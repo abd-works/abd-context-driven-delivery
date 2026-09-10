@@ -135,6 +135,7 @@ class Workflow:
 
     def _ensure_project(self, repo: Repo, repo_root: Path):
         if repo.project is not None:
+            repo.project.refresh_states()
             return repo.project
         config = self._load_workflow_config(repo_root)
         return repo.attach_project(config.project_owner, config.project_number)
@@ -446,8 +447,9 @@ class Workflow:
 
         Start by calling read_ticket_rules and follow every rule it returns; the repo's
         rules override defaults. Display each available ticket tool name and purpose
-        before acting. Then review ticket statuses so board state and left-to-right
-        column order are known. Then call only the tool needed to move a ticket, add a
+        before acting. Call list_project_statuses when you need the board columns.
+        Then review ticket statuses so board state and left-to-right column order are
+        known. Then call only the tool needed to move a ticket, add a
         child ticket, merge a completed child into its parent, update a ticket, update
         labels, align children to parent, or report board status. Never infer a ticket
         number when the request is ambiguous.
@@ -496,6 +498,19 @@ class Workflow:
             "url": issue.url,
         }
 
+    @agent_tool
+    def list_project_statuses(self, workspace: str = "") -> dict[str, object]:
+        """List GitHub Project Status columns left-to-right for move_ticket destinations."""
+        repo_root = self._repo_root(workspace)
+        repo = self._repo(workspace)
+        project = self._ensure_project(repo, repo_root)
+        statuses = project.status_option_names()
+        return {
+            "project": f"{project.owner}#{project.number}",
+            "statuses": statuses,
+            "hint": "Pass any status name to move_ticket(destination=...), or use next/previous.",
+        }
+
     @prompt(name="move-ticket")
     @agent_tool
     def move_ticket(
@@ -505,7 +520,7 @@ class Workflow:
         workspace: str = "",
         align_children: bool = True,
     ) -> dict[str, object]:
-        """Move a ticket to an exact board state, or to its next/previous state. Follow the repo workflow rules (read_ticket_rules)."""
+        """Move a ticket to any Project Status column, or to next/previous. Follow the repo workflow rules (read_ticket_rules)."""
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         project = self._ensure_project(repo, repo_root)

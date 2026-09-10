@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from harness.transport import render_mcp_invoke
+
 # Shaping-only fidelities deploy as skills but are not offered on the main context-tool router.
 _ROUTER_SKIP_FIDELITIES: frozenset[str] = frozenset({"scaffold"})
 
@@ -54,6 +56,31 @@ def _invoke_block(
     return "\n".join(lines) + "\n"
 
 
+def _invoke_tail(
+    toolset: str,
+    *,
+    transport: str = "cli",
+    action: str | None = None,
+    tool: str | None = None,
+    fidelity: str | None = None,
+    constructor_context: dict[str, str] | None = None,
+) -> str:
+    if transport == "mcp":
+        return render_mcp_invoke(
+            toolset,
+            action=action,
+            tool=tool,
+            fidelity=fidelity,
+        ) + "\n"
+    return _invoke_block(
+        toolset,
+        action=action,
+        tool=tool,
+        fidelity=fidelity,
+        constructor_context=constructor_context,
+    )
+
+
 def resolve_text(
     source: str,
     toolset: str,
@@ -65,6 +92,7 @@ def resolve_text(
     invoke: str = "action",
     constructor_context: dict[str, str] | None = None,
     extended: bool = False,
+    transport: str = "cli",
 ) -> str:
     """Resolve rules plus the CLI. Action and guidance bodies get opposite confirm lines.
 
@@ -77,24 +105,35 @@ def resolve_text(
     toolset = toolset.strip() or "the in-scope context tool"
     cc = constructor_context or {}
     if kind == "fidelity":
-        return _CATALOG_LINE + _invoke_block(toolset, action="generate", fidelity=source, constructor_context=cc)
+        if transport == "mcp":
+            return _invoke_tail(
+                toolset,
+                transport=transport,
+                action="generate",
+                fidelity=source,
+            )
+        return _CATALOG_LINE + _invoke_block(
+            toolset, action="generate", fidelity=source, constructor_context=cc
+        )
     if kind in {"utility", "format"}:
+        prefix = "" if transport == "mcp" else "through the tools cli\n\n"
         if kind == "format":
-            return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset, constructor_context=cc)
+            if transport == "mcp":
+                return (
+                    "Use the in-scope context tool's `generate` MCP tool and pass the "
+                    f"format as `{source}` in arguments.\n"
+                )
+            tail = _invoke_tail(toolset, transport=transport)
+            return prefix + _CATALOG_LINE + tail
         member = source.strip()
         if invoke == "tool" and member:
-            return (
-                "through the tools cli\n\n"
-                + _CATALOG_LINE
-                + _invoke_block(toolset, tool=member, constructor_context=cc)
-            )
+            tail = _invoke_tail(toolset, transport=transport, tool=member, constructor_context=cc)
+            return prefix + (_CATALOG_LINE if transport != "mcp" else "") + tail
         if invoke == "action" and member:
-            return (
-                "through the tools cli\n\n"
-                + _CATALOG_LINE
-                + _invoke_block(toolset, action=member, constructor_context=cc)
-            )
-        return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset, constructor_context=cc)
+            tail = _invoke_tail(toolset, transport=transport, action=member, constructor_context=cc)
+            return prefix + (_CATALOG_LINE if transport != "mcp" else "") + tail
+        tail = _invoke_tail(toolset, transport=transport, constructor_context=cc)
+        return prefix + (_CATALOG_LINE if transport != "mcp" else "") + tail
     if kind in {"guidance", "ct_fidelity"}:
         if kind == "ct_fidelity":
             if actions:
@@ -129,8 +168,14 @@ def resolve_text(
         return (
             taken
             + "Then run:\n"
-            + _CATALOG_LINE
-            + _invoke_block(toolset, action="generate", fidelity=source, constructor_context=cc)
+            + (_CATALOG_LINE if transport != "mcp" else "")
+            + _invoke_tail(
+                toolset,
+                transport=transport,
+                action="generate",
+                fidelity=source,
+                constructor_context=cc,
+            )
         )
     if kind == "guidance":
         if fidelities:
@@ -157,16 +202,26 @@ def resolve_text(
             taken
             + fidelity_ask
             + "Then run:\n"
-            + _CATALOG_LINE
-            + _invoke_block(toolset, tool=source, constructor_context=cc)
+            + (_CATALOG_LINE if transport != "mcp" else "")
+            + _invoke_tail(
+                toolset,
+                transport=transport,
+                tool=source,
+                constructor_context=cc,
+            )
         )
     action = source if kind == "action" else None
     return (
         taken
         + fidelity_ask
         + "Then run:\n"
-        + _CATALOG_LINE
-        + _invoke_block(toolset, action=action, constructor_context=cc)
+        + (_CATALOG_LINE if transport != "mcp" else "")
+        + _invoke_tail(
+            toolset,
+            transport=transport,
+            action=action,
+            constructor_context=cc,
+        )
     )
 
 
@@ -184,12 +239,13 @@ class ContextToolBody:
         fidelities: list[str] | tuple[str, ...] = (),
         actions: list[str] | tuple[str, ...] = (),
         extended: bool = False,
+        transport: str = "cli",
     ) -> "ContextToolBody":
         router_fidelities = [f for f in fidelities if f not in _ROUTER_SKIP_FIDELITIES]
         text = (
             f"# {name}\n\n"
             f"{overview}\n\n"
-            f"{resolve_text(name, toolset, kind='guidance', fidelities=router_fidelities, actions=actions, extended=extended)}"
+            f"{resolve_text(name, toolset, kind='guidance', fidelities=router_fidelities, actions=actions, extended=extended, transport=transport)}"
         )
         return cls(text)
 
@@ -263,13 +319,16 @@ class ActionBody:
         operation: str = "",
         constructor_context: dict[str, str] | None = None,
         extended: bool = False,
+        transport: str = "cli",
     ) -> "ActionBody":
         if kind == "fidelity":
             tool_name = _context_tool_name(toolset)
-            text = (
-                f"Run the action on {tool_name} at {name} fidelity through the tools cli\n\n"
-                f"{resolve_text(name, toolset, kind=kind, fidelities=fidelities, constructor_context=constructor_context, extended=extended)}"
+            lead = (
+                f"Run the action on {tool_name} at {name} fidelity.\n\n"
+                if transport == "mcp"
+                else f"Run the action on {tool_name} at {name} fidelity through the tools cli\n\n"
             )
+            text = lead + f"{resolve_text(name, toolset, kind=kind, fidelities=fidelities, constructor_context=constructor_context, extended=extended, transport=transport)}"
             return cls(text)
         member = (operation or name).strip()
         text = (
@@ -277,7 +336,7 @@ class ActionBody:
             "Run this action for any provided context tools, or on the context in general.\n\n"
             f"{class_string}\n\n"
             f"{operation_instructions}\n\n"
-            f"{resolve_text(member, toolset, kind=kind, fidelities=fidelities, context_tools=context_tools, invoke=invoke, constructor_context=constructor_context, extended=extended)}"
+            f"{resolve_text(member, toolset, kind=kind, fidelities=fidelities, context_tools=context_tools, invoke=invoke, constructor_context=constructor_context, extended=extended, transport=transport)}"
         )
         return cls(text)
 
@@ -300,6 +359,7 @@ class UtilityBody:
         invoke: str = "tool",
         operation: str = "",
         constructor_context: dict[str, str] | None = None,
+        transport: str = "cli",
     ) -> "UtilityBody":
         parts = [part for part in (class_string.strip(), operation_instructions.strip()) if part]
         if constructor_context:
@@ -313,7 +373,14 @@ class UtilityBody:
         text = (
             "\n\n".join(parts)
             + "\n\n"
-            + resolve_text(member, toolset, kind="utility", invoke=invoke, constructor_context=constructor_context)
+            + resolve_text(
+                member,
+                toolset,
+                kind="utility",
+                invoke=invoke,
+                constructor_context=constructor_context,
+                transport=transport,
+            )
         )
         return cls(text)
 
@@ -326,13 +393,13 @@ class FormatBody:
     text: str
 
     @classmethod
-    def from_source(cls, *, format: str) -> "FormatBody":
+    def from_source(cls, *, format: str, transport: str = "cli") -> "FormatBody":
         text = (
             f"# {format}\n\n"
             f"Run the context tool / actions using the following format: {format}.\n"
             "Used mostly with generate and render.\n"
             "Do not set a fidelity from this prompt.\n\n"
-            f"{resolve_text(format, 'the in-scope context tool', kind='format')}"
+            f"{resolve_text(format, 'the in-scope context tool', kind='format', transport=transport)}"
         )
         return cls(text)
 

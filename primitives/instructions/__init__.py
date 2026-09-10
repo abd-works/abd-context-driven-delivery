@@ -14,6 +14,8 @@ from .instructions import (
     _slug_variants,
     instruction,
     instruction_slot_names,
+    set_active_tool_invoker,
+    tool,
 )
 
 __all__ = [
@@ -21,6 +23,8 @@ __all__ = [
     "InstructionHost",
     "instruction",
     "instruction_slot_names",
+    "set_active_tool_invoker",
+    "tool",
     "_FORMAT_TEMPLATE_EXT",
     "_active_resource",
     "_expand_docstring",

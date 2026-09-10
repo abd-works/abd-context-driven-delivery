@@ -414,6 +414,33 @@ with description("a WorkSession that is started in a git working area"):
         _purge_clone(tmp)
 
 
+with description("a work session checkout that needs a venv"):
+    with context("when the checkout has no setup.ps1 to build one"):
+        with it("should open without building or reporting a venv"):
+            from workspace.workspace import Workspace
+
+            tmp = _init_clone("session_venv_skip_")
+            session = Workspace(str(tmp)).open_work_session("venv-skip")
+            expect(session.venv_note).to(equal(""))
+            expect((Path(session.git.root) / ".venv").exists()).to(be_false)
+            _purge_clone(tmp)
+
+    with context("when opening had to rebuild the venv"):
+        with it("should say so in the open message"):
+            from workspace.workspace import Workspace, WorkSession
+
+            class RebuildingSession(WorkSession):
+                def _ensure_worktree_venv(self) -> None:
+                    self.venv_note = "no venv at .venv"
+
+            tmp = _init_clone("session_venv_note_")
+            session = RebuildingSession(Workspace(str(tmp)), "venv-note", isolate=False)
+            opened = session.open()
+            expect(opened).to(contain("rebuilt .venv"))
+            expect(opened).to(contain("no venv at .venv"))
+            _purge_clone(tmp)
+
+
 with description("a sibling worktree directory name"):
     with it("should abbreviate hyphenated clone folders and append the session slug"):
         from workspace.workspace import WorkSession

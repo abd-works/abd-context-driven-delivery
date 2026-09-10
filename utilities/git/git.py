@@ -54,8 +54,20 @@ DEFAULT_PROJECT_STATES: tuple[str, ...] = ("Backlog", "In Progress", "Done")
 GITHUB_STATUS_ALIASES: dict[str, tuple[str, ...]] = {
     "Backlog": ("Todo",),
     "Todo": ("Backlog",),
+    "In Progress": ("In progress",),
+    "In progress": ("In Progress",),
 }
+GH_PROJECT_SCOPES_HINT = (
+    "Run: gh auth refresh -h github.com -s read:project,project"
+)
 _ISSUE_NUMBER = re.compile(r"^\d+$")
+
+
+def _gh_project_scope_error(exc: GhConnectError) -> GhConnectError:
+    message = str(exc)
+    if "read:project" in message or "missing required scopes" in message:
+        return GhConnectError(f"{message} {GH_PROJECT_SCOPES_HINT}")
+    return exc
 
 
 def theme_slug(theme: str) -> str:
@@ -307,29 +319,7 @@ class Ticket:
         if repo._memory:
             repo._ticket_project_theme[self.number] = slug
             return self
-        repo._gh(
-            "project",
-            "item-add",
-            str(project.number),
-            "--owner",
-            project.owner,
-            "--url",
-            self.url,
-        )
-        gh_value = resolve_github_theme_option(slug, project.theme_option_names())
-        repo._gh(
-            "project",
-            "item-edit",
-            str(project.number),
-            "--owner",
-            project.owner,
-            "--url",
-            self.url,
-            "--field",
-            "Theme",
-            "--value",
-            gh_value,
-        )
+        project.set_ticket_theme(self.number, self.url, slug)
         return self
 
     def set_type(self, name: str) -> Ticket:
@@ -355,46 +345,18 @@ class Ticket:
             raise RuntimeError("attach_project before setting ticket status")
         state = project.state_named(state_name)
         if repo._memory:
-            repo._ticket_project_state[self.number] = state_name
+            repo._ticket_project_state[self.number] = state.name
             self.state = state
             return self
-        item_raw = repo._gh(
-            "project",
-            "item-add",
-            str(project.number),
-            "--owner",
-            project.owner,
-            "--url",
-            self.url,
-            "--format",
-            "json",
-        )
-        item = json.loads(item_raw or "{}")
-        item_id = item.get("id")
-        if not item_id:
-            raise GhConnectError("Could not add issue to project.")
-        gh_value = resolve_github_status_option(
-            state_name, project.status_option_names()
-        )
-        repo._gh(
-            "project",
-            "item-edit",
-            str(project.number),
-            "--owner",
-            project.owner,
-            "--url",
-            self.url,
-            "--field",
-            "Status",
-            "--value",
-            gh_value,
-        )
-        self.state = state
+        resolved = project.set_ticket_status(self.number, self.url, state.name)
+        self.state = project.state_named(resolved)
         return self
 
     @classmethod
-    def parse_number(cls, ref: str) -> int:
-        cleaned = ref.strip()
+    def parse_number(cls, ref: str | int) -> int:
+        if isinstance(ref, int):
+            return ref
+        cleaned = str(ref).strip()
         if not cleaned:
             raise ValueError(f"not a GitHub issue reference: {ref!r}")
         if cleaned.startswith("#"):
@@ -525,13 +487,23 @@ class Project:
         self.number = number
         self.states = [TicketState(name) for name in DEFAULT_PROJECT_STATES]
 
+    def refresh_states(self) -> list[str]:
+        """Load Status column names from GitHub and replace the in-memory state list."""
+        names = self.status_option_names()
+        if names:
+            self.states = [TicketState(name) for name in names]
+        return names
+
     def state_named(self, name: str) -> TicketState:
         options = self.status_option_names()
         resolved = resolve_github_status_option(name, options)
-        for state_name in options or [state.name for state in self.states]:
+        candidates = options or [state.name for state in self.states]
+        for state_name in candidates:
             if state_name.lower() == resolved.lower():
                 return TicketState(state_name)
-        raise ValueError(f"unknown project state: {name!r}")
+        raise ValueError(
+            f"unknown project state: {name!r}; board columns: {candidates}"
+        )
 
     def status_option_names(self) -> list[str]:
         """Live GitHub Status field option names, or empty when listing fails."""
@@ -548,8 +520,8 @@ class Project:
                 "--format",
                 "json",
             )
-        except GhConnectError:
-            return []
+        except GhConnectError as exc:
+            raise _gh_project_scope_error(exc) from exc
         payload = json.loads(raw or "{}")
         fields = payload
         if isinstance(payload, dict):
@@ -586,6 +558,52 @@ class Project:
         )
         payload = json.loads(raw or "{}")
         return self._ticket_rows_from_items(payload.get("items") or [])
+
+    def set_ticket_status(
+        self, ticket_number: int, ticket_url: str, state_name: str
+    ) -> str:
+        """Set the Status column for one issue; returns the GitHub option name sent."""
+        item_id = self._ensure_item_id(ticket_number, ticket_url)
+        field_id, options = self._single_select_field("Status")
+        option_names = [str(option.get("name") or "") for option in options]
+        gh_value = resolve_github_status_option(state_name, option_names)
+        option_id = self._option_id_for_name(options, gh_value)
+        self._repo._gh(
+            "project",
+            "item-edit",
+            "--id",
+            item_id,
+            "--project-id",
+            self._project_id(),
+            "--field-id",
+            field_id,
+            "--single-select-option-id",
+            option_id,
+        )
+        return gh_value
+
+    def set_ticket_theme(
+        self, ticket_number: int, ticket_url: str, theme_slug: str
+    ) -> str:
+        """Set the Theme column for one issue; returns the GitHub option name sent."""
+        item_id = self._ensure_item_id(ticket_number, ticket_url)
+        field_id, options = self._single_select_field("Theme")
+        option_names = [str(option.get("name") or "") for option in options]
+        gh_value = resolve_github_theme_option(theme_slug, option_names)
+        option_id = self._option_id_for_name(options, gh_value)
+        self._repo._gh(
+            "project",
+            "item-edit",
+            "--id",
+            item_id,
+            "--project-id",
+            self._project_id(),
+            "--field-id",
+            field_id,
+            "--single-select-option-id",
+            option_id,
+        )
+        return gh_value
 
     def set_text_field(self, ticket_number: int, field_name: str, value: str) -> None:
         """Set an arbitrary text field on one issue's project item."""
@@ -652,6 +670,55 @@ class Project:
         )
         payload = json.loads(raw or "{}")
         return [row for row in payload.get("fields") or [] if isinstance(row, dict)]
+
+    def _single_select_field(self, field_name: str) -> tuple[str, list[dict[str, object]]]:
+        for field in self._field_rows():
+            if str(field.get("name") or "") != field_name:
+                continue
+            field_id = str(field.get("id") or "")
+            options = [
+                option
+                for option in (field.get("options") or [])
+                if isinstance(option, dict)
+            ]
+            if not field_id:
+                raise ValueError(f"project field has no id: {field_name}")
+            return field_id, options
+        raise ValueError(f"project field not found: {field_name}")
+
+    def _option_id_for_name(
+        self, options: list[dict[str, object]], name: str
+    ) -> str:
+        wanted = (name or "").strip()
+        for option in options:
+            label = str(option.get("name") or "").strip()
+            if label == wanted or label.lower() == wanted.lower():
+                option_id = str(option.get("id") or "")
+                if option_id:
+                    return option_id
+        raise ValueError(f"unknown project option: {name!r}")
+
+    def _ensure_item_id(self, ticket_number: int, ticket_url: str) -> str:
+        try:
+            return self._item_id(ticket_number)
+        except ValueError:
+            pass
+        item_raw = self._repo._gh(
+            "project",
+            "item-add",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--url",
+            ticket_url,
+            "--format",
+            "json",
+        )
+        item = json.loads(item_raw or "{}")
+        item_id = str(item.get("id") or "")
+        if not item_id:
+            raise GhConnectError("Could not add issue to project.")
+        return item_id
 
     def _ensure_text_field(self, field_name: str) -> str:
         for field in self._field_rows():
@@ -932,6 +999,7 @@ class Repo:
     def attach_project(self, owner: str, number: int) -> Project:
         self._project = Project(self, owner, number)
         self._project.link_repository()
+        self._project.refresh_states()
         return self._project
 
     @property

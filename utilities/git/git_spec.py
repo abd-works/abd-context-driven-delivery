@@ -23,10 +23,13 @@ from git.git import (
     Branch,
     CliAgentBinding,
     Commit,
+    GH_PROJECT_SCOPES_HINT,
+    GhConnectError,
     Project,
     Repo,
     Ticket,
     TicketState,
+    _gh_project_scope_error,
     issue_theme_label,
     resolve_github_status_option,
     resolve_github_theme_option,
@@ -168,6 +171,33 @@ with description("a Repo ticket lifecycle"):
 
 
 with description("GitHub project status names"):
+    with it("should append the project-scope refresh hint to gh auth errors"):
+        original = GhConnectError(
+            "gh project field-list failed: missing required scopes [read:project]"
+        )
+        expect(str(_gh_project_scope_error(original))).to(contain(GH_PROJECT_SCOPES_HINT))
+
+    with it("should refresh Project.states from the live Status field"):
+        repo = Repo.memory("/tmp/demo-clone")
+        project = repo.attach_project("demo-org", 3)
+
+        def fake_gh(*args: str, stdin: str | None = None) -> str:
+            if len(args) >= 2 and args[1] == "field-list":
+                return (
+                    '{"fields":[{"name":"Status","options":'
+                    '[{"name":"Todo"},{"name":"In Progress"},{"name":"Review"},{"name":"Done"}]}]}'
+                )
+            return ""
+
+        repo._gh = fake_gh  # type: ignore[method-assign]
+        repo._memory = False
+        names = project.refresh_states()
+        expect(names).to(equal(["Todo", "In Progress", "Review", "Done"]))
+        expect([state.name for state in project.states]).to(
+            equal(["Todo", "In Progress", "Review", "Done"])
+        )
+        repo._memory = True
+
     with it("should map Backlog to Todo when the board has Todo"):
         expect(
             resolve_github_status_option(
@@ -182,6 +212,13 @@ with description("GitHub project status names"):
             )
         ).to(equal("Backlog"))
 
+    with it("should map In Progress to In progress when the board uses lowercase"):
+        expect(
+            resolve_github_status_option(
+                "In Progress", ["Backlog", "In progress", "Done"]
+            )
+        ).to(equal("In progress"))
+
     with it("should send Todo to gh for Backlog while memory still records Backlog"):
         repo = Repo.memory("/tmp/demo-clone")
         repo.attach_project("demo-org", 3)
@@ -192,9 +229,13 @@ with description("GitHub project status names"):
             calls.append(args)
             if len(args) >= 2 and args[1] == "field-list":
                 return (
-                    '{"fields":[{"name":"Status","options":'
-                    '[{"name":"Todo"},{"name":"In Progress"},{"name":"Done"}]}]}'
+                    '{"fields":[{"name":"Status","id":"FIELD_STATUS","options":'
+                    '[{"id":"OPT_TODO","name":"Todo"},'
+                    '{"id":"OPT_IP","name":"In Progress"},'
+                    '{"id":"OPT_DONE","name":"Done"}]}]}'
                 )
+            if len(args) >= 2 and args[1] == "view":
+                return '{"id":"PROJ_3"}'
             if len(args) >= 2 and args[1] == "item-add":
                 return '{"id":"PVTI_1"}'
             return ""
@@ -202,11 +243,11 @@ with description("GitHub project status names"):
         repo._gh = fake_gh  # type: ignore[method-assign]
         repo._memory = False
         ticket.set_status("Backlog")
-        values = []
+        option_ids = []
         for call in calls:
-            if "--value" in call:
-                values.append(call[call.index("--value") + 1])
-        expect(values).to(equal(["Todo"]))
+            if "--single-select-option-id" in call:
+                option_ids.append(call[call.index("--single-select-option-id") + 1])
+        expect(option_ids).to(equal(["OPT_TODO"]))
         repo._memory = True
         ticket.set_status("Backlog")
         expect(repo._ticket_project_state[ticket.number]).to(equal("Backlog"))
@@ -231,9 +272,12 @@ with description("GitHub project theme names"):
             calls.append(args)
             if len(args) >= 2 and args[1] == "field-list":
                 return (
-                    '{"fields":[{"name":"Theme","options":'
-                    '[{"name":"cli-agent"},{"name":"workspace"}]}]}'
+                    '{"fields":[{"name":"Theme","id":"FIELD_THEME","options":'
+                    '[{"id":"OPT_CLI","name":"cli-agent"},'
+                    '{"id":"OPT_WS","name":"workspace"}]}]}'
                 )
+            if len(args) >= 2 and args[1] == "view":
+                return '{"id":"PROJ_3"}'
             if len(args) >= 2 and args[1] == "item-add":
                 return '{"id":"PVTI_1"}'
             return ""
@@ -241,11 +285,13 @@ with description("GitHub project theme names"):
         repo._gh = fake_gh  # type: ignore[method-assign]
         repo._memory = False
         ticket.add_theme("CLI agent")
-        theme_values = []
+        theme_option_ids = []
         for call in calls:
-            if "--field" in call and call[call.index("--field") + 1] == "Theme":
-                theme_values.append(call[call.index("--value") + 1])
-        expect(theme_values).to(equal(["cli-agent"]))
+            if "--single-select-option-id" in call:
+                theme_option_ids.append(
+                    call[call.index("--single-select-option-id") + 1]
+                )
+        expect(theme_option_ids).to(equal(["OPT_CLI"]))
         repo._memory = True
         ticket.add_theme("CLI agent")
         expect(repo._ticket_project_theme[ticket.number]).to(equal("cli-agent"))

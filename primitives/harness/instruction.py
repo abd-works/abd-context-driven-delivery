@@ -24,6 +24,7 @@ class Instruction(HarnessTool):
         self.apply_source(source)
         if not self.body and isinstance(source, dict):
             name = self.name
+            transport = source.get("transport") or "cli"
             if source.get("action") or source.get("source_kind") == "action":
                 self.body = ActionBody.from_source(
                     name=name,
@@ -34,6 +35,7 @@ class Instruction(HarnessTool):
                     invoke=source.get("invoke") or "action",
                     operation=source.get("operation") or "",
                     extended=source.get("extended") or False,
+                    transport=transport,
                 )
             elif source.get("source_kind") == "utility":
                 self.body = UtilityBody.from_source(
@@ -43,6 +45,7 @@ class Instruction(HarnessTool):
                     toolset=source.get("toolset", ""),
                     invoke=source.get("invoke") or "tool",
                     operation=source.get("operation") or "",
+                    transport=transport,
                 )
             else:
                 self.body = ContextToolBody.from_source(
@@ -52,6 +55,7 @@ class Instruction(HarnessTool):
                     fidelities=source.get("fidelities") or (),
                     actions=source.get("actions") or (),
                     extended=source.get("extended") or False,
+                    transport=transport,
                 )
             if source.get("overview"):
                 self.description = source["overview"]

@@ -2,8 +2,5 @@
 
 ## Start
 
-- **date:** 2026-09-05
-- **path:** C:\dev\abd-context-driven-delivery
-- **goal:** (unset)
-- **fidelities:** (unset)
-- **contexts:** (unset)
+- **date:** 2026-09-09
+- **note:** implicit default — no named work session open

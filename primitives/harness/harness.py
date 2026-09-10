@@ -14,7 +14,7 @@ import shutil
 from pathlib import Path
 
 from primitives.actions.action import agent_instructions, agentic_toolset
-from tools.tool import agent_tool
+from tools.tool import _ToolsetLoader, agent_tool
 from tools.toolset_header import manifest_commands
 
 from harness.agent import Agent
@@ -39,7 +39,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _IMPLEMENTED = frozenset({"Cursor", "VS Code", "Kilo"})
 _SKIP_DIRS = frozenset({"__pycache__", "examples"})
 _COMPOSER_CLASSES = frozenset({"BaseContextTool", "LifecycleAction"})
-_WALK_TREES = ("context_tools", "utilities")
+_WALK_TREES = ("context_tools", "utilities", "primitives")
 _FORMATS = (
     "markdown",
     "code",
@@ -127,6 +127,8 @@ class Harness:
         self._extended = False
         self._prod = False
         self._no_manifest = False
+        self._mcp = False
+        self._transport = "cli"
         self._code_language = _DEFAULT_CODE_LANGUAGE
         self.skills: list[Skill] = []
         self.prompts: list[Prompt] = []
@@ -744,7 +746,7 @@ class Harness:
         toolset = entry.get("toolset_ref") or entry.get("manifest_command", "").rsplit(" ", 1)[-1]
         names: list[str] = []
 
-        _BASE_FOLDER = {"context_tool": "context-tools", "action": "actions", "utility": "utilities"}
+        _BASE_FOLDER = {"context_tool": "context_tools", "action": "actions", "utility": "utilities"}
 
         def _folder_for(k: str, s: str) -> str:
             if k == "context_tool":
@@ -765,6 +767,7 @@ class Harness:
                 "operation": operation,
                 "invoke": invoke,
                 "folder": _folder_for(kind, slug),
+                "transport": self._transport,
             }
             if self._extended:
                 payload["extended"] = True
@@ -923,13 +926,19 @@ class Harness:
                 "folder": "",
                 "operation": cli_operation,
                 "invoke": cli_invoke,
+                "transport": self._transport,
             }
             if harness_cc:
                 payload["constructor_context"] = harness_cc
             if operation == "generate":
+                transport_ask = (
+                    "With no transport given, AskQuestion: MCP (recommended) | CLI. "
+                    "When MCP is chosen, pass arguments.mcp=true to write_deploy. "
+                )
                 payload["guidance"] = (
                     "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code | Kilo. "
-                    "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
+                    + transport_ask
+                    + "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
                     "With no deploy path given, call suggested_deploy_path, then AskQuestion: "
                     "deploy to that suggested path (recommended) / enter another path. "
                     "With no code_language given, AskQuestion: Python (recommended) | TypeScript. "
@@ -1035,7 +1044,83 @@ class Harness:
             payload["code_language"] = self._code_language
         if self._no_manifest:
             payload["no_manifest"] = True
+        if self._mcp:
+            payload["mcp"] = True
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def _mcp_python_executable(self) -> str:
+        import sys
+
+        for candidate in (
+            self.repo_root / ".venv" / "Scripts" / "python.exe",
+            self.repo_root / ".venv" / "bin" / "python",
+        ):
+            if candidate.is_file():
+                return str(candidate.resolve())
+        return sys.executable
+
+    def _mcp_pythonpath(self) -> str:
+        import os
+
+        roots = (
+            self.repo_root,
+            self.repo_root / "primitives",
+            self.repo_root / "utilities",
+            self.repo_root / "context_tools",
+        )
+        return os.pathsep.join(str(path.resolve()) for path in roots)
+
+    def _mcp_startable_toolset_refs(
+        self,
+        toolset_refs: list[str],
+        walk_entries: list[dict],
+    ) -> list[str]:
+        """Keep only toolsets the MCP host can construct with no arguments."""
+        ref_meta = {
+            entry["toolset_ref"]: entry
+            for entry in walk_entries
+            if entry.get("toolset_ref")
+        }
+        loader = _ToolsetLoader.instance()
+        startable: list[str] = []
+        seen: set[str] = set()
+        for ref in toolset_refs:
+            if not ref or ref in seen:
+                continue
+            seen.add(ref)
+            entry = ref_meta.get(ref)
+            if entry:
+                if required_init_params(Path(entry["file_path"]), entry["class_name"]):
+                    continue
+            try:
+                loader.load(ref)()
+            except Exception:
+                continue
+            startable.append(ref)
+        return startable
+
+    def _write_mcp_json(self, toolset_refs: list[str], walk_entries: list[dict]) -> None:
+        unique_refs = self._mcp_startable_toolset_refs(toolset_refs, walk_entries)
+        if not unique_refs:
+            return
+        path = self.repo_root / ".cursor" / "mcp.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "mcpServers": {
+                "cdd": {
+                    "command": self._mcp_python_executable(),
+                    "args": [
+                        "-m",
+                        "mcp_server",
+                        "--toolsets",
+                        ",".join(unique_refs),
+                    ],
+                    "cwd": str(self.repo_root.resolve()),
+                    "env": {"PYTHONPATH": self._mcp_pythonpath()},
+                }
+            }
+        }
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     def _toolset_ref_from_path(self, path: Path, class_name: str) -> str:
         """Build module:Class from the source file path."""
@@ -1172,7 +1257,12 @@ class Harness:
                         classes = _inferred_class_names(tree_ast, py_file)
                     else:
                         named = _header_class(default_manifest)
-                        if named:
+                        defined = {
+                            node.name
+                            for node in tree_ast.body
+                            if isinstance(node, ast.ClassDef)
+                        }
+                        if named and named in defined:
                             classes = [named]
                 if not classes:
                     continue
@@ -1231,6 +1321,7 @@ class Harness:
         code_language: str = _DEFAULT_CODE_LANGUAGE,
         no_manifest: bool = False,
         legacy: bool = False,
+        mcp: bool = False,
     ) -> str:
         """Walk if needed, then write sources plus Harness prompts into the deploy area.
 
@@ -1238,11 +1329,14 @@ class Harness:
         legacy=True reverts to the old stub-only fidelity skills that call the tool at runtime.
         prod=True skips any class decorated with @dev_only.
         code_language selects python (default) or typescript for inlined code templates.
+        mcp=True emits MCP tool references in skills and writes .cursor/mcp.json for Cursor.
         """
         self._require_implemented()
         self._extended = not legacy if extended else False
         self._prod = bool(prod)
         self._no_manifest = bool(no_manifest)
+        self._mcp = bool(mcp)
+        self._transport = "mcp" if self._mcp else "cli"
         normalized = (code_language or _DEFAULT_CODE_LANGUAGE).strip().lower()
         if normalized not in {"python", "typescript"}:
             raise ValueError(
@@ -1263,7 +1357,12 @@ class Harness:
         wanted = source.strip()
         seen: set[tuple[str, str]] = set()
         names: list[str] = []
-        for entry in json.loads(self.walk(name_filter)):
+        walk_entries = json.loads(self.walk(name_filter))
+        toolset_refs: list[str] = []
+        for entry in walk_entries:
+            ref = entry.get("toolset_ref")
+            if ref:
+                toolset_refs.append(ref)
             names.extend(self._generate_entry(entry, roots, wanted, seen))
         if not self._no_manifest and self.type in ("Cursor", "Kilo", "VS Code"):
             names.extend(self._write_repo_rules(roots, seen))
@@ -1280,7 +1379,17 @@ class Harness:
             for fmt in _FORMATS:
                 if wanted and fmt != wanted:
                     continue
-                written = self._emit("prompt", {"name": fmt, "format": fmt, "folder": "formats"}, roots, seen)
+                written = self._emit(
+                    "prompt",
+                    {
+                        "name": fmt,
+                        "format": fmt,
+                        "folder": "formats",
+                        "transport": self._transport,
+                    },
+                    roots,
+                    seen,
+                )
                 if written:
                     names.append(written)
             names.extend(self._write_harness_files(roots, seen))
@@ -1316,6 +1425,8 @@ class Harness:
         self._prune_vscode_agent_clones(roots)
         self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
+        if self._mcp and self.type == "Cursor":
+            self._write_mcp_json(toolset_refs, walk_entries)
         if self.type == "Cursor" and not self._no_manifest:
             self._deploy_cursor_hooks(wanted)
         return json.dumps(
@@ -1340,6 +1451,7 @@ class Harness:
         """With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."""
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
         """With no code_language given, AskQuestion: Python (recommended) | TypeScript."""
+        """With no transport given, AskQuestion: MCP (recommended) | CLI. When MCP is chosen, pass arguments.mcp=true to write_deploy."""
         """When requested, pass arguments.no_manifest=true to write_deploy for path-based no-manifest deployment."""
         """Pass the chosen language as arguments.code_language to write_deploy."""
         self.suggested_deploy_path()
@@ -1362,12 +1474,14 @@ class Harness:
             legacy = bool(state.get("legacy"))
             code_language = state.get("code_language") or _DEFAULT_CODE_LANGUAGE
             no_manifest = bool(state.get("no_manifest"))
+            mcp = bool(state.get("mcp"))
         except (OSError, json.JSONDecodeError):
             saved = None
             deploy_path = ""
             legacy = False
             code_language = _DEFAULT_CODE_LANGUAGE
             no_manifest = False
+            mcp = False
         if not saved:
             raise RuntimeError("no saved IDE")
         self.type = saved
@@ -1376,6 +1490,7 @@ class Harness:
             legacy=legacy,
             code_language=code_language,
             no_manifest=no_manifest,
+            mcp=mcp,
         )
 
     @prompt(name="clean-harness")

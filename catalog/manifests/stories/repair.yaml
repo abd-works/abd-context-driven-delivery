@@ -6,6 +6,3 @@ context:
   session: null
   workspace: null
 action: repair
-arguments:
-  asset: <asset>
-  violation: <violation>

@@ -418,3 +418,160 @@ Preferred next area to refine:
 - intake + normalization flow for direct and retailer-forwarded requests, including canonical errors and resubmission behavior.
 
 This discovery sketch intentionally leaves tactical details for specification and implementation, but it locks the core shape of the courier platform: one shared order lifecycle, one normalization gate, one depot assignment model, and mandatory POD closure.
+
+---
+
+## log
+- discovery / sketch / pass #scaffold-baseline
+- discovery / sketch / pass #detail-intake-normalize
+
+=========
+theme: Intake and Normalize Inbound Orders  (epic)
+---------
+stories:
+    Intake and Normalize Inbound Orders
+        Capture and Canonicalize
+            Customer --> Submit Direct Delivery Request
+            Retailer Ops --> Submit Forwarded Order Batch
+            System --> Ingest Retailer Payload Into Canonical Envelope
+            System --> Validate Sender and Recipient Completeness
+            System --> Interpret Parcel Details and Service Level
+            System --> Resolve Pickup and Dropoff Windows
+            System --> Mark Order Normalized and Dispatch-Eligible
+            Dispatcher --> Review Normalization Exception
+            Customer --> Resubmit Corrected Request Details
+            System --> Clear Exception and Re-run Normalization
+            * approx 2–3 more stories (duplicate external ref, partial batch rejection)
+        ~> Increment 1: direct UI + one retailer adapter through normalization gate before assignment
+---
+ddd:
+    Request Intake
+      vendor: custom
+      aggregates:
+        DeliveryOrder:
+          emits:
+            - RequestCaptured
+            - OrderNormalized
+            - NormalizationFailed
+            - NormalizationCleared
+          consumes:
+            - ForwardingIngested
+          members:
+            sourceChannel
+            externalOrderRef
+            canonicalEnvelope
+            normalizationState
+            serviceWindow
+            serviceLevel
+        NormalizationReview:
+          emits:
+            - ExceptionRaised
+            - ExceptionCleared
+          consumes:
+            - NormalizationFailed
+          members:
+            failureCodes
+            remediationNotes
+            resubmissionVersion
+    Channel Adapters
+      vendor: bespoke
+      aggregates:
+        ChannelForwardBatch:
+          emits:
+            - ForwardingIngested
+            - BatchPartiallyRejected
+          consumes:
+          members:
+            sourceContract
+            mappedEnvelopeDraft
+    Event map (this epic)
+      ForwardingIngested: ChannelForwardBatch → DeliveryOrder
+      RequestCaptured: DeliveryOrder → internal validation
+      NormalizationFailed: DeliveryOrder → NormalizationReview, dispatcher queue
+      ExceptionCleared: NormalizationReview → DeliveryOrder
+      OrderNormalized: DeliveryOrder → Dispatch (downstream)
+---
+ux:
+    Fidelity: ia
+
+    SITE MAP (intake + normalization)
+    Create Delivery Request
+      ├─ [action] Submit request ─────────→ Normalization Status
+      └─ [action] Save draft ─────────────→ Create Delivery Request
+    Forwarded Requests Inbox
+      ├─ [action] Open batch detail ──────→ Batch Normalization Detail
+      └─ [action] Open exception ─────────→ Normalization Exception Review
+    Normalization Status
+      ├─ [system] Awaiting remediation ───→ Normalization Exception Review
+      └─ [system] Normalized ─────────────→ Quote and Confirm
+    Normalization Exception Review
+      ├─ [action] Resubmit corrections ───→ Normalization Status
+      └─ [action] Escalate to dispatcher ─→ Exception Queue
+
+    SCREENS
+    [ Normalization Exception Review ]                 form
+      ┌─────────────────────────────┐
+      │ ! {failure code summary}    │
+      │ sender [____________]       │
+      │ recipient [____________]    │
+      │ parcel [____] service [▾]   │
+      │ window pickup [__] drop [__]│
+      │ [ Resubmit ] [ Escalate ]   │
+      └─────────────────────────────┘
+      Stories (~4): Review Exception · Resubmit Corrected Details · Escalate · Clear and Re-normalize
+      Domain terms: NormalizationException · DeliveryOrder · ServiceWindow
+---
+ce:
+    module-intake
+      IntakePort.captureDirect()
+      IntakePort.captureForwarded()
+      OrderNormalizationPort.normalize()
+      OrderNormalizationPort.remediate()
+    module-channel-adapters
+      ForwardingIngestPort.ingestBatch()
+      ForwardingIngestPort.mapToCanonical()
+    dependency: channel-adapters → intake → order (normalization lives on order seam)
+    NormalizationPolicy
+      operation evaluate(envelope) -> NormalizationResult
+      operation mergeResubmission(order, patch) -> canonicalEnvelope
+---
+bdd:
+    describe DeliveryOrder normalization
+    describe ChannelForwardBatch ingestion
+    describe NormalizationReview remediation
+=========
+
+### Normalization gate (decisions locked this pass)
+
+**States on DeliveryOrder.normalizationState**
+- `captured` — envelope accepted, not yet evaluated
+- `normalizing` — policy running
+- `normalized` — dispatch-eligible; emits OrderNormalized
+- `failed` — blocked; emits NormalizationFailed with coded reasons
+- `remediating` — human or sender correcting; no dispatch
+
+**Canonical error taxonomy (MVP)**
+| Code | Meaning | Typical remediation |
+|---|---|---|
+| `MISSING_SENDER` | Sender identity or contact incomplete | Customer or retailer fills sender block |
+| `MISSING_RECIPIENT` | Recipient identity or contact incomplete | Fill recipient block |
+| `INVALID_PARCEL` | Weight/size/type not interpretable | Correct parcel details |
+| `UNRESOLVED_WINDOW` | Pickup/dropoff window ambiguous or impossible | Pick valid windows for depot city |
+| `UNKNOWN_SERVICE_LEVEL` | Same-day / next-day not derivable | Explicit service level selection |
+| `RETAILER_MAPPING_GAP` | Source field has no canonical mapping | Adapter mapping table or manual map |
+| `DUPLICATE_EXTERNAL_REF` | externalOrderRef already active | Reject or link to existing order |
+
+**Resubmission behavior**
+- Failed orders never enter the dispatch queue; assignment consumes only `normalized` orders.
+- Resubmission merges a patch into `canonicalEnvelope` and increments `resubmissionVersion`; full re-run of normalization policy — not a partial bypass.
+- Retailer batch partial rejection: accepted rows become DeliveryOrder; rejected rows stay on ChannelForwardBatch with `BatchPartiallyRejected`.
+- Dispatcher escalation moves order to `remediating` without losing `externalOrderRef` or source channel.
+
+**Service-level promises (MVP answer to open question)**
+- Same-day: pickup window must end before 14:00 local; dropoff by 20:00 same calendar day.
+- Next-day: pickup any time today; dropoff by 18:00 next business day.
+- Windows outside depot coverage return `UNRESOLVED_WINDOW`.
+
+**Open for next sketch branch**
+- Quote and Confirm epic — how quote binds to normalized envelope
+- Assignment rules and manual override triggers

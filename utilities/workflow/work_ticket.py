@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING
+
+import yaml
 
 from git.git import Repo, Ticket, issue_theme_label
 
@@ -90,6 +93,7 @@ class WorkTicket:
         "sketch",
         "tools",
         "base",
+        "mcp-invocation-layer",
     )
     _DEFECT_MARKERS = (
         "defect",
@@ -221,8 +225,44 @@ class WorkTicket:
         return "Small change"
 
     @classmethod
-    def infer_theme(cls, text: str) -> str:
-        blob = text or ""
+    def _workflow_packages_path(cls, repo_root: Path | str | None) -> Path | None:
+        if not repo_root:
+            return None
+        path = Path(repo_root) / ".context" / "workflow-packages.yaml"
+        return path if path.is_file() else None
+
+    @classmethod
+    def _package_entries(cls, repo_root: Path | str | None = None) -> list[dict[str, str]]:
+        path = cls._workflow_packages_path(repo_root)
+        if path is None:
+            return []
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        packages = payload.get("packages") if isinstance(payload, dict) else None
+        if not isinstance(packages, list):
+            return []
+        entries: list[dict[str, str]] = []
+        for item in packages:
+            if not isinstance(item, dict):
+                continue
+            location = str(item.get("location") or "").strip()
+            theme = str(item.get("theme") or "").strip()
+            layer = str(item.get("layer") or "").strip()
+            if location and theme:
+                entries.append(
+                    {"location": location, "theme": theme, "layer": layer}
+                )
+        return entries
+
+    @classmethod
+    def infer_theme(cls, text: str, repo_root: Path | str | None = None) -> str:
+        blob = (text or "").replace("\\", "/")
+        for entry in cls._package_entries(repo_root):
+            location = entry["location"]
+            if location in blob:
+                return entry["theme"]
+            layer = entry.get("layer") or ""
+            if layer and layer.lower() in blob.lower():
+                return entry["theme"]
         for theme in sorted(cls.THEMES, key=len, reverse=True):
             pattern = rf"\b{theme.replace('-', '[- ]')}\b"
             if re.search(pattern, blob, re.IGNORECASE):
@@ -271,7 +311,7 @@ class WorkTicket:
         self.ensure_types()
         clue = infer_from or f"{title}\n{body}"
         resolved_type = self.resolve_type(type) if type.strip() else self.infer_type(clue)
-        resolved_theme = theme.strip() or self.infer_theme(clue)
+        resolved_theme = theme.strip() or self.infer_theme(clue, repo_root=self.repo.root)
         if resolved_theme.lower().startswith("theme:"):
             resolved_theme = resolved_theme.split(":", 1)[1].strip()
         issue = self.repo.create_ticket(title, body)

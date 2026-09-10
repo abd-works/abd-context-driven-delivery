@@ -1,0 +1,6 @@
+# Impacted package → project theme. Refer to packages by repo location in ticket bodies.
+packages:
+  - location: utilities/mcp_server
+    layer: MCP Invocation Layer
+    theme: mcp-invocation-layer
+    module: mcp_server

@@ -67,6 +67,7 @@ Handoff is only one way a session comes back later. **Every** `open` / `ensure_s
 2. If a worktree for `session/{name}` already exists → switch to it (retarget `WorkSession.git`). Do not create a second one.
 3. Otherwise create a **sibling** worktree next to the primary clone. Never add a worktree inside the clone. Never checkout the session branch in the primary folder (that steals the checkout from other chats).
 4. Fetch/pull so the worktree has the latest from the repository. Do all session work in that tree.
+5. Give that checkout its own working `.venv`. `.venv` is gitignored, so a new worktree has none, and a copied one still names the machine and destination it was built for. `open` checks `pyvenv.cfg` and the interpreter; when either is wrong it runs `setup.ps1` in that checkout and reports the repair. A healthy venv costs a file read — never borrow the primary clone's.
 
 Sibling path: `{abbrev}-{work-session-name}` beside `primary_root()`. `{work-session-name}` is the WorkSession kebab slug (not `session/...`). `{abbrev}` comes from the **primary clone folder name**: keep the first hyphen/underscore token, then the first letter of each later token (`abd-context-driven-delivery` → `abd-cdd`; `story-ui` → `story-u`; `my-app` → `my-a`; `widgets` → `widgets`).
 

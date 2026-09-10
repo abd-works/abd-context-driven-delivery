@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from harness.harness_tool import prompt
-from tools.tool import toolset
+from tools.tool import agent_tool, toolset
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _BASE_CONTEXT_TOOL_PATH = _REPO_ROOT / "context_tools" / "base" / "base_context_tool.py"
@@ -370,7 +370,7 @@ def importlib_module_file(module_path: str) -> str:
 
 # -- Lifecycle action resolution (AST walk) ----------------------------------
 
-_ACTION_DECORATOR_NAME = "action"
+_ACTION_DECORATOR_NAME = "agent_instructions"
 
 
 @dataclass(frozen=True)
@@ -554,10 +554,7 @@ def _resolve_actions_from_source(
     return [(m.name, m) for m in methods]
 
 
-def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
-    """AST-walk kit-owned lifecycle actions (partition, grill, sketch, iterate,
-    generate, document, validate, satisfy, repair, createRule, scan)."""
-    kit_specs: tuple[tuple[str, Path, str], ...] = (
+_KIT_LIFECYCLE_SPECS: tuple[tuple[str, Path, str], ...] = (
         ("partition", _REPO_ROOT / "context_tools" / "actions" / "partition" / "partition.py", "partition"),
         ("grill", _REPO_ROOT / "context_tools" / "actions" / "grill_context" / "grill_context.py", "grill_context"),
         ("sketch", _REPO_ROOT / "context_tools" / "actions" / "sketch" / "sketch.py", "sketch"),
@@ -570,8 +567,48 @@ def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
         ("createRule", _REPO_ROOT / "context_tools" / "actions" / "validate" / "validate.py", "validate"),
         ("scan", _REPO_ROOT / "context_tools" / "actions" / "scan" / "scan.py", "scan"),
     )
+
+_LIFECYCLE_KIT_IMPORTS: tuple[tuple[str, str, str], ...] = (
+    ("partition", "context_tools.actions.partition.partition", "Partition"),
+    ("grill", "context_tools.actions.grill_context.grill_context", "GrillContext"),
+    ("sketch", "context_tools.actions.sketch.sketch", "Sketch"),
+    ("iterate", "context_tools.actions.iterate.iterate", "Iterate"),
+    ("generate", "context_tools.actions.generate.generate", "Generate"),
+    ("document", "context_tools.actions.document.document", "Document"),
+    ("validate", "context_tools.actions.validate.validate", "Validate"),
+    ("satisfy", "context_tools.actions.satisfy.satisfy", "Satisfy"),
+    ("repair", "context_tools.actions.improvement.improvement", "Improvement"),
+    ("createRule", "context_tools.actions.validate.validate", "CreateRule"),
+)
+
+
+def resolve_lifecycle_action_owner() -> object:
+    """Load live ``Action`` objects for every kit-owned lifecycle action name."""
+    from primitives.actions.action import _discover_actions
+
+    actions: dict[str, object] = {}
+    for action_name, module_path, class_name in _LIFECYCLE_KIT_IMPORTS:
+        if action_name in actions:
+            continue
+        module = importlib.import_module(module_path)
+        instance = getattr(module, class_name)()
+        discovered = _discover_actions(instance)
+        if action_name in discovered:
+            actions[action_name] = discovered[action_name]
+
+    class _Owner:
+        pass
+
+    owner = _Owner()
+    owner.actions = actions
+    return owner
+
+
+def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
+    """AST-walk kit-owned lifecycle actions (partition, grill, sketch, iterate,
+    generate, document, validate, satisfy, repair, createRule, scan)."""
     results: list[ActionResolution] = []
-    for name, path, dir_name in kit_specs:
+    for name, path, dir_name in _KIT_LIFECYCLE_SPECS:
         methods = _resolve_actions_from_source(path, action_names=frozenset({name}))
         if not methods:
             continue
@@ -1396,6 +1433,20 @@ class CatalogUtility:
         )
 
 
+def _wire_catalog_renderers(
+    repo_url: str,
+    ref: str,
+) -> tuple[CatalogContextTool, CatalogAction, CatalogUtility]:
+    lifecycle_actions = resolve_lifecycle_actions()
+    catalog_tool = CatalogTool(repo_url, ref)
+    hrefs = {r.name: f"actions/{r.name}.html" for r in lifecycle_actions}
+    catalog_action = CatalogAction(repo_url, ref, catalog_tool, hrefs)
+    catalog_fidelity = CatalogFidelity(repo_url, ref, catalog_action, lifecycle_actions)
+    catalog_context_tool = CatalogContextTool(repo_url, ref, catalog_fidelity)
+    catalog_utility = CatalogUtility(repo_url, ref, catalog_tool, catalog_action)
+    return catalog_context_tool, catalog_action, catalog_utility
+
+
 @toolset
 class Catalog:
     """The top-level entry point - the only class ``generate_cdd_catalog.py``
@@ -1404,19 +1455,26 @@ class Catalog:
 
     def __init__(
         self,
-        repo_url: str,
-        ref: str,
-        out_root: str,
-        catalog_context_tool: CatalogContextTool,
-        catalog_action: CatalogAction,
-        catalog_utility: CatalogUtility,
+        repo_url: str = "",
+        ref: str = "",
+        out_root: str = "catalog",
+        catalog_context_tool: CatalogContextTool | None = None,
+        catalog_action: CatalogAction | None = None,
+        catalog_utility: CatalogUtility | None = None,
     ) -> None:
-        self.repo_url = repo_url
-        self.ref = ref
+        default_repo, default_ref = resolve_repo_remote()
+        self.repo_url = repo_url or default_repo
+        self.ref = ref or default_ref
         self.out_root = Path(out_root)
-        self.catalog_context_tool = catalog_context_tool
-        self.catalog_action = catalog_action
-        self.catalog_utility = catalog_utility
+        if catalog_context_tool is None or catalog_action is None or catalog_utility is None:
+            wired = _wire_catalog_renderers(self.repo_url, self.ref)
+            self.catalog_context_tool = catalog_context_tool or wired[0]
+            self.catalog_action = catalog_action or wired[1]
+            self.catalog_utility = catalog_utility or wired[2]
+        else:
+            self.catalog_context_tool = catalog_context_tool
+            self.catalog_action = catalog_action
+            self.catalog_utility = catalog_utility
 
     def _board_tool_entries(
         self,
@@ -1458,15 +1516,43 @@ class Catalog:
         return tools
 
     @prompt(name="generate-catalog")
+    @agent_tool
     def generate_catalog(
+        self,
+        repo_url: str = "",
+        ref: str = "",
+        out_root: str = "",
+    ) -> str:
+        """Render the whole catalog into ``out_root`` with Foundry chrome.
+        No output is ever written outside ``out_root``."""
+        if repo_url:
+            self.repo_url = repo_url
+        if ref:
+            self.ref = ref
+        if out_root:
+            self.out_root = Path(out_root)
+        if repo_url or ref:
+            (
+                self.catalog_context_tool,
+                self.catalog_action,
+                self.catalog_utility,
+            ) = _wire_catalog_renderers(self.repo_url, self.ref)
+        context_tool_entries, utility_entries = load_registry()
+        lifecycle_actions = resolve_lifecycle_actions()
+        action_owner = resolve_lifecycle_action_owner()
+        self._render_catalog(
+            context_tool_entries, utility_entries, lifecycle_actions, action_owner
+        )
+        return f"Catalog regenerated into {self.out_root} using {self.repo_url}@{self.ref}"
+
+    def _render_catalog(
         self,
         context_tool_entries: list[RegistryEntry],
         utility_entries: list[RegistryEntry],
         lifecycle_actions: list[ActionResolution],
         action_owner: object,
     ) -> None:
-        """Render the whole catalog into ``self.out_root`` with Foundry chrome.
-        No output is ever written outside ``out_root``."""
+        """Write every catalog page under ``self.out_root``."""
         from catalog_generator.foundry_chrome import (
             cap_card,
             copy_commons,

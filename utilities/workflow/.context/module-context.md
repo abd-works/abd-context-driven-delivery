@@ -14,3 +14,7 @@ Workflow
 - `WorkTicket` — same Repo as Workflow
 - `workspace` — working folder / WorkSession (one-way)
 - `handoff` (one-way)
+
+## Package themes
+
+Ticket themes for impacted packages live in `.context/workflow-packages.yaml` at the repo root. `/tickets` and `WorkTicket.infer_theme` read that file — cite package location (for example `utilities/mcp_server`) in issue bodies so the board gets the right `theme:` label.

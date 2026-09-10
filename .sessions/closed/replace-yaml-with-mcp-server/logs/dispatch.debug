@@ -1,0 +1,376 @@
+2026-09-09T22:29:42Z ENTRY raw_len=2308 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"7dcc8d54-9d64-4a32-8045-d8c9bd670b02","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:29:42Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:29:42Z ENABLED ['(none)']
+2026-09-09T22:29:42Z MERGED {"permission": "allow"}
+2026-09-09T22:31:02Z ENTRY raw_len=5447 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"a80ed770-72d2-479c-b06f-7113b8a57002","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:31:02Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:31:02Z ENABLED ['(none)']
+2026-09-09T22:31:02Z MERGED {"permission": "allow"}
+2026-09-09T22:32:36Z ENTRY raw_len=3956 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"d5f758ad-598b-4b0f-8e71-80b6c5f3c000","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:32:36Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:32:36Z ENABLED ['(none)']
+2026-09-09T22:32:36Z MERGED {"permission": "allow"}
+2026-09-09T22:33:54Z ENTRY raw_len=1267 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"0281016e-8352-44c4-a3d9-15146bdd571e","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:33:54Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:33:54Z ENABLED ['(none)']
+2026-09-09T22:33:54Z MERGED {"permission": "allow"}
+2026-09-09T22:34:59Z ENTRY raw_len=2057 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"197fa2eb-1039-4d69-9e33-14b6742260bb","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:34:59Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:34:59Z ENABLED ['(none)']
+2026-09-09T22:34:59Z MERGED {"permission": "allow"}
+2026-09-09T22:36:19Z ENTRY raw_len=1754 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"42b51555-71f2-4e88-ae70-5aea6b8af583","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:36:19Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:36:19Z ENABLED ['(none)']
+2026-09-09T22:36:19Z MERGED {"permission": "allow"}
+2026-09-09T22:38:29Z ENTRY raw_len=1103 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"4e5ba9b0-06d7-460f-8566-05379fba13f5","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:38:29Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:38:29Z ENABLED ['(none)']
+2026-09-09T22:38:29Z MERGED {"permission": "allow"}
+2026-09-09T22:39:39Z ENTRY raw_len=1059 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"63fe014c-a5bd-40e3-ae10-092710add192","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:39:39Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:39:39Z ENABLED ['(none)']
+2026-09-09T22:39:39Z MERGED {"permission": "allow"}
+2026-09-09T22:42:43Z ENTRY raw_len=2091 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"78ef1259-16bb-48c1-9a63-5249bd05e803","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:42:43Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:42:43Z ENABLED ['(none)']
+2026-09-09T22:42:43Z MERGED {"permission": "allow"}
+2026-09-09T22:43:46Z ENTRY raw_len=2839 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"084ae9eb-53c9-4124-9ae2-63f0fa00bb2b","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:43:46Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:43:46Z ENABLED ['(none)']
+2026-09-09T22:43:46Z MERGED {"permission": "allow"}
+2026-09-09T22:45:33Z ENTRY raw_len=1160 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"350303e6-32e2-4fce-927a-325cb374c34d","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:45:33Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:45:33Z ENABLED ['(none)']
+2026-09-09T22:45:33Z MERGED {"permission": "allow"}
+2026-09-09T22:45:54Z ENTRY raw_len=1550 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"a2fd4141-68ba-42d5-917c-1df672f7e2b5","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:45:54Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:45:54Z ENABLED ['(none)']
+2026-09-09T22:45:54Z MERGED {"permission": "allow"}
+2026-09-09T22:46:34Z ENTRY raw_len=1742 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"eb2d79e5-9000-44be-af58-a03571e2316e","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:46:34Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:46:34Z ENABLED ['(none)']
+2026-09-09T22:46:34Z MERGED {"permission": "allow"}
+2026-09-09T22:47:16Z ENTRY raw_len=1339 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"2564202a-ef7d-4466-9f47-f1ee9b536d9b","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:47:16Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:47:16Z ENABLED ['(none)']
+2026-09-09T22:47:16Z MERGED {"permission": "allow"}
+2026-09-09T22:47:39Z ENTRY raw_len=1279 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"01dd567e-16b9-4bbd-87b7-c0eb14d185c6","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:47:39Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:47:39Z ENABLED ['(none)']
+2026-09-09T22:47:39Z MERGED {"permission": "allow"}
+2026-09-09T22:48:20Z ENTRY raw_len=1166 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"c999d7b4-d7a4-46bc-8424-24a34f1eb86a","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:48:20Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:48:20Z ENABLED ['(none)']
+2026-09-09T22:48:20Z MERGED {"permission": "allow"}
+2026-09-09T22:48:52Z ENTRY raw_len=943 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"c4d5f7c8-8ecb-489f-83cf-a08d990c9668","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:48:52Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:48:52Z ENABLED ['(none)']
+2026-09-09T22:48:52Z MERGED {"permission": "allow"}
+2026-09-09T22:50:40Z ENTRY raw_len=1347 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"b7e46278-613a-4e23-b25b-bcce629f2daf","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:50:40Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:50:40Z ENABLED ['(none)']
+2026-09-09T22:50:40Z MERGED {"permission": "allow"}
+2026-09-09T22:52:01Z ENTRY raw_len=1067 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"f76ca1df-55a6-4e6b-83a7-30e5beebbfd5","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:52:01Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:52:01Z ENABLED ['(none)']
+2026-09-09T22:52:01Z MERGED {"permission": "allow"}
+2026-09-09T22:54:00Z ENTRY raw_len=1360 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"96611786-f430-43b5-ba83-820b4651e135","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:54:00Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:54:00Z ENABLED ['(none)']
+2026-09-09T22:54:00Z MERGED {"permission": "allow"}
+2026-09-09T22:55:18Z ENTRY raw_len=1096 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"bf890a87-fd2a-47db-9131-c763153b8aaa","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:55:18Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:55:18Z ENABLED ['(none)']
+2026-09-09T22:55:18Z MERGED {"permission": "allow"}
+2026-09-09T22:56:29Z ENTRY raw_len=1933 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"2eb8b130-bdc7-4f68-abf9-7704e1faf845","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:56:29Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:56:29Z ENABLED ['(none)']
+2026-09-09T22:56:29Z MERGED {"permission": "allow"}
+2026-09-09T22:58:24Z ENTRY raw_len=1199 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"ca8a0e1d-4969-440c-9991-2b113716cba1","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T22:58:24Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T22:58:24Z ENABLED ['(none)']
+2026-09-09T22:58:24Z MERGED {"permission": "allow"}
+2026-09-09T23:00:12Z ENTRY raw_len=1898 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"b1dbfb99-4bfc-4fe8-a5f7-d511692e42b0","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:00:12Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:00:12Z ENABLED ['(none)']
+2026-09-09T23:00:12Z MERGED {"permission": "allow"}
+2026-09-09T23:06:03Z ENTRY raw_len=2018 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"d8ddcf6f-0ce7-462e-9631-ecd4240ae562","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:06:03Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:06:03Z ENABLED ['(none)']
+2026-09-09T23:06:03Z MERGED {"permission": "allow"}
+2026-09-09T23:07:21Z ENTRY raw_len=1776 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"f6c00a7c-df9b-4afb-8937-d71e75b577c9","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:07:21Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:07:21Z ENABLED ['(none)']
+2026-09-09T23:07:21Z MERGED {"permission": "allow"}
+2026-09-09T23:10:39Z ENTRY raw_len=2032 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"02c63115-3707-4005-b0fa-d4376ce1f378","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:10:39Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:10:39Z ENABLED ['(none)']
+2026-09-09T23:10:39Z MERGED {"permission": "allow"}
+2026-09-09T23:11:59Z ENTRY raw_len=1359 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"13ef2639-a5ce-4a64-b25b-8831ce38dec1","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:11:59Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:11:59Z ENABLED ['(none)']
+2026-09-09T23:11:59Z MERGED {"permission": "allow"}
+2026-09-09T23:13:39Z ENTRY raw_len=1354 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"556fcec5-6632-48ad-a9b2-551a1c583ba9","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:13:39Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:13:39Z ENABLED ['(none)']
+2026-09-09T23:13:39Z MERGED {"permission": "allow"}
+2026-09-09T23:14:36Z ENTRY raw_len=2195 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"3c07dfd6-3022-4619-ad43-1360a6512b14","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:14:36Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:14:36Z ENABLED ['(none)']
+2026-09-09T23:14:36Z MERGED {"permission": "allow"}
+2026-09-09T23:21:00Z ENTRY raw_len=1916 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"ddc2a887-51be-4ed5-9720-32c21519b99b","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:21:00Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:21:00Z ENABLED ['(none)']
+2026-09-09T23:21:00Z MERGED {"permission": "allow"}
+2026-09-09T23:22:18Z ENTRY raw_len=2009 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"267c4172-88d9-42bb-b5f3-8394ecdd9d70","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:22:18Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:22:18Z ENABLED ['(none)']
+2026-09-09T23:22:18Z MERGED {"permission": "allow"}
+2026-09-09T23:23:54Z ENTRY raw_len=1701 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"561a52e5-4a5b-4692-a527-ebe4a912bf7c","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:23:54Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:23:54Z ENABLED ['(none)']
+2026-09-09T23:23:54Z MERGED {"permission": "allow"}
+2026-09-09T23:24:49Z ENTRY raw_len=1885 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"19ca93f9-0337-4b67-a57b-b7f23125f127","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:24:49Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:24:49Z ENABLED ['(none)']
+2026-09-09T23:24:49Z MERGED {"permission": "allow"}
+2026-09-09T23:25:22Z ENTRY raw_len=1198 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"b3b10db2-5626-4298-91a5-6ba6bab30fc3","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:25:22Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:25:22Z ENABLED ['(none)']
+2026-09-09T23:25:22Z MERGED {"permission": "allow"}
+2026-09-09T23:25:53Z ENTRY raw_len=1611 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"29834c28-38a0-4a42-9d5a-19a83f39dc3f","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:25:53Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:25:53Z ENABLED ['(none)']
+2026-09-09T23:25:53Z MERGED {"permission": "allow"}
+2026-09-09T23:27:22Z ENTRY raw_len=1897 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"6afea0b4-c7a5-4699-8f67-c782445b0e49","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:27:22Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:27:22Z ENABLED ['(none)']
+2026-09-09T23:27:22Z MERGED {"permission": "allow"}
+2026-09-09T23:28:53Z ENTRY raw_len=1877 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"6e5385fb-0fe1-4714-8255-f3c03c4047d7","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:28:53Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:28:53Z ENABLED ['(none)']
+2026-09-09T23:28:53Z MERGED {"permission": "allow"}
+2026-09-09T23:30:31Z ENTRY raw_len=1822 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"f9e61f61-5903-461a-a390-73ca832b9035","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:30:31Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:30:31Z ENABLED ['(none)']
+2026-09-09T23:30:31Z MERGED {"permission": "allow"}
+2026-09-09T23:30:58Z ENTRY raw_len=2084 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"954aa99b-9172-4b75-9ea7-8db7ac200a20","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:30:58Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:30:58Z ENABLED ['(none)']
+2026-09-09T23:30:58Z MERGED {"permission": "allow"}
+2026-09-09T23:32:34Z ENTRY raw_len=1861 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"b05fd713-10eb-4a41-838e-4fc9871085ef","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:32:34Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:32:34Z ENABLED ['(none)']
+2026-09-09T23:32:34Z MERGED {"permission": "allow"}
+2026-09-09T23:35:49Z ENTRY raw_len=2843 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"f8243144-8595-4537-bc8d-22fa02600cc9","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:35:49Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:35:49Z ENABLED ['(none)']
+2026-09-09T23:35:49Z MERGED {"permission": "allow"}
+2026-09-09T23:38:04Z ENTRY raw_len=3276 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"8796af3e-70cb-4bac-9f40-8170885605c8","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:38:04Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:38:04Z ENABLED ['(none)']
+2026-09-09T23:38:04Z MERGED {"permission": "allow"}
+2026-09-09T23:39:51Z ENTRY raw_len=5423 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"547d8b2a-7ed5-48cf-89b4-53ed5e21494a","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:39:51Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:39:51Z ENABLED ['(none)']
+2026-09-09T23:39:51Z MERGED {"permission": "allow"}
+2026-09-09T23:40:34Z ENTRY raw_len=2195 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"fc8c78f5-c878-4f22-8ff8-8e094ba216cd","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:40:34Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:40:34Z ENABLED ['(none)']
+2026-09-09T23:40:34Z MERGED {"permission": "allow"}
+2026-09-09T23:44:35Z ENTRY raw_len=958 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"26e07f63-39f3-4570-8571-491b7d5f3d29","generation_id":"83d6e74d-2640-4f53-9d7e-403d286fc136","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-09T23:44:35Z EVENT 'afterAgentResponse' conversation_id='26e07f63-39f3-4570-8571-491b7d5f3d29' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:44:35Z ENABLED ['(none)']
+2026-09-09T23:44:35Z MERGED {"permission": "allow"}
+2026-09-09T23:47:10Z ENTRY raw_len=1694 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"26e07f63-39f3-4570-8571-491b7d5f3d29","generation_id":"4e0fbe1e-8b67-4239-9905-b4830ad30e31","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-09T23:47:10Z EVENT 'afterAgentResponse' conversation_id='26e07f63-39f3-4570-8571-491b7d5f3d29' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:47:10Z ENABLED ['(none)']
+2026-09-09T23:47:10Z MERGED {"permission": "allow"}
+2026-09-09T23:51:34Z ENTRY raw_len=3054 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"7379260c-ecc3-4e1b-9ac5-bc3406e55d46","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-09T23:51:34Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-09T23:51:34Z ENABLED ['(none)']
+2026-09-09T23:51:34Z MERGED {"permission": "allow"}
+2026-09-10T00:41:18Z ENTRY raw_len=1288 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"26e07f63-39f3-4570-8571-491b7d5f3d29","generation_id":"123307b1-0008-42fc-9a49-109319799ea4","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T00:41:18Z EVENT 'afterAgentResponse' conversation_id='26e07f63-39f3-4570-8571-491b7d5f3d29' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:41:18Z ENABLED ['(none)']
+2026-09-10T00:41:18Z MERGED {"permission": "allow"}
+2026-09-10T00:43:12Z ENTRY raw_len=1897 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"26e07f63-39f3-4570-8571-491b7d5f3d29","generation_id":"eb7174ee-207b-4be3-a1e8-0e070c80d220","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T00:43:12Z EVENT 'afterAgentResponse' conversation_id='26e07f63-39f3-4570-8571-491b7d5f3d29' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:43:12Z ENABLED ['(none)']
+2026-09-10T00:43:12Z MERGED {"permission": "allow"}
+2026-09-10T00:49:02Z ENTRY raw_len=1950 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"f954caea-e59f-4e47-8290-4aa8ab8cf2e5","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T00:49:02Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:49:02Z ENABLED ['(none)']
+2026-09-10T00:49:02Z MERGED {"permission": "allow"}
+2026-09-10T00:50:01Z ENTRY raw_len=2500 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"4947c972-b3c7-48c7-ab04-03afb148d63a","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T00:50:01Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:50:01Z ENABLED ['(none)']
+2026-09-10T00:50:01Z MERGED {"permission": "allow"}
+2026-09-10T00:50:37Z ENTRY raw_len=2833 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"e1e11e7f-51e2-4cca-aae4-27f47fec76df","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T00:50:37Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:50:37Z ENABLED ['(none)']
+2026-09-10T00:50:37Z MERGED {"permission": "allow"}
+2026-09-10T00:55:39Z ENTRY raw_len=2302 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"8e1a2bef-5875-426b-84e6-fc15d2a0cdd9","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T00:55:39Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:55:39Z ENABLED ['(none)']
+2026-09-10T00:55:39Z MERGED {"permission": "allow"}
+2026-09-10T00:56:07Z ENTRY raw_len=1260 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"62737699-64ae-4a55-9826-0369262bf284","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T00:56:07Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:56:07Z ENABLED ['(none)']
+2026-09-10T00:56:07Z MERGED {"permission": "allow"}
+2026-09-10T00:56:32Z ENTRY raw_len=828 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"d6fb3d5e-4474-49b8-957c-33a40bb87fd9","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T00:56:32Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:56:32Z ENABLED ['(none)']
+2026-09-10T00:56:32Z MERGED {"permission": "allow"}
+2026-09-10T00:58:03Z ENTRY raw_len=1390 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"26e07f63-39f3-4570-8571-491b7d5f3d29","generation_id":"64ee5d5c-9ffc-4fa3-923f-ffca3db58d8f","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T00:58:03Z EVENT 'afterAgentResponse' conversation_id='26e07f63-39f3-4570-8571-491b7d5f3d29' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T00:58:03Z ENABLED ['(none)']
+2026-09-10T00:58:03Z MERGED {"permission": "allow"}
+2026-09-10T01:00:03Z ENTRY raw_len=1133 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"26e07f63-39f3-4570-8571-491b7d5f3d29","generation_id":"becf07b9-95ee-4ae4-8fbe-75d29770d1f0","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T01:00:03Z EVENT 'afterAgentResponse' conversation_id='26e07f63-39f3-4570-8571-491b7d5f3d29' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:00:03Z ENABLED ['(none)']
+2026-09-10T01:00:03Z MERGED {"permission": "allow"}
+2026-09-10T01:09:43Z ENTRY raw_len=2619 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"7238ebbc-acaf-4099-89d9-42a85f5c2b5e","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:09:43Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:09:43Z ENABLED ['(none)']
+2026-09-10T01:09:43Z MERGED {"permission": "allow"}
+2026-09-10T01:19:23Z ENTRY raw_len=2100 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"57ee2f95-6c23-42ac-b3c9-ac75ff4abbb2","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:19:23Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:19:23Z ENABLED ['(none)']
+2026-09-10T01:19:23Z MERGED {"permission": "allow"}
+2026-09-10T01:20:59Z ENTRY raw_len=1152 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"c5c06f45-e741-4e1a-a89d-03f0243fbcc5","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:20:59Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:20:59Z ENABLED ['(none)']
+2026-09-10T01:20:59Z MERGED {"permission": "allow"}
+2026-09-10T01:23:56Z ENTRY raw_len=2193 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"2f248740-9928-4a3b-aceb-50fe2ae73bea","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:23:56Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:23:56Z ENABLED ['(none)']
+2026-09-10T01:23:56Z MERGED {"permission": "allow"}
+2026-09-10T01:25:03Z ENTRY raw_len=1086 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"75109f1b-ac4b-4818-81d9-eb971ad132a1","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:25:03Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:25:03Z ENABLED ['(none)']
+2026-09-10T01:25:03Z MERGED {"permission": "allow"}
+2026-09-10T01:26:22Z ENTRY raw_len=1710 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"fd539d67-f9e8-44ca-9d86-6a1cb5ab6c09","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:26:22Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:26:22Z ENABLED ['(none)']
+2026-09-10T01:26:22Z MERGED {"permission": "allow"}
+2026-09-10T01:32:40Z ENTRY raw_len=2239 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"05503f2a-6efa-4bb8-b23f-6efa033c6613","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:32:40Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:32:40Z ENABLED ['(none)']
+2026-09-10T01:32:40Z MERGED {"permission": "allow"}
+2026-09-10T01:34:55Z ENTRY raw_len=1104 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"5725fc6d-fd7a-4339-9b53-c2d10e7eac7a","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:34:55Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:34:55Z ENABLED ['(none)']
+2026-09-10T01:34:55Z MERGED {"permission": "allow"}
+2026-09-10T01:36:13Z ENTRY raw_len=911 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"95c69733-dc42-4ed9-afa7-be663f92e388","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:36:13Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:36:13Z ENABLED ['(none)']
+2026-09-10T01:36:13Z MERGED {"permission": "allow"}
+2026-09-10T01:45:24Z ENTRY raw_len=864 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"2b5efe9c-cbb7-4632-9c42-9382e2965ed3","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:45:24Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:45:24Z ENABLED ['(none)']
+2026-09-10T01:45:24Z MERGED {"permission": "allow"}
+2026-09-10T01:51:43Z ENTRY raw_len=1269 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"148938ba-0b8f-4053-8d5f-3633ddda602f","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:51:43Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:51:43Z ENABLED ['(none)']
+2026-09-10T01:51:43Z MERGED {"permission": "allow"}
+2026-09-10T01:55:02Z ENTRY raw_len=1209 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"acebbc2a-a43b-417f-b8b7-2d74fa0e7824","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T01:55:02Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T01:55:02Z ENABLED ['(none)']
+2026-09-10T01:55:02Z MERGED {"permission": "allow"}
+2026-09-10T02:01:54Z ENTRY raw_len=1483 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"aa6b55e4-0fcf-4b31-ad2e-d179fd530fee","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:01:54Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:01:54Z ENABLED ['(none)']
+2026-09-10T02:01:54Z MERGED {"permission": "allow"}
+2026-09-10T02:08:10Z ENTRY raw_len=642 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"a20016df-c29f-4eae-ba49-69edb9738dfa","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:08:10Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'model_id', 'model_params', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:08:10Z ENABLED ['(none)']
+2026-09-10T02:08:10Z MERGED {"permission": "allow"}
+2026-09-10T02:08:17Z ENTRY raw_len=1731 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"93bbfbe9-0d83-4cee-82ef-8da5d980ef02","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:08:17Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:08:17Z ENABLED ['(none)']
+2026-09-10T02:08:17Z MERGED {"permission": "allow"}
+2026-09-10T02:08:32Z ENTRY raw_len=1875 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"8cdffe87-5108-43b4-b0cc-2da08e03abc4","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:08:32Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:08:32Z ENABLED ['(none)']
+2026-09-10T02:08:32Z MERGED {"permission": "allow"}
+2026-09-10T02:09:33Z ENTRY raw_len=2831 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"2f49e38e-f26a-4f89-8ffb-beec14dd03dd","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:09:33Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:09:33Z ENABLED ['(none)']
+2026-09-10T02:09:33Z MERGED {"permission": "allow"}
+2026-09-10T02:10:54Z ENTRY raw_len=923 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"5ec42571-42f2-4c47-8d17-7a4ac1887fda","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:10:54Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:10:54Z ENABLED ['(none)']
+2026-09-10T02:10:54Z MERGED {"permission": "allow"}
+2026-09-10T02:11:17Z ENTRY raw_len=2144 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"30fdd32e-b2bc-48c3-970e-2851e1d4d680","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:11:17Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:11:17Z ENABLED ['(none)']
+2026-09-10T02:11:17Z MERGED {"permission": "allow"}
+2026-09-10T02:12:17Z ENTRY raw_len=2281 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"e3bc318b-9c76-4500-88ba-5d896e12fdaf","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:12:17Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:12:17Z ENABLED ['(none)']
+2026-09-10T02:12:17Z MERGED {"permission": "allow"}
+2026-09-10T02:18:44Z ENTRY raw_len=2237 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"adfca027-6dbe-4908-b1b6-6a85b74efc3d","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:18:44Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:18:44Z ENABLED ['(none)']
+2026-09-10T02:18:44Z MERGED {"permission": "allow"}
+2026-09-10T02:21:16Z ENTRY raw_len=1526 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"60297832-1bdd-4dd6-a87d-0ccf7cad30f2","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:21:16Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:21:16Z ENABLED ['(none)']
+2026-09-10T02:21:16Z MERGED {"permission": "allow"}
+2026-09-10T02:23:52Z ENTRY raw_len=4713 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"80e1e41e-ce04-4c46-94fc-d1b1c1dc10f3","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:23:52Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:23:52Z ENABLED ['(none)']
+2026-09-10T02:23:52Z MERGED {"permission": "allow"}
+2026-09-10T02:30:13Z ENTRY raw_len=1971 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"da07d78b-aa31-46ef-9b2a-2ab24e287f42","generation_id":"4191c595-a178-4f3b-b894-79fcb7036729","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:30:13Z EVENT 'afterAgentResponse' conversation_id='da07d78b-aa31-46ef-9b2a-2ab24e287f42' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:30:13Z ENABLED ['(none)']
+2026-09-10T02:30:13Z MERGED {"permission": "allow"}
+2026-09-10T02:35:06Z ENTRY raw_len=1341 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"8053e92d-683b-4db7-91d2-a04dac8469aa","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T02:35:06Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:35:06Z ENABLED ['(none)']
+2026-09-10T02:35:06Z MERGED {"permission": "allow"}
+2026-09-10T02:36:25Z ENTRY raw_len=1842 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"1e55b344-abe4-4716-bdf2-6f2b6b8a2378","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T02:36:25Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:36:25Z ENABLED ['(none)']
+2026-09-10T02:36:25Z MERGED {"permission": "allow"}
+2026-09-10T02:37:28Z ENTRY raw_len=1025 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"f1c7a84c-b8ef-4a56-aeaf-20aebe475e54","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T02:37:28Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:37:28Z ENABLED ['(none)']
+2026-09-10T02:37:28Z MERGED {"permission": "allow"}
+2026-09-10T02:38:09Z ENTRY raw_len=998 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"2f4c353f-d07e-4e53-be29-7076049b6596","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T02:38:09Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:38:09Z ENABLED ['(none)']
+2026-09-10T02:38:09Z MERGED {"permission": "allow"}
+2026-09-10T02:39:52Z ENTRY raw_len=1320 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"b5466b30-f490-4b11-af17-0da9933624d5","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T02:39:52Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:39:52Z ENABLED ['(none)']
+2026-09-10T02:39:52Z MERGED {"permission": "allow"}
+2026-09-10T02:42:34Z ENTRY raw_len=1342 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"f1812fee-8796-4d84-8be5-d5ba863f74ed","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T02:42:34Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:42:34Z ENABLED ['(none)']
+2026-09-10T02:42:34Z MERGED {"permission": "allow"}
+2026-09-10T02:44:22Z ENTRY raw_len=958 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"472115e4-4328-4d74-8b5f-9d0dba2432b2","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:44:22Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:44:22Z ENABLED ['(none)']
+2026-09-10T02:44:22Z MERGED {"permission": "allow"}
+2026-09-10T02:48:37Z ENTRY raw_len=1569 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"ca51bb3f-3ca6-405e-b71f-73d636251bca","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:48:37Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:48:37Z ENABLED ['(none)']
+2026-09-10T02:48:37Z MERGED {"permission": "allow"}
+2026-09-10T02:49:04Z ENTRY raw_len=1044 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"befee73b-da3f-4bc4-888f-83c2c2ef60e5","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:49:04Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:49:04Z ENABLED ['(none)']
+2026-09-10T02:49:04Z MERGED {"permission": "allow"}
+2026-09-10T02:49:59Z ENTRY raw_len=915 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"32e74762-8771-4bc9-97ce-0da1820f1bc7","generation_id":"0f3f8b28-506f-4d30-b861-780692552763","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T02:49:59Z EVENT 'afterAgentResponse' conversation_id='32e74762-8771-4bc9-97ce-0da1820f1bc7' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:49:59Z ENABLED ['(none)']
+2026-09-10T02:49:59Z MERGED {"permission": "allow"}
+2026-09-10T02:52:25Z ENTRY raw_len=1457 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0e0e3022-d89b-47ca-a41d-e962101e1fe0","generation_id":"7ea28ec3-f96b-4906-99d7-920361a1758f","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T02:52:25Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:52:25Z ENABLED ['(none)']
+2026-09-10T02:52:25Z MERGED {"permission": "allow"}
+2026-09-10T02:54:01Z ENTRY raw_len=2255 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0e0e3022-d89b-47ca-a41d-e962101e1fe0","generation_id":"79f4f140-d934-43ea-81a9-c92fc08dd48c","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T02:54:01Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T02:54:01Z ENABLED ['(none)']
+2026-09-10T02:54:01Z MERGED {"permission": "allow"}
