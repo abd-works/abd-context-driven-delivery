@@ -17,6 +17,8 @@ skill = skill_decorator
 
 class Skill(HarnessTool):
     def relative_path(self) -> Path:
+        if self.folder:
+            return Path("skills") / self.folder / self.name / "SKILL.md"
         return Path("skills") / self.name / "SKILL.md"
 
     def render(self) -> str:
@@ -32,6 +34,7 @@ class Skill(HarnessTool):
         if not self.body:
             name = self.name
             meta = source if isinstance(source, dict) else {}
+            transport = meta.get("transport") or "cli"
             if meta.get("fidelity"):
                 fidelity_name = meta.get("fidelity_slug") or name
                 if meta.get("extended"):
@@ -54,6 +57,7 @@ class Skill(HarnessTool):
                         kind="fidelity",
                         fidelities=meta.get("fidelities") or (),
                         constructor_context=meta.get("constructor_context") or None,
+                        transport=transport,
                     )
             elif meta.get("action") or meta.get("source_kind") == "action":
                 self.body = ActionBody.from_source(
@@ -68,6 +72,7 @@ class Skill(HarnessTool):
                     operation=meta.get("operation") or "",
                     extended=meta.get("extended") or False,
                     constructor_context=meta.get("constructor_context") or None,
+                    transport=transport,
                 )
             elif meta.get("source_kind") == "utility":
                 self.body = UtilityBody.from_source(
@@ -78,6 +83,7 @@ class Skill(HarnessTool):
                     invoke=meta.get("invoke") or "tool",
                     operation=meta.get("operation") or "",
                     constructor_context=meta.get("constructor_context") or None,
+                    transport=transport,
                 )
             else:
                 self.body = ContextToolBody.from_source(
@@ -87,6 +93,7 @@ class Skill(HarnessTool):
                     fidelities=meta.get("fidelities") or (),
                     actions=meta.get("actions") or (),
                     extended=meta.get("extended") or False,
+                    transport=transport,
                 )
         meta = source if isinstance(source, dict) else {}
         if not self.description:

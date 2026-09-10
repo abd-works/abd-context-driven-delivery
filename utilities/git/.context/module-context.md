@@ -39,7 +39,9 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Commit.format(subject, trailers)` / `Commit.from_message(sha, message)` — message + trailer `data`
 - `Repo.attach_project(owner, number)` → `Project` (links the board onto this repository)
 - `Project.link_repository()` — `gh project link` so the board appears on the repo Projects tab
-- `Project.state_named(name)` — column on the board
+- `Project.state_named(name)` — column on the board (any live Status option)
+- `Project.refresh_states()` / `Project.status_option_names()` — hydrate columns from GitHub
+- `GH_PROJECT_SCOPES_HINT` — `gh auth refresh -h github.com -s read:project,project` when board API calls fail
 - `Ticket.set_status(state)` / `Ticket.parse_number(ref)` / `Ticket.github_ref(...)` / `Ticket.close()`
 - `Ticket.add_label(name)` / `Ticket.add_theme(theme)` / `issue_theme_label(theme)` — issue-sidebar `theme:<slug>` (filter/group; not a Status column)
 - `Ticket.set_type(name)` — apply an org issue Type name (WorkTicket owns defect / small change / feature mapping)

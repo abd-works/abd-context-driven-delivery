@@ -37,8 +37,9 @@ class Prompt(HarnessTool):
         self.apply_source(source)
         if not self.body and isinstance(source, dict):
             name = self.name
+            transport = source.get("transport") or "cli"
             if source.get("format"):
-                self.body = FormatBody.from_source(format=name)
+                self.body = FormatBody.from_source(format=name, transport=transport)
                 self.description = self.description or name
             elif source.get("fidelity"):
                 fidelity_name = source.get("fidelity_slug") or name
@@ -62,6 +63,7 @@ class Prompt(HarnessTool):
                         kind="fidelity",
                         fidelities=source.get("fidelities") or (),
                         constructor_context=source.get("constructor_context") or None,
+                        transport=transport,
                     )
             elif source.get("action") or source.get("source_kind") == "action":
                 self.body = ActionBody.from_source(
@@ -76,6 +78,7 @@ class Prompt(HarnessTool):
                     operation=source.get("operation") or "",
                     constructor_context=source.get("constructor_context") or None,
                     extended=source.get("extended") or False,
+                    transport=transport,
                 )
             else:
                 self.body = UtilityBody.from_source(
@@ -86,6 +89,7 @@ class Prompt(HarnessTool):
                     invoke=source.get("invoke") or "tool",
                     operation=source.get("operation") or "",
                     constructor_context=source.get("constructor_context") or None,
+                    transport=transport,
                 )
             if source.get("overview"):
                 self.description = source["overview"]

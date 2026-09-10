@@ -340,6 +340,27 @@ with description("a WorkTicket"):
         expect(WorkTicket.infer_theme("Queue for CLI agent")).to(equal("cli-agent"))
         expect(WorkTicket.infer_theme("sketch is really rough")).to(equal("sketch"))
 
+    with it("should infer theme from workflow-packages.yaml by location or layer name"):
+        import tempfile
+        from pathlib import Path
+
+        tmp = Path(tempfile.mkdtemp())
+        context_dir = tmp / ".context"
+        context_dir.mkdir(parents=True)
+        (context_dir / "workflow-packages.yaml").write_text(
+            "packages:\n"
+            "  - location: utilities/mcp_server\n"
+            "    layer: MCP Invocation Layer\n"
+            "    theme: mcp-invocation-layer\n",
+            encoding="utf-8",
+        )
+        expect(
+            WorkTicket.infer_theme("deploy harness for utilities/mcp_server", tmp)
+        ).to(equal("mcp-invocation-layer"))
+        expect(
+            WorkTicket.infer_theme("MCP Invocation Layer host tests", tmp)
+        ).to(equal("mcp-invocation-layer"))
+
 
 with description("a Workflow start path"):
     with context("with an issue available"):

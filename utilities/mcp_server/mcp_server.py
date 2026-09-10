@@ -6,34 +6,66 @@ import ast
 import inspect
 import textwrap
 from collections.abc import Callable
-from dataclasses import dataclass
-from typing import Generic, Protocol, TypeVar
+from typing import Protocol
 
+from primitives.instructions import set_active_tool_invoker
 from tools.tool import _ToolsetLoader as _CddToolsetLoader
-
-_TBinding = TypeVar("_TBinding")
-_ACTIVE_CTX: _McpRuntimeContext | None = None
 
 
 class AnnotatedToolset(Protocol):
     """CDD toolset instance constructed for MCP discovery."""
 
-
-@dataclass(frozen=True)
-class _McpRuntimeContext:
-    server: _McpServer
-    toolset_slug: str
+    @property
+    def toolset_name(self) -> str:
+        """Public toolset name — first segment of every MCP name on this instance."""
 
 
-@dataclass(frozen=True)
-class _ToolBinding:
-    """A registered AI-callable operation exposed to MCP under a dotted name."""
+def _unbound(method: Callable[..., object]) -> Callable[..., object]:
+    return getattr(method, "__func__", method)
 
-    mcp_name: str
-    toolset_slug: str
-    method_name: str
-    callable: Callable[..., object]
-    description: str
+
+def _toolset_from_bound(method: Callable[..., object]) -> AnnotatedToolset:
+    instance = getattr(method, "__self__", None)
+    if instance is None:
+        raise TypeError("expected a bound method on a toolset instance")
+    return instance
+
+
+class _McpPrimitive:
+    """Shared identity for MCP tools and prompts.
+
+    MCP defines separate primitives (tools, prompts, resources) with no protocol-level
+    superclass. This base holds only what our tool and prompt types share locally.
+    """
+
+    def __init__(self, bound_method: Callable[..., object]) -> None:
+        instance = _toolset_from_bound(bound_method)
+        self.toolset_name = instance.toolset_name
+        self.method_name = bound_method.__name__
+        self.callable = bound_method
+
+    @property
+    def mcp_name(self) -> str:
+        return f"{self.toolset_name}.{self.method_name}"
+
+    def register_on(self, registry: dict[str, _McpPrimitive]) -> None:
+        if self.mcp_name in registry:
+            raise ValueError(f"duplicate MCP name: {self.mcp_name}")
+        registry[self.mcp_name] = self
+
+
+class McpTool(_McpPrimitive):
+    """One MCP tool — an @agent_tool on a loaded toolset instance."""
+
+    def __init__(self, bound_method: Callable[..., object]) -> None:
+        function = _unbound(bound_method)
+        if not (
+            getattr(function, "_is_agent_tool", False)
+            or getattr(function, "_is_agent_instructions", False)
+        ):
+            raise TypeError(f"{function.__name__} is not an @agent_tool or @agent_instructions")
+        super().__init__(bound_method)
+        self.description = (inspect.getdoc(function) or "").strip()
 
     def invocable_parameters(self) -> tuple[str, ...]:
         sig = inspect.signature(self.callable)
@@ -48,172 +80,38 @@ class _ToolBinding:
             )
         )
 
-
-@dataclass(frozen=True)
-class _InstructionBinding:
-    """Agent guidance registered for discovery; body executes when invoked."""
-
-    mcp_name: str
-    toolset_slug: str
-    method_name: str
-    prompt_text: str
-    referenced_tool_names: tuple[str, ...]
-    callable: Callable[..., object]
+    def invoke(self, arguments: dict[str, object] | None = None) -> object:
+        return self.callable(**dict(arguments or {}))
 
 
-class _BindingCatalog(Generic[_TBinding]):
-    def __init__(self) -> None:
-        self._bindings: dict[str, _TBinding] = {}
+class McpPrompt(_McpPrimitive):
+    """One MCP prompt — an @instruction orchestration body on a loaded toolset instance."""
 
-    @property
-    def names(self) -> tuple[str, ...]:
-        return tuple(sorted(self._bindings))
+    def __init__(self, bound_method: Callable[..., object]) -> None:
+        function = _unbound(bound_method)
+        if not getattr(function, "_is_instruction_orchestration", False):
+            raise TypeError(f"{function.__name__} is not an @instruction orchestration body")
+        super().__init__(bound_method)
+        self.prompt_text = (inspect.getdoc(function) or "").strip()
+        self.referenced_tool_names = self._referenced_tool_names(function)
 
-    def _register(self, binding: _TBinding, *, mcp_name: str) -> None:
-        if mcp_name in self._bindings:
-            raise ValueError(f"duplicate MCP name: {mcp_name}")
-        self._bindings[mcp_name] = binding
+    def invoke(self, server: McpServer, arguments: dict[str, object] | None = None) -> object:
+        def invoke_referenced_tool(
+            referenced: Callable[..., object], call_args: dict[str, object]
+        ) -> object:
+            method_name = getattr(referenced, "__name__", "")
+            return server.invoke_tool(f"{self.toolset_name}.{method_name}", call_args)
 
-    def binding_for(self, mcp_name: str) -> _TBinding | None:
-        if mcp_name in self._bindings:
-            return self._bindings[mcp_name]
-        return None
-
-
-class _McpToolCatalog(_BindingCatalog[_ToolBinding]):
-    """Registry of AI tool bindings keyed by dotted MCP name."""
-
-    def register(self, binding: _ToolBinding) -> None:
-        self._register(binding, mcp_name=binding.mcp_name)
-
-
-class _McpInstructionCatalog(_BindingCatalog[_InstructionBinding]):
-    """Registry of agent guidance bindings keyed by dotted MCP name."""
-
-    def register(self, binding: _InstructionBinding) -> None:
-        self._register(binding, mcp_name=binding.mcp_name)
-
-
-class _McpNameFormatter:
-    """Derives stable dotted MCP names from CDD toolset identity."""
-
-    def format(self, toolset_slug: str, method_name: str) -> str:
-        return f"{toolset_slug}.{method_name}"
-
-
-def mcp_instruction(func: Callable[..., object]) -> Callable[..., object]:
-    """Mark a method as runnable agent guidance for MCP."""
-    func._is_mcp_instruction = True  # type: ignore[attr-defined]
-    return func
-
-
-def _lookup_runtime_context() -> _McpRuntimeContext | None:
-    return _ACTIVE_CTX
-
-
-def _require_runtime_context() -> _McpRuntimeContext:
-    ctx = _lookup_runtime_context()
-    if ctx is None:
-        raise RuntimeError("tool(...) is only valid during instruction invocation")
-    return ctx
-
-
-def _invoke_registered_tool(
-    ctx: _McpRuntimeContext,
-    bound_method: Callable[..., object],
-    arguments: dict[str, object],
-) -> object:
-    method_name = getattr(bound_method, "__name__", "")
-    mcp_name = ctx.server.name_formatter.format(ctx.toolset_slug, method_name)
-    return ctx.server.invoke_tool(mcp_name, arguments)
-
-
-def tool(bound_method: Callable[..., object], /, **arguments: object) -> object:
-    """Invoke an AI-callable tool from within agent guidance orchestration."""
-    ctx = _require_runtime_context()
-    return _invoke_registered_tool(ctx, bound_method, dict(arguments))
-
-
-class _ToolsetLoader:
-    """Discover toolsets, construct instances, and collect MCP bindings."""
-
-    def __init__(
-        self,
-        *,
-        name_formatter: _McpNameFormatter,
-        toolset_loader: _CddToolsetLoader | None = None,
-    ) -> None:
-        self._name_formatter = name_formatter
-        self._toolset_loader = toolset_loader or _CddToolsetLoader.instance()
-
-    def load_instances(
-        self,
-        toolset_refs: tuple[str, ...],
-        *,
-        constructor_context: dict[str, object] | None = None,
-    ) -> tuple[AnnotatedToolset, ...]:
-        context = dict(constructor_context or {})
-        instances: list[AnnotatedToolset] = []
-        for ref in toolset_refs:
-            toolset_cls = self._toolset_loader.load(ref)
-            instances.append(toolset_cls(**context))
-        return tuple(instances)
-
-    def collect_tool_bindings(self, instance: AnnotatedToolset) -> tuple[_ToolBinding, ...]:
-        slug = self.toolset_slug(instance)
-        bindings: list[_ToolBinding] = []
-        for name, member in inspect.getmembers(instance.__class__, predicate=inspect.isfunction):
-            if not self._is_ai_tool(member):
-                continue
-            bound = member.__get__(instance, instance.__class__)
-            bindings.append(
-                _ToolBinding(
-                    mcp_name=self._name_formatter.format(slug, name),
-                    toolset_slug=slug,
-                    method_name=name,
-                    callable=bound,
-                    description=(inspect.getdoc(member) or "").strip(),
-                )
-            )
-        return tuple(bindings)
-
-    def collect_instruction_bindings(
-        self, instance: AnnotatedToolset
-    ) -> tuple[_InstructionBinding, ...]:
-        slug = self.toolset_slug(instance)
-        bindings: list[_InstructionBinding] = []
-        for name, member in inspect.getmembers(instance.__class__, predicate=inspect.isfunction):
-            if not getattr(member, "_is_mcp_instruction", False):
-                continue
-            bound = member.__get__(instance, instance.__class__)
-            bindings.append(
-                _InstructionBinding(
-                    mcp_name=self._name_formatter.format(slug, name),
-                    toolset_slug=slug,
-                    method_name=name,
-                    prompt_text=(inspect.getdoc(member) or "").strip(),
-                    referenced_tool_names=self._referenced_tool_names(member),
-                    callable=bound,
-                )
-            )
-        return tuple(bindings)
-
-    @staticmethod
-    def toolset_slug(instance: AnnotatedToolset) -> str:
-        explicit = getattr(instance.__class__, "TOOLSET_SLUG", None)
-        if isinstance(explicit, str) and explicit.strip():
-            return explicit.strip()
-        module = instance.__class__.__module__.split(".")[-1]
-        return module.replace("-", "_")
-
-    @staticmethod
-    def _is_ai_tool(member: Callable[..., object]) -> bool:
-        return bool(getattr(member, "_is_agent_tool", False))
-
-    @staticmethod
-    def _referenced_tool_names(method: Callable[..., object]) -> tuple[str, ...]:
+        set_active_tool_invoker(invoke_referenced_tool)
         try:
-            source = textwrap.dedent(inspect.getsource(method))
+            return self.callable(**dict(arguments or {}))
+        finally:
+            set_active_tool_invoker(None)
+
+    @staticmethod
+    def _referenced_tool_names(function: Callable[..., object]) -> tuple[str, ...]:
+        try:
+            source = textwrap.dedent(inspect.getsource(function))
         except (OSError, TypeError):
             return ()
         tree = ast.parse(source)
@@ -231,22 +129,40 @@ class _ToolsetLoader:
         return tuple(dict.fromkeys(names))
 
 
-class _McpServer:
-    """Persistent local MCP server for CDD tool and instruction discovery."""
+class McpToolset:
+    """MCP view of one loaded CDD toolset — discover operations and register them on a server."""
 
-    def __init__(
-        self,
-        *,
-        tool_catalog: _McpToolCatalog,
-        instruction_catalog: _McpInstructionCatalog,
-        loader: _ToolsetLoader,
-        name_formatter: _McpNameFormatter,
-    ) -> None:
-        self._tool_catalog = tool_catalog
-        self._instruction_catalog = instruction_catalog
-        self._loader = loader
-        self._name_formatter = name_formatter
-        self._instances: dict[str, AnnotatedToolset] = {}
+    def __init__(self, instance: AnnotatedToolset) -> None:
+        self.instance = instance
+        self.toolset_name = instance.toolset_name
+        self.tools: dict[str, McpTool] = {}
+        self.prompts: dict[str, McpPrompt] = {}
+        for name, function in inspect.getmembers(
+            instance.__class__, predicate=inspect.isfunction
+        ):
+            bound = getattr(instance, name)
+            if getattr(function, "_is_agent_tool", False) or getattr(
+                function, "_is_agent_instructions", False
+            ):
+                McpTool(bound).register_on(self.tools)
+            elif getattr(function, "_is_instruction_orchestration", False):
+                McpPrompt(bound).register_on(self.prompts)
+
+    def register_on(self, server: McpServer) -> None:
+        for tool in self.tools.values():
+            tool.register_on(server._tools)
+        for prompt in self.prompts.values():
+            prompt.register_on(server._prompts)
+
+
+class McpServer:
+    """Persistent local MCP server — load toolsets, find tools and prompts, delegate."""
+
+    def __init__(self, *, toolset_loader: _CddToolsetLoader | None = None) -> None:
+        self._toolset_loader = toolset_loader or _CddToolsetLoader.instance()
+        self._toolsets: dict[str, McpToolset] = {}
+        self._tools: dict[str, McpTool] = {}
+        self._prompts: dict[str, McpPrompt] = {}
         self._started = False
 
     @property
@@ -254,8 +170,8 @@ class _McpServer:
         return self._started
 
     @property
-    def name_formatter(self) -> _McpNameFormatter:
-        return self._name_formatter
+    def toolsets(self) -> dict[str, McpToolset]:
+        return self._toolsets
 
     def start(
         self,
@@ -263,80 +179,41 @@ class _McpServer:
         *,
         constructor_context: dict[str, object] | None = None,
     ) -> None:
-        for instance in self._loader.load_instances(
-            toolset_refs, constructor_context=constructor_context
-        ):
-            slug = self._loader.toolset_slug(instance)
-            self._instances[slug] = instance
-            for binding in self._loader.collect_tool_bindings(instance):
-                self._tool_catalog.register(binding)
-            for binding in self._loader.collect_instruction_bindings(instance):
-                self._instruction_catalog.register(binding)
+        context = dict(constructor_context or {})
+        for ref in toolset_refs:
+            instance = self._toolset_loader.load(ref)(**context)
+            toolset = McpToolset(instance)
+            toolset.register_on(self)
+            self._toolsets[toolset.toolset_name] = toolset
         self._started = True
 
     def list_tools(self) -> tuple[str, ...]:
-        return self._tool_catalog.names
+        return tuple(sorted(self._tools))
 
-    def list_instructions(self) -> tuple[str, ...]:
-        return self._instruction_catalog.names
-
-    def instruction_for(self, mcp_name: str) -> _InstructionBinding | None:
-        return self._instruction_catalog.binding_for(mcp_name)
-
-    def invocable_parameters_for(self, mcp_name: str) -> tuple[str, ...]:
-        binding = self._tool_catalog.binding_for(mcp_name)
-        if binding is None:
-            raise KeyError(mcp_name)
-        return binding.invocable_parameters()
+    def list_prompts(self) -> tuple[str, ...]:
+        return tuple(sorted(self._prompts))
 
     def invoke_tool(
         self, mcp_name: str, arguments: dict[str, object] | None = None
     ) -> object:
-        binding = self._tool_catalog.binding_for(mcp_name)
-        if binding is None:
+        tool = self._tools.get(mcp_name)
+        if tool is None:
             raise KeyError(mcp_name)
-        return binding.callable(**dict(arguments or {}))
+        return tool.invoke(arguments)
 
-    def invoke_instruction(
+    def invoke_prompt(
         self, mcp_name: str, arguments: dict[str, object] | None = None
     ) -> object:
-        binding = self._instruction_catalog.binding_for(mcp_name)
-        if binding is None:
+        prompt = self._prompts.get(mcp_name)
+        if prompt is None:
             raise KeyError(mcp_name)
-        token = self._push_runtime_context(binding.toolset_slug)
-        try:
-            return binding.callable(**dict(arguments or {}))
-        finally:
-            self._pop_runtime_context(token)
+        return prompt.invoke(self, arguments)
 
-    def _push_runtime_context(self, toolset_slug: str) -> _McpRuntimeContext | None:
-        global _ACTIVE_CTX
-        previous = _ACTIVE_CTX
-        _ACTIVE_CTX = _McpRuntimeContext(server=self, toolset_slug=toolset_slug)
-        return previous
-
-    def _pop_runtime_context(self, previous: _McpRuntimeContext | None) -> None:
-        global _ACTIVE_CTX
-        _ACTIVE_CTX = previous
-
-
-ToolBinding = _ToolBinding
-InstructionBinding = _InstructionBinding
-McpToolCatalog = _McpToolCatalog
-McpInstructionCatalog = _McpInstructionCatalog
-McpNameFormatter = _McpNameFormatter
-ToolsetLoader = _ToolsetLoader
-McpServer = _McpServer
 
 __all__ = [
     "AnnotatedToolset",
-    "InstructionBinding",
-    "McpInstructionCatalog",
-    "McpNameFormatter",
+    "McpPrompt",
     "McpServer",
-    "McpToolCatalog",
-    "ToolBinding",
-    "ToolsetLoader",
-    "mcp_instruction",
-    "tool",
+    "McpTool",
+    "McpToolset",
 ]

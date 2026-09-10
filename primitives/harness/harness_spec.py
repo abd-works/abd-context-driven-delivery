@@ -1714,6 +1714,31 @@ with description("harness bodies for manifest-alone invoke (#45)"):
             expect(text).to(contain("Follow response.instructions"))
             expect(text).not_to(contain("<request.yaml|->"))
 
+    with context("when transport is mcp"):
+        with it("should emit a dotted MCP tool reference instead of tools.ps1"):
+            text = resolve_text(
+                "behavior",
+                "context_tools.bdd.bdd:Bdd",
+                kind="fidelity",
+                transport="mcp",
+            )
+            expect(text).to(contain("Use MCP tool:"))
+            expect(text).to(contain("bdd.generate"))
+            expect(text).not_to(contain("tools.ps1 run -"))
+            expect(text).not_to(contain("toolset:"))
+
+        with it("should name utility tools with the toolset slug"):
+            text = resolve_text(
+                "start",
+                "workflow.workflow:Workflow",
+                kind="utility",
+                invoke="tool",
+                transport="mcp",
+            )
+            expect(text).to(contain("Use MCP tool:"))
+            expect(text).to(contain("workflow.start"))
+            expect(text).not_to(contain("through the tools cli"))
+
 
 with description("_frontmatter model"):
     with it("should include model when set and never disable-model-invocation"):

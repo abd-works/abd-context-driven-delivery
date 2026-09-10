@@ -116,6 +116,19 @@ Python callable
 
 Add one persistent local MCP server.
 
+### Host process (implemented)
+
+| Decision | Choice |
+|---|---|
+| Transport | **stdio** — Cursor spawns one child process; not SSE/HTTP until remote hosting is needed |
+| Python SDK | Official **`mcp==1.30.0`** (`mcp.server.Server` + `stdio_server`) |
+| Entry | `python -m mcp_server --toolsets module:Class,...` or `MCP_TOOLSET_REFS` |
+| Adapter | `McpHost` — `tools/list`, `tools/call`, `prompts/list`, `prompts/get` → `McpServer` |
+| Health check | Built-in `cdd.ping` → `pong` |
+| Tests | Manual discovery first (`scripts/discover_host.py`), then `mcp_server_host_spec.py` (real stdio subprocess) |
+
+Persistence is **process lifetime**: the host keeps one Python interpreter; `McpServer.start()` runs once at boot; later `tools/call` hits the same enrolled instances.
+
 It should:
 
 - discover CDD `@tool` operations;

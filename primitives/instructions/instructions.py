@@ -13,6 +13,23 @@ InstructionHost: TypeAlias = Any
 
 F = TypeVar("F", bound=Callable[..., Any])
 
+_ToolInvoker = Callable[[Callable[..., object], dict[str, object]], object]
+_active_tool_invoker: _ToolInvoker | None = None
+
+
+def set_active_tool_invoker(invoker: _ToolInvoker | None) -> None:
+    """Register the runtime that resolves tool(...) calls during @instruction orchestration."""
+    global _active_tool_invoker
+    _active_tool_invoker = invoker
+
+
+def tool(bound_method: Callable[..., object], /, **arguments: object) -> object:
+    """Invoke an @agent_tool from inside a runnable @instruction orchestration body."""
+    invoker = _active_tool_invoker
+    if invoker is None:
+        raise RuntimeError("tool(...) is only valid during instruction invocation")
+    return invoker(bound_method, dict(arguments))
+
 
 def _section_heading_for_name(name: str) -> str:
     """Snake/kebab tool names -> markdown section titles (``create_session`` -> ``Create Session``)."""
@@ -243,10 +260,17 @@ def instruction(
     group: str | None = None,
     filter_key: str | None = None,
     override: bool = False,
+    orchestration: bool = False,
     label: str | None = None,
 ) -> F | Callable[[F], F]:
     def decorate(target: F) -> F:
         resolved_label = label or target.__name__
+
+        if orchestration:
+            wrapped = target
+            wrapped._is_instruction_orchestration = True  # type: ignore[attr-defined]
+            wrapped._instruction_label = resolved_label  # type: ignore[attr-defined]
+            return wrapped  # type: ignore[return-value]
 
         if override:
             wrapped = target

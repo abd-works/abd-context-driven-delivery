@@ -402,3 +402,988 @@ text: ## Validate — `utilities/mcp_server` (bdd / development)
 
 All 7 rules clean, 0 violations:
 ... [37 lines, 1517 chars total]
+
+==============================================================================
+2026-09-09T22:31:02Z  afterAgentResponse  conv=da07d78b  gen=a80ed770  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: ## Validate — `mcp_server_spec.py` against **bdd-development rules**
+
+**Ran:** `validate` + `scan` (bdd, all 7 scanner rules on `utilities/mcp_server`)  
+**Tests:** 14/14 green
+
+Scanners only catch mechanical patterns. Below is **every named rule** from bdd-development, judged with evidence.
+
+---
+... [64 lines, 4591 chars total]
+
+==============================================================================
+2026-09-09T22:32:36Z  afterAgentResponse  conv=da07d78b  gen=d5f758ad  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — and you're right to call it out. The scanners don't catch this; **`nest-by-enabling-events`** is the rule that covers it.
+
+### The rule
+
+From bdd-development:
+
+> **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
+
+... [68 lines, 3110 chars total]
+
+==============================================================================
+2026-09-09T22:33:54Z  afterAgentResponse  conv=da07d78b  gen=0281016e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Deleted the scanner. The rule lives only in `context_tools/bdd/bdd.md` now — that's what **validate** reads via **contexts**.
+
+**`context-setup-expresses-state`** — added in three places:
+
+1. **Shared rules** (behavior + development)
+2. **modules** scaffold key rules
+3. **development** rules (explicitly calls out `before.each` as Arrange)
+
+... [9 lines, 517 chars total]
+
+==============================================================================
+2026-09-09T22:34:59Z  afterAgentResponse  conv=da07d78b  gen=197fa2eb  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Restructured the whole spec so labels match setup and behavior.
+
+**Hierarchy fix**
+- Server build + `start()` now lives under `an MCP server` → `that has been built and started with annotated toolsets` — the `before.each` matches that label.
+- Annotation branches are nested under the running server: `that is hosting a tool operation annotated for direct AI invocation` and `that is hosting agent guidance annotated for orchestration`.
+- Invocation tests sit under `that has had the operation/guidance invoked through MCP` so discovery vs invoke are separate preconditions.
+
+**Language alignment**
+... [18 lines, 1297 chars total]
+
+==============================================================================
+2026-09-09T22:36:19Z  afterAgentResponse  conv=da07d78b  gen=42b51555  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — `self.server.start((_HOSTING_DEMO_REF,))` is what loads `HostingDemo`, constructs the instance, and registers its `@agent_tool` and `@mcp_instruction` methods. That was buried behind `_demo_ref()` before.
+
+The spec now shows the chain explicitly:
+
+1. **`that has been built`** — `self.server = _build_server()` only
+2. **`that has called start with the HostingDemo @toolset class reference`** — `self.server.start((_HOSTING_DEMO_REF,))` where `_HOSTING_DEMO_REF` is derived from the imported `HostingDemo` class
+3. **Discovery** — names the actual method and annotation (`HostingDemo.increment`
+... [10 lines, 994 chars total]
+
+==============================================================================
+2026-09-09T22:38:29Z  afterAgentResponse  conv=da07d78b  gen=4e5ba9b0  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: No good reason — `getattr` was just defensive defaulting. These are our own fixture classes; if the decorator didn't set the marker, we want that to fail loudly.
+
+Now it's direct access:
+
+```python
+expect(HostingDemo.increment._is_agent_tool).to(equal(True))
+expect(HostingDemo.plan_work._is_mcp_instruction).to(equal(True))
+```
+... [10 lines, 358 chars total]
+
+==============================================================================
+2026-09-09T22:39:39Z  afterAgentResponse  conv=da07d78b  gen=63fe014c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done. Removed the `_INCREMENT`, `_READ_COUNT`, `_PLAN_WORK`, and `_ORCHESTRATE_WITH_PLAIN` constants — tests now use the literal MCP names like `"hosting_demo.increment"` and `"hosting_demo.plan_work"` directly. `start()` uses `f"{HostingDemo.__module__}:{HostingDemo.__name__}"` inline. All 19 examples still green.
+
+==============================================================================
+2026-09-09T22:42:43Z  afterAgentResponse  conv=da07d78b  gen=78ef1259  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — I should have checked the spec first.
+
+Per `mcp_server_spec.md`, the authoring surface is:
+
+- **`@agent_tool`** (spec says `@tool`) — AI-callable operations
+- **`@instruction`** — runnable orchestration; docstring is the prompt, body runs on invoke
+- **`tool(...)`** — explicit AI tool boundary inside an instruction
+- **`@prompt` / `@skill`** — harness deploy only, not MCP discovery
+... [21 lines, 1310 chars total]
+
+==============================================================================
+2026-09-09T22:43:46Z  afterAgentResponse  conv=da07d78b  gen=084ae9eb  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Second pass against `mcp_server_spec.md` § Tests and acceptance criteria (items 3–8). Findings and fixes:
+
+### Wrong in the BDD (fixed)
+
+1. **Hierarchy bug** — `orchestrate_with_plain` tests lived under `that has invoked HostingDemo.plan_work`. That violates `nest-by-enabling-events`: orchestrate_with_plain is its own `@instruction`, not a child of plan_work invocation.
+
+2. **Missing `guidance_only`** — Spec requires `@instruction` discovery with correct docstring and `tool(...)` extraction. `HostingDemo.guidance_only` exists but had zero coverage (the no-referenced-tools case).
+
+... [33 lines, 2053 chars total]
+
+==============================================================================
+2026-09-09T22:45:33Z  afterAgentResponse  conv=da07d78b  gen=350303e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed. One `@agent_tool` discovery branch now; `read_count` is nested under it with `with no invocable parameters` holding the single empty-parameter test.
+
+Applied the same pattern to `@instruction` discovery — `plan_work` carries the shared discovery tests; `guidance_only` and `orchestrate_with_plain` nest only what differs (no repeated annotation checks or duplicate `list_instructions` calls).
+
+29 examples green.
+
+==============================================================================
+2026-09-09T22:45:54Z  afterAgentResponse  conv=da07d78b  gen=a2fd4141  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — I wasn't following it consistently. I wrote `utilities/mcp_server/AGENTS.md` once (for the `mcp_instruction` fix) and then kept making corrections without recording them in the same turn. That's exactly what the rule is meant to prevent.
+
+I've now updated:
+
+- **`utilities/mcp_server/AGENTS.md`** — BDD lessons from this session: labels match setup, name real subjects, no `getattr`/constants, no duplicate discovery branches, hierarchy matches enabling state, walk the migration spec for coverage, plus the existing CDD annotation rules.
+- **`context_tools/bdd/AGENTS.md`** — validate
+... [8 lines, 802 chars total]
+
+==============================================================================
+2026-09-09T22:46:34Z  afterAgentResponse  conv=da07d78b  gen=eb2d79e5  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done — one numbered lesson per correction, in the folder that owns the work:
+
+**`context_tools/bdd/AGENTS.md`** (5)
+1. Validate ≠ scan  
+2. No scanner unless asked  
+3. `context-setup-expresses-state`  
+4. New rules in three places in `bdd.md`  
+5. Record in same turn  
+... [30 lines, 971 chars total]
+
+==============================================================================
+2026-09-09T22:47:16Z  afterAgentResponse  conv=da07d78b  gen=2564202a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: The rule: put lessons in the **local `AGENTS.md` next to the corrected work** — reusable rules, same turn, no transcript. It does **not** say to touch the repo-root `AGENTS.md`.
+
+Fixed:
+
+- **Restored** root `AGENTS.md` to the kit/working rules only — removed the learning-from-corrections line I added.
+- **Consolidated** all 11 BDD lessons into `context_tools/bdd/AGENTS.md` only.
+- **Deleted** `utilities/mcp_server/AGENTS.md` and `primitives/instructions/AGENTS.md` — those held authoring/MCP stuff, not BDD corrections.
+
+... [9 lines, 590 chars total]
+
+==============================================================================
+2026-09-09T22:47:39Z  afterAgentResponse  conv=da07d78b  gen=01dd567e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Added to `context_tools/bdd/AGENTS.md` as **#3** — the main rule now:
+
+- Read each `describe`, `that`/`with`, and nested setup as **one unit**
+- Labels must match what `before.each` / Arrange actually does
+- Split enabling steps into parent contexts (built → start → discovered → invoked)
+- A reader should predict the setup from the hierarchy alone
+
+**#4** covers `nest-by-enabling-events` (nested branches are real preconditions, not filing convenience). Removed the duplicate sibling-branches item since that's the same point.
+
+==============================================================================
+2026-09-09T22:48:20Z  afterAgentResponse  conv=da07d78b  gen=c999d7b4  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right — local `AGENTS.md` goes **next to the work you changed**.
+
+- **`utilities/mcp_server/AGENTS.md`** — lessons from fixing `mcp_server_spec.py` (labels match code, real subjects, no duplicate contexts, walk the module spec, etc.)
+- **`context_tools/bdd/AGENTS.md`** — lessons from changing the BDD tool itself (`bdd.md`, validate vs scan, no scanner unless asked)
+
+Root `AGENTS.md` stays the repo working rules only.
+
+==============================================================================
+2026-09-09T22:48:52Z  afterAgentResponse  conv=da07d78b  gen=c4d5f7c8  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Restored `AGENTS.md` from `origin/main`. It already matched GitHub — the kit CLI rules, `gh` fallback, execute-on-first-pass, and PML wrong-project guard are all there. No local diff remained after checkout.
+
+==============================================================================
+2026-09-09T22:50:40Z  afterAgentResponse  conv=da07d78b  gen=b7e46278  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Rewrote the hierarchy to describe **what the server does** — annotated, registered, discovered, invoked, with/without parameters, with/without orchestrated `@agent_tool` references — not which demo class does it.
+
+`HostingDemo` stays only in the test bodies (`start` ref, annotation checks, MCP name literals). Labels like `that has called start with an annotated @toolset class reference` and `with no invocable parameters` replace `HostingDemo.plan_work` everywhere in the tree.
+
+Updated `utilities/mcp_server/AGENTS.md` rule 4 to match: **describe behaviors, not fixture names**.
+
+29 examples gree
+... [7 lines, 602 chars total]
+
+==============================================================================
+2026-09-09T22:52:01Z  afterAgentResponse  conv=da07d78b  gen=f76ca1df  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You were right — that was redundant. The parent already says no `@agent_tool` references, so the nested `with no orchestrated @agent_tool references` added nothing.
+
+`should list no referenced tool names` is now a sibling `it` under the parent. Added rule 10 to `AGENTS.md`: don't restate a precondition the parent already named.
+
+==============================================================================
+2026-09-09T22:54:00Z  afterAgentResponse  conv=da07d78b  gen=96611786  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed. Instruction discovery now mirrors `@agent_tool` discovery:
+
+1. **Parent** — generic runnable `@instruction` marker only  
+2. **Positive branch** — `with an @instruction that references @agent_tool calls in its body` → prompt, referenced names, `list_instructions`; then `with another @instruction on the same toolset` for the second positive example  
+3. **Negative branch** — `with an @instruction that orchestrates no @agent_tool references` → guidance-only tests  
+
+Referenced-tool assertions no longer sit at the parent without the matching context. Rule 11 added to `AGENTS.md`. 29 exampl
+... [7 lines, 609 chars total]
+
+==============================================================================
+2026-09-09T22:55:18Z  afterAgentResponse  conv=da07d78b  gen=bf890a87  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right — `list_instructions` applies to every discovered `@instruction`, not only ones that reference tools.
+
+Moved it to the parent under `that has discovered @instruction operations`, next to the runnable marker. Also fixed the broken context label (`with an @instruction that references…`). Rule 12 in `AGENTS.md` covers this pattern. 29 examples green.
+
+==============================================================================
+2026-09-09T22:56:29Z  afterAgentResponse  conv=da07d78b  gen=2eb8b130  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Flattened every nested context that didn't complete a readable sentence or add setup:
+
+**Removed filing-only wrappers**
+- `with another @agent_tool registered on the same toolset` → `read_count` in `list_tools` is a sibling `it` at the discovery parent; only `with an @agent_tool that declares no invocable parameters` remains for the empty-params case
+- `with another @instruction on the same toolset` → sibling `it` under the references branch, with the fixture named in the example label
+- `with orchestrated @agent_tool calls in the body` under invoke → merged into `that has invoked an @instruct
+... [13 lines, 1162 chars total]
+
+==============================================================================
+2026-09-09T22:58:24Z  afterAgentResponse  conv=da07d78b  gen=ca8a0e1d  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — that wording implied the server was attaching tool output to something separate. The test only checks that `invoke_instruction` returns what the instruction body got back from `tool(...)`.
+
+Renamed to **"should return the value from a tool(...) call in the instruction result"**. The sibling that mixed plain code got the same treatment: **"should return ordinary code values in the instruction result"**. Rule 14 in `AGENTS.md` covers this.
+
+==============================================================================
+2026-09-09T23:00:12Z  afterAgentResponse  conv=da07d78b  gen=b1dbfb99  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: The hierarchy now names the **situation first**, then walks the **lifecycle** under it:
+
+```
+with @agent_tool operations on the loaded toolset
+  that has discovered them          ← generic discovery
+  that has invoked one through invoke_tool
+  that receives a second invoke_tool call …
+  that is asked for an unknown MCP tool name
+... [23 lines, 1129 chars total]
+
+==============================================================================
+2026-09-09T23:06:03Z  afterAgentResponse  conv=da07d78b  gen=d8ddcf6f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: The **name belongs to each exposed operation** on a loaded toolset — not the server itself, not the toolset class as a whole.
+
+When `start` loads `HostingDemo`, the server registers:
+
+| Python method | Decorator | MCP name |
+|---|---|---|
+| `increment` | `@agent_tool` | `hosting_demo.increment` |
+| `read_count` | `@agent_tool` | `hosting_demo.read_count` |
+... [20 lines, 1249 chars total]
+
+==============================================================================
+2026-09-09T23:07:21Z  afterAgentResponse  conv=da07d78b  gen=f6c00a7c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right — the **name** is what each registered tool or instruction **is** in the MCP catalog. The formatter was the wrong shape: a procedural helper when the domain object is the identifier itself.
+
+**What has the name:** each `ToolBinding` and `InstructionBinding` when the server discovers an `@agent_tool` or `@instruction` method. The host uses that string to call `invoke_tool` or `invoke_instruction`.
+
+**Refactor:** replaced `McpNameFormatter.format(slug, method)` with `McpName`:
+
+```python
+@dataclass(frozen=True)
+... [24 lines, 1014 chars total]
+
+==============================================================================
+2026-09-09T23:10:39Z  afterAgentResponse  conv=da07d78b  gen=02c63115  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `McpName` is **neither an MCP tool nor an instruction**. It is the **public identifier** — the dotted string the host uses to refer to one registered operation.
+
+| Thing | What it is | Example |
+|---|---|---|
+| **MCP tool** (`ToolBinding`) | An `@agent_tool` method, registered and callable | `increment` on `HostingDemo` |
+| **MCP instruction** (`InstructionBinding`) | An `@instruction` method, registered with prompt text | `plan_work` on `HostingDemo` |
+| **`McpName`** | The address both share: `{toolset_slug}.{method_name}` | `hosting_demo.increment`, `hosting_demo.plan_work` |
+
+... [13 lines, 1270 chars total]
+
+==============================================================================
+2026-09-09T23:11:59Z  afterAgentResponse  conv=da07d78b  gen=13ef2639  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Exactly. The name isn't its own object — it's what a **binding** knows about itself from the data it already holds.
+
+`ToolBinding` and `InstructionBinding` store `toolset_slug` and `method_name`. `mcp_name` is a **property** on both:
+
+```python
+@property
+def mcp_name(self) -> str:
+    return f"{self.toolset_slug}.{self.method_name}"
+... [13 lines, 608 chars total]
+
+==============================================================================
+2026-09-09T23:13:39Z  afterAgentResponse  conv=da07d78b  gen=556fcec5  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: There wasn’t a good reason for it — leftover pattern, not a design choice.
+
+If something is on the public seam, name it once:
+
+- `McpServer`, `ToolBinding`, `InstructionBinding`, `McpToolCatalog`, `McpInstructionCatalog`, `ToolsetLoader`
+
+Leading `_` is only for implementation details that callers never touch:
+
+... [13 lines, 597 chars total]
+
+==============================================================================
+2026-09-09T23:14:36Z  afterAgentResponse  conv=da07d78b  gen=3c07dfd6  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Model written to [`utilities/mcp_server/.context/clean-engineering-model.md`](utilities/mcp_server/.context/clean-engineering-model.md).
+
+**What owns what**
+
+| Class | Role |
+|---|---|
+| `ToolBinding` | One `@agent_tool` — slug, method, callable, description; `mcp_name` derived |
+| `InstructionBinding` | One `@instruction` — same identity fields plus prompt and `referenced_tool_names` |
+... [24 lines, 1407 chars total]
+
+==============================================================================
+2026-09-09T23:21:00Z  afterAgentResponse  conv=da07d78b  gen=ddc2a887  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Refactored to resource-oriented binding — each binding owns its construction; the loader only iterates.
+
+**Before:** `ToolsetLoader` derived slugs, bound callables, read docstrings, parsed `tool(...)` AST, and built binding dataclass fields.
+
+**After:**
+
+```python
+ToolBinding.bind(instance, method_name, member) -> ToolBinding | None
+... [20 lines, 1154 chars total]
+
+==============================================================================
+2026-09-09T23:22:18Z  afterAgentResponse  conv=da07d78b  gen=267c4172  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Refactored around **resources that respond** and a **thin server that finds and delegates**.
+
+**Removed doers / data-bag split**
+- `McpToolCatalog`, `McpInstructionCatalog` — gone; server holds two dicts
+- `ToolsetLoader` — gone; `start` loads instances via `_ToolsetLoader` directly
+- `_BindingCatalog`, `_McpRuntimeContext`, module-level invoke helpers — gone
+
+**Bindings own the lifecycle**
+... [24 lines, 1231 chars total]
+
+==============================================================================
+2026-09-09T23:23:54Z  afterAgentResponse  conv=da07d78b  gen=561a52e5  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: The **toolset slug** is the toolset’s **public name** — the first part of every MCP name (`hosting_demo` in `hosting_demo.increment`). That’s not an operation name and not something the binding should look up with a static helper.
+
+CDD toolsets already expose it as an **instance property**:
+
+```python
+instance.toolset_name  # HostingDemo() -> "hosting_demo"
+```
+
+... [19 lines, 936 chars total]
+
+==============================================================================
+2026-09-09T23:24:49Z  afterAgentResponse  conv=da07d78b  gen=19ca93f9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Not quite — **`_RegisteredBinding` is shared plumbing**, not “an MCP tool” by itself.
+
+| Type | What it is in MCP terms |
+|---|---|
+| **`ToolBinding`** | A registered **MCP tool** — one `@agent_tool` method, in `_tools`, called via `invoke_tool` / `list_tools` |
+| **`InstructionBinding`** | A registered **MCP instruction** — one `@instruction` orchestration body, in `_instructions`, called via `invoke_instruction` / `list_instructions` |
+
+Both subclasses extend `_RegisteredBinding` because they share the same shape: `toolset_name`, `method_name`, `callable`, `mcp_name`, and `enroll`. The base 
+... [16 lines, 1104 chars total]
+
+==============================================================================
+2026-09-09T23:25:22Z  afterAgentResponse  conv=da07d78b  gen=b3b10db2  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes. `_RegisteredBinding` is the shared base for both:
+
+- **`ToolBinding`** — MCP **tool** (`@agent_tool`)
+- **`InstructionBinding`** — MCP **instruction** (`@instruction`)
+
+It holds what they have in common: `toolset_name`, `method_name`, the bound `callable`, `mcp_name`, and `enroll`. Each subtype adds its own fields and behavior (`description` + `invoke` for tools; `prompt_text`, `referenced_tool_names`, and orchestrated `invoke` for instructions).
+
+==============================================================================
+2026-09-09T23:25:53Z  afterAgentResponse  conv=da07d78b  gen=29834c28  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes. At the MCP boundary you care about two things:
+
+- **MCP tool** — something the host calls with `invoke_tool` (`hosting_demo.increment`)
+- **MCP instruction** — something the host discovers and runs with `invoke_instruction` (`hosting_demo.plan_work`)
+
+**Binding** is how the server connects a live toolset method to that public name: find the `@agent_tool` or `@instruction`, remember `toolset_name` + `method_name`, enroll under `mcp_name`, hold the callable. The host never sees “binding” — only the tool or instruction.
+
+So `ToolBinding` / `InstructionBinding` are really **the enrolled MCP t
+... [8 lines, 852 chars total]
+
+==============================================================================
+2026-09-09T23:27:22Z  afterAgentResponse  conv=da07d78b  gen=6afea0b4  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Renamed to match MCP vocabulary and our migration spec.
+
+**MCP domain (not invented)**
+
+MCP defines three **primitives**: **tools**, **prompts**, and **resources**. There is no protocol type that is “both a tool and a prompt” — they are separate primitives with separate `*/list` and invocation paths.
+
+| CDD | MCP primitive | Our type |
+|---|---|---|
+... [22 lines, 1119 chars total]
+
+==============================================================================
+2026-09-09T23:28:53Z  afterAgentResponse  conv=da07d78b  gen=6e5385fb  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — those class methods were constructors in disguise.
+
+**Before:** `McpTool.from_method(...)`, `McpTool.discover_on(instance)` — factory/class-method pattern.
+
+**Now:** ordinary construction:
+
+```python
+tool = McpTool(instance, HostingDemo.increment)
+... [25 lines, 1106 chars total]
+
+==============================================================================
+2026-09-09T23:30:31Z  afterAgentResponse  conv=da07d78b  gen=f9e61f61  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — passing `member` separately was redundant.
+
+Once you have the loaded toolset instance, the bound method already carries everything the constructor needs:
+
+- **`bound.__self__`** → the toolset instance (`toolset_name`)
+- **`bound.__name__`** → the method name (MCP name suffix)
+- **`bound.__func__`** → the unbound function (for decorator checks and `inspect.getdoc`)
+- **`bound` itself** → what you invoke
+... [26 lines, 1050 chars total]
+
+==============================================================================
+2026-09-09T23:30:58Z  afterAgentResponse  conv=da07d78b  gen=954aa99b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — at the MCP layer it's one **tool** per callable operation, not per toolset.
+
+**MCP** exposes a flat catalog of named primitives: **tools**, **prompts**, and **resources**. There is no MCP type for a "toolset", "agent toolset", or grouping container. The host lists tools by name and invokes one at a time.
+
+**CDD** is where the toolset lives. A `@toolset` class is how you author, load, and construct a bundle of related operations. When `McpServer.start` runs, it loads toolset *instances* — that's purely a CDD loading concern — then each `@agent_tool` method becomes its own `McpTool`, regis
+... [17 lines, 1320 chars total]
+
+==============================================================================
+2026-09-09T23:32:34Z  afterAgentResponse  conv=da07d78b  gen=b05fd713  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Exactly — and that's the right split.
+
+**MCP** has no toolset. It only knows individual tools and prompts by flat name.
+
+**CDD** has `@toolset` — a class that groups related operations and holds instance state.
+
+**`McpToolset`** is our adapter between those two worlds. It's not an MCP primitive; it just wraps one loaded CDD instance and does the iteration:
+
+... [31 lines, 1090 chars total]
+
+==============================================================================
+2026-09-09T23:35:49Z  afterAgentResponse  conv=da07d78b  gen=f8243144  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Your instinct is right — these are leftover catalog API from before `McpToolset` existed.
+
+**What they were for**
+
+They were meant to support MCP **discovery** responses: the host only has a string name (`hosting_demo.plan_work`), so something had to turn that name into metadata (`prompt_text`, `referenced_tool_names`, parameter list). That made sense when `McpServer` owned the whole discovery loop.
+
+**Why they feel fishy now**
+
+... [36 lines, 2053 chars total]
+
+==============================================================================
+2026-09-09T23:38:04Z  afterAgentResponse  conv=da07d78b  gen=8796af3e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: It isn't written yet — not the part that actually keeps a process alive.
+
+What exists today is only the **in-memory runtime** that *would* stay warm inside a long-lived process:
+
+```153:183:c:\dev\abd-context-driven-delivery\utilities\mcp_server\mcp_server.py
+class McpServer:
+    """Persistent local MCP server — load toolsets, find tools and prompts, delegate."""
+
+... [50 lines, 2459 chars total]
+
+==============================================================================
+2026-09-09T23:39:51Z  afterAgentResponse  conv=da07d78b  gen=547d8b2a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right to push on this — per `testing-approach.md`, we're ahead of ourselves on the domain layer and **behind** on what actually matters for persistence.
+
+## Where we are on the test ladder
+
+| Step | What it means here | Status |
+|---|---|---|
+| **1. Discover with real conditions** | Spawn a real MCP process, talk to it the way Cursor does | **Not done** for the host adapter |
+| **2. Stub TDD (fast suite)** | Lock regression tests at architecture boundaries | Done for `McpServer` / `McpToolset` domain API |
+... [100 lines, 4551 chars total]
+
+==============================================================================
+2026-09-09T23:40:34Z  afterAgentResponse  conv=da07d78b  gen=fc8c78f5  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes. I have the **test shape ladder** from `.cursor/rules/context_tools/clean_engineering/testing-approach.mdc` (same text as `context_tools/clean_engineering/rules/testing-approach.md`). It applies to `**/*.py` when working on code tests.
+
+The procedure, in order:
+
+1. **Discover with real conditions (MUST run first)** — no stubs/mocks on the subject or integration path; call exactly as the user would; learn real response shape; write test **signatures only** for failures (don't implement yet).
+
+2. **Stub TDD (fast suite)** — only after step 1 and code works; stubs/mocks at **architecture boun
+... [15 lines, 1437 chars total]
+
+==============================================================================
+2026-09-09T23:44:35Z  afterAgentResponse  conv=26e07f63  gen=83d6e74d  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: **https://github.com/orgs/abd-works/projects/1**
+
+That comes from `.context/workflow.yaml`: owner `abd-works`, project number `1`. GitHub org projects use `/orgs/{owner}/projects/{number}`.
+
+==============================================================================
+2026-09-09T23:47:10Z  afterAgentResponse  conv=26e07f63  gen=4e0fbe1e  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: **Yes — if you are signed in to `abd-works` and still see Not Found, that board is gone, not just closed.**
+
+GitHub still serves a closed project at its old URL. A 404 means the project was deleted, or it never existed at that number.
+
+What I can confirm from here:
+
+- `.context/workflow.yaml` still points at org `abd-works`, project `1` (set on 26 Aug 2026).
+- `https://github.com/orgs/abd-works/projects/1` returns **404**.
+... [13 lines, 908 chars total]
+
+==============================================================================
+2026-09-09T23:51:34Z  afterAgentResponse  conv=da07d78b  gen=7379260c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done — following the test ladder: manual stdio discovery first, then automated host specs.
+
+## What was built
+
+| Piece | Role |
+|---|---|
+| `mcp_host.py` | `McpHost` — wires official MCP SDK → `McpServer` |
+| `__main__.py` | `python -m mcp_server --toolsets module:Class,...` |
+... [55 lines, 2217 chars total]
+
+==============================================================================
+2026-09-10T00:41:18Z  afterAgentResponse  conv=26e07f63  gen=123307b1  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: They stay on the **repository**. Deleting the Project board does not delete the issues.
+
+**https://github.com/abd-works/abd-context-driven-delivery/issues**
+
+That repo currently has **36 open** items and about **59 issues** in total. `/backlog` creates a GitHub issue on this repo, then (when the board existed) added it to project `#1`. The board was only a view; the tickets themselves never lived there.
+
+There is also a local scratch list in `.context/backlog`. That is informal notes, not the GitHub issues.
+
+==============================================================================
+2026-09-10T00:43:12Z  afterAgentResponse  conv=26e07f63  gen=eb7174ee  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: **Open vs closed is still on the issues. The board columns are gone.**
+
+GitHub Projects stored **Status** (`Backlog` / `In Progress` / `Done`) on the board, not on the issue. Deleting project `#1` dropped that field. Issues were not deleted.
+
+What is still true on GitHub:
+
+| What | Still there? | Count |
+| --- | --- | --- |
+... [18 lines, 1108 chars total]
+
+==============================================================================
+2026-09-10T00:49:02Z  afterAgentResponse  conv=da07d78b  gen=f954caea  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done. Here's what landed:
+
+## HostingDemo orchestration (stdio)
+
+- `@instruction` operations are **dual-registered** on `tools/list` (and still on `prompts/list`)
+- `tools/call` `hosting_demo.plan_work` runs orchestration → `{"concept":"widgets","count":2}`
+- State carries: after `plan_work`, `read_count` returns `2`
+
+... [35 lines, 1157 chars total]
+
+==============================================================================
+2026-09-10T00:50:01Z  afterAgentResponse  conv=da07d78b  gen=4947c972  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: The phrase that probably needs unpacking is **dual-registered**.
+
+## What it means
+
+An `@instruction` like `plan_work` shows up in **two** MCP catalogs:
+
+| MCP call | What the host sees |
+|---|---|
+... [34 lines, 1697 chars total]
+
+==============================================================================
+2026-09-10T00:50:37Z  afterAgentResponse  conv=da07d78b  gen=e1e11e7f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Here’s the plain-English version.
+
+## 1. Turn the server on in Cursor
+
+You already have config in `.cursor/mcp.json`. Cursor just needs to load it:
+
+1. Open **Cursor Settings**
+2. Go to **MCP** (or **Features → MCP**)
+... [46 lines, 1982 chars total]
+
+==============================================================================
+2026-09-10T00:55:39Z  afterAgentResponse  conv=da07d78b  gen=8e1a2bef  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — **this is the right place.**
+
+What your screenshot shows:
+
+## `cdd` is there, but it's off
+
+You should see **`cdd`** on this MCP screen. You do. Right now it says **Disabled** and looks greyed out.
+
+... [41 lines, 1516 chars total]
+
+==============================================================================
+2026-09-10T00:56:07Z  afterAgentResponse  conv=da07d78b  gen=62737699  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Good — you're in the right place.
+
+If `cdd` is **green** and shows something like **“X tools enabled”**, it's running.
+
+Quick check in chat — ask something like:
+
+> Call `cdd.ping` and tell me the result.
+
+... [17 lines, 502 chars total]
+
+==============================================================================
+2026-09-10T00:56:32Z  afterAgentResponse  conv=da07d78b  gen=d6fb3d5e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **`pong`**
+
+The `cdd` MCP server is connected and responding. Your verification test passed.
+
+==============================================================================
+2026-09-10T00:58:03Z  afterAgentResponse  conv=26e07f63  gen=64ee5d5c  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: Created. There is no GitHub org named `abd-cdd`, so the board lives under **abd-works** and is titled **abd-cdd**.
+
+**https://github.com/orgs/abd-works/projects/2**
+
+- Kanban board with columns Backlog / Ready / In progress / In review / Done
+- All **30 open issues** imported into **Backlog**
+- Closed issues were left off the board
+- `.context/workflow.yaml` now points at `project_number: 2`
+... [10 lines, 606 chars total]
+
+==============================================================================
+2026-09-10T01:00:03Z  afterAgentResponse  conv=26e07f63  gen=becf07b9  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: The old board was never gone — it is private, so it 404s unless you are signed in.
+
+You now have both:
+
+- **#1** [abd-context-driven-delivery](https://github.com/orgs/abd-works/projects/1) — the original
+- **#2** [abd-cdd](https://github.com/orgs/abd-works/projects/2) — the new one, with the 30 open issues in Backlog
+
+`workflow.yaml` points at **#2**.
+
+==============================================================================
+2026-09-10T01:09:43Z  afterAgentResponse  conv=da07d78b  gen=7238ebbc  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: MCP mode for `/deploy-harness` is implemented and the skills have been regenerated.
+
+### Harness MCP transport
+- Added `primitives/harness/transport.py` with `render_mcp_tool_reference()` / `render_mcp_invoke()` — dotted names like `bdd.find_examples(...)`.
+- `write_deploy(mcp=True)` sets `transport: "mcp"` on all emitted payloads and writes `.cursor/mcp.json` for Cursor (all walked toolsets + `harness.harness:Harness`).
+- `bodies.py`, `skill.py`, `prompt.py`, and `instruction.py` thread transport through to skill tails.
+- Format skills use prose instead of a fake toolset slug: *"Use the in-sc
+... [39 lines, 1822 chars total]
+
+==============================================================================
+2026-09-10T01:19:23Z  afterAgentResponse  conv=da07d78b  gen=57ee2f95  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `utilities/mcp_server` is now registered as the **MCP Invocation Layer** package for `/tickets`.
+
+### Package registry
+**`.context/workflow-packages.yaml`** maps:
+- **Location:** `utilities/mcp_server`
+- **Layer:** MCP Invocation Layer
+- **Theme:** `mcp-invocation-layer`
+
+... [26 lines, 1332 chars total]
+
+==============================================================================
+2026-09-10T01:20:59Z  afterAgentResponse  conv=da07d78b  gen=c5c06f45  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: GitHub CLI sign-in is waiting for you in the browser.
+
+1. Open [https://github.com/login/device](https://github.com/login/device)
+2. Enter this one-time code: **4260-51DF**
+3. Approve access for `gh`
+
+The login command is still running in the terminal until that finishes. Reply **done** when you’ve approved it and I’ll verify with `gh auth status` and continue the `/tickets` work for MCP Invocation Layer.
+
+==============================================================================
+2026-09-10T01:23:56Z  afterAgentResponse  conv=da07d78b  gen=2f248740  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Git push works, but **`gh` never finished saving credentials** — there’s no `hosts.yml` under `%APPDATA%\GitHub CLI`, so the browser step didn’t complete in a shell that could persist the token. Agent shells background `gh auth login` and the device code expires before auth is written.
+
+**Run this in your own terminal** (the PowerShell tab where `git push` works):
+
+```powershell
+gh auth login --hostname github.com --git-protocol https --web --skip-ssh-key
+```
+
+... [42 lines, 1400 chars total]
+
+==============================================================================
+2026-09-10T01:25:03Z  afterAgentResponse  conv=da07d78b  gen=75109f1b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Your one-time code is:
+
+**569D-A845**
+
+1. Open [https://github.com/login/device](https://github.com/login/device)
+2. Paste **569D-A845**
+3. Approve access for `gh`
+
+... [9 lines, 340 chars total]
+
+==============================================================================
+2026-09-10T01:26:22Z  afterAgentResponse  conv=da07d78b  gen=fd539d67  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're signed in as **thomasjeffreyandersontwin**, and issue **#70** is now tied to the package.
+
+**[MCP Invocation Layer #70](https://github.com/abd-works/abd-context-driven-delivery/issues/70)**
+- Title corrected from "Invokation" → **MCP Invocation Layer**
+- Body documents **Package:** `utilities/mcp_server`, layer, seam, spec links, and scope
+- Label **`theme:mcp-invocation-layer`** created and applied
+
+That matches `.context/workflow-packages.yaml` — `/tickets` will infer the theme when work mentions `utilities/mcp_server` or MCP Invocation Layer.
+... [18 lines, 948 chars total]
+
+==============================================================================
+2026-09-10T01:32:40Z  afterAgentResponse  conv=da07d78b  gen=05503f2a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated the card workflow so moves use **every live Status column** on the GitHub project, not just the hardcoded three.
+
+### Code changes
+- **`Project.refresh_states()`** — loads all Status options from GitHub and updates the board column list
+- **`attach_project` / `_ensure_project`** — refresh columns on every board operation
+- **`move_ticket`** — accepts any live column name (plus `next` / `previous`); errors list available columns when the name is wrong
+- **`list_project_statuses`** — new tool to list columns left-to-right before moving
+- **Clear auth errors** — missing `read:project` sco
+... [32 lines, 1461 chars total]
+
+==============================================================================
+2026-09-10T01:34:55Z  afterAgentResponse  conv=da07d78b  gen=5725fc6d  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Your one-time code is:
+
+**3297-D205**
+
+1. Open [https://github.com/login/device](https://github.com/login/device)
+2. Enter **3297-D205**
+3. Approve the extra **project** permissions
+
+... [9 lines, 360 chars total]
+
+==============================================================================
+2026-09-10T01:36:13Z  afterAgentResponse  conv=da07d78b  gen=95c69733  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **943B-0359**
+
+[https://github.com/login/device](https://github.com/login/device)
+
+Approve the login there — this one includes **project** scopes so board moves will work.
+
+==============================================================================
+2026-09-10T01:45:24Z  afterAgentResponse  conv=da07d78b  gen=2b5efe9c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `cdd.ping` → **pong**
+
+The MCP host is up. `cdd.ping` is a built-in health check on every stdio host — no toolsets required.
+
+==============================================================================
+2026-09-10T01:51:43Z  afterAgentResponse  conv=da07d78b  gen=148938ba  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Full MCP harness deploy finished successfully.
+
+**Deployed to:** `.cursor/`  
+**Sources written:** 90+ skills/prompts/rules — all actions (`generate`, `validate`, `sketch`, …), context tools (`bdd`, `cdd`, `stories`, …), utilities (`workflow`, `git`, `echo`, …), format prompts, and harness (`deploy-harness`, `clean-harness`)
+
+Skills now use MCP tails (`Use MCP tool: \`...\``), and `.cursor/mcp.json` was regenerated with all walked toolsets. The `tickets` skill now mentions `list_project_statuses` for board columns.
+
+==============================================================================
+2026-09-10T01:55:02Z  afterAgentResponse  conv=da07d78b  gen=acebbc2a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done.
+
+1. **Cleared readonly flags** on `.cursor/skills` (Windows had blocked the first clean attempt).
+2. **`clean-harness`** — removed `.cursor/skills`, `.cursor/rules`, and `hooks.json`.
+3. **`deploy-harness`** — full manifest deploy with **`mcp: true`**, **`no_manifest: false`**, **`code_language: python`**.
+
+Verified: skills use `Use MCP tool: \`...\`` tails (no `tools.ps1`), and `.cursor/mcp.json` lists all toolsets including `harness.harness:Harness`.
+
+==============================================================================
+2026-09-10T02:01:54Z  afterAgentResponse  conv=da07d78b  gen=aa6b55e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed. `Skill.relative_path()` was ignoring `self.folder`, so every skill landed at `.cursor/skills/{name}/` instead of the nested layout.
+
+**Changes:**
+- `skill.py` — `relative_path()` now uses `skills/{folder}/{name}/SKILL.md` when `folder` is set
+- `harness.py` — `context-tools` → `context_tools` in the base folder map
+
+**Redeployed** with MCP mode. Structure is restored:
+
+... [15 lines, 724 chars total]
+
+==============================================================================
+2026-09-10T02:08:10Z  afterAgentResponse  conv=da07d78b  gen=a20016df  model=composer-2.5
+------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-10T02:08:17Z  afterAgentResponse  conv=da07d78b  gen=93bbfbe9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: When you asked to continue the sketch (`@sandbox/car-rentals/courier-fleet-scaffold.md continue sketch`), I did **not** use MCP or the kit CLI.
+
+What I actually did:
+
+1. **Read files directly** — the scaffold, `sketch.md`, sketch templates (stories, ddd, ux, ce)
+2. **Edited the markdown myself** — appended the intake/normalization theme block to `courier-fleet-scaffold.md`
+3. **Copied to** `sandbox/car-rentals/.context/courier-fleet-sketch.md`
+4. **Tried `AskQuestion`** for sketch review (you cancelled it)
+... [16 lines, 966 chars total]
+
+==============================================================================
+2026-09-10T02:08:32Z  afterAgentResponse  conv=da07d78b  gen=8cdffe87  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: When you asked to continue the sketch on `courier-fleet-scaffold.md`, I did **not** use MCP or the kit CLI.
+
+What I actually did:
+
+1. **Read files directly** — the scaffold, `sketch.md`, and the lens templates (`stories-sketch`, `ddd-sketch`, etc.)
+2. **Edited the scaffold in place** with `StrReplace`
+3. **Copied** to `sandbox/car-rentals/.context/courier-fleet-sketch.md`
+4. **Tried** `AskQuestion` for sketch review (you cancelled it)
+... [20 lines, 1115 chars total]
+
+==============================================================================
+2026-09-10T02:09:33Z  afterAgentResponse  conv=da07d78b  gen=2f49e38e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: If you **`/sketch`**, the agent is supposed to go through the **Sketch action**, not read templates and edit markdown by hand.
+
+## What `/sketch` wires up
+
+1. **Cursor loads** `.cursor/skills/actions/sketch/SKILL.md`
+2. That skill says: call **`sketch.sketch(...)`** via MCP (or the same thing through `tools.ps1`)
+3. **`sketch.sketch`** expands into a scripted loop:
+
+... [44 lines, 2029 chars total]
+
+==============================================================================
+2026-09-10T02:10:54Z  afterAgentResponse  conv=da07d78b  gen=5ec42571  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Good — when you're ready to continue the courier fleet work properly, `/sketch` with the scaffold as context and I'll run it through the MCP path (`save_sketch` / `review_sketch` and all).
+
+==============================================================================
+2026-09-10T02:11:17Z  afterAgentResponse  conv=da07d78b  gen=30fdd32e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **Not yet** — there is no dedicated MCP invocation log in this repo.
+
+What exists today:
+
+| Log | What it captures | MCP? |
+|---|---|---|
+| `.sessions/default/logs/dispatch.debug` | Cursor hook events (`afterAgentResponse`, etc.) | No |
+| `.sessions/.../logs/prompt-log.txt` | Prompt hook wire audit (CLI-era) | No |
+... [18 lines, 1386 chars total]
+
+==============================================================================
+2026-09-10T02:12:17Z  afterAgentResponse  conv=da07d78b  gen=e3bc318b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Cursor captures MCP server **stderr** — it does not write into your repo. Two places to look:
+
+## 1. Output panel (live, easiest)
+
+1. **View → Output** (or **Ctrl+Shift+U**)
+2. In the dropdown at the top-right of that panel, pick **MCP Logs** (or your server name **`cdd`**)
+
+That shows the child process stderr in real time — startup errors, Python tracebacks, and SDK lines like `Processing request of type CallToolRequest`.
+... [38 lines, 1473 chars total]
+
+==============================================================================
+2026-09-10T02:18:44Z  afterAgentResponse  conv=da07d78b  gen=adfca027  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Generated the **story map** and **thin slice** from `courier-fleet-sketch.md` via the harness path (`generate.generate` → Stories guidance).
+
+## Invocation path
+
+```yaml
+toolset: generate.generate:Generate
+context:
+  path: sandbox/car-rentals
+... [34 lines, 1457 chars total]
