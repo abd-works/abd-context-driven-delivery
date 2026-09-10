@@ -643,6 +643,7 @@ class Harness:
         for root in roots:
             copilot_file = root / "copilot-instructions.md"
             if not copilot_file.is_file():
+                copilot_file.parent.mkdir(parents=True, exist_ok=True)
                 copilot_file.write_text(content, encoding="utf-8")
 
     def _wanted(self, wanted: str, name: str, source_slug: str, derived: str) -> bool:

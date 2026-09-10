@@ -1,7 +1,7 @@
 ---
 description: "testing approach — test shape ladder"
 globs: "**/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs"
-alwaysApply: false
+alwaysApply: true
 ---
 
 When code — seriously, whenever you are writing code and testing it — you MUST follow this procedure. See @clean_engineering-code for the full skill.

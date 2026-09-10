@@ -70,6 +70,7 @@ with description("context tool rules"):
         expect(by_name["testing-approach"].body).to(contain("Test shape ladder"))
         expect(by_name["testing-approach"].body).to(contain("Discover with real conditions"))
         expect(by_name["testing-approach"].tool_slug).to(equal("clean_engineering"))
+        expect(by_name["testing-approach"].always_apply).to(be_true)
 
     with it("should place procedures under context_tools/{slug}/ as {name}.mdc"):
         rule = Rule("Cursor", "code-procedure")
@@ -129,7 +130,7 @@ with description("Harness deploy context tool rules"):
         )
         expect(rule_file.is_file()).to(be_true)
         expect(rule_file.read_text(encoding="utf-8")).to(contain("Test shape ladder"))
-        expect(rule_file.read_text(encoding="utf-8")).to(contain("alwaysApply: false"))
+        expect(rule_file.read_text(encoding="utf-8")).to(contain("alwaysApply: true"))
 
     with it("should discover rule files from repo rules/ folder"):
         from harness.context_tool_rules import rules_from_repo_rules_folder

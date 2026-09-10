@@ -905,6 +905,7 @@ class WorkSession:
                 branch = GitRepo(git_root).current_branch
                 if isinstance(branch, str) and branch.startswith("session/"):
                     name = branch[len("session/") :]
+        requested_path = path
         self.workspace = parent
         self.name = name
         self.goal = goal
@@ -926,6 +927,8 @@ class WorkSession:
             self.context_index_key = context_index_key
         if default_workspace_folder is not None:
             self.default_workspace_folder = default_workspace_folder
+        if not requested_path:
+            self.path = self._resolve_working_area(None)
         self.started = started if started is not None else date.today().isoformat()
         self.ended = ended
         self.outcome = outcome
@@ -2416,7 +2419,6 @@ class Workspace:
         working = (
             path
             or (getattr(host, "_raw_path", None) if host is not None else None)
-            or self.path
             or ""
         ).strip()
         session = self.open_work_session(
@@ -2426,13 +2428,13 @@ class Workspace:
             or ((getattr(host, "fidelity", "") or "") if host is not None else "")
             or "",
             contexts=contexts,
-            path=working or self.path,
+            path=working,
             isolate=isolate,
             context_index_key=(
-                getattr(type(host), "context_index_key", "") if host is not None else ""
+                getattr(host, "context_index_key", "") if host is not None else ""
             ),
             default_workspace_folder=(
-                getattr(type(host), "default_workspace_folder", ".")
+                getattr(host, "default_workspace_folder", ".")
                 if host is not None
                 else "."
             ),
@@ -2470,7 +2472,7 @@ class Workspace:
                 goal=goal,
                 fidelities=fidelities,
                 contexts=contexts,
-                path=path or self.path,
+                path=path,
                 git=git,
                 workspace_root=self.path,
                 context_index_key=context_index_key,
