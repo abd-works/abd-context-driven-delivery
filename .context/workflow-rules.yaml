@@ -1,0 +1,6 @@
+rules:
+  - Read .context/workflow-packages.yaml before creating, updating, or theming a ticket. When work names an impacted package, set theme from that entry and cite location (for example utilities/mcp_server) in the issue body.
+  - Use the layer name in titles when it helps scan the board (for example MCP Invocation Layer — …). The theme slug is mcp-invocation-layer for utilities/mcp_server.
+  - Never infer a ticket number when the request is ambiguous.
+  - GitHub Project board moves require gh scopes read:project and project. When gh reports missing scopes, run: gh auth refresh -h github.com -s read:project,project
+  - Call list_project_statuses before move_ticket when the destination column is unclear. move_ticket accepts any live Status column name from the project, plus next or previous.
