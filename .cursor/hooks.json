@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      { "command": "python3 hook_test/hook_logger.py beforeShellExecution", "timeout": 10 }
+    ],
+    "afterShellExecution": [
+      { "command": "python3 hook_test/hook_logger.py afterShellExecution", "timeout": 10 }
+    ],
+    "beforeReadFile": [
+      { "command": "python3 hook_test/hook_logger.py beforeReadFile", "timeout": 10 }
+    ],
+    "afterFileEdit": [
+      { "command": "python3 hook_test/hook_logger.py afterFileEdit", "timeout": 10 }
+    ],
+    "preToolUse": [
+      { "command": "python3 hook_test/hook_logger.py preToolUse", "timeout": 10 }
+    ],
+    "postToolUse": [
+      { "command": "python3 hook_test/hook_logger.py postToolUse", "timeout": 10 }
+    ],
+    "postToolUseFailure": [
+      { "command": "python3 hook_test/hook_logger.py postToolUseFailure", "timeout": 10 }
+    ],
+    "subagentStart": [
+      { "command": "python3 hook_test/hook_logger.py subagentStart", "timeout": 10 }
+    ],
+    "subagentStop": [
+      { "command": "python3 hook_test/hook_logger.py subagentStop", "timeout": 10, "loop_limit": 2 }
+    ],
+    "beforeSubmitPrompt": [
+      { "command": "python3 hook_test/hook_logger.py beforeSubmitPrompt", "timeout": 10 }
+    ],
+    "preCompact": [
+      { "command": "python3 hook_test/hook_logger.py preCompact", "timeout": 10 }
+    ],
+    "stop": [
+      { "command": "python3 hook_test/hook_logger.py stop", "timeout": 10, "loop_limit": 2 }
+    ],
+    "afterAgentResponse": [
+      { "command": "python3 hook_test/hook_logger.py afterAgentResponse", "timeout": 10 }
+    ],
+    "afterAgentThought": [
+      { "command": "python3 hook_test/hook_logger.py afterAgentThought", "timeout": 10 }
+    ]
+  }
+}
