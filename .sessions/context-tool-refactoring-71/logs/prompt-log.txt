@@ -1,0 +1,1521 @@
+
+==============================================================================
+2026-09-10T15:41:46Z  afterAgentResponse  conv=0e0e3022  gen=b1b5bb34  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **Work session open**
+
+| | |
+|---|---|
+| **Session** | `context-tool-refactoring-71` |
+| **Checkout** | Primary clone (`.`) — `isolate=false`, no sibling worktree |
+| **Branch** | `session/context-tool-refactoring-71` |
+| **Tickets in scope** | #71 parent + children #22, #68, #21, #19 |
+... [12 lines, 472 chars total]
+
+==============================================================================
+2026-09-10T15:48:13Z  afterAgentResponse  conv=0e0e3022  gen=8dd91b50  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Proposed remodel is in [`.sessions/context-tool-refactoring-71/context-tool-resource-model.md`](.sessions/context-tool-refactoring-71/context-tool-resource-model.md).
+
+### Core idea (resource-oriented)
+
+**`ContextTool` is the aggregate.** Everything else is an owned sub-resource:
+
+| Sub-object | Job |
+|---|---|
+... [31 lines, 1797 chars total]
+
+==============================================================================
+2026-09-10T15:50:26Z  afterAgentResponse  conv=0e0e3022  gen=256f7f00  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated the model: **`ContextTool` → `Guidance`** throughout.
+
+- Aggregate: **`Guidance`** / **`IGuidance`** (replaces `ContextTool` / `IContextTool`)
+- **`guidance_for`** → **`at_fidelity`** — avoids `Guidance.guidance_for`
+- **`from_tool` / `for_tool`** → **`from_guidance` / `for_guidance`**
+- Migration row for **#10**: `BaseContextTool` → `Guidance`, `ContextToolBody` → `GuidanceBody`
+- Title: **Guidance resource model**
+
+... [9 lines, 524 chars total]
+
+==============================================================================
+2026-09-10T15:52:55Z  afterAgentResponse  conv=0e0e3022  gen=4ef651df  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. The model is now two core types plus deploy/catalog seams:
+
+**`Guidance`** (base class) — owns all content logic:
+- `fidelities: list[Fidelity]`
+- **`content()`** — practice-wide material (contexts, examples, templates, scaffold)
+- **`at_fidelity(name)`** → matching `Fidelity.content()`
+
+**`Fidelity`** — sub-object with `name`, `stage`, `default_format`, **`parent: Guidance`**:
+... [19 lines, 816 chars total]
+
+==============================================================================
+2026-09-10T15:54:58Z  afterAgentResponse  conv=0e0e3022  gen=768f7918  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes. **`Guidance` has `content()`** — that's the only guidance seam.
+
+- **`ContextGuidance.content()`** — practice-wide  
+- **`FidelityGuidance.content()`** — `parent.content()` + fidelity layer  
+- **`context.fidelity(name)`** — lookup only; returns a `FidelityGuidance`; caller does **`.content()`**
+
+Deploy, catalog, and agent all end on `content()`. Harness copies that string — it doesn't build bodies. Removed `at_fidelity` from the doc so nothing bypasses `content()`.
+
+==============================================================================
+2026-09-10T15:59:16Z  afterAgentResponse  conv=0e0e3022  gen=0a494e58  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. **`Guidance` now has two properties:**
+
+| Property | Consumer | Purpose |
+|----------|----------|---------|
+| **`context`** | Agent, Harness, skills | Markdown for invoke / deploy |
+| **`catalog`** | `catalog_generator` | Rendered catalog guidance (HTML or catalog MD) |
+
+Same override pattern as `context`: subclasses can override **`catalog`** without changing **`context`**. Default: derive `catalog` from `context`; domains override when the catalog page needs different layout.
+... [18 lines, 796 chars total]
+
+==============================================================================
+2026-09-10T16:00:08Z  afterAgentResponse  conv=0e0e3022  gen=361e5888  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed `IGuidance` and `IContextGuidance`. The model section now has only concrete classes: `Guidance`, `ContextGuidance`, `FidelityGuidance`, `DeploymentDescriptor`, `Harness`, `Catalog`.
+
+==============================================================================
+2026-09-10T16:03:55Z  afterAgentResponse  conv=0e0e3022  gen=75dc5cf4  model=composer-2.5
+------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-10T16:06:35Z  afterAgentResponse  conv=0e0e3022  gen=31815054  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Added **Context from markdown (the missing seam)** to the model doc. Core idea:
+
+### Three layers (stay separate)
+
+| Module | Job |
+|--------|-----|
+| **`primitives/instructions`** | `@instruction` → `AssetLocator` → raw md (folder / file / `##` section in `{slug}.md`) |
+| **`Guidance`** | Orchestration: which slots to merge, fidelity filter, parent inline → **`.context`** |
+... [29 lines, 1632 chars total]
+
+==============================================================================
+2026-09-10T16:09:20Z  afterAgentResponse  conv=0e0e3022  gen=7d5a7bb1  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **Mostly yes on loader, no on composer.**
+
+`primitives/instructions` is mainly **asset resolution + expansion**: `@instruction` label → `AssetLocator` → read folder / file / `##` section beside `module_dir` → one string. `_inline(instance, "contexts")` does exactly that for a single slot.
+
+It is **not** the composer. It does not decide which slots to merge, in what order, or how fidelity/parent layers stack. That orchestration lives in the `@agent_instructions` body walk today (`guidance()` listing `self.contexts`, `self.examples`, …) and moves to **`Guidance._expand_slots()`** in the target m
+... [7 lines, 746 chars total]
+
+==============================================================================
+2026-09-10T16:10:19Z  afterAgentResponse  conv=0e0e3022  gen=77914122  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **Yes.**
+
+`primitives/instructions` is an **extractor**: given a label, pull text from a **file**, a **folder** (merged), or a **`##` section** in co-located markdown. One label → one blob of text.
+
+It does not compose guidance; it only **extracts** what's on disk at that location.
+
+==============================================================================
+2026-09-10T16:12:55Z  afterAgentResponse  conv=0e0e3022  gen=72c567d9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated the model:
+
+| Today | Target |
+|-------|--------|
+| `primitives/instructions` | **`primitives/markdown`** |
+| `@instruction` on slot methods | **`@markdown`** |
+| `Instruction` / `.expand()` | **`MarkdownRef`** / **`.extract()`** |
+| `_inline` | **`extract_markdown`** |
+... [14 lines, 548 chars total]
+
+==============================================================================
+2026-09-10T16:14:49Z  afterAgentResponse  conv=0e0e3022  gen=172ce83b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Renamed throughout the model:
+
+| Was | Now |
+|-----|-----|
+| `context` property | **`instructions`** |
+| `context_slots` | **`instruction_slots`** |
+| `_expand_slots()` | **`_expand_instruction_slots()`** |
+| `practice.context` / `fidelity(...).context` | **`practice.instructions`** / **`fidelity(...).instructions`** |
+... [17 lines, 705 chars total]
+
+==============================================================================
+2026-09-10T16:23:58Z  afterAgentResponse  conv=0e0e3022  gen=e8866dfb  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Added **ContextGuidance slim-down (retire from base)** to the model. Summary:
+
+### Retire from CT
+- **`session_guidance`** → Workspace only
+- **`resolve_fidelity` / `STAGE_ALIASES` / `_generate_fidelity_methods` / `_set_fidelity`** → **`FidelityGuidance`**: `resolve()`, `generate()`/`validate()`/`satisfy()`, `apply_to(instance)`
+- **`generate_fixes_from_validate`** → drop; **Satisfy** = validate report → fix in one `@agent_instructions` recipe
+- **# Open setup prelude** on `base_context_tool.md` → Workspace + `LifecycleAction.begin`
+
+... [17 lines, 1135 chars total]
+
+==============================================================================
+2026-09-10T16:25:29Z  afterAgentResponse  conv=0e0e3022  gen=103b40f7  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `Fidelities` is now a first-class collection in the model — not a bare `list` or stage→name `dict`.
+
+### `Fidelities` (on `ContextGuidance`)
+- **`entries`** — ordered `FidelityGuidance` nodes (depth ladder)
+- **`resolve(stage_or_name)`** — CDD alias *or* domain name (`"specification"` → same as `"behavior"`)
+- **`by_name` / `by_stage`** — direct lookup
+- **`names()`** — domain names for deploy/router (`bdd-behavior`, …)
+- **`__iter__`** — Harness, catalog, `deployment_manifest` walk the collection
+... [24 lines, 1071 chars total]
+
+==============================================================================
+2026-09-10T16:27:44Z  afterAgentResponse  conv=0e0e3022  gen=8900d6ae  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Moved the four-step numbered list into **`primitives/markdown`** as interaction syntax:
+
+```
+## extract_markdown
++ extract_markdown(host, slot_name: str): str
+<< triggered by >> AgenticToolset — bare self.{slot} in @agent_instructions body
+  -> Guidance.{slot}()
+  -> MarkdownRef.from_label(host, slot_name)
+... [16 lines, 598 chars total]
+
+==============================================================================
+2026-09-10T16:32:20Z  afterAgentResponse  conv=0e0e3022  gen=203b7a46  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated the model so **`catalog` is a property only**:
+
+| | `instructions` | `catalog` |
+|---|------------------|-----------|
+| **Shape** | `@property` | `@property` |
+| **Assembly** | `guidance_recipe()` + `_expand_instruction_slots()` | **Subclass override** (optional `@markdown catalog` slot in getter) |
+| **No** | — | **`catalog_recipe()`**, no default copy from `instructions` |
+| **Default** | built from slots | **empty** until overridden |
+... [10 lines, 582 chars total]
+
+==============================================================================
+2026-09-10T16:34:43Z  afterAgentResponse  conv=0e0e3022  gen=273826c4  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated **Fidelities** access in the model:
+
+### Declare
+```python
+fidelities = Fidelities([
+    FidelityGuidance(name="modules", stage="discovery", ...),
+    FidelityGuidance(name="behavior", stage="spec", ...),
+])
+... [19 lines, 629 chars total]
+
+==============================================================================
+2026-09-10T16:36:34Z  afterAgentResponse  conv=0e0e3022  gen=9b933164  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `guidance_recipe()` was a **draft hook** for “extra prose that isn’t in `contexts` / `examples` / `templates` md” — e.g. Bdd’s long `guidance()` docstring and the `return "..."` tail after `super().guidance()`.
+
+That overlapped with what **`instructions`** already is, so it’s **removed** from the model.
+
+### What each property does
+
+| | **`instructions`** | **`catalog`** |
+|---|-------------------|-----------------|
+... [18 lines, 1475 chars total]
+
+==============================================================================
+2026-09-10T22:03:24Z  afterAgentResponse  conv=0e0e3022  gen=7a8f8a36  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed the entire **`## Type shape`** section (142 lines). That block repeated what is already in:
+
+- **Language** — terms and relationships  
+- **Instructions from markdown** — `_expand_instructions()` assembly and fidelity walk  
+- **Modules** (`# context_tools/base`, etc.) — class diagrams  
+- **Object flows** — consumer paths  
+
+The doc now goes **Language → ContextGuidance slim-down → Instructions from markdown** without the redundant middle layer.
+
+==============================================================================
+2026-09-10T22:04:25Z  afterAgentResponse  conv=0e0e3022  gen=43efa7a9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Moved the **Design stance** paragraph from the doc intro to the top of **## Modules**, right before the build order line. The intro now starts with Sources/context and Naming.
+
+==============================================================================
+2026-09-10T22:05:30Z  afterAgentResponse  conv=0e0e3022  gen=96255f29  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed **## Language** and placed each definition as the starter intro above its class in **Modules**:
+
+- `# primitives/markdown` — *Markdown*
+- `## Guidance` — *Guidance*
+- `## AgenticToolset` — *AgenticToolset*
+- `## ContextGuidance` — *ContextGuidance*
+- `## Fidelities` — *Fidelities*
+- `## FidelityGuidance` — *FidelityGuidance*
+... [11 lines, 447 chars total]
+
+==============================================================================
+2026-09-10T22:10:53Z  afterAgentResponse  conv=0e0e3022  gen=e2122b67  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Those **Object flows** were ASCII sequence diagrams showing who calls whom across the guidance model. They duplicated the class diagrams without using the same notation as the Modules section.
+
+Replaced them with **clean_engineering interaction traces**:
+
+- `+ operation()` — the caller
+- `-> collaborator.operation` — nested interaction under that caller
+- `<< triggered by >>` — external actor (Agent, Harness, MCP)
+- `<< uses >>` — dependency (e.g. `AssetLocator`)
+... [19 lines, 1244 chars total]
+
+==============================================================================
+2026-09-10T22:13:11Z  afterAgentResponse  conv=0e0e3022  gen=bf5abdea  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated throughout the model: **`instructions` and `_expand_instructions()` are one operation** — a single merge of `contexts` → `examples` → `templates` via `extract_markdown`, joined with `\n\n`.
+
+The property only returns that merge; customise by overriding `_expand_instructions()`, not `instructions`. Expected behavior, class diagrams, and Object flows now use `+ instructions / _expand_instructions()   // one operation` instead of splitting them into two steps.
+
+==============================================================================
+2026-09-10T22:13:44Z  afterAgentResponse  conv=0e0e3022  gen=4ce53ab6  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated **Expected behavior** to use the Bdd kit as the concrete case:
+
+**`Bdd`** in `context_tools/bdd/bdd.py` — `module_dir` is that folder. **`Bdd.instructions`** is one merge from:
+
+- `bdd.md` § `# Contexts` (all fidelity `##` sections at practice level)
+- `examples/` merged
+- `templates/` merged (`bdd-templates.py`, `bdd-templates.ts`, …)
+
+... [11 lines, 641 chars total]
+
+==============================================================================
+2026-09-10T22:14:39Z  afterAgentResponse  conv=0e0e3022  gen=f0c52740  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: They aren’t in the sketch anymore — and there isn’t a separate BDD file for this model yet.
+
+**What changed**
+
+The old **`## Behavior sketch (BDD signatures)`** block (`describe Guidance` / `when _expand_instructions…`) was removed when you asked to drop agent BDD-style wording. It was replaced by **`## Expected behavior`** (around line 746 in `context-tool-resource-model.md`) using `=>` / `+` / `->` notation.
+
+That section explicitly says: **“Not agent BDD”** — it’s design contracts on the types, not runnable specs.
+
+... [23 lines, 1311 chars total]
+
+==============================================================================
+2026-09-10T22:14:57Z  afterAgentResponse  conv=0e0e3022  gen=a3150236  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Restored **`## Behavior sketch (BDD signatures)`** after Expected behavior (before Open questions).
+
+Updates vs the original block:
+
+- **`describe Bdd as ContextGuidance`** — ties specs to `bdd.md`, `examples/`, `templates/` beside `bdd.py`
+- **One merge** — `instructions` returns the same string as a single `_expand_instructions` walk
+- **`describe a FidelityGuidance on Bdd`** — behavior fidelity with modules-before-behavior stacking
+
+... [9 lines, 575 chars total]
+
+==============================================================================
+2026-09-10T22:16:41Z  afterAgentResponse  conv=0e0e3022  gen=f0dd8f80  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed. Bdd is no longer its own top-level `describe` — it’s fixture context under the type hierarchy:
+
+```
+describe Guidance
+  describe ContextGuidance
+    that extends Guidance
+    with Bdd kit in context_tools/bdd/ (...)
+      when instructions is read ...
+... [20 lines, 822 chars total]
+
+==============================================================================
+2026-09-10T22:18:19Z  afterAgentResponse  conv=0e0e3022  gen=e3361152  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed.
+
+**BDD sketch** — nested under `describe Guidance` → `describe ContextGuidance`; no Bdd. Uses `{domain}.md`, `examples/`, `templates/` in `module_dir`. Fidelity scenarios use two fidelities (shallower before deeper), not named practices.
+
+**Expected behavior** — same generic placeholders: `{practice}`, `{domain}`, `{name}`, `{slug}`.
+
+**Removed "kit"** everywhere in the doc (replaced with practice folder, action paths under `context_tools/actions/`, etc.).
+
+... [9 lines, 571 chars total]
+
+==============================================================================
+2026-09-10T22:35:05Z  afterAgentResponse  conv=0e0e3022  gen=73350d73  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. That block was stale in two ways: it mixed abstract *Guidance* with *ContextSection*, and it sat in `primitives/markdown` before the class definitions instead of on each class.
+
+**Now:**
+
+| Class | Where | What it documents |
+|-------|--------|-------------------|
+| `ContextSection` | `# primitives/markdown` | Base only — owns `.guidance` / `.rules`; points to subclasses |
+| `SharedSection` | `# primitives/markdown` | Shared-region table (`intro`, `## Guidance`, `## Shared rules`) + CE fields |
+... [17 lines, 1272 chars total]
+
+==============================================================================
+2026-09-10T22:42:52Z  afterAgentResponse  conv=0e0e3022  gen=96ebe893  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated the deployment model around **`@mcp`** instead of **`write_deploy(mcp=true)`**.
+
+**Core change:** MCP exposure is declared on each method, not flipped by a deploy script flag.
+
+```python
+@agent_instructions
+@mcp
+def generate(self, ...) -> str: ...
+... [24 lines, 1281 chars total]
+
+==============================================================================
+2026-09-10T22:46:14Z  afterAgentResponse  conv=0e0e3022  gen=91cf0a51  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated the type model:
+
+**`GuidanceSection` extends `Guidance`** — any section can emit `.instructions` and `.catalog` because it inherits from `Guidance`.
+
+**When you need a section object vs not:**
+
+| Read pattern | Model |
+|---|---|
+... [21 lines, 1227 chars total]
+
+==============================================================================
+2026-09-10T22:47:14Z  afterAgentResponse  conv=0e0e3022  gen=b869a7a0  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. **`examples` stays a property; it never joins `.instructions`.**
+
+| | |
+|---|---|
+| **Keep** | `@markdown examples` → `.examples` property (`extract_markdown(self, "examples")` from `examples/` folder) |
+| **Remove from merge** | `_expand_instructions()` at practice and fidelity — order is now `contexts` → fidelity templates → `additional_templates` only |
+| **Who reads it** | Lifecycle action recipes (`Generate`, `Validate`, …) reference `self.examples` in their `@agent_instructions` body when they need example prose |
+| **No** | `ExamplesSection`, thinning examples per fidelity, inl
+... [10 lines, 766 chars total]
+
+==============================================================================
+2026-09-10T22:53:26Z  afterAgentResponse  conv=0e0e3022  gen=c251fd9b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Split the conflated bits and clarified the *GuidanceSection* model:
+
+**Three separate concerns now:**
+
+1. **Guidance vs GuidanceSection** (when you need a section object at all)
+   - Plain *Guidance* — whole region only (`practice.instructions` = contexts + templates)
+   - *GuidanceSection* — when something needs **structured** props (`rules`) or an **instruction slice alone** (`shared.guidance` for validate)
+
+... [20 lines, 1184 chars total]
+
+==============================================================================
+2026-09-10T22:54:49Z  afterAgentResponse  conv=0e0e3022  gen=5f4d2e40  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed the top-level **Deployment model** chapter (~190 lines). Deploy rules now sit in the class intro that owns them:
+
+| Class / module | Deploy content |
+|----------------|----------------|
+| **ContextGuidance** | `### Deploy` — `deployment_manifest()` graph, router/fidelity artifacts, today → target |
+| **DeploymentDescriptor** | How manifest is built; Harness only serializes |
+| **ArtifactSpec** | Body copied from `.instructions` |
+| **context_tools/actions** | `### Deploy` — command vs skill vs `@mcp` |
+... [14 lines, 970 chars total]
+
+==============================================================================
+2026-09-10T23:01:32Z  afterAgentResponse  conv=0e0e3022  gen=a8cc95c4  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated the design doc: **`instructions` is a `@markdown(override=True)` property**, not a bare `@property`.
+
+**Seam (unchanged logic, different decorator):**
+- **`@markdown(override=True) instructions`** — registered label; body returns `expand_markdown()`
+- **`expand_markdown()`** — abstract composition method; subclasses override this, not `instructions`
+- **`examples`** — plain `@markdown` (extract-only), same family as `contexts`
+
+**Also updated:** naming line, Guidance intro, shape table, CE blocks (`Guidance`, `GuidanceSection`, `ContextGuidance`, `FidelityGuidance`), `@markdown` module
+... [8 lines, 693 chars total]
+
+==============================================================================
+2026-09-10T23:04:25Z  afterAgentResponse  conv=0e0e3022  gen=fb12083b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `@markdown` and `instructions` sit in different layers. **`@markdown` pulls one label → one blob.** **`instructions` is the composed agent string** every deploy and runtime path agrees on.
+
+## What `@markdown` does (and stops at)
+
+From the doc, `primitives/markdown` is **extractor only**:
+
+- `contexts` → `{domain}.md` § `# Contexts`
+- `examples` → `examples/` folder
+... [37 lines, 2441 chars total]
+
+==============================================================================
+2026-09-10T23:08:22Z  afterAgentResponse  conv=0e0e3022  gen=c1e2f826  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **"Contradictory @markdown on instructions"** was my mistake from the back-and-forth — not something in the design.
+
+For a bit we had `instructions` as `@markdown(override=True)` delegating to `expand_markdown()`. That was wrong: `@markdown` means "read this label from co-located md." `instructions` doesn't read a file — it **joins** other labels.
+
+**The model (two jobs):**
+
+| | What it does |
+|---|---|
+... [30 lines, 1349 chars total]
+
+==============================================================================
+2026-09-10T23:09:20Z  afterAgentResponse  conv=0e0e3022  gen=109fe9ad  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right:
+
+- **`@markdown`** — on each property that reads co-located md (`contexts`, `examples`, `scaffold`, …)
+- **`instructions`** — named `@property` with logic; calls those properties; no `@markdown`
+
+Doc updated — dropped the "collection" framing.
+
+==============================================================================
+2026-09-10T23:11:29Z  afterAgentResponse  conv=0e0e3022  gen=d48e6ae8  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Renamed **`context_tools/base`** → **`context_tools/context_guidance`** throughout the design doc (8 places), matching *ContextGuidance*.
+
+**Today:** `context_tools/base/base_context_tool.py` (`BaseContextTool`)  
+**Target:** `context_tools/context_guidance/` — `guidance.py`, `context_guidance.py`, `guidance_spec.py`, …
+
+Migration table #10 updated with the module path.
+
+==============================================================================
+2026-09-10T23:14:43Z  afterAgentResponse  conv=0e0e3022  gen=622352ed  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. **`@markdown` extraction is owned by `primitives/markdown`** — not `AgenticToolset`.
+
+**Flow:**
+```
+self.contexts  (any caller)
+  → @markdown property getter
+  → extract_markdown(host, label)
+  → MarkdownRef.extract()
+... [14 lines, 507 chars total]
+
+==============================================================================
+2026-09-10T23:15:39Z  afterAgentResponse  conv=0e0e3022  gen=b02dd8f9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: That block was an interaction trace without an operation header. It’s now:
+
+```markdown
+## MarkdownRef
+
+- extract(): str
+
+---
+... [17 lines, 493 chars total]
+
+==============================================================================
+2026-09-10T23:16:05Z  afterAgentResponse  conv=0e0e3022  gen=f446db44  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed the duplicate:
+
+- **Object flows §1** — dropped the repeated `host.contexts` / `extract_markdown` / `MarkdownRef.extract()` block; points to `primitives/markdown` instead.
+- **`extract_markdown` interaction** — no longer re-expands locate rules; ends at `MarkdownRef.extract()` with a pointer to that operation.
+
+==============================================================================
+2026-09-10T23:16:30Z  afterAgentResponse  conv=0e0e3022  gen=dcd997c9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: That block was muddled. Here's what was wrong and what it is now:
+
+**Before (broken):**
+- `extract(): str` orphaned between `---` separators
+- `<< triggered by >> extract_markdown → MarkdownRef.from_label` — call chain in the wrong place
+- `<< uses >> AssetLocator(host, label)` then `-> locate(...)` — mixed dependency and call syntax
+
+**Now:**
+... [20 lines, 778 chars total]
+
+==============================================================================
+2026-09-10T23:17:21Z  afterAgentResponse  conv=0e0e3022  gen=c5560874  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: That section was a leftover — a module-level function dressed up as a type operation with no body.
+
+**Removed** `## extract_markdown`. The path is:
+
+1. **`@markdown` property** (`self.contexts`, …) — public API  
+2. **`MarkdownRef.from_label` → `MarkdownRef.extract()`** — locate and read (interaction under `extract()`)
+
+No separate `extract_markdown` heading. If the implementation keeps a helper with that name, it's internal to the `@markdown` getter — not its own module concept.
+
+==============================================================================
+2026-09-10T23:17:42Z  afterAgentResponse  conv=0e0e3022  gen=86456d29  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Renamed **`MarkdownRef` → `Markdown`** everywhere in the doc (18 places).
+
+- Type: `Markdown.from_label(host, label)` → `Markdown.extract()`
+- Section: `## Markdown` (not `MarkdownRef`)
+- Return types on `@markdown` properties: `-> Markdown`
+
+==============================================================================
+2026-09-10T23:18:31Z  afterAgentResponse  conv=0e0e3022  gen=b1f933aa  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: We're not using it — that line was speculative.
+
+**Today:** `@instruction(override=True)` exists only for `session_guidance` on `BaseContextTool` — Python delegates to `WorkSession`:
+
+```162:168:context_tools/base/base_context_tool.py
+    @instruction(override=True)
+    def session_guidance(self) -> Instruction:
+        """Delegate to WorkSession — prose lives in workspace_session.md."""
+... [15 lines, 769 chars total]
+
+==============================================================================
+2026-09-10T23:19:06Z  afterAgentResponse  conv=0e0e3022  gen=31d32af6  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: That line was noise — a negative footnote in the wrong section.
+
+**`@markdown`** section: only what gets the decorator (`contexts`, `examples`, `scaffold`, …).
+
+**`instructions`** and **`catalog`**: named `@property` with logic — documented under *Guidance*, not as exceptions in the `@markdown` section.
+
+Also dropped the fuzzy “`catalog` unless also a co-located extract” wording. `catalog` is always `@property` override; if it reads md, that happens inside the property body, not via `@markdown`.
+
+==============================================================================
+2026-09-10T23:20:03Z  afterAgentResponse  conv=0e0e3022  gen=2f1ff944  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Consolidated into one **`## Markdown`** section:
+
+- **`@markdown`** decorator + **`Markdown`** type (`from_label`, `extract`) together
+- One example block (`contexts`, `examples`, `scaffold`)
+- One interaction trace under `host.{label}` → `from_label` → `extract` → `AssetLocator`
+- Label paths and `module_dir` requirement inline
+
+Removed the duplicate `## @markdown` section and the repeated prose at the top of the module.
+
+==============================================================================
+2026-09-11T01:46:51Z  afterAgentResponse  conv=0e0e3022  gen=58c236ac  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed **`TemplateRef`**. `template` is a normal **`@markdown` property** on *FidelityGuidance* — same mechanism as `contexts` / `examples`, no special class or `extract(format)`.
+
+**`FidelityGuidance`:**
+```python
+@markdown
+def template(self) -> str: ...   # templates/{domain}-sketch.md or templates/{domain}-templates.{ext}
+```
+
+... [11 lines, 571 chars total]
+
+==============================================================================
+2026-09-11T01:47:54Z  afterAgentResponse  conv=0e0e3022  gen=21357c3f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right — it wasn't a class. That `## parse` block was loose module functions dressed up like one.
+
+**Removed** `## parse` from `primitives/markdown`.
+
+Parsing belongs on the types that use it:
+- **Md layout** → under *GuidanceSection* (which `##` slices become `intro`, `guidance`, `rules`)
+- **Build** → `SharedSection.from_contexts_md(contexts_md)` — not a separate `parse_*` API in the module diagram
+
+... [9 lines, 529 chars total]
+
+==============================================================================
+2026-09-11T02:13:27Z  afterAgentResponse  conv=0e0e3022  gen=b083a3a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: That line was trying to say two things at once with notation nobody uses. Rewrote it plainly:
+
+**Two ways to read the same file:**
+- **`@markdown contexts`** — whole `# Contexts` chapter as one string
+- **`GuidanceSection`** (`intro`, `guidance`, `rules`) — constructor splits the file by headings into fields
+
+The layout diagram now uses a concrete example (`bdd.md`, `## behavior`) instead of `{domain}.md` § `# Contexts` — not `@markdown`. Also fixed the wrong claim that slice properties are `@markdown` (they are not).
+
+==============================================================================
+2026-09-11T02:18:09Z  afterAgentResponse  conv=0e0e3022  gen=5adb718f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — I had the wrong model. **`intro`, `guidance`, and `rules` are not constructor-filled fields.** They are `@markdown` properties like `contexts` and `examples`. `Markdown` resolves from the owner's `module_dir` (folder → file → section in `{slug}.md`). For `rules`, the property is typed `list[Rule]` and `@markdown` coerces the extracted section text into that list.
+
+Updated `context-tool-resource-model.md` accordingly:
+
+**`primitives/markdown`**
+- `@markdown` reads the property return type: `str` or `list[Rule]`
+- `Markdown.coerce(text, return_type)` parses rule bullets into `list
+... [20 lines, 1357 chars total]
+
+==============================================================================
+2026-09-11T02:34:42Z  afterAgentResponse  conv=0e0e3022  gen=6c9302da  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — that's the cleaner model. Updated the doc to match:
+
+```
+Guidance
+└── ContextSection
+    │   context    @markdown  (today's contexts / docstring slice)
+    │   guidance   @markdown
+    │   rules      @markdown → list[Rule]
+... [32 lines, 1750 chars total]
+
+==============================================================================
+2026-09-11T02:37:04Z  afterAgentResponse  conv=0e0e3022  gen=b65fd770  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. `Templates` is no longer a class.
+
+`templates` is a `@property` on *ContextGuidance* and *FidelityGuidance* — backed by the `templates/` folder, with `templates[format]` as subscript access to pick the produce file for that format. The `## Templates` section is removed; it’s documented inline on those two types only.
+
+==============================================================================
+2026-09-11T02:39:50Z  afterAgentResponse  conv=0e0e3022  gen=d0ae9f0c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. `templates` is now **`@markdown`** with map coercion, aligned to what existing context tools already use on disk.
+
+**Mechanism**
+- `@markdown templates` → `dict[str, str]` — **format key → relative path** under `module_dir`
+- `templates[format]` subscripts the map and **reads file content** (with `filter_template_lines` on *FidelityGuidance* when sharing one produce file)
+
+**Naming standard (migrate as-is — do not rename)**
+
+... [19 lines, 1123 chars total]
+
+==============================================================================
+2026-09-11T02:40:18Z  afterAgentResponse  conv=0e0e3022  gen=5312f187  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **"Practice" is not a type.** In the design doc it's shorthand for one **domain *ContextGuidance*** — the whole context tool at toolset scope, not at a single fidelity.
+
+| Informal "practice" | Actual thing |
+|-------------------|----------------|
+| `practice.instructions` | `bdd.instructions` — router skill body for *Bdd* |
+| `practice.rules` | shared rules on that *ContextGuidance* |
+| "practice level" vs "fidelity level" | *ContextGuidance* vs *FidelityGuidance* |
+| `from_practice(...)` | was vague — renamed to **`from_context_guidance(context_guidance: ContextGuidance)`** |
+... [14 lines, 1182 chars total]
+
+==============================================================================
+2026-09-11T02:40:54Z  afterAgentResponse  conv=0e0e3022  gen=7cc11c01  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **`DeploymentDescriptor`** is the deploy plan for one *ContextGuidance* (e.g. *Bdd*) — a plain data object that says **which IDE files to write and what goes in each**, without Harness building prose at write time.
+
+**Today:** Harness walks classes, calls `compound_guidance`, uses `ContextToolBody`, re-parses rules, etc. Assembly is spread across Harness.
+
+**Target:** *ContextGuidance* builds the plan once via `deployment_manifest()` → `DeploymentDescriptor`. Harness `DeployWriter` only serializes it — copy `body` strings to disk, write `mcp.json`, no subprocess, no re-parse.
+
+**What it holds:
+... [27 lines, 1620 chars total]
+
+==============================================================================
+2026-09-11T02:49:07Z  afterAgentResponse  conv=0e0e3022  gen=a0fe1582  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Your last message looks cut off — just **"t h"**.
+
+Were you going for something like "thanks", or did you mean to ask about a specific part of the model (channels, `ContextGuidance`, templates, …)? Send the full question and I'll pick it up.
+
+==============================================================================
+2026-09-11T02:49:36Z  afterAgentResponse  conv=0e0e3022  gen=94aafd9a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Recorded at the top of the design doc:
+
+| Role | Owner | Does |
+|------|--------|------|
+| **Reading** | *Guidance* / *ContextGuidance* / *AgenticToolset* | `@markdown`, `.instructions`, `.catalog`, tools, action recipes — answer when asked |
+| **Writing** | **Deployment channel** | Skill / command / rule / MCP target — asks host, writes IDE file |
+| **Orchestration** | **Harness** | `registry.load()` → for each host × channel → `deploy(host)` — no prose assembly |
+
+... [9 lines, 619 chars total]
+
+==============================================================================
+2026-09-11T02:50:52Z  afterAgentResponse  conv=0e0e3022  gen=1a9f138b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Created **[`.sessions/context-tool-refactoring-71/context-tool-resource-model-om-bdd.md`](c:\dev\abd-context-driven-delivery\.sessions\context-tool-refactoring-71\context-tool-resource-model-om-bdd.md)** — object model + BDD only.
+
+**Includes:**
+- Type hierarchy
+- CE blocks for all types (`Markdown`, `Guidance`, `ContextSection`, `ContextGuidance`, `Fidelities`, `FidelityGuidance`, `Rule`, `AgenticToolset`, `DeploymentChannel`, `Harness`, MCP, `Catalog`)
+- Object flows (1–5)
+- Full BDD behavior sketch (expanded slightly for channels / `Markdown.coerce`)
+
+... [12 lines, 744 chars total]
+
+==============================================================================
+2026-09-11T02:52:02Z  afterAgentResponse  conv=0e0e3022  gen=5a36f0b7  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Rewrote `context-tool-resource-model-om-bdd.md`:
+
+**Object model (clean_engineering model fidelity)**
+- Removed ASCII trees
+- Module intros: Purpose, Seam, Dependencies
+- Classes as `## ClassName` / `## Child : Parent` with `+` constructor, `------` / `----`, `<< composition >>` / `<< association >>`, `->` interactions, `//` invariants
+- Channel subtypes: `SkillChannel`, `CommandChannel`, `RuleChannel`, `McpChannel` : `DeploymentChannel`
+
+... [15 lines, 798 chars total]
+
+==============================================================================
+2026-09-11T02:57:28Z  afterAgentResponse  conv=0e0e3022  gen=871d5d1d  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed **slice** from both design docs:
+
+- `context-tool-resource-model.md` — `# Contexts` **section**; iterate flow uses **segment** instead of slice
+- `context-tool-resource-model-om-bdd.md` — same on disk
+
+Recorded in `.sessions/context-tool-refactoring-71/AGENTS.md`: use **section** for md scope, **segment** for iterate ticks, or name the property directly — not slice.
+
+==============================================================================
+2026-09-11T03:01:07Z  afterAgentResponse  conv=0e0e3022  gen=a573fb9f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated both docs. Target `# Contexts` layout:
+
+```
+# Contexts
+preamble              → ContextGuidance.context
+## Guidance           → ContextGuidance.guidance
+## Shared rules       → ContextGuidance.rules
+
+... [22 lines, 959 chars total]
+
+==============================================================================
+2026-09-11T03:05:09Z  afterAgentResponse  conv=0e0e3022  gen=a4fd7731  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `FidelityPhases` is a **second lookup path** on `Fidelities` — same `FidelityGuidance` objects, keyed by **CDD stage** instead of **domain name**.
+
+## Two names for the same node
+
+Each `FidelityGuidance` carries both:
+
+| Bdd example | Domain name (`name`) | CDD stage (`stage`) |
+|-------------|----------------------|---------------------|
+... [58 lines, 2326 chars total]
+
+==============================================================================
+2026-09-11T03:05:34Z  afterAgentResponse  conv=0e0e3022  gen=5c7a8478  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Dropped `FidelityPhases`. `Fidelities` now has two lookups on the same collection:
+
+```python
+fidelities["behavior"]              # domain name → md ## heading, deploy name
+fidelities.by_phase("specification")  # CDD stage → same FidelityGuidance; aliases normalized here
+```
+
+`by_phase` replaces today's `STAGE_ALIASES` + `resolve_fidelity` + the `fidelities` stage→name dict. Both docs and session `AGENTS.md` are updated.
+
+==============================================================================
+2026-09-11T03:08:38Z  afterAgentResponse  conv=0e0e3022  gen=40e38c5f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right. Updated model:
+
+**`ContextSection`** owns `format` and `instructions` assembly — one path for every host:
+`context + guidance + format_rules(rules) + templates[format]`
+
+**`FidelityGuidance`** adds only `name` (plus `stage`, `default_format`, `parent`). `name` scopes `@markdown` extract under `## {name}`; no `instructions` override. Same property, same logic as practice — `AssetLocator` sees a different host.
+
+**`ContextGuidance`** is the only type that overrides `instructions` — to append `fidelities.instructions`.
+... [10 lines, 612 chars total]
+
+==============================================================================
+2026-09-11T03:09:48Z  afterAgentResponse  conv=0e0e3022  gen=07795e7f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Agreed — those were a mistake. `FidelityGuidance` is read-side only: `name`, `stage`, `default_format`, `parent`, plus inherited `ContextSection` properties.
+
+Removed from the OM block:
+- `generate()` / `validate()` / `satisfy()` / `apply_to(instance)`
+
+Also removed the BDD scenario that tied `generate` to `FidelityGuidance`. Full design doc now marks `_generate_fidelity_methods` and `_set_fidelity` as **retire**, not moved onto `FidelityGuidance`. `Generate`, `Validate`, `Satisfy` stay independent `@agent_instructions` actions on `ContextGuidance` in `context_tools/actions/`. Invoke resolves 
+... [6 lines, 695 chars total]
+
+==============================================================================
+2026-09-11T03:12:35Z  afterAgentResponse  conv=0e0e3022  gen=a1cf60b5  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `fidelity` is now on **`ContextSection`** (base), not only on `ContextGuidance`:
+
+```68:73:c:\dev\abd-context-driven-delivery\.sessions\context-tool-refactoring-71\context-tool-resource-model-om-bdd.md
++ name: str | None
++ context_guidance: ContextGuidance
+	// @markdown module_dir always from here — self on ContextGuidance, parent on FidelityGuidance
++ fidelity: str | None
+	// domain fidelity key — equals name on FidelityGuidance; active key on ContextGuidance at invoke; None practice-wide
+... [13 lines, 938 chars total]
+
+==============================================================================
+2026-09-11T03:16:30Z  afterAgentResponse  conv=0e0e3022  gen=217438e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `getitem` / subscript is back as the default **`"name"`** lookup:
+
+```python
+fidelities["behavior"]              # default key — domain name
+fidelities.by("stage", "specification")  # other key indexes
+```
+
+`getitem(name)` ≡ `by("name", name)`. Stage and other keys stay on `by(key_id, key)` only. Both docs and `AGENTS.md` updated.
+
+==============================================================================
+2026-09-11T03:18:59Z  afterAgentResponse  conv=0e0e3022  gen=83c9396d  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated — both module paths now use `agent_toolset`:
+
+| Was | Now |
+|-----|-----|
+| `primitives/actions/` | `primitives/agent_toolset/` |
+| `context_tools/actions/` | `context_tools/agent_toolset/` |
+
+`AgenticToolset` class name unchanged. `scan`, `generate`, `render`, `iterate`, etc. all sit under `context_tools/agent_toolset/`. Session docs and `AGENTS.md` updated.
+
+==============================================================================
+2026-09-11T03:20:10Z  afterAgentResponse  conv=0e0e3022  gen=d9c17db7  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **`@agent_instructions`** — that's what lands in the `actions` dict on `AgenticToolset`.
+
+| Dict | Decorator | Examples |
+|------|-----------|----------|
+| **`actions`** | `@agent_instructions` | `Generate`, `Validate`, `Satisfy`, `guidance()`, utility commands |
+| **`tools`** | `@agent_tool` | `load_template`, scanners, host tools |
+
+Lifecycle/orchestration methods use `@agent_instructions`. Optional stacks on top:
+... [13 lines, 689 chars total]
+
+==============================================================================
+2026-09-11T03:21:00Z  afterAgentResponse  conv=0e0e3022  gen=202b93d3  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. On `AgenticToolset`:
+
+| Registry | Property | Decorator |
+|----------|----------|-----------|
+| `@agent_tool` | `tools` | unchanged |
+| `@agent_instructions` | **`map`** | was `actions` dict |
+
+Also fixed the OM block — it had `instructions: dict` by mistake; that's now `map: dict`.
+
+==============================================================================
+2026-09-11T03:22:16Z  afterAgentResponse  conv=0e0e3022  gen=07babf0f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — I mixed up three different things. Sorry about that.
+
+On **`AgenticToolset`** there are three separate pieces:
+
+| Name | What it is |
+|------|------------|
+| **`tools`** | Registry of `@agent_tool` methods |
+| **`actions`** | Registry of `@agent_instructions` methods (`Generate`, `Validate`, …) |
+... [15 lines, 741 chars total]
+
+==============================================================================
+2026-09-11T03:23:22Z  afterAgentResponse  conv=0e0e3022  gen=252abd1b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Got it — the refactor drops **`actions`** as the registry name. **`@agent_instructions`** methods register as **`instructions`** (replacing today's `actions` / `ToolsetExtensions.members("actions", …)`).
+
+**Two senses of `instructions` in the target model:**
+
+| | What | Access |
+|---|------|--------|
+| **Registry** | `@agent_instructions` methods (`Generate`, `Validate`, …) | Class/extension introspection at deploy/MCP — **not** `practice.instructions` on a loaded instance |
+| **Prose** | Assembled markdown for deploy / `guidance()` | `practice.instructions` → `str` `@property` on *ContextGuid
+... [13 lines, 893 chars total]
+
+==============================================================================
+2026-09-11T03:24:17Z  afterAgentResponse  conv=0e0e3022  gen=d3e2c114  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Reverted. `ContextGuidance` is back to `ContextSection` only, with the `// also AgenticToolset` note. `AgenticToolset : Toolset, Guidance` is unchanged.
+
+==============================================================================
+2026-09-11T03:27:01Z  afterAgentResponse  conv=0e0e3022  gen=340d617c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Documented **compound doc** across the session artifacts.
+
+### Pattern
+
+Both `.instructions` and `.catalog` are **assembled documents** read from the host — not registries:
+
+1. **Own slots** first (`@markdown` joins on *ContextSection*; module/operation prose on bare *AgenticToolset*)
+2. **Iterate members** in stable order and append each slice:
+... [22 lines, 1252 chars total]
+
+==============================================================================
+2026-09-11T03:33:09Z  afterAgentResponse  conv=0e0e3022  gen=8dc12a28  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Consolidated everything under **`primitives/harness`** — one module for all IDE deploy artifacts.
+
+### Unified model
+
+**`HarnessTool`** — writers for every artifact type:
+
+| Writer | Decorator | Output |
+|---|---|---|
+... [21 lines, 1015 chars total]
+
+==============================================================================
+2026-09-11T03:33:46Z  afterAgentResponse  conv=0e0e3022  gen=fe7fac71  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `HarnessTool` is the **file writer** — one instance produces **one IDE artifact on disk**.
+
+It is **not** the annotation (`@skill`, `@prompt`, …). It is **not** the host (`ContextGuidance`, `Bdd`, …). It is the object that knows:
+
+1. **Where** the file goes — `relative_path()` → e.g. `.cursor/skills/bdd/SKILL.md`
+2. **What** goes in it — `render()` → frontmatter + body
+3. **How to fill the body** — `generate(source)` pulls from `ContextToolBody`, `ActionBody`, `UtilityBody`, etc.
+
+... [34 lines, 1691 chars total]
+
+==============================================================================
+2026-09-11T03:34:22Z  afterAgentResponse  conv=0e0e3022  gen=54ed5e2a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `DeployTarget` and `HarnessTool` are separate because they answer different questions — but only **half** the deploy paths need both.
+
+### Two sources of deploy work
+
+**1. Host-level deploy** — no method decorator involved
+
+| What | How it deploys |
+|---|---|
+... [43 lines, 2621 chars total]
+
+==============================================================================
+2026-09-11T03:37:05Z  afterAgentResponse  conv=0e0e3022  gen=a4df2f54  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — the docs were wrong to treat host deploy as a separate "read `.instructions` and write a file" path.
+
+**Correct model:**
+
+| Member | Host | Decorators | Deploys as |
+|---|---|---|---|
+| `instructions` | *ContextGuidance* | `@skill` `@agent_instructions` | router skill (`@bdd`) |
+| `rules` | *ContextGuidance* | `@instruction` per `Rule` | `.cursor/rules/…` |
+... [26 lines, 1124 chars total]
+
+==============================================================================
+2026-09-11T03:38:34Z  afterAgentResponse  conv=0e0e3022  gen=3c317db8  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Settled on **`@rules`** on the `rules` property.
+
+| Decorator | Goes on | Why |
+|---|---|---|
+| **`@rules`** | `rules` property (`list[Rule]`) | Matches the member name; deploys one file per `Rule.slug` |
+| **`@instruction(name=…)`** | an **operation** | One **named** rule file (harness already uses this) |
+| ~~`@instructions`~~ | — | Don't use — collides with `instructions` |
+
+... [16 lines, 725 chars total]
+
+==============================================================================
+2026-09-11T03:38:46Z  afterAgentResponse  conv=0e0e3022  gen=9acecefb  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: With `deployMember` and `@rules` / `@skill` / `@prompt` all on members, **`HarnessTool` does not earn a separate place in the target model.**
+
+It is only there because today's code has it:
+
+```288:289:primitives/harness/harness_tool.py
+class HarnessTool:
+    """One generated IDE file. ``type`` is Cursor, VS Code, or Kilo."""
+```
+... [34 lines, 1482 chars total]
+
+==============================================================================
+2026-09-11T03:40:38Z  afterAgentResponse  conv=0e0e3022  gen=15d032d1  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right — MCP is not “another markdown writer.” Updated the model:
+
+### Two deploy shapes under `DeployTarget`
+
+**`DeployTarget`** (base) — markdown IDE files  
+`@skill`, `@prompt`, `@rules`, `@instruction`, … → `deploy(host, member)` → `render()` → write `.md` / `.mdc`
+
+**`McpDeployTarget : DeployTarget`** — extends, overrides deploy  
+... [25 lines, 1018 chars total]
+
+==============================================================================
+2026-09-11T03:42:25Z  afterAgentResponse  conv=0e0e3022  gen=d81ebc1a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right — **`@mcp` does not exist today.** Docs are corrected.
+
+### Today: MCP mode in Harness
+
+```python
+Harness.write_deploy(mcp=True)  # /deploy-harness with mcp=true
+```
+
+... [33 lines, 1412 chars total]
+
+==============================================================================
+2026-09-11T03:43:19Z  afterAgentResponse  conv=0e0e3022  gen=f02ff037  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **Target model — two parts, one tail for all markdown deploy targets:**
+
+| Part | Owner | What |
+|---|---|---|
+| **Invoke tail** | `DeployTarget.render(…, transport="mcp")` | **Same for `@skill`, `@prompt`, `@rules`, `@instruction`** — `Use MCP tool: …` at bottom |
+| **Manifest + runtime** | `McpDeployTarget` + `deployMcp(host)` | `mcp.json`, JSON schema, `McpToolset` bind — **not** markdown |
+
+`@mcp` goes on the **operation** (`generate`, `guidance`, …). The file deploy decorators (`@skill` on `instructions`, `@prompt` on fidelity `instructions`, `@rules` on `rules`) still render markdown — w
+... [12 lines, 825 chars total]
+
+==============================================================================
+2026-09-11T03:45:56Z  afterAgentResponse  conv=0e0e3022  gen=1d2cc4c7  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: They didn't disappear — they were **folded into `DeployTarget` subclasses**, and the old Harness dispatch helpers were **retired**.
+
+**What changed (by design)**
+
+| Retired | Replaced by |
+| ------- | ----------- |
+| `deployContextGuidance` | `SkillDeployTarget.deploy` + `RulesDeployTarget.deploy` on the host |
+| `deployContextGuidanceSection` | `PromptDeployTarget.deploy` + `RulesDeployTarget.deploy` on each fidelity |
+... [20 lines, 1253 chars total]
+
+==============================================================================
+2026-09-11T03:49:14Z  afterAgentResponse  conv=0e0e3022  gen=10154818  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: All deploy orchestration methods are back under `## DeployTarget` at lines 212–252:
+
+- `deploy(deployable)`
+- `deployContextGuidance`
+- `deployContextGuidanceSection`
+- `deployGuidance`
+- `deployOperation`
+- `deployTool`
+... [14 lines, 509 chars total]
+
+==============================================================================
+2026-09-11T03:52:23Z  afterAgentResponse  conv=0e0e3022  gen=7e5bc955  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — that's the model, and both docs now say it explicitly.
+
+**Orchestration** (`deploy*`) — dispatch by **what you pass in**:
+
+| Deployable | Method | Why it's separate |
+|------------|--------|-------------------|
+| `ContextGuidance` | `deployContextGuidance` | practice + fidelities + ops + MCP toolset |
+| `FidelityGuidance` | `deployContextGuidanceSection` | one section only — **override** when policy differs (extended → skill not command) |
+... [23 lines, 1397 chars total]
+
+==============================================================================
+2026-09-11T03:55:11Z  afterAgentResponse  conv=0e0e3022  gen=7fa41a01  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done. `context-tool-resource-model-om-bdd.md` is CE model + BDD only now:
+
+- **Removed** all tables (deploy walk, markdown kinds, MCP two-parts)
+- **Removed** narrative blocks (three roles, compound doc, md layout, templates key, MCP in target prose)
+- **Header** points to the full doc for tables and rationale
+
+Reference tables and deploy/MCP narrative live in `context-tool-resource-model.md`. `AGENTS.md` records that split.
+
+==============================================================================
+2026-09-11T03:57:18Z  afterAgentResponse  conv=0e0e3022  gen=a1c9baf8  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes. One seam: **`DeployTarget`**. No `DeployOrchestrator`.
+
+```
+DeployTarget.deploy(deployable)
+  → ContextGuidance  → deployContextTool(host)
+  → AgenticToolset   → deployToolset(host)
+
+deployContextTool(host)
+... [24 lines, 1123 chars total]
+
+==============================================================================
+2026-09-11T03:57:48Z  afterAgentResponse  conv=0e0e3022  gen=b11fe9dd  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right.
+
+- **`deploy(deployable)`** — you pass the deployable **in**; dispatch is `when deployable is ContextGuidance` → `deployContextTool(context_guidance)`, not “return ContextGuidance”.
+- **No return type** on deploy methods — side effect only; artifacts land on disk.
+- Parameters named for what they are: `context_guidance`, `toolset`, `fidelity` — not generic `host`.
+
+Updated in om-bdd, full doc, and `AGENTS.md`.
+
+==============================================================================
+2026-09-11T03:59:20Z  afterAgentResponse  conv=0e0e3022  gen=314542af  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed. All subtypes use the **same `deploy*` API** as `DeployTarget` — they override the abstract methods, no parallel deploy API.
+
+**MarkdownDeployTarget** overrides:
+- `deployContextSection`
+- `deployContextSectionFidelity`
+- `deployToolsetOperation`
+- `deployToolsetTool`
+
+... [15 lines, 682 chars total]
+
+==============================================================================
+2026-09-11T04:01:10Z  afterAgentResponse  conv=0e0e3022  gen=91c22213  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right to question it — **`deployToolsetOperation` is not a thing in the current system.** It was invented in the target model to mean “deploy one `@agent_instructions` method on the toolset.” Nothing in today's code is named or structured that way.
+
+### What deploy actually does today
+
+`Harness.write_deploy()` → `_generate_entry()` per registry class. For each class it does roughly:
+
+1. **One router artifact per context tool** — a **skill** for the practice (`kind == "context_tool"`), built from class metadata / guidance, not from walking methods individually.
+
+... [40 lines, 3036 chars total]
+
+==============================================================================
+2026-09-11T04:03:28Z  afterAgentResponse  conv=0e0e3022  gen=6514a011  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated the design to trace deploy names back to today's harness — **extract, not reinvent**.
+
+### Renamed to match `operation_writes`
+
+| Target | Today |
+|--------|--------|
+| `deployAgentInstructions` | `operation_writes` row with `invoke == "action"` — method has `@agent_instructions`; emits skill/command when `@skill` / `@prompt` stacked |
+| `deployAgentTool` | `operation_writes` row with `invoke == "tool"` — method has `@agent_tool`; usually invoke tail only; MCP bind when `mcp=True` |
+... [35 lines, 1946 chars total]
+
+==============================================================================
+2026-09-11T04:05:14Z  afterAgentResponse  conv=0e0e3022  gen=4aff9a8c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: They're not the same thing — they sit on opposite sides of deploy vs runtime.
+
+### `McpDeployTarget` — deploy time (writes files)
+
+Part of the `DeployTarget` hierarchy. Runs during `write_deploy(mcp=True)` and produces **static artifacts on disk**:
+
+- `.cursor/mcp.json` — tells Cursor to start `python -m mcp_server --toolsets stories:Bdd,…`
+- Which toolset refs to include (today: `_write_mcp_json` in `Harness`)
+... [63 lines, 2739 chars total]
+
+==============================================================================
+2026-09-11T04:07:40Z  afterAgentResponse  conv=0e0e3022  gen=b0257aea  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — roughly right, with one important correction about **what deploy actually writes today**.
+
+### Three different things (don’t collapse them)
+
+| Layer | When | What it is | Granularity |
+|-------|------|------------|-------------|
+| **`MarkdownDeployTarget`** (`transport="mcp"`) | Deploy | **Strings in files** — `Use MCP tool: \`stories.generate(...)\`` at the bottom of SKILL.md / commands | Per operation (prose for the agent) |
+| **`McpDeployTarget`** | Deploy | **Config on disk** — mainly `.cursor/mcp.json` | Per **toolset class**, not per operation |
+... [53 lines, 3002 chars total]
+
+==============================================================================
+2026-09-11T04:09:59Z  afterAgentResponse  conv=0e0e3022  gen=08f43ff9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right that **one walk** should drive deploy — and that's what the `DeployTarget` refactor is aiming at. The separation isn't "walk twice on purpose"; it's **deploy writes files and exits** vs **the MCP server is a different process that starts later**.
+
+### What deploy can and does do in one pass
+
+When `Harness.write_deploy(mcp=True)` runs, it already does MCP-related work from the same registry walk:
+
+1. **Markdown files** — invoke tails (`Use MCP tool: \`stories.generate(...)\``) via `operation_writes` + `transport=mcp`
+2. **`mcp.json`** — server command + **toolset refs** (`context_t
+... [64 lines, 3631 chars total]
+
+==============================================================================
+2026-09-11T04:10:51Z  afterAgentResponse  conv=0e0e3022  gen=88f553d3  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right to push on that — **`bind` should not be a deploy step**, and it shouldn't be something `Harness` orchestrates as a separate operation in the target model.
+
+That was sloppy naming in the design doc (`McpDeployTarget` → `McpToolset.register_bindings`). Drop it.
+
+### What actually happens today
+
+Deploy ends. No binding.
+
+... [52 lines, 2354 chars total]
+
+==============================================================================
+2026-09-11T04:12:50Z  afterAgentResponse  conv=0e0e3022  gen=bc97bf5b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Got it — you’re not asking for bind at deploy. You’re saying **`bind` belongs on `McpDeployTarget`** because that type already walks operations for deploy, so don’t spin up separate `McpToolset` adapters that redo the same annotation iteration.
+
+Updated the design to match:
+
+### One walker: `McpDeployTarget`
+
+```
+deploy (write_deploy)
+... [28 lines, 1270 chars total]
+
+==============================================================================
+2026-09-11T04:13:02Z  afterAgentResponse  conv=0e0e3022  gen=4bc1021f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right, and I was answering a different question than the one you asked.
+
+**What you meant:** don't copy the `operation_writes` / annotation walk in two places (`Harness` deploy path and `McpToolset` getmembers). Put it on `McpDeployTarget` once — `deploy*` writes files and records ops, `bind(server)` enrolls from that same knowledge at server start.
+
+**What I kept arguing:** deploy can't *run* the MCP server or hold live callables on disk. That's still true, but it's orthogonal. You never said bind should run during deploy.
+
+So yes — **your design makes sense**. The duplication today is
+... [32 lines, 1709 chars total]
+
+==============================================================================
+2026-09-11T04:15:51Z  afterAgentResponse  conv=0e0e3022  gen=050cf86d  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Second pass done. **`context-tool-resource-model-om-bdd.md` is now canonical** for flows and BDD; the full doc summarizes and points there.
+
+### What was wrong
+
+| Issue | Fix |
+|-------|-----|
+| **Deploy flow** stopped at `deployContextTool(bdd)` | Expanded to full walk: section → fidelity × n → `operation_writes` → `MarkdownDeployment` / `McpDeployment` split |
+| **No MCP runtime flows** | Added **MCP server start** (`bind`) and **MCP invoke** sections |
+... [32 lines, 2151 chars total]
+
+==============================================================================
+2026-09-11T04:20:46Z  afterAgentResponse  conv=0e0e3022  gen=42d8cfc6  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Reordered BDD in `context-tool-resource-model-om-bdd.md` into **10 dependency layers** — implement and green bottom-up:
+
+| Layer | What | Why first |
+|-------|------|-----------|
+| **1** | `Markdown`, `Rule` | extract, coerce `str` / `list[Rule]` / templates map |
+| **2** | `Guidance` alone | compound `.instructions` / `.catalog` on a stub subtype |
+| **3** | `AgenticToolset` | per-operation assembly via `instructions_registry` |
+| **4** | `ContextSection` | shared `# Contexts` file — context, guidance, rules, templates |
+... [25 lines, 1713 chars total]
+
+==============================================================================
+2026-09-11T04:22:53Z  afterAgentResponse  conv=0e0e3022  gen=0af952a3  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated BDD to be **subject-first** — same layer order, different outer `describe` subjects.
+
+### Rule added
+Outer `describe` = **observable thing** (file, folder, deploy tree), not `Markdown`, `Deployment`, `ContextSection`, etc. Nest down to the annotated property, section heading, or IDE path, then `it should`.
+
+### Examples of the shift
+
+| Before (class-first) | After (object-first) |
+... [28 lines, 1630 chars total]
+
+==============================================================================
+2026-09-11T04:25:43Z  afterAgentResponse  conv=0e0e3022  gen=42fa7fc9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Validated and revised the BDD sketch against **bdd-behavior** shared rules. Summary:
+
+### Rules now explicit at top of BDD section
+`observable-behavior`, `describe-is-subject-not-internal`, `describe-is-plain-english`, `state-not-when`, `nest-by-enabling-events`, `domain-practice-alignment`, `usage-order-behaviors`.
+
+### Layer 1 — restored module-dir resolution (your example)
+Observable in `it should`; implementation on `->` port line:
+
+... [33 lines, 1890 chars total]
+
+==============================================================================
+2026-09-11T04:26:11Z  afterAgentResponse  conv=0e0e3022  gen=66bdcfaa  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: What that spec was trying to say — there are **two ways** to read the same section from `bdd.md`:
+
+1. **Read the property** — e.g. `practice.guidance` (a `@markdown` property on the host).
+2. **Call the extractor** — `Markdown.from_label(host, "guidance")` then extract/coerce.
+
+Those are meant to be the **same code path**: the property is a thin wrapper around `from_label`, not a second parser. The spec says: if you read `host.guidance` and you also run the extractor with the same host and label, you get **identical text**.
+
+The old wording (“reading by label as reading the property directly”)
+... [17 lines, 1159 chars total]
+
+==============================================================================
+2026-09-11T04:26:51Z  afterAgentResponse  conv=0e0e3022  gen=17eaa6b0  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: The observable thing is simply: **when someone reads `guidance` (or `context`, `rules`, etc.) on a context tool, they get the prose from that tool’s own co-located markdown file — not from somewhere else.**
+
+Concretely, in a test you’d set up:
+
+1. `context_tools/bdd/bdd.md` contains `## Guidance` with known text.
+2. Read `Bdd(...).guidance` → you get **that** text.
+
+The negative case (module isolation) is also observable:
+... [15 lines, 900 chars total]
+
+==============================================================================
+2026-09-11T04:28:14Z  afterAgentResponse  conv=0e0e3022  gen=4add8cee  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — **Shared rules + scanner bullets** is ContextSection behavior (the `rules` property on a practice host reading the shared contexts file), not primitive markdown.
+
+**Layer 1** now only covers:
+- read a markdown section as the property string
+- prose comes from **this** module's file, not another module's
+
+**Layer 4** (shared contexts file at practice scope) now owns:
+- Shared rules → rule list with scanner slugs, slug/body/fidelity for scan and deploy
+... [11 lines, 754 chars total]
+
+==============================================================================
+2026-09-11T04:29:14Z  afterAgentResponse  conv=0e0e3022  gen=fbeaf6b9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed **slots** from all session design and BDD text and added a ban to `AGENTS.md`.
+
+**Replacements:**
+- `own slots` → `own markdown properties` / `own catalog properties`
+- `markdown-backed slots` → `several markdown-backed properties`
+- `assemble from those slots` → `assemble from those properties`
+- `@instruction` slots → `@instruction` named rule files
+
+... [16 lines, 635 chars total]
+
+==============================================================================
+2026-09-11T04:30:25Z  afterAgentResponse  conv=0e0e3022  gen=a833f523  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Agreed — **"wired into a compound instructions property"** was doing the test’s job in the setup. That’s implementation shape, not a standing condition.
+
+Your structure is right:
+
+```
+describe a minimal tool class          ← subject
+  with several markdown-backed properties   ← structure
+    with the instructions property read    ← event
+... [12 lines, 628 chars total]
+
+==============================================================================
+2026-09-11T04:31:32Z  afterAgentResponse  conv=0e0e3022  gen=f7c513ac  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. Catalog behavior is now:
+
+- **No catalog content** → empty catalog, not instructions
+- **Markdown catalog content on the host** → **HTML from that markdown**, not instructions text
+
+That matches the model: `.catalog` is its own compound doc (HTML for the catalog site), built from catalog markdown properties — not a copy of `.instructions`.
+
+==============================================================================
+2026-09-11T04:32:33Z  afterAgentResponse  conv=0e0e3022  gen=0ce0f23f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fair point — removed it.
+
+A minimal tool class **without a contexts file** only gets specs for what it **does**: instructions assembly and catalog. Context, guidance, and rules enter the tree in layer 4 when that host and file format exist. Testing that it “doesn’t expose” properties it never had is noise.
+
+Recorded in `AGENTS.md`: **don’t test non-existence.**
+
+(Layer 6 still has “should not expose `session_guidance`” on the **refactored** bdd/stories host — that’s a migration constraint: legacy API that **used to** exist and must be gone. Different story; say if you want that dropped too.)
+
+==============================================================================
+2026-09-11T04:33:15Z  afterAgentResponse  conv=0e0e3022  gen=b7103c08  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed:
+
+- Layer 6 — whole `that is refactored from the legacy base context tool` block (`session_guidance`, `generate_fixes_from_validate`, per-fidelity generate methods)
+- Layer 10 — `it should not call generate fixes from validate on the legacy base context tool`
+
+`AGENTS.md` now says the same rule covers legacy-removal negatives: spec what the new host **does**, not that removed APIs stay gone.
+
+==============================================================================
+2026-09-11T04:34:09Z  afterAgentResponse  conv=0e0e3022  gen=1e1f303f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed. You can't test that in any meaningful way — you'd be asserting which internal walk the reader uses, not something a stakeholder sees.
+
+Layer 3 now only states the positive read outcome: compound instructions from each registered operation. The `-> instructions_registry` hint stays on that line for whoever ports the spec; read vs deploy separation lives in `AGENTS.md`, not in `it should`.
+
+Also dropped the `guidance()` vs `.instructions` equivalence block — same problem (two code paths must agree).
+
+==============================================================================
+2026-09-11T04:36:41Z  afterAgentResponse  conv=0e0e3022  gen=70a30346  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Layer 4 and 5 are restructured around that idea:
+
+**One shared outcome block per layer** — the `it should` lines for context, guidance, rules, instructions, and templates (layer 4) and fidelity reads (layer 5).
+
+**Two setups that nest the same block:**
+- **Single file** — `{practice}.md` with the shared contexts chapter structure (`bdd.md` style)
+- **Section files / folders** — `contexts.md` or `contexts/`, `guidance.md` or `guidance/`, `rules.md` or `rules/`, `fidelities/` when split (`@instruction` / `AssetLocator` style)
+
+... [11 lines, 784 chars total]
+
+==============================================================================
+2026-09-11T04:39:41Z  afterAgentResponse  conv=0e0e3022  gen=7378125e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed. Replaced invented **practice host** / **practice-wide** / **on the practice** with **context guidance** and **fidelity guidance** throughout layers 4–10 and deploy/catalog specs.
+
+Also added a **domain-vocabulary** bdd-behavior rule and an `AGENTS.md` line: never use practice host in om-bdd or `guidance_spec.py`; scope before `## Fidelities` is context guidance, each `## {name}` under Fidelities is fidelity guidance.
+
+==============================================================================
+2026-09-11T04:43:05Z  afterAgentResponse  conv=0e0e3022  gen=e626673f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed — left context guidance terminology as-is.
+
+Layers 4–5 now use Mamba **`shared_context` / `included_context`** (your auth-gateway shape):
+
+1. **`with shared_context('shared contexts format on context guidance'):`** — all read outcomes once  
+2. Each layout **`with description(...):`** — `before.each` builds the fixture (`{domain-slug}.md` vs section files/folders)  
+3. **`with included_context('...'): pass`** — pulls in the shared tree
+
+... [9 lines, 569 chars total]
