@@ -128,12 +128,25 @@ https://github.com/abd-works/abd-context-driven-delivery/issues/19
 - Bdd and Ddd `transform`/`render` delegate to Clean Engineering rather than their own channels
 - Same names and similar bodies appear on several domains; whether they are the **exact same** method that can lift to `BaseContextTool` is the investigation
 
-## Handoff — base (2026-08-26)
+## Handoff — guidance resource model implementation (2026-09-11)
 
 ## Resume
 
-- **Stage:** (unset)
-- **Last work:** (see session progress below)
+- **Stage:** layer 1 green; layer 2 next
+- **Last work:** Layer 1 — `primitives/markdown`, `@markdown`, `context_tools/context_guidance/guidance_spec.py` + real fixtures; golden-reference workflow documented
+- **Next action:** **Layer 2 turn** — minimal `Guidance` compound instructions and catalog (`generate` → migrate → real spec → `/turn`)
+- **Next focus:** Layer 2 only — no deploy yet
+
+## Golden deploy reference
+
+- **Path:** `.cursor copy/` (repo root, local — successful `write_deploy(mcp=True)` snapshot)
+- **Use:** compare deploy test output (skills, `mcp.json`, rules, MCP tails) to matching paths under `.cursor copy/`
+- **Note:** fidelity commands appear as skills `{slug}-{fidelity}` in MCP golden, not only under `commands/`
+
+## Handoff — base (2026-08-26)
+
+## Resume (archived)
+
 - **Next action:** Investigate whether domain transform and render can live on BaseContextTool
 - **Next focus:** Investigate whether domain transform and render can live on BaseContextTool
 

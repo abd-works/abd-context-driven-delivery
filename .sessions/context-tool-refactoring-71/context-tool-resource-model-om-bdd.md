@@ -420,6 +420,28 @@ Port: `before.each` → fixture; `write_deploy` → deploy setup; shared block �
 
 ---
 
+## Implementation — one layer per turn
+
+**Golden deploy reference:** `.cursor copy/` at the repo root (local snapshot of a successful `write_deploy(mcp=True)`). Treat it as the visual and structural source of truth until this migration replaces it. Compare every deploy test’s output tree to the matching paths under `.cursor copy/` — same skill folder layout, `mcp.json` shape, MCP invoke tails at the bottom of markdown bodies, rules under `.cursor/rules/`. Target layout may add sections (for example explicit `## Fidelities` in domain markdown) for easier mapping; skill paths stay aligned: router `.cursor/skills/{slug}/{slug}/SKILL.md`, fidelity `.cursor/skills/{slug}/{slug}-{fidelity}/SKILL.md`, utilities and actions under their own slug folders. CLI transport may still use `.cursor/commands/` — MCP golden is all skills.
+
+**No fake deploy tests.** Every deploy `it should` runs the real `Harness.write_deploy` (or the extracted `Deployment` once migrated) into a temp or fixture directory, then reads files from disk. Do not mock `Harness`, `Deployment`, or `operation_writes` for outcomes that stakeholders see on disk. Read-path tests use real co-located fixtures beside a real module directory. Temporary throwaway modules are fine; stubby mocks of the deploy pipeline are not.
+
+**Migrate then retire.** Each layer is a migration step on existing code (`markdown_extractor`, `BaseContextTool`, monolithic `Harness`, `McpToolset`, …). Wire the new seam until that layer’s BDD is green, then delete or bypass the old path for that behavior. Breaking unrelated tests temporarily is acceptable within a layer turn; fix or retire the old path before `/turn`. Do not leave parallel implementations.
+
+**One layer = one `/turn`.** Do not stack layers in a single commit. Per turn:
+
+1. **`generate`** — `@bdd-development` for the layer’s `guidance_spec.py` (or the module that owns that layer); `@clean-engineering-model` when the layer introduces or moves types.
+2. **Migrate** — minimum production code for that layer only; touch old code only as needed to route through the new seam.
+3. **Real environment** — run `write_deploy` (mcp when the layer includes MCP); diff against `.cursor copy/` for the fixtures in scope; run mamba on the layer spec.
+4. **Subagent spot-check** — for MCP invoke and skill bodies (layers 3–7), run a sub-agent against deployed `SKILL.md` or `McpServer.invoke_tool` / `invoke_prompt` instead of asserting only string contains in unit tests.
+5. **`/turn`** — commit with `utility: turn`, message names the layer number and what was migrated/retired.
+
+**Layer 1 (done):** `primitives/markdown/Markdown` + `@markdown` over `AssetLocator`; `context_tools/context_guidance/guidance_spec.py` layer 1 block with real fixtures under `fixtures/sample_tool` and `fixtures/other_tool`.
+
+**Layer 2 turn (next):** minimal `Guidance` compound `instructions` / `catalog` — no contexts file yet.
+
+---
+
 ## Layer 1 — co-located markdown and folders
 
 ```

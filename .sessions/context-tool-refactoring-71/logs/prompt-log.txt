@@ -1670,3 +1670,31 @@ text: Layer 7 host specs are reframed around the full chain, matching the style 
 
 ### After (fixture-driven)
 ... [21 lines, 1267 chars total]
+
+==============================================================================
+2026-09-11T05:13:16Z  afterAgentResponse  conv=0e0e3022  gen=d7488dd0  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Committed on `main` as `8cb8b407`.
+
+**bdd:** Interleave deploy with read per host; MCP invoke tails and runtime chain; remove satisfy; hooks last
+
+- **Context-Tool:** bdd  
+- **Utility:** turn  
+- **Subject:** `.sessions/context-tool-refactoring-71`
+
+... [11 lines, 496 chars total]
+
+==============================================================================
+2026-09-11T05:14:54Z  afterAgentResponse  conv=0e0e3022  gen=e97fb788  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Captured the implementation discipline. This turn is **process + handoff** — not Layer 1 code (that gets its own turn).
+
+### Golden reference: `.cursor copy/`
+Successful MCP deploy snapshot at repo root. Deploy tests must:
+- Run real `Harness.write_deploy(mcp=True)` into a temp directory
+- Compare output to `.cursor copy/` — skill folders, `mcp.json`, rules, `Use MCP tool:` tails at the bottom of bodies
+- MCP golden uses **all skills** (e.g. `stories/stories-story-map/SKILL.md`), not only `commands/`
+
+... [29 lines, 1632 chars total]

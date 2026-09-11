@@ -1,6 +1,11 @@
 # Guidance resource model (#71)
 
+## Implementation turns (one om-bdd layer each)
 
+- **Golden deploy:** `.cursor copy/` at repo root — successful MCP deploy snapshot. Deploy tests call real `Harness.write_deploy` into a temp dir and compare structure and bodies to `.cursor copy/` (skills, `mcp.json`, rules, MCP tails). Not a mock of the deploy pipeline.
+- **Per turn:** `generate` (bdd-development + clean-engineering-model when types move) → migrate production code for that layer → real deploy + mamba → subagent spot-check for MCP/skills when the layer includes them → `/turn`. One layer per commit.
+- **Migrate then retire** — wire the new seam, green the layer spec, remove or bypass the old code path for that behavior in the same turn. OK if other tests break mid-layer; do not leave dual implementations.
+- **No stubby deploy tests** — no mocking `Harness` / `Deployment` for disk outcomes. Real fixtures, real write_deploy, read files back.
 
 - Do not use **slice** in this design — not for a `# Contexts` region, a `ContextSection` scope, or iterate workflow steps. Name the thing: **section** (md heading scope), **segment** (iterate tick), or the property name (`context`, `guidance`, `rules`).
 

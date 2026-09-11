@@ -803,6 +803,8 @@ Harness.write_deploy(mcp=False)
 
 Deploy outcomes shared across layers live in om-bdd **Deploy shared contexts** — each host layer adds delta `it_behaves_like` blocks only.
 
+**Implementation:** one om-bdd layer per `/turn`. Golden MCP deploy snapshot: `.cursor copy/` at repo root. Deploy tests use real `Harness.write_deploy` and compare output to that tree; migrate existing code per layer then retire the old path. See om-bdd § Implementation — one layer per turn.
+
 Full specs → `context-tool-resource-model-om-bdd.md` (canonical).
 
 ---
