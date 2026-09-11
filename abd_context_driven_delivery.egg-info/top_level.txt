@@ -1,7 +1,7 @@
+_probe_signup
 _template_review
 actions
 agent_bdd
-agent_skills
 assets
 base
 bdd
@@ -12,12 +12,11 @@ catalog_generator
 cdd
 clean_engineering
 cli_agent
+conf
 context_setup
 context_tools
-contexts
 create_context_tool
 ddd
-declared
 deployments
 diagnose
 document
@@ -45,9 +44,7 @@ rules
 sandbox
 satisfy
 scan
-scanners
 scripts
-sessions
 sketch
 stories
 sub_agent
@@ -56,6 +53,5 @@ tools
 utilities
 ux
 validate
-work
 workflow
 workspace

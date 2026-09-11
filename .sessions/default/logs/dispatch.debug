@@ -6,6 +6,7 @@
 2026-09-10T03:11:45Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-10T03:11:45Z ENABLED ['(none)']
 2026-09-10T03:11:45Z MERGED {"permission": "allow"}
+<<<<<<< HEAD
 2026-09-10T15:32:45Z ENTRY raw_len=1119 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0e0e3022-d89b-47ca-a41d-e962101e1fe0","generation_id":"241a9b27-bbdb-4286-b39c-265681a7a5be","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
 2026-09-10T15:32:45Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-10T15:32:45Z ENABLED ['(none)']
@@ -14,3 +15,65 @@
 2026-09-10T15:39:55Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-10T15:39:55Z ENABLED ['(none)']
 2026-09-10T15:39:55Z MERGED {"permission": "allow"}
+=======
+2026-09-10T12:16:23Z ENTRY raw_len=1092 raw=b'\xef\xbb\xbf{"conversation_id":"f522502a-8e0c-436f-9016-45e6b7ee4c2d","generation_id":"70917119-e7f5-4cc6-a982-4aa8afa6f670","model":"gemini-2.5-flash","model_id":"gemini-2.5-flash","text":"It seems there was '
+2026-09-10T12:16:23Z EVENT 'afterAgentResponse' conversation_id='f522502a-8e0c-436f-9016-45e6b7ee4c2d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:16:23Z ENABLED ['(none)']
+2026-09-10T12:16:23Z MERGED {"permission": "allow"}
+2026-09-10T12:18:18Z ENTRY raw_len=1400 raw=b'\xef\xbb\xbf{"conversation_id":"f522502a-8e0c-436f-9016-45e6b7ee4c2d","generation_id":"d725abb6-57eb-438f-ab1c-cd76a6b6f09e","model":"gemini-2.5-flash","model_id":"gemini-2.5-flash","text":"I have created a ha'
+2026-09-10T12:18:18Z EVENT 'afterAgentResponse' conversation_id='f522502a-8e0c-436f-9016-45e6b7ee4c2d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:18:18Z ENABLED ['(none)']
+2026-09-10T12:18:18Z MERGED {"permission": "allow"}
+2026-09-10T12:30:18Z ENTRY raw_len=2373 raw=b'\xef\xbb\xbf{"conversation_id":"dff22550-003e-4b90-894e-24ea5bb1d574","generation_id":"49739c82-86b9-4780-8f65-13a3833e2f76","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:30:18Z EVENT 'afterAgentResponse' conversation_id='dff22550-003e-4b90-894e-24ea5bb1d574' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:30:18Z ENABLED ['(none)']
+2026-09-10T12:30:18Z MERGED {"permission": "allow"}
+2026-09-10T12:30:55Z ENTRY raw_len=2788 raw=b'\xef\xbb\xbf{"conversation_id":"dff22550-003e-4b90-894e-24ea5bb1d574","generation_id":"0460fca9-7355-4a64-90ed-7e9e7a751dd9","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:30:55Z EVENT 'afterAgentResponse' conversation_id='dff22550-003e-4b90-894e-24ea5bb1d574' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:30:55Z ENABLED ['(none)']
+2026-09-10T12:30:55Z MERGED {"permission": "allow"}
+2026-09-10T12:34:57Z ENTRY raw_len=1631 raw=b'\xef\xbb\xbf{"conversation_id":"dff22550-003e-4b90-894e-24ea5bb1d574","generation_id":"7150a2e8-0c99-470e-bc61-98c85639c815","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:34:57Z EVENT 'afterAgentResponse' conversation_id='dff22550-003e-4b90-894e-24ea5bb1d574' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:34:57Z ENABLED ['(none)']
+2026-09-10T12:34:57Z MERGED {"permission": "allow"}
+2026-09-10T12:36:18Z ENTRY raw_len=1222 raw=b'\xef\xbb\xbf{"conversation_id":"dff22550-003e-4b90-894e-24ea5bb1d574","generation_id":"7669ce40-7347-4658-8e32-5d7a2cb93e9d","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:36:18Z EVENT 'afterAgentResponse' conversation_id='dff22550-003e-4b90-894e-24ea5bb1d574' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:36:18Z ENABLED ['(none)']
+2026-09-10T12:36:18Z MERGED {"permission": "allow"}
+2026-09-10T12:38:19Z ENTRY raw_len=1152 raw=b'\xef\xbb\xbf{"conversation_id":"dff22550-003e-4b90-894e-24ea5bb1d574","generation_id":"18db03a2-d214-43a1-b615-5693ec56a32b","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:38:19Z EVENT 'afterAgentResponse' conversation_id='dff22550-003e-4b90-894e-24ea5bb1d574' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:38:19Z ENABLED ['(none)']
+2026-09-10T12:38:19Z MERGED {"permission": "allow"}
+2026-09-10T12:38:52Z ENTRY raw_len=1166 raw=b'\xef\xbb\xbf{"conversation_id":"dff22550-003e-4b90-894e-24ea5bb1d574","generation_id":"c7dabf48-9602-4947-beae-40253cc2c924","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:38:52Z EVENT 'afterAgentResponse' conversation_id='dff22550-003e-4b90-894e-24ea5bb1d574' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:38:52Z ENABLED ['(none)']
+2026-09-10T12:38:52Z MERGED {"permission": "allow"}
+2026-09-10T12:45:20Z ENTRY raw_len=1875 raw=b'\xef\xbb\xbf{"conversation_id":"b6418d15-2794-4982-b396-5763a12aad36","generation_id":"a9a9533a-40d1-4fef-b40c-fdc2585f4a28","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:45:20Z EVENT 'afterAgentResponse' conversation_id='b6418d15-2794-4982-b396-5763a12aad36' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:45:20Z ENABLED ['(none)']
+2026-09-10T12:45:20Z MERGED {"permission": "allow"}
+2026-09-10T12:51:06Z ENTRY raw_len=1299 raw=b'\xef\xbb\xbf{"conversation_id":"b6418d15-2794-4982-b396-5763a12aad36","generation_id":"d7fc57f6-df07-4b00-9a57-85b28d09906e","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:51:06Z EVENT 'afterAgentResponse' conversation_id='b6418d15-2794-4982-b396-5763a12aad36' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:51:06Z ENABLED ['(none)']
+2026-09-10T12:51:06Z MERGED {"permission": "allow"}
+2026-09-10T12:51:33Z ENTRY raw_len=1320 raw=b'\xef\xbb\xbf{"conversation_id":"b6418d15-2794-4982-b396-5763a12aad36","generation_id":"dafa10b3-cd87-44ea-a296-33398d9313de","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:51:33Z EVENT 'afterAgentResponse' conversation_id='b6418d15-2794-4982-b396-5763a12aad36' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:51:33Z ENABLED ['(none)']
+2026-09-10T12:51:33Z MERGED {"permission": "allow"}
+2026-09-10T12:56:40Z ENTRY raw_len=1060 raw=b'\xef\xbb\xbf{"conversation_id":"b6418d15-2794-4982-b396-5763a12aad36","generation_id":"861b7eb7-ad81-4f88-bac3-2be8e76ae689","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T12:56:40Z EVENT 'afterAgentResponse' conversation_id='b6418d15-2794-4982-b396-5763a12aad36' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T12:56:40Z ENABLED ['(none)']
+2026-09-10T12:56:40Z MERGED {"permission": "allow"}
+2026-09-10T13:02:28Z ENTRY raw_len=1563 raw=b'\xef\xbb\xbf{"conversation_id":"b6418d15-2794-4982-b396-5763a12aad36","generation_id":"e5108c00-3baa-41fd-b2ed-babe374d1595","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T13:02:28Z EVENT 'afterAgentResponse' conversation_id='b6418d15-2794-4982-b396-5763a12aad36' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T13:02:28Z ENABLED ['(none)']
+2026-09-10T13:02:28Z MERGED {"permission": "allow"}
+2026-09-10T13:03:24Z ENTRY raw_len=2594 raw=b'\xef\xbb\xbf{"conversation_id":"b6418d15-2794-4982-b396-5763a12aad36","generation_id":"84ac8735-8c21-41c6-adcc-d57c87cd996a","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T13:03:24Z EVENT 'afterAgentResponse' conversation_id='b6418d15-2794-4982-b396-5763a12aad36' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T13:03:24Z ENABLED ['(none)']
+2026-09-10T13:03:24Z MERGED {"permission": "allow"}
+2026-09-10T13:10:50Z ENTRY raw_len=1075 raw=b'\xef\xbb\xbf{"conversation_id":"b6418d15-2794-4982-b396-5763a12aad36","generation_id":"df414c5c-776b-441c-8de0-be32be49463b","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
+2026-09-10T13:10:50Z EVENT 'afterAgentResponse' conversation_id='b6418d15-2794-4982-b396-5763a12aad36' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T13:10:50Z ENABLED ['(none)']
+2026-09-10T13:10:50Z MERGED {"permission": "allow"}
+>>>>>>> 7e30c3fed5a0bcc35343159fd8e78b36f50a588b

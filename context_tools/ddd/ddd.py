@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
 from primitives.actions.action import agent_instructions
@@ -102,16 +103,15 @@ class Ddd(BaseContextTool):
         """CleanEngineering companion at the matching fidelity (tool mode — invoke separately when ready)."""
         from context_tools.clean_engineering.clean_engineering import CleanEngineering
 
+        current = self.workspace.current_work_session
+        working_path = current.path if current is not None else self._raw_path
+        workspace_root = current.workspace_root if current is not None else self.workspace.path
         instance = CleanEngineering(
             fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
             format=self.format,
-            path=self.workspace.path,
-            session=(
-                self.workspace.current_work_session.name
-                if self.workspace.current_work_session
-                else ""
-            ),
-            workspace=self.workspace.path,
+            path=working_path,
+            session=current.name if current is not None else "",
+            workspace=workspace_root,
         )
         instance.mode = "tool"
         return instance
@@ -131,18 +131,27 @@ class Ddd(BaseContextTool):
         default (`src`). Returns the working path in force.
         """
         generate_folder = type(self).default_workspace_folder
-        if self._raw_path is not None:
-            current = self.workspace.current_work_session
-            return current.path if current is not None else self.workspace.path
-        if self.default_workspace_folder != generate_folder:
-            current = self.workspace.current_work_session
-            return current.path if current is not None else self.workspace.path
-        self.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
         current = self.workspace.current_work_session
         if current is None:
-            return self.workspace.path
+            self.workspace.open(
+                self,
+                name=self._session_name,
+                path=self._raw_path or "",
+            )
+            current = self.workspace.current_work_session
+        if current is None:
+            raise RuntimeError("DDD work session did not open")
+        if self._raw_path is not None:
+            return current.path
+        if self.default_workspace_folder != generate_folder:
+            return current.path
+        generated_path = Path(current.workspace_root) / generate_folder
+        if Path(current.path).resolve() != generated_path.resolve():
+            return current.path
+        self.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
         current.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
-        current.path = current._resolve_working_area(None)
+        current.path = str(Path(current.workspace_root) / current.default_workspace_folder)
+        current.record_context_root()
         return current.path
 
     @instruction

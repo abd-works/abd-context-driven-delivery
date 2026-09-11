@@ -369,6 +369,18 @@ with description("a harness"):
                 expect(refs).not_to(contain("required.required:RequiredTool"))
                 expect(refs).not_to(contain("harness.harness:Harness"))
 
+            with it("should write mcp.json to the requested deploy path"):
+                root = _sandbox()
+                deploy_root = Path(tempfile.mkdtemp()) / ".cursor"
+                Harness("Cursor", repo_root=root).write_deploy(
+                    deploy_path=str(deploy_root), mcp=True
+                )
+                expect((deploy_root / "mcp.json").is_file()).to(equal(True))
+                config = json.loads((deploy_root / "mcp.json").read_text(encoding="utf-8"))
+                expect(config["mcpServers"]["cdd"]["cwd"]).to(
+                    equal(str(deploy_root.parent.resolve()))
+                )
+
         with context("with a source"):
             with it("should write that source into the deploy area"):
                 root = _sandbox()

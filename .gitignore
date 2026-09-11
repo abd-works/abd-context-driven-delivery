@@ -45,6 +45,7 @@ conf/
 
 # Temporary scratch files and scripts
 _*
+!utilities/mcp_server/__main__.py
 call_miro.py
 count_all.py
 extract_ids.py
