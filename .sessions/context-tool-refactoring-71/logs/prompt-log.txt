@@ -1698,3 +1698,17 @@ Successful MCP deploy snapshot at repo root. Deploy tests must:
 - MCP golden uses **all skills** (e.g. `stories/stories-story-map/SKILL.md`), not only `commands/`
 
 ... [29 lines, 1632 chars total]
+
+==============================================================================
+2026-09-11T05:18:26Z  afterAgentResponse  conv=0e0e3022  gen=803ddc9e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Continued and finished what was pending.
+
+### Documentation turn (`fd14dd1b`)
+Golden deploy workflow, one-layer-per-turn rules, `.cursor copy/` as reference — in session docs and `AGENTS.md`.
+
+### Layer 1 implementation (`41700b6b`) — green
+
+**Production**
+... [25 lines, 1189 chars total]
