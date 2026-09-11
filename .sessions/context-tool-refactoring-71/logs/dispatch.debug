@@ -522,3 +522,7 @@
 2026-09-11T05:18:26Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-11T05:18:26Z ENABLED ['(none)']
 2026-09-11T05:18:26Z MERGED {"permission": "allow"}
+2026-09-11T15:20:01Z ENTRY raw_len=1097 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0e0e3022-d89b-47ca-a41d-e962101e1fe0","generation_id":"14d3cb50-b740-4dbd-b6d3-d76969f5f7fb","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-11T15:20:01Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-11T15:20:01Z ENABLED ['(none)']
+2026-09-11T15:20:01Z MERGED {"permission": "allow"}

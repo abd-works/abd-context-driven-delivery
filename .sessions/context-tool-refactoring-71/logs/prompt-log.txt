@@ -1712,3 +1712,15 @@ Golden deploy workflow, one-layer-per-turn rules, `.cursor copy/` as reference �
 
 **Production**
 ... [25 lines, 1189 chars total]
+
+==============================================================================
+2026-09-11T15:20:01Z  afterAgentResponse  conv=0e0e3022  gen=14d3cb50  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Committed everything. Working tree is clean.
+
+**`b798c7b9`** — Add golden MCP deploy snapshot under `.cursor copy/` (125 files: skills, `mcp.json`, rules, agents) + session logs
+
+**`b510b133`** — Remove live `.cursor/` deploy tree (files moved/archived to `.cursor copy/`)
+
+Branch is **7 commits ahead** of `origin/main`. Say if you want those pushed.
