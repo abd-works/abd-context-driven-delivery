@@ -1671,6 +1671,31 @@ class WorkSession:
         except (GitConnectError, ValueError):
             pass
 
+    def _ticket_number_from_session_name(self) -> int | None:
+        match = re.search(r"-(\d+)$", (self.name or "").strip())
+        if not match:
+            return None
+        return int(match.group(1))
+
+    def _embed_ticket_context(self) -> None:
+        """When the session slug ends in -{issue}, copy that ticket and linked sub-issues into session.md."""
+        if (self.body or "").strip():
+            return
+        number = self._ticket_number_from_session_name()
+        if number is None:
+            return
+        try:
+            from workflow.work_ticket import format_session_ticket_context
+
+            gh_repo = Repo.open(str(self._repository_root()))
+        except (GitConnectError, ValueError):
+            return
+        body, contexts = format_session_ticket_context(gh_repo, number)
+        if body and not (self.body or "").strip():
+            self.body = body
+        if contexts and not (self.contexts or "").strip():
+            self.contexts = contexts
+
     def _bind_active_session_logs(self) -> None:
         root = Path(self.path or self.git.root)
         write_active_session(root, self.name or SessionModel.DEFAULT_SESSION)
@@ -1718,6 +1743,7 @@ class WorkSession:
                 self.contexts = contexts
             if not self.started:
                 self.started = date.today().isoformat()
+            self._embed_ticket_context()
             self.session_md.write_text(self._render(), encoding="utf-8")
         self._ensure_worktree_venv()
         self._inherit_session_model()
@@ -2032,6 +2058,10 @@ class WorkSession:
         missing or was built for another machine or worktree.
         Pass ``isolate: false`` to keep session folders / turns / logs on the
         current checkout (no sibling worktree) — e.g. track work on main.
+
+        When the session name ends in ``-{issue}``, ``session.md`` gets a
+        ``## Tickets`` section with that issue and every linked sub-issue (parent
+        plus children, or child plus parent and siblings).
 
         Do not call this from a /cli-agent parent. CliAgent opens the session,
         switches to that path, and binds doer/judge. Resume does not rewrite Start.

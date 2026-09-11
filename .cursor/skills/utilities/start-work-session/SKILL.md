@@ -14,6 +14,9 @@ start_work_session — agent starts or resumes a named work session.
         Pass ``isolate: false`` to keep session folders / turns / logs on the
         current checkout (no sibling worktree) — e.g. track work on main.
 
+        When the session name ends in ``-{issue}``, ``session.md`` includes a
+        ``## Tickets`` section with that issue and every linked sub-issue.
+
         Do not call this from a /cli-agent parent. CliAgent opens the session,
         switches to that path, and binds doer/judge. Resume does not rewrite Start.
 

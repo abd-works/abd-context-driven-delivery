@@ -26,3 +26,25 @@ Only `WorkTicket.infer_theme` in `utilities/workflow/work_ticket.py`. Ticket cre
 - scan title + body
 - if the text contains `utilities/mcp_server` → label `mcp-invocation-layer`
 ... [18 lines, 1268 chars total]
+
+==============================================================================
+2026-09-10T15:32:45Z  afterAgentResponse  conv=0e0e3022  gen=241a9b27  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: Cursor full deploy with `mcp=True` finished. Skills, commands, and rules are rewritten under `.cursor/`, and `.cursor/mcp.json` lists the constructable toolsets.
+
+Restart the CDD MCP server so Cursor picks up the new `tools/list`. Skills still show tails like `generate.generate(tools: 'list')` — that’s the signature dump, not a call example.
+
+==============================================================================
+2026-09-10T15:39:55Z  afterAgentResponse  conv=0e0e3022  gen=359dae10  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fair complaint. I was doing it the slow way.
+
+**What burned time**
+- Spinning up `Workflow()` via `python -c` for every step — each call re-attaches the GitHub project and refreshes the full board (multiple `gh` round-trips, often 30–90s).
+- Calling `review_ticket_statuses` / `align_child_tickets_to_parent` when you only asked to move one card.
+- Retrying after PowerShell mangled multiline `python -c`, and waiting on commands that got interrupted instead of switching to `gh` immediately.
+
+**What should have happened**
+... [14 lines, 976 chars total]

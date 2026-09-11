@@ -21,7 +21,7 @@ from mamba import before, context, description, it
 
 from git import TicketNotFoundError
 from git.git import Commit, Repo, Ticket
-from workflow.work_ticket import WorkTicket
+from workflow.work_ticket import WorkTicket, format_session_ticket_context
 from workflow.workflow import Workflow
 
 
@@ -399,15 +399,76 @@ with description("a Workflow start path"):
             self.workflow.start("87", workspace=str(self.tmp))
             expect(self.repo._ticket_project_state[87]).to(equal("In Progress"))
 
-        with it("should copy issue sections into the work session folder when needed"):
+        with it("should copy linked ticket sections into the work session folder when needed"):
             path = self.workflow.copy_issue_body_to_session(
                 "87",
                 "add-workflow-package-87",
                 workspace=str(self.tmp),
             )
-            expect(Path(path).read_text(encoding="utf-8")).to(
-                equal("forward requirements from issue")
+            content = Path(path).read_text(encoding="utf-8")
+            expect("## Tickets" in content).to(be_true)
+            expect("forward requirements from issue" in content).to(be_true)
+
+        with it("should embed parent and child ticket bodies in session.md on open_ticket_session"):
+            _seed_issue(
+                self.repo,
+                number=71,
+                title="Context-tool refactoring",
+                body="parent requirements",
             )
+            _seed_issue(
+                self.repo,
+                number=22,
+                title="Standard fidelities",
+                body="child requirements",
+            )
+            self.repo._ticket_children[71] = [22]
+            self.repo._ticket_parents[22] = 71
+            opened = self.workflow.open_ticket_session("71", workspace=str(self.tmp))
+            session_md = (
+                self.tmp / ".sessions" / opened["session_name"] / "session.md"
+            )
+            content = session_md.read_text(encoding="utf-8")
+            expect("## Tickets" in content).to(be_true)
+            expect("parent requirements" in content).to(be_true)
+            expect("child requirements" in content).to(be_true)
+            expect("#71 #22" in content).to(be_true)
+
+        with it("should include parent and siblings when opening a child ticket session"):
+            _seed_issue(
+                self.repo,
+                number=71,
+                title="Context-tool refactoring",
+                body="parent requirements",
+            )
+            _seed_issue(
+                self.repo,
+                number=22,
+                title="Standard fidelities",
+                body="child requirements",
+            )
+            self.repo._ticket_children[71] = [22]
+            self.repo._ticket_parents[22] = 71
+            opened = self.workflow.open_ticket_session("22", workspace=str(self.tmp))
+            session_md = (
+                self.tmp / ".sessions" / opened["session_name"] / "session.md"
+            )
+            content = session_md.read_text(encoding="utf-8")
+            expect("parent requirements" in content).to(be_true)
+            expect("child requirements" in content).to(be_true)
+
+
+with description("format_session_ticket_context"):
+    with it("should list a parent ticket and every direct child"):
+        tmp, repo = _workflow_fixture("wf-ticket-context-")
+        _seed_issue(repo, number=71, title="Parent", body="parent body")
+        _seed_issue(repo, number=22, title="Child", body="child body")
+        repo._ticket_children[71] = [22]
+        body, contexts = format_session_ticket_context(repo, 71)
+        expect("## Tickets" in body).to(be_true)
+        expect("parent body" in body).to(be_true)
+        expect("child body" in body).to(be_true)
+        expect(contexts).to(equal("#71 #22"))
 
 
 with description("a Workflow finish path"):
