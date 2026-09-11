@@ -306,7 +306,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 # Object flows
 
-**Implementation order** matches BDD layers below: markdown → Guidance → AgenticToolset → ContextSection → fidelities → ContextGuidance → deploy/IDE → MCP → hooks.
+**Implementation order** matches BDD layers below: markdown → Guidance → AgenticToolset **+deploy** → base Guidance **+deploy** → shared contexts **+deploy** → fidelities + assembly **+deploy** → MCP → catalog → hooks last.
 
 ## Compound doc
 
@@ -361,14 +361,15 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 + McpServer.start(toolset_refs from mcp.json)
 	-> for ref: McpDeployment(ref).bind(self)
-		-> enroll McpTool / McpPrompt from mcp_operations
+		-> enroll from mcp_operations recorded when that toolset was deployed — not getmembers rescan
 << triggered by >> Cursor spawns stdio host — not during write_deploy
 
 ## MCP invoke
 
-<< triggered by >> Agent reads SKILL.md invoke tail or host tools/call
-	-> McpServer.invoke_tool("{slug}.{member}")
-	-> McpServer.invoke_prompt("{slug}.{member}")
+<< triggered by >> Agent reads deployed SKILL.md invoke tail or host tools/call / prompts/get
+	-> fixture: toolset with operation annotated @mcp (+ @agent_tool or @agent_instructions) and deployed mcp=True
+	-> McpServer.invoke_tool("{slug}.{member}", arguments)
+	-> McpServer.invoke_prompt("{slug}.{member}", arguments)
 
 ## Runtime guidance
 
@@ -382,6 +383,17 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 Port to `context_tools/context_guidance/guidance_spec.py`. Every `it` body: `# BDD: SIGNATURE` until development fidelity.
 
+**Share notation** — same shape as `bdd` § Guidance for **read** and **deploy**:
+1. **`shared context "…"`** — outcomes written once (read against a common subject, or deploy against a deploy output tree).
+2. **Each layout `describe`** — **`before.each`** assigns the subject or runs **`write_deploy`** on that layer’s fixture.
+3. **`it_behaves_like "…"`** — pulls in the shared block; no repeating the same deploy `describe` tree in every layer.
+
+**Deploy rule:** green **read** for a host, then **deploy markdown artifacts** for that same host before moving on — skills, prompts, and rules first because they are the cheap check that deploy renders the same instructions strings the read path assembled. Split a layer when read has two milestones (fidelity instructions, then assembly): deploy after each milestone, not after all read blocks.
+
+**MCP rule:** same rhythm — once a layer’s markdown deploy is green, add a sibling deploy `describe` with `mcp` transport on **that fixture**. MCP still writes skills, commands, and rules files; transport only changes the **invoke tail at the bottom** of each body (`it_behaves_like "deploy mcp invoke tail on markdown bodies"`). Layer 7 keeps **manifest + host enrollment** only — not first proof of signatures on disk.
+
+Port: `before.each` → fixture; `write_deploy` → deploy setup; shared block → `shared_context`; `it_behaves_like` → `included_context`.
+
 **bdd-behavior shared rules** (validate every line against these):
 
 - **observable-behavior** — `it should` states return value, file on disk, or agent-visible text — not private helpers or class names.
@@ -390,22 +402,21 @@ Port to `context_tools/context_guidance/guidance_spec.py`. Every `it` body: `# B
 - **state-not-when** — never `when`; use `that` for finalized events (`that has been deployed`), `with` for standing conditions.
 - **nest-by-enabling-events** — each nested block must be a real precondition for the outcomes below it.
 - **domain-vocabulary** — use model terms in outcomes: **context guidance**, **fidelity guidance**, `context_guidance.module_dir`, fidelity name, context guidance instructions. Never **practice host** or **practice-wide**.
-- **usage-order-behaviors** — layers below follow co-located file → minimal guidance → toolset → shared contexts format → fidelities → context guidance → deploy → MCP → hooks.
+- **usage-order-behaviors** — co-located file → minimal guidance → toolset **read+markdown deploy+mcp** → base guidance **read+markdown deploy+mcp** → shared contexts **read+router/rules deploy+mcp** → fidelity instructions **read+fidelity prompt deploy+mcp** → assembly **read+full-tree deploy** → MCP manifest/host → catalog → hooks last.
 
-**Implementation order** — green each layer before the next.
+**Implementation order** — green each layer before the next. Each host layer ends with deploy using **deploy shared contexts** (define once below).
 
 | Layer | Test subject | Depends on |
 | ----- | ------------ | ---------- |
 | 1 | Co-located markdown section as string — correct module file only | — |
 | 2 | Minimal tool host with compound instructions and catalog only | layer 1 |
-| 3 | Toolset module with agent-instructions operations | layer 2 |
-| 4 | Shared contexts format on context guidance — single file or section files | layer 1–2 |
-| 5 | Fidelity sections in shared contexts format — same file or fidelities folder | layer 4 |
-| 6 | Context guidance for a context tool such as bdd or stories | layer 3–5 |
-| 7 | Deploy output trees per IDE host | layer 6 |
-| 8 | MCP manifest and running stdio host | layer 7 |
-| 9 | Hooks config and hook skill files | layer 7 |
-| 10 | Catalog pages and satisfy after validate | layer 2+ |
+| 3 | Agentic toolset — read then deploy bare operations | layer 2 |
+| 4 | Base Guidance — read then deploy on same fixture | layer 2–3 |
+| 5 | Shared contexts on context guidance — read then deploy router and rules | layer 1–2, 4 |
+| 6 | Fidelity instructions read → prompt deploy → assembly read → full-tree deploy (+ mcp each deploy step) | layer 5 |
+| 7 | MCP manifest then host invoke — annotated op deployed → start from manifest → tools/call or prompts/get | layer 3–6 fixtures |
+| 8 | Catalog pages from guidance catalog property | layer 2+ |
+| 9 | Hooks config and hook skill files — last; hooks deploy not complete in harness today | layer 6 |
 
 ---
 
@@ -443,7 +454,88 @@ describe a minimal tool class
 
 ---
 
-## Layer 3 — a toolset module with operations
+## Deploy shared contexts (define once)
+
+Reuse in every layer’s deploy subsection via `it_behaves_like`. Each layer’s `describe` only runs `write_deploy` on **its** fixture in `before.each`.
+
+```
+shared context "deploy bare agentic toolset operations"
+  with a Cursor deploy output tree
+    it should write one skill file per agent-instructions operation marked for skill
+    -> .cursor/skills/{operation}/SKILL.md or flat skill path per harness convention
+    it should write one command file per agent-instructions operation marked for prompt
+    -> .cursor/commands/{operation}.md
+    it should not write a router skill or fidelity commands
+    -> deployToolset only; no deployContextSection
+  with a deploy run after write_deploy
+    it should walk operation_writes not instructions_registry
+    it should render skill and prompt bodies from the same instructions strings the read path assembles
+
+shared context "deploy base guidance skill bodies"
+  with deployed skill bodies for marked operations
+    it should use the compound instructions string from the guidance instructions property
+
+shared context "deploy context guidance router and rules"
+  with a Cursor deploy output tree
+    it should write a router skill file whose body equals context guidance instructions
+    -> .cursor/skills/{slug}/SKILL.md
+    it should write one context guidance rules file per context guidance rule slug
+    -> .cursor/rules/{slug}.mdc
+
+shared context "deploy fidelity sections on context guidance"
+  with a Cursor deploy output tree
+    it should write one fidelity command file per fidelity whose body equals that fidelity instructions
+    -> .cursor/commands/{slug}-{fidelity}.md
+    it should write one fidelity rules file per fidelity rule slug
+
+shared context "deploy cli transport on markdown bodies"
+  with deployed skill command and rules bodies
+    it should append the CLI invoke fence at the bottom of each body
+    -> MarkdownDeployment.render transport cli
+
+shared context "deploy mcp invoke tail on markdown bodies"
+  with a deployed skill file for an mcp-published agent-instructions operation
+    it should keep the instruction prose at the top of the skill body unchanged from the non-mcp deploy
+    it should place one MCP invoke line after that prose at the bottom of the file
+    it should name the tool as {toolset-slug}.{operation} with the method parameter signature in backticks
+    -> Use MCP tool: `bdd.generate(...)`; MarkdownDeployment.render_mcp_invoke / transport.render_mcp_tool_reference
+    it should not append the CLI tools.ps1 invoke fence
+  with a deployed command file for an mcp-published prompt operation
+    it should place the same MCP invoke line after the command body at the bottom of the file
+  with a deployed router skill for context guidance when the router operation is mcp-published
+    it should place the MCP invoke line after context guidance instructions at the bottom of the skill file
+  with a deployed fidelity command when that fidelity prompt is mcp-published
+    it should place the MCP invoke line after fidelity instructions at the bottom of the command file
+  with a deployed rules file when that rule slug is mcp-published in the deploy walk
+    it should place the MCP invoke line after the rule body at the bottom of the rules file
+
+shared context "deploy mcp enrollment without bind"
+  with a deploy run after write_deploy with mcp transport
+    it should record each mcp-published operation for server enrollment
+    it should not bind tool handlers during deploy
+    -> McpDeployment.mcp_operations; bind at server start only
+
+shared context "deploy vscode prompt paths"
+  with a VS Code deploy output tree
+    it should write fidelity command files under github prompts not under cursor commands
+    -> .github/prompts/{slug}-{fidelity}.md
+
+shared context "deploy full context tool coverage"
+  with a registered context guidance host fully deployed
+    it should emit router skill fidelity commands and operation artifacts in one pass
+    -> deployContextSection; deployContextSectionFidelity per fidelity; deployToolset
+
+shared context "deploy bare utility toolset only"
+  with a registered utility toolset fully deployed
+    it should emit operation artifacts only without router or fidelity commands
+    -> deployToolset; operation_writes not instructions_registry
+```
+
+---
+
+## Layer 3 — agentic toolset read and deploy
+
+### Read
 
 ```
 describe a toolset module with several agent-instructions operations
@@ -454,9 +546,55 @@ describe a toolset module with several agent-instructions operations
     it should assemble catalog from its catalog properties then from tools and registered operations
 ```
 
+### Deploy
+
+Fixture: small `AgenticToolset` with `@skill` / `@prompt` on some `@agent_instructions` operations, optional `@agent_tool`, co-located markdown for invoke tails.
+
+```
+describe a bare agentic toolset registered for deploy
+  with before.each that runs write_deploy on that fixture
+  it_behaves_like "deploy bare agentic toolset operations"
+
+describe a bare agentic toolset with mcp-published operations registered for deploy
+  with before.each that runs write_deploy with mcp transport on that fixture
+  it_behaves_like "deploy mcp invoke tail on markdown bodies"
+  it_behaves_like "deploy mcp enrollment without bind"
+```
+
 ---
 
-## Layer 4 — shared contexts format on context guidance
+## Layer 4 — base Guidance read and deploy
+
+### Read
+
+```
+describe a minimal guidance tool subclass
+  with agent-instructions operations registered on the toolset
+    with the instructions property read
+      it should assemble compound instructions from markdown properties then from each operation
+```
+
+### Deploy
+
+Same annotations as layer 3 on a `Guidance` subclass with layer 2 compound `instructions` / `catalog`.
+
+```
+describe a minimal guidance tool registered for deploy
+  with before.each that runs write_deploy on that fixture
+  it_behaves_like "deploy bare agentic toolset operations"
+  it_behaves_like "deploy base guidance skill bodies"
+
+describe a minimal guidance tool with mcp-published operations registered for deploy
+  with before.each that runs write_deploy with mcp transport on that fixture
+  it_behaves_like "deploy mcp invoke tail on markdown bodies"
+  it_behaves_like "deploy mcp enrollment without bind"
+```
+
+---
+
+## Layer 5 — shared contexts on context guidance read and deploy
+
+### Read
 
 **Shared contexts format** — the `# Contexts` chapter template (`context-tool-resource-model.md` § Contexts file layout; scaffold seed in `create_context_tool/templates/domain-md.md`). Context guidance body before `## Fidelities`:
 
@@ -467,204 +605,202 @@ describe a toolset module with several agent-instructions operations
 ## Shared rules                 → rules property — scanner bullets
 
 ## Fidelities
-  … fidelity sections — layer 5 …
+  … fidelity sections — layer 6 …
 ```
 
-**Share** — Mamba `shared_context` / `included_context`: define read outcomes once, each on-disk layout `describe` only sets up fixtures in `before.each` then pulls in the shared tree. Resolution order matches today's `@instruction` slots: `{label}/` folder merged, then `{label}.md`, then `## {Label}` in `{domain-slug}.md` beside the module.
+**Share** (`bdd` § Guidance) — same read outcomes for every on-disk layout; only fixture setup differs. Resolution order matches today's `@instruction` slots: `{label}/` folder merged, then `{label}.md`, then `## {Label}` in `{domain-slug}.md` beside the module.
 
-```python
-from mamba import description, context, it, before, shared_context, included_context
+Define once — all `it should` read **context guidance** (assigned in `before.each` below):
 
-with shared_context('shared contexts format on context guidance'):
-    with context('a Contexts chapter and Guidance and Shared rules before Fidelities'):
-        with context('the context property read on context guidance'):
-            with it('should return the Contexts preamble on context guidance only'):
-                # BDD: SIGNATURE
-
-        with context('the guidance property read on context guidance'):
-            with it('should return the Guidance section body only'):
-                # BDD: SIGNATURE
-
-        with context('a Shared rules section containing scanner bullets'):
-            with context('the rules property read on context guidance'):
-                with it('should parse bullets into rules whose slugs match the scanner registry'):
-                    # BDD: SIGNATURE
-                with it('should expose slug body and optional fidelity on each rule for scan and later deploy'):
-                    # BDD: SIGNATURE
-
-        with context('the instructions property read on context guidance'):
-            with it('should join context guidance formatted rules and templates selected by format in one string'):
-                # BDD: SIGNATURE
-
-    with context('a templates folder beside the module'):
-        with context('template files such as slug-templates and slug-sketch inside the folder'):
-            with context('the templates property read on context guidance'):
-                with it('should map each format key to a relative path under templates'):
-                    # BDD: SIGNATURE
-                with it('should keep existing filenames without renaming to slug-fidelity-format'):
-                    # BDD: SIGNATURE
-            with context('one format key selected on that property'):
-                with it('should return the file content at the mapped path'):
-                    # BDD: SIGNATURE
-
-with description('a context tool module with one domain markdown file named for the context tool'):
-    with before.each:
-        # {domain-slug}.md at module_dir following the shared contexts format
-        ...
-
-    with included_context('shared contexts format on context guidance'):
-        pass
-
-with description('a context tool module with section files and subsection folders named for the context tool'):
-    with before.each:
-        # contexts as contexts.md or contexts/; guidance as guidance.md or guidance/;
-        # shared rules as rules.md or rules/ beside the module
-        ...
-
-    with included_context('shared contexts format on context guidance'):
-        pass
+```
+shared context "shared contexts format on context guidance"
+  with the context property read
+    it should return the Contexts preamble on context guidance only
+  with the guidance property read
+    it should return the Guidance section body only
+  with a Shared rules section containing scanner bullets
+    with the rules property read
+      it should parse bullets into rules whose slugs match the scanner registry
+      it should expose slug body and optional fidelity on each rule for scan and later deploy
+  with the instructions property read
+    it should join context guidance formatted rules and templates selected by format in one string
+  with a templates folder beside the module
+    with template files such as slug-templates and slug-sketch inside the folder
+      with the templates property read
+        it should map each format key to a relative path under templates
+        it should keep existing filenames without renaming to slug-fidelity-format
+      with one format key selected
+        it should return the file content at the mapped path
 ```
 
----
+Use in each layout — **assign context guidance, then include shared context**:
 
-## Layer 5 — fidelity sections in shared contexts format
+```
+describe a context tool module with one domain markdown file named for the context tool
+  with before.each that assigns context guidance from {domain-slug}.md at module_dir
+  it_behaves_like "shared contexts format on context guidance"
 
-Fidelity blocks under `## Fidelities` in the same template — `## {name}` with optional `### Guidance` and `### Rules`, or one file or folder per fidelity name when split on disk.
+describe a context tool module with section files and subsection folders named for the context tool
+  with before.each that assigns context guidance from contexts guidance and rules files or folders beside the module
+  it_behaves_like "shared contexts format on context guidance"
+```
 
-```python
-with shared_context('fidelity sections in shared contexts format'):
-    with context('fidelity guidance whose name matches one fidelity heading'):
-        with context('the guidance property read on that fidelity guidance'):
-            with it('should return Guidance under that fidelity name only'):
-                # BDD: SIGNATURE
-        with context('the rules property read on that fidelity guidance'):
-            with it('should return Rules under that fidelity name as a rule list'):
-                # BDD: SIGNATURE
-            with it('should not include rules from sibling fidelity sections'):
-                # BDD: SIGNATURE
+### Deploy
 
-    with context('two fidelities declared shallower before deeper in the collection'):
-        with context('the instructions property read on the deeper fidelity guidance'):
-            with it('should include prior fidelity sections in context in declaration order'):
-                # BDD: SIGNATURE
-            with it('should not include later fidelity sections or sibling templates'):
-                # BDD: SIGNATURE
-            with it('should not inline examples into fidelity instructions'):
-                # BDD: SIGNATURE
-        with context('the templates property read on the deeper fidelity guidance'):
-            with it('should return only that fidelity entries from the templates scan'):
-                # BDD: SIGNATURE
-        with context('one format key selected on that fidelity guidance'):
-            with it('should apply template line filtering when produce fidelities share one templates file'):
-                # BDD: SIGNATURE
-        with context('the catalog property read on the deeper fidelity guidance'):
-            with it('should stack prior fidelity catalog sections like instructions'):
-                # BDD: SIGNATURE
-        with context('the rules property read on that fidelity guidance'):
-            with it('should match the same bullets already formatted into fidelity instructions'):
-                # BDD: SIGNATURE
+Fixture: same layouts as Read — shared contexts on context guidance, no fidelity sections yet (or empty `## Fidelities`).
 
-with description('a guidance collection on context guidance'):
-    with context('the instructions property read on the collection'):
-        with it('should join each fidelity instructions string in declaration order'):
-            # BDD: SIGNATURE
-    with context('lookup by domain name'):
-        with it('should return fidelity guidance for that name'):
-            # BDD: SIGNATURE
-    with context('lookup by stage key and sketch'):
-        with it('should return the sketch fidelity from the stage index'):
-            # BDD: SIGNATURE
-    with context('lookup by stage alias'):
-        with it('should return the same fidelity as lookup by domain name'):
-            # BDD: SIGNATURE
+```
+describe a context tool module with shared contexts format registered for deploy
+  with before.each that runs write_deploy on the single-file or section-file fixture from Read
+  it_behaves_like "deploy context guidance router and rules"
 
-with description('a context tool module with one domain markdown file named for the context tool'):
-    with before.each:
-        # Fidelities and named fidelity headings inside {domain-slug}.md
-        ...
-
-    with included_context('fidelity sections in shared contexts format'):
-        pass
-
-with description('a context tool module with a fidelities folder beside the module'):
-    with before.each:
-        # one file or subfolder per fidelity name; guidance/rules split under each when needed
-        ...
-
-    with included_context('fidelity sections in shared contexts format'):
-        pass
+describe a context tool module with shared contexts format and mcp on the router registered for deploy
+  with before.each that runs write_deploy with mcp transport on the layer 5 read fixture
+  it_behaves_like "deploy context guidance router and rules"
+  it_behaves_like "deploy mcp invoke tail on markdown bodies"
+  it_behaves_like "deploy mcp enrollment without bind"
 ```
 
 ---
 
-## Layer 6 — context guidance for a context tool
+## Layer 6 — fidelity sections and context guidance assembly
+
+Fidelity blocks under `## Fidelities` in the shared contexts template — `## {name}` with optional `### Guidance` and `### Rules`, or one file or folder per fidelity name when split on disk. **Deploy fidelity prompts as soon as fidelity instructions read is green** — before assembly read. Assembly read then full-tree deploy follow.
+
+### Read — fidelity instructions from markdown
+
+Define once — all `it should` read **fidelity guidance** (and the deeper fidelity in stacking cases) assigned in `before.each` below:
 
 ```
-describe context guidance for a context tool such as bdd or stories
-  with co-located domain markdown examples folder and templates folder using the shared contexts format
-    with the instructions property read on context guidance
-      it should equal context guidance instructions plus joined fidelity instructions sketch first
-      it should not inline examples into instructions
-      it should not include the scaffold label
-    with the examples property read on context guidance
-      it should return examples folder content as a separate property not inside instructions
-    with the catalog property read on context guidance
-      it should not derive catalog from instructions
-    with format and default format set on context guidance
-      it should select the template for the active format in context guidance instructions assembly
-    with fidelity set at invoke on context guidance
-      it should resolve active format from the named fidelity default format
+shared context "fidelity sections in shared contexts format"
+  with the guidance property read on fidelity guidance
+    it should return Guidance under that fidelity name only
+  with the rules property read on fidelity guidance
+    it should return Rules under that fidelity name as a rule list
+    it should not include rules from sibling fidelity sections
+  with two fidelities declared shallower before deeper in the collection
+    with the instructions property read on the deeper fidelity guidance
+      it should include prior fidelity sections in context in declaration order
+      it should not include later fidelity sections or sibling templates
+      it should not inline examples into fidelity instructions
+    with the templates property read on the deeper fidelity guidance
+      it should return only that fidelity entries from the templates scan
+    with one format key selected on the deeper fidelity guidance
+      it should apply template line filtering when produce fidelities share one templates file
+    with the catalog property read on the deeper fidelity guidance
+      it should stack prior fidelity catalog sections like instructions
+    with the rules property read on the deeper fidelity guidance
+      it should match the same bullets already formatted into fidelity instructions
 ```
 
----
-
-## Layer 7 — deploy output trees (skills, prompts, rules)
-
-Deploy renders the same instructions and rules strings as layers 1–6. Observe files on disk.
+Use in each layout — **assign context guidance and fidelity guidance from that layout, then include shared context**:
 
 ```
-describe a Cursor deploy output tree
-  that has been deployed for a context tool such as stories
-    it should write a router skill file whose body equals context guidance instructions
-    -> .cursor/skills/{slug}/SKILL.md
-    it should write one fidelity command file per fidelity whose body equals that fidelity instructions
-    -> .cursor/commands/{slug}-{fidelity}.md
-    it should write one rules file per context guidance rule slug
-    -> .cursor/rules/{slug}.mdc
-    it should write one fidelity rules file per fidelity rule slug
-  that has been deployed for a bare utility toolset such as git
-    with an operation published as both skill and agent instructions
-      it should write one skill file for that operation without a router skill or fidelity commands
-    with an agent-tool operation only
-      it should not write a standalone skill file unless skill or prompt is also published
-  that has been deployed for a single source name filter
+describe a context tool module with one domain markdown file named for the context tool
+  with before.each that assigns context guidance from {domain-slug}.md and fidelity guidance from a named ## heading under ## Fidelities
+  it_behaves_like "fidelity sections in shared contexts format"
+
+describe a context tool module with a fidelities folder beside the module
+  with before.each that assigns context guidance and fidelity guidance from files or subfolders under fidelities
+  it_behaves_like "fidelity sections in shared contexts format"
+```
+
+### Deploy — fidelity skills and prompts
+
+Same fixtures as fidelity Read — prove command bodies equal each fidelity guidance `instructions` string before testing assembly.
+
+```
+describe a context tool module with fidelity sections registered for deploy
+  with before.each that runs write_deploy on the single-file or fidelities-folder fixture from fidelity Read
+  it_behaves_like "deploy fidelity sections on context guidance"
+
+describe a context tool module with fidelity sections and mcp on fidelity commands registered for deploy
+  with before.each that runs write_deploy with mcp transport on that fixture
+  it_behaves_like "deploy fidelity sections on context guidance"
+  it_behaves_like "deploy mcp invoke tail on markdown bodies"
+  it_behaves_like "deploy mcp enrollment without bind"
+```
+
+### Read — collection and context guidance assembly
+
+Collection lookup (not layout-specific):
+
+```
+describe a guidance collection on context guidance
+  with the instructions property read on the collection
+    it should join each fidelity instructions string in declaration order
+  with lookup by domain name
+    it should return fidelity guidance for that name
+  with lookup by stage key and sketch
+    it should return the sketch fidelity from the stage index
+  with lookup by stage alias
+    it should return the same fidelity as lookup by domain name
+```
+
+Context guidance assembly — context guidance reads from layer 5 plus fidelities from above; not a separate “named tool” layer. Use the same `before.each` fixtures as layer 5–6.
+
+```
+describe context guidance with fidelities examples and templates beside the module
+  with before.each that assigns context guidance from the layer 5 and layer 6 fixtures
+  with the instructions property read on context guidance
+    it should join context guidance instructions with each fidelity instructions in declaration order sketch first
+    it should not inline examples into instructions
+    it should not include the scaffold label
+  with the examples property read on context guidance
+    it should return examples folder content as a separate property not inside instructions
+  with the catalog property read on context guidance
+    it should not derive catalog from instructions
+  with format and default format set on context guidance
+    it should select the template for the active format in context guidance instructions assembly
+  with fidelity set at invoke on context guidance
+    it should resolve active format from the named fidelity default format
+```
+
+### Deploy — full context tool tree and transports
+
+Assembly fixtures — one pass proves router, fidelity commands, and operation artifacts together. Fidelity prompt deploy is already green above; this subsection adds coverage, filters, and non-Cursor paths.
+
+```
+describe a context tool module with fidelities and assembly registered for deploy
+  with before.each that runs write_deploy on the layer 6 assembly fixture
+  it_behaves_like "deploy context guidance router and rules"
+  it_behaves_like "deploy fidelity sections on context guidance"
+  it_behaves_like "deploy full context tool coverage"
+
+describe a context tool module with fidelities assembly and mcp registered for deploy
+  with before.each that runs write_deploy with mcp transport on the layer 6 assembly fixture
+  it_behaves_like "deploy full context tool coverage"
+  it_behaves_like "deploy mcp invoke tail on markdown bodies"
+  it_behaves_like "deploy mcp enrollment without bind"
+
+describe a bare utility toolset such as git registered for deploy
+  with before.each that runs write_deploy on that utility fixture
+  it_behaves_like "deploy bare utility toolset only"
+  with an operation published as both skill and agent instructions
+    it should write one skill file for that operation without a router skill or fidelity commands
+  with an agent-tool operation only
+    it should write a standalone skill file only when skill or prompt is also published
+
+describe a deploy run with a single source name filter on a context tool
+  that has been deployed for one named source only
     it should emit only that tool router fidelity commands and operation files
 
-describe a VS Code deploy output tree
-  that has been deployed for a context tool such as stories
-    it should write fidelity command files under github prompts not under cursor commands
-    -> .github/prompts/{slug}-{fidelity}.md
+describe a context tool deployed with cli transport
+  with before.each that runs write_deploy with cli transport on a layer 6 fixture
+  it_behaves_like "deploy cli transport on markdown bodies"
 
-describe deployed skill and command bodies
-  that has been deployed with cli transport
-    it should append the CLI invoke fence at the bottom of every skill command and rules body
-  that has been deployed with mcp transport
-    it should append the same MCP tool invoke tail on every deployed markdown body kind
-
-describe deploy coverage for a registered context tool
-  that has been fully deployed
-    it should emit router skill fidelity commands and operation artifacts in one pass
-    -> deployContextSection; deployContextSectionFidelity per fidelity; deployToolset
-
-describe deploy coverage for a registered utility toolset
-  that has been fully deployed
-    it should emit operation artifacts only without router or fidelity commands
-    -> deployToolset; operation_writes not instructions_registry
+describe a context tool deployed for VS Code
+  with before.each that runs write_deploy with vscode transport on a layer 6 fixture
+  it_behaves_like "deploy vscode prompt paths"
 ```
 
 ---
 
-## Layer 8 — MCP manifest and host
+## Layer 7 — MCP manifest and host
+
+MCP invoke tails on deployed skill, command, and rules files are proved incrementally in layers 3–6 via **deploy mcp invoke tail on markdown bodies**. Layer 7 proves **manifest → start → invoke** on the same fixtures: a toolset whose operation was annotated for mcp, deployed, then called through the running host.
+
+### Manifest
 
 ```
 describe an MCP manifest file
@@ -673,28 +809,71 @@ describe an MCP manifest file
     -> .cursor/mcp.json
   that has been written by a deploy with mcp disabled
     it should omit the MCP manifest file
+```
 
-describe a router skill body
-  that has been deployed with mcp transport and an MCP-published operation on context guidance
-    it should end with an MCP tool invoke tail in the markdown file
-    it should record that operation for server enrollment without binding during deploy
-    -> McpDeployment.mcp_operations; bind at server start only
+### Host — invoke after deploy
 
-describe a running MCP stdio host
-  that has been started from manifest toolset refs after deploy
-    it should enroll tools and prompts from recorded MCP operations without rescanning the class
-    -> McpDeployment.bind; not McpToolset getmembers
-  with a tools call for an enrolled tool name
-    it should return the result of the loaded toolset operation
+Chain every runtime `it should` through: **annotated operation → deployed with mcp → server started from that deploy’s manifest → tools/call or prompts/get**. Reuse layer 3–6 fixtures; only the invoke kind changes.
 
-describe MCP server enrollment timing
-  that has been deployed but not started
-    it should not bind tool handlers during deploy
+```
+describe a bare agentic toolset with an agent-tool operation annotated for mcp
+  that has been deployed with mcp enabled
+    with an MCP server started from manifest toolset refs written during that deploy
+      it should enroll that operation under the mcp name {slug}.{operation}
+      it should enroll from mcp operations recorded at deploy not from a second annotation scan on the class
+      -> McpDeployment.bind; not McpToolset getmembers
+      with a tools call for that enrolled mcp name and arguments matching the operation signature
+        it should return the operation result
+
+describe a bare agentic toolset with an agent-instructions operation annotated for mcp
+  that has been deployed with mcp enabled
+    with an MCP server started from manifest toolset refs written during that deploy
+      it should enroll that operation as a prompt under the mcp name {slug}.{operation}
+      with a prompts call for that enrolled mcp name
+        it should return the orchestration result from that operation
+
+describe a minimal guidance tool with an agent-instructions operation annotated for mcp
+  that has been deployed with mcp enabled
+    with an MCP server started from manifest toolset refs written during that deploy
+      with a prompts call for that enrolled mcp name
+        it should return the same compound instructions string the read path assembles
+
+describe a context tool module with router skill annotated for mcp
+  that has been deployed with mcp enabled
+    with an MCP server started from manifest toolset refs written during that deploy
+      with a prompts call for the router enrolled mcp name
+        it should return context guidance instructions as the prompt source
+
+describe a context tool module with fidelity command annotated for mcp
+  that has been deployed with mcp enabled
+    with an MCP server started from manifest toolset refs written during that deploy
+      with a prompts call for that fidelity enrolled mcp name
+        it should return fidelity guidance instructions as the prompt source
+
+describe a toolset with an mcp-published operation
+  that has been deployed with mcp enabled but the server has not been started
+    it should record the operation for enrollment without binding handlers during deploy
+```
+
+---
+
+## Layer 8 — catalog pages
+
+`catalog_generator` reads each host’s `.catalog` compound doc — same read seam as layers 2–6, different consumer. **Generate / validate / satisfy** live in `context_tools/agent_toolset/`; they are not part of this resource model or `guidance_spec.py`.
+
+```
+describe generated catalog pages
+  that have been built from the guidance registry
+    it should write each context guidance catalog property to its own page
+    it should write each fidelity catalog property to its own page
+    it should not scrape deployed markdown files or heading structure from disk
 ```
 
 ---
 
 ## Layer 9 — hooks deploy output
+
+**Last layer** — hook deploy is not fully wired in harness today; spec the target here but implement after MCP and catalog are green.
 
 ```
 describe a Cursor hooks config
@@ -704,20 +883,4 @@ describe a Cursor hooks config
     it should write hook skill files for hook-published agent-instructions operations
   that has been partially deployed with no hook sources emitted
     it should leave hooks manifest unchanged from a prior full deploy
-```
-
----
-
-## Layer 10 — catalog pages and satisfy
-
-```
-describe generated catalog pages
-  that have been built from the guidance registry
-    it should write each context guidance catalog property to its own page
-    it should write each fidelity catalog property to its own page
-    it should not scrape deployed markdown files or heading structure from disk
-
-describe a satisfy run on a context tool
-  that has run after validate
-    it should apply fixes from the validate report
 ```

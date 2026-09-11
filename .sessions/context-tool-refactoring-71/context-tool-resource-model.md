@@ -789,18 +789,19 @@ Harness.write_deploy(mcp=False)
 
 **Notation:** `describe` / `that` / `with` / `it should` — never `when` for state. **Subject-first:** outer `describe` names the file, folder, or deploy tree under test — not internal class names. Object flows: `+` operation, `->` call, `<< triggered by >>` actor.
 
-**Implementation order** (green each layer before the next):
+**Implementation order** (green each layer before the next; detail in `context-tool-resource-model-om-bdd.md`):
 
 1. `Markdown`, `Rule` — extract, coerce str / list[Rule] / templates map
 2. `Guidance` — standalone instructions + catalog compound doc
-3. `AgenticToolset` — instructions/catalog per `instructions_registry` operation
-4. `ContextSection` — shared `# Contexts` file: context, guidance, rules, templates
-5. `FidelityGuidance`, `GuidanceCollection` — `## Fidelities` / `## {name}` in same file; stacking
-6. `ContextGuidance` — practice + fidelities + formats
-7. `Deployment`, `MarkdownDeployment`, `Harness` — skills/prompts/rules per IDE (Cursor folders vs VS Code flat prompts); context tool vs bare toolset
-8. `McpDeployment`, `McpServer`
-9. `HookDeployment`
-10. `Catalog`, `Satisfy`
+3. `AgenticToolset` — read then deploy bare operations (`@skill` / `@prompt`; `operation_writes`)
+4. Base `Guidance` subclass — read then deploy on same fixture (compound instructions in skill bodies)
+5. `ContextSection` — shared contexts format — read then deploy router skill and context guidance rules (+ mcp on router when green)
+6. `FidelityGuidance` — fidelity instructions read → fidelity prompt deploy (+ mcp); then `GuidanceCollection` / `ContextGuidance` assembly read → full-tree deploy (+ mcp, CLI, VS Code, utility filter)
+7. `McpDeployment`, `McpServer` — `mcp.json` manifest; then host invoke on layer 3–6 fixtures (operation annotated `@mcp` + `@agent_tool` or `@agent_instructions`, deployed, started, `tools/call` or `prompts/get`)
+8. `Catalog` — pages from each host `.catalog` property (not validate/satisfy — those stay in `agent_toolset`)
+9. `HookDeployment` — last; hook deploy not complete in harness today
+
+Deploy outcomes shared across layers live in om-bdd **Deploy shared contexts** — each host layer adds delta `it_behaves_like` blocks only.
 
 Full specs → `context-tool-resource-model-om-bdd.md` (canonical).
 

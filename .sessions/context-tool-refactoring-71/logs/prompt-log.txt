@@ -1519,3 +1519,154 @@ Layers 4–5 now use Mamba **`shared_context` / `included_context`** (your auth-
 3. **`with included_context('...'): pass`** — pulls in the shared tree
 
 ... [9 lines, 569 chars total]
+
+==============================================================================
+2026-09-11T04:44:53Z  afterAgentResponse  conv=0e0e3022  gen=6200add2  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Two `/turn` commits on `main`:
+
+1. **`201fd362`** — workflow/workspace changes + root `AGENTS.md`  
+   *Guidance resource model BDD: Mamba `shared_context`/`included_context` for layout variants; context guidance vocabulary*
+
+2. **`589041ea`** — `.sessions/context-tool-refactoring-71/` (om-bdd, AGENTS, session artifacts) + `car-inspect` skill  
+   *Add guidance resource model session: om-bdd layers, AGENTS vocabulary rules*
+
+... [9 lines, 540 chars total]
+
+==============================================================================
+2026-09-11T04:55:04Z  afterAgentResponse  conv=0e0e3022  gen=6daa5c45  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Stripped Mamba/RSpec syntax. Layers 4–5 now use the plain **Share** sketch from `bdd` § Guidance:
+
+- **`shared context …`** — read outcomes defined once  
+- **`includes shared context …`** — each layout `describe` only differs in setup (single file vs section files/folders)
+
+Same pattern as the rest of the om-bdd file — `describe` / `with` / `it should`, no framework imports. When you port to `guidance_spec.py`, map `shared context` / `includes shared context` to whatever the test runner provides.
+
+==============================================================================
+2026-09-11T04:56:23Z  afterAgentResponse  conv=0e0e3022  gen=cf4d8457  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Two problems:
+
+1. **Layer 4 block header was broken** — it said `contexts format on context guidance` instead of `shared context "shared contexts format on context guidance"`, so the `includes` line didn’t point at anything.
+2. **`includes shared context` was nested under a `with`** — it read like another precondition instead of pulling in the shared block.
+
+Fixed to match `bdd` § Share:
+
+```475:505:c:\dev\abd-context-driven-delivery\.sessions\context-tool-refactoring-71\context-tool-resource-model-om-bdd.md
+... [24 lines, 1463 chars total]
+
+==============================================================================
+2026-09-11T04:56:56Z  afterAgentResponse  conv=0e0e3022  gen=3b1e791b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fair point — the use site was buried. It’s split now:
+
+**Define once** — `shared context "…"` with all the `it should` lines.
+
+**Use in each layout** — separate block; each `describe` starts with:
+
+```text
+it_behaves_like "shared contexts format on context guidance"
+... [13 lines, 573 chars total]
+
+==============================================================================
+2026-09-11T04:58:00Z  afterAgentResponse  conv=0e0e3022  gen=8b15ee23  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: That line is **test fixture setup** for layer 5’s single-file layout — not part of the shared context’s `it should` block.
+
+**What it means**
+
+The shared contexts **template** (from `context-tool-resource-model.md` § Contexts file layout) says after `## Shared rules` you get:
+
+```text
+## Fidelities
+... [36 lines, 1527 chars total]
+
+==============================================================================
+2026-09-11T05:00:08Z  afterAgentResponse  conv=0e0e3022  gen=6047792f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Right — the shared block should only exercise a **common subject**; each layout `describe` **assigns** that subject, then **`it_behaves_like`** pulls in the shared tests.
+
+**Before (wrong):** layout setup was prose `with` lines after `it_behaves_like`, and the shared block re-described file shape instead of reading the subject.
+
+**Now:**
+
+1. **Shared context** — `it should` reads `context guidance` / `fidelity guidance` (like your `self.gateway.authenticate(...)` — no layout detail).
+
+... [16 lines, 1132 chars total]
+
+==============================================================================
+2026-09-11T05:03:48Z  afterAgentResponse  conv=0e0e3022  gen=d76f913c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Reordered. New path before shared contexts:
+
+| Layer | What |
+|-------|------|
+| **1–3** | Markdown read → minimal `Guidance` → `AgenticToolset` `instructions_registry` (unchanged) |
+| **4** | **Deploy smoke** — bare `AgenticToolset`, mark ops `@skill` / `@prompt` / `@agent_instructions`, run `write_deploy`, assert skill/command files + `operation_writes` walk |
+| **5** | **Deploy smoke** — base `Guidance` subclass: compound `instructions` from layer 2 + agent-instructions ops on top; same deploy artifacts as layer 4 |
+| **6–7** | Shared contexts format + fidelity sections (was 4–5) |
+... [12 lines, 921 chars total]
+
+==============================================================================
+2026-09-11T05:04:55Z  afterAgentResponse  conv=0e0e3022  gen=64569f84  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You were right — layer 8 was just “run layers 6+7 again but say bdd/stories,” which adds nothing.
+
+**Removed layer 8.** What was actually new there is now the closing block of **layer 7**:
+
+- Join practice-wide instructions with fidelity collection instructions (sketch first)
+- `examples` separate from instructions
+- `format` / `default_format` / `fidelity` at invoke
+- Same `before.each` fixtures as layers 6–7 — no named-tool layer
+... [10 lines, 559 chars total]
+
+==============================================================================
+2026-09-11T05:08:14Z  afterAgentResponse  conv=0e0e3022  gen=d6396035  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Hooks moved to **layer 9** (last). New tail order:
+
+| Layer | Subject |
+|-------|---------|
+| 7 | MCP manifest + host |
+| 8 | Catalog pages |
+| 9 | Hooks deploy |
+
+... [11 lines, 401 chars total]
+
+==============================================================================
+2026-09-11T05:09:06Z  afterAgentResponse  conv=0e0e3022  gen=06d6ab11  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Expanded the MCP deploy specs. The gap was a single vague “append MCP tail” line — not enough to prove signatures land on the right files.
+
+### Two deploy shared contexts (replacing one vague block)
+
+**`deploy mcp invoke tail on markdown bodies`** — agent-visible, per file kind:
+- **Skill** — instruction prose unchanged; `Use MCP tool: \`{toolset-slug}.{operation}(…)\`` **at the bottom**; no CLI fence
+- **Command/prompt** — same tail after command body
+- **Router skill** — tail after context guidance instructions
+... [19 lines, 1251 chars total]
+
+==============================================================================
+2026-09-11T05:09:47Z  afterAgentResponse  conv=0e0e3022  gen=bce075d1  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Layer 7 host specs are reframed around the full chain, matching the style in `mcp_server_spec.py`:
+
+**annotated operation → deployed with mcp → server started from that manifest → invoke**
+
+### Before (too abstract)
+“a running MCP stdio host… enroll tools… tools call returns result”
+
+### After (fixture-driven)
+... [21 lines, 1267 chars total]
