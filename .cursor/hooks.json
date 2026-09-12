@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterAgentResponse": [
+      {
+        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+        "timeout": 30,
+        "failClosed": false
+      }
+    ]
+  }
+}
