@@ -1614,3 +1614,7 @@
 2026-09-15T19:21:47Z EVENT 'afterAgentResponse' conversation_id='d0d23fcb-534a-4486-b864-e3615a424d6e' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-15T19:21:47Z ENABLED ['(none)']
 2026-09-15T19:21:47Z MERGED {"permission": "allow"}
+2026-09-15T19:25:35Z ENTRY raw_len=1316 raw=b'\xef\xbb\xbf{"conversation_id":"d0d23fcb-534a-4486-b864-e3615a424d6e","generation_id":"837fdbd6-ba42-4ab0-af17-e858b085ebe5","model":"cursor-grok-4.6-medium","model_id":"grok-4.6","model_params":[{"id":"effort'
+2026-09-15T19:25:35Z EVENT 'afterAgentResponse' conversation_id='d0d23fcb-534a-4486-b864-e3615a424d6e' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-15T19:25:35Z ENABLED ['(none)']
+2026-09-15T19:25:35Z MERGED {"permission": "allow"}

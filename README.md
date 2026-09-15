@@ -73,7 +73,9 @@ All defaults can be overridden.
 | Sibling worktree | Isolated checkout for the session branch (`{abbrev}-{name}` next to the primary clone). |
 | `{workspace}/.context/context-index.md` | Which tool owns which durable root. |
 
-Close with `/finish-work-session` — that commits the whole worktree.
+Close the session with `/finish-work-session` — that commits the whole worktree.
+
+**Commits.** Call **`/turn`** whenever you want a checkpoint — preferably after each step. Call **`/finish-turn`** when that turn is done. Then **`/finish-work-session`** when the sprint itself is done.
 
 ## Context tools
 
@@ -234,12 +236,14 @@ For Checkout, decide which context tools are needed, then produce concrete scena
 ## A short first workflow
 
 1. **`/start-work-session`** — name the session. That creates `.sessions/{name}/` at the repo root and a sibling worktree/branch (unless you stay on `main`).
-2. **`/stories /generate story_map`** — walking-skeleton map in markdown as `{working path}/.context/story-map.md`, next to the work itself.
-3. **`/render drawio`** and/or **`/render miro`** — same map as `.drawio` or a Miro board.
-4. **`/stories /generate scenarios`** — Given / When / Then on the stories you are specifying.
+2. **`/stories /generate story_map`** — walking-skeleton map in markdown as `{working path}/.context/story-map.md`, next to the work itself. **`/turn`**.
+3. **`/render drawio`** and/or **`/render miro`** — same map as `.drawio` or a Miro board. **`/turn`**.
+4. **`/stories /generate scenarios`** — Given / When / Then on the stories you are specifying. **`/turn`**.
 5. **Turn that spec into code**
    - **`/render python`** (or `typescript`, …) when you already have the map/scenarios and want the language channel.
    - **`/stories /generate acceptance_tests`** or **`/bdd /generate development`** when you are producing the executable spec / tests as new work.
-6. **`/validate`** the slice you just wrote. **`/satisfy`** if you want the artifact driven to green.
+   Then **`/turn`**.
+6. **`/validate`** the slice you just wrote. **`/satisfy`** if you want the artifact driven to green. **`/turn`**.
+7. **`/finish-turn`**, then **`/finish-work-session`**.
 
 Partition source first when you are starting from existing docs. Use `/cdd` when you want every lens at one stage.

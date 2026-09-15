@@ -3740,3 +3740,11 @@ The merged file keeps setup, deploy layout, plugins, and where files go, then th
 text: The `tools.ps1` / `manifest` / `run` block is gone from the README.
 
 After setup, the path is chat: slash skills carry the context tool, and the agent runs actions through MCP. `setup.ps1` is still the bootstrap; the old CLI is not documented.
+
+==============================================================================
+2026-09-15T19:25:35Z  afterAgentResponse  conv=d0d23fcb  gen=837fdbd6  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: `/turn` is now the checkpoint: commit whenever you want, preferably after each workflow step.
+
+`/finish-turn` closes that turn. `/finish-work-session` still closes the sprint and worktree. The short workflow lists `/turn` after map, render, scenarios, code, and validate, then finishes with those two close skills.
