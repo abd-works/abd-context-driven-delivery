@@ -11,9 +11,6 @@ if str(_KIT_ROOT) not in sys.path:
     sys.path.insert(0, str(_KIT_ROOT))
 
 from mcp_server.mcp_host import build_host
-from utilities.conf_secrets import load_conf_secrets
-
-load_conf_secrets(_KIT_ROOT)
 
 
 def _toolset_refs(value: str) -> tuple[str, ...]:
