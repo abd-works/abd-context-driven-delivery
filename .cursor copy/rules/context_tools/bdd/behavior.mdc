@@ -1,0 +1,11 @@
+---
+description: "bdd behavior rules"
+globs: **/*.{py,js,ts,java}
+alwaysApply: false
+---
+
+When behavior, follow these rules. See @bdd-behavior for the full skill.
+
+
+- **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
+- **`framework-syntax`** — Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.

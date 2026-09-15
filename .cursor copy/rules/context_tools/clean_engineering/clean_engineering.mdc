@@ -1,0 +1,12 @@
+---
+description: "clean_engineering shared rules — apply across all fidelities"
+globs: **/*.py,**/*.md
+alwaysApply: false
+---
+
+When code, model, or modules, also follow these rules on top of the fidelity-specific ones. See @clean_engineering-code, @clean_engineering-model, @clean_engineering-modules for full generate guidance.
+
+
+- **`honor-every-rule-in-the-artifact`** — Honor every rule in the artifact you are writing. One-way dependencies, named seams, and localized behavior apply to language and markdown as well as to code. Do not create a dependency in prose that violates isolation. Treat prose with the same respect you treat the model and the code.
+- **`vocabulary-traces-to-source`** — Take every term from the source. The English term and the code name are the same word: *shopping cart* is `ShoppingCart`. When the code says a different word than the domain, every reader keeps a translation in their head, and the two names drift until they mean different things.
+- **`do-not-invent-terms`** — Do not invent a second noun or a parallel vocabulary. A second noun for the same thing becomes a second class, and then the same rule has to be written and fixed in both. Keep `do-not-invent-parallel-object-models` on the model for wrappers and `*Model` / `*Entry` families.

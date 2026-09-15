@@ -1,0 +1,23 @@
+---
+name: start-work-session
+description: "start_work_session — agent starts or resumes a named work session."
+disable-model-invocation: true
+---
+
+start_work_session — agent starts or resumes a named work session.
+
+        Non-default session branches isolate in a sibling worktree named
+        ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
+        Stay in the primary clone when the session branch is the default branch.
+        That checkout gets its own ``.venv`` — rebuilt via ``setup.ps1`` when it is
+        missing or was built for another machine or worktree.
+        Pass ``isolate: false`` to keep session folders / turns / logs on the
+        current checkout (no sibling worktree) — e.g. track work on main.
+
+        When the session name ends in ``-{issue}``, ``session.md`` includes a
+        ``## Tickets`` section with that issue and every linked sub-issue.
+
+        Do not call this from a /cli-agent parent. CliAgent opens the session,
+        switches to that path, and binds doer/judge. Resume does not rewrite Start.
+
+Use MCP tool: `work_session.start_work_session(tools: 'list[Any] | None' = None, name: 'str' = '', goal: 'str' = '', fidelities: 'str' = '', contexts: 'str' = '', path: 'str' = '', host: 'Any | None' = None, isolate: 'bool' = True) -> 'WorkSession'`

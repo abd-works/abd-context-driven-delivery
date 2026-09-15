@@ -341,3 +341,56 @@ class WorkTicket:
             payload["category"] = self.type
             payload["type"] = self.type
         return payload
+
+
+def format_session_ticket_context(
+    repo: Repo, ticket_number: int
+) -> tuple[str, str]:
+    """Build session.md body and contexts refs for a ticket and linked sub-issues.
+
+    When the ticket is a parent, include every direct child. When it is a child,
+    include the parent and all siblings so the session has the full group.
+    """
+    issue = repo.ticket(str(ticket_number))
+    if issue is None:
+        return "", ""
+
+    tickets: list[Ticket] = []
+    seen: set[int] = set()
+
+    def add(candidate: Ticket | None) -> None:
+        if candidate is None or candidate.number in seen:
+            return
+        seen.add(candidate.number)
+        tickets.append(candidate)
+
+    add(issue)
+    if issue.sub_issue_numbers:
+        for child_number in sorted(issue.sub_issue_numbers):
+            add(repo.ticket(str(child_number)))
+    elif issue.parent_number is not None:
+        parent = repo.ticket(str(issue.parent_number))
+        add(parent)
+        if parent is not None and parent.sub_issue_numbers:
+            for child_number in sorted(parent.sub_issue_numbers):
+                add(repo.ticket(str(child_number)))
+
+    lines = ["## Tickets", ""]
+    refs: list[str] = []
+    for ticket in tickets:
+        refs.append(f"#{ticket.number}")
+        lines.append(f"### #{ticket.number} — {ticket.title}")
+        lines.append("")
+        if ticket.url:
+            lines.append(ticket.url)
+            lines.append("")
+        body = (ticket.body or "").strip()
+        if body:
+            lines.append(body)
+        else:
+            lines.append(
+                "*(Issue body empty on GitHub — title is the requirement.)*"
+            )
+        lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n", " ".join(refs)

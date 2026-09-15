@@ -827,14 +827,18 @@ class Workflow:
         workspace: str = "",
         filename: str = "issue-body.md",
     ) -> str:
+        from workflow.work_ticket import format_session_ticket_context
+
         repo_root = self._repo_root(workspace)
-        issue = self._repo(workspace).ticket(ticket)
+        repo = self._repo(workspace)
+        issue = repo.ticket(ticket)
         if issue is None:
             raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
         session_folder = repo_root / ".sessions" / session_name
         session_folder.mkdir(parents=True, exist_ok=True)
         target = session_folder / filename
-        target.write_text(issue.body, encoding="utf-8")
+        body, _ = format_session_ticket_context(repo, issue.number)
+        target.write_text(body or issue.body, encoding="utf-8")
         return str(target.resolve())
 
     def open_ticket_session(

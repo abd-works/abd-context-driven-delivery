@@ -6,6 +6,16 @@
 2026-09-10T03:11:45Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-10T03:11:45Z ENABLED ['(none)']
 2026-09-10T03:11:45Z MERGED {"permission": "allow"}
+<<<<<<< HEAD
+2026-09-10T15:32:45Z ENTRY raw_len=1119 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0e0e3022-d89b-47ca-a41d-e962101e1fe0","generation_id":"241a9b27-bbdb-4286-b39c-265681a7a5be","model":"cursor-grok-4.6-high","model_id":"grok-4.6","model_params":[{"id":"effor'
+2026-09-10T15:32:45Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T15:32:45Z ENABLED ['(none)']
+2026-09-10T15:32:45Z MERGED {"permission": "allow"}
+2026-09-10T15:39:55Z ENTRY raw_len=1734 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0e0e3022-d89b-47ca-a41d-e962101e1fe0","generation_id":"359dae10-fed6-49b6-b7a0-2911602b1243","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-10T15:39:55Z EVENT 'afterAgentResponse' conversation_id='0e0e3022-d89b-47ca-a41d-e962101e1fe0' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-10T15:39:55Z ENABLED ['(none)']
+2026-09-10T15:39:55Z MERGED {"permission": "allow"}
+=======
 2026-09-10T12:16:23Z ENTRY raw_len=1092 raw=b'\xef\xbb\xbf{"conversation_id":"f522502a-8e0c-436f-9016-45e6b7ee4c2d","generation_id":"70917119-e7f5-4cc6-a982-4aa8afa6f670","model":"gemini-2.5-flash","model_id":"gemini-2.5-flash","text":"It seems there was '
 2026-09-10T12:16:23Z EVENT 'afterAgentResponse' conversation_id='f522502a-8e0c-436f-9016-45e6b7ee4c2d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-10T12:16:23Z ENABLED ['(none)']
@@ -66,6 +76,7 @@
 2026-09-10T13:10:50Z EVENT 'afterAgentResponse' conversation_id='b6418d15-2794-4982-b396-5763a12aad36' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-10T13:10:50Z ENABLED ['(none)']
 2026-09-10T13:10:50Z MERGED {"permission": "allow"}
+<<<<<<< HEAD
 2026-09-11T20:35:20Z ENTRY raw_len=1188 raw=b'\xef\xbb\xbf{"conversation_id":"8df116bb-44e5-44d4-b7cf-31f2476a611e","generation_id":"4b6f4d68-4d6d-42e5-beb9-c8ce02eae911","model":"claude-4.6-sonnet-medium-thinking","model_id":"claude-sonnet-4-6","model_pa'
 2026-09-11T20:35:20Z EVENT 'afterAgentResponse' conversation_id='8df116bb-44e5-44d4-b7cf-31f2476a611e' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-11T20:35:20Z ENABLED ['(none)']
@@ -1618,3 +1629,6 @@
 2026-09-15T19:25:35Z EVENT 'afterAgentResponse' conversation_id='d0d23fcb-534a-4486-b864-e3615a424d6e' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-15T19:25:35Z ENABLED ['(none)']
 2026-09-15T19:25:35Z MERGED {"permission": "allow"}
+=======
+>>>>>>> 7e30c3fed5a0bcc35343159fd8e78b36f50a588b
+>>>>>>> 845ef58bb907e767130fe3bf0e8476712e042f13
