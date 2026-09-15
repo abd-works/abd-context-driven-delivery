@@ -13,6 +13,10 @@ from tools.repo_paths import prepend_sys_path, repo_root  # noqa: E402
 _REPO_ROOT = repo_root()
 prepend_sys_path(_REPO_ROOT)
 
+from utilities.conf_secrets import load_conf_secrets  # noqa: E402
+
+load_conf_secrets(_REPO_ROOT)
+
 from agent_bdd import build_runbook, read_manifest  # noqa: E402
 from tools.tool import _ManifestYaml, RunError, Toolset, _ToolsetLoader, _ToolsetRunner  # noqa: E402
 from utilities.manifest_hook import manifest_gate_conf  # noqa: E402

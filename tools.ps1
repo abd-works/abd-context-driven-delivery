@@ -16,6 +16,41 @@ $parts = @(
     (Join-Path $Root "context_tools\actions")
 )
 $env:PYTHONPATH = ($parts -join [IO.Path]::PathSeparator)
+
+function Import-DotEnvFile {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return }
+    foreach ($raw in Get-Content -LiteralPath $Path) {
+        $line = $raw.Trim()
+        if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) { continue }
+        $eq = $line.IndexOf("=")
+        $key = $line.Substring(0, $eq).Trim()
+        $value = $line.Substring($eq + 1).Trim()
+        if (
+            ($value.StartsWith('"') -and $value.EndsWith('"')) -or
+            ($value.StartsWith("'") -and $value.EndsWith("'"))
+        ) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        if ($key -eq "SECRETS_IMPORT") {
+            foreach ($item in ($value -split ",")) {
+                $importPath = $item.Trim()
+                if ($importPath) { Import-DotEnvFile $importPath }
+            }
+            continue
+        }
+        if ($key -and $value -and -not [Environment]::GetEnvironmentVariable($key)) {
+            Set-Item -Path "Env:$key" -Value $value
+        }
+    }
+}
+
+$kitSecrets = Join-Path $Root "conf\.secrets"
+Import-DotEnvFile $kitSecrets
+Import-DotEnvFile (Join-Path $Root "conf\.env")
+if ($env:CDD_SECRETS_FILE) { Import-DotEnvFile $env:CDD_SECRETS_FILE }
+$answersSecrets = Join-Path (Split-Path $Root -Parent) "abd-works-repo\abd-answers\conf\.secrets"
+Import-DotEnvFile $answersSecrets
 if ($MyInvocation.ExpectingInput) {
     $input | & $VenvPython -m tools @args
 } else {

@@ -67,9 +67,75 @@ if ($Problem) {
     Write-Host "Rebuilt .venv with $SystemPython - $Problem"
 }
 
+$RequirementsPath = Join-Path $Root "requirements.txt"
+$RequirementsBody = @"
+# Runtime and test deps for this checkout (install into .venv via setup.ps1).
+# Keep in sync with [project].dependencies in pyproject.toml plus the test runner.
+expects>=0.9.0
+PyYAML>=6.0
+mcp==1.30.0
+numpy>=1.26
+faiss-cpu>=1.8.0
+openai>=1.40.0
+anyio>=4.5
+httpx>=0.27.1
+httpx-sse>=0.4
+jsonschema>=4.20.0
+pydantic>=2.11.0
+pydantic-settings>=2.5.2
+pyjwt>=2.10.1
+python-multipart>=0.0.9
+pywin32>=310; sys_platform == 'win32'
+sse-starlette>=1.6.1
+starlette>=0.27
+typing-extensions>=4.9.0
+typing-inspection>=0.4.1
+uvicorn>=0.31.1
+mamba>=0.11.3
+"@
+if (-not (Test-Path $RequirementsPath)) {
+    Set-Content -LiteralPath $RequirementsPath -Value $RequirementsBody -Encoding utf8
+    Write-Host "Wrote $RequirementsPath"
+}
+
 $env:PYTHONIOENCODING = "utf-8"
 & $VenvPython -m pip install --upgrade pip
-& $VenvPython -m pip install -r (Join-Path $Root "requirements.txt")
+$Missing = & $VenvPython -c @"
+from pathlib import Path
+from importlib.metadata import PackageNotFoundError, version
+text = Path(r'$RequirementsPath').read_text(encoding='utf-8')
+missing = []
+for raw in text.splitlines():
+    line = raw.split('#', 1)[0].strip()
+    if not line:
+        continue
+    req = line.split(';', 1)[0].strip()
+    name = req.split('[', 1)[0]
+    for sep in ('==', '>=', '<=', '~=', '!=', '>', '<'):
+        if sep in name:
+            name = name.split(sep, 1)[0]
+            break
+    name = name.strip()
+    if not name:
+        continue
+    try:
+        version(name)
+    except PackageNotFoundError:
+        missing.append(name)
+print('\n'.join(missing))
+"@
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not check installed packages against requirements.txt"
+}
+if ("$Missing".Trim()) {
+    Write-Host "Installing missing packages: $(($Missing -split '\s+' | Where-Object { $_ }) -join ', ')"
+    & $VenvPython -m pip install -r $RequirementsPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "pip install -r requirements.txt failed"
+    }
+} else {
+    Write-Host "All requirements already installed"
+}
 & $VenvPython -c "import sys; from pathlib import Path; root = Path(r'$Root'); sys.path.insert(0, str(root / 'primitives')); from tools.repo_paths import write_venv_pth; write_venv_pth(root / '.venv', root)"
 try {
     $ErrorActionPreference = "Continue"
@@ -80,6 +146,20 @@ try {
 }
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "Editable install skipped (optional). Tools work via .\tools.ps1 and abd_cdd_paths.pth."
+}
+
+$parts = @(
+    $Root
+    (Join-Path $Root "primitives")
+    (Join-Path $Root "utilities")
+    (Join-Path $Root "context_tools")
+    (Join-Path $Root "context_tools\actions")
+)
+$env:PYTHONPATH = ($parts -join [IO.Path]::PathSeparator)
+Write-Host "Deploying harness into this checkout (.cursor)..."
+& $VenvPython -m tools run harness.harness:Harness --tool write_deploy --context type=Cursor --context repo_root=$Root --arg mcp=true --arg code_language=python --arg deploy_path=$Root
+if ($LASTEXITCODE -ne 0) {
+    throw "Harness write_deploy failed"
 }
 Write-Host "Ready. Use: .\tools.ps1 manifest <toolset>"
 # Reaching here means setup succeeded; do not leak the optional step's exit code.
