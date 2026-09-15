@@ -1,5 +1,3 @@
-_probe_signup
-_template_review
 actions
 agent_bdd
 assets
@@ -12,7 +10,7 @@ catalog_generator
 cdd
 clean_engineering
 cli_agent
-conf
+context_guidance
 context_setup
 context_tools
 create_context_tool
@@ -34,6 +32,7 @@ instructions
 iterate
 kanban
 manifest_hook
+markdown
 mcp_server
 partition
 plan
@@ -47,6 +46,7 @@ scan
 scripts
 sketch
 stories
+story-realizations
 sub_agent
 swarm
 tools

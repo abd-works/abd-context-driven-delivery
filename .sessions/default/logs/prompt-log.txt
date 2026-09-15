@@ -175,3 +175,28 @@ Protected operations (the full list):
 
 text: 17/17 passing.
 >>>>>>> 7e30c3fed5a0bcc35343159fd8e78b36f50a588b
+
+==============================================================================
+2026-09-15T23:07:55Z  afterAgentResponse  conv=9787b0b8  gen=74ae11c4  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: Harness deploy is now blocked from writing the user-level Cursor MCP config.
+
+`write_deploy` was already targeting the **project** `.cursor/mcp.json`. The hole was `deploy_path` (and the harness rule that said agents could use `~/.cursor/mcp.json` when the user “expected” a global server). That is what produced the stale `user-cdd` entry pointing at another repo.
+
+**Now:** if the deploy root is `~/.cursor`, it raises and leaves `~/.cursor/mcp.json` untouched. Same guard sits on `_write_mcp_json`. The deploy-harness recipe says **never write `~/.cursor/mcp.json`**. Project `.cursor/mcp.json` is
+... [5 lines, 627 chars total]
+
+==============================================================================
+2026-09-15T23:09:56Z  afterAgentResponse  conv=611b05bc  gen=9053900a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: It is not the same thing listed twice — it is two seam terms with different jobs, and the second block is a call chain, not a second API.
+
+Line 10 names both: `@markdown`, `Markdown`, `AssetLocator`.
+
+**`## Markdown`** — the value object’s public API:
+- `from_label` — build a `Markdown` for a host + label
+- `extract` — read raw text via `AssetLocator`
+- `coerce` — turn that text into `str`, `list[Rule]`, or a templates path map
+... [20 lines, 1527 chars total]

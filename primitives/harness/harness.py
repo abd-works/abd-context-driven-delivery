@@ -230,6 +230,18 @@ class Harness:
             return [root]
         return [self._suggested_deploy_path()]
 
+    def _reject_user_cursor_root(self, root: Path) -> None:
+        """MCP and Cursor deploy never target the user-level ~/.cursor folder."""
+        user_cursor = (Path.home() / ".cursor").resolve()
+        try:
+            resolved = root.resolve()
+        except OSError:
+            return
+        if resolved == user_cursor:
+            raise ValueError(
+                "Harness deploy writes project .cursor/mcp.json only — never ~/.cursor/mcp.json"
+            )
+
     def _constructor_context(self, path: Path, class_name: str) -> dict[str, str]:
         """Return {param: ''} for each required __init__ param of the class at path."""
         params = required_init_params(path, class_name)
@@ -1109,6 +1121,7 @@ class Harness:
         if not unique_refs:
             return
         path = cursor_root / "mcp.json"
+        self._reject_user_cursor_root(cursor_root)
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "mcpServers": {
@@ -1334,7 +1347,8 @@ class Harness:
         legacy=True reverts to the old stub-only fidelity skills that call the tool at runtime.
         prod=True skips any class decorated with @dev_only.
         code_language selects python (default) or typescript for inlined code templates.
-        mcp=True emits MCP tool references in skills and writes .cursor/mcp.json for Cursor.
+        mcp=True emits MCP tool references in skills and writes project .cursor/mcp.json for Cursor.
+        Never writes ~/.cursor/mcp.json.
         """
         self._require_implemented()
         self._extended = not legacy if extended else False
@@ -1359,6 +1373,8 @@ class Harness:
         self._actions_for_ask = self._action_option_names()
         self._context_tools_for_ask = self._context_tool_option_names()
         roots = self._write_root_paths(deploy_path)
+        for root in roots:
+            self._reject_user_cursor_root(root)
         wanted = source.strip()
         seen: set[tuple[str, str]] = set()
         names: list[str] = []
@@ -1457,6 +1473,7 @@ class Harness:
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
         """With no code_language given, AskQuestion: Python (recommended) | TypeScript."""
         """With no transport given, AskQuestion: MCP (recommended) | CLI. When MCP is chosen, pass arguments.mcp=true to write_deploy."""
+        """Never write ~/.cursor/mcp.json — MCP deploy is project .cursor/mcp.json only."""
         """When requested, pass arguments.no_manifest=true to write_deploy for path-based no-manifest deployment."""
         """Pass the chosen language as arguments.code_language to write_deploy."""
         self.suggested_deploy_path()

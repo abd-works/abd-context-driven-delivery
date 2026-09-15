@@ -77,3 +77,11 @@
 2026-09-10T13:10:50Z ENABLED ['(none)']
 2026-09-10T13:10:50Z MERGED {"permission": "allow"}
 >>>>>>> 7e30c3fed5a0bcc35343159fd8e78b36f50a588b
+2026-09-15T23:07:55Z ENTRY raw_len=1377 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"9787b0b8-f76b-4d39-9beb-f073ab8ab399","generation_id":"74ae11c4-b75a-41d6-a4c9-b7e375dbd3f3","model":"cursor-grok-4.6-medium","model_id":"grok-4.6","model_params":[{"id":"eff'
+2026-09-15T23:07:55Z EVENT 'afterAgentResponse' conversation_id='9787b0b8-f76b-4d39-9beb-f073ab8ab399' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-15T23:07:55Z ENABLED ['(none)']
+2026-09-15T23:07:55Z MERGED {"permission": "allow"}
+2026-09-15T23:09:56Z ENTRY raw_len=2272 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"611b05bc-6b0a-41b1-8ea2-031031c42c4b","generation_id":"9053900a-13e2-4ce5-862f-d45f57f4bdad","model":"composer-2.5","model_id":"composer-2.5","model_params":[{"id":"fast","va'
+2026-09-15T23:09:56Z EVENT 'afterAgentResponse' conversation_id='611b05bc-6b0a-41b1-8ea2-031031c42c4b' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-15T23:09:56Z ENABLED ['(none)']
+2026-09-15T23:09:56Z MERGED {"permission": "allow"}

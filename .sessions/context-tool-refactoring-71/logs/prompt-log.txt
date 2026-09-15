@@ -1724,3 +1724,67 @@ text: Committed everything. Working tree is clean.
 **`b510b133`** — Remove live `.cursor/` deploy tree (files moved/archived to `.cursor copy/`)
 
 Branch is **7 commits ahead** of `origin/main`. Say if you want those pushed.
+
+==============================================================================
+2026-09-15T22:48:39Z  afterAgentResponse  conv=9787b0b8  gen=116d54dd  model=cursor-grok-4.6-high-fast
+------------------------------------------------------------------------------
+
+text: Deploy finished. Cursor + MCP, full tree, into `.cursor`.
+
+`write_deploy(mcp=True)` wrote skills, rules, and `.cursor/mcp.json` for every source it walked — actions, context tools, utilities, harness prompts, and format skills. Took about 18 seconds.
+
+==============================================================================
+2026-09-15T22:48:53Z  afterAgentResponse  conv=9787b0b8  gen=21a8f889  model=cursor-grok-4.6-high-fast
+------------------------------------------------------------------------------
+
+text: `cdd.ping` answered. The CDD MCP host is up.
+
+==============================================================================
+2026-09-15T22:49:52Z  afterAgentResponse  conv=9787b0b8  gen=70750d7e  model=cursor-grok-4.6-high-fast
+------------------------------------------------------------------------------
+
+text: They are the same age on disk — both last written **today at 6:43 PM**. Neither is a later revision of the other.
+
+They are a pair:
+
+- **`context-tool-resource-model-om-bdd.md`** is the **canonical** doc for object flows and BDD. Session rules say update this first, then keep the other aligned. Use this when you need the accurate class seams, `->` ports, and `describe` / `that` / `with` / `it should` specs.
+- **`context-tool-resource-model.md`** is the **full** design write-up: tables, narrative, rationale, module story. It is extracted *from* for the om-bdd file, and it points back: “Full spe
+... [8 lines, 772 chars total]
+
+==============================================================================
+2026-09-15T22:55:25Z  afterAgentResponse  conv=9787b0b8  gen=9a76e3de  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: I was wrong earlier. That first `cdd.ping` never returned **pong**. Cursor handed back the tool id `cdd_ping`. I treated a name echo as a healthy host.
+
+**What is actually broken**
+
+`.venv` did not have the `mcp` package. `python -m mcp_server` cannot start without it. Cursor still listed every `user-cdd` tool from a **stale catalog**, so discovery looked fine and every `tools/call` came back as the tool name with no payload.
+
+That is why render/guidance “echoed.” The CDD process behind those names was dead.
+
+... [21 lines, 1311 chars total]
+
+==============================================================================
+2026-09-15T22:56:11Z  afterAgentResponse  conv=9787b0b8  gen=ad3bbc3a  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: Still broken. `cdd.ping` came back as `cdd_ping` again, not **pong**.
+
+The tool is still listed, so Cursor has a catalog. The call is still not returning host output. Reload the **cdd** project MCP server (disable/enable it, or restart Cursor) and ping again.
+
+==============================================================================
+2026-09-15T22:57:31Z  afterAgentResponse  conv=9787b0b8  gen=4722e87d  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: **pong** — host is up.
+
+The live server is the project one (`project-0-abd-cdd-71-cdd`), not the old `user-cdd` catalog. That stale namespace was still echoing tool names.
+
+==============================================================================
+2026-09-15T22:58:34Z  afterAgentResponse  conv=9787b0b8  gen=dd62472d  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: Removed the user-level `cdd` server from `~\.cursor\mcp.json`.
+
+It was pointing at `C:\dev\abd-context-driven-delivery`, not this repo — that’s the stale `user-cdd` catalog. Left `story_bot`, `chrome-devtools`, and `desktop-commander` in place. Reload MCP if `user-cdd` is still listed; the live host is the project server.

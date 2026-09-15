@@ -7,6 +7,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -289,6 +290,7 @@ with description("a harness"):
                 expect(prose).to(contain("Generate is the deploy"))
                 expect(prose).to(contain("no separate deploy"))
                 expect(prose).to(contain("Do not confirm the scanned list"))
+                expect(prose).to(contain("never ~/.cursor/mcp.json"))
                 expect(_generate_tools(harness)).to(equal(("suggested_deploy_path", "write_deploy")))
                 harness.write_deploy()
                 expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
@@ -380,6 +382,21 @@ with description("a harness"):
                 expect(config["mcpServers"]["cdd"]["cwd"]).to(
                     equal(str(deploy_root.parent.resolve()))
                 )
+
+            with it("should refuse to write the user-level mcp.json"):
+                root = _sandbox()
+                fake_home = Path(tempfile.mkdtemp())
+                user_cursor = fake_home / ".cursor"
+                user_cursor.mkdir()
+                sentinel = user_cursor / "mcp.json"
+                sentinel.write_text('{"keep": true}\n', encoding="utf-8")
+                with patch.object(Path, "home", return_value=fake_home):
+                    expect(
+                        lambda: Harness("Cursor", repo_root=root).write_deploy(
+                            deploy_path=str(user_cursor), mcp=True
+                        )
+                    ).to(raise_error(ValueError))
+                expect(sentinel.read_text(encoding="utf-8")).to(equal('{"keep": true}\n'))
 
         with context("with a source"):
             with it("should write that source into the deploy area"):
