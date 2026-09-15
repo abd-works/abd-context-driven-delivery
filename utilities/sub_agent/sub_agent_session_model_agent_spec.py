@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec utilities/sub_agent/sub_agent_session_model_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: utilities/sub_agent/.context/.agent_bdd_sessions/session-model.json

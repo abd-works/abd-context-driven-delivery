@@ -1,6 +1,3 @@
-# @toolset-manifest python -m tools manifest {module_path}:{ClassName}
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
 """{ClassName} generator."""
 
 from __future__ import annotations

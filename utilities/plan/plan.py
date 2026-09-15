@@ -1,5 +1,3 @@
-# @toolset-manifest python -m tools manifest plan.plan:Plan
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 """Plan — front-end to git; based on a reusable or named Workflow."""
 from __future__ import annotations
 

@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec context_tools/actions/iterate/iterate_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: context_tools/actions/iterate/.context/.agent_bdd_sessions/iterate-owns-tools.json

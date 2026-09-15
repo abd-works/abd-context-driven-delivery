@@ -1,4 +1,3 @@
-# @toolset-manifest python -m tools manifest git.git:Git
 """Git + GitHub domain model — repo, branches, commits, project tickets."""
 
 from __future__ import annotations

@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec primitives/harness/harness_invoke_action_many_tools_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: primitives/harness/.context/.agent_bdd_sessions/invoke-action-many-tools.json

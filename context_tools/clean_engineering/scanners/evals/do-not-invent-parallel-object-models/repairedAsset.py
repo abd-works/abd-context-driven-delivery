@@ -1,5 +1,4 @@
 """
-# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
 """
 # Repaired: thin wrappers over live objects - no parallel *Model/*Entry scrape.
 

@@ -40,7 +40,8 @@ primitives/hooks/prompt_echo/prompt_echo.debug
 
 # Virtualenv & Secrets
 .venv/
-conf/
+conf/*
+!conf/.secrets.example
 *.secrets.txt
 
 # Temporary scratch files and scripts

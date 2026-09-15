@@ -1,6 +1,3 @@
-# @toolset-manifest python -m tools manifest primitives.examples.reporter:Reporter
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
 """Integrated example - @toolset, @agent_tool, @resource, @instruction (all three forms), @agent_instructions."""
 from __future__ import annotations
 

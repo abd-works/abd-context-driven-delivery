@@ -1,9 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.stories.stories:Stories
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
-# invoke-new: action generate | context.fidelity discovery
-# invoke-edit: action satisfy | toolset: context_tools.stories.stories:Stories
-# invoke-check: action validate | toolset: context_tools.stories.stories:Stories
 """Stories generator - multi-fidelity story maps, scenarios, and acceptance tests."""
 
 from __future__ import annotations

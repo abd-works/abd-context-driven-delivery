@@ -1,5 +1,7 @@
 """A venv only serves the checkout it was built for, on this machine."""
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -15,7 +17,15 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from expects import be_empty, contain, equal, expect
 from mamba import context, description, it
 
-from tools.repo_paths import _same_path, ensure_venv, venv_problem, venv_python
+from tools.repo_paths import (
+    _same_path,
+    ensure_venv,
+    pythonpath_entries,
+    venv_problem,
+    venv_pth_entries,
+    venv_python,
+    write_venv_pth,
+)
 
 _THIS_MACHINE = str(Path(sys.base_prefix))
 _ABSENT_MACHINE = r"C:\Users\jeffa\AppData\Local\Programs\Python\Python312"
@@ -168,3 +178,34 @@ with description("a checkout that needs a working venv"):
             note = ensure_venv(root)
             expect(note).to(contain("still broken after setup.ps1"))
             shutil.rmtree(root, ignore_errors=True)
+
+
+with description("this checkout's tools package"):
+    with context("when the venv pth is written for this repo"):
+        with it("should list only paths under this repo"):
+            entries = pythonpath_entries(_REPO_ROOT)
+            expect(entries[0]).to(equal(str(_REPO_ROOT.resolve())))
+            for entry in entries:
+                expect(Path(entry).resolve().is_relative_to(_REPO_ROOT.resolve())).to(equal(True))
+
+        with it("should write repo-relative paths into site-packages"):
+            entries = venv_pth_entries(_REPO_ROOT / ".venv", _REPO_ROOT)
+            expect(len(entries)).to(equal(len(pythonpath_entries(_REPO_ROOT))))
+            for entry in entries:
+                expect(Path(entry).is_absolute()).to(equal(False))
+                expect(":" in entry).to(equal(False))
+
+        with it("should make a fresh python import this repo's tools package"):
+            pth = write_venv_pth(_REPO_ROOT / ".venv", _REPO_ROOT)
+            expect("site-packages" in str(pth)).to(equal(True))
+            expect((_REPO_ROOT / ".venv" / "abd_cdd_paths.pth").exists()).to(equal(False))
+            py = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+            env = {k: v for k, v in os.environ.items() if k.upper() != "PYTHONPATH"}
+            env["PYTHONIOENCODING"] = "utf-8"
+            out = subprocess.check_output(
+                [str(py), "-c", "import tools; print(tools.__file__)"],
+                env=env,
+                text=True,
+            )
+            expect(str(_REPO_ROOT.resolve()).lower() in out.strip().lower()).to(equal(True))
+            expect("paradise-mobile" in out.lower()).to(equal(False))

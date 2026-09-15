@@ -1,8 +1,3 @@
-# @toolset-manifest python -m tools manifest workspace.workspace:Turn
-# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession
-# @toolset-manifest python -m tools manifest workspace.workspace:Workspace
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
 """Workspace domain — from workspace-eval-oo-sketch §2 / §4."""
 
 from __future__ import annotations

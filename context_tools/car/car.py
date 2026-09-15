@@ -1,6 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.car.car:Car
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# invoke-new: action generate | context.fidelity road_story
 """Car — example context tool for in-character road stories and vehicle tools."""
 from __future__ import annotations
 
