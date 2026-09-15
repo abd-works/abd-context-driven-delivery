@@ -1,9 +1,3 @@
-# @toolset-manifest python -m tools manifest validate.validate:Validate
-# @toolset-manifest python -m tools manifest validate.validate:CreateRule
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
-# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """Validate and CreateRule — run on each provided context tool."""
 
 from __future__ import annotations

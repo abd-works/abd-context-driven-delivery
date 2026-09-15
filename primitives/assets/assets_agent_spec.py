@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec primitives/assets/assets_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: primitives/assets/.context/.agent_bdd_sessions/card-file.json

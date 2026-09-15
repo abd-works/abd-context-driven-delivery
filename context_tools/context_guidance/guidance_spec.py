@@ -1,7 +1,4 @@
 """BDD spec — guidance resource model layer 1 (co-located markdown extract).
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """
 import sys
 from pathlib import Path

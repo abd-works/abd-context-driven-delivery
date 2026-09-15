@@ -1,4 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 """BDD — /plan /small-work themed run with Grill + HIL Grill (judge replies)."""
 import sys
 import tempfile

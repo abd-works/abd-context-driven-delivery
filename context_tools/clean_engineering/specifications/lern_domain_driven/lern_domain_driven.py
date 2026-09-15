@@ -1,10 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.clean_engineering.specifications.lern_domain_driven.lern_domain_driven:LernDomainDriven
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
-# invoke-new: action generate
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """LernDomainDriven generator - implementation fidelity for a domain-module-organized
 LERN stack (lowdb JSON files / Express / React / Node) on an already-designed vertical slice.
 Each aggregate owns its own JSON store; repositories load, create, search, and update

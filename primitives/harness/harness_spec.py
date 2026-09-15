@@ -1,6 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD spec for primitives/harness — deploy, invoke, and context-tool rules."""
 
 import json
@@ -48,7 +45,6 @@ def _generate_tools(harness: Harness) -> tuple[str, ...]:
 def _write_toolset(path: Path, module: str, class_name: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        f"# @toolset-manifest python -m tools manifest {module}:{class_name}\n"
         f'"""{class_name}."""\n'
         f"class {class_name}:\n"
         "    pass\n",
@@ -65,7 +61,6 @@ def _write_context_tool(
     path.parent.mkdir(parents=True, exist_ok=True)
     items = ", ".join(f'"{key}": "{value}"' for key, value in fidelities.items())
     path.write_text(
-        f"# @toolset-manifest python -m tools manifest {module}:{class_name}\n"
         f'"""{class_name}."""\n'
         f"class {class_name}:\n"
         f"    fidelities = {{{items}}}\n",
@@ -76,7 +71,6 @@ def _write_context_tool(
 def _write_action_with_operation(path: Path, module: str, class_name: str, operation: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        f"# @toolset-manifest python -m tools manifest {module}:{class_name}\n"
         f'"""{class_name}."""\n'
         f"class {class_name}:\n"
         "    @agent_instructions\n"
@@ -116,7 +110,6 @@ def _sandbox() -> Path:
     widget = root / "utilities" / "widget" / "widget.py"
     widget.parent.mkdir(parents=True, exist_ok=True)
     widget.write_text(
-        "# @toolset-manifest python -m tools manifest utilities.widget.widget:Widget\n"
         '"""Widget."""\n'
         "class Widget:\n"
         "    @skill\n"
@@ -128,7 +121,6 @@ def _sandbox() -> Path:
     echo = root / "utilities" / "echo" / "echo.py"
     echo.parent.mkdir(parents=True, exist_ok=True)
     echo.write_text(
-        "# @toolset-manifest python -m tools manifest echo.echo:Echo\n"
         '"""Echo."""\n'
         "class Echo:\n"
         "    @prompt\n"
@@ -140,7 +132,6 @@ def _sandbox() -> Path:
     handoff = root / "utilities" / "handoff" / "handoff.py"
     handoff.parent.mkdir(parents=True, exist_ok=True)
     handoff.write_text(
-        "# @toolset-manifest python -m tools manifest handoff.handoff:Handoff\n"
         '"""Handoff."""\n'
         "class Handoff:\n"
         "    @prompt\n"
@@ -152,7 +143,6 @@ def _sandbox() -> Path:
     ask = root / "utilities" / "context_setup" / "context_index.py"
     ask.parent.mkdir(parents=True, exist_ok=True)
     ask.write_text(
-        "# @toolset-manifest python -m tools manifest context_setup.context_index:ContextIndex\n"
         '"""Embed partitioned segments into a FAISS index and answer questions with source citations."""\n'
         "class ContextIndex:\n"
         '    @prompt(name="ask")\n'
@@ -210,7 +200,6 @@ def _sandbox() -> Path:
     tagged = root / "context_tools" / "actions" / "tagged" / "tagged.py"
     tagged.parent.mkdir(parents=True, exist_ok=True)
     tagged.write_text(
-        "# @toolset-manifest python -m tools manifest context_tools.actions.tagged.tagged:Tagged\n"
         '"""Tagged."""\n'
         "class Tagged:\n"
         "    @skill\n"
@@ -224,7 +213,6 @@ def _sandbox() -> Path:
     named = root / "context_tools" / "actions" / "namedkit" / "namedkit.py"
     named.parent.mkdir(parents=True, exist_ok=True)
     named.write_text(
-        "# @toolset-manifest python -m tools manifest context_tools.actions.namedkit.namedkit:Namedkit\n"
         '"""Namedkit."""\n'
         "class Namedkit:\n"
         '    @skill(name="custom-name")\n'
@@ -339,7 +327,6 @@ with description("a harness"):
                 required_path = root / "utilities" / "required" / "required.py"
                 required_path.parent.mkdir(parents=True, exist_ok=True)
                 required_path.write_text(
-                    "# @toolset-manifest python -m tools manifest required.required:RequiredTool\n"
                     "@agentic_toolset\n"
                     "class RequiredTool:\n"
                     "    def __init__(self, name: str):\n"
@@ -353,7 +340,6 @@ with description("a harness"):
                 ok_path = root / "utilities" / "oktool" / "oktool.py"
                 ok_path.parent.mkdir(parents=True, exist_ok=True)
                 ok_path.write_text(
-                    "# @toolset-manifest python -m tools manifest oktool.oktool:OkTool\n"
                     "@agentic_toolset\n"
                     "class OkTool:\n"
                     "    @agent_tool\n"
@@ -509,7 +495,6 @@ with description("a harness"):
                 required_tool = root / "utilities" / "requiredtool" / "requiredtool.py"
                 required_tool.parent.mkdir(parents=True, exist_ok=True)
                 required_tool.write_text(
-                    "# @toolset-manifest python -m tools manifest requiredtool.requiredtool:RequiredTool\n"
                     '"""RequiredTool."""\n'
                     "class RequiredTool:\n"
                     "    def __init__(self, target: str):\n"
@@ -530,7 +515,6 @@ with description("a harness"):
                 root = _sandbox()
                 path = root / "context_tools" / "actions" / "lifecycle.py"
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.actions.lifecycle:LifecycleAction\n"
                     '"""LifecycleAction."""\n'
                     "class LifecycleAction:\n"
                     "    @agent_tool\n"
@@ -553,7 +537,6 @@ with description("a harness"):
                 path = root / "utilities" / "catalog_generator" / "catalog_generator.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest catalog_generator.catalog_generator:Catalog\n"
                     '"""Catalog."""\n'
                     "@toolset\n"
                     "class Catalog:\n"
@@ -581,7 +564,6 @@ with description("a harness"):
                 path = root / "utilities" / "git" / "git.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest git.git:Git\n"
                     '"""Git."""\n'
                     "@toolset\n"
                     "class Git:\n"
@@ -598,7 +580,6 @@ with description("a harness"):
                 path = root / "utilities" / "workspace" / "workspace.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest workspace.workspace:Workspace\n"
                     '"""Workspace."""\n'
                     "@toolset\n"
                     "class Workspace:\n"
@@ -617,8 +598,6 @@ with description("a harness"):
                 path = root / "utilities" / "workspace" / "workspace.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest workspace.workspace:Turn\n"
-                    "# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession\n"
                     '"""Workspace."""\n'
                     "@toolset\n"
                     "class Turn:\n"
@@ -652,7 +631,6 @@ with description("a harness"):
                 path = root / "utilities" / "host_turn" / "host_turn.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest workspace.workspace:Turn\n"
                     '"""Turn."""\n'
                     "@toolset\n"
                     "class HostTurn:\n"
@@ -693,7 +671,6 @@ with description("a harness"):
                 path = root / "utilities" / "sub_agent" / "sub_agent.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest sub_agent.sub_agent:SubAgent\n"
                     '"""SubAgent."""\n'
                     "@toolset\n"
                     "class SubAgent:\n"
@@ -720,7 +697,6 @@ with description("a harness"):
                 path = root / "utilities" / "record_decisions" / "record_decisions.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest record_decisions.record_decisions:RecordDecisions\n"
                     '"""RecordDecisions."""\n'
                     "@toolset\n"
                     "class RecordDecisions:\n"
@@ -767,7 +743,6 @@ with description("a harness"):
                 path = root / "utilities" / "index_ask" / "index_ask.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest context_setup.context_index:ContextIndex\n"
                     '"""IndexAsk."""\n'
                     "@toolset\n"
                     "class IndexAsk:\n"
@@ -821,7 +796,6 @@ with description("a harness"):
                 path = root / "context_tools" / "actions" / "workflow" / "workflow.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.actions.workflow.workflow:Workflow\n"
                     '"""Workflow."""\n'
                     "class Workflow:\n"
                     '    @prompt(name="backlog")\n'
@@ -870,7 +844,6 @@ with description("a harness"):
                 path = root / "context_tools" / "actions" / "sessionkit" / "sessionkit.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.actions.sessionkit.sessionkit:Sessionkit\n"
                     '"""Sessionkit."""\n'
                     "class Sessionkit:\n"
                     '    @prompt(name="start-turn")\n'
@@ -894,7 +867,6 @@ with description("a harness"):
                 path = root / "context_tools" / "actions" / "generate" / "generate.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.actions.generate.generate:Generate\n"
                     '"""Generate."""\n'
                     "class Generate:\n"
                     "    @prompt\n"
@@ -932,7 +904,6 @@ with description("a harness"):
                 (
                     root / "context_tools" / "actions" / "workspace" / "workspace.py"
                 ).write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.actions.workspace.workspace:Workspace\n"
                     '"""Workspace."""\n'
                     "class Workspace:\n"
                     "    @agent_instructions\n"
@@ -944,7 +915,6 @@ with description("a harness"):
                 path = root / "utilities" / "workspace" / "workspace.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest workspace.workspace:Turn\n"
                     '"""Turn."""\n'
                     "@agentic_toolset\n"
                     "class Turn:\n"
@@ -1063,7 +1033,6 @@ with description("a harness"):
                 path = root / "context_tools" / "bddish" / "bddish.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.bddish.bddish:Bddish\n"
                     '"""Bddish."""\n'
                     "from primitives.actions.action import agentic_toolset, agent_instructions\n"
                     "\n"
@@ -1213,7 +1182,6 @@ with description("a harness"):
                 root = _sandbox()
                 (root / "context_tools" / "base").mkdir(parents=True, exist_ok=True)
                 (root / "context_tools" / "base" / "base_context_tool.py").write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.base.base_context_tool:BaseContextTool\n"
                     '"""Base."""\n'
                     "class BaseContextTool:\n"
                     "    @skill\n"
@@ -1226,7 +1194,6 @@ with description("a harness"):
                 path = root / "context_tools" / "family" / "family.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.family.family:Child\n"
                     '"""Child."""\n'
                     "from context_tools.base.base_context_tool import BaseContextTool\n"
                     "class Child(BaseContextTool):\n"
@@ -1263,7 +1230,6 @@ with description("a harness"):
                 path = root / "context_tools" / "actions" / "turnkit" / "turnkit.py"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "# @toolset-manifest python -m tools manifest context_tools.actions.turnkit.turnkit:Turnkit\n"
                     '"""Turnkit."""\n'
                     "class Turnkit:\n"
                     '    @prompt(name="finish-turn")\n'
@@ -1702,17 +1668,29 @@ with description("required_init_params"):
             expect(required_init_params(Path("/no/such/file.py"), "Any")).to(equal([]))
 
 
+with description("kit invoke path"):
+    with it("should not ship tools.ps1"):
+        expect((_REPO_ROOT / "tools.ps1").exists()).to(equal(False))
+
+    with it("should tell agents to use MCP instead of the tools CLI"):
+        agents = (_REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        expect(agents).to(contain("Use MCP tool:"))
+        expect(agents).not_to(contain("tools.ps1"))
+        expect(agents).not_to(contain("python -m tools"))
+
+
 with description("harness bodies for manifest-alone invoke (#45)"):
     with context("when resolving a fidelity body"):
-        with it("should name tools.ps1 and follow response.instructions without remanifest"):
+        with it("should name the MCP generate tool without remanifest"):
             text = resolve_text(
                 "behavior",
                 "context_tools.bdd.bdd:Bdd",
                 kind="fidelity",
             )
-            expect(text).to(contain("tools.ps1 run -"))
-            expect(text).to(contain("Follow response.instructions"))
-            expect(text).to(contain("Do not remanifest"))
+            expect(text).to(contain("Use MCP tool:"))
+            expect(text).to(contain("bdd.generate"))
+            expect(text).not_to(contain("tools.ps1 run -"))
+            expect(text).not_to(contain("toolset:"))
             expect(text).not_to(contain("_req.yaml"))
             expect(text).not_to(contain("python -m tools manifest "))
 

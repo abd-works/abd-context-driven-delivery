@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec utilities/cli_agent/cli_agent_44_one_judged_job_agent_spec.py
 # Agent reading this file: run via agent BDD CLI harness (cursor-agent).
 # harness: cli
 # session: utilities/cli_agent/.context/.agent_bdd_sessions/run-backlog-44-one-job.json

@@ -1,5 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD spec for utilities/git/git.py."""
 
 import sys

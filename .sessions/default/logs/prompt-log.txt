@@ -3774,3 +3774,561 @@ text: `/turn` is now the checkpoint: commit whenever you want, preferably after 
 =======
 >>>>>>> 7e30c3fed5a0bcc35343159fd8e78b36f50a588b
 >>>>>>> 845ef58bb907e767130fe3bf0e8476712e042f13
+
+==============================================================================
+2026-09-15T19:27:56Z  afterAgentResponse  conv=d0d23fcb  gen=d3c74591  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: The merge is done. Origin won everywhere except:
+
+- `README.md`
+- `setup.ps1` (venv, missing-package install, harness deploy)
+- `requirements.txt` (full dep list plus `mamba`)
+- `pyproject.toml` (same deps)
+
+Those stayed from this checkout. The merge commit is on `main`; it is 4 commits ahead of `origin/main` and is not pushed.
+
+==============================================================================
+2026-09-15T19:34:15Z  afterAgentResponse  conv=0a6a1960  gen=ee22a85d  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The title is now **We have decades helping organizations adopt new ways of working**. Reload `#3`.
+
+==============================================================================
+2026-09-15T19:38:07Z  afterAgentResponse  conv=0a6a1960  gen=62651b9c  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The scattered icon map is gone. That slot is now a three-column table:
+
+| Capability | Existing dysfunction | AI amplification |
+| Ideation â†’ Discovery â†’ Build â†’ Test â†’ Deploy | the red-icon problems, grouped | how AI makes each one worse |
+
+Eyebrow: **Why this approach**. Title: **Existing dysfunction, amplified**.
+
+Reload the old â€œWhy This Approach?â€ slide (page 05). Say if a row should move or the amplification copy should be sharper.
+
+==============================================================================
+2026-09-15T19:38:45Z  afterAgentResponse  conv=0a6a1960  gen=17950504  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **The Opportunity Is Strong. The Delivery System Must Catch Up.** is gone. The deck is **21** slides; page numbers are updated. `#4` is now the next slide in line.
+
+==============================================================================
+2026-09-15T19:39:05Z  afterAgentResponse  conv=0a6a1960  gen=0c4c1aa0  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **Existing dysfunction, amplified** is gone. The deck is **20** slides; page numbers are updated. `#5` is now whatever followed that table.
+
+==============================================================================
+2026-09-15T19:39:55Z  afterAgentResponse  conv=0a6a1960  gen=5ac43a8f  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The table is back, with the imageâ€™s header:
+
+- Eyebrow: **Why this approach**
+- Title: **AI makes a bad process worse**
+
+Same three columns: Capability / Existing dysfunction / AI amplification. Itâ€™s `#4`, right after the decades slide. Reload that hash.
+
+==============================================================================
+2026-09-15T19:40:12Z  afterAgentResponse  conv=0a6a1960  gen=ae602514  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: `#7` and the slide before it are swapped. Page numbers are unchanged in count (21). Reload `#6` / `#7` to confirm the order.
+
+==============================================================================
+2026-09-15T19:41:02Z  afterAgentResponse  conv=0a6a1960  gen=66af7d82  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: `#6` / `#7` are back as they were. **`#4` and `#5` are swapped** â€” the AI-makes-a-bad-process-worse table is now `#5`. Reload those two.
+
+==============================================================================
+2026-09-15T19:42:41Z  afterAgentResponse  conv=0a6a1960  gen=0eea8a86  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The Individual survey is gone. The **Team** survey is now `#4`. The dysfunction table follows it on `#5`. Deck is **20** slides.
+
+==============================================================================
+2026-09-15T19:43:47Z  afterAgentResponse  conv=0a6a1960  gen=9aaffd8a  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: That closer is now: **AI when combined with modern product engineering correctly is called Context Driven Delivery.** Reload `#3`.
+
+==============================================================================
+2026-09-15T19:44:49Z  afterAgentResponse  conv=0a6a1960  gen=9becaf25  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The header sub that was colliding is gone. **Smaller, more autonomous teams with greater ownership** now sits in the With CDD band â€” after the change â€” with the shared-context line. Reload `#6`.
+
+==============================================================================
+2026-09-15T19:45:39Z  afterAgentResponse  conv=0a6a1960  gen=a9bc3b9f  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **Context Driven Delivery** is now `#6`, right after **AI makes a bad process worse**. Reload `#5` / `#6`.
+
+==============================================================================
+2026-09-15T19:48:10Z  afterAgentResponse  conv=0a6a1960  gen=83b58407  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: `#7` and `#8` are swapped. The agentic slide is now `#7`; the handoff/change slide is `#8`. Reload those two.
+
+==============================================================================
+2026-09-15T19:49:42Z  afterAgentResponse  conv=0a6a1960  gen=d394b304  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Slide 6 now has the same gray eyebrow as the others: **From Agile to agentic_**, then **Context Driven Delivery** and the orange rule. Content top stays at 120px so it lines up with the decades slide. Reload `#6`.
+
+==============================================================================
+2026-09-15T19:52:27Z  afterAgentResponse  conv=0a6a1960  gen=da1f62c8  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Itâ€™s on `#2` now: gray **The future is now_** above **AI has significant implications across the technology delivery lifecycle**, same treatment as the other slides. Reload `#2`.
+
+==============================================================================
+2026-09-15T19:54:13Z  afterAgentResponse  conv=0a6a1960  gen=1cf3e306  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: That title is now: **Accelerated delivery is scaled by providing an agentic fabric that makes it easy to access and update the right context from idea all the way to Operations.** Reload `#7`. Itâ€™s a long line â€” say if you want it split.
+
+==============================================================================
+2026-09-15T19:55:51Z  afterAgentResponse  conv=0a6a1960  gen=22a3746c  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The title is now: **Acceleration scales through a common context fabric from idea to Operations.** Reload `#7`.
+
+==============================================================================
+2026-09-15T19:56:11Z  afterAgentResponse  conv=0a6a1960  gen=e6615472  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Itâ€™s **from Idea to Operations** now. Reload `#7`.
+
+==============================================================================
+2026-09-15T19:58:36Z  afterAgentResponse  conv=0a6a1960  gen=29db89a5  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The left **Observed** (baseline / â€œgivenâ€) is gone. The three that remain sit under **Discovery**, **Specification**, and **Implementation**.
+
+The threads, stage chips, and Observed row have more gap so the board uses more of the slide. Reload `#9`.
+
+==============================================================================
+2026-09-15T19:59:23Z  afterAgentResponse  conv=0a6a1960  gen=4017648f  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Thereâ€™s an **Appendix** divider at the end now. The old `#8` handoff slide sits in that section, then the existing reference-map slide. The working path goes **Harness â†’ Lessons** with no handoff in the middle. Deck is **21** slides.
+
+==============================================================================
+2026-09-15T20:07:13Z  afterAgentResponse  conv=0a6a1960  gen=6ca07a8c  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **Observed** is gone. Same green boxes, three lines each:
+
+- **Discovery:** Accelerate validation Â· Multiply learning Â· Increase shared understanding  
+- **Specification:** Confident instructions Â· Faster feedback Â· Increased alignment  
+- **Implementation:** Safety Â· Automated quality Â· Faster delivery cycles  
+
+Reload the harness slide (`#8` now).
+
+==============================================================================
+2026-09-15T20:07:41Z  afterAgentResponse  conv=0a6a1960  gen=c56a2adc  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The outcome boxes are back to the old type: **16px, muted, regular weight**. Copy is unchanged. Reload the harness slide.
+
+==============================================================================
+2026-09-15T20:23:02Z  afterAgentResponse  conv=0a6a1960  gen=f109b2dc  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Slide 9 is now **How we can help**.
+
+Lead: CDD practitioners at every level â€” **advisory, coaching, pairing, and betting on the work**.
+
+Three shaded columns:
+
+1. **Accelerated requirements & testing** â€” digital workflow program, name TBC. Scope, stories, executable specs, evidence.
+2. **Coaching / enablement of digital staff** â€” pair in the work, context as the asset, push back on agents, leaders sponsor the operating model (not a tool install).
+... [11 lines, 814 chars total]
+
+==============================================================================
+2026-09-15T20:25:00Z  afterAgentResponse  conv=0a6a1960  gen=a09be75b  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The kit index ask did not return a hit â€” `tools.ps1` dies on a missing `utilities.conf_secrets` module, and there is no FAISS index at the documented `.context` path. The three bullets are taken from ABDâ€™s own quals and enablement material instead.
+
+On `#9` the lead is now:
+
+- We **embed** with leaders and teams â€” C-suite to the front line â€” and turn delivery momentum into durable new ways of working.  
+  ([About Agile By Design](c:\dev\abd-works-repo\abd-works-website\proofwork-qual-md\About Agile By Design.md))
+- We **pair in the work**: shared artefacts, ubiquitous language, humanâ€
+... [12 lines, 1201 chars total]
+
+==============================================================================
+2026-09-15T20:33:30Z  afterAgentResponse  conv=0a6a1960  gen=600d85e2  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: `#9` now uses your three lead lines.
+
+The program column is:
+
+- Approach refinement and socialization  
+- Context refinement and baseline  
+- Client bootcamp and mentoring  
+
+... [15 lines, 394 chars total]
+
+==============================================================================
+2026-09-15T20:36:28Z  afterAgentResponse  conv=0a6a1960  gen=5b8a08c9  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Those three lines are **italic only** now â€” no bullets. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:37:42Z  afterAgentResponse  conv=0a6a1960  gen=4b24a91d  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: First line is now **Unlock and scale key program bottleneck**, with a little more space between the three italic lines. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:38:03Z  afterAgentResponse  conv=0a6a1960  gen=21b8bcd4  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Columns 2 and 3 now use the same italic outcomes as column 1 â€” no bullets, same line spacing. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:38:53Z  afterAgentResponse  conv=0a6a1960  gen=be0f97df  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Each column now matches the first: **three short work bullets**, then **italic outcomes**. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:43:33Z  afterAgentResponse  conv=0a6a1960  gen=7970c1de  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Middle column now has those four work items, then the three italic outcomes. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:47:06Z  afterAgentResponse  conv=0a6a1960  gen=b9542eeb  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Column 3 now has the four work items and italic benefits. The pairing / slide-led line is already off the slide â€” hard-refresh `#9` if you still see it.
+
+==============================================================================
+2026-09-15T20:47:28Z  afterAgentResponse  conv=0a6a1960  gen=9c25992a  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Middle-column italics now start with **CDD Delivery Approach used by the team**. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:48:29Z  afterAgentResponse  conv=0a6a1960  gen=b44a93cc  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: First italic line in the middle column is now **Reusable CDD Delivery Approach and Guidelines**. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:49:00Z  afterAgentResponse  conv=0a6a1960  gen=d99a7cc9  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Updated to **Accelerated delivery without compromising safety**. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:49:26Z  afterAgentResponse  conv=0a6a1960  gen=d8fa04a3  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Column 3 italics are now results: work starts from how the org actually operates, agents use existing knowledge instead of inventing it, and context compounds so the next team is faster. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:51:00Z  afterAgentResponse  conv=0a6a1960  gen=f75aa1ed  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Column 3 italics now use those three lines. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:54:20Z  afterAgentResponse  conv=0a6a1960  gen=f152e149  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Title on `#9` is now **Our people enable by embedding ourselves in the work with you at all levels of your organization**. Reload and say if you want it tightened for the line length.
+
+==============================================================================
+2026-09-15T20:54:45Z  afterAgentResponse  conv=0a6a1960  gen=eb371c62  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Title is now **Our people enable by embedding at all levels of your organization**. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:55:01Z  afterAgentResponse  conv=0a6a1960  gen=cf6910e2  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **people** and **organization** are orange in the `#9` title. Reload.
+
+==============================================================================
+2026-09-15T20:55:21Z  afterAgentResponse  conv=0a6a1960  gen=d77f61d2  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **organization** is black again. **people** stays orange. Reload `#9`.
+
+==============================================================================
+2026-09-15T20:57:16Z  afterAgentResponse  conv=0a6a1960  gen=df7c16e8  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The mission terminal is on the **title slide**, top-right: white card, same typewriter sequence. Reload `#1`.
+
+==============================================================================
+2026-09-15T20:57:54Z  afterAgentResponse  conv=0a6a1960  gen=ce6b07be  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: After the done line it holds **10 seconds**, then clears and plays again. Reload `#1`.
+
+==============================================================================
+2026-09-15T21:02:10Z  afterAgentResponse  conv=0a6a1960  gen=ab186a72  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Slide `#3` close now reads: numerous enterprise clients already use this deceptively simple strategy, and the next challenge is product engineering for AI â€” **Context Driven Delivery**. Reload.
+
+==============================================================================
+2026-09-15T21:02:25Z  afterAgentResponse  conv=0a6a1960  gen=f78361c9  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The terminal now starts at the same **96px** as **Taking advantage of AI**. Reload `#1`.
+
+==============================================================================
+2026-09-15T21:03:07Z  afterAgentResponse  conv=0a6a1960  gen=23040477  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Slide `#3` close is your four lines again â€” not a rewrite. Reload.
+
+==============================================================================
+2026-09-15T21:03:26Z  afterAgentResponse  conv=0a6a1960  gen=07669fbf  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Third line is now **We have helped numerous enterprise clients adopt this deceptively simple strategy.** The next-challenge line is unchanged. Reload `#3`.
+
+==============================================================================
+2026-09-15T21:03:43Z  afterAgentResponse  conv=0a6a1960  gen=f67bc5f6  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Those two lines are gone. `#3` close is only the helped-clients line and the next-challenge line. Reload.
+
+==============================================================================
+2026-09-15T21:04:27Z  afterAgentResponse  conv=0a6a1960  gen=46a8e1cf  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **Taking advantage of AI** now matches the other grey subheaders: same type, **120px** from the top, **100px** from the left. The terminal moved with it. Reload `#1`.
+
+==============================================================================
+2026-09-15T21:07:54Z  afterAgentResponse  conv=0a6a1960  gen=513972d0  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Bottom of `#5` now has a kicker for the talk track: AI only accelerates a broken system of work, plus the CircleCI 2026 numbers from those two bootcamp slides â€” **+59%** throughput in the top 5%, main branch **âˆ’7%**, CI success **70.8%**, **72 min** to recover, **~12 FTE/year** lost to debugging. Reload.
+
+==============================================================================
+2026-09-15T21:08:21Z  afterAgentResponse  conv=0a6a1960  gen=ed6e0a99  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The kicker is now four numbers plus the two CircleCI charts side by side: **+59%**, **âˆ’7%** main branch, **70.8%** CI, **72 min** recover. Reload `#5`.
+
+==============================================================================
+2026-09-15T21:08:46Z  afterAgentResponse  conv=0a6a1960  gen=3f142ef8  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Those two CircleCI slides are now side by side at the bottom of `#5`. Reload.
+
+==============================================================================
+2026-09-15T21:09:32Z  afterAgentResponse  conv=0a6a1960  gen=bbf68864  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Bottom of `#5` is now two stories, same shape as those slides: **More code. Less shipped.** and **Code is breaking more often** â€” each with a short lead, three bullets, and its two charts. Reload.
+
+==============================================================================
+2026-09-15T21:13:47Z  afterAgentResponse  conv=0a6a1960  gen=e45d3a2b  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: `#5` now has space under the table, then the two stories in **orange titles** across the middle, then **four custom charts** in a row â€” no CircleCI screenshots. Reload.
+
+==============================================================================
+2026-09-15T21:14:19Z  afterAgentResponse  conv=0a6a1960  gen=d1385c40  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **More code. Less shipped.** now has a `*`, with a tiny footer citing [CircleCI, The 2026 State of Software Delivery](https://circleci.com/resources/2026-state-of-software-delivery/). Reload `#5`.
+
+==============================================================================
+2026-09-15T21:16:35Z  afterAgentResponse  conv=0a6a1960  gen=b95704de  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The CI chart now labels each year: **77.0% â†’ 77.4% â†’ 82.2% â†’ 70.8%**, with 60â€“90% gridlines. Reload `#5`.
+
+==============================================================================
+2026-09-15T21:21:24Z  afterAgentResponse  conv=0a6a1960  gen=8a9cf7f5  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: On `#6`, **Context Driven Delivery** is orange. The title now reads: Context Driven Delivery: Enabling clients to clean, clarify, and transform context into working solutions. Reload.
+
+==============================================================================
+2026-09-15T21:22:08Z  afterAgentResponse  conv=0a6a1960  gen=6a8bc49d  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The colon is orange now too. Reload `#6`.
+
+==============================================================================
+2026-09-15T21:27:23Z  afterAgentResponse  conv=0a6a1960  gen=6fe64086  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: On `#8`, those three features sit under the green boxes and above **Please see Forge**. Reload.
+
+==============================================================================
+2026-09-15T21:27:42Z  afterAgentResponse  conv=0a6a1960  gen=35bdfe07  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The three feature lines are centered on `#8`. Reload.
+
+==============================================================================
+2026-09-15T21:28:30Z  afterAgentResponse  conv=0a6a1960  gen=f4b86030  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: More space under the green boxes, and those three lines now match **Please see** â€” same mono, size, and muted color. Reload `#8`.
+
+==============================================================================
+2026-09-15T21:38:14Z  afterAgentResponse  conv=0a6a1960  gen=d5f36647  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: On `#9`:
+
+- Left card: **1 Ã— AI Enablement Lead** (that footer is taller so it lines up with the two-line block)
+- Middle + right, stacked: **1 Ã— AI Enablement Lead** and **1 Ã— AI Forward Deployed Engineer**
+- Full width under all three: **1 Ã— AI Transformation Executive Â· 2 days per week**, everyone else **5 days per week**
+
+Reload.
+
+==============================================================================
+2026-09-15T21:39:46Z  afterAgentResponse  conv=0a6a1960  gen=407d4fc6  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Roles are centered. Each line now ends with **Â· 5 days per week** (exec is **Â· 2 days per week**). Reload `#9`.
+
+==============================================================================
+2026-09-15T21:41:53Z  afterAgentResponse  conv=0a6a1960  gen=4eeaa454  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Appendix is now right after `#9`: **Supporting material**, then the handoff slide, then the context-architecture map. The old `#10` plan path starts after that. Reload and step from `#9`.
+
+==============================================================================
+2026-09-15T21:46:01Z  afterAgentResponse  conv=0a6a1960  gen=8bfadeb0  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: New slide `#10` sits right after the three pillars: three cards â€” **AI Enablement Lead** (Senior, on the floor), **AI Forward Deployed Engineer** (Engineer, building and embedding), **AI Transformation Executive** (Lead, advisory, 2 days). Name left, icon, bullets right. Reload.
+
+==============================================================================
+2026-09-15T21:47:33Z  afterAgentResponse  conv=0a6a1960  gen=732f90e8  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Bullets are one column again, with longer lines so they read left to right. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:48:18Z  afterAgentResponse  conv=0a6a1960  gen=48b23d30  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: That executive line is now **Support executives to sponsor priorities, funding, and blockers**. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:48:35Z  afterAgentResponse  conv=0a6a1960  gen=ed848e28  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Two columns are back, with those same longer sentences. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:49:01Z  afterAgentResponse  conv=0a6a1960  gen=5954d0b0  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: That line is now just **Advise the change strategy**. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:50:43Z  afterAgentResponse  conv=0a6a1960  gen=7b95a6b1  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Executive card now includes two Architect lines: **shape what the agentic solution could and should look like**, and **surface technical ramifications â€” orchestration, agent-ready systems, and guardrails**. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:51:05Z  afterAgentResponse  conv=0a6a1960  gen=f3c98353  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Those two lines now synthesize that Architect block: **agents vs copilots vs RPA, orchestration, and tool use**, then **agent-ready APIs and data, MLOps, and technical guardrails**. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:51:52Z  afterAgentResponse  conv=0a6a1960  gen=6a885f5c  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: That **Shape the solution** line is gone. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:52:33Z  afterAgentResponse  conv=0a6a1960  gen=b15a18b5  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: That line is now **Advise and shape the agentic fabric â€” e.g. agent-ready APIs and data, MLOps, and technical guardrails**. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:53:27Z  afterAgentResponse  conv=0a6a1960  gen=eb31cb08  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The outcomes line is gone. Executive card is now **leadership on the left**, **Architect engineering on the right** â€” agents vs copilots, orchestration, agent-ready systems, MLOps, and technical governance. Reload `#10`.
+
+==============================================================================
+2026-09-15T21:54:10Z  afterAgentResponse  conv=0a6a1960  gen=5aa07b55  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The governance line is gone. Reload `#10`.
+
+==============================================================================
+2026-09-15T23:29:42Z  afterAgentResponse  conv=0a6a1960  gen=13de6677  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Title-slide eyebrow is now **The agentic SDLC**. Reload `#1`.
+
+==============================================================================
+2026-09-15T23:33:38Z  afterAgentResponse  conv=267d577e  gen=14c6a402  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: CDD was running as a **user** MCP server (`~/.cursor/mcp.json`), with cwd `pml-domainmodel`. Thatâ€™s why session 71 opened in the wrong repo and why the tool looked like a stub.
+
+**Done**
+- Removed `cdd` from `C:\Users\jeffa\.cursor\mcp.json` (Miro stays).
+- Wrote project MCP at `C:\dev\abd-context-driven-delivery\.cursor\mcp.json` (cwd is this repo).
+
+This chat now has **no CDD MCP** (`cdd` is gone; project server is not approved yet). I am not calling `tools.ps1`.
+
+... [9 lines, 656 chars total]
+
+==============================================================================
+2026-09-15T23:34:55Z  afterAgentResponse  conv=267d577e  gen=cc85feab  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: I was wrong. There is no approval step.
+
+This chat was bound to **user** MCP (`user-cdd` in `~/.cursor/mcp.json`). I removed that entry. Cursor dropped CDD from this session. The only servers I can see now are GitLens and Miro.
+
+Project config is already on disk at `abd-context-driven-delivery/.cursor/mcp.json`. It has not attached to **this** conversation, so `start_work_session` cannot run here.
+
+A new agent chat in this window is what picks up the project CDD server. I will start `#71` there over MCP.
+
+==============================================================================
+2026-09-15T23:36:48Z  afterAgentResponse  conv=c1654368  gen=6f761405  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: Session **context-tool-refactoring-71** is already on this clone (`C:\dev\abd-context-driven-delivery`). No sibling worktree.
+
+**Goal:** Context-tool refactoring (#71) â€” parent for structural refactors. Children: #22, #68, #21, #19.
+
+**Next (from the session file):** whether domain transform and render can live on `BaseContextTool`.
+
+The kit CLI failed on `utilities.conf_secrets`, so I did not get a fresh `start_work_session` handshake. The session folder is already here; we are in it.
+
+==============================================================================
+2026-09-15T23:41:50Z  afterAgentResponse  conv=c1654368  gen=b415ff61  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: Deleted `primitives/tools/__main__.py`. `python -m tools` no longer has an entry point.
+
+==============================================================================
+2026-09-15T23:42:31Z  afterAgentResponse  conv=c1654368  gen=b8e979aa  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: This work is on **main**, in the primary clone `C:\dev\abd-context-driven-delivery`.
+
+There is no sibling worktree for 71. Session `context-tool-refactoring-71` was already using this same checkout (`path: .`).

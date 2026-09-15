@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec primitives/actions/actions_display_tools_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: primitives/actions/.context/.agent_bdd_sessions/display-agenda-tools.json

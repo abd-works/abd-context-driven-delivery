@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec utilities/record_decisions/record_decisions_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: utilities/record_decisions/.context/.agent_bdd_sessions/write-cdr.json

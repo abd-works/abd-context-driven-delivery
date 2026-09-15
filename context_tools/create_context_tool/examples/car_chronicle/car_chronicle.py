@@ -1,10 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
-# invoke-new: action generate
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """Minimal BaseContextTool subclass example for generator specs."""
 
 from __future__ import annotations

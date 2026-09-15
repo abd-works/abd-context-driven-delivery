@@ -41,7 +41,6 @@ import utilities.manifest_hook.manifest_gate as gate  # noqa: E402
 
 _GATED_WIDGET_TARGET = "tools.hooks.examples.gated_widget.gated_widget:GatedWidget"
 _GATED_FILE = (
-    f"# @toolset-manifest python -m tools manifest {_GATED_WIDGET_TARGET}\n"
     '"""docstring."""\n'
 )
 

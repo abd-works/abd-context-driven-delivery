@@ -1,4 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 """BDD development specs for the prompt_log audit hook."""
 import json
 import sys

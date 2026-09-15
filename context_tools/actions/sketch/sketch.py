@@ -1,6 +1,3 @@
-# @toolset-manifest python -m tools manifest sketch.sketch:Sketch
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
 """Sketch a solution interactively before generating the formal artifact.
 
 Sketch is a standalone toolset. Any agent or human can invoke its tools and

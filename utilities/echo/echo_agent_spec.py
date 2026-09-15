@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec utilities/echo/echo_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: utilities/echo/.context/.agent_bdd_sessions/fence-echo.json

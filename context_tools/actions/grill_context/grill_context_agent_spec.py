@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec context_tools/actions/grill_context/grill_context_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/actions/grill_context/.context/.agent_bdd_sessions/grill-write.json

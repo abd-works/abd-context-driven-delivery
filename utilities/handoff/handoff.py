@@ -1,5 +1,3 @@
-# @toolset-manifest python -m tools manifest handoff.handoff:Handoff
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 """Handoff - write a compact session summary so the next agent can continue.
 
 Writes handoff-{timestamp}.md into the current session folder (.sessions/{name}/).

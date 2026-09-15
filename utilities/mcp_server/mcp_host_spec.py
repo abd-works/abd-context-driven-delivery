@@ -1,4 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 """BDD spec for MCP host JSON Schema binding of Python parameter types."""
 import sys
 from pathlib import Path

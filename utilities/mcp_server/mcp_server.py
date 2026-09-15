@@ -1,4 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 """MCP-native CDD runtime — discover AI tools and agent guidance, register with MCP, invoke directly."""
 from __future__ import annotations
 

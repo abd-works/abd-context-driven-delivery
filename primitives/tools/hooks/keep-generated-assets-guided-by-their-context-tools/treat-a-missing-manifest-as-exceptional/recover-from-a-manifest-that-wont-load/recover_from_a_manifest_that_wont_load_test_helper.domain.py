@@ -36,7 +36,6 @@ from recover_from_a_manifest_that_wont_load_story import (  # noqa: E402
 import utilities.manifest_hook.manifest_gate as gate  # noqa: E402
 
 _GATED_FILE = (
-    '# @toolset-manifest python -m tools manifest a.b:C\n'
     '"""docstring."""\n'
 )
 

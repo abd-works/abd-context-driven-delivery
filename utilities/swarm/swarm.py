@@ -1,5 +1,3 @@
-# @toolset-manifest python -m tools manifest swarm.swarm:Swarm
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 """Swarm — Supervisor + Agents on a shared Plan turn slice; CliAgent is the worker."""
 from __future__ import annotations
 

@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec utilities/cli_agent/cli_agent_human_check_agent_spec.py
 # Agent reading this file: run via agent BDD CLI harness (cursor-agent).
 # harness: cli
 # session: utilities/cli_agent/.context/.agent_bdd_sessions/human-check-53.json

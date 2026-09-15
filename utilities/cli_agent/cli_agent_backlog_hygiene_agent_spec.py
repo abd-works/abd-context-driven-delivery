@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec utilities/cli_agent/cli_agent_backlog_hygiene_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: utilities/cli_agent/.context/.agent_bdd_sessions/backlog-hygiene-46.json

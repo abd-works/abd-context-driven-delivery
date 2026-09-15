@@ -1,9 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.cdd.cdd:Cdd
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# Do not author behavior from this Python source.
-# invoke-new: action generate | context.fidelity discovery
-# invoke-edit: action satisfy | toolset: context_tools.cdd.cdd:Cdd
-# invoke-check: action validate | toolset: context_tools.cdd.cdd:Cdd
 """CDD orchestrator - stage menu across stories, ddd, ux, clean_engineering, bdd."""
 
 from __future__ import annotations

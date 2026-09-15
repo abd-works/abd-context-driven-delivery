@@ -1,5 +1,3 @@
-# @toolset-manifest python -m tools manifest car_story.car_story:CarStory
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 """CarStory — actions that orchestrate Car context tools for scripted trips."""
 from __future__ import annotations
 

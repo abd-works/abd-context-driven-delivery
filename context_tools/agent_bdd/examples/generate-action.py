@@ -1,7 +1,5 @@
 """
-# @toolset-manifest python -m tools manifest agent_bdd.agent_bdd:AgentBdd
 """
-# @agent-spec-manifest python -m tools agent-spec context_tools/agent_bdd/examples/generate-action.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/agent_bdd/.agent_bdd_sessions/generate-action-example.json

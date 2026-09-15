@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec utilities/plan/plan_small_work_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: utilities/plan/.context/.agent_bdd_sessions/small-work-themed-hil.json

@@ -1,4 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 """BDD spec for context-tool Cursor rule generation."""
 
 import sys

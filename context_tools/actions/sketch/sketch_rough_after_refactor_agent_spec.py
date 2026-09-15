@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec context_tools/actions/sketch/sketch_rough_after_refactor_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge) or CLI agent BDD.
 # harness: cli
 # session: context_tools/actions/sketch/.context/.agent_bdd_sessions/sketch-rough-32.json

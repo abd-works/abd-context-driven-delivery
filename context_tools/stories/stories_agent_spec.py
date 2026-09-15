@@ -1,4 +1,3 @@
-# @agent-spec-manifest python -m tools agent-spec context_tools/stories/stories_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: context_tools/stories/.context/.agent_bdd_sessions/stories-generate.json

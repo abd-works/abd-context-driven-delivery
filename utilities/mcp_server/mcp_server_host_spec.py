@@ -1,4 +1,3 @@
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 """Infrastructure spec — stdio MCP host wired to the CDD runtime."""
 
 import asyncio

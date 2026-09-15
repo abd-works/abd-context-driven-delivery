@@ -1,5 +1,4 @@
 """
-# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
 """
 TAX_RATE = 0.13
 
