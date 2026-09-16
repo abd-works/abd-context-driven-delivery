@@ -73,7 +73,10 @@ class Markdown:
         name = getattr(host, "name", None)
         locator_host = _locator_host(host, class_dir, name)
         location = AssetLocator(locator_host, self._label).locate()
-        return _extract_location(location)
+        text = _extract_location(location)
+        if self._label in {"context", "contexts"}:
+            text = _preamble_before_h2(text)
+        return text
 
     def html(self) -> HTML:
         return HTML.from_markdown(self.extract())
@@ -200,6 +203,13 @@ def _read_section(file_path: Path, section_heading: str) -> str:
     if newline >= 0:
         body = body[newline + 1 :]
     return body.strip()
+
+
+def _preamble_before_h2(text: str) -> str:
+    match = re.search(r"^##\s+\S", text, re.MULTILINE)
+    if not match:
+        return text.strip()
+    return text[: match.start()].strip()
 
 
 def _templates_path_map(markdown: Markdown) -> dict[str, str]:

@@ -1,6 +1,7 @@
-"""Layer 1 fixture host — co-located markdown beside this module."""
+"""Layer 1–2 fixture host — co-located markdown beside this module."""
 from __future__ import annotations
 
+from context_tools.context_guidance.guidance import ContextGuidance
 from primitives.markdown import HTML, Markdown, markdown
 
 
@@ -15,3 +16,9 @@ class SampleToolHost:
 
     def read_guidance_as_html(self) -> HTML:
         return Markdown.from_label(self, "guidance").html()
+
+
+class SampleContextGuidance(ContextGuidance):
+    domain_slug = "sample_tool"
+    default_format = "templates"
+    name = None

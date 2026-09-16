@@ -14,7 +14,10 @@ from expects import contain, equal, expect
 from mamba import context, description, it
 
 from context_tools.context_guidance.fixtures.other_tool.other_tool_host import OtherToolHost
-from context_tools.context_guidance.fixtures.sample_tool.sample_tool_host import SampleToolHost
+from context_tools.context_guidance.fixtures.sample_tool.sample_tool_host import (
+    SampleContextGuidance,
+    SampleToolHost,
+)
 from primitives.markdown import HTML, Markdown
 
 
@@ -52,3 +55,25 @@ with description("a co-located markdown file beside a host module"):
                 expect(type(rendered)).to(equal(HTML))
                 expect(str(rendered)).to(contain("known prose for guidance in sample tool"))
                 expect(str(rendered)).to(contain("<p>"))
+
+
+with description("context guidance"):
+    with context("with the instructions property read"):
+        with it(
+            "should join context, guidance, formatted rules, and the template for the active format"
+        ):
+            host = SampleContextGuidance(format="templates")
+            text = host.instructions
+            expect(text).to(contain("sample preamble"))
+            expect(text).to(contain("known prose for guidance in sample tool"))
+            expect(text).to(contain("sample-rule-one"))
+            expect(text).to(contain("active format template body for sample tool"))
+
+        with it(
+            "should expose instructions as one compound property not as a single markdown label"
+        ):
+            host = SampleContextGuidance(format="templates")
+            expect(host.instructions).not_to(equal(host.context))
+            expect(host.instructions).not_to(equal(host.guidance))
+            expect(host.instructions).to(contain(host.context.strip()))
+            expect(host.instructions).to(contain(host.guidance.strip()))
