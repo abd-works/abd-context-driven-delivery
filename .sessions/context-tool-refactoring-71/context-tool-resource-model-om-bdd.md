@@ -6,9 +6,16 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 # primitives/markdown
 
-- **Purpose:** Extract co-located markdown — not assembly.
-- **Seam (terms):** `@markdown`, `Markdown`, `AssetLocator`
+- **Purpose:** Extract co-located markdown — not assembly. Convert that extract to HTML.
+- **Seam (terms):** `@markdown`, `Markdown`, `HTML`, `AssetLocator`
 - **Dependencies (one-way):** `primitives/assets`
+
+## HTML
+
++ HTML.from_markdown(text: str)
+	// renamed from catalog — conversion of one markdown extract
+------
+----
 
 ## Markdown
 
@@ -16,47 +23,43 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 ------
 ----
 + extract(): str
-	-> AssetLocator.locate(host.context_guidance.module_dir, label, host.name)
-+ coerce(text: str, return_type): str | list[Rule] | dict[str, str]
-	// return_type selects str, list[Rule], or templates path map
+	// this property is on a class — use that class’s file directory; no module_dir on the host
+	-> AssetLocator.locate(class file directory, label, host.name)
++ html(): HTML
+	// any @markdown property can convert its extract to HTML
+	-> HTML.from_markdown(extract())
++ coerce(text: str, return_type): str | RulesCollection | dict[str, str] | HTML
+	// return_type selects str, RulesCollection, templates path map, or HTML
 
 ## @markdown
 
 + @markdown(getter) -> property
 	// property name = label; coerce to annotated return type
+	// annotated property reads as markdown (extract) or HTML (html)
 	-> Markdown.from_label(owner, label)
 	-> Markdown.extract()
+	-> Markdown.html() when the read is HTML
 	-> Markdown.coerce(return_type)
 
 ---
 
 # context_guidance/guidance
 
-- **Purpose:** Assemble agent instructions and catalog from `@markdown` properties; fidelity-scoped guidance nodes.
-- **Seam (terms):** `Guidance`, `ContextSection`, `ContextGuidance`, `FidelityGuidance`, `GuidanceCollection`
+- **Purpose:** Assemble agent instructions from `@markdown` properties; fidelity-scoped guidance nodes.
+- **Seam (terms):** `ContextGuidance`, `PracticeGuidance`, `FidelityGuidance`, `GuidanceCollection`, `RulesCollection`
 - **Dependencies (one-way):** `primitives/markdown`, `primitives/assets`, `workspace`, `context_tools/agent_toolset/scan`
 
-## Guidance
-
-+ Guidance()
-	// abstract — reading seam for instructions and catalog
-------
-----
-+ instructions: str
-	// @property — compound doc: own markdown properties + iterate members
-+ catalog: str
-	// @property — compound doc: own markdown properties + iterate members (HTML)
-
-## ContextSection : Guidance
-+ ContextSection()
-	// abstract — shared context / guidance / rules
+## ContextGuidance
++ ContextGuidance()
+	// base — shared context / guidance / rules; no fidelity; instructions live here
 ------
 + context: str
 	// @markdown — # Contexts  for this host scope
 + guidance: str
 	// @markdown
-+ rules: list[Rule]
-	// @markdown — coerce bullets to Rules; slug matches Scanner; @rules at deploy
++ rules: RulesCollection
+	// @markdown — coerce bullets to RulesCollection
+	// @rules — deploy writes one .mdc per rule because of this mark
 + templates: dict[str, str]
 	// @markdown — format key → relative path under templates/; subscript reads content
 + format: str
@@ -64,187 +67,301 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 + default_format: str
 	// fallback when format unset; invoke copies to format on active host
 + name: str | None
-	// scopes @markdown extract; None on context guidance
-+ context_guidance: ContextGuidance
-	// @markdown module_dir always from here — self on ContextGuidance, parent on FidelityGuidance
-+ fidelity: str | None
-	// domain fidelity key — equals name on fidelity guidance; active key on context guidance at invoke; None on context guidance
+	// scopes @markdown extract; None on practice guidance
 ----
 + instructions: str
 	// @property — context + guidance + format_rules(rules) + templates[format]; same logic on every host
++ guidance(): str
+	// @agent_instructions @skill — same operation deploy as any other recipe; file kind is the skill mark
+	-> self.instructions
 
-## ContextGuidance : ContextSection
-	// also AgenticToolset, Deployable — see primitives/agent_toolset, primitives/harness
+## PracticeGuidance : ContextGuidance
+	// not an AgenticToolset — generate / satisfy / validate / scan are their own hosts
+	// guidance() and rules still deploy through the same leaves as any marked member
 
-+ ContextGuidance(format, path, session, workspace)
++ PracticeGuidance(format, path, session, workspace)
 ------
 + << composition >> fidelities: GuidanceCollection
++ fidelity: str | None
+	// active domain key at invoke; format from the matching child in fidelities
 + examples: str
 	// @markdown — not in instructions
 + << association >> workspace: Workspace
 + << association >> scanner: Scan
 ----
-+ rules: list[Rule]
-	// inherited; deployed when MarkdownDeployment implements deployContextSection / deployContextSectionFidelity
++ rules: RulesCollection
+	// inherited — still @rules from ContextGuidance
 + instructions: str
 	// @property override — super.instructions + fidelities.instructions
-	// @skill @agent_instructions — router skill body = this string at deploy; guidance() -> self.instructions
-	-> ContextSection.instructions
+	-> ContextGuidance.instructions
 	-> GuidanceCollection.instructions
 
-## GuidanceCollection
+## GuidanceCollection : ContextGuidance
+	// Composite — every ContextGuidance read iterates children
 
-+ GuidanceCollection(entries: tuple[FidelityGuidance, ...])
++ GuidanceCollection(entries: dict[str, ContextGuidance])
+	// keyed children — key is the child's name; FidelityGuidance, nested practice, another collection, …
 ------
-+ << association >> parent: ContextGuidance
-+ entries: tuple[FidelityGuidance, ...]
-+ indexes: dict[str, dict[str, FidelityGuidance]]
-	// key_id → key → entry — built at construction ("name", "stage", …)
++ entries: dict[str, ContextGuidance]
 ----
++ context: str
+	-> join each child's context
++ guidance: str
+	-> join each child's guidance
++ rules: RulesCollection
+	// Composite — keyed like entries; each value is that child's RulesCollection
+	-> each key → that child's rules
++ templates: dict[str, str]
+	-> merge each child's templates
 + instructions: str
-	// @property — join each entry.instructions in declaration order
-+ getitem(name: str): FidelityGuidance
-	// default key — same as by("name", name); fidelities["behavior"]
-+ by(key_id: str, key: str): FidelityGuidance
-	// non-default keys — select index for key_id; lookup key (stage aliases in "stage" index)
-+ names(): list[str]
+	-> join each child's instructions
++ html() on any of those reads
+	-> each child read as HTML, then join
 + iter()
 
-## FidelityGuidance : ContextSection, Deployable
+## FidelityGuidance : ContextGuidance
 
-+ FidelityGuidance(name, stage, default_format, context_guidance)
++ FidelityGuidance(name, stage, default_format, practice_guidance)
 ------
++ << association >> practice_guidance: PracticeGuidance
+	// parent practice — child points up; the base does not
++ fidelity: str
+	// domain fidelity key — equals name; read-side only
 + stage: str
-	// CDD stage key — fidelity, name, context_guidance on ContextSection; read-side only
+	// CDD stage key
 ----
++ context: str
+	// inherited @markdown — this name’s scope plus prior ## {name} blocks in declaration order
 + instructions: str
-	// @property — ContextSection assembly scoped by name; @prompt @agent_instructions — fidelity command body = this string at deploy
-+ rules: list[Rule]
-	// @markdown; @rules at deploy — same list[Rule] as Scan / format_rules
+	// @property — ContextGuidance assembly scoped by name; context already holds the prior stack
++ guidance(): str
+	// @agent_instructions @command — same operation deploy; this subclass marks the file a command
+	-> self.instructions
++ rules: RulesCollection
+	// inherited — still @rules from ContextGuidance
 
 ---
 
 # context_tools/agent_toolset/scan
+
+- **Purpose:** Honor each rule against the current context. Validate is agentic and lives on the rule; the checker lives on the rule too.
+- **Seam (terms):** `Rule`, `RulesCollection`, `Scanner`, `Scan`
+- **Dependencies (one-way):** host `rules`
 
 ## Rule
 
 + Rule(slug: str, body: str, fidelity: str | None = None)
 ------
 + slug: str
+	// name of the scanner that implements this rule, when one exists
 + body: str
 + fidelity: str | None
++ scanner: Scanner | None
+	// zero or one — go to the rule; scanners/{slug}_scanner.py beside the practice
+	-> None when that script is absent
+----
++ validate(): str
+	// agentic — evaluate the current context against this rule's body
+	// planned body always names the run kind — mark is only the default if a call is bare
+	-> instructions(
+		self.body
+	)
+	-> tools(
+		self.scanner.scan
+	)
+	// tools(...) omitted when scanner is None
+
+## RulesCollection
+	// Composite of Rule — batch validate so rules are not invoked one at a time
+
++ RulesCollection(entries: dict[str, Rule | RulesCollection])
+	// keyed children — leaf slug or child guidance name
+------
++ entries: dict[str, Rule | RulesCollection]
+----
++ validate(): str
+	// planned body — every child explicit
+	-> instructions(
+		each child's validate()
+	)
++ scan(paths)
+	-> tools(
+		each Rule.scanner.scan when present
+	)
 
 ## Scanner
 
-+ Scanner(rule: str)
++ Scanner(rule: Rule)
 ----
 + scan(file_path: Path): list
 
-## ScannerCollection
+## Scan
 
-+ ScannerCollection.discover(): dict[str, type[Scanner]]
++ Scan.bound_to(host)
+----
++ scan(paths)
+	-> tools(
+		host.rules.scan
+	)
+
+---
+
+# context_tools/agent_toolset/validate
+
+- **Purpose:** Agentic validate against the current context. Default is every rule; pass one rule to narrow.
+- **Seam (terms):** `Validate`
+- **Dependencies (one-way):** `Rule`, `RulesCollection`
+
+## Validate
+	// LifecycleAction — changing: default all rules, optional one rule
+
++ Validate()
+------
+----
++ validate(tools, rule: Rule | None = None): str
+	// planned body — always wrap; mark is default only when a call is bare
+	-> instructions(
+		host.rules.validate
+	)
+	// or, when one rule passed:
+	-> instructions(
+		rule.validate
+	)
 
 ---
 
 # primitives/agentic_toolset
 
-- **Purpose:** `AgenticToolset` — tool and action registration; runtime invoke.
-- **Dependencies:** `primitives/tools`, `context_tools/context_guidance`
+- **Purpose:** One type. Two author wrappers on methods: `@agent_tool` and `@agent_instructions`. Unmarked methods are plain operations. Do not split Toolset / InstructionSet.
+- **Seam (terms):** `AgenticToolset`, `@agentic_toolset`, `@agent_tool`, `@agent_instructions`
+- **Source:** `.sessions/closed/eval-consolidate-workspace/workspace-eval-oo-sketch.md` § Agent annotations
 
-## AgenticToolset : Toolset, Guidance, Deployable
+## AgenticToolset
 
 + AgenticToolset()
-	// ContextGuidance uses deployContextTool; bare toolset uses deployToolset
+	// class decorator @agentic_toolset
+	// PracticeGuidance deploys as guidance documents; this type deploys as operation files
 ------
 + tools: dict
-	// @agent_tool registry — from Toolset
+	// @agent_tool registry
 + instructions_registry: Mapping
 	// @agent_instructions members — class/extension discovery (was `actions`)
 ----
 + instructions: str
-	// @property — compound instructions doc: own markdown properties + iterate instructions_registry
-+ catalog: str
-	// @property — compound catalog doc: own catalog properties + iterate tools and instructions_registry
+	// compound instructions — own markdown + iterate instructions_registry
 + guidance(): str
 	-> self.instructions
++ tools(*calls)
+	// any number of calls — same path as @agent_tool; agent invokes each
+	-> each call as if that member were @agent_tool
++ instructions(*calls)
+	// any number of calls — same path as @agent_instructions; expand each
+	-> each call as if that member were @agent_instructions
+
+// Method marks are the default when a call is bare: @agent_tool, @agent_instructions, unmarked = plain
+// Planned recipe bodies always wrap — make every call explicit even when the mark would have implied it
+// Precedent — one call per line:
+//	tools(
+//		self.some_method,
+//		self.other_class.some_other
+//	)
+//	instructions(
+//		self.dynamically_add_ins()
+//	)
 
 ---
 
 # primitives/harness
 
 - **Purpose:** *Deployment* + *Harness* + MCP runtime. **Extract** what `Harness.write_deploy` / `operation_writes` already do — same artifacts; not new deploy behavior.
-- **Seam (terms):** `Deployment`, `MarkdownDeployment`, `McpDeployment`, `HookDeployment`, `Deployable`, `Harness`, `McpServer`, `McpTool`, `McpPrompt`
-- **Dependencies:** registry; `transport` (invoke tails). Stdio entry: `utilities/mcp_server/__main__.py` loads *McpServer* from here.
+- **Seam (terms):** `Deployment`, `MarkdownDeployment`, `McpDeployment`, `HookDeployment`, `Harness`, `McpServer`, `McpTool`, `McpPrompt`
+- **Dependencies:** registry. Stdio entry: `utilities/mcp_server/__main__.py` loads *McpServer* from here.
 
 ## Deployment
 
-+ Deployment()
-	// deploy(deployable) — pass deployable in, write artifacts to disk; no return (product is on file)
-------
++ Deployment(ide, path)
+-----
++ ide: str
++ path: Path
 ----
-+ deploy(deployable: Deployable)
-	when deployable is ContextGuidance: deployContextTool(context_guidance)
-	when deployable is AgenticToolset: deployToolset(toolset)
++ deploy(host)
+	when host is PracticeGuidance: deployPracticeGuidance(practice_guidance)
+	when host is AgenticToolset: deployAgenticToolset(host)
 
-+ deployContextTool(context_guidance: ContextGuidance)
-	// today: Harness._generate_entry when kind == context_tool
-	-> deployContextSection(context_guidance)
-	-> deployContextSectionFidelity(fidelity) per context_guidance.fidelities
-	-> deployToolset(context_guidance)
++ deployPracticeGuidance(practice_guidance: PracticeGuidance)
+	-> deployContextGuidance(practice_guidance)
+	-> deployFidelityGuidance(fidelity) per practice_guidance.fidelities
 
-+ deployContextSection(section: ContextSection)
-	// abstract — today: router skill _emit("skill") + rules; subtype implements
++ deployContextGuidance(guidance: ContextGuidance)
+	// visit this host’s marked members — same leaves as a toolset, not a second writer
+	-> deployAgentInstructions(guidance, guidance.guidance) when guidance() is marked
+	-> write rules files from guidance.rules when rules is @rules
 
-+ deployContextSectionFidelity(fidelity: FidelityGuidance)
-	// abstract — today: per-fidelity _emit("prompt"); subtype implements
++ deployFidelityGuidance(fidelity: FidelityGuidance)
+	// same visit on that fidelity — guidance() is @command there
+	-> deployAgentInstructions(fidelity, fidelity.guidance) when guidance() is marked
+	-> write rules files from fidelity.rules when rules is @rules
 
-+ deployToolset(toolset: AgenticToolset)
-	// today: operation_writes loop in Harness._generate_entry — NOT instructions_registry walk
-	-> for each operation_writes row on toolset class:
-		when invoke == action: deployAgentInstructions(toolset, operation)
-		when invoke == tool: deployAgentTool(toolset, operation)
++ deployAgenticToolset(host)
+	-> for each operation_writes row on the host class:
+		when invoke == action: deployAgentInstructions(host, operation)
+		when invoke == tool: deployAgentTool(host, operation)
 
-+ deployAgentInstructions(toolset, operation)
-	// @agent_instructions method — today: _emit when @skill/@prompt stacked (invoke=action)
++ deployAgentInstructions(host, operation)
+	// one write for any @agent_instructions member — utility generate, context guidance(), fidelity guidance()
+	// file kind from @skill / @command / @rules stacked on that member
 
-+ deployAgentTool(toolset, operation)
-	// @agent_tool method — today: invoke tail; file only if @skill/@prompt stacked
++ deployAgentTool(host, operation)
+	// @agent_tool — file only if @skill/@command stacked
 
 ## MarkdownDeployment : Deployment
 
-+ MarkdownDeployment(transport: str = "cli")
-	// same deploy API as base — overrides abstract section methods; writes .cursor markdown files
++ MarkdownDeployment(ide, path)
+	// every file is a skill, a command, or a rule — @skill / @command / @rules on the member
 ------
-+ transport: str
 ----
-+ deployContextSection(section: ContextSection)
-+ deployContextSectionFidelity(fidelity: FidelityGuidance)
-+ deployAgentInstructions(toolset, operation)
-+ deployAgentTool(toolset, operation)
-+ relative_path(mark, section, member): Path
++ deployContextGuidance(guidance: ContextGuidance)
+	// visit only — calls deployAgentInstructions / rules write; do not reimplement render
++ deployFidelityGuidance(fidelity: FidelityGuidance)
+	// visit only — same leaves
++ deployAgentInstructions(host, operation)
+	// write the skill, command, or rule for that member — relative_path + render
++ deployAgentTool(host, operation)
+	// write the skill or command for that member when those marks are stacked
++ relative_path(mark, guidance, member): Path
 + render(mark, section, member): str
+	// iterate marked members — @skill / @command / @rules writes the slash file
+	when member is not @mcp:
+		-> that operation’s instructions + CLI fence
+	when member is @mcp:
+		-> host.context
+		-> render_mcp_invoke(toolset_ref, member)
+		// tail is that string — do not call the MCP server at deploy
 + mark(member) -> member
 
 + @skill(name: str | None = None) -> member
-+ @prompt(name: str | None = None) -> member
++ @command(name: str | None = None) -> member
 + @rules(member) -> member
-+ @instruction(name: str) -> member
-+ render_mcp_invoke(toolset_ref, member) -> str
++ render_mcp_invoke(toolset_ref, member): str
+	// string from the member — slug.operation + signature; not a live MCP call
+	-> Use MCP tool: `{slug}.{member}(...)`
 
 ## McpDeployment : Deployment
 
-+ McpDeployment(toolset_ref: str)
-	// one per toolset — same operation_writes walk as deploy; bind() at server start only
++ McpDeployment(ide, path, toolset_ref: str)
+	// leaf writes only — record @mcp and mcp.json; the toolset walk stays on Deployment
 ------
 + toolset_ref: str
-+ mcp_operations: list  // @mcp rows collected during deployToolset walk — bind reuses, no second scan
++ mcp_operations: list  // filled by the leaf writes — bind reuses, no second scan
 ----
-+ deployAgentInstructions(toolset, operation)
-	// @mcp + invoke action — record op; manifest slice when mcp=True
-+ deployAgentTool(toolset, operation)
-	// @mcp + invoke tool — record op
-+ deployToolset(toolset: AgenticToolset)
-	// same walk as base deployToolset; writes mcp.json contribution; fills mcp_operations
++ deployContextGuidance(guidance: ContextGuidance)
+	// visit only — record via the same deployAgentInstructions leaf when guidance() is @mcp
++ deployFidelityGuidance(fidelity: FidelityGuidance)
+	// visit only — same leaf
++ deployAgentInstructions(host, operation)
+	// @mcp on an @agent_instructions member — record op; mcp.json slice
++ deployAgentTool(host, operation)
+	// @mcp on an @agent_tool member — record op; mcp.json slice
 + bind(server: McpServer)
 	// server start only — enroll McpTool / McpPrompt from mcp_operations; NOT called from deploy
 
@@ -252,31 +369,38 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 ## HookDeployment : Deployment
 
-+ HookDeployment()
-	// same deploy API — overrides section and/or toolset methods for hooks config + hook skills
++ HookDeployment(ide, path)
+	// same deploy API as base — implement the leaf writes; the walk stays on Deployment
 ------
-+ deployContextSection(section: ContextSection)
++ deployContextGuidance(guidance: ContextGuidance)
+	// write hook config for the practice router
++ deployFidelityGuidance(fidelity: FidelityGuidance)
+	// write hook config for that fidelity command
 + deployAgentInstructions(toolset, operation)
-	// @hook stacked on @agent_instructions — today: operation_writes vehicle==hook
+	// @hook stacked on @agent_instructions — only when host is AgenticToolset
 
 + @hook(event: str | None = None) -> member
 + @agent(name: str | None = None) -> member
 + @agent_guidance(name: str | None = None) -> member
 
-## Deployable
-
-+ Deployable()
-	// anything passed to Deployment.deploy — ContextGuidance, AgenticToolset, …
-
 ## Harness
 
-+ Harness()
-+ deployment: Deployment
++ Harness(ide=None, path=None)
+	// new with ide + path, or load the harness file — same two properties either way
+	// today: primitives/harness/.deploy-state.json
+	// MCP is @mcp on the member, not a harness flag
+------
++ ide: str
+	// Cursor | VS Code | Kilo | …
++ path: Path
+	// exact folder — Cursor → .cursor; VS Code → .github; Kilo → .kilo when not given
++ << composition >> deployment: Deployment
+	// constructed with this harness’s ide + path
 ----
-+ write_deploy(extended: bool, mcp: bool = False, …)
-	// today: walk + _generate_entry + _write_harness_files inline on Harness
++ write_deploy()
 	-> registry.load()
-	-> deployment.deploy(deployable) per registry entry
+	-> deployment.deploy(host) per registry entry
+	-> write ide + path to the harness file
 	// side effect — artifacts on disk; no aggregate return
 
 ## McpServer
@@ -295,154 +419,177 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 # utilities/catalog_generator
 
-## Catalog
+## Catalog : HTML
 
 + Catalog.from_registry()
 + generate_catalog(out_root: Path)
-	-> ContextGuidance.catalog
-	-> FidelityGuidance.catalog
+	-> each practice guidance @markdown property as HTML
+	-> each fidelity guidance @markdown property as HTML
 
 ---
 
 # Object flows
 
-**Implementation order** matches BDD layers below: markdown → Guidance → AgenticToolset **+deploy** → base Guidance **+deploy** → shared contexts **+deploy** → fidelities + assembly **+deploy** → MCP → catalog → hooks last.
+**Implementation order** matches BDD layers below: markdown → ContextGuidance → AgenticToolset **+deploy** → ContextGuidance **+deploy** → shared contexts **+deploy** → fidelities + assembly **+deploy** → MCP → Catalog : HTML → hooks last.
 
 ## Compound doc
 
-+ Guidance.instructions
-	-> own markdown properties + iterate members → markdown compound doc
-+ Guidance.catalog
-	-> own catalog properties + iterate members → HTML compound doc
++ ContextGuidance.instructions
+	-> own markdown properties → markdown compound doc
 + AgenticToolset.instructions
 	-> iterate instructions_registry — assemble markdown per @agent_instructions operation
 	// read-side registry walk — deploy uses operation_writes AST walk, not this collection
-+ AgenticToolset.catalog
-	-> own catalog properties + iterate tools + instructions_registry for HTML fragments
 
 ## Instructions assembly
 
-+ ContextSection.instructions
++ ContextGuidance.instructions
 	-> self.context + self.guidance + format_rules(self.rules) + self.templates[format]
 	// FidelityGuidance — same property; name scopes @markdown extract only
-+ GuidanceCollection.instructions
-	-> join each FidelityGuidance.instructions in declaration order
-+ ContextGuidance.instructions
++ GuidanceCollection.{context,guidance,templates,instructions}
+	-> iterate children; join each child's same read
++ GuidanceCollection.rules
+	-> RulesCollection keyed by entries keys; each value is that child's RulesCollection
+	// Composite — rules stay partitioned by child; validate() batches every child
++ PracticeGuidance.instructions
 	-> super.instructions + fidelities.instructions
 
 << triggered by >> Agent, deploy, guidance action
+
+## Validate
+
++ Validate.validate(tools, rule=None)
+	-> instructions(
+		host.rules.validate
+	)
+	-> or instructions(
+		rule.validate
+	)
++ Rule.validate()
+	-> instructions(
+		self.body
+	)
+	-> tools(
+		self.scanner.scan
+	)
++ RulesCollection.validate()
+	-> instructions(
+		each child's validate()
+	)
+<< triggered by >> Agent, Validate action
 
 ## @markdown extract
 
 + host.{label}
 	-> Markdown.from_label(host, label)
 	-> Markdown.extract()
+		-> AssetLocator.locate(class file directory, label, host.name)
+	-> Markdown.html() when the read is HTML
 	-> Markdown.coerce(return_type)
 << uses >> AssetLocator
 
+## HTML
+
++ Markdown.html()
+	-> HTML.from_markdown(extract())
+<< triggered by >> Catalog, any @markdown property read as HTML
+
 ## Deploy
 
-+ Harness.write_deploy(mcp=…)
++ Harness(ide, path) or load the harness file
+	-> Deployment(ide, path) — MarkdownDeployment + McpDeployment (+ HookDeployment when hooks)
++ Harness.write_deploy()
 	-> registry.load()
-	-> deployment.deploy(deployable) per registry entry
-		// deployment composite — MarkdownDeployment + McpDeployment (+ HookDeployment when hooks)
-		-> deployContextTool(context_guidance)
-			-> deployContextSection — MarkdownDeployment: router @skill + @rules on context guidance
-			-> deployContextSectionFidelity per fidelity — MarkdownDeployment: @prompt fidelity command + @rules
-			-> deployToolset(context_guidance) — operation_writes walk (context tool is also toolset)
-		-> deployToolset(bare AgenticToolset) — operation_writes walk only
-		-> deployAgentInstructions per row invoke action — markdown file when @skill/@prompt stacked; McpDeployment records @mcp op
-		-> deployAgentTool per row invoke tool — invoke tail when stacked; McpDeployment records @mcp op
-		-> McpDeployment.deployToolset merges mcp.json slice when mcp=True
+	-> deployment.deploy(host) per registry entry
+		-> deployPracticeGuidance(practice_guidance)
+			-> deployContextGuidance — visit marked members; guidance() → deployAgentInstructions; rules → @rules write
+			-> deployFidelityGuidance per fidelity — same leaves
+		-> deployAgenticToolset(bare AgenticToolset)
+			-> deployAgentInstructions / deployAgentTool per operation_writes row
+		-> McpDeployment leaf: if the member is @mcp, record it and write mcp.json
+	-> write ide + path to the harness file
 << triggered by >> Harness.write_deploy
-	-> host.instructions / fidelity.instructions at render — read @property, not subprocess
+	-> render: member not @mcp → that operation’s instructions + CLI fence; member is @mcp → context section + MCP invoke tail
 
 ## MCP server start
 
 + McpServer.start(toolset_refs from mcp.json)
-	-> for ref: McpDeployment(ref).bind(self)
-		-> enroll from mcp_operations recorded when that toolset was deployed — not getmembers rescan
+	-> for ref: McpDeployment(ide, path, ref).bind(self)
+		-> enroll from mcp_operations recorded when that member was @mcp — not getmembers rescan
 << triggered by >> Cursor spawns stdio host — not during write_deploy
 
 ## MCP invoke
 
-<< triggered by >> Agent reads deployed SKILL.md invoke tail or host tools/call / prompts/get
-	-> fixture: toolset with operation annotated @mcp (+ @agent_tool or @agent_instructions) and deployed mcp=True
+<< triggered by >> Agent reads deployed skill or command invoke tail or host tools/call / prompts/get
+	-> fixture: member annotated @mcp and deployed
 	-> McpServer.invoke_tool("{slug}.{member}", arguments)
 	-> McpServer.invoke_prompt("{slug}.{member}", arguments)
 
 ## Runtime guidance
 
++ ContextGuidance.guidance()
+	-> self.instructions
++ FidelityGuidance.guidance()
+	-> self.instructions
 + AgenticToolset.guidance()
 	-> self.instructions
-<< triggered by >> action: guidance, MCP prompt body assembly
+<< triggered by >> action: guidance, deployed skill or command body
+
+## Recipe callee
+
++ @agent_instructions body walk
+	when call is in tools(*calls): same as @agent_tool — agent invokes
+	when call is in instructions(*calls): same as @agent_instructions — expand
+	when call is bare: callee mark is the default (@agent_tool / @agent_instructions / unmarked = plain)
+	// planned bodies wrap every call — do not leave the default implied
+<< triggered by >> Agent follows a recipe
 
 ---
 
 # Behavior sketch (BDD)
 
-Port to `context_tools/context_guidance/guidance_spec.py`. Every `it` body: `# BDD: SIGNATURE` until development fidelity.
+Port to `context_tools/context_guidance/guidance_spec.py`.
 
-**Share notation** — same shape as `bdd` § Guidance for **read** and **deploy**:
-1. **`shared context "…"`** — outcomes written once (read against a common subject, or deploy against a deploy output tree).
-2. **Each layout `describe`** — **`before.each`** assigns the subject or runs **`write_deploy`** on that layer’s fixture.
-3. **`it_behaves_like "…"`** — pulls in the shared block; no repeating the same deploy `describe` tree in every layer.
-
-**Deploy rule:** green **read** for a host, then **deploy markdown artifacts** for that same host before moving on — skills, prompts, and rules first because they are the cheap check that deploy renders the same instructions strings the read path assembled. Split a layer when read has two milestones (fidelity instructions, then assembly): deploy after each milestone, not after all read blocks.
-
-**MCP rule:** same rhythm — once a layer’s markdown deploy is green, add a sibling deploy `describe` with `mcp` transport on **that fixture**. MCP still writes skills, commands, and rules files; transport only changes the **invoke tail at the bottom** of each body (`it_behaves_like "deploy mcp invoke tail on markdown bodies"`). Layer 7 keeps **manifest + host enrollment** only — not first proof of signatures on disk.
-
-Port: `before.each` → fixture; `write_deploy` → deploy setup; shared block → `shared_context`; `it_behaves_like` → `included_context`.
-
-**bdd-behavior shared rules** (validate every line against these):
-
-- **observable-behavior** — `it should` states return value, file on disk, or agent-visible text — not private helpers or class names.
-- **describe-is-subject-not-internal** — outer `describe` is a file, folder, deploy tree, or context tool module — never `Markdown`, `Deployment`, `Harness`, …
-- **describe-is-plain-english** — no decorator symbols or type syntax in `describe` / `that` / `with` / `it should` labels; put exact paths and APIs on `->` port lines beneath the `it`.
-- **state-not-when** — never `when`; use `that` for finalized events (`that has been deployed`), `with` for standing conditions.
-- **nest-by-enabling-events** — each nested block must be a real precondition for the outcomes below it.
-- **domain-vocabulary** — use model terms in outcomes: **context guidance**, **fidelity guidance**, `context_guidance.module_dir`, fidelity name, context guidance instructions. Never **practice host** or **practice-wide**.
-- **usage-order-behaviors** — co-located file → minimal guidance → toolset **read+markdown deploy+mcp** → base guidance **read+markdown deploy+mcp** → shared contexts **read+router/rules deploy+mcp** → fidelity instructions **read+fidelity prompt deploy+mcp** → assembly **read+full-tree deploy** → MCP manifest/host → catalog → hooks last.
-
-**Implementation order** — green each layer before the next. Each host layer ends with deploy using **deploy shared contexts** (define once below).
+Read a host, then deploy that same host: skill, command, or rule from the mark. `@mcp` writes the context section plus the invoke tail. Layer 7 is manifest and host invoke.
 
 | Layer | Test subject | Depends on |
 | ----- | ------------ | ---------- |
-| 1 | Co-located markdown section as string — correct module file only | — |
-| 2 | Minimal tool host with compound instructions and catalog only | layer 1 |
-| 3 | Agentic toolset — read then deploy bare operations | layer 2 |
-| 4 | Base Guidance — read then deploy on same fixture | layer 2–3 |
-| 5 | Shared contexts on context guidance — read then deploy router and rules | layer 1–2, 4 |
-| 6 | Fidelity instructions read → prompt deploy → assembly read → full-tree deploy (+ mcp each deploy step) | layer 5 |
-| 7 | MCP manifest then host invoke — annotated op deployed → start from manifest → tools/call or prompts/get | layer 3–6 fixtures |
-| 8 | Catalog pages from guidance catalog property | layer 2+ |
-| 9 | Hooks config and hook skill files — last; hooks deploy not complete in harness today | layer 6 |
+| 1 | Markdown — co-located section as string or HTML; this class file directory only | — |
+| 2 | Context guidance — compound `instructions` | layer 1 |
+| 3 | Agentic toolset — read `instructions`, then deploy skill and command from the marks | layer 2 |
+| 4 | Context guidance — same `instructions`, then deploy skill and rules from the marks | layer 2 |
+| 5 | Practice guidance — shared contexts read, then deploy skill and rules (no fidelity guidance yet) | layer 1–2, 4 |
+| 6 | Fidelity guidance read and command deploy, then practice guidance assembly and full tree | layer 5 |
+| 7 | MCP manifest then host invoke — `@mcp` member deployed → start from manifest → tools/call or prompts/get | layer 3–6 fixtures |
+| 8 | Catalog pages from each host `@markdown` property as HTML | layer 1+ |
+| 9 | Hooks config and hook skill files — last; hooks deploy not complete in harness today | layer 8 |
 
 ---
 
 ## Implementation — one layer per turn
 
-**Golden deploy reference:** `.cursor copy/` at the repo root (local snapshot of a successful `write_deploy(mcp=True)`). Treat it as the visual and structural source of truth until this migration replaces it. Compare every deploy test’s output tree to the matching paths under `.cursor copy/` — same skill folder layout, `mcp.json` shape, MCP invoke tails at the bottom of markdown bodies, rules under `.cursor/rules/`. Target layout may add sections (for example explicit `## Fidelities` in domain markdown) for easier mapping; skill paths stay aligned: router `.cursor/skills/{slug}/{slug}/SKILL.md`, fidelity `.cursor/skills/{slug}/{slug}-{fidelity}/SKILL.md`, utilities and actions under their own slug folders. CLI transport may still use `.cursor/commands/` — MCP golden is all skills.
+**0. Isolate first — before any layer.** Backup the remodeled production trees (`markdown_extractor`, `BaseContextTool`, Harness deploy, `McpToolset`, …), then move those trees to `legacy-no-longer-valid/` at the repo root, keeping their relative paths. That folder is detailed requirements only: what files were written, what strings came back, what a deploy tree looked like. It is not the design. Design is this document. Do not write a layer while those modules still sit on the live import path — the old types and the new names get mixed. If a behavior detail is missing later, read `legacy-no-longer-valid/`. Write new modules from this sketch into their target paths.
+
+**Golden deploy reference:** `.cursor copy/` at the repo root (local snapshot of a successful deploy). Compare structure and bodies to that tree. File kind follows the mark on the member — `@skill` / `@command` / `@rules` — even when the snapshot wrote a fidelity as a skill. Practice skill `.cursor/skills/{slug}/SKILL.md`, fidelity command `.cursor/commands/{slug}-{fidelity}.md`, rules under `.cursor/rules/`. `mcp.json` shape and MCP invoke tails stay. Target markdown may add `## Fidelities` for mapping.
 
 **No fake deploy tests.** Every deploy `it should` runs the real `Harness.write_deploy` (or the extracted `Deployment` once migrated) into a temp or fixture directory, then reads files from disk. Do not mock `Harness`, `Deployment`, or `operation_writes` for outcomes that stakeholders see on disk. Read-path tests use real co-located fixtures beside a real module directory. Temporary throwaway modules are fine; stubby mocks of the deploy pipeline are not.
-
-**Migrate then retire.** Each layer is a migration step on existing code (`markdown_extractor`, `BaseContextTool`, monolithic `Harness`, `McpToolset`, …). Wire the new seam until that layer’s BDD is green, then delete or bypass the old path for that behavior. Breaking unrelated tests temporarily is acceptable within a layer turn; fix or retire the old path before `/turn`. Do not leave parallel implementations.
 
 **One layer = one `/turn`.** Do not stack layers in a single commit. Per turn:
 
 1. **`generate`** — `@bdd-development` for the layer’s `guidance_spec.py` (or the module that owns that layer); `@clean-engineering-model` when the layer introduces or moves types.
-2. **Migrate** — minimum production code for that layer only; touch old code only as needed to route through the new seam.
+2. **Write** — minimum production code for that layer only, from this sketch. Do not grow the types in `legacy-no-longer-valid/`.
 3. **Real environment** — run `write_deploy` (mcp when the layer includes MCP); diff against `.cursor copy/` for the fixtures in scope; run mamba on the layer spec.
 4. **Subagent spot-check** — for MCP invoke and skill bodies (layers 3–7), run a sub-agent against deployed `SKILL.md` or `McpServer.invoke_tool` / `invoke_prompt` instead of asserting only string contains in unit tests.
-5. **`/turn`** — commit with `utility: turn`, message names the layer number and what was migrated/retired.
+5. **`/turn`** — commit with `utility: turn`, message names the layer number and what was written.
 
-**Layer 1 (done):** `primitives/markdown/Markdown` + `@markdown` over `AssetLocator`; `context_tools/context_guidance/guidance_spec.py` layer 1 block with real fixtures under `fixtures/sample_tool` and `fixtures/other_tool`.
+**Isolate (done):** remodeled trees live under `legacy-no-longer-valid/` (requirements only).
 
-**Layer 2 turn (next):** minimal `Guidance` compound `instructions` / `catalog` — no contexts file yet.
+**Layer 1 (done after isolate):** `primitives/markdown/Markdown` + `@markdown` over `AssetLocator`; `context_tools/context_guidance/guidance_spec.py` layer 1 block with real fixtures under `fixtures/sample_tool` and `fixtures/other_tool`.
+
+**Layer 2:** `ContextGuidance` compound `instructions` — context + guidance + formatted rules + selected template.
 
 ---
 
-## Layer 1 — co-located markdown and folders
+## Layer 1 — markdown
 
 ```
 describe a co-located markdown file beside a host module
@@ -454,24 +601,23 @@ describe a co-located markdown file beside a host module
       it should return that prose
     with an identically named section in a different module folder
       it should not return prose from the other module file when the host belongs to this module
-      -> resolves under context_guidance.module_dir for this host only
+      -> Markdown locates the host class directory; this module only
+  with a markdown-backed string property
+    with that property read as HTML
+      it should return HTML formatted from that section body
+      -> Markdown.html(); HTML.from_markdown
 ```
 
 ---
 
-## Layer 2 — minimal tool host without a contexts file
+## Layer 2 — context guidance instructions
 
 ```
-describe a minimal tool class
-  with several markdown-backed properties
-    with the instructions property read
-      it should assemble markdown from those properties in declared order
-      it should expose instructions as one compound property not as a single markdown label
-    with the catalog property read and no catalog content on the host
-      it should return empty catalog not instructions
-    with the catalog property read and markdown catalog content on the host
-      it should return HTML formatted text from that markdown formatting
-      it should not return instructions text
+describe context guidance
+  with the instructions property read
+    it should join context, guidance, formatted rules, and the template for the active format
+    it should expose instructions as one compound property not as a single markdown label
+    -> ContextGuidance.instructions; not a @markdown label
 ```
 
 ---
@@ -485,26 +631,30 @@ shared context "deploy bare agentic toolset operations"
   with a Cursor deploy output tree
     it should write one skill file per agent-instructions operation marked for skill
     -> .cursor/skills/{operation}/SKILL.md or flat skill path per harness convention
-    it should write one command file per agent-instructions operation marked for prompt
+    it should write one command file per agent-instructions operation marked for command
     -> .cursor/commands/{operation}.md
-    it should not write a router skill or fidelity commands
-    -> deployToolset only; no deployContextSection
-  with a deploy run after write_deploy
-    it should walk operation_writes not instructions_registry
-    it should render skill and prompt bodies from the same instructions strings the read path assembles
+    it should write a skill or command for an agent-tool operation only when that operation is also marked skill or command
+    it should not write a context guidance skill or fidelity commands
+    -> deployAgenticToolset; PracticeGuidance is not this host
+  with a deploy output tree
+    it should render skill and command bodies from the same instructions strings the read path assembles
+    -> operation_writes rows; not instructions_registry
 
-shared context "deploy base guidance skill bodies"
-  with deployed skill bodies for marked operations
-    it should use the compound instructions string from the guidance instructions property
-
-shared context "deploy context guidance router and rules"
+shared context "deploy context guidance skill and rules"
   with a Cursor deploy output tree
-    it should write a router skill file whose body equals context guidance instructions
-    -> .cursor/skills/{slug}/SKILL.md
-    it should write one context guidance rules file per context guidance rule slug
+    it should write a skill file whose body equals context guidance instructions
+    -> guidance() is @skill; .cursor/skills/{slug}/SKILL.md
+    it should write one rules file per rule slug
+    -> rules is @rules; .cursor/rules/{slug}.mdc
+
+shared context "deploy practice guidance skill and rules"
+  with a Cursor deploy output tree
+    it should write a skill file whose body equals practice guidance instructions
+    -> inherited @skill; .cursor/skills/{slug}/SKILL.md
+    it should write one practice guidance rules file per practice guidance rule slug
     -> .cursor/rules/{slug}.mdc
 
-shared context "deploy fidelity sections on context guidance"
+shared context "deploy fidelity sections on practice guidance"
   with a Cursor deploy output tree
     it should write one fidelity command file per fidelity whose body equals that fidelity instructions
     -> .cursor/commands/{slug}-{fidelity}.md
@@ -513,44 +663,41 @@ shared context "deploy fidelity sections on context guidance"
 shared context "deploy cli transport on markdown bodies"
   with deployed skill command and rules bodies
     it should append the CLI invoke fence at the bottom of each body
-    -> MarkdownDeployment.render transport cli
+    -> MarkdownDeployment.render when the member is not @mcp
 
 shared context "deploy mcp invoke tail on markdown bodies"
   with a deployed skill file for an mcp-published agent-instructions operation
-    it should keep the instruction prose at the top of the skill body unchanged from the non-mcp deploy
-    it should place one MCP invoke line after that prose at the bottom of the file
+    it should still write the skill file so there is a slash command
+    it should put the context section at the top of the file
+    it should not put the full instructions in that file
+    it should place one MCP invoke tail after the context section
     it should name the tool as {toolset-slug}.{operation} with the method parameter signature in backticks
-    -> Use MCP tool: `bdd.generate(...)`; MarkdownDeployment.render_mcp_invoke / transport.render_mcp_tool_reference
+    -> Use MCP tool: `bdd.generate(...)`; MarkdownDeployment.render_mcp_invoke
     it should not append the CLI tools.ps1 invoke fence
-  with a deployed command file for an mcp-published prompt operation
-    it should place the same MCP invoke line after the command body at the bottom of the file
-  with a deployed router skill for context guidance when the router operation is mcp-published
-    it should place the MCP invoke line after context guidance instructions at the bottom of the skill file
-  with a deployed fidelity command when that fidelity prompt is mcp-published
-    it should place the MCP invoke line after fidelity instructions at the bottom of the command file
-  with a deployed rules file when that rule slug is mcp-published in the deploy walk
-    it should place the MCP invoke line after the rule body at the bottom of the rules file
+  with a deployed command file for an mcp-published command operation
+    it should write the context section plus MCP invoke tail — not the full command body
+  with a deployed practice skill when guidance is mcp-published
+    it should write the context section plus MCP invoke tail — not practice guidance instructions
+  with a deployed fidelity command when that fidelity guidance is mcp-published
+    it should write the context section plus MCP invoke tail — not fidelity instructions
+  with a deployed rules file when that rule is mcp-published
+    it should write the context section plus MCP invoke tail — not the full rule body
 
 shared context "deploy mcp enrollment without bind"
-  with a deploy run after write_deploy with mcp transport
+  with a deploy output tree for hosts whose members are annotated mcp
     it should record each mcp-published operation for server enrollment
     it should not bind tool handlers during deploy
     -> McpDeployment.mcp_operations; bind at server start only
 
-shared context "deploy vscode prompt paths"
+shared context "deploy vscode command paths"
   with a VS Code deploy output tree
     it should write fidelity command files under github prompts not under cursor commands
-    -> .github/prompts/{slug}-{fidelity}.md
+    -> Harness(ide=VS Code); .github/prompts/{slug}-{fidelity}.md
 
 shared context "deploy full context tool coverage"
-  with a registered context guidance host fully deployed
-    it should emit router skill fidelity commands and operation artifacts in one pass
-    -> deployContextSection; deployContextSectionFidelity per fidelity; deployToolset
-
-shared context "deploy bare utility toolset only"
-  with a registered utility toolset fully deployed
-    it should emit operation artifacts only without router or fidelity commands
-    -> deployToolset; operation_writes not instructions_registry
+  with a registered practice guidance host fully deployed
+    it should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass
+    -> deployPracticeGuidance → deployContextGuidance then deployFidelityGuidance per fidelity
 ```
 
 ---
@@ -564,13 +711,11 @@ describe a toolset module with several agent-instructions operations
   with the instructions property read on a loaded instance
     it should assemble one compound instructions string from each registered operation
     -> instructions_registry
-  with the catalog property read on the same instance
-    it should assemble catalog from its catalog properties then from tools and registered operations
 ```
 
 ### Deploy
 
-Fixture: small `AgenticToolset` with `@skill` / `@prompt` on some `@agent_instructions` operations, optional `@agent_tool`, co-located markdown for invoke tails.
+Fixture: small `AgenticToolset` with `@skill` / `@command` on some `@agent_instructions` operations, optional `@agent_tool`, co-located markdown for invoke tails.
 
 ```
 describe a bare agentic toolset registered for deploy
@@ -578,43 +723,41 @@ describe a bare agentic toolset registered for deploy
   it_behaves_like "deploy bare agentic toolset operations"
 
 describe a bare agentic toolset with mcp-published operations registered for deploy
-  with before.each that runs write_deploy with mcp transport on that fixture
+  with before.each that runs write_deploy on that fixture
   it_behaves_like "deploy mcp invoke tail on markdown bodies"
   it_behaves_like "deploy mcp enrollment without bind"
 ```
 
 ---
 
-## Layer 4 — base Guidance read and deploy
+## Layer 4 — context guidance skill and rules
 
 ### Read
 
+Same compound `instructions` as layer 2. This layer deploys those marks through the same leaves as layer 3 — `guidance()` is `@agent_instructions` `@skill`, `rules` is `@rules`.
+
 ```
-describe a minimal guidance tool subclass
-  with agent-instructions operations registered on the toolset
-    with the instructions property read
-      it should assemble compound instructions from markdown properties then from each operation
+describe context guidance
+  with the instructions property read
+    it should join context, guidance, formatted rules, and the template for the active format
 ```
 
 ### Deploy
 
-Same annotations as layer 3 on a `Guidance` subclass with layer 2 compound `instructions` / `catalog`.
-
 ```
-describe a minimal guidance tool registered for deploy
+describe context guidance registered for deploy
   with before.each that runs write_deploy on that fixture
-  it_behaves_like "deploy bare agentic toolset operations"
-  it_behaves_like "deploy base guidance skill bodies"
+  it_behaves_like "deploy context guidance skill and rules"
 
-describe a minimal guidance tool with mcp-published operations registered for deploy
-  with before.each that runs write_deploy with mcp transport on that fixture
+describe context guidance with mcp-published guidance registered for deploy
+  with before.each that runs write_deploy on that fixture
   it_behaves_like "deploy mcp invoke tail on markdown bodies"
   it_behaves_like "deploy mcp enrollment without bind"
 ```
 
 ---
 
-## Layer 5 — shared contexts on context guidance read and deploy
+## Layer 5 — practice guidance shared contexts
 
 ### Read
 
@@ -632,39 +775,58 @@ describe a minimal guidance tool with mcp-published operations registered for de
 
 **Share** (`bdd` § Guidance) — same read outcomes for every on-disk layout; only fixture setup differs. Resolution order matches today's `@instruction` slots: `{label}/` folder merged, then `{label}.md`, then `## {Label}` in `{domain-slug}.md` beside the module.
 
-Define once — all `it should` read **context guidance** (assigned in `before.each` below):
+Define once — all `it should` read **context guidance** properties on **practice guidance** (assigned in `before.each` below):
 
 ```
-shared context "shared contexts format on context guidance"
+shared context "shared contexts format on practice guidance"
   with the context property read
-    it should return the Contexts preamble on context guidance only
+    it should return the Contexts preamble
   with the guidance property read
     it should return the Guidance section body only
   with a Shared rules section containing scanner bullets
     with the rules property read
-      it should parse bullets into rules whose slugs match the scanner registry
-      it should expose slug body and optional fidelity on each rule for scan and later deploy
+      it should parse bullets into a rules collection
+      it should expose slug, body, optional fidelity, and zero or one scanner on each rule
+    with validate read on one rule
+      it should return instructions to evaluate the current context against that rule
+      it should tell the agent to run the scanner when the rule has one
+    with validate read on the rules collection
+      it should return every child rule's validate instructions in one shot
   with the instructions property read
-    it should join context guidance formatted rules and templates selected by format in one string
+    it should join context, guidance, formatted rules, and the template for the active format
+    -> PracticeGuidance inherits ContextGuidance.instructions; fidelities are empty in this layer
   with a templates folder beside the module
     with template files such as slug-templates and slug-sketch inside the folder
       with the templates property read
         it should map each format key to a relative path under templates
-        it should keep existing filenames without renaming to slug-fidelity-format
       with one format key selected
         it should return the file content at the mapped path
 ```
 
-Use in each layout — **assign context guidance, then include shared context**:
+Use in each layout — **assign practice guidance, then include shared context**:
 
 ```
 describe a context tool module with one domain markdown file named for the context tool
-  with before.each that assigns context guidance from {domain-slug}.md at module_dir
-  it_behaves_like "shared contexts format on context guidance"
+  with before.each that assigns practice guidance from {domain-slug}.md beside the class
+  it_behaves_like "shared contexts format on practice guidance"
 
 describe a context tool module with section files and subsection folders named for the context tool
-  with before.each that assigns context guidance from contexts guidance and rules files or folders beside the module
-  it_behaves_like "shared contexts format on context guidance"
+  with before.each that assigns practice guidance from contexts guidance and rules files or folders beside the module
+  it_behaves_like "shared contexts format on practice guidance"
+```
+
+### Validate action
+
+Same fixtures as Read. Default is every rule; pass one rule to narrow.
+
+```
+describe a validate action on practice guidance
+  with no rule passed
+    it should return validate instructions for every rule in one shot
+    -> Validate.validate(tools); host.rules.validate()
+  with one rule passed
+    it should return validate instructions for that rule only
+    -> Validate.validate(tools, rule)
 ```
 
 ### Deploy
@@ -674,20 +836,19 @@ Fixture: same layouts as Read — shared contexts on context guidance, no fideli
 ```
 describe a context tool module with shared contexts format registered for deploy
   with before.each that runs write_deploy on the single-file or section-file fixture from Read
-  it_behaves_like "deploy context guidance router and rules"
+  it_behaves_like "deploy practice guidance skill and rules"
 
-describe a context tool module with shared contexts format and mcp on the router registered for deploy
-  with before.each that runs write_deploy with mcp transport on the layer 5 read fixture
-  it_behaves_like "deploy context guidance router and rules"
+describe a context tool module with shared contexts format and mcp on the practice skill registered for deploy
+  with before.each that runs write_deploy on the layer 5 read fixture
   it_behaves_like "deploy mcp invoke tail on markdown bodies"
   it_behaves_like "deploy mcp enrollment without bind"
 ```
 
 ---
 
-## Layer 6 — fidelity sections and context guidance assembly
+## Layer 6 — fidelity guidance and practice guidance assembly
 
-Fidelity blocks under `## Fidelities` in the shared contexts template — `## {name}` with optional `### Guidance` and `### Rules`, or one file or folder per fidelity name when split on disk. **Deploy fidelity prompts as soon as fidelity instructions read is green** — before assembly read. Assembly read then full-tree deploy follow.
+Fidelity blocks under `## Fidelities` — `## {name}` with optional `### Guidance` and `### Rules`, or one file or folder per fidelity name when split on disk. `guidance()` on fidelity guidance is `@command`. **Deploy those commands as soon as fidelity instructions read is green** — before assembly read. Assembly read then full-tree deploy follow.
 
 ### Read — fidelity instructions from markdown
 
@@ -698,197 +859,184 @@ shared context "fidelity sections in shared contexts format"
   with the guidance property read on fidelity guidance
     it should return Guidance under that fidelity name only
   with the rules property read on fidelity guidance
-    it should return Rules under that fidelity name as a rule list
+    it should return a rules collection for that fidelity name only
     it should not include rules from sibling fidelity sections
   with two fidelities declared shallower before deeper in the collection
     with the instructions property read on the deeper fidelity guidance
       it should include prior fidelity sections in context in declaration order
       it should not include later fidelity sections or sibling templates
-      it should not inline examples into fidelity instructions
     with the templates property read on the deeper fidelity guidance
       it should return only that fidelity entries from the templates scan
     with one format key selected on the deeper fidelity guidance
-      it should apply template line filtering when produce fidelities share one templates file
-    with the catalog property read on the deeper fidelity guidance
-      it should stack prior fidelity catalog sections like instructions
+      it should apply template line filtering when several fidelities share one templates file
+    with a markdown-backed property read as HTML on the deeper fidelity guidance
+      it should return HTML formatted from that fidelity section body
     with the rules property read on the deeper fidelity guidance
       it should match the same bullets already formatted into fidelity instructions
 ```
 
-Use in each layout — **assign context guidance and fidelity guidance from that layout, then include shared context**:
+Use in each layout — **assign practice guidance and fidelity guidance from that layout, then include shared context**:
 
 ```
 describe a context tool module with one domain markdown file named for the context tool
-  with before.each that assigns context guidance from {domain-slug}.md and fidelity guidance from a named ## heading under ## Fidelities
+  with before.each that assigns practice guidance from {domain-slug}.md and fidelity guidance from a named ## heading under ## Fidelities
   it_behaves_like "fidelity sections in shared contexts format"
 
 describe a context tool module with a fidelities folder beside the module
-  with before.each that assigns context guidance and fidelity guidance from files or subfolders under fidelities
+  with before.each that assigns practice guidance and fidelity guidance from files or subfolders under fidelities
   it_behaves_like "fidelity sections in shared contexts format"
 ```
 
-### Deploy — fidelity skills and prompts
+### Deploy — fidelity commands and rules
 
 Same fixtures as fidelity Read — prove command bodies equal each fidelity guidance `instructions` string before testing assembly.
 
 ```
 describe a context tool module with fidelity sections registered for deploy
   with before.each that runs write_deploy on the single-file or fidelities-folder fixture from fidelity Read
-  it_behaves_like "deploy fidelity sections on context guidance"
+  it_behaves_like "deploy fidelity sections on practice guidance"
 
 describe a context tool module with fidelity sections and mcp on fidelity commands registered for deploy
-  with before.each that runs write_deploy with mcp transport on that fixture
-  it_behaves_like "deploy fidelity sections on context guidance"
+  with before.each that runs write_deploy on that fixture
   it_behaves_like "deploy mcp invoke tail on markdown bodies"
   it_behaves_like "deploy mcp enrollment without bind"
 ```
 
-### Read — collection and context guidance assembly
-
-Collection lookup (not layout-specific):
+### Read — collection and practice guidance assembly
 
 ```
-describe a guidance collection on context guidance
+describe a guidance collection of context guidance children
   with the instructions property read on the collection
-    it should join each fidelity instructions string in declaration order
-  with lookup by domain name
-    it should return fidelity guidance for that name
-  with lookup by stage key and sketch
-    it should return the sketch fidelity from the stage index
-  with lookup by stage alias
-    it should return the same fidelity as lookup by domain name
+    it should join each child instructions string in declaration order
+  with the context property read on the collection
+    it should join each child context string in declaration order
+  with the guidance property read on the collection
+    it should join each child guidance string in declaration order
+  with the rules property read on the collection
+    it should return a rules collection keyed by each child key
+    it should keep each child's rules under that child's key
+    -> RulesCollection; not a flattened list
+  with validate read on that rules collection
+    it should return every child rule's validate instructions in one shot
 ```
 
-Context guidance assembly — context guidance reads from layer 5 plus fidelities from above; not a separate “named tool” layer. Use the same `before.each` fixtures as layer 5–6.
+Practice guidance assembly — practice guidance reads context guidance from layer 5 plus fidelities from above; not a separate “named tool” layer. Use the same `before.each` fixtures as layer 5–6.
 
 ```
-describe context guidance with fidelities examples and templates beside the module
-  with before.each that assigns context guidance from the layer 5 and layer 6 fixtures
-  with the instructions property read on context guidance
+describe practice guidance with fidelities examples and templates beside the module
+  with before.each that assigns practice guidance from the layer 5 and layer 6 fixtures
+  with the instructions property read on practice guidance
     it should join context guidance instructions with each fidelity instructions in declaration order sketch first
     it should not inline examples into instructions
-    it should not include the scaffold label
-  with the examples property read on context guidance
+  with the examples property read on practice guidance
     it should return examples folder content as a separate property not inside instructions
-  with the catalog property read on context guidance
-    it should not derive catalog from instructions
-  with format and default format set on context guidance
-    it should select the template for the active format in context guidance instructions assembly
-  with fidelity set at invoke on context guidance
+  with a markdown-backed property read as HTML on practice guidance
+    it should return HTML formatted from that property extract
+  with format and default format set on practice guidance
+    it should select the template for the active format in practice guidance instructions assembly
+  with fidelity set at invoke on practice guidance
     it should resolve active format from the named fidelity default format
 ```
 
-### Deploy — full context tool tree and transports
+### Deploy — full practice guidance tree
 
-Assembly fixtures — one pass proves router, fidelity commands, and operation artifacts together. Fidelity prompt deploy is already green above; this subsection adds coverage, filters, and non-Cursor paths.
+One pass proves the practice skill, practice rules, fidelity commands, and fidelity rules together. Practice guidance is not an agentic toolset — operation files stay in layer 3.
 
 ```
 describe a context tool module with fidelities and assembly registered for deploy
   with before.each that runs write_deploy on the layer 6 assembly fixture
-  it_behaves_like "deploy context guidance router and rules"
-  it_behaves_like "deploy fidelity sections on context guidance"
+  it_behaves_like "deploy practice guidance skill and rules"
+  it_behaves_like "deploy fidelity sections on practice guidance"
   it_behaves_like "deploy full context tool coverage"
 
-describe a context tool module with fidelities assembly and mcp registered for deploy
-  with before.each that runs write_deploy with mcp transport on the layer 6 assembly fixture
-  it_behaves_like "deploy full context tool coverage"
+describe a context tool module with fidelities assembly and mcp-published members registered for deploy
+  with before.each that runs write_deploy on the layer 6 assembly fixture
   it_behaves_like "deploy mcp invoke tail on markdown bodies"
   it_behaves_like "deploy mcp enrollment without bind"
 
-describe a bare utility toolset such as git registered for deploy
-  with before.each that runs write_deploy on that utility fixture
-  it_behaves_like "deploy bare utility toolset only"
-  with an operation published as both skill and agent instructions
-    it should write one skill file for that operation without a router skill or fidelity commands
-  with an agent-tool operation only
-    it should write a standalone skill file only when skill or prompt is also published
-
-describe a deploy run with a single source name filter on a context tool
-  that has been deployed for one named source only
-    it should emit only that tool router fidelity commands and operation files
-
-describe a context tool deployed with cli transport
-  with before.each that runs write_deploy with cli transport on a layer 6 fixture
+describe practice guidance that has been deployed
+  with members that are not annotated mcp
   it_behaves_like "deploy cli transport on markdown bodies"
 
-describe a context tool deployed for VS Code
-  with before.each that runs write_deploy with vscode transport on a layer 6 fixture
-  it_behaves_like "deploy vscode prompt paths"
+describe practice guidance that has been deployed for VS Code
+  with before.each that constructs Harness for VS Code and runs write_deploy on a layer 6 fixture
+  it_behaves_like "deploy vscode command paths"
 ```
 
 ---
 
 ## Layer 7 — MCP manifest and host
 
-MCP invoke tails on deployed skill, command, and rules files are proved incrementally in layers 3–6 via **deploy mcp invoke tail on markdown bodies**. Layer 7 proves **manifest → start → invoke** on the same fixtures: a toolset whose operation was annotated for mcp, deployed, then called through the running host.
+MCP invoke tails on deployed skill, command, and rules files are proved incrementally in layers 3–6 via **deploy mcp invoke tail on markdown bodies**. Layer 7 proves **manifest → start → invoke** on the same fixtures. MCP is `@mcp` on the member — not a harness or `write_deploy` flag. The slash file is the context section plus the invoke tail; the running host returns the full instructions.
 
 ### Manifest
 
 ```
 describe an MCP manifest file
-  that has been written by a deploy with mcp enabled
+  that has been written by a deploy whose walked members are annotated mcp
     it should list stdio server command and comma-separated toolset refs for walked classes
     -> .cursor/mcp.json
-  that has been written by a deploy with mcp disabled
+  that has been written by a deploy with no mcp-published members
     it should omit the MCP manifest file
 ```
 
 ### Host — invoke after deploy
 
-Chain every runtime `it should` through: **annotated operation → deployed with mcp → server started from that deploy’s manifest → tools/call or prompts/get**. Reuse layer 3–6 fixtures; only the invoke kind changes.
+Chain every runtime `it should` through: **member annotated mcp → deployed → server started from that deploy’s manifest → tools/call or prompts/get**. Reuse layer 3–6 fixtures; only the invoke kind changes.
 
 ```
 describe a bare agentic toolset with an agent-tool operation annotated for mcp
-  that has been deployed with mcp enabled
+  that has been deployed
     with an MCP server started from manifest toolset refs written during that deploy
       it should enroll that operation under the mcp name {slug}.{operation}
       it should enroll from mcp operations recorded at deploy not from a second annotation scan on the class
-      -> McpDeployment.bind; not McpToolset getmembers
+      -> McpDeployment.bind
       with a tools call for that enrolled mcp name and arguments matching the operation signature
         it should return the operation result
 
 describe a bare agentic toolset with an agent-instructions operation annotated for mcp
-  that has been deployed with mcp enabled
+  that has been deployed
     with an MCP server started from manifest toolset refs written during that deploy
       it should enroll that operation as a prompt under the mcp name {slug}.{operation}
       with a prompts call for that enrolled mcp name
         it should return the orchestration result from that operation
 
-describe a minimal guidance tool with an agent-instructions operation annotated for mcp
-  that has been deployed with mcp enabled
+describe context guidance with guidance annotated for mcp
+  that has been deployed
     with an MCP server started from manifest toolset refs written during that deploy
       with a prompts call for that enrolled mcp name
         it should return the same compound instructions string the read path assembles
 
-describe a context tool module with router skill annotated for mcp
-  that has been deployed with mcp enabled
+describe practice guidance with guidance annotated for mcp
+  that has been deployed
     with an MCP server started from manifest toolset refs written during that deploy
-      with a prompts call for the router enrolled mcp name
-        it should return context guidance instructions as the prompt source
+      with a prompts call for the practice skill enrolled mcp name
+        it should return practice guidance instructions as the prompt source
 
-describe a context tool module with fidelity command annotated for mcp
-  that has been deployed with mcp enabled
+describe fidelity guidance with guidance annotated for mcp
+  that has been deployed
     with an MCP server started from manifest toolset refs written during that deploy
       with a prompts call for that fidelity enrolled mcp name
         it should return fidelity guidance instructions as the prompt source
 
-describe a toolset with an mcp-published operation
-  that has been deployed with mcp enabled but the server has not been started
-    it should record the operation for enrollment without binding handlers during deploy
+describe a host with an mcp-published member
+  that has been deployed and the server has not been started
+    it should record the member for enrollment without binding handlers during deploy
 ```
 
 ---
 
 ## Layer 8 — catalog pages
 
-`catalog_generator` reads each host’s `.catalog` compound doc — same read seam as layers 2–6, different consumer. **Generate / validate / satisfy** live in `context_tools/agent_toolset/`; they are not part of this resource model or `guidance_spec.py`.
+`Catalog` extends `HTML`. It reads each host’s `@markdown` properties as HTML — same extract as layers 1–6, different consumer. Generate and satisfy stay in `context_tools/agent_toolset/` and out of `guidance_spec.py`. Validate is layer 5.
 
 ```
 describe generated catalog pages
   that have been built from the guidance registry
-    it should write each context guidance catalog property to its own page
-    it should write each fidelity catalog property to its own page
+    it should write each practice guidance markdown property as HTML to its own page
+    it should write each fidelity guidance markdown property as HTML to its own page
     it should not scrape deployed markdown files or heading structure from disk
+    -> Catalog : HTML; Markdown.html()
 ```
 
 ---
