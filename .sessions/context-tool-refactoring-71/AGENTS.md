@@ -31,3 +31,27 @@
 - **Markdown layout — folder, then file, then section in `{domain-slug}.md`.** Layer 4–5 BDD uses **`bdd` § Share**: **`shared context "…"`** exercises a common subject (`context guidance` / `fidelity guidance`); each layout **`describe`** assigns it in **`before.each`**, then **`it_behaves_like "…"`**. Same resolution as today's `@instruction` / `AssetLocator`.
 - **Object flows and BDD — canonical in `context-tool-resource-model-om-bdd.md`.** Validate sketches against **bdd-behavior** shared rules before porting to `guidance_spec.py`. **BDD subjects:** observable file, folder, or deploy tree — not internal classes. **`it should`** = stakeholder-visible outcome only — never assert two internal code paths agree, and never phrase implementation bans as behavior (`should not depend on deploy walk`, `should not use getmembers`, …); put read vs deploy wiring in design notes or `->` hints, not as tests. Put implementation hints on `->` port lines only. No type syntax or braces in describe/that/with/it labels. Use `that has been deployed` not "after write_deploy". **`with` is structure, not the test** — do not describe assembly/compound wiring in setup; nest `with the instructions property read` then state the outcome. **Do not test non-existence** — no `it should not expose …` for properties or hooks the new design never adds, and no “legacy API must be gone” negatives after a refactor; test what context guidance does, not what it doesn’t fly. Read: `instructions_registry`; deploy: `operation_writes`.
 
+## Layer status (implementer)
+
+Command that passed (78 examples):
+
+`mamba context_tools/context_guidance/guidance_spec.py`
+
+(venv `python -m mamba` is not available here; system `mamba` CLI was used.)
+
+| Layer | Status | Commit |
+| ----- | ------ | ------ |
+| Isolate | green (prior) | `d7199c6e` |
+| 1 Markdown | green | `28e33fd7` |
+| 2 ContextGuidance.instructions | green | `82759f68` |
+| 3 AgenticToolset read + deploy | green | `d8fdf06b` |
+| 4 ContextGuidance deploy | green | `eb111038` |
+| 5 PracticeGuidance shared contexts + Validate + deploy | green | `710b774b` (also holds later-layer production types) |
+| 6 FidelityGuidance + assembly + full tree + VS Code | green | recorded below |
+| 7 MCP manifest + host invoke | green | recorded below |
+| 8 Catalog : HTML | green | recorded below |
+| 9 HookDeployment | green | recorded below |
+
+Turn `git add -A` did not pick up empty `__init__.py` files ignored by gitignore, and did not stage the huge untracked `.cursor/` tree. Production guidance/harness/MCP/catalog files landed in `710b774b`.
+
+
