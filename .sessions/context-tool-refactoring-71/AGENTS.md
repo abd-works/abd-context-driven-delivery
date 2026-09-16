@@ -47,7 +47,7 @@ Command that passed (78 examples):
 | 3 AgenticToolset read + deploy | green | `d8fdf06b` |
 | 4 ContextGuidance deploy | green | `eb111038` |
 | 5 PracticeGuidance shared contexts + Validate + deploy | green | `710b774b` (also holds later-layer production types) |
-| 6 FidelityGuidance + assembly + full tree + VS Code | green | recorded below |
+| 6 FidelityGuidance + assembly + full tree + VS Code | green | `ff540381` |
 | 7 MCP manifest + host invoke | green | recorded below |
 | 8 Catalog : HTML | green | recorded below |
 | 9 HookDeployment | green | recorded below |
