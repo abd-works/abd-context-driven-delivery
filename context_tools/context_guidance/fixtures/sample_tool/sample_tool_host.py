@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from context_tools.context_guidance.guidance import ContextGuidance, PracticeGuidance
+from primitives.agentic_toolset import agent_instructions
+from primitives.harness.marks import mcp, skill
 from primitives.markdown import HTML, Markdown, markdown
 
 
@@ -20,21 +22,22 @@ class SampleToolHost:
 
 class SampleContextGuidance(ContextGuidance):
     domain_slug = "sample_tool"
-    default_format = "templates"
+    default_format = "markdown"
     name = None
 
 
 class SampleMcpContextGuidance(SampleContextGuidance):
-    publish_mcp = True
-
     @markdown
+    @mcp
+    @skill
+    @agent_instructions
     def guidance(self) -> str:
         """Guidance section body."""
 
 
 class SamplePracticeGuidance(PracticeGuidance):
     domain_slug = "sample_tool"
-    default_format = "templates"
+    default_format = "markdown"
     name = None
 
 
@@ -45,8 +48,9 @@ class SamplePracticeWithFidelities(SamplePracticeGuidance):
 
 
 class SampleMcpPractice(SamplePracticeWithFidelities):
-    publish_mcp = True
-
     @markdown
+    @mcp
+    @skill
+    @agent_instructions
     def guidance(self) -> str:
         """Guidance section body."""

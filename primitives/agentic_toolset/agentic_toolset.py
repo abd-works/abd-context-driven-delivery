@@ -69,13 +69,17 @@ class AgenticToolset:
     def guidance(self) -> str:
         return self.instructions
 
-    def tools_call(self, *calls: Callable[..., Any]) -> list[Any]:
-        return [call() if callable(call) else call for call in calls]
 
-    def instructions_call(self, *calls: Callable[..., Any]) -> str:
-        parts = []
-        for call in calls:
-            if callable(call):
-                doc = inspect.getdoc(call) or ""
-                parts.append(doc.strip())
-        return "\n\n".join(p for p in parts if p)
+def tools(*calls: Callable[..., Any]) -> list[Any]:
+    return [call() if callable(call) else call for call in calls]
+
+
+def instructions(*calls: Callable[..., Any]) -> str:
+    parts: list[str] = []
+    for call in calls:
+        if isinstance(call, str):
+            parts.append(call.strip())
+        elif callable(call):
+            doc = inspect.getdoc(call) or ""
+            parts.append(doc.strip())
+    return "\n\n".join(p for p in parts if p)

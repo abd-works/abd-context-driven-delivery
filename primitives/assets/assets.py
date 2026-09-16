@@ -2,6 +2,7 @@
 """
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
@@ -14,6 +15,15 @@ from primitives.instructions import (
 )
 
 LocationKind = Literal["file", "folder", "section"]
+
+
+def _class_file_directory(host: Any) -> Path:
+    try:
+        return Path(inspect.getfile(type(host))).resolve().parent
+    except (TypeError, OSError):
+        stored = getattr(host, "module_dir", None)
+        return Path(stored) if stored is not None else Path(".")
+
 
 _FORMAT_DIR_ALIAS = {
     "markdown": "md",
@@ -128,7 +138,7 @@ class AssetLocator:
         return self._stamp(self._locate())
 
     def _locate(self) -> AssetLocation:
-        module_dir = Path(getattr(self._host, "module_dir", Path(".")))
+        module_dir = _class_file_directory(self._host)
         domain_slug = getattr(self._host, "domain_slug", getattr(self._host, "toolset_name", module_dir.name))
         filter_value = _active_resource(self._host, self._filter_key) if self._filter_key else None
         if self._label == "templates":
@@ -396,11 +406,11 @@ class Asset:
         return self._location.format
 
     def collect(self) -> str:
-        from .markdown_extractor import _extract_single, thin_contexts_for_fidelity
+        from primitives.markdown.markdown import _extract_location, _preamble_before_h2
 
-        text = _extract_single(self._location)
-        if self._location.label == "contexts":
-            return thin_contexts_for_fidelity(text, self.fidelity)
+        text = _extract_location(self._location)
+        if self._location.label in {"contexts", "context"}:
+            return _preamble_before_h2(text)
         return text
 
 
@@ -422,22 +432,25 @@ class AssetCollection:
         return self._location.format
 
     def collect(self) -> dict[str, str]:
-        from .markdown_extractor import (
-            _extract_collection,
-            thin_examples_by_fidelity,
-            thin_examples_by_format,
-        )
+        from primitives.markdown.markdown import _merge_folder
 
-        items = _extract_collection(self._location)
-        if self._location.label == "examples":
-            items = thin_examples_by_format(items, self.format)
-            items = thin_examples_by_fidelity(items, self.fidelity)
+        items: dict[str, str] = {}
+        folder = self._location.folder
+        if folder is not None and folder.is_dir():
+            for path in sorted(folder.iterdir()):
+                if path.name.startswith(".") or path.name == "__pycache__":
+                    continue
+                if path.is_file():
+                    items[path.stem] = path.read_text(encoding="utf-8")
         self.collection = items
-        return self.collection
+        return items
 
     def merged(self) -> str:
-        from .markdown_extractor import _merge_collection
+        from primitives.markdown.markdown import _merge_folder
 
+        folder = self._location.folder
+        if folder is not None and folder.is_dir():
+            return _merge_folder(folder)
         if not self.collection:
             self.collect()
-        return _merge_collection(self.collection)
+        return "\n\n".join(self.collection.values())

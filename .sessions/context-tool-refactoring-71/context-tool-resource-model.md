@@ -784,7 +784,7 @@ Harness.write_deploy(mcp=False)
 
 ## Behavior sketch (BDD signatures)
 
-**Canonical copy:** `context-tool-resource-model-om-bdd.md` — keep in sync when changing specs. Port to `context_tools/context_guidance/guidance_spec.py` on implementation.
+**Canonical copy:** `context-tool-resource-model-om-bdd.md` — keep in sync when changing specs. Port each layer into the package that owns the subject (see the om-bdd port table).
 
 **Notation:** `describe` / `that` / `with` / `it should` — never `when` for state. **Subject-first:** outer `describe` names the file, folder, or deploy tree under test — not internal class names. Object flows: `+` operation, `->` call, `<< triggered by >>` actor.
 

@@ -547,7 +547,18 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 # Behavior sketch (BDD)
 
-Port to `context_tools/context_guidance/guidance_spec.py`.
+Port each layer into the package that owns the subject:
+
+| Layer | Spec |
+| ----- | ---- |
+| 1 | `primitives/markdown/markdown_spec.py` |
+| 2, 5–6 read | `context_tools/context_guidance/guidance_spec.py` |
+| 3 read | `primitives/agentic_toolset/agentic_toolset_spec.py` |
+| 3–6 deploy | `primitives/harness/deployment_spec.py` |
+| Rule / Validate | `context_tools/agent_toolset/scan_spec.py`, `validate_spec.py` |
+| 7 | `primitives/harness/mcp_server_spec.py` |
+| 8 | `utilities/catalog_generator/catalog_spec.py` |
+| 9 | `primitives/harness/hook_deployment_spec.py` |
 
 Read a host, then deploy that same host: skill, command, or rule from the mark. `@mcp` writes the context section plus the invoke tail. Layer 7 is manifest and host invoke.
 

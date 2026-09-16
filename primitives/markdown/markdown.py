@@ -5,7 +5,6 @@ import html
 import inspect
 import re
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any, Callable, TypeVar, get_args, get_origin, get_type_hints
 
 from primitives.assets import AssetLocation, AssetLocator
@@ -68,11 +67,7 @@ class Markdown:
         return cls(host, label)
 
     def extract(self) -> str:
-        host = self._host
-        class_dir = class_file_directory(host)
-        name = getattr(host, "name", None)
-        locator_host = _locator_host(host, class_dir, name)
-        location = AssetLocator(locator_host, self._label).locate()
+        location = AssetLocator(self._host, self._label).locate()
         text = _extract_location(location)
         if self._label in {"context", "contexts"}:
             text = _preamble_before_h2(text)
@@ -89,27 +84,14 @@ class Markdown:
             return text
         if origin is dict:
             return _templates_path_map(self)
+        from context_tools.agent_toolset.scan import RulesCollection
+
+        if return_type is RulesCollection:
+            return RulesCollection.from_markdown(text)
         from_markdown = getattr(return_type, "from_markdown", None)
         if callable(from_markdown):
             return from_markdown(text)
         return text
-
-
-def _locator_host(host: Any, class_dir: Path, name: Any) -> SimpleNamespace:
-    domain_slug = (
-        getattr(host, "domain_slug", None)
-        or getattr(host, "toolset_name", None)
-        or name
-        or class_dir.name
-    )
-    adapter = SimpleNamespace(
-        module_dir=class_dir,
-        domain_slug=domain_slug,
-        name=name,
-        format=getattr(host, "format", None),
-        fidelity=getattr(host, "fidelity", None),
-    )
-    return adapter
 
 
 def _extract_location(location: AssetLocation) -> str:
@@ -212,26 +194,87 @@ def _preamble_before_h2(text: str) -> str:
     return text[: match.start()].strip()
 
 
+_EXT_TO_FORMAT = {
+    "md": "markdown",
+    "py": "python",
+    "ts": "typescript",
+    "js": "javascript",
+    "java": "java",
+    "drawio": "drawio",
+    "html": "html",
+    "json": "json",
+}
+
+_FORMAT_ALIASES = {
+    "md": "markdown",
+    "markdown": "markdown",
+    "py": "python",
+    "python": "python",
+    "ts": "typescript",
+    "typescript": "typescript",
+    "js": "javascript",
+    "javascript": "javascript",
+    "java": "java",
+    "drawio": "drawio",
+    "miro": "miro",
+    "html": "html",
+    "json": "json",
+}
+
+
+def canonical_format(name: str | None) -> str:
+    """Resolve a host format or folder alias to the output-channel key."""
+    if not name:
+        return ""
+    folded = name.casefold()
+    return _FORMAT_ALIASES.get(folded, folded)
+
+
+def _format_key_for_template(path: Path, templates_folder: Path) -> str:
+    parts = path.relative_to(templates_folder).parts
+    if len(parts) > 1:
+        folder_key = _FORMAT_ALIASES.get(parts[0].casefold())
+        if folder_key:
+            return folder_key
+    ext = path.suffix.lstrip(".").lower()
+    return _EXT_TO_FORMAT.get(ext, ext)
+
+
 def _templates_path_map(markdown: Markdown) -> dict[str, str]:
     class_dir = class_file_directory(markdown._host)
     folder = class_dir / "templates"
     mapping: dict[str, str] = {}
     if not folder.is_dir():
         return mapping
-    domain = getattr(markdown._host, "domain_slug", None) or class_dir.name
     for path in sorted(folder.rglob("*")):
         if not path.is_file() or path.name.startswith("."):
             continue
         rel = path.relative_to(class_dir).as_posix()
-        stem = path.stem
-        key = stem
-        prefix = f"{domain}-"
-        if stem.startswith(prefix):
-            key = stem[len(prefix) :]
+        key = _format_key_for_template(path, folder)
+        if not key:
+            continue
         mapping[key] = rel
-        mapping[stem] = rel
-        mapping[path.suffix.lstrip(".")] = rel
     return mapping
+
+
+_MARK_ATTRS = (
+    "_skill",
+    "_command",
+    "_rules",
+    "_mcp",
+    "_hook",
+    "_is_agent_instructions",
+    "_is_agent_tool",
+    "_skill_name",
+    "_command_name",
+    "_hook_name",
+)
+
+
+def _copy_marks(src: Any, dest: Any) -> None:
+    for attr in _MARK_ATTRS:
+        if hasattr(src, attr):
+            setattr(dest, attr, getattr(src, attr))
 
 
 def _markdown_property(fn: _F, prop_label: str) -> property:
@@ -254,10 +297,18 @@ def _markdown_property(fn: _F, prop_label: str) -> property:
                 return md.coerce(text, return_type)
             if args and args[0] is HTML:
                 return md.html()
-        return md.coerce(text, return_type)
+        result = md.coerce(text, return_type)
+        from context_tools.agent_toolset.scan import RulesCollection
+
+        if isinstance(result, RulesCollection):
+            class_dir = class_file_directory(self)
+            for rule in result:
+                rule.bind_scanner(class_dir)
+        return result
 
     getter.__doc__ = fn.__doc__
     getter.__name__ = fn.__name__
+    _copy_marks(fn, getter)
     return property(getter)
 
 

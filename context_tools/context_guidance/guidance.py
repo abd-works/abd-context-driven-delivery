@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from context_tools.agent_toolset.scan import RulesCollection, Scan
-from primitives.markdown import Markdown, markdown
+from primitives.agentic_toolset import agent_instructions
+from primitives.harness.marks import command, rules, skill
+from primitives.markdown import canonical_format, markdown
 
 
 def format_rules(rules: RulesCollection | str | None) -> str:
@@ -22,7 +24,6 @@ class ContextGuidance:
     default_format: str = ""
     name: str | None = None
     domain_slug: str | None = None
-    _guidance_file: str = "skill"
 
     def __init__(
         self,
@@ -37,28 +38,18 @@ class ContextGuidance:
         self.workspace = workspace
         self.scanner = Scan.bound_to(self)
 
-    def __init_subclass__(cls, **kwargs) -> None:
-        super().__init_subclass__(**kwargs)
-        g = getattr(cls, "guidance", None)
-        fget = getattr(g, "fget", None)
-        if fget is not None:
-            fget._is_agent_instructions = True
-            if getattr(cls, "publish_mcp", False):
-                fget._mcp = True
-        r = getattr(cls, "rules", None)
-        rfget = getattr(r, "fget", None)
-        if rfget is not None:
-            rfget._rules = True
-
     @markdown("contexts")
     def context(self) -> str:
         """Contexts preamble for this host scope."""
 
     @markdown
+    @skill
+    @agent_instructions
     def guidance(self) -> str:
         """Guidance section body."""
 
     @markdown("shared rules")
+    @rules
     def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
 
@@ -70,7 +61,7 @@ class ContextGuidance:
         mapping = self.templates
         if not mapping:
             return ""
-        key = self.format or self.default_format
+        key = canonical_format(self.format or self.default_format)
         if not key:
             return ""
         rel = mapping.get(key)
@@ -91,9 +82,6 @@ class ContextGuidance:
             self._template_text(),
         ]
         return "\n\n".join(part for part in parts if part)
-
-    def guidance_text(self) -> str:
-        return self.instructions
 
 
 def _h2_blocks(text: str) -> list[tuple[str, str]]:
@@ -174,18 +162,6 @@ class PracticeGuidance(ContextGuidance):
         super().__init__(format=format, path=path, session=session, workspace=workspace)
         self.fidelities = GuidanceCollection()
         self.fidelity: str | None = None
-        class_dir = Path(inspect.getfile(type(self))).resolve().parent
-        for rule in self.rules:
-            rule.bind_scanner(class_dir)
-
-    @property
-    def rules(self) -> RulesCollection:  # type: ignore[override]
-        text = Markdown.from_label(self, "shared rules").extract()
-        collection = RulesCollection.from_markdown(text)
-        class_dir = Path(inspect.getfile(type(self))).resolve().parent
-        for rule in collection:
-            rule.bind_scanner(class_dir)
-        return collection
 
     @markdown
     def examples(self) -> str:
@@ -228,8 +204,6 @@ class PracticeGuidance(ContextGuidance):
 
 
 class FidelityGuidance(ContextGuidance):
-    _guidance_file = "command"
-
     def __init__(
         self,
         name: str,
@@ -266,7 +240,9 @@ class FidelityGuidance(ContextGuidance):
     @property
     def templates(self) -> dict[str, str]:  # type: ignore[override]
         mapping = dict(super().templates or {})
-        return {key: rel for key, rel in mapping.items() if self.name.replace(" ", "_") in key or True}
+        needle = self.name.replace(" ", "_")
+        filtered = {key: rel for key, rel in mapping.items() if needle in str(key)}
+        return filtered
 
     @property
     def instructions(self) -> str:
@@ -277,4 +253,19 @@ class FidelityGuidance(ContextGuidance):
             self._template_text(),
         ]
         return "\n\n".join(part for part in parts if part)
+
+
+def _mark_fidelity_members() -> None:
+    guidance_get = FidelityGuidance.guidance.fget
+    if guidance_get is not None:
+        command(agent_instructions(guidance_get))
+        guidance_get._command = True
+        guidance_get._is_agent_instructions = True
+    rules_get = FidelityGuidance.rules.fget
+    if rules_get is not None:
+        rules(rules_get)
+        rules_get._rules = True
+
+
+_mark_fidelity_members()
 

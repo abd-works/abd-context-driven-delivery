@@ -6,5 +6,5 @@ from context_tools.context_guidance.guidance import PracticeGuidance
 
 class SplitPracticeGuidance(PracticeGuidance):
     domain_slug = "split_tool"
-    default_format = "templates"
+    default_format = "markdown"
     name = None

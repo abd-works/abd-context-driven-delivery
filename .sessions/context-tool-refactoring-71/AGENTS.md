@@ -17,6 +17,8 @@
 - **`Validate` action** — `Validate.validate(tools, rule=None)`. Default is all rules (`host.rules.validate()`). Pass one `Rule` to get that rule only.
 
 - `name`, `format`, `default_format`, and `templates` live on `ContextGuidance`. The base does **not** hold a `PracticeGuidance`. Do not add `module_dir` — every class already has a file directory. `Markdown.extract` uses that. `FidelityGuidance` has `practice_guidance` (parent). `fidelity` lives on `FidelityGuidance` (equals `name`) and as the active key on `PracticeGuidance` at invoke (matching child in `fidelities`).
+- **`format` is the output channel**, not the templates folder. Keys are `markdown` (documentation), `drawio`, `miro`, and code (`python`, `typescript`, `javascript`, `java`, …). `{slug}-templates.md` is a produce filename; the map key for that file is `markdown`. Folder aliases (`md`, `py`, `ts`, `js`) resolve to those keys. Never pass `format="templates"`.
+- **Specs live in the package that owns the subject.** Markdown extract in `primitives/markdown/markdown_spec.py`, guidance read in `context_tools/context_guidance/guidance_spec.py`, deploy in `primitives/harness/deployment_spec.py`, and so on. Do not park every layer in `guidance_spec.py`.
 - **BDD vocabulary — context guidance, practice guidance, fidelity guidance.** `ContextGuidance` is the base (context / guidance / rules). `PracticeGuidance` is the practice host with `fidelities`. Each `## {name}` under Fidelities is **fidelity guidance**. No `Deployable` type — `Deployment.deploy` takes whatever.
 
 - Module paths: `primitives/agent_toolset/` and `context_tools/agent_toolset/` (not `actions/`). No abstract `Guidance` type. `ContextGuidance` owns `.instructions` from `@markdown` properties. One type: `AgenticToolset`. Method marks (`@agent_tool`, `@agent_instructions`, unmarked = plain) are the **default** when a call is bare. Planned recipe bodies always wrap with `tools(...)` / `instructions(...)` — one call per line — even when the mark would have implied the run kind. Do not split Toolset / InstructionSet. HTML conversion lives on `Markdown.html()`; `Catalog` extends `HTML`.
@@ -33,9 +35,9 @@
 
 ## Layer status (implementer)
 
-Command that passed (78 examples):
+Command that passed (79 examples, split by package):
 
-`mamba context_tools/context_guidance/guidance_spec.py`
+`mamba primitives/markdown/markdown_spec.py primitives/agentic_toolset/agentic_toolset_spec.py context_tools/context_guidance/guidance_spec.py context_tools/agent_toolset/scan_spec.py context_tools/agent_toolset/validate_spec.py primitives/harness/deployment_spec.py primitives/harness/mcp_server_spec.py primitives/harness/hook_deployment_spec.py utilities/catalog_generator/catalog_spec.py`
 
 (venv `python -m mamba` is not available here; system `mamba` CLI was used.)
 
@@ -52,6 +54,7 @@ Command that passed (78 examples):
 | 8 Catalog : HTML | green | `14d97d4f` |
 | 9 HookDeployment | green | `ff60c0ff` |
 
-Turn `git add -A` did not pick up empty `__init__.py` files ignored by gitignore (`_*`), and did not stage the huge untracked `.cursor/` tree. Production guidance/harness/MCP/catalog files landed in `710b774b`. The isolate turn **deleted** the live trees but did not add `legacy-no-longer-valid/` (subject-scoped add). That backup is committed with this status table.
+- File kind and MCP are **marks on the member** (`@skill` / `@command` / `@rules` / `@mcp`), copied through `@markdown` onto the property getter. Do not invent `publish_mcp` or `_guidance_file` on the class. `guidance` is the `@markdown` section when read and the `@agent_instructions` operation for deploy — deploy writes `instructions`, not the section body. `tools(*calls)` / `instructions(*calls)` are module functions on `AgenticToolset`; they do not replace the `tools` / `instructions` properties.
+
 
 

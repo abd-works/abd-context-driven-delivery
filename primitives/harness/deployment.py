@@ -91,9 +91,10 @@ class MarkdownDeployment:
         )
         slug = host_slug(guidance)
         from primitives.agentic_toolset import AgenticToolset
+        from context_tools.context_guidance.guidance import FidelityGuidance
 
         fidelity_name = getattr(guidance, "name", None)
-        is_fidelity = type(guidance).__name__ == "FidelityGuidance"
+        is_fidelity = isinstance(guidance, FidelityGuidance)
         if mark == "skill":
             folder = name if isinstance(guidance, AgenticToolset) else slug
             return Path("skills") / str(folder) / "SKILL.md"

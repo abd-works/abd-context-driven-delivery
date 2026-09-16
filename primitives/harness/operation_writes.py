@@ -43,12 +43,6 @@ def operation_writes(host: Any) -> list[OperationWrite]:
         is_tool = getattr(member, "_is_agent_tool", False)
         is_mcp = getattr(member, "_mcp", False)
         is_hook = getattr(member, "_hook", False)
-        if name == "guidance" and is_ai:
-            file_kind = getattr(cls, "_guidance_file", "skill")
-            if file_kind == "command":
-                is_command = True
-            else:
-                is_skill = True
         if not (is_skill or is_command or is_rules or is_ai or is_tool or is_mcp or is_hook):
             continue
         kind = "rules" if is_rules else "command" if is_command else "skill" if is_skill else ""

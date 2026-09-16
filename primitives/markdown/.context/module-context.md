@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Extract co-located markdown for guidance hosts — single-label read seam wrapping `AssetLocator` / `markdown_extractor`. Assembly and deploy live elsewhere.
+Extract co-located markdown — not assembly. Convert that extract to HTML.
 
 ## Seam (terms)
 
-`Markdown`, `@markdown`
+`@markdown`, `Markdown`, `HTML`, `AssetLocator`
 
 ## Dependencies (one-way)
 
@@ -14,5 +14,7 @@ Extract co-located markdown for guidance hosts — single-label read seam wrappi
 
 ## Public API
 
-- `Markdown.from_label(host, label).extract()` — resolve label under `host.context_guidance.module_dir` (or `host.module_dir`) and return extracted text.
-- `@markdown` — property decorator; property name is the asset label.
+- `Markdown.from_label(host, label).extract()` — `AssetLocator.locate` under the host class file directory and `host.name`. No `module_dir` on the host.
+- `Markdown.html()` — `HTML.from_markdown(extract())`.
+- `Markdown.coerce(text, return_type)` — str, RulesCollection, templates path map, or HTML.
+- `@markdown` — property name is the label; coerce to the annotated return type. File-kind marks (`@skill` / `@command` / `@rules` / `@mcp`) on the getter are copied through.

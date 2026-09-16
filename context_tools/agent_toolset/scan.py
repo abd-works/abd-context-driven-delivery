@@ -29,13 +29,15 @@ class Rule:
             self.scanner = Scanner(self)
 
     def validate(self) -> str:
-        lines = [
+        from primitives.agentic_toolset import instructions
+
+        text = instructions(
             f"Evaluate the current context against this rule ({self.slug}):",
             self.body,
-        ]
+        )
         if self.scanner is not None:
-            lines.append("Run the scanner for this rule.")
-        return "\n".join(lines)
+            text = text + "\nRun the scanner for this rule."
+        return text
 
     @classmethod
     def from_bullet(cls, text: str, fidelity: str | None = None) -> Rule:
