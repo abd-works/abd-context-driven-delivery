@@ -1,0 +1,403 @@
+"""Bodies for generated harness files — ContextToolBody, ContextToolFidelityBody, ActionBody, UtilityBody, FormatBody, Resolve."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from harness.transport import render_mcp_invoke
+
+# Shaping-only fidelities deploy as skills but are not offered on the main context-tool router.
+_ROUTER_SKIP_FIDELITIES: frozenset[str] = frozenset({"scaffold"})
+
+
+def _context_tool_name(toolset: str) -> str:
+    ref = toolset.strip()
+    if ":" in ref:
+        module, class_name = ref.rsplit(":", 1)
+        slug = module.rsplit(".", 1)[-1]
+        return slug or class_name
+    return ref or "the in-scope context tool"
+
+
+_CATALOG_LINE = (
+    "Pipe the block to stdin from the repo root. Do not write a request file. "
+    "Do not remanifest — this skill is the catalog. "
+    "Follow response.instructions only.\n"
+)
+
+
+def _invoke_block(
+    toolset: str,
+    *,
+    action: str | None = None,
+    tool: str | None = None,
+    fidelity: str | None = None,
+    constructor_context: dict[str, str] | None = None,
+) -> str:
+    """Filled invoke fence plus one ``tools.ps1 run -`` (manifest-alone path, #45)."""
+    lines = ["```", f"toolset: {toolset}"]
+    ctx: dict[str, str] = dict(constructor_context or {})
+    if fidelity:
+        ctx["fidelity"] = fidelity
+    if ctx:
+        lines.append("context:")
+        for k, v in ctx.items():
+            lines.append(f"  {k}: {v}")
+    if tool:
+        lines.append(f"tool: {tool}")
+    elif action:
+        lines.append(f"action: {action}")
+    lines.append("```")
+    lines.append(".\\tools.ps1 run -")
+    return "\n".join(lines) + "\n"
+
+
+def _invoke_tail(
+    toolset: str,
+    *,
+    transport: str = "cli",
+    action: str | None = None,
+    tool: str | None = None,
+    fidelity: str | None = None,
+    constructor_context: dict[str, str] | None = None,
+) -> str:
+    if transport == "mcp":
+        return render_mcp_invoke(
+            toolset,
+            action=action,
+            tool=tool,
+            fidelity=fidelity,
+        ) + "\n"
+    return _invoke_block(
+        toolset,
+        action=action,
+        tool=tool,
+        fidelity=fidelity,
+        constructor_context=constructor_context,
+    )
+
+
+def resolve_text(
+    source: str,
+    toolset: str,
+    *,
+    kind: str = "action",
+    fidelities: list[str] | tuple[str, ...] = (),
+    actions: list[str] | tuple[str, ...] = (),
+    context_tools: list[str] | tuple[str, ...] = (),
+    invoke: str = "action",
+    constructor_context: dict[str, str] | None = None,
+    extended: bool = False,
+    transport: str = "cli",
+) -> str:
+    """Resolve rules plus the CLI. Action and guidance bodies get opposite confirm lines.
+
+    ``extended`` swaps both confirm lines to consider a straight prompt passed
+    versus ct; ``ct_fidelity`` is the extended composite kind for
+    ``{context_tool}-{fidelity}`` commands — the guidance confirm line, then
+    the CLI fence with the fidelity pinned and ``action: generate``, never a
+    fidelity AskQuestion.
+    """
+    toolset = toolset.strip() or "the in-scope context tool"
+    cc = constructor_context or {}
+    if kind == "fidelity":
+        if transport == "mcp":
+            return _invoke_tail(
+                toolset,
+                transport=transport,
+                action="generate",
+                fidelity=source,
+            )
+        return _CATALOG_LINE + _invoke_block(
+            toolset, action="generate", fidelity=source, constructor_context=cc
+        )
+    if kind in {"utility", "format"}:
+        prefix = "" if transport == "mcp" else "through the tools cli\n\n"
+        if kind == "format":
+            if transport == "mcp":
+                return (
+                    "Use the in-scope context tool's `generate` MCP tool and pass the "
+                    f"format as `{source}` in arguments.\n"
+                )
+            tail = _invoke_tail(toolset, transport=transport)
+            return prefix + _CATALOG_LINE + tail
+        member = source.strip()
+        if invoke == "tool" and member:
+            tail = _invoke_tail(toolset, transport=transport, tool=member, constructor_context=cc)
+            return prefix + (_CATALOG_LINE if transport != "mcp" else "") + tail
+        if invoke == "action" and member:
+            tail = _invoke_tail(toolset, transport=transport, action=member, constructor_context=cc)
+            return prefix + (_CATALOG_LINE if transport != "mcp" else "") + tail
+        tail = _invoke_tail(toolset, transport=transport, constructor_context=cc)
+        return prefix + (_CATALOG_LINE if transport != "mcp" else "") + tail
+    if kind in {"guidance", "ct_fidelity"}:
+        if kind == "ct_fidelity":
+            if actions:
+                action_ask = (
+                    "AskQuestion constrained to these actions: "
+                    + " | ".join(actions)
+                )
+            else:
+                action_ask = "AskQuestion constrained to the available actions for this context tool"
+            taken = (
+                "With a straight prompt passed, take the action from the prompt. "
+                "If you took an action from the context versus being given a straight prompt, "
+                f"confirm the use of the context. {action_ask}.\n"
+            )
+    else:
+        tool_options = list(context_tools) + ["use existing context only"]
+        tool_ask = (
+            "AskQuestion constrained to the context tools: " + " | ".join(tool_options)
+        )
+        if extended:
+            taken = (
+                "With a straight prompt passed, run this action on the context in general. "
+                "If you took a context tool from the context and not a straight prompt, "
+                f"confirm the use of the context. {tool_ask}.\n"
+            )
+        else:
+            taken = (
+                "If you took guidance from the context and not a tool, "
+                f"confirm the use of the context. {tool_ask}.\n"
+            )
+    if kind == "ct_fidelity":
+        return (
+            taken
+            + "Then run:\n"
+            + (_CATALOG_LINE if transport != "mcp" else "")
+            + _invoke_tail(
+                toolset,
+                transport=transport,
+                action="generate",
+                fidelity=source,
+                constructor_context=cc,
+            )
+        )
+    if kind == "guidance":
+        if fidelities:
+            skill_options = " | ".join(f"@{source}-{fidelity}" for fidelity in fidelities)
+            return (
+                f"Determine which {source} skill to run from context; if you cannot, "
+                f"AskQuestion: {skill_options}.\n"
+                "Run the appropriate skill.\n"
+            )
+        return (
+            f"Determine which {source} skill to run from context; if you cannot, "
+            "AskQuestion to choose the appropriate fidelity skill.\n"
+            "Run the appropriate skill.\n"
+        )
+    fidelity_ask = (
+        "If the fidelity does not belong to the in-scope tool or has not been provided, "
+        "guess the correct fidelity and confirm with AskQuestion constrained to the other fidelities"
+    )
+    if fidelities:
+        fidelity_ask += ": " + " | ".join(fidelities)
+    fidelity_ask += ".\n"
+    if kind == "action" and invoke == "tool":
+        return (
+            taken
+            + fidelity_ask
+            + "Then run:\n"
+            + (_CATALOG_LINE if transport != "mcp" else "")
+            + _invoke_tail(
+                toolset,
+                transport=transport,
+                tool=source,
+                constructor_context=cc,
+            )
+        )
+    action = source if kind == "action" else None
+    return (
+        taken
+        + fidelity_ask
+        + "Then run:\n"
+        + (_CATALOG_LINE if transport != "mcp" else "")
+        + _invoke_tail(
+            toolset,
+            transport=transport,
+            action=action,
+            constructor_context=cc,
+        )
+    )
+
+
+@dataclass(frozen=True)
+class ContextToolBody:
+    text: str
+
+    @classmethod
+    def from_source(
+        cls,
+        *,
+        name: str,
+        overview: str,
+        toolset: str,
+        fidelities: list[str] | tuple[str, ...] = (),
+        actions: list[str] | tuple[str, ...] = (),
+        extended: bool = False,
+        transport: str = "cli",
+    ) -> "ContextToolBody":
+        router_fidelities = [f for f in fidelities if f not in _ROUTER_SKIP_FIDELITIES]
+        text = (
+            f"# {name}\n\n"
+            f"{overview}\n\n"
+            f"{resolve_text(name, toolset, kind='guidance', fidelities=router_fidelities, actions=actions, extended=extended, transport=transport)}"
+        )
+        return cls(text)
+
+    def __str__(self) -> str:
+        return self.text
+
+
+@dataclass(frozen=True)
+class ContextToolFidelityBody(ContextToolBody):
+    """Composite — domain guidance at one pinned fidelity for ``{tool}-{fidelity}`` skills."""
+
+    @classmethod
+    def from_source(
+        cls,
+        *,
+        overview: str,
+        toolset: str,
+        guidance: str = "",
+        instructions: str = "",
+        fidelities: list[str] | tuple[str, ...] = (),
+        actions: list[str] | tuple[str, ...] = (),
+        fidelity: str = "",
+        constructor_context: dict[str, str] | None = None,
+    ) -> "ContextToolFidelityBody":
+        content = (instructions or "").strip()
+        if not content:
+            candidate = (guidance or "").strip()
+            content = candidate if candidate and candidate != "guidance" else overview
+        tool_name = _context_tool_name(toolset)
+        previous: list[str] = []
+        if fidelity in fidelities:
+            previous = [
+                name
+                for name in fidelities[: fidelities.index(fidelity)]
+                if name not in _ROUTER_SKIP_FIDELITIES
+            ]
+        references = ""
+        if previous:
+            mentions = "\n".join(
+                f"@{tool_name}-{higher}" for higher in reversed(previous)
+            )
+            references = (
+                "\n\nRefer to these skills in order to fill in details from previous "
+                f"fidelities if not present:\n{mentions}"
+            )
+        text = (
+            f"# {tool_name}-{fidelity}\n\n"
+            f"Use {tool_name} guidance at `{fidelity}` fidelity only."
+            f"{references}\n\n"
+            f"{content}"
+        )
+        return cls(text)
+
+
+@dataclass(frozen=True)
+class ActionBody:
+    text: str
+
+    @classmethod
+    def from_source(
+        cls,
+        *,
+        name: str,
+        class_string: str,
+        operation_instructions: str,
+        toolset: str,
+        kind: str = "action",
+        fidelities: list[str] | tuple[str, ...] = (),
+        context_tools: list[str] | tuple[str, ...] = (),
+        invoke: str = "action",
+        operation: str = "",
+        constructor_context: dict[str, str] | None = None,
+        extended: bool = False,
+        transport: str = "cli",
+    ) -> "ActionBody":
+        if kind == "fidelity":
+            tool_name = _context_tool_name(toolset)
+            lead = (
+                f"Run the action on {tool_name} at {name} fidelity.\n\n"
+                if transport == "mcp"
+                else f"Run the action on {tool_name} at {name} fidelity through the tools cli\n\n"
+            )
+            text = lead + f"{resolve_text(name, toolset, kind=kind, fidelities=fidelities, constructor_context=constructor_context, extended=extended, transport=transport)}"
+            return cls(text)
+        member = (operation or name).strip()
+        text = (
+            f"# {name}\n\n"
+            "Run this action for any provided context tools, or on the context in general.\n\n"
+            f"{class_string}\n\n"
+            f"{operation_instructions}\n\n"
+            f"{resolve_text(member, toolset, kind=kind, fidelities=fidelities, context_tools=context_tools, invoke=invoke, constructor_context=constructor_context, extended=extended, transport=transport)}"
+        )
+        return cls(text)
+
+    def __str__(self) -> str:
+        return self.text
+
+
+@dataclass(frozen=True)
+class UtilityBody:
+    text: str
+
+    @classmethod
+    def from_source(
+        cls,
+        *,
+        name: str,
+        class_string: str,
+        operation_instructions: str,
+        toolset: str,
+        invoke: str = "tool",
+        operation: str = "",
+        constructor_context: dict[str, str] | None = None,
+        transport: str = "cli",
+    ) -> "UtilityBody":
+        parts = [part for part in (class_string.strip(), operation_instructions.strip()) if part]
+        if constructor_context:
+            missing = [k for k, v in constructor_context.items() if not v]
+            if missing:
+                parts.append(
+                    f"Required context params with no value: {', '.join(missing)}. "
+                    "AskQuestion to collect each missing value before running."
+                )
+        member = (operation or "").strip()
+        text = (
+            "\n\n".join(parts)
+            + "\n\n"
+            + resolve_text(
+                member,
+                toolset,
+                kind="utility",
+                invoke=invoke,
+                constructor_context=constructor_context,
+                transport=transport,
+            )
+        )
+        return cls(text)
+
+    def __str__(self) -> str:
+        return self.text
+
+
+@dataclass(frozen=True)
+class FormatBody:
+    text: str
+
+    @classmethod
+    def from_source(cls, *, format: str, transport: str = "cli") -> "FormatBody":
+        text = (
+            f"# {format}\n\n"
+            f"Run the context tool / actions using the following format: {format}.\n"
+            "Used mostly with generate and render.\n"
+            "Do not set a fidelity from this prompt.\n\n"
+            f"{resolve_text(format, 'the in-scope context tool', kind='format', transport=transport)}"
+        )
+        return cls(text)
+
+    def __str__(self) -> str:
+        return self.text
