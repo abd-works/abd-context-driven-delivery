@@ -50,8 +50,8 @@ Command that passed (78 examples):
 | 6 FidelityGuidance + assembly + full tree + VS Code | green | `ff540381` |
 | 7 MCP manifest + host invoke | green | `5f0ff6e5` |
 | 8 Catalog : HTML | green | `14d97d4f` |
-| 9 HookDeployment | green | recorded below |
+| 9 HookDeployment | green | `ff60c0ff` |
 
-Turn `git add -A` did not pick up empty `__init__.py` files ignored by gitignore, and did not stage the huge untracked `.cursor/` tree. Production guidance/harness/MCP/catalog files landed in `710b774b`.
+Turn `git add -A` did not pick up empty `__init__.py` files ignored by gitignore (`_*`), and did not stage the huge untracked `.cursor/` tree. Production guidance/harness/MCP/catalog files landed in `710b774b`. The isolate turn **deleted** the live trees but did not add `legacy-no-longer-valid/` (subject-scoped add). That backup is committed with this status table.
 
 
