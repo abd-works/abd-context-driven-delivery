@@ -22,3 +22,11 @@ class SampleContextGuidance(ContextGuidance):
     domain_slug = "sample_tool"
     default_format = "templates"
     name = None
+
+
+class SampleMcpContextGuidance(SampleContextGuidance):
+    publish_mcp = True
+
+    @markdown
+    def guidance(self) -> str:
+        """Guidance section body."""
