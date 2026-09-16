@@ -1,7 +1,7 @@
-"""Layer 1–2 fixture host — co-located markdown beside this module."""
+"""Fixture hosts — co-located markdown beside this module."""
 from __future__ import annotations
 
-from context_tools.context_guidance.guidance import ContextGuidance
+from context_tools.context_guidance.guidance import ContextGuidance, PracticeGuidance
 from primitives.markdown import HTML, Markdown, markdown
 
 
@@ -25,6 +25,26 @@ class SampleContextGuidance(ContextGuidance):
 
 
 class SampleMcpContextGuidance(SampleContextGuidance):
+    publish_mcp = True
+
+    @markdown
+    def guidance(self) -> str:
+        """Guidance section body."""
+
+
+class SamplePracticeGuidance(PracticeGuidance):
+    domain_slug = "sample_tool"
+    default_format = "templates"
+    name = None
+
+
+class SamplePracticeWithFidelities(SamplePracticeGuidance):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.load_fidelities_from_markdown()
+
+
+class SampleMcpPractice(SamplePracticeWithFidelities):
     publish_mcp = True
 
     @markdown
