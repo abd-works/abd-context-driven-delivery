@@ -1,0 +1,6 @@
+{
+  "install": "bash .cursor/install.sh",
+  "repositoryDependencies": [
+    "github.com/Paradise-Mobile/pml-domainmodel"
+  ]
+}
