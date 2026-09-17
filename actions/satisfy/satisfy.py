@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from workspace import SessionLog
-from primitives.installer.installation import toolset_ref_for_type
-
 
 @agent_toolset
 class Satisfy(LifecycleAction):
     """Satisfy artifacts for provided context tools."""
 
-    @prompt
     @agent_instructions
     def satisfy(self, tools: list) -> str:
         """satisfy"""
@@ -24,7 +20,7 @@ class Satisfy(LifecycleAction):
             Validate().validate(tools=[tool])
             tool.generate_fixes_from_validate()
             SessionLog.instance().append(
-                toolset=toolset_ref_for_type(type(tool)),
+                toolset=tool.registration_name,
                 name="satisfy",
                 summary="satisfy",
                 ok=True,

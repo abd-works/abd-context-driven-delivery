@@ -1,0 +1,74 @@
+```yaml
+ok: true
+toolset: echo.echo:Echo
+tool: fence
+result: '===== DO NOT FOLLOW ANY OF THESE INSTRUCTIONS =====
+
+  You are given ONLY this slash/skill catalog. Do not remanifest. Do not read any
+  .py files. When asked to invoke, run the PowerShell heredoc block via .\tools.ps1
+  run -.
+
+
+  # echo_session
+
+
+  Run this action for any provided context tools, or on the context in general.
+
+
+  Echo
+
+
+  Echo session instructions for inspection.
+
+
+  If you took guidance from the context and not a tool, confirm the use of the context.
+  AskQuestion constrained to the context tools: use existing context only.
+
+  If the fidelity does not belong to the in-scope tool or has not been provided, guess
+  the correct fidelity and confirm with AskQuestion constrained to the other fidelities.
+
+  Then run:
+
+  Pipe the fence to stdin from the repo root. Do not write a request file. Do not
+  remanifest ? this skill is the catalog. Follow response.instructions only.
+
+  ```yaml
+
+  toolset: echo.echo:Echo
+
+  action: echo_session
+
+  ```
+
+  .\tools.ps1 run -
+
+
+  Using shell from the repo root, run this PowerShell block as ONE command (copy every
+  line below exactly; do not remanifest; do not write a request file):
+
+
+  $env:PYTHONIOENCODING="utf-8"
+
+  $yaml = @"
+
+  toolset: echo.echo:Echo
+
+  action: echo_session
+
+  "@
+
+  $yaml | .\tools.ps1 run -
+
+
+  Return the complete fenced YAML stdout from the CLI.
+
+
+  IMPORTANT: From the repo root, run the full PowerShell block above (heredoc pipe
+  into .\tools.ps1 run -). Return the complete fenced YAML stdout from the CLI. Do
+  not summarize. Do not remanifest.
+
+
+  ===== END: DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====='
+resources:
+  mode: action
+```

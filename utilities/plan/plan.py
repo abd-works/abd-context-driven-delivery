@@ -8,12 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from git.git import Repo, TicketState
-from installer.installer_tool import prompt
 from primitives.agent_tools.agent_tools import agent_toolset
 from agent_tools.agent_tools import agent_tool
 from workspace.workspace import Turn, WorkSession, Workspace
 from workflow.workflow import Workflow
-
 
 @dataclass
 class JudgeCheckpoint:
@@ -22,13 +20,11 @@ class JudgeCheckpoint:
     rubric: str
     judge_result: str | None = None
 
-
 @dataclass
 class HILCheck:
     """Human-in-the-loop check hanging on a Turn."""
 
     validation: str | None = None
-
 
 @dataclass
 class ProgressView:
@@ -39,7 +35,6 @@ class ProgressView:
     hil_validation: str | None
     judge_result: str | None
 
-
 @dataclass
 class TurnTemplate:
     """One prebaked Turn shape loaded from a named Workflow."""
@@ -49,7 +44,6 @@ class TurnTemplate:
     format: str = ""
     context: str = ""
     tool_keys: list[str] = field(default_factory=list)
-
 
 class TurnAttachments:
     """HILCheck and JudgeCheckpoint hanging on Turns."""
@@ -86,7 +80,6 @@ class TurnAttachments:
     def delete_judge(self, turn: Turn) -> None:
         turn.judge_checkpoint = None  # type: ignore[attr-defined]
 
-
 @dataclass
 class PlanSeed:
     """Construction seed for Plan.create / from_workflow."""
@@ -96,7 +89,6 @@ class PlanSeed:
     name: str = ""
     workflow: Workflow | None = None
     workflow_name: str = ""
-
 
 _PREBAKED_WORKFLOWS: dict[str, list[TurnTemplate]] = {
     "small-work": [
@@ -116,7 +108,6 @@ _PREBAKED_WORKFLOWS: dict[str, list[TurnTemplate]] = {
         ),
     ],
 }
-
 
 class Plan:
     """Plan front-end to git, based on a reusable or newly named Workflow."""
@@ -214,7 +205,6 @@ class Plan:
                 tool_keys=list(template.tool_keys),
             )
 
-
 class PlanTurns:
     """Edit and delete Turns on a Plan."""
 
@@ -231,7 +221,6 @@ class PlanTurns:
         if turn in turns:
             turns.remove(turn)
 
-
 _ENOUGH_MARKERS = (
     "## root cause",
     "## acceptance",
@@ -244,7 +233,6 @@ _THEME_RE = re.compile(
     r"(?:^|\s)(?:theme:|theme\s*=\s*)(?P<theme>[\w./-]+)",
     re.IGNORECASE,
 )
-
 
 @dataclass
 class ThemedIssue:
@@ -259,7 +247,6 @@ class ThemedIssue:
     def context_enough(self) -> bool:
         return SmallWorkRunner.enough_context(self.body)
 
-
 @dataclass
 class SmallWorkState:
     """Persisted small-work run across HIL Grill interrupts."""
@@ -271,7 +258,6 @@ class SmallWorkState:
     pending_hil: dict[str, Any] | None = None
     grill_questions: list[str] = field(default_factory=list)
     status: str = "running"
-
 
 class SmallWorkRunner:
     """Execute prebaked small-work Plan against themed issues one at a time.
@@ -569,12 +555,10 @@ class SmallWorkRunner:
         self.clear_state()
         return payload
 
-
 @agent_toolset
 class PlanCommands:
     """Slash `/plan` and `/plan /small-work {context}` — load Workflow into a Plan."""
 
-    @prompt(name="plan")
     @agent_tool
     def plan(
         self,
@@ -586,7 +570,6 @@ class PlanCommands:
         workflow_name = (workflow or "").strip() or "plan"
         return self._open_named_workflow(workflow_name, context, workspace)
 
-    @prompt(name="small-work")
     @agent_tool
     def small_work(
         self,
@@ -667,7 +650,6 @@ class PlanCommands:
         for turn in built.turns:
             existing = getattr(turn, "context", "") or ""
             turn.context = f"{existing} {context}".strip() if existing else context
-
 
 class PlanExecution:
     """Runs a Plan: start, execute, judge record, advance, fix."""

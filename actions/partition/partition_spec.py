@@ -23,7 +23,7 @@ from partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
 from primitives.agent_tools.agent_tools import AgentInstructions
 from primitives.markdown import Markdown
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
@@ -47,7 +47,7 @@ with description("Partition kit prose"):
 
 with description("Partition kit on hosts"):
     with it("should not expose partition on practice guidance hosts"):
-        cls = ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
+        cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
         host = cls()
         expect("partition" in host.agent_tools).to(equal(False))
 

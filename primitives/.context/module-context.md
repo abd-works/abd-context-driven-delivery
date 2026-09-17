@@ -37,7 +37,7 @@ actions  →  primitives/markdown  →  primitives/assets
 tools    →  primitives/markdown
 ```
 
-Never import `tools` or `actions` from inside `primitives`. Peers self-register through `ToolsetExtensions`.
+Never import `tools` or `actions` from inside `primitives`.
 
 
 

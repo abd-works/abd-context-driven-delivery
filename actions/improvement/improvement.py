@@ -4,14 +4,11 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from primitives.markdown import markdown
 from agent_tools.agent_tools import agent_tool
 from workspace import SessionLog
-from primitives.installer.installation import toolset_ref_for_type
-
 
 @agent_toolset
 class Improvement(LifecycleAction):
@@ -26,7 +23,6 @@ class Improvement(LifecycleAction):
     def repair_loop(self) -> str:
         """Deep root-cause recipe — why the toolset's expected behavior failed."""
 
-    @prompt(name="repair")
     @agent_instructions
     def repair(self, tools: list, asset: str, violation: str) -> str:
         """Open a domain repair on each passed context tool and instruct the fix."""
@@ -42,7 +38,7 @@ class Improvement(LifecycleAction):
             host.examples
             host.templates
             SessionLog.instance().append(
-                toolset=toolset_ref_for_type(type(self)),
+                toolset=self.registration_name,
                 name="repair",
                 summary=f"repair {asset}",
                 ok=True,

@@ -13,14 +13,11 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from installer.installer_tool import prompt
 from primitives.agent_tools.agent_tools import agent_toolset
 from sub_agent.sub_agent import SubAgent, sub_agent
 from agent_tools.agent_tools import agent_tool
 
-
 _IDE_NOTIFIER_URL = "http://127.0.0.1:37291/notify"
-
 
 def _show_ide_notification(title: str, body: str, *, error: bool = False) -> None:
     """Fire-and-forget IDE notification via the local Cursor extension bridge."""
@@ -43,7 +40,6 @@ def _show_ide_notification(title: str, body: str, *, error: bool = False) -> Non
     except Exception:
         pass
 
-
 @dataclass
 class IdeCliResult:
     """Outcome of one spawned IDE CLI process."""
@@ -54,7 +50,6 @@ class IdeCliResult:
     argv: list[str] = field(default_factory=list)
     elapsed_seconds: float = 0.0
     pid: int = 0
-
 
 def _pid_alive(pid: int) -> bool:
     """True when ``pid`` refers to a running process (OS-level liveness)."""
@@ -79,7 +74,6 @@ def _pid_alive(pid: int) -> bool:
         return False
     return True
 
-
 def _kill_pid(pid: int) -> bool:
     """Force-stop ``pid`` if alive. Returns True when a kill was attempted."""
     pid = int(pid or 0)
@@ -100,7 +94,6 @@ def _kill_pid(pid: int) -> bool:
         except OSError:
             return False
     return True
-
 
 def _kill_workspace_agent_procs(workspace: str) -> list[str]:
     """Kill stray cursor-agent processes whose command line targets ``workspace``."""
@@ -149,7 +142,6 @@ def _kill_workspace_agent_procs(workspace: str) -> list[str]:
             killed.append(f"orphan:{pid}")
     return killed
 
-
 class _TaskFile:
     """Task text on disk so the CLI argv stays short."""
 
@@ -167,7 +159,6 @@ class _TaskFile:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(task, encoding="utf-8")
         return self.relative_path(path, workspace)
-
 
 class _TurnBinder:
     """Bind listed tools and one action onto a hanging Turn."""
@@ -309,7 +300,6 @@ class _TurnBinder:
             if not ctx.get("format"):
                 ctx["format"] = src["format"]
 
-
 class _TurnPrompt:
     """Prompt text from a hanging Turn and later guidance."""
 
@@ -347,7 +337,6 @@ class _TurnPrompt:
         if parts:
             return ", ".join(parts)
         return "(none)"
-
 
 class _JudgePrompt:
     """Judge session text for the same Turn and source scope."""
@@ -411,7 +400,6 @@ class _JudgePrompt:
         if body.endswith("\n"):
             return body
         return body + "\n"
-
 
 class _CliSpawner:
     """Start an IDE CLI process and return immediately."""
@@ -482,7 +470,6 @@ class _CliSpawner:
         result.elapsed_seconds = time.perf_counter() - started
         return result
 
-
 class _CliScratch:
     """Temps CliAgent writes. WorkSession must not know these names."""
 
@@ -546,7 +533,6 @@ class _CliScratch:
         except Exception:
             return False
 
-
 class JobQueue:
     """FIFO jobs on the WorkSession — assign or append; launch_next sends one."""
 
@@ -594,7 +580,6 @@ class JobQueue:
         head, rest = items[0], items[1:]
         self.save(work, rest)
         return head
-
 
 class _CliAgentLog:
     """Append-only event log for a cli-agent session: cli-agent-session.jsonl."""
@@ -899,7 +884,6 @@ class _CliAgentLog:
             record["job_index"] = job_index
         self.append(work, record)
 
-
 class _TranscriptWatch:
     """Poll Cursor agent jsonl transcripts for turn end and judge verdict."""
 
@@ -989,7 +973,6 @@ class _TranscriptWatch:
             return "\n".join(parts)
         return str(content or "")
 
-
 class _Pickup:
     """Fail launch only when the doer neither takes the job nor stays alive."""
 
@@ -1042,7 +1025,6 @@ class _Pickup:
                 return False
             sleep(0.25)
 
-
 class _ChatMint:
     """CLI session identity from create-chat or a minted id."""
 
@@ -1067,7 +1049,6 @@ class _ChatMint:
             f"cursor-agent create-chat returned no chat id.\n"
             f"stdout: {stdout}\nstderr: {stderr}"
         )
-
 
 class _SessionArgv:
     """Vendor argv for one interactive session."""
@@ -1131,7 +1112,6 @@ class _SessionArgv:
         args.append(prompt)
         return args
 
-
 class _WorkAttach:
     """Bind doer and judge CLI identities onto the WorkSession."""
 
@@ -1147,7 +1127,6 @@ class _WorkAttach:
             work.associate_cli("judge", vendor._create_chat(agent._workspace_root()))
         agent._ide = vendor._copy_policy(vendor._resumed(work.cli_doer, work.cli_judge))
         return work
-
 
 class IdeCli:
     """Pick and invoke the installed IDE agent CLI.
@@ -1610,7 +1589,6 @@ class IdeCli:
             raise RuntimeError(missing)
         return exe
 
-
 class CursorCli(IdeCli):
     """cursor-agent / agent — builds argv and spawns the process."""
 
@@ -1645,7 +1623,6 @@ class CursorCli(IdeCli):
             completed.stdout, completed.stderr, completed.returncode
         )
 
-
 class VscodeCli(IdeCli):
     """VS Code `code chat` — builds argv and spawns the process."""
 
@@ -1658,8 +1635,6 @@ class VscodeCli(IdeCli):
     def _judge_command(self, prompt: str, workspace: str) -> list[str]:
         return _SessionArgv()._vscode_args(self, prompt, workspace)
 
-
-
 @agent_toolset
 @dataclass
 class CliJobTemplate:
@@ -1668,7 +1643,6 @@ class CliJobTemplate:
     name: str
     jobs: list = field(default_factory=list)
     description: str = ""
-
 
 class CliJobTemplateStore:
     """Persist and retrieve job templates.
@@ -1727,7 +1701,6 @@ class CliJobTemplateStore:
                     results.append(t)
         return results
 
-
 @dataclass
 class CliBacklogItem:
     """One unit on a CliAgent backlog: ticket ref or free-text."""
@@ -1753,7 +1726,6 @@ class CliBacklogItem:
             kind=data.get("kind", "text"),
             status=data.get("status", "pending"),
         )
-
 
 class CliBacklog:
     """Ordered backlog items for one CliAgent session.
@@ -1824,7 +1796,6 @@ class CliBacklog:
 
     def remaining(self) -> list[CliBacklogItem]:
         return [i for i in self.items if i.status != "done"]
-
 
 class CliAgent(SubAgent):
     """Slash ``/cli-agent`` runs listed context tools and actions through the IDE CLI.
@@ -2702,7 +2673,6 @@ class CliAgent(SubAgent):
         )
         raise RuntimeError(f"stall: no judge verdict within {stall_s}s")
 
-    @prompt(name="kick-cli-agent")
     @agent_tool
     def kick(self) -> str:
         """Nudge a stalled doer to advance to the next job.
@@ -2757,7 +2727,6 @@ class CliAgent(SubAgent):
     def _template_store(self, path: str | None = None) -> CliJobTemplateStore:
         return CliJobTemplateStore(root=path or None)
 
-    @prompt(name="cli-agent-template")
     @agent_tool
     def add_template(self, name: str, jobs: list[dict], description: str = "", path: str | None = None) -> str:
         """Create, list, and apply reusable job templates for /cli-agent.
@@ -2955,7 +2924,6 @@ class CliAgent(SubAgent):
             return f"backlog item {ref_label}: loaded template '{backlog.template}' ({len(jobs)} job(s))"
         return f"backlog item {ref_label}: ready (no template — enqueue jobs manually)"
 
-    @prompt(name="cli-agent")
     @sub_agent
     @agent_tool
     def launch_sessions(self, tools: list[object], actions: list[object] | None = None, prompt: str | None = None, judge: bool | str | dict | None = None) -> str:
@@ -3052,5 +3020,4 @@ class CliAgent(SubAgent):
             )
         results = self._spawn_worker(tools, hanging, actions)
         return self._session_report(work, results)
-
 

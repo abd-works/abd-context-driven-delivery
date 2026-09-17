@@ -18,7 +18,7 @@ from mamba import before, context, description, it
 
 from primitives.markdown import Markdown
 from improvement.improvement import Improvement
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 
 _KIT_DIR = Path(__file__).resolve().parent
 _IMPROVEMENT = "improvement.improvement:Improvement"
@@ -39,7 +39,7 @@ with description("Improvement repair recipe"):
 
     with context("when repair is expanded"):
         with before.all:
-            cls = ToolsetLoader.instance().load(_IMPROVEMENT)
+            cls = type(AgentToolSet.instantiate(_IMPROVEMENT))
             self.kit = cls()
             self.response = self.kit.instructions["repair"].expand(
                 {},

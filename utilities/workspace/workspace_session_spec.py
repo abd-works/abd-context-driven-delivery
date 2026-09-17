@@ -17,7 +17,7 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
 from expects import be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 from primitives.markdown import Markdown
 from workspace.workspace import WorkSession, Workspace
 
@@ -49,7 +49,7 @@ with description("WorkSession on a PracticeGuidance host"):
         with before.all:
             from generate.generate import Generate
 
-            cls = ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
+            cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
             self.host = cls()
             self.response = Generate().instructions["generate"].expand(
                 {},
@@ -83,7 +83,7 @@ with description("WorkSession on a PracticeGuidance host"):
         with before.all:
             from generate.generate import Generate
 
-            cls = ToolsetLoader.instance().load(_CHRONICLE_WITH_OUTPUT_TOOLSET)
+            cls = type(AgentToolSet.instantiate(_CHRONICLE_WITH_OUTPUT_TOOLSET))
             self.host = cls()
             self.response = Generate().instructions["generate"].expand(
                 {},

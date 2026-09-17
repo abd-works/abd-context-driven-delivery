@@ -29,4 +29,4 @@ When expansion makes tools available, agenda instructions must tell the AI to **
 
 ## Dependencies
 
-Optional **primitives** for shared helpers. Peer packages register through `ToolsetExtensions`.
+Optional **primitives** for shared helpers.

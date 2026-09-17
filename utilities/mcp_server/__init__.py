@@ -1,4 +1,1 @@
-"""MCP-native CDD runtime."""
-from mcp_server.mcp_server import McpPrompt, McpServer, McpTool
-
-__all__ = ["McpPrompt", "McpServer", "McpTool"]
+# Examples and host specs for the MCP destination. Runtime is primitives.mcp.mcp_server.

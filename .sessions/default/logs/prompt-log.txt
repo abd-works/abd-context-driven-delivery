@@ -5864,3 +5864,35 @@ Production invoke is already on the objects:
 - `@agent_instructions` expands via `AgentInstructions.expand`
 - `@agent_tool` runs as the method / MCP-enrolled op
 ... [11 lines, 867 chars total]
+
+==============================================================================
+2026-09-17T20:13:16Z  afterAgentResponse  conv=57fa16f9  gen=0ef1542c  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Those helpers now live on `Installer` instead of the module:
+
+- `deco_id`, `class_is_installable`, `module_name` — collect-walk methods
+- `STATE_NAME`, `DEFAULT_PATHS`, `CDD_FOLDERS`, `SKIP_DIRS`, `CLASS_DECOS`, `METHOD_MARKS` — class attributes
+
+`get_installations` still picks channels from `tool.destinations`; the skill/command/rule markdown branches share one loop. `installer_spec.py` is green (63 examples).
+
+==============================================================================
+2026-09-17T20:14:42Z  afterAgentResponse  conv=57fa16f9  gen=12310f25  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: `Registry` never fed `Installer.install` — that path already uses `collect_tools()` or the toolsets you pass. The class only held an empty list.
+
+Deleted `registry.py`. `Catalog.from_registry` now walks the hosts you give it (the catalog spec already passed them). Pass toolsets into `install` when you do not want a full collect.
+
+==============================================================================
+2026-09-17T20:18:31Z  afterAgentResponse  conv=57fa16f9  gen=2bab10a7  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: `repo_paths.py` was not for markdown or MCP. It was venv forensics: parse `pyvenv.cfg`, probe the interpreter, rewrite `abd_cdd_paths.pth`, rebuild via `setup.ps1`. Markdown install only needed the CDD checkout so `collect_tools` can walk folders. MCP only needed that same checkout so imports resolve. The rest was leftover from copied worktree venvs.
+
+What you actually need:
+
+- **`repo`** — the CDD checkout (skills/commands come from here; one `.venv` lives here)
+- **`venv`** — `{repo}/.venv`, one interpreter for the whole CDD tree
+- **`project`** — set when the product repo is not the CDD che
+... [11 lines, 1057 chars total]

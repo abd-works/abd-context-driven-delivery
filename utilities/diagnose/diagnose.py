@@ -1,10 +1,8 @@
 """Diagnose toolset - launch the disciplined bug-fixing loop as a non-blocking sub-agent."""
 from __future__ import annotations
 
-from installer.installer_tool import prompt
 from sub_agent.sub_agent import sub_agent
 from agent_tools import agent_tool, agent_toolset
-
 
 @agent_toolset
 class Diagnose:
@@ -14,7 +12,6 @@ class Diagnose:
     Reproduce -> minimise -> hypothesise -> instrument -> fix -> regression-test.
     """
 
-    @prompt(name="diagnose")
     @sub_agent
     @agent_tool
     def diagnose(self) -> str:

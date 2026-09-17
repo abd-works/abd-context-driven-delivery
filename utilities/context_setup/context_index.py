@@ -7,15 +7,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Protocol, Sequence
 
 from agent_tools import agent_instructions, agent_toolset
-from installer.installer_tool import prompt
 from agent_tools.agent_tools import agent_tool
 
 if TYPE_CHECKING:
     pass
 
-
 # ── Result types ─────────────────────────────────────────────────────────────
-
 
 @dataclasses.dataclass
 class RankedChunk:
@@ -26,7 +23,6 @@ class RankedChunk:
     view: str      # story | domain | architecture | ux | general
     score: float   # similarity score in [0, 1]; higher is more relevant
 
-
 @dataclasses.dataclass
 class EmbedResult:
     """Summary of a completed embed() call."""
@@ -35,16 +31,13 @@ class EmbedResult:
     segment_count: int
     views_covered: list[str]  # sorted list of distinct view tags found in segments
 
-
 @dataclasses.dataclass
 class SearchResult:
     """Ordered list of ranked chunks from a search() call."""
 
     chunks: list[RankedChunk]
 
-
 # ── Embedding provider protocol (injectable for tests) ───────────────────────
-
 
 class EmbeddingProvider(Protocol):
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
@@ -52,7 +45,6 @@ class EmbeddingProvider(Protocol):
 
     def embed_query(self, text: str) -> list[float]:
         ...
-
 
 class OpenAIEmbeddingProvider:
     """Default provider — calls OpenAI text-embedding-3-small."""
@@ -71,9 +63,7 @@ class OpenAIEmbeddingProvider:
     def embed_query(self, text: str) -> list[float]:
         return self.embed_texts([text])[0]
 
-
 # ── Toolset ───────────────────────────────────────────────────────────────────
-
 
 @agent_toolset
 class ContextIndex:
@@ -89,7 +79,6 @@ class ContextIndex:
 
     # ── @tools — deterministic Python ────────────────────────────────────────
 
-    @prompt(name="embed")
     @agent_tool
     def embed(self, segments_paths: list[str], out_path: str) -> EmbedResult:
         """Read every segment markdown file listed in segments_paths, embed using the embedding provider,
@@ -132,7 +121,6 @@ class ContextIndex:
             views_covered=sorted(views_covered),
         )
 
-    @prompt(name="search")
     @agent_tool
     def search(self, query: str, index_path: str, top_k: int = 5) -> SearchResult:
         """Embed query and search the FAISS index at index_path.
@@ -169,7 +157,6 @@ class ContextIndex:
 
     # ── @agent_instructions — AI reads recipe; owns judgment ──────────────────────────────
 
-    @prompt(name="ask")
     @agent_instructions
     def ask(self, question: str, index_path: str) -> str:
         """Answer question using the FAISS index at index_path, citing sources.
@@ -185,7 +172,6 @@ class ContextIndex:
         Write an answer in plain prose, citing source.path and section for every claim made.
         Do not include information that does not appear in the retrieved chunks."""
         return "Answer composed with citations."
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

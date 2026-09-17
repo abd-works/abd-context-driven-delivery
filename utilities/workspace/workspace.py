@@ -20,16 +20,13 @@ from primitives.markdown import markdown
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
-from primitives.installer.repo_paths import ensure_venv
 from agent_tools.agent_tools import agent_tool, agent_toolset
-from installer.prompt import prompt
-from installer.marks import hook
+from primitives.hooks.hooks import hook
 from hooks.session_logs import (
     clear_active_session,
     consolidate_logs_for_close,
     write_active_session,
 )
-
 
 @dataclass
 class PathOverride:
@@ -38,7 +35,6 @@ class PathOverride:
     tool: str
     fidelity: str
     path: str
-
 
 class SessionPaths:
     """Where files go relative to a workspace path.
@@ -128,10 +124,8 @@ class SessionPaths:
         shutil.move(str(legacy), str(dest))
         return True
 
-
 docs_dir = SessionPaths.docs_dir
 session_dir = SessionPaths.session_dir
-
 
 class SessionModel:
     """Persist the preferred Cursor/IDE model under ``{repository_root}/.sessions/{name}/model``.
@@ -234,7 +228,6 @@ class SessionModel:
             return found
         return list(cls._FALLBACK_MODELS)
 
-
 @dataclass
 class ToolCall:
     """One expand|run record — session trail and openTurn.toolCalls."""
@@ -245,7 +238,6 @@ class ToolCall:
     ok: bool = True
     error: str = ""
     role: str = ""
-
 
 @dataclass
 class TurnCommit:
@@ -263,7 +255,6 @@ class TurnCommit:
     def session_name(self) -> str:
         """Legacy alias — branch name at commit time."""
         return self.branch
-
 
 @agent_toolset
 class Turn:
@@ -399,7 +390,6 @@ class Turn:
             )
         git.note(sha, payload, ref=self.TURN_NOTES_REF)
 
-    @prompt(name="turn")
     @agent_tool
     def turn(
         self,
@@ -639,7 +629,6 @@ class Turn:
             pass
         return change
 
-    @prompt(name="mistake")
     @agent_tool
     def record_mistake(
         self,
@@ -670,7 +659,6 @@ class Turn:
         self.mistakes.append(mistake)
         return mistake
 
-    @prompt(name="correction")
     @agent_tool
     def record_correction(
         self,
@@ -717,7 +705,6 @@ class Turn:
         self.correction = correction
         return correction
 
-
 @dataclass
 class Mistake:
     """Mistake — annotated on the introducing commit (Git-primary)."""
@@ -748,7 +735,6 @@ class Mistake:
                 "introducing_commit": self.introducing_commit,
             },
         )
-
 
 @dataclass
 class Correction:
@@ -801,7 +787,6 @@ class Correction:
                 lines.append(f"Introducing-Commit: {mistake.introducing_commit}")
         return "\n".join(lines)
 
-
 @dataclass
 class Repair:
     """Domain repair bucket on a WorkSession — themed improvement nest (not agentic)."""
@@ -828,7 +813,6 @@ class Repair:
     def finish(self, turn: Turn | None = None) -> None:
         self.status = "finished"
 
-
 class Repairs:
     """WorkSession.repairs — lookup by theme / violation."""
 
@@ -852,7 +836,6 @@ class Repairs:
 
     def __len__(self) -> int:
         return len(self._by_theme)
-
 
 class WorkSession:
     """One named work session — owns openTurn, turns, repairs, git; session.md kit."""
@@ -1325,14 +1308,15 @@ class WorkSession:
         self._try_fetch_pull()
 
     def _ensure_worktree_venv(self) -> None:
-        """Give this checkout its own venv — a worktree never borrows the primary's."""
+        """Point at this checkout's .venv — one interpreter for the CDD repo."""
         git = self.git
         if getattr(git, "_memory", False):
             return
-        try:
-            self.venv_note = ensure_venv(Path(git.root))
-        except OSError as error:
-            self.venv_note = f"could not check .venv: {error}"
+        venv = Path(git.root) / ".venv"
+        python = venv / ("Scripts" if os.name == "nt" else "bin") / (
+            "python.exe" if os.name == "nt" else "python"
+        )
+        self.venv_note = "" if python.is_file() else f"no venv at {venv}"
 
     @staticmethod
     def _abbrev_repo_name(folder: str) -> str:
@@ -1890,7 +1874,6 @@ class WorkSession:
             return slug[len("session/") :]
         return slug
 
-    @prompt(name="worksession-chat")
     @agent_tool
     def worksession_chat(
         self,
@@ -2031,7 +2014,6 @@ class WorkSession:
         md = self.close(outcome=outcome, handoff=handoff)
         return str(md.resolve())
 
-    @prompt(name="start-work-session")
     @agent_tool
     def start_work_session(
         self,
@@ -2120,7 +2102,6 @@ class WorkSession:
             pass
         return "finished without work session"
 
-    @prompt(name="finish-work-session")
     @agent_tool
     def finish_work_session(
         self,
@@ -2311,7 +2292,6 @@ class WorkSession:
             workspace_root=path,
         )
 
-
 @agent_toolset
 class Workspace:
     """Parent of `.context/` — workSessions, currentWorkSession, pathOverrides."""
@@ -2416,7 +2396,6 @@ class Workspace:
         """List available Cursor/IDE model ids for AskQuestion choices."""
         return SessionModel.list_available()
 
-    @prompt(name="model")
     @agent_instructions
     def model(self, model: str = "", session: str = "", workspace: str = "") -> str:
         """Set the preferred IDE/CLI model for this work session (slash ``/model``).
@@ -2584,7 +2563,6 @@ class Workspace:
                 continue
             rows.append(PathOverride(tool=tool, fidelity=fidelity, path=row_path))
         return rows
-
 
 class ContextToolHost:
     """Spec/host surface from OO — workspace direct; turn/git via currentWorkSession."""

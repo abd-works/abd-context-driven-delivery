@@ -6,7 +6,8 @@ from primitives.agent_tools.agent_tools import (
     agent_tool,
     agent_toolset,
 )
-from primitives.installer.marks import command, mcp, skill
+from primitives.harness_files.harness_files import command, skill
+from primitives.mcp.mcp_server import mcp
 
 
 @agent_toolset

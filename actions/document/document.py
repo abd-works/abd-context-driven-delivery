@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from workspace import SessionLog
-from primitives.installer.installation import toolset_ref_for_type
-
 
 @agent_toolset
 class Document(LifecycleAction):
     """Document existing state for provided context tools."""
 
-    @prompt
     @agent_instructions
     def document(self, tools: list, paths: list[str]) -> str:
         """document"""
@@ -24,7 +20,7 @@ class Document(LifecycleAction):
             tool.scanner.scan(paths)
             tool.generate_output()
             SessionLog.instance().append(
-                toolset=toolset_ref_for_type(type(tool)),
+                toolset=tool.registration_name,
                 name="document",
                 summary="document",
                 ok=True,

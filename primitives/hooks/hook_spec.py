@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "primitives/hooks"):
+for _cat in ("primitives", "utilities"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -17,8 +17,8 @@ from expects import be_true, equal, expect
 from mamba import context, description, it
 from agent_tools import agent_toolset
 
-from hooks.dispatch import dispatch, parse_payload, set_enabled
-from installer.marks import hook
+from primitives.hooks.dispatch import dispatch, parse_payload, set_enabled
+from primitives.hooks.hooks import hook
 
 
 @agent_toolset

@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
-from primitives.installer.marks import hook, skill
+from primitives.harness_files.harness_files import skill
+from primitives.hooks.hooks import hook
 
 
 @agent_toolset

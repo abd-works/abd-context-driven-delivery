@@ -19,7 +19,7 @@ for _p in [
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import practices  # noqa: F401
 from primitives.markdown import Markdown
@@ -40,7 +40,7 @@ def _kit_prose(action: str, kit_dir: Path) -> str:
 
 
 def _load_agent_bdd(*, format_name: str = "python") -> AgentToolSet:
-    toolset_cls = ToolsetLoader.instance().load(_AGENT_BDD_TOOLSET)
+    toolset_cls = type(AgentToolSet.instantiate(_AGENT_BDD_TOOLSET))
     return toolset_cls(format=format_name)
 
 

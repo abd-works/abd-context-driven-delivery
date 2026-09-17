@@ -8,11 +8,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from installer.installer_tool import prompt
 from workspace import SessionPaths, Workspace
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
-
 
 @agent_toolset
 class Handoff:
@@ -51,7 +49,6 @@ class Handoff:
         path.write_text(content, encoding="utf-8")
         return str(path.resolve())
 
-    @prompt
     @agent_instructions
     def handoff_session(self, next_focus: str = "") -> str:
         """Write a compact handoff for the current session so the next agent can continue. Tailor to {{next_focus}} when provided."""

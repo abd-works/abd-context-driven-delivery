@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-for _category in ("primitives", "utilities", "primitives/hooks"):
+for _category in ("primitives", "utilities"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
@@ -20,7 +20,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from agent_tools import agent_toolset
-from installer.marks import hook
+from primitives.hooks.hooks import hook
 
 _DISABLED_FLAG = _REPO_ROOT / ".context/hooks/prompt_echo.disabled"
 

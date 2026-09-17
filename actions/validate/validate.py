@@ -4,19 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset, instructions
 from scan.rule import Rule
 from workspace import SessionLog
-from primitives.installer.installation import toolset_ref_for_type
-
 
 @agent_toolset
 class Validate(LifecycleAction):
     """Validate artifacts for provided context tools."""
 
-    @prompt
     @agent_instructions
     def validate(self, tools: Any, rule: Rule | None = None) -> str:
         """validate"""
@@ -33,12 +29,10 @@ class Validate(LifecycleAction):
                 self.end()
         return "Validation report for artifacts under {session.path}/."
 
-
 @agent_toolset
 class CreateRule(LifecycleAction):
     """Write a named rule and scanner into the provided context tool."""
 
-    @prompt(name="createRule")
     @agent_instructions
     def createRule(self, tools: list, failed: str, wanted: str) -> str:
         """createRule"""
@@ -48,7 +42,7 @@ class CreateRule(LifecycleAction):
             tool.examples
             tool.templates
             SessionLog.instance().append(
-                toolset=toolset_ref_for_type(type(tool)),
+                toolset=tool.registration_name,
                 name="createRule",
                 summary="createRule",
                 ok=True,

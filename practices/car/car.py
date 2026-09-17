@@ -1,7 +1,6 @@
 """Car — example context tool for in-character road stories and vehicle tools."""
 from __future__ import annotations
 
-from installer.installer_tool import dev_only, prompt
 from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
 from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
@@ -17,8 +16,6 @@ _FIDELITY_FORMAT_DEFAULTS = {
     "full_journey": "markdown",
 }
 
-
-@dev_only
 @agent_toolset
 class Car(PracticeGuidance):
     """# Instructions
@@ -131,7 +128,6 @@ class Car(PracticeGuidance):
             return "Write full in-character prose; invoke vehicle tools as the story needs."
         return "Write full journey prose; use wrap_story when inspection output is required."
 
-    @prompt(name="car-start")
     @agent_tool
     def start(self) -> None:
         """Start the engine."""

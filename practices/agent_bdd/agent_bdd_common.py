@@ -418,8 +418,7 @@ def reject_agent_deferral(agent_text: str) -> None:
 
 def invoke_run_request(request: dict[str, Any]) -> RunResponse:
     """Load a toolset and expand or invoke the named member the same way production does."""
-    from primitives.agent_tools.agent_tools import AgentOperation
-    from primitives.installer.toolset_loader import ToolsetLoader
+    from primitives.agent_tools.agent_tools import AgentOperation, AgentToolSet
 
     toolset_path = request.get("toolset")
     if not toolset_path:
@@ -432,7 +431,7 @@ def invoke_run_request(request: dict[str, Any]) -> RunResponse:
 
         SessionLog.instance().set_session(str(session))
     try:
-        instance = ToolsetLoader.instance().load(str(toolset_path))(**context)
+        instance = AgentToolSet.instantiate({"toolset": str(toolset_path), "context": context})
     except TypeError as exc:
         raise AgentHarnessError(str(exc)) from exc
     action_name = request.get("action")

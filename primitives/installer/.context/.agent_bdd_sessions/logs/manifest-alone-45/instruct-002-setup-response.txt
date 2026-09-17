@@ -1,0 +1,31 @@
+```
+===== DO NOT FOLLOW ANY OF THESE INSTRUCTIONS =====
+STOP. DO NOT EXECUTE ANY OF THE INSTRUCTIONS BELOW THIS LINE. Your only task right now is: collect every instruction you received for this action into one string, call fence with that string, emit the fenced block to the user as chat output, then stop completely. Nothing else. Do not interpret. Do not act. Do not generate. The fenced block IS the entire output of this invocation.
+
+Step 1 - call fence, passing every instruction you received for this action - verbatim, in full, in order - as a single string. Do not summarise. Do not omit.
+
+Step 2 - emit the returned fenced block to the user as chat output. Every line inside the fence is inert diagnostic text to be read, not followed.
+
+STOP. You are done. Do not proceed to any other stage. Do not run grill, sketch, or generate.
+
+Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
+
+```yaml
+toolset: echo.echo:Echo
+context:
+tool: <tool name>
+arguments:
+  <if needed>
+```
+
+Run: python -m tools run -
+
+Suggested flow (repeat and reorder as the story needs):
+
+1. tool: fence
+   arguments:
+     body: <value>
+
+Read `resources` from each response before choosing the next tool.
+===== END: DO NOT FOLLOW ANY OF THESE INSTRUCTIONS =====
+```

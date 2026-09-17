@@ -4,13 +4,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from installer.installer_tool import prompt
 from agent_tools import agent_instructions, agent_toolset, instructions, tools
 from agent_tools.agent_tools import agent_tool
 
 _FORMAT_PATH = Path(__file__).parent / "CDR-FORMAT.md"
 _CDR_NAME_RE = re.compile(r"^(\d{4})-")
-
 
 @agent_toolset
 class RecordDecisions:
@@ -66,7 +64,6 @@ class RecordDecisions:
         target.write_text(content.strip() + "\n", encoding="utf-8")
         return str(target)
 
-    @prompt(name="record-decisions-session")
     @agent_instructions
     def record_decisions_session(self, root: str = ".") -> str:
         """Offer and write Context Decision Records (CDRs) sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions."""

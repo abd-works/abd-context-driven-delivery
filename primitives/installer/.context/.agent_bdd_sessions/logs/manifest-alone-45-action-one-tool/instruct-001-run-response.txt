@@ -1,0 +1,1 @@
+The PowerShell block itself isn’t in your message — only the instruction to run it. Paste the full block (every line) and I’ll run it as one command from the repo root.

@@ -17,10 +17,8 @@ import inspect
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from installer.installer_tool import prompt
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import AgentTool
-
 
 @dataclass(frozen=True)
 class SubAgentTool:
@@ -56,7 +54,6 @@ class SubAgentTool:
     def add_to_signature(self, signature: dict[str, Any]) -> None:
         signature[self.name] = self.signature_entry
 
-
 def sub_agent(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as a non-blocking sub-agent launch.
 
@@ -75,7 +72,6 @@ def sub_agent(func: Callable[..., Any]) -> Callable[..., Any]:
     func._is_agent_tool = False  # type: ignore[attr-defined]
     return func
 
-
 def discover_sub_agent_tools(instance: Any) -> dict[str, SubAgentTool]:
     """Return all ``@sub_agent``-marked methods on *instance* as ``SubAgentTool`` objects."""
     discovered: dict[str, SubAgentTool] = {}
@@ -83,7 +79,6 @@ def discover_sub_agent_tools(instance: Any) -> dict[str, SubAgentTool]:
         if getattr(member, "_is_sub_agent", False):
             discovered[name] = SubAgentTool(name=name, callable=getattr(instance, name))
     return discovered
-
 
 @agent_toolset
 class SubAgent:
@@ -94,7 +89,6 @@ class SubAgent:
     Use ``for host in self.listed():`` — same ``arguments.tools`` list the expander binds.
     """
 
-    @prompt(name="sub-agent")
     @sub_agent
     @agent_instructions
     def run(self, tools: list, actions: list | None = None, prompt: str | None = None) -> str:

@@ -57,7 +57,7 @@ def _run_async(coro):
 def _host_params(toolsets: str) -> StdioServerParameters:
     return StdioServerParameters(
         command=str(_PYTHON),
-        args=["-m", "mcp_server", "--toolsets", toolsets],
+        args=["-m", "primitives.mcp", "--toolsets", toolsets],
         cwd=str(_REPO_ROOT),
         env={**__import__("os").environ, "PYTHONPATH": _PYTHONPATH},
     )

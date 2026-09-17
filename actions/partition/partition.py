@@ -5,14 +5,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
 from agent_tools import agent_instructions, agent_toolset
 from primitives.markdown import markdown
 from agent_tools.agent_tools import agent_tool
-
 
 @agent_toolset
 class Partition(LifecycleAction):
@@ -22,7 +20,6 @@ class Partition(LifecycleAction):
     ``arguments.tools``. Workspace open and the hanging session turn come from
     ``LifecycleAction.begin`` / ``end``.
     """
-
 
     @property
     def module_dir(self) -> Path:
@@ -120,7 +117,6 @@ class Partition(LifecycleAction):
             "Hard fail if any new chunk fails named-entry completeness."
         )
 
-    @prompt
     @agent_instructions
     def partition(self,
         tools: list,

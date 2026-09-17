@@ -28,6 +28,84 @@ def sessions_dir(spec_file: str | Path, *, folder: str = ".agent_bdd_sessions") 
     return Path(spec_file).resolve().parent / ".context" / folder
 
 
+CAR = "practices.car.car:Car"
+CAR_CTX = {
+    "fidelity": "road_story",
+    "make": "Dodge",
+    "model": "Charger",
+    "year": 1969,
+    "personality": "General Lee",
+}
+CAR_SKILL = ".cursor/skills/context_tools/car/car/SKILL.md"
+CAR_ROAD_STORY = ".cursor/skills/context_tools/car/car-road-story/SKILL.md"
+TRAVEL_TO = ".cursor/skills/actions/travel-to/SKILL.md"
+CAR_START = ".cursor/skills/context_tools/car/car-start/SKILL.md"
+CAR_INSPECT = ".cursor/skills/actions/car-inspect/SKILL.md"
+_staged_roots: set[str] = set()
+
+
+def car_tool_argument() -> dict:
+    return {"toolset": CAR, "context": dict(CAR_CTX)}
+
+
+def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
+    path = Path(command)
+    key = str(path.as_posix()).replace("\\", "/")
+    if not path.is_file():
+        candidate = (repo_root / path).resolve()
+        key = str(candidate.relative_to(repo_root.resolve()).as_posix()).replace("\\", "/")
+    mapping = {
+        CAR_ROAD_STORY.replace("\\", "/"): {
+            "toolset": CAR,
+            "action": "generate",
+            "context": dict(CAR_CTX),
+        },
+        CAR_START.replace("\\", "/"): {
+            "toolset": CAR,
+            "tool": "start",
+            "context": dict(CAR_CTX),
+        },
+        TRAVEL_TO.replace("\\", "/"): {
+            "toolset": "car_story.car_story:CarStory",
+            "action": "travelTo",
+            "arguments": {
+                "tools": [car_tool_argument()],
+                "destination": "town",
+                "conditions": "dry",
+            },
+        },
+        CAR_INSPECT.replace("\\", "/"): {
+            "toolset": "car_story.car_story:CarStory",
+            "action": "inspect_trip",
+            "arguments": {
+                "tools": [car_tool_argument()],
+                "plan": "Night run to Atlanta.",
+            },
+        },
+    }
+    if key not in mapping:
+        raise KeyError(f"No invoke mapping for deployed path {key!r}")
+    return dict(mapping[key])
+
+
+def stage_invoke_commands(repo_root: Path) -> None:
+    from installer.installer import Installer
+    from primitives.agent_tools.agent_tools import AgentToolSet
+
+    car = AgentToolSet.instantiate(CAR)
+    car.load_fidelities_from_markdown()
+    car_story = AgentToolSet.instantiate("car_story.car_story:CarStory")
+    Installer("Cursor", path=repo_root / ".cursor").install([car, car_story])
+
+
+def ensure_invoke_staged(repo_root: Path) -> None:
+    key = str(repo_root.resolve())
+    if key in _staged_roots:
+        return
+    stage_invoke_commands(repo_root)
+    _staged_roots.add(key)
+
+
 # ---------------------------------------------------------------------------
 # In-process toolset invoke
 # ---------------------------------------------------------------------------
@@ -100,8 +178,6 @@ def run_skill(
     require_agent_shell: bool = False,
 ) -> RunResponse:
     """Invoke a deployed skill path using its fixture run-request mapping."""
-    from installer.installer_invoke_fixtures import invoke_request_for_path
-
     _ = timeout_seconds, require_agent_shell
     request = invoke_request_for_path(command, repo_root=repo_root)
     merged = dict(request)

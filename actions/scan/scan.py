@@ -6,14 +6,12 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from primitives.agent_tools.agent_tools import AgentToolSet, agent_toolset
 from agent_tools.agent_tools import agent_tool
 
 from .scanner import Scanner
 from .scanner_collection import ScannerCollection, ScannerReport
-
 
 class ScanReport:
     """Scan result consumed by eval Repair: ``ok`` plus ``matches(mistake)``."""
@@ -44,7 +42,6 @@ class ScanReport:
                     continue
             return True
         return False
-
 
 @agent_toolset
 class Scan(LifecycleAction):
@@ -94,7 +91,6 @@ class Scan(LifecycleAction):
             result["ok"] = len(result["violations"]) == 0
         return str(result)
 
-    @prompt
     @agent_tool
     def scan(
         self,

@@ -19,7 +19,7 @@ from mamba import before, context, description, it
 from primitives.agent_tools.agent_tools import AgentInstructions
 from workspace.git_repo import DirtyBranchSwitchError, NullGitRepo
 from workspace.workspace import ContextToolHost, PathOverride, Turn, Workspace
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 
 
 with description("a context tool"):
@@ -515,7 +515,7 @@ with description("a context tool"):
 with description("Turn"):
     with context("that is a toolset"):
         with it("should load as workspace.workspace:Turn"):
-            loaded = ToolsetLoader.instance().load("workspace.workspace:Turn")
+            loaded = type(AgentToolSet.instantiate("workspace.workspace:Turn"))
             expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
             expect("turn" in loaded().tools).to(equal(True))
             expect("finish_turn" in loaded().tools).to(equal(True))
@@ -559,7 +559,7 @@ with description("WorkSession"):
             from workspace.workspace import WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="ws-session-load-"))
-            loaded = ToolsetLoader.instance().load("workspace.workspace:WorkSession")
+            loaded = type(AgentToolSet.instantiate("workspace.workspace:WorkSession"))
             kit = loaded(workspace=str(tmp), session="probe-tools")
             expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
             expect("finish_work_session" in kit.tools).to(equal(True))

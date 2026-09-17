@@ -14,18 +14,16 @@ from expects import equal, expect, raise_error
 from mamba import context, description, it
 
 from agent_bdd.spec_helpers import (
+    CAR,
+    CAR_START,
     build_run_request,
+    ensure_invoke_staged,
     generate_similar_prompt,
     generate_similar_rubric,
+    invoke_request_for_path,
     invoke_toolset,
     repo_root_from,
     sessions_dir,
-)
-from installer.installer_invoke_fixtures import (
-    CAR,
-    CAR_START,
-    ensure_invoke_staged,
-    invoke_request_for_path,
 )
 
 

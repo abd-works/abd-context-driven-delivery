@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import inspect
 import re
+import sys
 import textwrap
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable, Mapping, cast, get_args, get_origin
 
 ContextDocument = dict[str, Any]
@@ -92,6 +95,17 @@ class AgentToolSet:
     @property
     def name(self) -> str:
         return AgentToolSet._slugify_class_name(type(self).__name__)
+
+    @property
+    def slug(self) -> str:
+        if self.domain_slug:
+            return str(self.domain_slug).replace("_", "-")
+        return self.name.replace("_", "-")
+
+    @property
+    def registration_name(self) -> str:
+        typ = type(self)
+        return f"{typ.__module__}:{typ.__name__}"
 
     @property
     def description(self) -> str:
@@ -360,8 +374,69 @@ class AgentToolSet:
         return providers
 
     @classmethod
-    def instantiate(cls, context: dict[str, Any] | None = None) -> AgentToolSet:
-        return cls(**(context or {}))
+    def instantiate(cls, item: Any = None) -> Any:
+        if item is None:
+            return cls()
+        if isinstance(item, dict) and "toolset" in item:
+            loaded = cls._load(str(item["toolset"]))
+            return loaded(**(item.get("context") or {}))
+        if isinstance(item, dict):
+            return cls(**item)
+        if isinstance(item, str):
+            return cls._load(item)()
+        return item
+
+    @classmethod
+    def instantiate_all(cls, items: list) -> list:
+        return [cls.instantiate(item) for item in items]
+
+    @classmethod
+    def _check_toolset(cls, candidate: type) -> bool:
+        return isinstance(candidate, type) and getattr(candidate, "_is_agent_toolset", False)
+
+    @classmethod
+    def _load(cls, path: str) -> type:
+        module_name, _, class_name = path.partition(":")
+        if not class_name:
+            raise ValueError(f"expected <module>:<Class>, got {path!r}")
+        try:
+            module = __import__(module_name, fromlist=[class_name])
+        except ModuleNotFoundError:
+            module = cls._load_hyphenated(module_name)
+        loaded = getattr(module, class_name)
+        if not cls._check_toolset(loaded):
+            raise TypeError(f"{path} is not a @agent_toolset class")
+        return loaded
+
+    @classmethod
+    def _load_hyphenated(cls, module_name: str):
+        parts = module_name.split(".")
+        repo = Path(__file__).resolve().parents[2]
+        search_roots = [repo] + [
+            repo / name for name in ("primitives", "utilities", "practices", "actions")
+        ]
+        module_file = None
+        for root in search_roots:
+            search = root
+            for part in parts[:-1]:
+                hyphenated = part.replace("_", "-")
+                candidate = search / hyphenated
+                search = candidate if candidate.is_dir() else search / part
+            candidate_file = search / f"{parts[-1]}.py"
+            if candidate_file.exists():
+                module_file = candidate_file
+                break
+        if module_file is None:
+            raise ModuleNotFoundError(
+                f"No module named {module_name!r} (also tried under {search_roots})"
+            )
+        spec = importlib.util.spec_from_file_location(module_name, module_file)
+        if spec is None or spec.loader is None:
+            raise ModuleNotFoundError(f"Cannot create spec for {module_file}")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = mod
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        return mod
 
     def validate(self) -> None:
         AgentToolSet._validate_toolset_class(type(self))
@@ -379,6 +454,7 @@ class AgentTool:
     name: str
     callable: Callable[..., Any]
     toolset: AgentToolSet
+    _body: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_callable(cls, func: Callable[..., Any]) -> AgentTool:
@@ -433,6 +509,14 @@ class AgentTool:
         return destinations
 
     @property
+    def slug(self) -> str:
+        return self.toolset.slug
+
+    @property
+    def registration_name(self) -> str:
+        return self.toolset.registration_name
+
+    @property
     def deploy_name(self) -> str:
         return (
             getattr(self.callable, "_command_name", None)
@@ -449,9 +533,14 @@ class AgentTool:
         return "none"
 
     @property
+    def docstring(self) -> str:
+        if self._body is not None:
+            return self._body
+        return (inspect.getdoc(self.callable) or "").strip()
+
+    @property
     def description(self) -> str:
-        doc = (self.callable.__doc__ or "").strip()
-        return doc if doc else self.callable.__name__
+        return self.docstring or self.callable.__name__
 
     @property
     def parameters(self) -> dict[str, str]:

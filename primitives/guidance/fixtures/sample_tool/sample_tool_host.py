@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from primitives.guidance.guidance import Guidance, PracticeGuidance
 from primitives.agent_tools.agent_tools import agent_instructions
-from primitives.installer.marks import mcp, skill
+from primitives.harness_files.harness_files import skill
+from primitives.mcp.mcp_server import mcp
 from primitives.markdown import HTML, Markdown, markdown
 
 
@@ -32,6 +33,7 @@ class SampleMcpGuidance(SampleGuidance):
     @skill
     @agent_instructions
     def instructions(self) -> str:
+        """context"""
         return super().instructions
 
 
@@ -53,4 +55,5 @@ class SampleMcpPractice(SamplePracticeWithFidelities):
     @skill
     @agent_instructions
     def instructions(self) -> str:
+        """context"""
         return super().instructions

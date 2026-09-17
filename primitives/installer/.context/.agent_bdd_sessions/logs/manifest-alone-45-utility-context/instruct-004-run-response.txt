@@ -1,0 +1,8 @@
+Ran `.\tools.ps1 run -` from the repo root. Exit code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Empty stdin — no toolset in the request.

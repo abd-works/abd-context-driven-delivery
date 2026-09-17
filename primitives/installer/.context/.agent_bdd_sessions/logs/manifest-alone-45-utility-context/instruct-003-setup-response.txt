@@ -1,0 +1,8 @@
+Constraints acknowledged:
+
+1. Use only the slash/skill catalog you provide  
+2. Do not remanifest  
+3. Do not read `.py` files  
+4. Invoke by piping the YAML fence to `.\tools.ps1 run -`
+
+No catalog body is in this message yet — paste it (or the invoke target) when you want a run.

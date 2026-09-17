@@ -7,7 +7,8 @@ from typing import Any
 
 from actions.scan.rule import RulesCollection
 from primitives.agent_tools.agent_tools import ToolSetCollection, agent_instructions, tools
-from primitives.installer.marks import command, mcp, rules, skill
+from primitives.harness_files.harness_files import command, rules, skill
+from primitives.mcp.mcp_server import mcp
 from primitives.markdown import Markdown, canonical_format, class_file_directory, fidelity_blocks, markdown
 
 
@@ -15,6 +16,17 @@ class Guidance:
     default_format: str = ""
     name: str | None = None
     domain_slug: str | None = None
+
+    @property
+    def slug(self) -> str:
+        if self.domain_slug:
+            return str(self.domain_slug).replace("_", "-")
+        return type(self).__name__.replace("_", "-").lower()
+
+    @property
+    def registration_name(self) -> str:
+        typ = type(self)
+        return f"{typ.__module__}:{typ.__name__}"
 
     def __init__(
         self,
@@ -65,6 +77,7 @@ class Guidance:
     @skill
     @agent_instructions
     def instructions(self) -> str:
+        """context"""
         return "\n\n".join(
             part
             for part in (
@@ -97,6 +110,16 @@ class Guidance:
             is_rules = getattr(member, "_rules", False)
             if not (is_instructions or is_tool or is_rules):
                 continue
+            if is_rules:
+                collection = getattr(self, name, None)
+                if isinstance(collection, RulesCollection):
+                    for slug, rule in collection.entries.items():
+                        if isinstance(rule, RulesCollection):
+                            continue
+                        found[slug] = AgentTool(
+                            name=slug, callable=member, toolset=self, _body=rule.body
+                        )
+                    continue
             found[name] = AgentTool(name=name, callable=member, toolset=self)
         return found
 
@@ -159,11 +182,11 @@ class PracticeGuidance(Guidance):
         """Examples folder content — not part of instructions."""
 
     @property
-   
     @mcp
     @skill
     @agent_instructions
     def instructions(self) -> str:
+        """context"""
         parts = [super().instructions]
         if self.fidelities.entries:
             for fidelity in self.fidelities.entries.values():
@@ -247,6 +270,7 @@ class FidelityGuidance(Guidance):
     @command
     @agent_instructions
     def instructions(self) -> str:
+        """context"""
         return super().instructions
 
     @property

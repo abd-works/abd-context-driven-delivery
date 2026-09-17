@@ -4,12 +4,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from workspace import docs_dir
-
 
 @agent_toolset
 class GrillContext(LifecycleAction):
@@ -78,7 +76,6 @@ class GrillContext(LifecycleAction):
         answers_path.write_text(self._appended_answers_content(existing, heading, body), encoding="utf-8")
         return str(answers_path)
 
-    @prompt(name="grill")
     @agent_instructions
     def grill(self, tools: list) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""

@@ -18,7 +18,7 @@ from mamba import before, context, description, it
 
 from primitives.agent_tools.agent_tools import AgentInstructions
 from sketch import Sketch
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 
 
 with description("Sketch toolset"):
@@ -261,8 +261,10 @@ with description("a sketch action"):
 
 with description("PracticeGuidance host face for sketch"):
     with it("should not expose sketch on practice guidance hosts"):
-        cls = ToolsetLoader.instance().load(
-            "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+        cls = type(
+            AgentToolSet.instantiate(
+                "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+            )
         )
         host = cls()
         expect("sketch" in host.agent_tools).to(equal(False))

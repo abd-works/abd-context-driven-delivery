@@ -4,16 +4,11 @@ from __future__ import annotations
 
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
-from installer.installer_tool import prompt
 from workspace import SessionLog
-from primitives.installer.installation import toolset_ref_for_type
-
-
 @agent_toolset
 class Generate(LifecycleAction):
     """Generate artifacts for provided context tools."""
 
-    @prompt
     @agent_instructions
     def generate(self, tools: list) -> str:
         """generate"""
@@ -24,7 +19,7 @@ class Generate(LifecycleAction):
             self.generate_fixes_from_validate()
             self.add_generate_header_to_generated()
             SessionLog.instance().append(
-                toolset=toolset_ref_for_type(type(tool)),
+                toolset=tool.registration_name,
                 name="generate",
                 summary="generate",
                 ok=True,

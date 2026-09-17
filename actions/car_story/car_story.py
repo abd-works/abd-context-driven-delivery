@@ -1,16 +1,13 @@
 """CarStory — actions that orchestrate Car context tools for scripted trips."""
 from __future__ import annotations
 
-from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset, tools, instructions
-
 
 @agent_toolset
 class CarStory(LifecycleAction):
     """Scripted trip actions over one or more Car context tools."""
 
-    @prompt(name="travel-to")
     @agent_instructions
     def travelTo(self, tools: list, destination: str, conditions: str) -> str:
         """Scripted trip to a destination under stated conditions."""
@@ -26,7 +23,6 @@ class CarStory(LifecycleAction):
             tools(car.speak())
         return f"Instructions for traveling to {destination}"
 
-    @prompt(name="car-inspect")
     @agent_instructions
     def inspect_trip(self, tools: list, plan: str) -> str:
         """Collect the trip plan into one string, call wrap_story, emit the fenced block only."""

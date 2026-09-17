@@ -17,7 +17,7 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 import practices  # noqa: F401 - generator package on path
 from primitives.markdown import Markdown
 from scan import ScannerCollection
@@ -39,7 +39,7 @@ _SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
 def _load_clean_engineering(
     *, format_name: str = "python", fidelity: str = "modules"
 ) -> AgentToolSet:
-    toolset_cls = ToolsetLoader.instance().load(_CLEAN_ENGINEERING_TOOLSET)
+    toolset_cls = type(AgentToolSet.instantiate(_CLEAN_ENGINEERING_TOOLSET))
     return toolset_cls(fidelity=fidelity, format=format_name, session=None)
 
 

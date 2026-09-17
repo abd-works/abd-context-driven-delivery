@@ -29,9 +29,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from installer.installer_tool import prompt
 from agent_tools import agent_tool, agent_toolset
-from primitives.installer.installation import toolset_ref_for_type
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
@@ -61,14 +59,12 @@ UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("sub_agent", "sub_agent.sub_agent", "SubAgent"),
 )
 
-
 def _toolset_name_of(cls: type) -> str:
     """Match ``Toolset.toolset_name`` without needing an instance (that property
     is instance-only; accessing it on the class returns the property object)."""
     import re
 
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", cls.__name__).lower()
-
 
 @dataclass(frozen=True)
 class RegistryEntry:
@@ -79,11 +75,9 @@ class RegistryEntry:
     class_name: str
     cls: type
 
-
 def _load_class(module_path: str, class_name: str) -> type:
     module = importlib.import_module(module_path)
     return getattr(module, class_name)
-
 
 def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
     """Resolve every context-tool and utility registry row to a real class.
@@ -101,7 +95,6 @@ def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
         for name, module_path, class_name in UTILITY_REGISTRY
     ]
     return practices, utilities
-
 
 # -- Fidelity scraping --------------------------------------------------------
 
@@ -124,7 +117,6 @@ _STAGE_FRONTMATTER_TOKENS: dict[str, tuple[str, ...]] = {
     "engineer": ("engineering", "engineer"),
 }
 
-
 @dataclass(frozen=True)
 class FidelityGuidance:
     """One fidelity's key, default format, ``## {fidelity}`` body, and tool overview."""
@@ -133,7 +125,6 @@ class FidelityGuidance:
     default_format: str | None
     guidance: str
     overview: str = ""
-
 
 def _template_frontmatter_blob(text: str) -> str:
     """Return the leading frontmatter block (YAML or ``# ---`` comment form)."""
@@ -153,7 +144,6 @@ def _template_frontmatter_blob(text: str) -> str:
         return "\n".join(blob)
     return ""
 
-
 def _frontmatter_tokens(text: str) -> set[str]:
     blob = _template_frontmatter_blob(text).lower()
     tokens: set[str] = set()
@@ -171,7 +161,6 @@ def _frontmatter_tokens(text: str) -> set[str]:
                 if tok:
                     tokens.add(tok)
     return tokens
-
 
 def resolve_default_template(
     module_dir: Path,
@@ -272,7 +261,6 @@ def resolve_default_template(
     scored.sort(key=lambda pair: (-pair[0], len(pair[1].parts), pair[1].as_posix()))
     return scored[0][1].resolve()
 
-
 def extract_heading_section(markdown: str, heading: str, level: int = 2) -> str | None:
     """Return the body under ``'#' * level + ' ' + heading`` up to the next
     heading of the same or higher level, or ``None`` if the heading is absent.
@@ -301,7 +289,6 @@ def extract_heading_section(markdown: str, heading: str, level: int = 2) -> str 
             break
     return "\n".join(lines[start:end]).strip()
 
-
 def extract_tool_overview(markdown: str) -> str:
     """Prose under the opening H1 until Shared rules / first fidelity ``##``.
 
@@ -325,7 +312,6 @@ def extract_tool_overview(markdown: str) -> str:
     while body_lines and not body_lines[-1].strip():
         body_lines.pop()
     return "\n".join(body_lines).strip()
-
 
 def scrape_fidelities(cls: type) -> list[FidelityGuidance]:
     """For every fidelity in ``cls.fidelities`` (declared stage order), resolve
@@ -357,17 +343,14 @@ def scrape_fidelities(cls: type) -> list[FidelityGuidance]:
         )
     return results
 
-
 def importlib_module_file(module_path: str) -> str:
     """Thin wrapper so ``scrape_fidelities`` needs only one import surface."""
     module = importlib.import_module(module_path)
     return module.__file__  # type: ignore[return-value]
 
-
 # -- Lifecycle action resolution (AST walk) ----------------------------------
 
 _ACTION_DECORATOR_NAME = "agent_instructions"
-
 
 @dataclass(frozen=True)
 class ActionResolution:
@@ -376,7 +359,6 @@ class ActionResolution:
     name: str
     source_dir: Path
     calls: list[str] = field(default_factory=list)
-
 
 def _decorator_names(node: ast.FunctionDef) -> set[str]:
     names: set[str] = set()
@@ -388,7 +370,6 @@ def _decorator_names(node: ast.FunctionDef) -> set[str]:
             names.add(target.attr)
     return names
 
-
 # Plan: emit top-level lifecycle actions; skip override hooks.
 # ``generate_fixes_from_validate`` is a satisfy helper, not its own catalog action.
 # ``improve`` sits after ``repair`` — same peer kit (``utilities/repair/``),
@@ -399,7 +380,6 @@ _LIFECYCLE_ACTION_SKIP = frozenset({
     "add_generate_header_to_generated",
     "generate_fixes_from_validate",
 })
-
 
 def _public_action_methods(tree: ast.Module) -> list[ast.FunctionDef]:
     methods: list[ast.FunctionDef] = []
@@ -416,7 +396,6 @@ def _public_action_methods(tree: ast.Module) -> list[ast.FunctionDef]:
             if _ACTION_DECORATOR_NAME in _decorator_names(item):
                 methods.append(item)
     return methods
-
 
 def _init_peer_kit_attrs(tree: ast.Module) -> dict[str, str]:
     """Map ``self.<attr> = <ClassName>(...)`` assignments in ``__init__`` to
@@ -446,7 +425,6 @@ def _init_peer_kit_attrs(tree: ast.Module) -> dict[str, str]:
                     attr_to_class[target.attr] = call_func.id
     return attr_to_class
 
-
 def _import_module_for_class(tree: ast.Module, class_name: str) -> str | None:
     """Find ``from <module> import <class_name>`` at module top level."""
     for node in tree.body:
@@ -455,7 +433,6 @@ def _import_module_for_class(tree: ast.Module, class_name: str) -> str | None:
                 if alias.name == class_name:
                     return node.module
     return None
-
 
 def _double_attr_calls(body: list[ast.stmt]) -> list[tuple[str, str]]:
     """Every ``self.<attr>.<method>(...)`` call's ``(<attr>, <method>)`` pair,
@@ -487,7 +464,6 @@ def _double_attr_calls(body: list[ast.stmt]) -> list[tuple[str, str]]:
                 pairs.append((owner.attr, func.attr))
     return pairs
 
-
 def _same_instance_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
     """Every ``self.<method>()`` call where ``<method>`` is another public
     action name, in source order, de-duplicated."""
@@ -506,7 +482,6 @@ def _same_instance_action_calls(body: list[ast.stmt], action_names: set[str]) ->
             ):
                 calls.append(func.attr)
     return calls
-
 
 def _host_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
     """``host.<method>()`` or ``Generate().generate(tools=[host])`` kit dispatch."""
@@ -527,7 +502,6 @@ def _host_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str
                 calls.append(func.attr)
     return calls
 
-
 _HOST_LIFECYCLE_ACTIONS = frozenset({
     "generate",
     "document",
@@ -535,7 +509,6 @@ _HOST_LIFECYCLE_ACTIONS = frozenset({
     "satisfy",
     "createRule",
 })
-
 
 def _resolve_actions_from_source(
     path: Path,
@@ -548,7 +521,6 @@ def _resolve_actions_from_source(
     if action_names is not None:
         methods = [m for m in methods if m.name in action_names]
     return [(m.name, m) for m in methods]
-
 
 _KIT_LIFECYCLE_SPECS: tuple[tuple[str, Path, str], ...] = (
         ("partition", _REPO_ROOT / "practices" / "actions" / "partition" / "partition.py", "partition"),
@@ -577,7 +549,6 @@ _LIFECYCLE_KIT_IMPORTS: tuple[tuple[str, str, str], ...] = (
     ("createRule", "practices.actions.validate.validate", "CreateRule"),
 )
 
-
 def resolve_lifecycle_action_owner() -> object:
     """Load live ``AgentTool`` objects for every kit-owned lifecycle action name."""
     actions: dict[str, object] = {}
@@ -597,7 +568,6 @@ def resolve_lifecycle_action_owner() -> object:
     owner.agent_tools = actions
     return owner
 
-
 def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
     """AST-walk kit-owned lifecycle actions (partition, grill, sketch, iterate,
     generate, document, validate, satisfy, repair, createRule, scan)."""
@@ -611,7 +581,6 @@ def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
         calls = _host_action_calls(method.body, {"generate"})
         results.append(ActionResolution(name=name, source_dir=source_dir, calls=calls))
     return results
-
 
 def resolve_lifecycle_actions() -> list[ActionResolution]:
     """Resolve lifecycle action source dirs and same-instance calls from action kits."""
@@ -630,11 +599,9 @@ def resolve_lifecycle_actions() -> list[ActionResolution]:
     )
     return [kit_by_name[name] for name in order if name in kit_by_name]
 
-
 # -- Skill slash-command map --------------------------------------------------
 
 _SKILL_NAME_RE = re.compile(r"^name:\s*(.+?)\s*$", re.MULTILINE)
-
 
 def skill_slash_name(module_dir_name: str) -> str | None:
     """Resolve a context tool's slash-invocable skill name from its deployed
@@ -656,7 +623,6 @@ def skill_slash_name(module_dir_name: str) -> str | None:
 
 # -- Portability: git-URL source citations + CLI defaults --------------------
 
-
 def resolve_repo_remote(repo_root: Path | None = None) -> tuple[str, str]:
     """Resolve ``(repo_url, ref)`` from the local git checkout - the CLI's
     zero-flag defaults (``git remote get-url origin`` + current ``HEAD``)."""
@@ -671,7 +637,6 @@ def resolve_repo_remote(repo_root: Path | None = None) -> tuple[str, str]:
     ).stdout.strip()
     return normalize_repo_url(repo_url), ref
 
-
 def normalize_repo_url(repo_url: str) -> str:
     """Strip a trailing ``.git`` and turn an SSH remote (``git@host:org/repo``)
     into the ``https://host/org/repo`` form ``git_blob_url`` builds on."""
@@ -683,7 +648,6 @@ def normalize_repo_url(repo_url: str) -> str:
     if url.endswith(".git"):
         url = url[: -len(".git")]
     return url
-
 
 def git_blob_url(repo_url: str, ref: str, path: Path, lines: tuple[int, int] | None = None) -> str:
     """Build ``{repo_url}/blob/{ref}/{relative_path}`` - the only source
@@ -705,14 +669,12 @@ def git_blob_url(repo_url: str, ref: str, path: Path, lines: tuple[int, int] | N
         url += f"#L{start}-L{end}" if end != start else f"#L{start}"
     return url
 
-
 def git_blob_url_for_callable(repo_url: str, ref: str, func: object) -> str:
     """Cite a Python callable's own definition - file + line range."""
     source_file = Path(inspect.getsourcefile(func))  # type: ignore[arg-type]
     _, start_line = inspect.getsourcelines(func)  # type: ignore[arg-type]
     end_line = start_line + len(inspect.getsource(func).splitlines()) - 1  # type: ignore[arg-type]
     return git_blob_url(repo_url, ref, source_file, (start_line, end_line))
-
 
 def write_page(out_root: Path, relative_path: str, html: str) -> Path:
     """Write one generated page's literal HTML under ``out_root``.
@@ -727,9 +689,7 @@ def write_page(out_root: Path, relative_path: str, html: str) -> Path:
     target.write_text(html, encoding="utf-8")
     return target
 
-
 # -- Raw run-request YAML (from live toolset manifests) -----------------------
-
 
 def _example_value(name: str, type_str: str) -> object:
     """Placeholder value for a manifest parameter type in a sample request."""
@@ -740,14 +700,12 @@ def _example_value(name: str, type_str: str) -> object:
         return []
     return f"<{name}>"
 
-
 _HOST_LIFECYCLE_KITS = {
     "generate": "generate.generate:Generate",
     "validate": "validate.validate:Validate",
     "satisfy": "satisfy.satisfy:Satisfy",
     "document": "document.document:Document",
 }
-
 
 def build_run_request(
     cls: type,
@@ -779,7 +737,7 @@ def build_run_request(
             "action": action,
             "arguments": {
                 "tools": [
-                    {"toolset": toolset_ref_for_type(cls), "context": host_context},
+                    {"toolset": f"{cls.__module__}:{cls.__name__}", "context": host_context},
                 ]
             },
         }
@@ -797,7 +755,7 @@ def build_run_request(
             context[name] = _example_value(name, str(type_str))
 
     request: dict[str, object] = {
-        "toolset": toolset_ref_for_type(cls),
+        "toolset": f"{cls.__module__}:{cls.__name__}",
         "context": context,
         "action": action,
     }
@@ -807,7 +765,6 @@ def build_run_request(
             for name, type_str in action_params.items()
         }
     return request
-
 
 def dump_run_request_yaml(
     cls: type,
@@ -826,7 +783,6 @@ def dump_run_request_yaml(
         default_flow_style=False,
     )
 
-
 def write_raw_manifests(
     out_root: Path,
     context_tool_entries: list[RegistryEntry],
@@ -835,9 +791,7 @@ def write_raw_manifests(
     """Deprecated — manifest YAML/HTML output removed; kept for import compatibility."""
     return None
 
-
 # -- Illustrated examples -----------------------------------------------------
-
 
 @dataclass(frozen=True)
 class IllustratedExampleRow:
@@ -847,9 +801,7 @@ class IllustratedExampleRow:
     source: str
     anchor: str
 
-
 _TABLE_ROW_RE = re.compile(r"^\|(.+)\|\s*$")
-
 
 def parse_illustrated_examples(markdown: str) -> list[IllustratedExampleRow]:
     """Parse the ``## Illustrated examples`` table (``Fidelity | Source | Anchor``)
@@ -873,17 +825,14 @@ def parse_illustrated_examples(markdown: str) -> list[IllustratedExampleRow]:
         rows.append(IllustratedExampleRow(fidelity=fidelity, source=source, anchor=anchor))
     return rows
 
-
 def extract_whole_file(source_path: Path) -> str:
     """Whole-file illustrated example: the entire source file's content."""
     return source_path.read_text(encoding="utf-8")
-
 
 def extract_comment_tag(text: str, tag: str) -> str:
     """Comment-tag-anchored illustrated example: only the lines carrying the
     given HTML comment tag (e.g. ``<!-- Mu -->``), matched literally."""
     return "\n".join(line for line in text.splitlines() if tag in line)
-
 
 def resolve_illustrated_example(tool_dir: Path, row: IllustratedExampleRow) -> str:
     """Resolve one :class:`IllustratedExampleRow` to its example body, using
@@ -904,7 +853,6 @@ def resolve_illustrated_example(tool_dir: Path, row: IllustratedExampleRow) -> s
     section = extract_heading_section(text, heading, level=level)
     return section if section is not None else text
 
-
 # -- Render model (Clean Engineering pass) ------------------------------------
 #
 # Each class below wraps one real primitive one-for-one and exposes exactly
@@ -920,7 +868,6 @@ def resolve_illustrated_example(tool_dir: Path, row: IllustratedExampleRow) -> s
 # bullets; CatalogFidelity additionally takes the ordered list of
 # ``ActionResolution`` (from ``resolve_lifecycle_actions``) so it knows the
 # 9 actions and their href map without re-deriving them per fidelity page.
-
 
 class CatalogTool:
     """The one-line, hyperlinked rendering of a single real ``@agent_tool`` call
@@ -944,7 +891,6 @@ class CatalogTool:
             except (TypeError, OSError):
                 pass
         return f'<li>{name} <span class="tag">(tool, no page)</span></li>'
-
 
 class CatalogAction:
     """The four-fixed-section rendering of one real ``Action`` - Tools/actions
@@ -1033,7 +979,6 @@ class CatalogAction:
             f"{self._overview_section(source_dir)}"
             f"</section>\n"
         )
-
 
 class CatalogFidelity:
     """The Section-0-quick-invoke-plus-guidance rendering of one fidelity name
@@ -1183,7 +1128,6 @@ class CatalogFidelity:
     def section_0_html(self, skill_name: str, fidelity_name: str, toolset_name: str | None = None) -> str:
         return self._quick_invoke(skill_name, fidelity_name, toolset_name or skill_name)
 
-
 class CatalogContextTool:
     """The context-tool page for one ``BaseContextTool`` instance - Stories,
     DDD, UX, Clean Engineering, BDD, or CDD's own header-row page."""
@@ -1237,7 +1181,6 @@ class CatalogContextTool:
             f"</article>"
         )
 
-
 class CatalogUtility:
     """The utility-row detail page for one plain-utility ``Toolset`` instance."""
 
@@ -1288,7 +1231,6 @@ class CatalogUtility:
             f"</section>\n"
         )
 
-
 def _wire_catalog_renderers(
     repo_url: str,
     ref: str,
@@ -1301,7 +1243,6 @@ def _wire_catalog_renderers(
     catalog_context_tool = CatalogContextTool(repo_url, ref, catalog_fidelity)
     catalog_utility = CatalogUtility(repo_url, ref, catalog_tool, catalog_action)
     return catalog_context_tool, catalog_action, catalog_utility
-
 
 @agent_toolset
 class Catalog:
@@ -1371,7 +1312,6 @@ class Catalog:
             )
         return tools
 
-    @prompt(name="generate-catalog")
     @agent_tool
     def generate_catalog(
         self,

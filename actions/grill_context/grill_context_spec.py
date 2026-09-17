@@ -18,7 +18,7 @@ from mamba import before, context, description, it
 
 from primitives.agent_tools.agent_tools import AgentInstructions
 from grill_context.grill_context import GrillContext
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 
 
 with description("GrillContext toolset"):
@@ -225,8 +225,10 @@ with description("a grill action"):
 
 with description("PracticeGuidance host face for grill"):
     with it("should not expose grill on practice guidance hosts"):
-        cls = ToolsetLoader.instance().load(
-            "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+        cls = type(
+            AgentToolSet.instantiate(
+                "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+            )
         )
         host = cls()
         expect("grill" in host.agent_tools).to(equal(False))

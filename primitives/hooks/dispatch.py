@@ -27,19 +27,19 @@ def _hook_debug_path(filename: str) -> Path:
     return session_log_path(_REPO_ROOT, filename)
 
 
-for _category in ("primitives", "utilities", "primitives/hooks"):
+for _category in ("primitives", "utilities"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from installer.marks import normalize_event
+from primitives.hooks.hooks import hook
 
 
 def toggle_flag(owner: type, method: str, event: str) -> Path:
     slug = owner.__name__.lower()
-    norm = normalize_event(event)
+    norm = hook.normalize_event(event)
     return _REPO_ROOT / ".context" / "hooks" / slug / f"{method}_{norm}.enabled"
 
 

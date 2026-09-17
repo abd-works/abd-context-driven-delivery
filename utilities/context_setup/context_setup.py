@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Optional
 
 from agent_tools import agent_instructions, agent_toolset
-from installer.installer_tool import prompt
 from agent_tools.agent_tools import agent_tool
 from partition.partition import Partition
 
@@ -17,9 +16,7 @@ from practices.stories.stories import Stories
 from practices.ux.ux import Ux
 from context_setup.context_index import ContextIndex
 
-
 # ── Result types ─────────────────────────────────────────────────────────────
-
 
 @dataclasses.dataclass
 class StructureNote:
@@ -30,14 +27,12 @@ class StructureNote:
     heading_count: int     # total number of heading lines
     word_count: int        # approximate word count of the full document
 
-
 @dataclasses.dataclass
 class ConversionResult:
     """All markdown files produced by a single convert() call."""
 
     markdown_files: list[str]
     structure_notes: list[StructureNote]
-
 
 @dataclasses.dataclass
 class ScreenResult:
@@ -48,7 +43,6 @@ class ScreenResult:
     reachable: bool
     status_code: int
 
-
 @dataclasses.dataclass
 class SmokeTestResult:
     """Results of a smoke test run against the stubbed application."""
@@ -56,7 +50,6 @@ class SmokeTestResult:
     passed: bool
     screen_results: list[ScreenResult]
     inventory_path: str
-
 
 @dataclasses.dataclass
 class PageCapture:
@@ -66,7 +59,6 @@ class PageCapture:
     url: str
     screenshot_path: str
     aria_path: str
-
 
 @dataclasses.dataclass
 class ScoutResult:
@@ -84,7 +76,6 @@ class ScoutResult:
     def page_slugs(self) -> list[str]:
         return [p.slug for p in self.page_captures]
 
-
 @dataclasses.dataclass
 class CaptureResult:
     """Results of a Phase N complete-capture run."""
@@ -93,26 +84,21 @@ class CaptureResult:
     added_captures: list[PageCapture]
     total_page_count: int
 
-
 # ── Toolset ───────────────────────────────────────────────────────────────────
 
 _SUPPORTED = frozenset({".docx", ".doc", ".pdf", ".pptx", ".ppt", ".txt", ".md", ".html", ".htm"})
 _STUBS_DIR = ("tests", "stubs")
 _SCOUT_DIR = ("sandbox", "extracted-context", "app-extraction")
 
-
 def _write_root(repo_path: str, capture_repo: str = "") -> Path:
     chosen = (capture_repo or "").strip() or repo_path
     return Path(chosen)
 
-
 def _stubs_root(repo: Path) -> Path:
     return repo.joinpath(*_STUBS_DIR)
 
-
 def _scout_root(repo: Path) -> Path:
     return repo.joinpath(*_SCOUT_DIR)
-
 
 @agent_toolset
 class ContextSetup:
@@ -294,7 +280,6 @@ class ContextSetup:
 
     # ── @agent_instructions — AI reads recipe; owns judgment; calls @tools + collaborators ─
 
-    @prompt(name="capture-from-live-app")
     @agent_instructions
     def capture_from_live_app(self,
         repo_path: str,
@@ -368,7 +353,6 @@ class ContextSetup:
         self.context_index.embed()
         return "Live app captured and indexed."
 
-    @prompt(name="capture-from-documents")
     @agent_instructions
     def capture_from_documents(self,
         folder_path: str,
@@ -408,7 +392,6 @@ class ContextSetup:
         self.context_index.embed()
         return "Documents captured and indexed."
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _analyse(file_path: str, content: str) -> StructureNote:
@@ -424,11 +407,9 @@ def _analyse(file_path: str, content: str) -> StructureNote:
         word_count=word_count,
     )
 
-
 # ── Live-app capture helpers ──────────────────────────────────────────────────
 
 _COMMON_PORTS = [3000, 8000, 8080, 5000, 4000, 5173, 4173]
-
 
 def _detect_base_url() -> str:
     """Return the first localhost port that accepts a TCP connection."""
@@ -442,7 +423,6 @@ def _detect_base_url() -> str:
             except OSError:
                 continue
     return "http://localhost:3000"
-
 
 def _http_smoke(base_url: str, paths: list[str]) -> list[ScreenResult]:
     """HTTP GET each path and return reachability results."""
@@ -462,7 +442,6 @@ def _http_smoke(base_url: str, paths: list[str]) -> list[ScreenResult]:
         results.append(ScreenResult(slug=slug, url=url, reachable=reachable, status_code=status))
     return results
 
-
 def _desktop_smoke(repo_path: str) -> list[ScreenResult]:
     """Check that a desktop process matching the repo name is running."""
     import subprocess
@@ -476,7 +455,6 @@ def _desktop_smoke(repo_path: str) -> list[ScreenResult]:
     except Exception:
         running = False
     return [ScreenResult(slug="desktop-root", url=repo_path, reachable=running, status_code=0 if not running else 200)]
-
 
 def _append_smoke_results(inventory_path: str, results: list[ScreenResult]) -> None:
     """Append a smoke-test results table to the stub inventory file."""
@@ -492,12 +470,10 @@ def _append_smoke_results(inventory_path: str, results: list[ScreenResult]) -> N
     with p.open("a", encoding="utf-8") as f:
         f.writelines(lines)
 
-
 def _slug_from_path(path: str, index: int) -> str:
     """Convert a URL path to a numbered slug like '01-login'."""
     label = path.strip("/").replace("/", "-") or "home"
     return f"{index + 1:02d}-{label}"
-
 
 def _web_capture(base_url: str, paths: list[str], pages_root: Path) -> list[PageCapture]:
     """Use Playwright to capture screenshot + aria.yaml for each path."""
@@ -543,11 +519,9 @@ def _web_capture(base_url: str, paths: list[str], pages_root: Path) -> list[Page
         browser.close()
     return captures
 
-
 def _desktop_capture(repo_path: str, pages_root: Path) -> list[PageCapture]:
     """Placeholder for desktop UIA capture via pywinauto (not yet wired)."""
     return []
-
 
 def _write_extraction_overview(
     overview_path: str,
@@ -574,14 +548,12 @@ def _write_extraction_overview(
         ]
     Path(overview_path).write_text("".join(lines), encoding="utf-8")
 
-
 def _read_existing_slugs(overview_path: str) -> list[str]:
     """Return the list of ## slugs already in the extraction-overview."""
     p = Path(overview_path)
     if not p.exists():
         return []
     return re.findall(r"^## (\S+)", p.read_text(encoding="utf-8"), re.MULTILINE)
-
 
 def _append_extraction_overview(overview_path: str, captures: list[PageCapture]) -> None:
     """Append new page sections to an existing extraction-overview.md."""

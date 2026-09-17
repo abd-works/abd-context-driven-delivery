@@ -16,13 +16,13 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
         sys.path.insert(0, _p)
 
 import practices  # noqa: F401
-from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.agent_tools.agent_tools import AgentToolSet
 
 _OOAD_TOOLSET = "practices.clean_engineering.clean_engineering:CleanEngineering"
 
 
 def _load_clean_engineering(*, fidelity: str = "modules", format: str = "markdown"):
-    toolset_cls = ToolsetLoader.instance().load(_OOAD_TOOLSET)
+    toolset_cls = type(AgentToolSet.instantiate(_OOAD_TOOLSET))
     return toolset_cls(fidelity=fidelity, format=format)
 
 

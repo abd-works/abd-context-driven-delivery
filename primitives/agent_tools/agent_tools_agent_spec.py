@@ -23,7 +23,7 @@ from agent_bdd import (
     sessions_dir,
     tools_run_captures,
 )
-from installer.installer_invoke_fixtures import (
+from agent_bdd.spec_helpers import (
     CAR_SKILL,
     TRAVEL_TO,
     car_tool_argument,

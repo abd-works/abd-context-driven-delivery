@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from primitives.installer.toolset_loader import ToolsetLoader
-from agent_tools import agent_instructions, agent_tool, agent_toolset, instructions, tools
+from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
 from workspace.workspace import SessionModel, Turn, Workspace
 
 
 def listed(host) -> list:
     """Instantiate toolset refs bound on ``host._tool_items`` for lifecycle recipe bodies."""
     raw = getattr(host, "_tool_items", None) or []
-    return ToolsetLoader.instance().instantiate_all(raw)
+    return AgentToolSet.instantiate_all(raw)
 
 
 @agent_toolset

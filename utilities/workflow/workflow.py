@@ -10,8 +10,7 @@ import yaml
 from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
-from installer.installer_tool import prompt
-from installer.marks import skill
+from primitives.harness_files.harness_files import skill
 from agent_tools import agent_instructions, agent_toolset
 from sub_agent.sub_agent import sub_agent
 from agent_tools.agent_tools import agent_tool
@@ -20,13 +19,11 @@ from workspace import Workspace
 from workspace.git_repo import NullGitRepo
 from workspace.workspace import Turn
 
-
 @dataclass(frozen=True)
 class WorkflowConfig:
     project_owner: str
     project_number: int
     default_branch: str = "main"
-
 
 @agent_toolset
 class Workflow:
@@ -138,7 +135,6 @@ class Workflow:
         config = self._load_workflow_config(repo_root)
         return repo.attach_project(config.project_owner, config.project_number)
 
-    @prompt(name="backlog")
     @agent_tool
     def backlog(
         self,
@@ -306,7 +302,6 @@ class Workflow:
             text = path.read_text(encoding="utf-8")
         return text
 
-    @prompt(name="start-ticket")
     @sub_agent
     @agent_tool
     def start(
@@ -350,7 +345,6 @@ class Workflow:
             session.git.checkout_or_create(session.session_branch)
         return {**viewed, **opened}
 
-    @prompt(name="finish-ticket")
     @agent_tool
     def finish(
         self,
@@ -410,13 +404,11 @@ class Workflow:
             "default_branch": config.default_branch,
         }
 
-    @prompt(name="ticket-rules")
     @agent_tool
     def read_ticket_rules(self, workspace: str = "") -> dict[str, object]:
         """Read the repo's workflow rules that govern every ticket action."""
         return {"rules": self._load_workflow_rules(workspace)}
 
-    @prompt(name="update-ticket-labels")
     @agent_tool
     def update_ticket_labels(
         self,
@@ -438,7 +430,6 @@ class Workflow:
         }
 
     @skill(name="tickets")
-    @prompt(name="tickets")
     @agent_instructions
     def manage_tickets(self, request: str, workspace: str = "") -> str:
         """Manage project tickets from {{request}}.
@@ -509,7 +500,6 @@ class Workflow:
             "hint": "Pass any status name to move_ticket(destination=...), or use next/previous.",
         }
 
-    @prompt(name="move-ticket")
     @agent_tool
     def move_ticket(
         self,
@@ -559,7 +549,6 @@ class Workflow:
                 return str(row["status"])
         return ""
 
-    @prompt(name="add-child-ticket")
     @agent_tool
     def add_child_ticket(
         self,
@@ -606,7 +595,6 @@ class Workflow:
             seen.add(parent.number)
         return ancestors
 
-    @prompt(name="merge-child-into-parent")
     @agent_tool
     def merge_child_into_parent(
         self,
@@ -651,7 +639,6 @@ class Workflow:
             raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
         return issue
 
-    @prompt(name="update-ticket")
     @agent_tool
     def update_ticket(
         self,
@@ -666,7 +653,6 @@ class Workflow:
         issue.update(title=normalized_title, body=body)
         return self.view_ticket(ticket, workspace)
 
-    @prompt(name="review-ticket-statuses")
     @agent_tool
     def review_ticket_statuses(
         self,
@@ -687,7 +673,6 @@ class Workflow:
             "total": sum(len(column["tickets"]) for column in columns),
         }
 
-    @prompt(name="align-child-tickets-to-parent")
     @agent_tool
     def align_child_tickets_to_parent(
         self,

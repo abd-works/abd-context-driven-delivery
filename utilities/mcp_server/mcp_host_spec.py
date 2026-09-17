@@ -14,7 +14,7 @@ from expects import contain, equal, expect
 from mamba import before, context, description, it
 
 from practices.actions.iterate.iterate import Iterate
-from mcp_server.mcp_host import _input_schema_for_callable
+from primitives.mcp.mcp_server import McpHost
 from mcp_server.examples.parameter_types.parameter_types import ParameterTypes
 
 
@@ -26,7 +26,7 @@ with description("an MCP host input schema"):
 
     with context("that has been derived from a ParameterTypes echo operation"):
         with before.each:
-            self.schema = _input_schema_for_callable(ParameterTypes().echo)
+            self.schema = McpHost.input_schema_for_callable(ParameterTypes().echo)
             self.properties = self.schema["properties"]
 
         with context("with a string parameter"):
@@ -207,7 +207,7 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_sequence operation"):
         with context("with a Sequence of strings parameter"):
             with it("should advertise JSON Schema array of string"):
-                schema = _input_schema_for_callable(ParameterTypes().echo_sequence)
+                schema = McpHost.input_schema_for_callable(ParameterTypes().echo_sequence)
                 expect(schema["properties"]["value"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
@@ -215,7 +215,7 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_mapping operation"):
         with context("with a Mapping of integer values parameter"):
             with it("should advertise JSON Schema object with integer additionalProperties"):
-                schema = _input_schema_for_callable(ParameterTypes().echo_mapping)
+                schema = McpHost.input_schema_for_callable(ParameterTypes().echo_mapping)
                 expect(schema["properties"]["value"]).to(
                     equal(
                         {
@@ -228,13 +228,13 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_unannotated operation"):
         with context("with an unannotated parameter"):
             with it("should advertise JSON Schema string"):
-                schema = _input_schema_for_callable(ParameterTypes().echo_unannotated)
+                schema = McpHost.input_schema_for_callable(ParameterTypes().echo_unannotated)
                 expect(schema["properties"]["value"]).to(equal({"type": "string"}))
 
     with context("that has been derived from iterate.iterate"):
         with context("with a tools list parameter"):
             with it("should advertise JSON Schema array of string"):
-                schema = _input_schema_for_callable(Iterate.iterate)
+                schema = McpHost.input_schema_for_callable(Iterate.iterate)
                 expect(schema["properties"]["tools"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )

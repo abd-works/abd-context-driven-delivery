@@ -1,0 +1,14 @@
+You are given ONLY this slash/skill catalog. Do not remanifest. Do not read any .py files. When asked to invoke, pipe the YAML fence via .\tools.ps1 run -.
+
+Echo
+
+Wrap body in DO-NOT-FOLLOW fences.
+
+through the tools cli
+
+Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
+```yaml
+toolset: echo.echo:Echo
+tool: fence
+```
+.\tools.ps1 run -

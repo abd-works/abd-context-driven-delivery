@@ -9,14 +9,11 @@ from pathlib import Path
 
 from grill_context.grill_context import GrillContext
 from lifecycle import LifecycleAction
-from installer.installer_tool import prompt
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from workspace import docs_dir
 
-
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
-
 
 @agent_toolset
 class Sketch(LifecycleAction):
@@ -101,7 +98,6 @@ class Sketch(LifecycleAction):
         Grill must validate the sketch's thinking here — not run as a disconnected interview."""
         return "sketch-review"
 
-    @prompt
     @agent_instructions
     def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
