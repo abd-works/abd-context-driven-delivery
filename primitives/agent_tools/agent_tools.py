@@ -584,7 +584,7 @@ class AgentInstructions(AgentTool):
 
     def expand(self, context: dict[str, Any], arguments: dict[str, Any]) -> ExpansionResult:
         del context
-        self._scan()
+        self._scan(arguments=arguments)
         parameter_names = set(self.parameters)
         result = self._substitute(
             self.result_template, arguments, parameter_names, instance=self.toolset,
@@ -602,13 +602,14 @@ class AgentInstructions(AgentTool):
         visited: frozenset[tuple[str, str]] | None = None,
         defining_class: type | None = None,
         reset: bool = True,
+        arguments: dict[str, Any] | None = None,
     ) -> None:
         if reset:
             self._prompt = []
             self._tools = []
             self._seen_prompt = set()
             self._loop_item_modes = {}
-            self._execution_locals = {}
+            self._execution_locals = dict(arguments or {})
         self._defining_class = defining_class
         self._mode = self._read_mode(self.toolset)
         self._visited = self._check_and_advance_visited(
