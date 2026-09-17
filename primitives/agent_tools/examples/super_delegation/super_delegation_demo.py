@@ -15,10 +15,10 @@ class SuperBase:
         return "work done"
 
     @agent_instructions
-    def generate(recipe) -> str:
+    def generate(self) -> str:
         """Base generate instructions."""
         "Base generate instructions."
-        tools(recipe.toolset.do_work())
+        tools(self.do_work())
         return "generate done"
 
 
@@ -27,7 +27,7 @@ class ExplicitSuperChild(SuperBase):
     """Child that calls super().generate() explicitly."""
 
     @agent_instructions
-    def generate(recipe) -> str:
+    def generate(self) -> str:
         """Child generate instructions."""
         "Child generate instructions."
         super().generate()
@@ -39,7 +39,7 @@ class EmptySuperChild(SuperBase):
     """Child with empty body - auto-delegates to parent generate."""
 
     @agent_instructions
-    def generate(recipe) -> str: ...
+    def generate(self) -> str: ...
 
 
 @agent_toolset
@@ -47,6 +47,6 @@ class EmptyWithReturn(SuperBase):
     """Empty steps but custom return - parent tools/prose, child result template."""
 
     @agent_instructions
-    def generate(recipe) -> str:
+    def generate(self) -> str:
         ...
         return "child result only"

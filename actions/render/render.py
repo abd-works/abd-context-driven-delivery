@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from primitives.agent_tools.agent_tools import agent_toolset
 from agent_tools.agent_tools import agent_tool

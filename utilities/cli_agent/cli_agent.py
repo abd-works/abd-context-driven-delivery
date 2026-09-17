@@ -13,7 +13,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from primitives.agent_tools.agent_tools import agent_toolset
 from sub_agent.sub_agent import SubAgent, sub_agent
 from agent_tools.agent_tools import agent_tool

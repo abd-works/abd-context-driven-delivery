@@ -5,12 +5,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
 from agent_tools import agent_instructions, agent_toolset
-from primitives.instructions import instruction
+from primitives.markdown import markdown
 from agent_tools.agent_tools import agent_tool
 
 
@@ -63,7 +63,7 @@ class Partition(LifecycleAction):
             expected_names=expected_names,
         )
 
-    @instruction
+    @markdown
     def partition_guidance(self) -> str: ...
 
     def _read_partition_index(
@@ -99,8 +99,7 @@ class Partition(LifecycleAction):
         )
       
     @agent_instructions
-    def partition_corpus(
-        recipe,
+    def partition_corpus(self,
         context: str,
         mode: str = "one_go",
         out_root: str | None = None,
@@ -123,8 +122,7 @@ class Partition(LifecycleAction):
 
     @prompt
     @agent_instructions
-    def partition(
-        recipe,
+    def partition(self,
         tools: list,
         context: str,
         mode: str = "one_go",

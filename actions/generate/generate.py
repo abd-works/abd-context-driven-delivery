@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from workspace import SessionLog
-from primitives.harness.deployment import toolset_ref_for_type
+from primitives.installer.installation import toolset_ref_for_type
 
 
 @agent_toolset
@@ -15,7 +15,7 @@ class Generate(LifecycleAction):
 
     @prompt
     @agent_instructions
-    def generate(recipe, tools: list) -> str:
+    def generate(self, tools: list) -> str:
         """generate"""
         self.begin(tools, action="generate")
         for tool in self.listed():
@@ -34,7 +34,7 @@ class Generate(LifecycleAction):
         return "When done, run validate."
 
     @agent_instructions
-    def add_generate_header_to_generated(recipe) -> str:
+    def add_generate_header_to_generated(self) -> str:
         """Prepend the following block verbatim as the very first lines of the file you are writing - before any imports, before any code."""
         return (
             '"""\n'
@@ -42,11 +42,11 @@ class Generate(LifecycleAction):
         )
 
     @agent_instructions
-    def generate_output(recipe) -> str:
+    def generate_output(self) -> str:
         """"""
         return ""
 
     @agent_instructions
-    def generate_fixes_from_validate(recipe) -> str:
+    def generate_fixes_from_validate(self) -> str:
         """generate_fixes_from_validate"""
         return ""

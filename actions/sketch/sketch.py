@@ -9,7 +9,7 @@ from pathlib import Path
 
 from grill_context.grill_context import GrillContext
 from lifecycle import LifecycleAction
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from workspace import docs_dir
@@ -103,7 +103,7 @@ class Sketch(LifecycleAction):
 
     @prompt
     @agent_instructions
-    def sketch(recipe, tools: list) -> str:
+    def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
         """Sketch interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.path (durable {path}/.context/) — not session.folder. Module sketches: {session.path}/{module}. Question shape (frame + options) comes from grill_with_context - do not restate bare options here. Hard rule: call save_sketch as soon as the first interim draft exists; overwrite on every regeneration; call review_sketch after every save_sketch and do not ask the next grill question until the person confirms the sketch is correct. Never defer persistence or review to the end of the grill. Mistakes named in review (bad assumptions, poor performance, poor hygiene, or anything else) must be carried forward into the next sketch — correct the model; do not regenerate as if those mistakes never happened. Grill validates what the sketch claimed — sketch and grill must not run disconnected."""
         """Step 0 - Grill the sketch plan (concept-grounded, thinking-first questions via grill_with_context). Batch very similar questions into one AskQuestion when they share a frame (e.g. port-as-is vs change for several peers) so the loop does not run forever."""

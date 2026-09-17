@@ -97,7 +97,7 @@ with description("an MCP host over stdio"):
             expect(names).to(contain("hosting_demo.increment"))
             expect(names).to(contain("hosting_demo.read_count"))
 
-        with it("should list @instruction operations in list_prompts"):
+        with it("should list HostingDemo prompt-facing operations in list_prompts"):
             prompts = _run_async(
                 _with_session(_HOSTING_DEMO, lambda session: session.list_prompts())
             )
@@ -105,7 +105,7 @@ with description("an MCP host over stdio"):
                 contain("hosting_demo.plan_work")
             )
 
-        with it("should list @instruction operations in list_tools for host invocation"):
+        with it("should list HostingDemo operations in list_tools for host invocation"):
             tools = _run_async(
                 _with_session(_HOSTING_DEMO, lambda session: session.list_tools())
             )
@@ -132,7 +132,7 @@ with description("an MCP host over stdio"):
             expect(first).to(equal("4"))
             expect(second).to(equal("5"))
 
-        with context("with an @instruction that references @agent_tool calls in its body"):
+        with context("with a HostingDemo operation that calls another @agent_tool"):
             with it("should run orchestration through tools/call"):
                 result = _run_async(
                     _with_session(

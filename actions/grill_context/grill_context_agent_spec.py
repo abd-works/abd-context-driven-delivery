@@ -36,13 +36,10 @@ with description("a GrillContext toolset"):
             self._ag = agent(_REPO_ROOT, _SESSIONS / "grill-write.json")
             self.session = self._ag.__enter__()
             self.explore_response = self.session.instruct_run(
-                "Using shell, run exactly: python -m harness run -\n"
-                "Pipe this YAML on stdin:\n"
                 f"toolset: {_TOOLSET}\n"
                 "tool: explore_context_files\n"
                 "arguments:\n"
-                f"  root: '{_GRILL_CONTEXT_DIR}'\n"
-                "Return the complete fenced YAML stdout from the CLI.",
+                f"  root: '{_GRILL_CONTEXT_DIR}'\n",
                 timeout_seconds=90,
             )
 
@@ -76,8 +73,6 @@ with description("a GrillContext toolset"):
             self.session2 = self._ag2.__enter__()
             self._tmpdir = tempfile.mkdtemp()
             self.write_response = self.session2.instruct_run(
-                "Using shell, run exactly: python -m harness run -\n"
-                "Pipe this YAML on stdin:\n"
                 f"toolset: {_TOOLSET}\n"
                 "tool: write_grill_answer\n"
                 "arguments:\n"
@@ -85,8 +80,7 @@ with description("a GrillContext toolset"):
                 "  heading: 'How explore_context_files discovers files'\n"
                 "  body: 'It scans recursively for files whose name contains context "
                 "or that live inside a .context/ subfolder, skipping __pycache__ and "
-                "private underscore-prefixed paths.'\n"
-                "Return the complete fenced YAML stdout from the CLI.",
+                "private underscore-prefixed paths.'\n",
                 timeout_seconds=90,
             )
 

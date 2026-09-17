@@ -1134,11 +1134,11 @@ You now have both:
 2026-09-10T01:09:43Z  afterAgentResponse  conv=da07d78b  gen=7238ebbc  model=composer-2.5
 ------------------------------------------------------------------------------
 
-text: MCP mode for `/deploy-harness` is implemented and the skills have been regenerated.
+text: MCP mode for `/install` is implemented and the skills have been regenerated.
 
 ### Harness MCP transport
-- Added `primitives/harness/transport.py` with `render_mcp_tool_reference()` / `render_mcp_invoke()` — dotted names like `bdd.find_examples(...)`.
-- `write_deploy(mcp=True)` sets `transport: "mcp"` on all emitted payloads and writes `.cursor/mcp.json` for Cursor (all walked toolsets + `harness.harness:Harness`).
+- Added `primitives/installer/transport.py` with `render_mcp_tool_reference()` / `render_mcp_invoke()` — dotted names like `bdd.find_examples(...)`.
+- `install(mcp=True)` sets `transport: "mcp"` on all emitted payloads and writes `.cursor/mcp.json` for Cursor (all walked toolsets + `installer.installer:Harness`).
 - `bodies.py`, `skill.py`, `prompt.py`, and `instruction.py` thread transport through to skill tails.
 - Format skills use prose instead of a fake toolset slug: *"Use the in-sc
 ... [39 lines, 1822 chars total]
@@ -1264,7 +1264,7 @@ The MCP host is up. `cdd.ping` is a built-in health check on every stdio host �
 text: Full MCP harness deploy finished successfully.
 
 **Deployed to:** `.cursor/`  
-**Sources written:** 90+ skills/prompts/rules — all actions (`generate`, `validate`, `sketch`, …), context tools (`bdd`, `cdd`, `stories`, …), utilities (`workflow`, `git`, `echo`, …), format prompts, and harness (`deploy-harness`, `clean-harness`)
+**Sources written:** 90+ skills/prompts/rules — all actions (`generate`, `validate`, `sketch`, …), context tools (`bdd`, `cdd`, `stories`, …), utilities (`workflow`, `git`, `echo`, …), format prompts, and harness (`install`, `clean-harness`)
 
 Skills now use MCP tails (`Use MCP tool: \`...\``), and `.cursor/mcp.json` was regenerated with all walked toolsets. The `tickets` skill now mentions `list_project_statuses` for board columns.
 
@@ -1276,9 +1276,9 @@ text: Done.
 
 1. **Cleared readonly flags** on `.cursor/skills` (Windows had blocked the first clean attempt).
 2. **`clean-harness`** — removed `.cursor/skills`, `.cursor/rules`, and `hooks.json`.
-3. **`deploy-harness`** — full manifest deploy with **`mcp: true`**, **`no_manifest: false`**, **`code_language: python`**.
+3. **`install`** — full manifest deploy with **`mcp: true`**, **`no_manifest: false`**, **`code_language: python`**.
 
-Verified: skills use `Use MCP tool: \`...\`` tails (no `tools.ps1`), and `.cursor/mcp.json` lists all toolsets including `harness.harness:Harness`.
+Verified: skills use `Use MCP tool: \`...\`` tails (no `tools.ps1`), and `.cursor/mcp.json` lists all toolsets including `installer.installer:Harness`.
 
 ==============================================================================
 2026-09-10T02:01:54Z  afterAgentResponse  conv=da07d78b  gen=aa6b55e4  model=composer-2.5

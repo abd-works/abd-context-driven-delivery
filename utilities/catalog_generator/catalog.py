@@ -14,7 +14,7 @@ class Catalog(HTML):
 
     @classmethod
     def from_registry(cls, hosts: Iterable[Any] | None = None) -> Catalog:
-        from primitives.harness.registry import Registry
+        from primitives.installer.registry import Registry
 
         catalog = cls()
         for host in list(hosts) if hosts is not None else Registry.load():

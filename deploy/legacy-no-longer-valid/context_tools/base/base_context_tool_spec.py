@@ -17,8 +17,7 @@ from mamba import before, context, description, it
 
 from primitives.agent_tools.agent_tools import _AgentToolRunRequest, _AgentToolRunner
 import context_tools  # noqa: F401 - generator package on path
-from primitives.instructions import Instruction
-from primitives.instructions import _path_for_name
+from primitives.markdown import Instruction, _path_for_name
 from tools.tool import Toolset, _ToolsetLoader
 
 from context_tools.base.base_context_tool import BaseContextTool

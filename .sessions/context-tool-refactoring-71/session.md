@@ -74,7 +74,7 @@ https://github.com/abd-works/abd-context-driven-delivery/issues/21
 
 # Catalog and harness likely overlap on classes, skills, actions, and render
 
-Guidance for this ticket came from `utilities/catalog_generator` and `primitives/harness` (not a domain context tool such as Bdd or Stories).
+Guidance for this ticket came from `utilities/catalog_generator` and `primitives/installer` (not a domain context tool such as Bdd or Stories).
 
 ## Forward requirements (from prompt)
 
@@ -103,8 +103,8 @@ Guidance for this ticket came from `utilities/catalog_generator` and `primitives
 
 - `utilities/catalog_generator/.context/module-context.md`
 - `utilities/catalog_generator/catalog_generator.py`
-- `primitives/harness/harness.py`
-- `primitives/harness/.context/harness-sketch.md`
+- `primitives/installer/harness.py`
+- `primitives/installer/.context/harness-sketch.md`
 - `.context/context-index.md`
 
 ### #19 — Investigate whether domain transform and render can live on BaseContextTool
@@ -139,7 +139,7 @@ https://github.com/abd-works/abd-context-driven-delivery/issues/19
 
 ## Golden deploy reference
 
-- **Path:** `.cursor copy/` (repo root, local — successful `write_deploy(mcp=True)` snapshot)
+- **Path:** `.cursor copy/` (repo root, local — successful `install(mcp=True)` snapshot)
 - **Use:** compare deploy test output (skills, `mcp.json`, rules, MCP tails) to matching paths under `.cursor copy/`
 - **Note:** fidelity commands appear as skills `{slug}-{fidelity}` in MCP golden, not only under `commands/`
 

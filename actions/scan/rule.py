@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any, Iterator
 
-from primitives.agent_tools.agent_tools import instructions
+from primitives.agent_tools.agent_tools import instructions, tools
 
 from .scanner import Scanner
 
@@ -30,6 +30,7 @@ class Rule:
             self.body,
         )
         if self.scanner is not None:
+            tools(self.scanner.scan)
             text = text + "\nRun the scanner for this rule."
         return text
 

@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
-from practices.base.base_context_tool import BaseContextTool
-from primitives.agent_tools.agent_tools import agent_instructions
-from primitives.instructions import instruction
-from primitives.tools.tool import agent_tool  # noqa: F401
+from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
+from practices.workspace_bind import init_practice_guidance
+from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
+from primitives.guidance.guidance import PracticeGuidance
+from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
+    from practices.clean_engineering.clean_engineering import CleanEngineering
     from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -49,24 +51,29 @@ def _resolve_format(fidelity: str, format: str | None) -> str:
     return resolved
 
 
-class Bdd(BaseContextTool):
+@agent_toolset
+class Bdd(PracticeGuidance):
     """# Instructions
 
     Depends on CleanEngineering (lazy import in ce() and transform to avoid circular imports at
     module load time).
     """
 
+    domain_slug = "bdd"
     default_workspace_folder: str = "src"
     context_index_key: str = "bdd"
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
-
-    fidelities = {
-        BaseContextTool.DISCOVERY: "modules",
-        BaseContextTool.SPEC:      "behavior",
-        BaseContextTool.ENGINEER:  "development",
+    STAGE_TO_FIDELITY = {
+        DISCOVERY: "modules",
+        SPEC: "behavior",
+        ENGINEER: "development",
     }
+
+    @classmethod
+    def resolve_fidelity(cls, fidelity: str) -> str:
+        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
 
     def __init__(
         self,
@@ -78,21 +85,27 @@ class Bdd(BaseContextTool):
     ) -> None:
         fidelity = type(self).resolve_fidelity(fidelity)
         resolved_format = _resolve_format(fidelity, format)
-        super().__init__(
-            format=resolved_format, path=path, session=session, workspace=workspace
+        init_practice_guidance(
+            self,
+            format=resolved_format,
+            path=path,
+            session=session,
+            workspace=workspace,
+            fidelity=fidelity,
+            stage_to_fidelity=self.STAGE_TO_FIDELITY,
         )
-        self.fidelity = fidelity
 
     # -- CleanEngineering companion ------------------------------------------
 
-    def ce(self) -> "BaseContextTool":
+    def ce(self) -> "CleanEngineering":
         """CleanEngineering companion at the matching fidelity (tool mode — invoke separately when ready)."""
         # lazy import: avoids circular import at module load
         from practices.clean_engineering.clean_engineering import CleanEngineering
 
+        ce_fidelity = _CE_FIDELITY[self.fidelity]
         instance = CleanEngineering(
-            fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
-            path=self._raw_path,
+            fidelity=ce_fidelity,
+            path=self.path,
             session=(
                 self.workspace.current_work_session.name
                 if self.workspace.current_work_session
@@ -113,7 +126,7 @@ class Bdd(BaseContextTool):
     # -- Lifecycle actions: BDD first, then CE classes -----------------------
 
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Provide guidance for creating behavior skeletons and development tests.
         At modules fidelity: no BDD spec file is written — bootstrap CE class structure via the companion.
         At behavior fidelity: write all BDD test signatures (SIGNATURE markers).

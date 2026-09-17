@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from primitives.agent_tools.agent_tools import AgentToolSet, agent_toolset
 from agent_tools.agent_tools import agent_tool

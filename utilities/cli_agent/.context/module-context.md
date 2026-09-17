@@ -38,5 +38,5 @@ Register named job templates under the project templates root (default `utilitie
 
 - `sub_agent` (one-way)
 - `workspace` — WorkSession for doer and judge identity (one-way)
-- `harness.harness_tool` (one-way)
+- `harness.installer_tool` (one-way)
 - `primitives.agent_tools` (one-way)

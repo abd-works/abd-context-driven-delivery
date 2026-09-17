@@ -1,7 +1,7 @@
 """Diagnose toolset - launch the disciplined bug-fixing loop as a non-blocking sub-agent."""
 from __future__ import annotations
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from sub_agent.sub_agent import sub_agent
 from agent_tools import agent_tool, agent_toolset
 

@@ -33,13 +33,13 @@ class LoggedProbe:
         return "silent"
 
     @agent_instructions
-    def narrate(recipe, message: str) -> str:
+    def narrate(self, message: str) -> str:
         """Narrate by pinging once."""
-        tools(recipe.toolset.ping(message))
+        tools(self.ping(message))
         return "told"
 
     @agent_instructions
-    def mute(recipe) -> str:
-        """Action without a run append in the recipe."""
-        tools(recipe.toolset.quiet())
+    def mute(self) -> str:
+        """Action without a run append in the @agent_instructions body."""
+        tools(self.quiet())
         return "muted"

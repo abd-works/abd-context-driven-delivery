@@ -180,7 +180,7 @@ Proposed apply (method names). No courier row until we pick:
 | 2A | `Document.run_document_scan` | scan + Ddd workspace default |
 | 2A | `Drawio.drawio_render_pipeline` | `create_diagram`, `scan`, `repair` launch |
 | 2A | `Workflow.backlog_capture` | `compact_handoff`, `capture_backlog` |
-| 2A | `Harness.deploy_generate` | `suggested_deploy_path`, `write_deploy` |
+| 2A | `Harness.deploy_generate` | `suggested_deploy_path`, `install` |
 | 2C | `GrillContext.read_context_files` | repeated `read_context_file` |
 
 Optional / lower: `satisfy_validate_and_fix`, `generate_via_bdd`, `capture_documents_pipeline`, `sketch_persist_draft`, `iterate_tick`, `echo_session_fenced`.

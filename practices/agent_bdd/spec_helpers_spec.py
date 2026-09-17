@@ -14,107 +14,63 @@ from expects import equal, expect, raise_error
 from mamba import context, description, it
 
 from agent_bdd.spec_helpers import (
-    command_fence_yaml,
-    dump_run_yaml,
+    build_run_request,
     generate_similar_prompt,
     generate_similar_rubric,
-    parse_command_fence,
+    invoke_toolset,
     repo_root_from,
-    run_yaml_from_command,
     sessions_dir,
-    tools_run_prompt,
-    tools_run_prompt_from_command,
 )
-from harness.harness_invoke_fixtures import (
+from installer.installer_invoke_fixtures import (
     CAR,
-    CAR_ROAD_STORY,
     CAR_START,
-    stage_invoke_commands,
+    ensure_invoke_staged,
+    invoke_request_for_path,
 )
 
 
 with description("spec_helpers"):
-    with context("dump_run_yaml"):
+    with context("build_run_request"):
         with it("should serialize an action request"):
-            body = dump_run_yaml(
+            payload = build_run_request(
                 toolset="pkg:Tool",
                 action="generate",
                 context={"format": "python"},
             )
-            expect("toolset: pkg:Tool" in body).to(equal(True))
-            expect("action: generate" in body).to(equal(True))
-            expect("format: python" in body).to(equal(True))
+            expect(payload["toolset"]).to(equal("pkg:Tool"))
+            expect(payload["action"]).to(equal("generate"))
+            expect(payload["context"]["format"]).to(equal("python"))
 
         with it("should serialize a tool request with arguments"):
-            body = dump_run_yaml(
+            payload = build_run_request(
                 toolset="pkg:Tool",
                 tool="scan",
                 arguments={"paths": ["a.py"]},
             )
-            expect("tool: scan" in body).to(equal(True))
-            expect("paths" in body).to(equal(True))
+            expect(payload["tool"]).to(equal("scan"))
+            expect(payload["arguments"]["paths"]).to(equal(["a.py"]))
 
         with it("should reject missing tool and action"):
-            expect(lambda: dump_run_yaml(toolset="pkg:Tool")).to(raise_error(ValueError))
+            expect(lambda: build_run_request(toolset="pkg:Tool")).to(raise_error(ValueError))
 
         with it("should reject both tool and action"):
             expect(
-                lambda: dump_run_yaml(toolset="pkg:Tool", tool="scan", action="generate")
+                lambda: build_run_request(toolset="pkg:Tool", tool="scan", action="generate")
             ).to(raise_error(ValueError))
 
-    with context("tools_run_prompt"):
-        with it("should wrap YAML for stdin tools run via tools.ps1 (#45)"):
-            prompt = tools_run_prompt("toolset: X\naction: generate\n")
-            expect("tools.ps1 run -" in prompt).to(equal(True))
-            expect("action: generate" in prompt).to(equal(True))
-            expect("python -m harness manifest" in prompt).to(equal(False))
-
-        with it("should round-trip yaml via yaml_from_prompt"):
-            from agent_bdd.agent_bdd_common import yaml_from_prompt
-
-            yaml = dump_run_yaml(toolset="agent_tools.examples.car:Car", tool="start")
-            prompt = tools_run_prompt(yaml)
-            body = yaml_from_prompt(prompt)
-            expect(body.strip()).to(equal(yaml.strip()))
-
-    with context("deployed command fences"):
-        with it("should parse car.road_story.md invoke fence"):
+    with context("invoke_toolset"):
+        with it("should invoke car-start in-process"):
             root = repo_root_from(__file__, parents=2)
-            stage_invoke_commands(root)
-            payload = parse_command_fence(CAR_ROAD_STORY, repo_root=root)
-            expect(payload.get("toolset")).to(equal(CAR))
-            expect(payload.get("action")).to(equal("generate"))
-
-        with it("should build run yaml from travel-to.md with tools argument"):
-            root = repo_root_from(__file__, parents=2)
-            stage_invoke_commands(root)
-            from harness.harness_invoke_fixtures import TRAVEL_TO, car_tool_argument
-
-            body = run_yaml_from_command(
-                TRAVEL_TO,
-                repo_root=root,
-                arguments={
-                    "tools": [car_tool_argument()],
-                    "destination": "town",
-                    "conditions": "dry",
-                },
+            ensure_invoke_staged(root)
+            request = invoke_request_for_path(CAR_START, repo_root=root)
+            response = invoke_toolset(
+                toolset=request["toolset"],
+                tool=request["tool"],
+                context=request.get("context"),
             )
-            expect("action: travelTo" in body).to(equal(True))
-            expect("destination: town" in body).to(equal(True))
-
-        with it("should build tools run prompt from deployed car-start fence"):
-            root = repo_root_from(__file__, parents=2)
-            stage_invoke_commands(root)
-            prompt = tools_run_prompt_from_command(CAR_START, repo_root=root)
-            expect("tool: start" in prompt).to(equal(True))
-            expect("tools.ps1 run -" in prompt).to(equal(True))
-
-        with it("should return the exact fence body from car-start.md"):
-            root = repo_root_from(__file__, parents=2)
-            stage_invoke_commands(root)
-            fence = command_fence_yaml(CAR_START, repo_root=root)
-            expect("tool: start" in fence).to(equal(True))
-            expect("toolset: practices.car.car:Car" in fence).to(equal(True))
+            expect(response.ok).to(equal(True))
+            expect(response.tool).to(equal("start"))
+            expect(response.toolset).to(equal(CAR))
 
     with context("path helpers"):
         with it("should resolve sessions beside the spec file"):
@@ -126,7 +82,6 @@ with description("spec_helpers"):
         with it("should resolve repo root from this package"):
             root = repo_root_from(__file__, parents=2)
             expect((root / "practices" / "agent_bdd").is_dir()).to(equal(True))
-
 
     with context("a pass fixture handed to generate"):
         with it("should ask the agent to generate something similar"):

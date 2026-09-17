@@ -4,8 +4,8 @@
 
 - **Stage:** (unset)
 - **Last work:** (see session progress below)
-- **Next action:** Implement Experiment 1 composite harness subtyping extension in primitives/harness
-- **Next focus:** Implement Experiment 1 composite harness subtyping extension in primitives/harness
+- **Next action:** Implement Experiment 1 composite harness subtyping extension in primitives/installer
+- **Next focus:** Implement Experiment 1 composite harness subtyping extension in primitives/installer
 
 ## Artifacts to read
 

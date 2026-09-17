@@ -7,7 +7,7 @@ disable-model-invocation: true
 finish_work_session — close the current work session.
 
         Before calling: in the session worktree run ``git status``. Delete only temps
-        you know are ephemeral from this session (examples: ``Harness.write_deploy``
+        you know are ephemeral from this session (examples: ``Harness.install``
         output under ``.cursor/commands`` and ``.cursor/skills``, agent BDD run logs
         under ``.context/.agent_bdd_sessions/`` from spec runs, ``_req*.yaml`` scratch
         files). Use session context — do not delete durable generate, product files, or

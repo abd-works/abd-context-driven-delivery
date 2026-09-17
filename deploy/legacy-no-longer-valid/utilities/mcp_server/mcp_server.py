@@ -7,7 +7,7 @@ import textwrap
 from collections.abc import Callable
 from typing import Protocol
 
-from primitives.instructions import set_active_tool_invoker
+from primitives.markdown import set_active_tool_invoker
 from tools.tool import _ToolsetLoader as _CddToolsetLoader
 
 

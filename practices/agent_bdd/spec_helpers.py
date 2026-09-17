@@ -1,18 +1,16 @@
-"""Shared helpers for agent BDD specs — YAML run prompts, path layout, assertions.
+"""Shared helpers for agent BDD specs — in-process invoke, path layout, assertions.
 
-Specs stay thin: build request YAML, call harness free functions, assert response fields.
+Specs stay thin: build a run request, invoke through toolset_invoke, assert response fields.
 Import from ``agent_bdd.spec_helpers`` (or re-exports on ``agent_bdd``).
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import yaml
 from expects import be_true, equal, expect
 
-from agent_bdd.agent_bdd_common import RunResponse, looks_like_tools_run_output
+from agent_bdd.agent_bdd_common import RunResponse, invoke_run_request
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -30,19 +28,19 @@ def sessions_dir(spec_file: str | Path, *, folder: str = ".agent_bdd_sessions") 
 
 
 # ---------------------------------------------------------------------------
-# tools run YAML + prompts
+# In-process toolset invoke
 # ---------------------------------------------------------------------------
 
 
-def dump_run_yaml(
+def build_run_request(
     *,
     toolset: str,
     tool: str | None = None,
     action: str | None = None,
     context: Mapping[str, Any] | None = None,
     arguments: Mapping[str, Any] | None = None,
-) -> str:
-    """Serialize a ``python -m harness run`` request body."""
+) -> dict[str, Any]:
+    """Build a spec run-request mapping."""
     if (tool is None) == (action is None):
         raise ValueError("Provide exactly one of tool= or action=")
     payload: dict[str, Any] = {"toolset": toolset}
@@ -54,22 +52,27 @@ def dump_run_yaml(
         payload["tool"] = tool
     if arguments:
         payload["arguments"] = dict(arguments)
-    return yaml.safe_dump(payload, sort_keys=False).rstrip() + "\n"
+    return payload
 
 
-def tools_run_prompt(run_yaml: str) -> str:
-    """Standard instruct_use_tool prompt: pipe YAML to ``.\\tools.ps1 run -``."""
-    body = run_yaml.rstrip()
-    return (
-        "Using shell from the repo root, run exactly: .\\tools.ps1 run -\n"
-        "Pipe this YAML on stdin:\n"
-        f"{body}\n"
-        "Return the complete fenced YAML stdout from the CLI. "
-        "Do not remanifest. Do not write a request file."
+def invoke_toolset(
+    *,
+    toolset: str,
+    tool: str | None = None,
+    action: str | None = None,
+    context: Mapping[str, Any] | None = None,
+    arguments: Mapping[str, Any] | None = None,
+) -> RunResponse:
+    """Invoke one tool or action in-process for specs."""
+    return invoke_run_request(
+        build_run_request(
+            toolset=toolset,
+            tool=tool,
+            action=action,
+            context=context,
+            arguments=arguments,
+        )
     )
-
-
-_COMMAND_FENCE_RE = re.compile(r"```(?:yaml)?\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
 def command_path(repo_root: Path, command: str | Path) -> Path:
@@ -86,60 +89,6 @@ def command_path(repo_root: Path, command: str | Path) -> Path:
     raise FileNotFoundError(f"Deployed command not found: {resolved}")
 
 
-def command_fence_yaml(command: str | Path, *, repo_root: Path) -> str:
-    """Return the invoke fence body from a deployed slash/skill command."""
-    path = command_path(repo_root, command)
-    text = path.read_text(encoding="utf-8")
-    for match in _COMMAND_FENCE_RE.finditer(text):
-        body = match.group(1).strip()
-        if body.startswith("toolset:"):
-            return body + "\n"
-    raise ValueError(f"No toolset invoke fence in {path}")
-
-
-def parse_command_fence(command: str | Path, *, repo_root: Path) -> dict[str, Any]:
-    """Parse the invoke fence from a deployed ``.cursor/commands/*.md`` skill."""
-    payload = yaml.safe_load(command_fence_yaml(command, repo_root=repo_root))
-    if not isinstance(payload, dict):
-        raise ValueError(f"Command fence must be a mapping: {command}")
-    return payload
-
-
-def run_yaml_from_command(
-    command: str | Path,
-    *,
-    repo_root: Path,
-    context: Mapping[str, Any] | None = None,
-    arguments: Mapping[str, Any] | None = None,
-) -> str:
-    """Build stdin YAML from a skill fence, optionally merging context/arguments."""
-    payload = dict(parse_command_fence(command, repo_root=repo_root))
-    if context:
-        merged = dict(payload.get("context") or {})
-        merged.update(dict(context))
-        payload["context"] = merged
-    if arguments:
-        payload["arguments"] = dict(arguments)
-    return yaml.safe_dump(payload, sort_keys=False).rstrip() + "\n"
-
-
-def tools_run_prompt_from_command(
-    command: str | Path,
-    *,
-    repo_root: Path,
-    context: Mapping[str, Any] | None = None,
-    arguments: Mapping[str, Any] | None = None,
-) -> str:
-    """Build a tools-run prompt from the exact invoke fence in a deployed command."""
-    run_yaml = run_yaml_from_command(
-        command,
-        repo_root=repo_root,
-        context=context,
-        arguments=arguments,
-    )
-    return tools_run_prompt(run_yaml)
-
-
 def run_skill(
     command: str | Path,
     *,
@@ -149,20 +98,19 @@ def run_skill(
     timeout_seconds: int = 180,
     require_agent_shell: bool = False,
 ) -> RunResponse:
-    """Invoke using YAML from a deployed skill fence (call ``read_workspace`` first)."""
-    from agent_bdd import instruct_use_tool
+    """Invoke a deployed skill path using its fixture run-request mapping."""
+    from installer.installer_invoke_fixtures import invoke_request_for_path
 
-    prompt = tools_run_prompt_from_command(
-        command,
-        repo_root=repo_root,
-        context=context,
-        arguments=arguments,
-    )
-    return instruct_use_tool(
-        prompt,
-        timeout_seconds=timeout_seconds,
-        require_agent_shell=require_agent_shell,
-    )
+    _ = timeout_seconds, require_agent_shell
+    request = invoke_request_for_path(command, repo_root=repo_root)
+    merged = dict(request)
+    if context:
+        merged_context = dict(merged.get("context") or {})
+        merged_context.update(dict(context))
+        merged["context"] = merged_context
+    if arguments:
+        merged["arguments"] = dict(arguments)
+    return invoke_run_request(merged)
 
 
 def run_toolset(
@@ -175,33 +123,15 @@ def run_toolset(
     timeout_seconds: int = 180,
     require_agent_shell: bool = False,
 ) -> RunResponse:
-    """Build YAML, drive ``instruct_use_tool``, return the parsed ``RunResponse``."""
-    run_yaml = dump_run_yaml(
+    """Invoke one toolset member in-process."""
+    _ = timeout_seconds, require_agent_shell
+    return invoke_toolset(
         toolset=toolset,
         tool=tool,
         action=action,
         context=context,
         arguments=arguments,
     )
-    from agent_bdd import instruct_use_tool
-
-    return instruct_use_tool(
-        tools_run_prompt(run_yaml),
-        timeout_seconds=timeout_seconds,
-        require_agent_shell=require_agent_shell,
-    )
-
-
-def expect_agent_invoked_shell(block: Any, *, agent_text: str = "") -> None:
-    """Assert the agent ran shell tools.ps1/tools run — not harness replay or deferral."""
-    from agent_bdd.agent_bdd_common import reject_agent_deferral
-
-    reject_agent_deferral(agent_text)
-    captures = tools_run_captures(block)
-    expect(len(captures) >= 1).to(be_true)
-    combined = combined_capture_text(captures).lower()
-    expect("tools.ps1 run" in combined or "tools run" in combined).to(be_true)
-    expect("tools manifest" not in combined).to(be_true)
 
 
 def read_workspace(path: str, *, timeout_seconds: int = 120) -> Any:
@@ -281,37 +211,6 @@ def expect_instructions_contain_any(
         (n.lower() if case_insensitive else n) in haystack for n in needles
     )
     expect(matched).to(be_true)
-
-
-# ---------------------------------------------------------------------------
-# Shell captures (action-following specs)
-# ---------------------------------------------------------------------------
-
-
-def tools_run_captures(block: Any) -> list[Any]:
-    """Filter ``session_shell_captures`` to tools-run commands or outputs."""
-    captures = getattr(block, "session_shell_captures", None) or []
-    return [
-        capture
-        for capture in captures
-        if "tools run" in capture.command.lower()
-        or "tools.ps1 run" in capture.command.lower()
-        or looks_like_tools_run_output(capture.output)
-    ]
-
-
-def combined_capture_text(captures: Sequence[Any], *extras: str) -> str:
-    """Join shell captures (and optional extra stdout) for substring asserts."""
-    parts = [f"{c.command}\n{c.output}" for c in captures]
-    parts.extend(extras)
-    return "\n".join(parts)
-
-
-def expect_capture_mentions(combined: str, *needles: str) -> None:
-    """Assert each needle appears in combined capture/stdout text (case-insensitive)."""
-    haystack = combined.lower()
-    for needle in needles:
-        expect(needle.lower() in haystack).to(be_true)
 
 
 def generate_similar_prompt(pass_path: str | Path) -> str:

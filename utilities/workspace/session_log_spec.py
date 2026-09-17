@@ -18,7 +18,7 @@ from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
 from workspace import SessionLog
-from primitives.harness.runner import ToolsetRunner as _ToolsetRunner
+from toolset_invoke.toolset_invoke import run_request as _run_request
 
 
 with description("an action that is expanded"):
@@ -27,10 +27,10 @@ with description("an action that is expanded"):
         SessionLog.set_instance(None)
         self.log = SessionLog(sessions_root=self.sessions_root)
         SessionLog.set_instance(self.log)
-        self.runner = _ToolsetRunner.instance()
+        self.runner = _run_request
 
     with it("should record an expansion event on the session trail"):
-        response = self.runner.run_request(
+        response = self.runner(
             {
                 "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
                 "session": "expand-spec",
@@ -52,10 +52,10 @@ with description("a tool that appends a run record"):
         SessionLog.set_instance(None)
         self.log = SessionLog(sessions_root=self.sessions_root)
         SessionLog.set_instance(self.log)
-        self.runner = _ToolsetRunner.instance()
+        self.runner = _run_request
 
     with it("should record a run event on the session trail"):
-        response = self.runner.run_request(
+        response = self.runner(
             {
                 "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
                 "session": "runner-spec",
@@ -113,10 +113,10 @@ with description("a tool that does not append"):
         SessionLog.set_instance(None)
         self.log = SessionLog(sessions_root=self.sessions_root)
         SessionLog.set_instance(self.log)
-        self.runner = _ToolsetRunner.instance()
+        self.runner = _run_request
 
     with it("should leave the session trail empty"):
-        self.runner.run_request(
+        self.runner(
             {
                 "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
                 "session": "quiet-spec",

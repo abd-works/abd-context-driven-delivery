@@ -32,7 +32,7 @@ format: md
 
 
 
-Build order: `primitives.tools` | `primitives.instructions` → `mcp_server`
+Build order: `primitives.tools` | `primitives.markdown` → `mcp_server`
 
 
 
@@ -46,5 +46,5 @@ Build order: `primitives.tools` | `primitives.instructions` → `mcp_server`
 
 - **Seam (terms):** McpServer, McpToolset, McpTool, McpPrompt
 
-- **Dependencies (one-way):** `primitives.tools`, `primitives.instructions`; MCP SDK adapter (internal)
+- **Dependencies (one-way):** `primitives.tools`, `primitives.markdown`; MCP SDK adapter (internal)
 

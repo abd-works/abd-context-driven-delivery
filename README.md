@@ -32,7 +32,7 @@ That run does three things:
 
 1. **Creates or repairs `.venv`** with a system Python 3.12+ interpreter.
 2. **Installs Python packages** from `requirements.txt` when they are missing. If that file is absent, setup writes one that matches this checkout (runtime deps plus `mamba` for specs).
-3. **Deploys the harness into this checkout** — `write_deploy` for Cursor, MCP on, Python templates.
+3. **Deploys the harness into this checkout** — `install` for Cursor, MCP on, Python templates.
 
 The deploy walk can take a few minutes the first time.
 
@@ -45,14 +45,14 @@ Everything lands under **this repo’s `.cursor/`**, not a second project folder
 
 | Path                 | What it is                                                                                                           |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `.cursor/skills/`    | Slash skills: actions, context tools and fidelities, format prompts, utilities, `/deploy-harness`, `/clean-harness`. |
+| `.cursor/skills/`    | Slash skills: actions, context tools and fidelities, format prompts, utilities, `/install`, `/clean-harness`. |
 | `.cursor/rules/`     | Repo rules plus per-tool `.mdc` guidance.                                                                            |
 | `.cursor/agents/`    | Role agents (Partitioner, Scaffolder, Discoverer, Specifier, Implementer, …).                                        |
 | `.cursor/mcp.json`   | Project MCP server that exposes the toolsets.                                                                        |
 | `.cursor/hooks.json` | Cursor hooks (dispatch into this repo’s Python).                                                                     |
 
 
-Source of those files is this repo (`practices/`, `utilities/`, `primitives/`, `rules/`). Re-run `.\setup.ps1` or `/deploy-harness` after you change a skill source and want the editor copy refreshed.
+Source of those files is this repo (`practices/`, `utilities/`, `primitives/`, `rules/`). Re-run `.\setup.ps1` or `/install` after you change a skill source and want the editor copy refreshed.
 
 VS Code Copilot agents, when you deploy that IDE, live under `.github/agents/`.
 

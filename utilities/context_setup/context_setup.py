@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from agent_tools import agent_instructions, agent_toolset
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from agent_tools.agent_tools import agent_tool
 from partition.partition import Partition
 
@@ -296,8 +296,7 @@ class ContextSetup:
 
     @prompt(name="capture-from-live-app")
     @agent_instructions
-    def capture_from_live_app(
-        recipe,
+    def capture_from_live_app(self,
         repo_path: str,
         capture_repo: str = "",
         surface: str = "web",
@@ -371,8 +370,7 @@ class ContextSetup:
 
     @prompt(name="capture-from-documents")
     @agent_instructions
-    def capture_from_documents(
-        recipe,
+    def capture_from_documents(self,
         folder_path: str,
         indexers: Optional[list[str]] = None,
         first: str = "",

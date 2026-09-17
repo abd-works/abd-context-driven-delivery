@@ -51,5 +51,5 @@ Pass additional toolset module references to `McpServer.start` when registering 
 ## Dependencies (one-way)
 
 - `primitives.tools` — `@toolset`, `@agent_tool`, `@resource`; `_ToolsetLoader.load`
-- `primitives.instructions` — `@instruction`, `tool(...)` semantics
+- `primitives.markdown` — `@instruction`, `tool(...)` semantics
 - `mcp` — stdio transport and protocol only; domain stays in `McpServer`

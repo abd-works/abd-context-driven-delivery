@@ -19,8 +19,7 @@ from primitives.agent_tools.agent_tools import _AgentToolRunner
 from primitives.agent_tools.agent_tools import AgenticToolset
 from primitives.agent_tools.agent_tools import agent_instructions
 from primitives.tools.tool import agent_tool
-from primitives.instructions import Instruction
-from primitives.instructions import instruction
+from primitives.markdown import Instruction, instruction
 from scan.scan import Scan
 from scan.scanner_collection import ScannerCollection
 from workspace.workspace import Workspace, WorkSession

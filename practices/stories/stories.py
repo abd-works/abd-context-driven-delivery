@@ -7,13 +7,14 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from practices.base.base_context_tool import BaseContextTool
-from primitives.agent_tools.agent_tools import agent_instructions
-from primitives.instructions import Instruction
-from primitives.instructions import instruction
-from primitives.tools.tool import agent_tool  # noqa: F401
+from practices.stages import DISCOVERY, ENGINEER, SHAPING, SPEC, resolve_stage_fidelity
+from practices.workspace_bind import init_practice_guidance
+from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
+from primitives.guidance.guidance import PracticeGuidance
+from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
+    from practices.clean_engineering.clean_engineering import CleanEngineering
     from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -73,21 +74,26 @@ def _root_glob_to_prefix(root_glob: str) -> str:
     return text.strip("/")
 
 
-class Stories(BaseContextTool):
+@agent_toolset
+class Stories(PracticeGuidance):
     """# Instructions"""
 
+    domain_slug = "stories"
     default_workspace_folder: str = "tests"
     context_index_key: str = "stories"
     _fidelity_format_defaults = _FIDELITY_FORMAT_DEFAULTS
     supported_formats = _SUPPORTED_FORMATS
 
-
-    fidelities = {
-        BaseContextTool.SHAPING:   "scaffold",
-        BaseContextTool.DISCOVERY: "story_map",
-        BaseContextTool.SPEC:      "scenarios",
-        BaseContextTool.ENGINEER:  "acceptance_tests",
+    STAGE_TO_FIDELITY = {
+        SHAPING: "scaffold",
+        DISCOVERY: "story_map",
+        SPEC: "scenarios",
+        ENGINEER: "acceptance_tests",
     }
+
+    @classmethod
+    def resolve_fidelity(cls, fidelity: str) -> str:
+        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
 
     def __init__(
         self,
@@ -107,10 +113,15 @@ class Stories(BaseContextTool):
             raise ValueError(
                 f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
             )
-        super().__init__(
-            format=resolved_format, path=path, session=session, workspace=workspace
+        init_practice_guidance(
+            self,
+            format=resolved_format,
+            path=path,
+            session=session,
+            workspace=workspace,
+            fidelity=fidelity,
+            stage_to_fidelity=self.STAGE_TO_FIDELITY,
         )
-        self.fidelity = fidelity
 
     def diagnostic(self) -> "Diagnose":
         """Diagnose companion — common six-phase loop as a tool (not inlined)."""
@@ -119,7 +130,7 @@ class Stories(BaseContextTool):
 
         return Diagnose()
 
-    def ce(self) -> "BaseContextTool":
+    def ce(self) -> "CleanEngineering":
         """CleanEngineering companion at code fidelity — used at acceptance_tests fidelity
         to generate or update matching production class implementations after writing specs.
         Invoke as a tool (not inlined into stories guidance). Passes this Stories instance's
@@ -132,7 +143,7 @@ class Stories(BaseContextTool):
         instance = CleanEngineering(
             fidelity="code",
             format=ce_format,
-            path=self._raw_path,
+            path=self.path,
             session=(
                 self.workspace.current_work_session.name
                 if self.workspace.current_work_session
@@ -160,10 +171,10 @@ class Stories(BaseContextTool):
 
     def _deploy_folder_prefix(self) -> str | None:
         """Infer colocated output root from ``path`` when it targets story artifacts."""
-        if not self._raw_path:
+        if not self.path:
             return None
         workspace = Path(self.workspace.path).resolve()
-        raw = Path(self._raw_path)
+        raw = Path(self.path)
         if not raw.is_absolute():
             raw = (workspace / raw).resolve()
 
@@ -191,11 +202,8 @@ class Stories(BaseContextTool):
             return target_cls(tests_root=self._resolve_tests_root())
         return target_cls()
 
-    @instruction
-    def contexts(self) -> Instruction: ...
-
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Provide guidance for creating story maps, scenarios, and acceptance tests.
         At scaffold fidelity: write epic, sub-epic, and story names only.
         At story_map fidelity: write the story map and thin-slice only.
@@ -223,7 +231,7 @@ class Stories(BaseContextTool):
         canonical = source.parse(parsed_input)
         if source_format == "markdown" and target_format in _CODE_FORMATS:
             from practices.stories.document.markdown.nodes import MarkdownScenario
-            scenarios = MarkdownScenario.parse_text(content, self._raw_path or "story-scenarios.md")
+            scenarios = MarkdownScenario.parse_text(content, self.path or "story-scenarios.md")
             canonical.attach_scenarios(scenarios)
         rendered = target.render(canonical)
         return {"format": target_format, "content": rendered}
@@ -233,8 +241,8 @@ class Stories(BaseContextTool):
         """Render already-generated story output into ``format`` via channel parse/render."""
         source = None
         if not content:
-            if self._raw_path:
-                p = Path(self._raw_path)
+            if self.path:
+                p = Path(self.path)
                 if p.is_file():
                     content = p.read_text(encoding="utf-8")
                     if p.suffix == ".md":

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from primitives.harness.toolset_loader import ToolsetLoader
+from primitives.installer.toolset_loader import ToolsetLoader
 from agent_tools import agent_instructions, agent_tool, agent_toolset, instructions, tools
 from workspace.workspace import SessionModel, Turn, Workspace
 
@@ -66,19 +66,18 @@ class LifecycleAction:
         return session_name
 
     @agent_instructions
-    def begin(recipe, tools: list | None = None, action: str = "") -> str:
+    def begin(self, tools: list | None = None, action: str = "") -> str:
         """Open the workspace if it is not already open. The turn hangs off the work session — it is already there when the session is awake. Decision records hang off the work session. Session is optional — actions work without one."""
-        toolset = recipe.toolset
         warning = ""
-        if toolset.workspace.current_work_session is None:
-            warning = toolset._open_session(toolset._session_name)
-        session = toolset._session()
+        if self.workspace.current_work_session is None:
+            warning = self._open_session(self._session_name)
+        session = self._session()
         if session is not None:
             try:
                 session.turn
                 if action:
                     session.turn.action = action
-                instructions(toolset._decisions().record_decisions_session())
+                instructions(self._decisions().record_decisions_session())
             except (AttributeError, TypeError):
                 pass
             if not warning:
@@ -86,7 +85,7 @@ class LifecycleAction:
         return warning
 
     @agent_instructions
-    def end(recipe) -> str:
+    def end(self) -> str:
         """Commit the turn via ``/turn`` (``Turn.turn``)."""
-        tools(recipe.toolset._turn().turn(utility="lifecycle"))
+        tools(self._turn().turn(utility="lifecycle"))
         return ""

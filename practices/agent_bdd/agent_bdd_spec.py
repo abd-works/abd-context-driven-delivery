@@ -74,14 +74,12 @@ with description("an agent spec file"):
             finally:
                 cm.__exit__(None, None, None)
 
-        with it("should strip prose after embedded stdin YAML in instruct_use_tool prompts"):
+        with it("should strip prose after embedded run-request YAML in instruct_use_tool prompts"):
             prompt = (
-                "Using shell, run exactly: python -m harness run -\n"
-                "Pipe this YAML on stdin:\n"
+                "Invoke this request:\n"
                 "toolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
-                "Return the complete fenced YAML stdout from the CLI.\n"
-                "\nIMPORTANT: From the repo root, invoke .\\tools.ps1 run - via shell."
+                "Return the complete response.\n"
             )
             body = yaml_from_prompt(prompt)
             expect(body).to(equal("toolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))

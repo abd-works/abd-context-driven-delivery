@@ -61,8 +61,8 @@ Do **not** remove or redesign the **`@resource`**, **`@skill`**, or **`@prompt` 
 These **annotation decorators** stay as they are today. Do not rename, merge, or delete them:
 
 - **`@resource`** — observable toolset state (`primitives/agent_tools`); property getters, instruction inlining, and resource registration behavior are unchanged.
-- **`@skill`** — harness marker for skill files (`primitives/harness`); still selects which operations deploy as `SKILL.md`.
-- **`@prompt`** — harness marker for prompt/command files (`primitives/harness`); still selects which operations deploy as slash commands / prompt files.
+- **`@skill`** — harness marker for skill files (`primitives/installer`); still selects which operations deploy as `SKILL.md`.
+- **`@prompt`** — harness marker for prompt/command files (`primitives/installer`); still selects which operations deploy as slash commands / prompt files.
 
 What **does** change under `@skill` / `@prompt` is only the **generated file body** where it currently describes YAML/CLI invocation — that content becomes MCP invocation guidance instead.
 
@@ -537,7 +537,7 @@ Replace with a single concise MCP line (see [Harness transport rendering](#harne
 
 ### Harness code that must change
 
-At minimum, update `primitives/harness/` (and anything that duplicates its invoke rendering):
+At minimum, update `primitives/installer/` (and anything that duplicates its invoke rendering):
 
 - **`_invoke_block()`** — remove or replace; must not emit YAML
 - **`_CATALOG_LINE`** and **`resolve_text()`** — stop teaching stdin YAML catalog protocol
@@ -547,7 +547,7 @@ At minimum, update `primitives/harness/` (and anything that duplicates its invok
 
 ### Redeploy requirement
 
-After harness generation is updated, run **`deploy-harness`** (or equivalent) so checked-in generated skills/commands/rules in the repo match the new MCP invocation text. The migration is not done while deployed artifacts still contain YAML invoke instructions.
+After harness generation is updated, run **`install`** (or equivalent) so checked-in generated skills/commands/rules in the repo match the new MCP invocation text. The migration is not done while deployed artifacts still contain YAML invoke instructions.
 
 ### Before / after (skill tail)
 
@@ -643,7 +643,7 @@ Add tests for:
 - tool invocation → direct Python callable
 - persistent process / retained instance where relevant
 - generated skill / prompt / command / rule / agent → correct MCP tool reference (no YAML tail)
-- harness `deploy-harness` redeploy removes YAML from `.cursor/skills` and sibling deploy trees
+- harness `install` redeploy removes YAML from `.cursor/skills` and sibling deploy trees
 - `@instruction` docstring behavior
 - `tool(...)` extraction from instruction bodies
 

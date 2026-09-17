@@ -121,7 +121,7 @@ with description("a Ddd toolset"):
         with context("with a path set"):
             with it("should carry the same path to the CE companion"):
                 ce = Ddd(fidelity="bounded_context", path="practices/ddd").ce()
-                expect(ce._raw_path).to(equal("practices/ddd"))
+                expect(ce.path).to(equal("practices/ddd"))
 
         with context("with a session set"):
             with it("should carry the same session name to the CE companion"):

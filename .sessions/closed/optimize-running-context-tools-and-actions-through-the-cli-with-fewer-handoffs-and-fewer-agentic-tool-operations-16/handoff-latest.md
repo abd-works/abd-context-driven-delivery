@@ -47,7 +47,7 @@ Stories blob **17,767** / CE **45,100**. Pair B leftover is write + Drawio glue,
 - Domain methods return domain objects. `to_dict` is a dump hook only.
 - Host extras stay behind `if host:`. Session comes from `workspace` path + `session` name (or `session/` git branch).
 - `/sub-agent` is non-blocking. Parent does not inline. Listed **actions** proceed as today. **No actions** → worker runs `performTurn` (open, do the work, `finish_turn`, report branch and commit).
-- Harness AskQuestion only when IDE/path are unknown. Saved state: `primitives/harness/.deploy-state.json` (Cursor + `abd-works-repo/.cursor`). Repeat deploys: `generateAgain`.
+- Harness AskQuestion only when IDE/path are unknown. Saved state: `primitives/installer/.install-state.json` (Cursor + `abd-works-repo/.cursor`). Repeat deploys: `generateAgain`.
 
 ```yaml
 toolset: workspace.workspace:Turn
@@ -76,7 +76,7 @@ toolset: scan.scan:Scan
 - Do not change return types to dicts so YAML can dump them.
 - Do not strip host logic — `if host:` around bind/index/attach/trail.
 - Scanners are not path-only. Paths are what you walk; `_scanner_collection()` on the host is the rule set.
-- `/deploy-harness` answers live in `.deploy-state.json`. Do not re-ask IDE/path.
+- `/install` answers live in `.install-state.json`. Do not re-ask IDE/path.
 - A `/sub-agent` fix is only `SubAgent.run`. Do not walk expanders or harness.
 
 ## Artifacts to read

@@ -381,7 +381,7 @@ text: Updated. That block was stale in two ways: it mixed abstract *Guidance* wi
 2026-09-10T22:42:52Z  afterAgentResponse  conv=0e0e3022  gen=96ebe893  model=composer-2.5
 ------------------------------------------------------------------------------
 
-text: Updated the deployment model around **`@mcp`** instead of **`write_deploy(mcp=true)`**.
+text: Updated the deployment model around **`@mcp`** instead of **`install(mcp=true)`**.
 
 **Core change:** MCP exposure is declared on each method, not flipped by a deploy script flag.
 
@@ -987,7 +987,7 @@ Both `.instructions` and `.catalog` are **assembled documents** read from the ho
 2026-09-11T03:33:09Z  afterAgentResponse  conv=0e0e3022  gen=8dc12a28  model=composer-2.5
 ------------------------------------------------------------------------------
 
-text: Consolidated everything under **`primitives/harness`** — one module for all IDE deploy artifacts.
+text: Consolidated everything under **`primitives/installer`** — one module for all IDE deploy artifacts.
 
 ### Unified model
 
@@ -1061,8 +1061,8 @@ text: With `deployMember` and `@rules` / `@skill` / `@prompt` all on members, **
 
 It is only there because today's code has it:
 
-```288:289:primitives/harness/harness_tool.py
-class HarnessTool:
+```288:289:primitives/installer/installer_tool.py
+class InstallerTool:
     """One generated IDE file. ``type`` is Cursor, VS Code, or Kilo."""
 ```
 ... [34 lines, 1482 chars total]
@@ -1090,7 +1090,7 @@ text: Right — **`@mcp` does not exist today.** Docs are corrected.
 ### Today: MCP mode in Harness
 
 ```python
-Harness.write_deploy(mcp=True)  # /deploy-harness with mcp=true
+Harness.install(mcp=True)  # /install with mcp=true
 ```
 
 ... [33 lines, 1412 chars total]
@@ -1211,7 +1211,7 @@ text: You're right to question it — **`deployToolsetOperation` is not a thing 
 
 ### What deploy actually does today
 
-`Harness.write_deploy()` → `_generate_entry()` per registry class. For each class it does roughly:
+`Harness.install()` → `_generate_entry()` per registry class. For each class it does roughly:
 
 1. **One router artifact per context tool** — a **skill** for the practice (`kind == "context_tool"`), built from class metadata / guidance, not from walking methods individually.
 
@@ -1227,8 +1227,8 @@ text: Updated the design to trace deploy names back to today's harness — **ext
 
 | Target | Today |
 |--------|--------|
-| `deployAgentInstructions` | `operation_writes` row with `invoke == "action"` — method has `@agent_instructions`; emits skill/command when `@skill` / `@prompt` stacked |
-| `deployAgentTool` | `operation_writes` row with `invoke == "tool"` — method has `@agent_tool`; usually invoke tail only; MCP bind when `mcp=True` |
+| `installAgentInstructions` | `operation_writes` row with `invoke == "action"` — method has `@agent_instructions`; emits skill/command when `@skill` / `@prompt` stacked |
+| `installAgentTool` | `operation_writes` row with `invoke == "tool"` — method has `@agent_tool`; usually invoke tail only; MCP bind when `mcp=True` |
 ... [35 lines, 1946 chars total]
 
 ==============================================================================
@@ -1239,7 +1239,7 @@ text: They're not the same thing — they sit on opposite sides of deploy vs run
 
 ### `McpDeployTarget` — deploy time (writes files)
 
-Part of the `DeployTarget` hierarchy. Runs during `write_deploy(mcp=True)` and produces **static artifacts on disk**:
+Part of the `DeployTarget` hierarchy. Runs during `install(mcp=True)` and produces **static artifacts on disk**:
 
 - `.cursor/mcp.json` — tells Cursor to start `python -m mcp_server --toolsets stories:Bdd,…`
 - Which toolset refs to include (today: `_write_mcp_json` in `Harness`)
@@ -1267,7 +1267,7 @@ text: You're right that **one walk** should drive deploy — and that's what the
 
 ### What deploy can and does do in one pass
 
-When `Harness.write_deploy(mcp=True)` runs, it already does MCP-related work from the same registry walk:
+When `Harness.install(mcp=True)` runs, it already does MCP-related work from the same registry walk:
 
 1. **Markdown files** — invoke tails (`Use MCP tool: \`stories.generate(...)\``) via `operation_writes` + `transport=mcp`
 2. **`mcp.json`** — server command + **toolset refs** (`context_t
@@ -1298,7 +1298,7 @@ Updated the design to match:
 ### One walker: `McpDeployTarget`
 
 ```
-deploy (write_deploy)
+deploy (install)
 ... [28 lines, 1270 chars total]
 
 ==============================================================================
@@ -1324,7 +1324,7 @@ text: Second pass done. **`context-tool-resource-model-om-bdd.md` is now canonic
 
 | Issue | Fix |
 |-------|-----|
-| **Deploy flow** stopped at `deployContextTool(bdd)` | Expanded to full walk: section → fidelity × n → `operation_writes` → `MarkdownDeployment` / `McpDeployment` split |
+| **Deploy flow** stopped at `deployContextTool(bdd)` | Expanded to full walk: section → fidelity × n → `operation_writes` → `MarkdownInstallation` / `McpInstallation` split |
 | **No MCP runtime flows** | Added **MCP server start** (`bind`) and **MCP invoke** sections |
 ... [32 lines, 2151 chars total]
 
@@ -1610,7 +1610,7 @@ text: Reordered. New path before shared contexts:
 | Layer | What |
 |-------|------|
 | **1–3** | Markdown read → minimal `Guidance` → `AgenticToolset` `instructions_registry` (unchanged) |
-| **4** | **Deploy smoke** — bare `AgenticToolset`, mark ops `@skill` / `@prompt` / `@agent_instructions`, run `write_deploy`, assert skill/command files + `operation_writes` walk |
+| **4** | **Deploy smoke** — bare `AgenticToolset`, mark ops `@skill` / `@prompt` / `@agent_instructions`, run `install`, assert skill/command files + `operation_writes` walk |
 | **5** | **Deploy smoke** — base `Guidance` subclass: compound `instructions` from layer 2 + agent-instructions ops on top; same deploy artifacts as layer 4 |
 | **6–7** | Shared contexts format + fidelity sections (was 4–5) |
 ... [12 lines, 921 chars total]
@@ -1693,7 +1693,7 @@ text: Captured the implementation discipline. This turn is **process + handoff**
 
 ### Golden reference: `.cursor copy/`
 Successful MCP deploy snapshot at repo root. Deploy tests must:
-- Run real `Harness.write_deploy(mcp=True)` into a temp directory
+- Run real `Harness.install(mcp=True)` into a temp directory
 - Compare output to `.cursor copy/` — skill folders, `mcp.json`, rules, `Use MCP tool:` tails at the bottom of bodies
 - MCP golden uses **all skills** (e.g. `stories/stories-story-map/SKILL.md`), not only `commands/`
 
@@ -1731,7 +1731,7 @@ Branch is **7 commits ahead** of `origin/main`. Say if you want those pushed.
 
 text: Deploy finished. Cursor + MCP, full tree, into `.cursor`.
 
-`write_deploy(mcp=True)` wrote skills, rules, and `.cursor/mcp.json` for every source it walked — actions, context tools, utilities, harness prompts, and format skills. Took about 18 seconds.
+`install(mcp=True)` wrote skills, rules, and `.cursor/mcp.json` for every source it walked — actions, context tools, utilities, harness prompts, and format skills. Took about 18 seconds.
 
 ==============================================================================
 2026-09-15T22:48:53Z  afterAgentResponse  conv=9787b0b8  gen=21a8f889  model=cursor-grok-4.6-high-fast

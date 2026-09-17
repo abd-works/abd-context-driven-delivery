@@ -23,7 +23,7 @@ from agent_bdd import (
     sessions_dir,
     tools_run_captures,
 )
-from harness.harness_invoke_fixtures import (
+from installer.installer_invoke_fixtures import (
     CAR_SKILL,
     TRAVEL_TO,
     car_tool_argument,
@@ -35,7 +35,7 @@ _SESSIONS = sessions_dir(__file__)
 
 
 with description("a class"):
-    with context("with a toolset that declares @agent_instructions recipes"):
+    with context("with a toolset that declares @agent_instructions members"):
         with context("with agent and travelTo action"):
             with it("drives travelTo from deployed prompts, follows tools, judges the story"):
                 stage_invoke_commands(_REPO_ROOT)
@@ -58,7 +58,7 @@ with description("a class"):
 
                     story = follow_instructions(
                         "General Lee must reach the Hazzard County courthouse. "
-                        "Use python -m harness run via shell: call start, then speak once in character. "
+                        "Invoke the car start tool, then speak once in character. "
                         "Summarize the muddy-road adventure with Rosco in pursuit.",
                         timeout_seconds=180,
                     )

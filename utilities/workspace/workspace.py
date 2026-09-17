@@ -16,15 +16,14 @@ from pathlib import Path
 from typing import Any
 
 from agent_tools import agent_instructions, agent_toolset
-from primitives.instructions import Instruction
-from primitives.instructions import instruction
+from primitives.markdown import markdown
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
-from primitives.harness.repo_paths import ensure_venv
+from primitives.installer.repo_paths import ensure_venv
 from agent_tools.agent_tools import agent_tool, agent_toolset
-from harness.prompt import prompt
-from hooks.hook import hook
+from installer.prompt import prompt
+from installer.marks import hook
 from hooks.session_logs import (
     clear_active_session,
     consolidate_logs_for_close,
@@ -510,7 +509,7 @@ class Turn:
             encoding="utf-8",
         )
 
-    @hook(event="afterAgentResponse")
+    @hook("afterAgentResponse")
     def auto_turn(self, payload: dict) -> dict:
         """Commit dirty checkout after each agent response when enabled."""
         git = self._git()
@@ -1185,8 +1184,8 @@ class WorkSession:
     def domain_slug(self) -> str:
         return "workspace_session"
 
-    @instruction
-    def session_guidance(self) -> Instruction: ...
+    @markdown
+    def session_guidance(self) -> str: ...
 
     @property
     def active(self) -> WorkSession:
@@ -2132,7 +2131,7 @@ class WorkSession:
         """finish_work_session — close the current work session.
 
         Before calling: in the session worktree run ``git status``. Delete only temps
-        you know are ephemeral from this session (examples: ``Harness.write_deploy``
+        you know are ephemeral from this session (examples: ``Harness.install``
         output under ``.cursor/commands`` and ``.cursor/skills``, agent BDD run logs
         under ``.context/.agent_bdd_sessions/`` from spec runs, ``_req*.yaml`` scratch
         files). Use session context — do not delete durable generate, product files, or
@@ -2419,7 +2418,7 @@ class Workspace:
 
     @prompt(name="model")
     @agent_instructions
-    def model(recipe, model: str = "", session: str = "", workspace: str = "") -> str:
+    def model(self, model: str = "", session: str = "", workspace: str = "") -> str:
         """Set the preferred IDE/CLI model for this work session (slash ``/model``).
 
         Persist under ``.sessions/{session}/model``. When no session is open,
@@ -2691,6 +2690,3 @@ class ContextToolHost:
             turn.tool_calls.append(run)
         return commit
 
-
-# Back-compat for specs that imported the stub name during generation.
-BaseContextTool = ContextToolHost

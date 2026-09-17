@@ -18,11 +18,8 @@ from agent_bdd.agent_bdd_common import (
     JUDGE_LAUNCH,
     JUDGE_TASK,
     JudgeResult,
-    RUN_PROMPT_SUFFIX,
     RunResponse,
     _ShellCapture,
-    _fenced_yaml_from_text,
-    cli_output_matches_prompt,
     _log_harness,
     _parse_judge_result,
     _run_yaml_request,
@@ -72,30 +69,14 @@ class _ChatAgentBlock:
         timeout_seconds: int = 300,
         require_agent_shell: bool = False,
     ) -> RunResponse:
-        if require_agent_shell:
-            raise AgentHarnessError(
-                "require_agent_shell is only supported on the CLI harness"
-            )
-        full_prompt = prompt.rstrip() + RUN_PROMPT_SUFFIX
+        _ = timeout_seconds, require_agent_shell
+        request_yaml = yaml_from_prompt(prompt)
+        if not request_yaml:
+            raise AgentHarnessError("prompt must contain a toolset: run request block")
         prefix = self._next_instruct_prefix("run")
-        _log_harness("agent_chat_bdd", f"{prefix} prompt: {full_prompt[:120]}{'...' if len(full_prompt) > 120 else ''}")
-        self._write_artifact(f"{prefix}-prompt.txt", full_prompt)
-        stdout = self._wait_for_inbox(prefix, full_prompt, timeout_seconds=timeout_seconds)
-        self._write_artifact(f"{prefix}-response.txt", stdout)
-        cli_output = _fenced_yaml_from_text(stdout)
-        if cli_output is not None and not cli_output_matches_prompt(cli_output, full_prompt):
-            cli_output = None
-        if cli_output is None:
-            yaml_body = yaml_from_prompt(full_prompt)
-            if yaml_body:
-                cli_output = _run_yaml_request(yaml_body, self._workspace, prefix=prefix)
-        if cli_output is None:
-            raise AgentHarnessError(
-                "no python -m harness run output - chat runner must return fenced YAML",
-                prefix=prefix,
-                stdout=stdout,
-                log_dir=self._log_dir,
-            )
+        self._write_artifact(f"{prefix}-prompt.txt", prompt)
+        self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
+        cli_output = _run_yaml_request(request_yaml, self._workspace, prefix=prefix)
         return self._finalize_run_response(prefix, cli_output)
 
     def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:

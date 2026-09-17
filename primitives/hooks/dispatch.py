@@ -1,14 +1,13 @@
-"""Cursor hook runtime — dispatch, skill inject, bootstrap, and deploy wiring."""
+"""Cursor hook runtime — dispatch marked operations; skill inject."""
 
 from __future__ import annotations
 
 import importlib
+import inspect
 import json
 import os
-import re
 import subprocess
 import sys
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -18,8 +17,9 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_HOOKS_JSON = _REPO_ROOT / ".cursor" / "hooks.json"
 _NOTIFY_PS1 = Path(__file__).with_name("_notify_test.ps1")
+_HANDLERS_JSON = _REPO_ROOT / ".cursor" / "hook-handlers.json"
+_DEFAULT_HOST_REFS = ("workspace.workspace:Turn",)
 
 
 def _hook_debug_path(filename: str) -> Path:
@@ -31,131 +31,80 @@ for _category in ("primitives", "utilities", "primitives/hooks"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-from hooks.hook import Hook, HookHarness
-
-DISPATCH_SCRIPT = "primitives/hooks/dispatch.py"
-_BOOTSTRAP_MODULES = ("workspace.workspace",)
-
-# ---------------------------------------------------------------------------
-# Bootstrap
-# ---------------------------------------------------------------------------
+from installer.marks import normalize_event
 
 
-def load() -> None:
-    """Import toolsets that declare ``@hook`` handlers."""
-    for module_name in _BOOTSTRAP_MODULES:
-        importlib.import_module(module_name)
+def toggle_flag(owner: type, method: str, event: str) -> Path:
+    slug = owner.__name__.lower()
+    norm = normalize_event(event)
+    return _REPO_ROOT / ".context" / "hooks" / slug / f"{method}_{norm}.enabled"
 
 
-# ---------------------------------------------------------------------------
-# Deploy metadata (harness toggle skills + hooks.json wiring)
-# ---------------------------------------------------------------------------
+def is_enabled(owner: type, method: str, event: str) -> bool:
+    return toggle_flag(owner, method, event).is_file()
 
 
-@dataclass(frozen=True)
-class HookBinding:
-    """One ``@hook`` operation discovered during harness deploy."""
-
-    event: str
-    operation: str
-    slug: str = ""
-    owner: str = ""
-    folder: str = ""
-
-    @classmethod
-    def from_source(cls, source: dict) -> HookBinding:
-        return cls(
-            event=str(source.get("event") or ""),
-            operation=str(source.get("operation") or ""),
-            slug=str(source.get("slug") or source.get("name") or ""),
-            owner=str(source.get("owner") or ""),
-            folder=str(source.get("folder") or ""),
-        )
-
-    def deploy_slug(self) -> str:
-        return self.operation or self.slug
-
-    def event_suffix(self) -> str:
-        return Hook.normalize_event(self.event)
-
-    def toggle_flag(self) -> Path:
-        owner_slug = self.owner.lower() if self.owner else "toolset"
-        return (
-            Path(".context")
-            / "hooks"
-            / owner_slug
-            / f"{self.operation}_{self.event_suffix()}.enabled"
-        )
-
-    def skill_name(self, *, enabled: bool) -> str:
-        suffix = "on" if enabled else "off"
-        return f"{self.deploy_slug()}_{self.event_suffix()}_{suffix}"
-
-    def overview(self, *, enabled: bool) -> str:
-        verb = "Enable" if enabled else "Disable"
-        return (
-            f"{verb} `{self.deploy_slug()}` hook on "
-            f"`{self.event}` ({self.event_suffix().replace('_', ' ')}) "
-            f"for {self.owner or 'toolset'}."
-        )
-
-    def instructions(self, *, enabled: bool) -> str:
-        verb = "Enable" if enabled else "Disable"
-        flag = self.toggle_flag()
-        body = (
-            f"{verb} the `{self.deploy_slug()}` hook on Cursor event `{self.event}`.\n\n"
-            f"Flag file: `{flag.as_posix()}`\n"
-        )
-        if enabled:
-            body += (
-                "\nCreate the flag file (empty is fine). The hook dispatcher runs "
-                f"`{self.operation}` when this flag exists.\n"
-            )
-            if self.operation == "auto_turn":
-                body += (
-                    "\nOn `afterAgentResponse`, auto-turn stages all changes under "
-                    "the repo root (including new untracked files) and commits after "
-                    "each agent reply.\n"
-                )
-        else:
-            body += "\nRemove the flag file so the dispatcher skips this handler.\n"
-        return body
-
-    def skill_sources(self) -> list[dict]:
-        return [
-            {
-                "name": self.skill_name(enabled=enabled),
-                "overview": self.overview(enabled=enabled),
-                "body": self.instructions(enabled=enabled),
-                "folder": self.folder,
-            }
-            for enabled in (True, False)
-        ]
+def set_enabled(owner: type, method: str, event: str, *, enabled: bool) -> Path:
+    path = toggle_flag(owner, method, event)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if enabled:
+        path.write_text("", encoding="utf-8")
+    elif path.is_file():
+        path.unlink()
+    return path
 
 
-def hook_skill_sources(source: dict) -> tuple[list[dict], set[str]]:
-    binding = HookBinding.from_source(source)
-    events = {binding.event} if binding.event else set()
-    return binding.skill_sources(), events
+def _load_ref(ref: str) -> type | None:
+    module_name, _, class_name = ref.partition(":")
+    if not module_name or not class_name:
+        return None
+    try:
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
+    except (ImportError, AttributeError):
+        return None
 
 
-def deploy_dispatch(repo_root: Path, events: set[str]) -> None:
-    HookHarness(script=DISPATCH_SCRIPT).sync_dispatch(
-        repo_root / ".cursor" / "hooks.json",
-        events,
-    )
+def load_hosts(hosts: list[type] | None = None) -> list[type]:
+    if hosts is not None:
+        return hosts
+    refs: list[str] = []
+    if _HANDLERS_JSON.is_file():
+        try:
+            payload = json.loads(_HANDLERS_JSON.read_text(encoding="utf-8"))
+            refs = [
+                str(item["ref"])
+                for item in payload.get("handlers") or []
+                if item.get("ref")
+            ]
+        except (OSError, json.JSONDecodeError):
+            refs = []
+    if not refs:
+        refs = list(_DEFAULT_HOST_REFS)
+    loaded: list[type] = []
+    seen: set[str] = set()
+    for ref in refs:
+        if ref in seen:
+            continue
+        seen.add(ref)
+        cls = _load_ref(ref)
+        if cls is not None:
+            loaded.append(cls)
+    return loaded
 
 
-def install_dispatch() -> None:
-    """Sync ``dispatch.py`` entries in ``.cursor/hooks.json``."""
-    load()
-    events = {entry["event"] for entry in Hook.registered()}
-    if not events:
-        print("No @hook handlers registered — nothing to install.")
-        return
-    deploy_dispatch(_REPO_ROOT, events)
-    print(f"Installed dispatch hooks for {sorted(events)} -> {_HOOKS_JSON}")
+def _hook_methods(owner: type, event: str) -> list[str]:
+    names: list[str] = []
+    for name, member in inspect.getmembers(owner, predicate=inspect.isfunction):
+        if not getattr(member, "_hook", False):
+            continue
+        if getattr(member, "_hook_name", None) != event:
+            continue
+        names.append(name)
+    return names
 
 
 # ---------------------------------------------------------------------------
@@ -211,14 +160,10 @@ def _merge_results(results: list[dict[str, Any]]) -> dict[str, Any]:
     return merged
 
 
-def _matcher_ok(matcher: str | None, payload: dict[str, Any]) -> bool:
-    if not matcher:
-        return True
-    tool_name = str(payload.get("tool_name") or "")
-    return re.search(matcher, tool_name) is not None
-
-
-def dispatch(payload: dict[str, Any]) -> dict[str, Any]:
+def dispatch(
+    payload: dict[str, Any],
+    hosts: list[type] | None = None,
+) -> dict[str, Any]:
     event = str(payload.get("hook_event_name") or "")
     conv = payload.get("conversation_id")
     _dispatch_debug(
@@ -230,23 +175,20 @@ def dispatch(payload: dict[str, Any]) -> dict[str, Any]:
 
     results: list[dict[str, Any]] = []
     enabled: list[str] = []
-    for entry in Hook.bindings_for(event):
-        if not _matcher_ok(entry.get("matcher"), payload):
-            continue
-        owner = entry["owner"]
-        method = entry["method"]
-        if not Hook.is_enabled(owner, method, event):
-            continue
-        label = f"{owner.__name__}.{method}"
-        enabled.append(label)
-        instance = owner()
-        handler = getattr(instance, method)
-        result = handler(payload)
-        results.append(result)
-        result_keys = sorted((result or {}).keys())
-        _dispatch_debug(
-            f"HANDLER {label} result_keys={result_keys} result={json.dumps(result or {})}"
-        )
+    for owner in load_hosts(hosts):
+        for method in _hook_methods(owner, event):
+            if not is_enabled(owner, method, event):
+                continue
+            label = f"{owner.__name__}.{method}"
+            enabled.append(label)
+            instance = owner()
+            handler = getattr(instance, method)
+            result = handler(payload)
+            results.append(result)
+            result_keys = sorted((result or {}).keys())
+            _dispatch_debug(
+                f"HANDLER {label} result_keys={result_keys} result={json.dumps(result or {})}"
+            )
     _dispatch_debug(f"ENABLED {enabled or ['(none)']}")
     merged = _merge_results(results)
     _dispatch_debug(f"MERGED {json.dumps(merged)}")
@@ -481,7 +423,7 @@ def main() -> None:
 
     ensure_default_session(_REPO_ROOT)
     if len(sys.argv) > 1 and sys.argv[1] in {"--install", "install"}:
-        install_dispatch()
+        print("Hook install is Installer.install — not dispatch.py")
         return
 
     raw = sys.stdin.buffer.read()
@@ -500,7 +442,6 @@ def main() -> None:
         _run_skill_inject_hook(raw)
         return
 
-    load()
     _run_dispatch_hook(raw)
 
 

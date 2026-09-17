@@ -14,7 +14,7 @@ Format is not a fidelity. Hardcoded list for now, from CleanEngineering `_CHANNE
 
 ### Generate is the deploy
 
-`Harness.generate` is `@agent_instructions`. If no IDE is given, AskQuestion: Cursor or VS Code. Then construct `Harness(type)` and write skills, commands, formats, and the rest into that IDE's deploy area. One operation — generate is the deploy. `generate(source)` writes one source; no source walks then generates each. No confirm list for the scan.
+`Harness.generate` is `@agent_instructions`. If no IDE is given, AskQuestion: Cursor or VS Code. Then construct `Installer(type)` and write skills, commands, formats, and the rest into that IDE's deploy area. One operation — generate is the deploy. `generate(source)` writes one source; no source walks then generates each. No confirm list for the scan.
 
 ### Stale files
 
@@ -33,7 +33,7 @@ Same as agent_skills `save_state` / `deploy_again`. After generate, save the las
 Same two commands as every other agentic operation (grill, sketch, today’s agent_skills):
 
 ```
-python -m agent_tools manifest harness.harness:Harness
+python -m agent_tools manifest installer.installer:Harness
 python -m agent_tools run _req.yaml
 ```
 

@@ -34,11 +34,8 @@ with description("a RecordDecisions toolset"):
             self._ag = agent(_REPO_ROOT, _SESSIONS / "read-cdr-format.json")
             self.session = self._ag.__enter__()
             self.format_response = self.session.instruct_run(
-                "Using shell, run exactly: python -m harness run -\n"
-                "Pipe this YAML on stdin:\n"
                 f"toolset: {_TOOLSET}\n"
-                "tool: read_cdr_format\n"
-                "Return the complete fenced YAML stdout from the CLI.",
+                "tool: read_cdr_format\n",
                 timeout_seconds=60,
             )
 
@@ -71,8 +68,6 @@ with description("a RecordDecisions toolset"):
             self.session2 = self._ag2.__enter__()
             self._tmpdir = tempfile.mkdtemp()
             self.write_response = self.session2.instruct_run(
-                "Using shell, run exactly: python -m harness run -\n"
-                "Pipe this YAML on stdin:\n"
                 f"toolset: {_TOOLSET}\n"
                 "tool: write_cdr\n"
                 "arguments:\n"
@@ -82,8 +77,7 @@ with description("a RecordDecisions toolset"):
                 "    # Use YAML for tool requests\\n"
                 "    \\n"
                 "    We chose YAML over JSON for tool request files because it is "
-                "human-readable and supports multi-line strings without escaping.\\n"
-                "Return the complete fenced YAML stdout from the CLI.",
+                "human-readable and supports multi-line strings without escaping.\\n",
                 timeout_seconds=90,
             )
 

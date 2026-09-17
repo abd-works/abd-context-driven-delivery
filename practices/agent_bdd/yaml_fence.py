@@ -1,8 +1,4 @@
-"""Local fenced-YAML helpers for parsing ``python -m harness run`` CLI output.
-
-Owned by agent_bdd - not part of the Tools author seam. Tools authors get
-manifest text via ``front_matter`` or the CLI; harnesses parse CLI envelopes here.
-"""
+"""Fenced-YAML helpers for serializing in-process spec invoke responses."""
 from __future__ import annotations
 
 from pathlib import Path

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from focus import focus
-from practices.base.base_context_tool import BaseContextTool
 from practices.clean_engineering.class_model.drawio.drawio import Drawio
 from practices.clean_engineering.class_model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from practices.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
@@ -12,10 +11,11 @@ from practices.clean_engineering.class_model.json_class_model import JsonCleanEn
 from practices.clean_engineering.class_model.markdown_class_model import MarkdownCleanEngineeringModel
 from practices.clean_engineering.class_model.python_class_model import PythonCleanEngineeringModel
 from practices.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
-from primitives.agent_tools.agent_tools import agent_instructions
-from primitives.instructions import Instruction
-from primitives.instructions import instruction
-from agent_tools.agent_tools import resource, agent_tool  # noqa: F401
+from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
+from practices.workspace_bind import init_practice_guidance
+from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
+from primitives.guidance.guidance import PracticeGuidance
+from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
     "modules": "markdown",
@@ -38,20 +38,25 @@ _CHANNELS: dict[str, type] = {
 _SUPPORTED_FORMATS = frozenset(_CHANNELS)
 
 
-class CleanEngineering(BaseContextTool):
+@agent_toolset
+class CleanEngineering(PracticeGuidance):
     """# Instructions"""
 
+    domain_slug = "clean_engineering"
     default_workspace_folder: str = "src"
     context_index_key: str = "clean_engineering"
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
-
-    fidelities = {
-        BaseContextTool.DISCOVERY: "modules",
-        BaseContextTool.SPEC:      "model",
-        BaseContextTool.ENGINEER:  "code",
+    STAGE_TO_FIDELITY = {
+        DISCOVERY: "modules",
+        SPEC: "model",
+        ENGINEER: "code",
     }
+
+    @classmethod
+    def resolve_fidelity(cls, fidelity: str) -> str:
+        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
 
     def __init__(
         self,
@@ -73,23 +78,25 @@ class CleanEngineering(BaseContextTool):
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
             )
         resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        super().__init__(
-            format=resolved_format, path=path, session=session, workspace=workspace
+        init_practice_guidance(
+            self,
+            format=resolved_format,
+            path=path,
+            session=session,
+            workspace=workspace,
+            fidelity=fidelity,
+            stage_to_fidelity=self.STAGE_TO_FIDELITY,
         )
-        self.fidelity = fidelity
         self.drawio = Drawio(workspace=self.workspace)
-
-    # Resolves to # Contexts in clean_engineering.md (fidelities + design vocabulary).
-    @instruction
-    def contexts(self) -> Instruction: ...
+        self.drawio.mode = "tool"
 
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Provide guidance for creating OO modules, models, and code."""
         return super().guidance()
 
     @agent_instructions
-    def generate_output(recipe) -> str:
+    def generate_output(self) -> str:
         """Write the fidelity artifact under the session.
 
         When ``format`` is ``drawio``, call ``drawio.render`` (create diagram →
@@ -98,8 +105,7 @@ class CleanEngineering(BaseContextTool):
         (markdown / python / …) from contexts, examples, and templates — do
         not invoke drawio.render.
         """
-        self.drawio.mode = "tool"
-        self.drawio.render()
+        tools(self.drawio.render())
         return "Artifact written under {session.path}/."
 
     @agent_tool

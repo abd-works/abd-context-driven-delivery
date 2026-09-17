@@ -17,7 +17,7 @@ from mamba import context, description, it
 
 from primitives.agent_tools.agent_tools import AgentInstructions
 from iterate import Iterate
-from primitives.harness.toolset_loader import ToolsetLoader
+from primitives.installer.toolset_loader import ToolsetLoader
 
 
 with description("Iterate toolset"):
@@ -74,10 +74,8 @@ with description("an iterate action"):
             expect(joined).to(contain("grill_with_context"))
 
 
-with description("BaseContextTool host face for iterate"):
-    with it("should not expose iterate on the host composer"):
-        from practices.base.base_context_tool import BaseContextTool
-
+with description("PracticeGuidance host face for iterate"):
+    with it("should not expose iterate on practice guidance hosts"):
         cls = ToolsetLoader.instance().load(
             "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
         )

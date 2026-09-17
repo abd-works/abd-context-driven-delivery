@@ -16,11 +16,11 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
 from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
-from primitives.harness.runner import InstructionRunRequest, InstructionRunner
-from primitives.instructions import Instruction
-from primitives.instructions import _path_for_name
+from toolset_invoke.toolset_invoke import expand_action
+from primitives.markdown import Markdown
+from improvement.improvement import Improvement
 from agent_tools import AgentToolSet
-from primitives.harness.toolset_loader import ToolsetLoader
+from primitives.installer.toolset_loader import ToolsetLoader
 
 _KIT_DIR = Path(__file__).resolve().parent
 _IMPROVEMENT = "improvement.improvement:Improvement"
@@ -33,21 +33,18 @@ def _expand(
     toolset_path: str,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return InstructionRunner.instance().invoke_action(
-        InstructionRunRequest(
-            request={"toolset": toolset_path, "context": {}},
-            toolset_path=toolset_path,
-            action_name=action_name,
-            context={},
-            arguments=arguments or {},
-            instance=instance,
-        )
+    return expand_action(
+        instance,
+        action_name,
+        toolset_path=toolset_path,
+        context={},
+        arguments=arguments or {},
+        request={"toolset": toolset_path, "context": {}},
     )
 
 
 def _section(name: str) -> str:
-    text = _path_for_name(_KIT_DIR, name).replace(" \u00a7 ", " # ", 1)
-    return Instruction(text, _KIT_DIR, domain_slug="improvement").expand()
+    return Markdown.from_label(Improvement(), name).extract()
 
 
 with description("Improvement repair recipe"):

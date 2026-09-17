@@ -1,12 +1,12 @@
 """Car — example context tool for in-character road stories and vehicle tools."""
 from __future__ import annotations
 
-from harness.harness_tool import dev_only, prompt
-from practices.base.base_context_tool import BaseContextTool
-from primitives.agent_tools.agent_tools import agent_instructions
-from primitives.instructions import Instruction
-from primitives.instructions import instruction
-from agent_tools.agent_tools import agent_tool, resource
+from installer.installer_tool import dev_only, prompt
+from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
+from practices.workspace_bind import init_practice_guidance
+from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
+from primitives.guidance.guidance import PracticeGuidance
+from agent_tools.agent_tools import agent_tool
 
 _TRIP_HEADER = "===== TRIP LOG (read only) ====="
 _TRIP_FOOTER = "===== END TRIP LOG ====="
@@ -19,23 +19,29 @@ _FIDELITY_FORMAT_DEFAULTS = {
 
 
 @dev_only
-class Car(BaseContextTool):
+@agent_toolset
+class Car(PracticeGuidance):
     """# Instructions
 
     Example context tool — qualitative guidance for in-character driving stories,
     plus vehicle tools agents invoke while narrating.
     """
 
+    domain_slug = "car"
     default_workspace_folder: str = "."
     context_index_key: str = "car"
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = frozenset({"markdown"})
 
-    fidelities = {
-        BaseContextTool.DISCOVERY: "trip_outline",
-        BaseContextTool.SPEC: "road_story",
-        BaseContextTool.ENGINEER: "full_journey",
+    STAGE_TO_FIDELITY = {
+        DISCOVERY: "trip_outline",
+        SPEC: "road_story",
+        ENGINEER: "full_journey",
     }
+
+    @classmethod
+    def resolve_fidelity(cls, fidelity: str) -> str:
+        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
 
     def __init__(
         self,
@@ -56,10 +62,15 @@ class Car(BaseContextTool):
                 f"Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
             )
         resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        super().__init__(
-            format=resolved_format, path=path, session=session, workspace=workspace
+        init_practice_guidance(
+            self,
+            format=resolved_format,
+            path=path,
+            session=session,
+            workspace=workspace,
+            fidelity=fidelity,
+            stage_to_fidelity=self.STAGE_TO_FIDELITY,
         )
-        self.fidelity = fidelity
         self._make = make
         self._model = model
         self._year = year
@@ -68,46 +79,32 @@ class Car(BaseContextTool):
         self._speed = 0.0
 
     @property
-    @resource
     def make(self) -> str:
         """Vehicle manufacturer."""
         return self._make
 
     @property
-    @resource
     def model(self) -> str:
         """Vehicle model name."""
         return self._model
 
     @property
-    @resource
     def year(self) -> int:
         """Model year."""
         return self._year
 
     @property
-    @resource
     def personality(self) -> str:
         """Character and voice of the car."""
         return self._personality
 
     @property
-    @resource
     def running(self) -> bool:
         """Whether the engine is running."""
         return self._running
 
-    @instruction
-    def contexts(self) -> Instruction: ...
-
-    @instruction
-    def examples(self) -> Instruction: ...
-
-    @instruction
-    def templates(self) -> Instruction: ...
-
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Provide guidance for in-character road stories at the current fidelity.
         At trip_outline fidelity: write bullet beats only — destination, conditions, tool order.
         At road_story fidelity: write full prose with start, drive, speak, and stop woven in.
@@ -121,12 +118,12 @@ class Car(BaseContextTool):
         )
 
     @agent_instructions
-    def generate(recipe) -> str:
+    def generate(self) -> str:
         """Generate the road-story artifact for the current fidelity."""
         return self.generate_output()
 
     @agent_instructions
-    def generate_output(recipe) -> str:
+    def generate_output(self) -> str:
         """Write the artifact for the active fidelity — outline, prose, or full journey."""
         if self.fidelity == "trip_outline":
             return "Write bullet beats: destination, conditions, start, drive, speak, stop."

@@ -5,10 +5,10 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-from practices.base.base_context_tool import BaseContextTool
-from primitives.agent_tools.agent_tools import agent_instructions
-from primitives.instructions import Instruction
-from primitives.instructions import instruction
+from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
+from practices.workspace_bind import init_practice_guidance
+from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
+from primitives.guidance.guidance import PracticeGuidance
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -37,20 +37,25 @@ def _load_channel_class(format_name: str) -> type:
     return getattr(importlib.import_module(module_path), attr)
 
 
-class Ux(BaseContextTool):
+@agent_toolset
+class Ux(PracticeGuidance):
     """# Instructions"""
 
+    domain_slug = "ux"
     default_workspace_folder: str = "ux"
     context_index_key: str = "ux"
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
-
-    fidelities = {
-        BaseContextTool.DISCOVERY: "ia",
-        BaseContextTool.SPEC:      "mockup",
-        BaseContextTool.ENGINEER:  "front_end_code",
+    STAGE_TO_FIDELITY = {
+        DISCOVERY: "ia",
+        SPEC: "mockup",
+        ENGINEER: "front_end_code",
     }
+
+    @classmethod
+    def resolve_fidelity(cls, fidelity: str) -> str:
+        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
 
     def __init__(
         self,
@@ -70,16 +75,18 @@ class Ux(BaseContextTool):
             raise ValueError(
                 f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
             )
-        super().__init__(
-            format=resolved_format, path=path, session=session, workspace=workspace
+        init_practice_guidance(
+            self,
+            format=resolved_format,
+            path=path,
+            session=session,
+            workspace=workspace,
+            fidelity=fidelity,
+            stage_to_fidelity=self.STAGE_TO_FIDELITY,
         )
-        self.fidelity = fidelity
-
-    @instruction
-    def contexts(self) -> Instruction: ...
 
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Provide guidance for creating IA, mockups, and front-end code."""
         return super().guidance()
 

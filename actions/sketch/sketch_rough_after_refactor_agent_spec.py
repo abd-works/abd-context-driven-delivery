@@ -26,7 +26,7 @@ from agent_bdd import (
     run_skill,
     sessions_dir,
 )
-from harness.harness import Harness
+from installer.installer import Installer
 
 _REPO = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
@@ -52,7 +52,7 @@ def _session(name: str) -> Path:
 
 
 def _deploy_sketch() -> None:
-    Harness("Cursor", repo_root=_REPO).write_deploy(source="sketch")
+    Installer("Cursor", repo_root=_REPO).install(source="sketch")
 
 
 def _context_sketch_files() -> set[Path]:

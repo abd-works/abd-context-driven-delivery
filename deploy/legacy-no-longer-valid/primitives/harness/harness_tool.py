@@ -37,7 +37,7 @@ def prompt(fn: Callable[..., Any] | None = None, *, name: str | None = None):
 
 
 def instruction(fn: Callable[..., Any] | None = None, *, name: str | None = None):
-    """Harness write-vehicle. Distinct from primitives.instructions.instruction (slots).
+    """Harness write-vehicle. Distinct from primitives.markdown.instruction (slots).
 
     AST scan only treats ``@instruction(name=...)`` as a write vehicle so slot
     ``@instruction`` / ``@instruction(label=...)`` stay guidance, not files.

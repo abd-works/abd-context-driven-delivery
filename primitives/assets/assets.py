@@ -1,4 +1,4 @@
-"""Asset location and collection for instruction expansion.
+"""Asset location and collection for markdown extract.
 """
 from __future__ import annotations
 
@@ -7,12 +7,60 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
 
-from primitives.instructions import (
-    _FORMAT_TEMPLATE_EXT,
-    _active_resource,
-    _path_for_templates,
-    _slug_variants,
-)
+_FORMAT_TEMPLATE_EXT = {
+    "python": ".py",
+    "py": ".py",
+    "javascript": ".js",
+    "js": ".js",
+    "markdown": ".md",
+    "md": ".md",
+    "typescript": ".ts",
+    "ts": ".ts",
+    "java": ".java",
+}
+
+
+def _slug_variants(domain_slug: str) -> list[str]:
+    variants = [domain_slug]
+    for alt in (domain_slug.replace("_", "-"), domain_slug.replace("-", "_")):
+        if alt not in variants:
+            variants.append(alt)
+    return variants
+
+
+def _active_resource(instance: Any, key: str | None) -> str | None:
+    if not key:
+        return None
+    value = getattr(instance, key, None)
+    return str(value) if value else None
+
+
+def _path_for_templates(module_dir: Path, domain_slug: str, active_format: str | None) -> str:
+    shared = module_dir / "templates"
+    if shared.is_dir():
+        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
+        for slug in _slug_variants(domain_slug):
+            for stem in (f"{slug}-templates", f"{slug}-template"):
+                if ext:
+                    preferred = shared / f"{stem}{ext}"
+                    if preferred.is_file():
+                        return preferred.relative_to(module_dir).as_posix()
+                for path in sorted(shared.glob(f"{stem}.*")):
+                    return path.relative_to(module_dir).as_posix()
+        return "templates"
+    for slug in _slug_variants(domain_slug):
+        for stem in (f"{slug}-templates", f"{slug}-template"):
+            if active_format:
+                format_dir = module_dir / "formats" / active_format
+                if format_dir.is_dir():
+                    for path in sorted(format_dir.glob(f"{stem}.*")):
+                        return path.relative_to(module_dir).as_posix()
+            for path in sorted(module_dir.glob(f"{stem}.*")):
+                return path.name
+    primary = _slug_variants(domain_slug)[0]
+    if active_format:
+        return f"formats/{active_format}/{primary}-templates"
+    return f"{primary}-templates"
 
 LocationKind = Literal["file", "folder", "section"]
 
@@ -142,7 +190,11 @@ class AssetLocator:
 
     def _locate(self) -> AssetLocation:
         module_dir = _class_file_directory(self._host)
-        domain_slug = getattr(self._host, "domain_slug", getattr(self._host, "toolset_name", module_dir.name))
+        domain_slug = (
+            getattr(self._host, "domain_slug", None)
+            or getattr(self._host, "toolset_name", None)
+            or module_dir.name
+        )
         filter_value = _active_resource(self._host, self._filter_key) if self._filter_key else None
         if self._label == "templates":
             # Prefer host.format so py/js/md template files are selected by channel.
@@ -179,7 +231,10 @@ class AssetLocator:
         return root
 
     def _locate_under(self, search_root: Path, module_dir: Path, domain_slug: str) -> AssetLocation:
-        fidelity_name = getattr(self._host, "name", None)
+        declared_name = getattr(type(self._host), "name", None)
+        fidelity_name = None if isinstance(declared_name, property) else getattr(
+            self._host, "name", None
+        )
         if fidelity_name:
             section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
             return AssetLocation(

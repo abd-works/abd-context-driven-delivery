@@ -83,7 +83,7 @@ arguments:
   name: <optional kebab-slug or session/... branch>
 ```
 
-**Before close:** run `git status` in the worktree. Delete only temps you can attribute to this session and know are disposable (examples: `Harness.write_deploy` output under `.cursor/commands` / `.cursor/skills`, agent BDD logs under `.context/.agent_bdd_sessions/` from spec runs, `_req*.yaml` scratch). Use judgment from the session — code cannot guess what is real. Never ask the user whether to delete the worktree.
+**Before close:** run `git status` in the worktree. Delete only temps you can attribute to this session and know are disposable (examples: `Harness.install` output under `.cursor/commands` / `.cursor/skills`, agent BDD logs under `.context/.agent_bdd_sessions/` from spec runs, `_req*.yaml` scratch). Use judgment from the session — code cannot guess what is real. Never ask the user whether to delete the worktree.
 
 Commit the complete worktree, then push the session branch. Do not filter changes by task scope, author, or which files the agent recognizes: anything changed in this worktree belongs to this worktree. Merge with main so the work lands on main — do **not** checkout `main` in a worktree you are about to delete. Drop any stash (`clear_stash`) — stash must never keep a session worktree. If the worktree is clean (no dirty files), `git worktree remove` it. If dirty remains after the full-root commit, leave the worktree and report what blocked removal.
 

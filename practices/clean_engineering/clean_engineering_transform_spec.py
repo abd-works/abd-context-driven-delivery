@@ -16,7 +16,7 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
         sys.path.insert(0, _p)
 
 import practices  # noqa: F401
-from primitives.harness.toolset_loader import ToolsetLoader
+from primitives.installer.toolset_loader import ToolsetLoader
 
 _OOAD_TOOLSET = "practices.clean_engineering.clean_engineering:CleanEngineering"
 

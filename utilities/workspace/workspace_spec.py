@@ -19,7 +19,7 @@ from mamba import before, context, description, it
 from primitives.agent_tools.agent_tools import AgentInstructions
 from workspace.git_repo import DirtyBranchSwitchError, NullGitRepo
 from workspace.workspace import ContextToolHost, PathOverride, Turn, Workspace
-from primitives.harness.toolset_loader import ToolsetLoader
+from primitives.installer.toolset_loader import ToolsetLoader
 
 
 with description("a context tool"):

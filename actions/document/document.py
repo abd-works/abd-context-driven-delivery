@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from workspace import SessionLog
-from primitives.harness.deployment import toolset_ref_for_type
+from primitives.installer.installation import toolset_ref_for_type
 
 
 @agent_toolset
@@ -15,7 +15,7 @@ class Document(LifecycleAction):
 
     @prompt
     @agent_instructions
-    def document(recipe, tools: list, paths: list[str]) -> str:
+    def document(self, tools: list, paths: list[str]) -> str:
         """document"""
         self.begin(tools, action="document")
         for tool in self.listed():

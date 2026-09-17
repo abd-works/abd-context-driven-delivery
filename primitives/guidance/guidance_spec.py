@@ -161,10 +161,12 @@ with description("practice guidance with fidelities examples and templates besid
 
     with context("with the instructions property read on practice guidance"):
         with it(
-            "should join context guidance instructions with each fidelity instructions in declaration order sketch first"
+            "should join this practice's own context, guidance, rules, and template without inlining fidelity bodies"
         ):
             text = self.host.instructions
-            expect(text.find("sketch guidance") < text.find("spec guidance")).to(equal(True))
+            expect(text).to(contain("sample preamble"))
+            expect(text).not_to(contain("sketch guidance body only"))
+            expect(text).not_to(contain("spec guidance body only"))
 
         with it("should not inline examples into instructions"):
             expect(self.host.instructions).not_to(contain("example file not inlined"))

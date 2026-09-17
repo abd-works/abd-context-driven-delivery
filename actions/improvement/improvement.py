@@ -4,13 +4,13 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
-from primitives.instructions import Instruction, instruction
+from primitives.markdown import markdown
 from agent_tools.agent_tools import agent_tool
 from workspace import SessionLog
-from primitives.harness.deployment import toolset_ref_for_type
+from primitives.installer.installation import toolset_ref_for_type
 
 
 @agent_toolset
@@ -19,17 +19,16 @@ class Improvement(LifecycleAction):
 
     @property
     def module_dir(self) -> Path:
-        """Directory of this module — used by @instruction slots to locate markdown files."""
+        """Directory of this module — used by @markdown extract."""
         return Path(inspect.getfile(type(self))).resolve().parent
 
-    @instruction(label="repair")
-    def repair_loop(self) -> Instruction:
+    @markdown(label="repair")
+    def repair_loop(self) -> str:
         """Deep root-cause recipe — why the toolset's expected behavior failed."""
-        ...
 
     @prompt(name="repair")
     @agent_instructions
-    def repair(recipe, tools: list, asset: str, violation: str) -> str:
+    def repair(self, tools: list, asset: str, violation: str) -> str:
         """Open a domain repair on each passed context tool and instruct the fix."""
         self.repair_loop
         self.begin(tools, action="repair")

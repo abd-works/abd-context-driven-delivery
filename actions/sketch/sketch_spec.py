@@ -18,7 +18,7 @@ from mamba import before, context, description, it
 
 from primitives.agent_tools.agent_tools import AgentInstructions
 from sketch import Sketch
-from primitives.harness.toolset_loader import ToolsetLoader
+from primitives.installer.toolset_loader import ToolsetLoader
 
 
 with description("Sketch toolset"):
@@ -259,10 +259,8 @@ with description("a sketch action"):
             expect("review_sketch" in Sketch().tools).to(be_true)
 
 
-with description("BaseContextTool host face for sketch"):
-    with it("should not expose sketch on the host composer"):
-        from practices.base.base_context_tool import BaseContextTool
-
+with description("PracticeGuidance host face for sketch"):
+    with it("should not expose sketch on practice guidance hosts"):
         cls = ToolsetLoader.instance().load(
             "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
         )

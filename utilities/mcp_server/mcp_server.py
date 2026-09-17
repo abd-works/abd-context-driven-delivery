@@ -4,9 +4,9 @@ from __future__ import annotations
 import inspect
 from typing import Any
 
-from primitives.harness.deployment import McpDeployment, McpOp
-from primitives.harness.operation_writes import operation_writes
-from primitives.harness.toolset_loader import ToolsetLoader
+from primitives.installer.installation import McpInstallation, McpOp
+from primitives.installer.declared_installations import declared_installations
+from primitives.installer.toolset_loader import ToolsetLoader
 
 
 class McpTool:
@@ -15,7 +15,7 @@ class McpTool:
     def __init__(self, op: McpOp) -> None:
         self.mcp_name = op.mcp_name
         self._op = op
-        self.callable = getattr(op.host, op.operation)
+        self.callable = getattr(op.tool, op.operation)
         function = getattr(self.callable, "__func__", self.callable)
         self.description = (inspect.getdoc(function) or "").strip()
 
@@ -31,15 +31,15 @@ class McpPrompt:
     def __init__(self, op: McpOp) -> None:
         self.mcp_name = op.mcp_name
         self._op = op
-        self.callable = getattr(op.host, op.operation)
+        self.callable = getattr(op.tool, op.operation)
         function = getattr(self.callable, "__func__", self.callable)
         self.prompt_text = (inspect.getdoc(function) or "").strip()
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
-        host = self._op.host
+        tool = self._op.tool
         name = self._op.operation
-        if name == "guidance" and hasattr(host, "instructions"):
-            return host.instructions
+        if name == "instructions" and hasattr(tool, "instructions"):
+            return tool.instructions
         member = self.callable
         if callable(member):
             try:
@@ -48,9 +48,9 @@ class McpPrompt:
                 result = None
             if result is not None:
                 return result
-            return self.prompt_text or getattr(host, "instructions", "")
-        if hasattr(host, "instructions"):
-            return host.instructions
+            return self.prompt_text or getattr(tool, "instructions", "")
+        if hasattr(tool, "instructions"):
+            return tool.instructions
         return member
 
 
@@ -59,7 +59,7 @@ class McpServer:
 
     def __init__(self, *, toolset_loader: ToolsetLoader | None = None) -> None:
         self._toolset_loader = toolset_loader or ToolsetLoader.instance()
-        self.mcp_deployments: list[McpDeployment] = []
+        self.mcp_installations: list[McpInstallation] = []
         self._tools: dict[str, McpTool] = {}
         self._prompts: dict[str, McpPrompt] = {}
         self._started = False
@@ -82,11 +82,11 @@ class McpServer:
         else:
             self._prompts[op.mcp_name] = McpPrompt(op)
 
-    def bind_from(self, deployment: McpDeployment) -> None:
-        """Enroll ops recorded during ``Harness.write_deploy`` — no class rescan."""
-        deployment.bind(self)
-        if deployment not in self.mcp_deployments:
-            self.mcp_deployments.append(deployment)
+    def bind_from(self, installation: McpInstallation) -> None:
+        """Enroll ops recorded during ``Installer.install`` — no class rescan."""
+        installation.bind(self)
+        if installation not in self.mcp_installations:
+            self.mcp_installations.append(installation)
 
     def start(
         self,
@@ -96,16 +96,16 @@ class McpServer:
     ) -> None:
         """Load each toolset ref and enroll its ``@mcp`` ops via the same walk deploy uses."""
         context = dict(constructor_context or {})
-        self.mcp_deployments = []
+        self.mcp_installations = []
         self._tools.clear()
         self._prompts.clear()
         for ref in toolset_refs:
-            host = self._toolset_loader.load(ref)(**context)
-            deployment = McpDeployment("Cursor", ".", ref)
-            for row in operation_writes(host):
-                deployment.record_operation(host, row)
-            deployment.bind(self)
-            self.mcp_deployments.append(deployment)
+            tool = self._toolset_loader.load(ref)(**context)
+            installation = McpInstallation("Cursor", ".", ref)
+            for declared in declared_installations(tool):
+                installation.record_operation(tool, declared)
+            installation.bind(self)
+            self.mcp_installations.append(installation)
         self._started = True
 
     def invoke_tool(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:

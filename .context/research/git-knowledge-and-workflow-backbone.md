@@ -511,7 +511,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | --- | --- | --- | --- | --- | --- |
 | G-06 | Context package | `ContextPackage.capture` at open/finish | `context-package.yaml` per turn | GitLens shows Context-Package trailer | **1** |
 | G-07 | Manifest version | manifest cmd + toolset blob SHA in package | Manifest-SHA in yaml/trailer | GitLens blame at SHA | **1** |
-| G-08 | Skill/rule surface | deploy-state + rules paths in package | skills_deployed, rules_surface | diff `.deploy-state.json` | **1** |
+| G-08 | Skill/rule surface | deploy-state + rules paths in package | skills_deployed, rules_surface | diff `.install-state.json` | **1** |
 | G-09 | Point-in-time replay | `regen_context_package(session, sha)` | regen yaml from git | `git show sha:path` | **2** |
 | G-10 | Retrieval evidence | *Defer* optional `retrieval.jsonl` | — | None stable in IDE | **5** |
 

@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent_tools import agent_instructions, agent_toolset
-from primitives.instructions import Instruction, instruction
+from agent_tools import agent_instructions, agent_toolset, instructions, tools
+from primitives.markdown import markdown
 from scan.scan import Scan
 from sub_agent.sub_agent import sub_agent
 from agent_tools.agent_tools import agent_tool
@@ -47,11 +47,11 @@ class Drawio:
     def domain_slug(self) -> str:
         return "drawio"
 
-    @instruction
-    def contexts(self) -> Instruction: ...
+    @markdown
+    def contexts(self) -> str: ...
 
-    @instruction
-    def examples(self) -> Instruction: ...
+    @markdown
+    def examples(self) -> str: ...
 
     @agent_tool
     def create_diagram(
@@ -111,24 +111,20 @@ class Drawio:
         return self.scanner.scan(paths, root=scan_root, rule=rule)
 
     @agent_instructions
-    def validate(recipe) -> str:
+    def validate(self) -> str:
         """Judge the diagram against drawio contexts; call scan on the asset paths under review."""
-        self.contexts
-        self.scan()
+        tools(self.scan)
         return "Validation report for Draw.io layout rules (see contexts)."
 
     @sub_agent
     @agent_instructions
-    def repair(recipe, asset: str, violation: str) -> str:
+    def repair(self, asset: str, violation: str) -> str:
         """repair"""
-        self.scan()
-        self.contexts
-        self.examples
+        tools(self.scan)
         return "Repair {{asset}} until drawio validate/scan passes. Fix the layout generator — not a one-off diagram edit."
 
     @agent_instructions
-    def render(
-        recipe,
+    def render(self,
         content: str = "",
         path: str = "",
         source_format: str = "markdown",
@@ -136,12 +132,14 @@ class Drawio:
         keep_positioning: bool = False,
     ) -> str:
         """render"""
-        self.create_diagram(
-            content, path, source_format, previous, keep_positioning
+        tools(
+            self.create_diagram(
+                content, path, source_format, previous, keep_positioning
+            )
         )
-        self.validate()
+        instructions(self.validate)
         self.mode = "tool"
-        self.repair()
+        instructions(self.repair)
         return (
             "Rendered {{path}}. After validate/scan: if definitive layout "
             "violations remain, invoke repair as a sub-agent with the scan "

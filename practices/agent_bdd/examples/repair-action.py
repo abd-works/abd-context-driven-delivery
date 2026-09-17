@@ -32,10 +32,7 @@ with description("a CarChronicle generator"):
                 )
 
                 response = instruct_use_tool(
-                    "Using shell, run exactly: python -m harness run -\n"
-                    "Pipe this YAML on stdin:\n"
-                    f"{_REPAIR_YAML}\n"
-                    "Return the complete fenced YAML stdout from the CLI.",
+                    f"{_REPAIR_YAML}\n",
                     timeout_seconds=120,
                 )
                 expect(response.ok).to(be_true)

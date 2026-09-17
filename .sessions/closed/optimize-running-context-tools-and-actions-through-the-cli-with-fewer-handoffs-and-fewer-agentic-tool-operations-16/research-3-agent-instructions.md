@@ -152,7 +152,7 @@ Section reference: `.context/sessions/…/options.md` lines 146–175 (+ related
 
 | Row | Section 3 claim | Evidence |
 |---|---|---|
-| Harness.generate | “AskQuestions then two tools” | `Harness.generate` expands; lists `suggested_deploy_path`, `write_deploy` as `@agent_tool` steps — one expand hop, then agent runs tools (section 2). Not multiple instruction hops. |
+| Harness.generate | “AskQuestions then two tools” | `Harness.generate` expands; lists `suggested_deploy_path`, `install` as `@agent_tool` steps — one expand hop, then agent runs tools (section 2). Not multiple instruction hops. |
 | Workflow.start/finish | “already one `@agent_tool` — good pattern” | **Correct.** `workflow.py` — `start`/`finish` are `@agent_tool`; Python runs chain in one `tool:` invoke. |
 | Generate.generate | “begin/guidance/output/end → one host tool” | **Misdiagnosed.** `begin`/`end`/nested actions are already inlined by expander. Promoting to `@agent_tool` (3A) would **add** CLI hops, not remove them. |
 | Lifecycle begin/end | “one prelude tool” | **Wrong direction.** They are `@agent_instructions` and already merge into first expand. `SessionLog.append` in generate recipe already runs at expand time. |
@@ -198,7 +198,7 @@ These appear after the first expand because they are **`@agent_tool` steps** (or
 | `read_cdr_format`, `list_cdrs`, `write_cdr` | Inlined from `begin` → `record_decisions_session`; tools on `RecordDecisions` | `record_decisions.record_decisions:RecordDecisions` |
 | Domain `@agent_tool` from `generate_output` override | e.g. `ChronicleWithOutput.generate_output` → `self.add_epic()` | Host context tool |
 | `capture_backlog` | `Workflow.backlog` expand lists tool; handoff action inlined | `workflow.workflow:Workflow` |
-| `suggested_deploy_path`, `write_deploy` | `Harness.generate` expand | `harness.harness:Harness` |
+| `suggested_deploy_path`, `install` | `Harness.generate` expand | `installer.installer:Harness` |
 | `fence` | `Echo.echo_session` expand | `echo.echo:Echo` |
 | Grill `explore` / `read` / `write_grill_answer` | Fine tools by design | Grill kit |
 | CDD stage `guidance` | **Deferred** via `mode=tool` | Each stage child toolset |

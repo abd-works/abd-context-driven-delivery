@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 
-from expects import be_a, contain, equal, expect
+from expects import contain, equal, expect
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -14,7 +14,6 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
         sys.path.insert(0, _p)
 
 from primitives.examples.reporter.reporter import Reporter
-from primitives.instructions import Instruction
 
 
 def make_reporter(beat: str = "technology") -> Reporter:
@@ -87,38 +86,23 @@ with description("a Reporter"):
         with before.each:
             self.reporter = make_reporter()
 
-        with it("should return an Instruction resolved from reporter.md"):
-            # Act
-            result = self.reporter.style()
-            # Assert
-            expect(result).to(be_a(Instruction))
-            expect(result.expand()).to(contain("inverted-pyramid"))
+        with it("should return the Style section from reporter.md"):
+            expect(self.reporter.style).to(contain("inverted-pyramid"))
 
     with context("that exposes house guidelines"):
         with before.each:
             self.reporter = make_reporter()
 
-        with it("should return an Instruction resolved from house-guidelines.md"):
-            # Act
-            result = self.reporter.guidelines()
-            # Assert
-            expect(result).to(be_a(Instruction))
-            expect(result.expand()).to(contain("attribute"))
+        with it("should return house-guidelines.md"):
+            expect(self.reporter.guidelines).to(contain("attribute"))
 
     with context("that has its toolset manifest read"):
         with it("should register add_note, read_notes, and clear_notes as tools"):
-            # Act / Assert
-            tool_names = set(Reporter.manifest.tools.keys())
-            expect(tool_names).to(
+            reporter = make_reporter()
+            expect(set(reporter.operations)).to(
                 equal({"add_note", "read_notes", "clear_notes"})
             )
 
-        with it("should register beat and note_count as resources"):
-            # Act / Assert
-            resource_names = set(Reporter.manifest.resource_entries.keys())
-            expect(resource_names).to(equal({"beat", "note_count"}))
-
-        with it("should register gather and file_report as actions"):
-            # Act / Assert
-            action_names = set(Reporter.manifest.agent_tools.keys())
-            expect(action_names).to(equal({"gather", "file_report"}))
+        with it("should register gather and file_report as agent instructions"):
+            reporter = make_reporter()
+            expect(set(reporter.instructions)).to(equal({"gather", "file_report"}))

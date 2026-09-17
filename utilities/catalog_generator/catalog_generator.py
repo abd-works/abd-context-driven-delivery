@@ -29,12 +29,11 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from agent_tools import agent_tool, agent_toolset
-from primitives.harness.deployment import toolset_ref_for_type
+from primitives.installer.installation import toolset_ref_for_type
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_BASE_CONTEXT_TOOL_PATH = _REPO_ROOT / "practices" / "base" / "base_context_tool.py"
 _SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
 
 # -- Registry ---------------------------------------------------------------
@@ -54,7 +53,7 @@ CONTEXT_TOOL_REGISTRY: tuple[tuple[str, str, str], ...] = (
 
 # Harness owns generate (replaces the old deploy_agent_skills utility).
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
-    ("harness", "harness.harness", "Harness"),
+    ("harness", "installer.installer", "Harness"),
     ("diagnose", "diagnose.diagnose", "Diagnose"),
     ("echo", "echo.echo", "Echo"),
     ("handoff", "handoff.handoff", "Handoff"),
@@ -189,7 +188,7 @@ def resolve_default_template(
     """
     if not default_format:
         return None
-    from primitives.instructions import _path_for_templates
+    from primitives.assets.assets import _path_for_templates
 
     relative = _path_for_templates(module_dir, domain_slug, default_format)
     candidate = (module_dir / relative).resolve()
@@ -250,7 +249,7 @@ def resolve_default_template(
 
     if not scored:
         # Single non-sketch file at templates root matching format ext (e.g. DDD).
-        from primitives.instructions import _FORMAT_TEMPLATE_EXT
+        from primitives.assets.assets import _FORMAT_TEMPLATE_EXT
 
         ext = _FORMAT_TEMPLATE_EXT.get(default_format.lower(), "")
         root_files = [
@@ -614,71 +613,9 @@ def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
     return results
 
 
-def resolve_lifecycle_actions(
-    base_context_tool_path: Path | None = None,
-) -> list[ActionResolution]:
-    """AST-walk ``BaseContextTool``'s public ``@agent_instructions`` methods, in source
-    order, and resolve each one's delegate kit dir and same-instance calls.
-
-    Kit-owned lifecycle actions (``partition``, ``grill``, ``sketch``,
-    ``iterate``) are resolved from their action kits under
-    ``actions/`` — not from the host composer.
-
-    Delegate resolution has no hand-maintained per-action lookup table: a
-    peer-kit ``(attr, method)`` call pair is that action's unique delegate
-    signal only when no *other* public action calls that exact same pair.
-    Two actions may each own a distinct call on the *same* peer kit
-    (``repair`` -> ``self.repairer.repair(...)``, ``improve`` ->
-    ``self.repairer.improve()``) without colliding - each pair is unique to
-    its own action. Shared infrastructure is marked by the opposite case:
-    two actions calling the *identical* pair (``document`` and ``validate``
-    both calling ``self.scanner.scan(...)``), which is excluded from
-    delegate resolution. An action with no unique peer-kit pair falls back
-    to ``practices/base/``.
-    """
-    path = base_context_tool_path or _BASE_CONTEXT_TOOL_PATH
-    source = path.read_text(encoding="utf-8")
-    tree = ast.parse(source)
-
-    methods = _public_action_methods(tree)
-    action_names = {m.name for m in methods}
-    peer_kit_attrs = _init_peer_kit_attrs(tree)
-
-    # (attr, method) -> set of action names that call self.<attr>.<method>(...)
-    pair_actions: dict[tuple[str, str], set[str]] = {}
-    for method in methods:
-        for pair in set(_double_attr_calls(method.body)):
-            pair_actions.setdefault(pair, set()).add(method.name)
-
-    host_results: list[ActionResolution] = []
-    for method in methods:
-        called_pairs = set(_double_attr_calls(method.body))
-        delegate_attr = next(
-            (
-                attr
-                for attr, _method_name in called_pairs
-                if attr in peer_kit_attrs
-                and len(pair_actions.get((attr, _method_name), set())) == 1
-            ),
-            None,
-        )
-        if method.name in _HOST_LIFECYCLE_ACTIONS:
-            source_dir = _REPO_ROOT / "practices" / "base"
-        elif delegate_attr is not None:
-            class_name = peer_kit_attrs[delegate_attr]
-            module_path = _import_module_for_class(tree, class_name)
-            package_name = module_path.split(".")[0] if module_path else delegate_attr
-            actions_dir = _REPO_ROOT / "practices" / "actions" / package_name
-            utilities_dir = _REPO_ROOT / "utilities" / package_name
-            source_dir = actions_dir if actions_dir.is_dir() else utilities_dir
-        else:
-            source_dir = _REPO_ROOT / "practices" / "base"
-
-        calls = _same_instance_action_calls(method.body, action_names - {method.name})
-        host_results.append(ActionResolution(name=method.name, source_dir=source_dir, calls=calls))
-
+def resolve_lifecycle_actions() -> list[ActionResolution]:
+    """Resolve lifecycle action source dirs and same-instance calls from action kits."""
     kit_by_name = {r.name: r for r in _resolve_kit_lifecycle_actions()}
-    host_by_name = {r.name: r for r in host_results}
     order = (
         "partition",
         "grill",
@@ -691,7 +628,7 @@ def resolve_lifecycle_actions(
         "repair",
         "createRule",
     )
-    return [kit_by_name.get(name) or host_by_name[name] for name in order]
+    return [kit_by_name[name] for name in order if name in kit_by_name]
 
 
 # -- Skill slash-command map --------------------------------------------------
@@ -818,7 +755,7 @@ def build_run_request(
     action: str,
     fidelity: str | None = None,
 ) -> dict:
-    """Build a ``python -m harness run`` request dict from the live toolset manifest.
+    """Build a spec run-request dict from the live toolset manifest.
 
     Constructor parameters become ``context``; the named action's parameters
     become ``arguments``. ``fidelity`` (when the constructor accepts it) is
@@ -1628,7 +1565,7 @@ class Catalog:
             "checkout the agent can see).</li>"
             "<li>Drop "
             f'<a href="{html_mod.escape(harness_href)}" target="_blank" rel="noopener noreferrer">'
-            "<code>primitives/harness/harness.py</code></a> "
+            "<code>primitives/installer/harness.py</code></a> "
             "into the chat and ask the agent to run "
             "<strong>generate</strong> "
             "(action <code>generate</code>). "

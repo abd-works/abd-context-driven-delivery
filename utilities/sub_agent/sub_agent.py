@@ -4,7 +4,7 @@ Usage::
 
     @sub_agent
     @agent_instructions
-    def run(recipe, tools: list, actions: list | None = None) -> str:
+    def run(self, tools: list, actions: list | None = None) -> str:
         \"\"\"Full instructions for the sub-agent go here - inline in the docstring.\"\"\"
 
 When deployed via MCP the agent sees ``kind: sub_agent`` with
@@ -17,7 +17,7 @@ import inspect
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import AgentTool
 
@@ -64,7 +64,7 @@ def sub_agent(func: Callable[..., Any]) -> Callable[..., Any]:
 
         @sub_agent
         @agent_instructions
-    def run(recipe, tools: list, actions: list | None = None) -> str:
+    def run(self, tools: list, actions: list | None = None) -> str:
             \"\"\"Instructions sent verbatim to the sub-agent.\"\"\"
 
     The inner decorator runs first.  ``@sub_agent`` then sets ``_is_sub_agent = True``
@@ -97,7 +97,7 @@ class SubAgent:
     @prompt(name="sub-agent")
     @sub_agent
     @agent_instructions
-    def run(recipe, tools: list, actions: list | None = None, prompt: str | None = None) -> str:
+    def run(self, tools: list, actions: list | None = None, prompt: str | None = None) -> str:
         """Run the listed context tools and actions as one non-blocking sub-agent.
 
         tools — context tools (same arguments.tools as iterate / repair / generate).

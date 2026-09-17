@@ -13,7 +13,7 @@ class TemplatedMdDemo:
         super().__init__()
 
     @agent_instructions
-    def greet(recipe, name: str) -> str:
+    def greet(self, name: str) -> str:
         """Greet someone on behalf of this toolset."""
         (
             "Greet {{name}} on behalf of {{self.label}}. Keep the tone brief.\n"

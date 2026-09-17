@@ -5,18 +5,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from practices.base.base_context_tool import BaseContextTool
-from primitives.agent_tools.agent_tools import agent_instructions
-from primitives.instructions import Instruction
-from primitives.instructions import instruction
+from practices.workspace_bind import init_practice_guidance
+from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
+from primitives.guidance.guidance import PracticeGuidance
 
 if TYPE_CHECKING:
     from practices.stories.stories import Stories
 
 
-class MernDomainDriven(BaseContextTool):
+@agent_toolset
+class MernDomainDriven(PracticeGuidance):
     """# Instructions"""
 
+    domain_slug = "mern_domain_driven"
     default_workspace_folder: str = "packages"
     context_index_key: str = "mern_domain_driven"
 
@@ -26,7 +27,13 @@ class MernDomainDriven(BaseContextTool):
         session: str | None = None,
         workspace: str | None = None,
     ) -> None:
-        super().__init__(format="typescript", path=path, session=session, workspace=workspace)
+        init_practice_guidance(
+            self,
+            format="typescript",
+            path=path,
+            session=session,
+            workspace=workspace,
+        )
 
     def _stories(self) -> "Stories":
         """Stories companion pinned at acceptance_tests fidelity, typescript format -
@@ -37,7 +44,7 @@ class MernDomainDriven(BaseContextTool):
         instance = Stories(
             fidelity="acceptance_tests",
             format="typescript",
-            path=self._raw_path,
+            path=self.path,
             session=(
                 self.workspace.current_work_session.name
                 if self.workspace.current_work_session
@@ -48,11 +55,8 @@ class MernDomainDriven(BaseContextTool):
         instance.mode = "tool"
         return instance
 
-    @instruction
-    def contexts(self) -> Instruction: ...
-
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """1. Follow session_guidance (handled by the inherited body below). Fill
         templates/ for the feature package this slice touches ({epicSlug}/ with
         nested domain module + process boot) if not already present.

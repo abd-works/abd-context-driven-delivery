@@ -113,7 +113,7 @@ with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections")
 
 
 with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
-    with description("given BaseContextTool's lifecycle-actions section"):
+    with description("given lifecycle action kits"):
         with before.all:
             self.resolutions = resolve_lifecycle_actions()
             self.by_name = {r.name: r for r in self.resolutions}

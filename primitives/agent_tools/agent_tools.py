@@ -61,15 +61,33 @@ class ExpansionResult:
 
 _PARAM_PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 _SELF_PLACEHOLDER = re.compile(r"\{\{self\.(\w+)\}\}")
+_EXEC_LOCAL_MISSING = object()
+
+
+class ToolSetCollection:
+    """Named child toolsets, iterated in entry order."""
+
+    def __init__(self, entries: dict[str, Any] | None = None) -> None:
+        self.entries: dict[str, Any] = dict(entries or {})
+
+    def __iter__(self):
+        return iter(self.entries.values())
+
+    def __len__(self) -> int:
+        return len(self.entries)
+
+    def __bool__(self) -> bool:
+        return bool(self.entries)
 
 
 class AgentToolSet:
     """Injected by @agent_toolset — operations and @agent_instructions on one toolset."""
 
     _mode: str = "instructions"
+    domain_slug: str | None = None
 
     def __init__(self) -> None:
-        pass
+        self.nested_toolsets = ToolSetCollection()
 
     @property
     def name(self) -> str:
@@ -91,7 +109,7 @@ class AgentToolSet:
     def tools(self) -> dict[str, AgentTool]:
         merged: dict[str, AgentTool] = {}
         merged.update(self.operations)
-        merged.update(self.instructions)
+        merged.update(self._discover_instruction_members())
         return merged
 
     @property
@@ -151,7 +169,16 @@ class AgentToolSet:
         return frozenset(names)
 
 
-    class _RecipeBodyScanner(ast.NodeVisitor):
+    class _InstructionBodyValidator(ast.NodeVisitor):
+        """Validate ``tools(...)`` and ``instructions(...)`` in one ``@agent_instructions`` body.
+
+        Invoked from ``_validate_action`` when an ``@agent_toolset`` class is registered.
+        Walks the action AST and raises ``AgentToolValidationError`` when a wrapper
+        names a member that is not an allowed ``@agent_tool``, ``@agent_instructions``
+        peer, loop-bound companion, or recognized cross-toolset provider. The visit
+        performs the check — not a passive tree walk for something else to interpret.
+        """
+
         def __init__(
             self,
             *,
@@ -164,49 +191,83 @@ class AgentToolSet:
             self._all_providers = all_providers
             self._class_name = class_name
             self._action_name = action_name
+            self._loop_vars: list[str] = []
+
+        def visit_For(self, node: ast.For) -> None:
+            if isinstance(node.target, ast.Name):
+                self._loop_vars.append(node.target.id)
+                self.generic_visit(node)
+                self._loop_vars.pop()
+                return
+            self.generic_visit(node)
+
+        def _validate_wrapper_arg(self, wrapper: str, arg: ast.AST | None) -> bool:
+            if arg is None:
+                if wrapper == "tools":
+                    raise AgentToolValidationError(
+                        f"{wrapper}(...) requires one argument",
+                        class_name=self._class_name,
+                        action_name=self._action_name,
+                    )
+                return False
+            if AgentToolSet._provider_cross_call(arg) is not None:
+                return True
+            if self._loop_vars and AgentToolSet._provider_cross_call(
+                arg, frozenset(self._loop_vars)
+            ) is not None:
+                return True
+            if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute):
+                if isinstance(arg.func.value, ast.Name) and arg.func.value.id in self._loop_vars:
+                    return True
+            member = AgentInstructions._self_member_name(arg)
+            if member is not None:
+                self._check_member(member)
+                return True
+            if wrapper == "tools":
+                raise AgentToolValidationError(
+                    f"{wrapper}(...) argument is not a recognized tool step",
+                    class_name=self._class_name,
+                    action_name=self._action_name,
+                )
+            return False
 
         def _check_member(self, member_name: str) -> None:
             if member_name in self._allowed_names or member_name in self._all_providers:
                 return
             raise AgentToolValidationError(
-                f"{member_name!r} is not an allowed recipe step",
+                f"{member_name!r} is not an allowed tool step",
                 class_name=self._class_name,
                 action_name=self._action_name,
             )
 
         def visit_Call(self, node: ast.Call) -> None:
-            if AgentToolSet._cross_instance_call(node) is not None:
-                return
-            member_name = AgentInstructions._self_member_name(node)
-            if member_name is not None:
-                self._check_member(member_name)
-                return
-            self.generic_visit(node)
-
-        def visit_Attribute(self, node: ast.Attribute) -> None:
-            member_name = AgentInstructions._self_member_name(node)
-            if member_name is not None:
-                self._check_member(member_name)
-                return
+            if isinstance(node.func, ast.Name) and node.func.id == "tools":
+                if self._validate_wrapper_arg("tools", node.args[0] if node.args else None):
+                    return
+            if isinstance(node.func, ast.Name) and node.func.id == "instructions":
+                if self._validate_wrapper_arg(
+                    "instructions", node.args[0] if node.args else None
+                ):
+                    return
             self.generic_visit(node)
 
     @classmethod
-    def _validate_recipe_param(
+    def _validate_self_param(
         cls,
         class_name: str,
         action_name: str,
         action_func: Callable[..., Any],
     ) -> None:
         params = list(inspect.signature(action_func).parameters.values())
-        if not params or params[0].name != "recipe":
+        if not params or params[0].name != "self":
             raise AgentToolValidationError(
-                "first parameter must be named 'recipe'",
+                "first parameter must be named 'self'",
                 class_name=class_name,
                 action_name=action_name,
             )
         if params[0].default is not inspect.Parameter.empty:
             raise AgentToolValidationError(
-                "recipe parameter must not have a default",
+                "self parameter must not have a default",
                 class_name=class_name,
                 action_name=action_name,
             )
@@ -219,10 +280,10 @@ class AgentToolSet:
         action_func: Callable[..., Any],
         allowed_names: set[str],
     ) -> None:
-        cls._validate_recipe_param(class_name, action_name, action_func)
+        cls._validate_self_param(class_name, action_name, action_func)
         body_ast = AgentInstructions.for_callable(action_func)._parse_source(action_func)
         all_providers = cls._cross_instance_providers(body_ast) | cls._for_each_providers(body_ast)
-        cls._RecipeBodyScanner(
+        cls._InstructionBodyValidator(
             allowed_names=allowed_names,
             all_providers=all_providers,
             class_name=class_name,
@@ -242,8 +303,12 @@ class AgentToolSet:
         cls._validate_toolset_class(toolset_cls)
 
     @classmethod
-    def _cross_instance_call(cls, node: ast.AST) -> tuple[str, str] | None:
-        """Match ``self.<provider>().<member>()`` or ``self.<provider>.<member>()``."""
+    def _provider_cross_call(
+        cls,
+        node: ast.AST,
+        roots: frozenset[str] = frozenset({"self"}),
+    ) -> tuple[str, str] | None:
+        """Match ``<root>.<provider>().<member>()`` or ``<root>.<provider>.<member>()``."""
         if not isinstance(node, ast.Call):
             return None
         if not isinstance(node.func, ast.Attribute):
@@ -253,9 +318,13 @@ class AgentToolSet:
         provider_attr = provider_node.func if isinstance(provider_node, ast.Call) else provider_node
         if not isinstance(provider_attr, ast.Attribute):
             return None
-        if not isinstance(provider_attr.value, ast.Name) or provider_attr.value.id != "self":
+        if not isinstance(provider_attr.value, ast.Name) or provider_attr.value.id not in roots:
             return None
         return provider_attr.attr, member
+
+    @classmethod
+    def _cross_instance_call(cls, node: ast.AST) -> tuple[str, str] | None:
+        return cls._provider_cross_call(node, frozenset({"self"}))
 
     @classmethod
     def _cross_instance_providers(cls, body: ast.Module) -> set[str]:
@@ -273,8 +342,6 @@ class AgentToolSet:
             if not isinstance(node, ast.For):
                 continue
             iter_member = AgentInstructions._self_member_name(node.iter)
-            if iter_member is None:
-                iter_member = AgentInstructions._recipe_toolset_member_name(node.iter)
             if iter_member is not None:
                 providers.add(iter_member)
         return providers
@@ -286,6 +353,14 @@ class AgentToolSet:
     def validate(self) -> None:
         AgentToolSet._validate_toolset_class(type(self))
 
+class InstallDestination:
+    MCP = "mcp"
+    HOOK = "hook"
+    SKILL = "skill"
+    COMMAND = "command"
+    RULE = "rules"
+
+
 @dataclass
 class AgentTool:
     name: str
@@ -295,6 +370,54 @@ class AgentTool:
     @classmethod
     def from_callable(cls, func: Callable[..., Any]) -> AgentTool:
         return cls(name=func.__name__, callable=func, toolset=AgentToolSet())
+
+    @property
+    def install_to_mcp(self) -> bool:
+        return bool(getattr(self.callable, "_mcp", False))
+
+    @property
+    def install_to_hook(self) -> bool:
+        return bool(getattr(self.callable, "_hook", False))
+
+    @property
+    def install_to_skill(self) -> bool:
+        return bool(getattr(self.callable, "_skill", False))
+
+    @property
+    def install_to_command(self) -> bool:
+        return bool(getattr(self.callable, "_command", False))
+
+    @property
+    def install_to_rule(self) -> bool:
+        return bool(getattr(self.callable, "_rules", False))
+
+    def install_to(self, destination: str) -> bool:
+        if destination == InstallDestination.MCP:
+            return self.install_to_mcp
+        if destination == InstallDestination.HOOK:
+            return self.install_to_hook
+        if destination == InstallDestination.SKILL:
+            return self.install_to_skill
+        if destination == InstallDestination.COMMAND:
+            return self.install_to_command
+        if destination == InstallDestination.RULE:
+            return self.install_to_rule
+        return False
+
+    @property
+    def destinations(self) -> list[str]:
+        destinations: list[str] = []
+        if self.install_to_mcp:
+            destinations.append(InstallDestination.MCP)
+        if self.install_to_skill:
+            destinations.append(InstallDestination.SKILL)
+        if self.install_to_command:
+            destinations.append(InstallDestination.COMMAND)
+        if self.install_to_rule:
+            destinations.append(InstallDestination.RULE)
+        if self.install_to_hook:
+            destinations.append(InstallDestination.HOOK)
+        return destinations
 
     @property
     def kind(self) -> str:
@@ -310,7 +433,7 @@ class AgentTool:
         sig = inspect.signature(self.callable)
         parameters: dict[str, str] = {}
         for name, param in sig.parameters.items():
-            if name in ("self", "cls", "recipe"):
+            if name in ("self", "cls"):
                 continue
             if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
                 continue
@@ -381,6 +504,7 @@ class AgentInstructions(AgentTool):
     _defining_class: type | None = field(default=None, init=False, repr=False)
     _mode: str = field(default='instructions', init=False, repr=False)
     _loop_item_modes: dict[int, str] = field(default_factory=dict, init=False, repr=False)
+    _execution_locals: dict[str, Any] = field(default_factory=dict, init=False, repr=False)
 
     @property
     def kind(self) -> str:
@@ -429,7 +553,7 @@ class AgentInstructions(AgentTool):
         *,
         instance: Any | None = None,
     ) -> str:
-        return cls.for_callable(lambda recipe: None)._substitute(
+        return cls.for_callable(lambda self: None)._substitute(
             template, arguments, parameter_names, instance=instance,
         )
 
@@ -459,6 +583,7 @@ class AgentInstructions(AgentTool):
             self._tools = []
             self._seen_prompt = set()
             self._loop_item_modes = {}
+            self._execution_locals = {}
         self._defining_class = defining_class
         self._mode = self._read_mode(self.toolset)
         self._visited = self._check_and_advance_visited(
@@ -514,39 +639,6 @@ class AgentInstructions(AgentTool):
         if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "self":
             return node.attr
         return None
-
-    @staticmethod
-    def _recipe_toolset_member_name(node: ast.AST) -> str | None:
-        target = node.func if isinstance(node, ast.Call) else node
-        if not isinstance(target, ast.Attribute):
-            return None
-        value = target.value
-        if not isinstance(value, ast.Attribute):
-            return None
-        if not isinstance(value.value, ast.Name) or value.value.id != "recipe":
-            return None
-        if value.attr != "toolset":
-            return None
-        return target.attr
-
-    def _recipe_toolset_cross_call(self, node: ast.AST) -> tuple[str, str] | None:
-        if not isinstance(node, ast.Call):
-            return None
-        if not isinstance(node.func, ast.Attribute):
-            return None
-        member = node.func.attr
-        provider_node = node.func.value
-        provider_attr = provider_node.func if isinstance(provider_node, ast.Call) else provider_node
-        if not isinstance(provider_attr, ast.Attribute):
-            return None
-        value = provider_attr.value
-        if not isinstance(value, ast.Attribute):
-            return None
-        if not isinstance(value.value, ast.Name) or value.value.id != "recipe":
-            return None
-        if value.attr != "toolset":
-            return None
-        return provider_attr.attr, member
 
     def _visit_key(self, instance: Any, action_name: str, defining_class: type | None = None) -> tuple[str, str]:
         cls = defining_class if defining_class is not None else type(instance)
@@ -678,14 +770,14 @@ class AgentInstructions(AgentTool):
     def _wrapped_member_name(self, node: ast.AST | None) -> str | None:
         if node is None:
             return None
-        recipe_name = self._recipe_toolset_member_name(node)
-        if recipe_name is not None:
-            return recipe_name
+        self_name = self._self_member_name(node)
+        if self_name is not None:
+            return self_name
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
             return node.func.attr
         if isinstance(node, ast.Attribute):
             return node.attr
-        return self._self_member_name(node)
+        return None
 
     def _resolve_provider(self, instance: Any, provider_name: str) -> Any:
         raw = getattr(instance, provider_name)
@@ -738,13 +830,7 @@ class AgentInstructions(AgentTool):
         if not isinstance(target, ast.Attribute) or target.attr != "mode":
             return None
         is_self = isinstance(target.value, ast.Name) and target.value.id == "self"
-        is_recipe_toolset = (
-            isinstance(target.value, ast.Attribute)
-            and isinstance(target.value.value, ast.Name)
-            and target.value.value.id == "recipe"
-            and target.value.attr == "toolset"
-        )
-        if not (is_self or is_recipe_toolset):
+        if not is_self:
             return None
         if isinstance(statement.value, ast.Constant) and isinstance(statement.value.value, str):
             return statement.value.value
@@ -765,6 +851,47 @@ class AgentInstructions(AgentTool):
             return statement.value.value
         return None
 
+    def _dispatch_tools_arg(
+        self,
+        arg: ast.AST | None,
+        *,
+        loop_var: str | None = None,
+        loop_item: Any = None,
+    ) -> bool:
+        if arg is None:
+            return False
+        roots = frozenset({loop_var}) if loop_var else frozenset({"self"})
+        cross = (
+            AgentToolSet._provider_cross_call(arg, roots)
+            if isinstance(arg, ast.Call)
+            else None
+        )
+        if cross is not None:
+            provider_name, member = cross
+            owner = loop_item if loop_var else self.toolset
+            try:
+                target = self._resolve_provider(owner, provider_name)
+            except Exception as exc:  # noqa: BLE001
+                self._add_prompt(f"Could not resolve `{provider_name}`: {exc}")
+                self._tools.append(member)
+                return True
+            self._expand_target_member(member, target)
+            return True
+        if loop_var and isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute):
+            if isinstance(arg.func.value, ast.Name) and arg.func.value.id == loop_var:
+                self._expand_target_member(arg.func.attr, loop_item)
+                return True
+        if loop_var is None:
+            member_name = self._self_member_name(arg)
+            if member_name:
+                self._expand_target_member(member_name, self.toolset)
+                return True
+        member = self._wrapped_member_name(arg)
+        if member:
+            self._tools.append(member)
+            return True
+        return False
+
     def _walk_for_each_wrapped(
         self,
         body_stmt: ast.stmt,
@@ -780,18 +907,134 @@ class AgentInstructions(AgentTool):
         if arg is None:
             return False
         if call.func.id == "tools":
-            member = self._recipe_toolset_member_name(arg)
-            if member is None and isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute):
-                member = arg.func.attr
-            if member:
-                self._tools.append(member)
-                return True
-            return False
+            return self._dispatch_tools_arg(arg, loop_var=var_name, loop_item=target_item)
         if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute):
             if isinstance(arg.func.value, ast.Name) and arg.func.value.id == var_name:
                 self._expand_target_member(arg.func.attr, target_item)
                 return True
-        cross = self._recipe_toolset_cross_call(arg)
+        cross = AgentToolSet._provider_cross_call(arg, frozenset({var_name}))
+        if cross is not None:
+            provider_name, member = cross
+            try:
+                target = self._resolve_provider(target_item, provider_name)
+            except Exception as exc:  # noqa: BLE001
+                self._add_prompt(f"Could not resolve `{provider_name}`: {exc}")
+                self._tools.append(member)
+                return True
+            self._expand_target_member(member, target)
+            return True
+        return False
+
+    def _is_companion_for(self, stmt: ast.For) -> bool:
+        if not isinstance(stmt.target, ast.Name):
+            return False
+        if not isinstance(stmt.iter, ast.Call):
+            return False
+        return self._self_member_name(stmt.iter) is not None
+
+    @staticmethod
+    def _expander_stub_tools(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("tools(...) was not handled by the @agent_instructions expander")
+
+    @staticmethod
+    def _expander_stub_instructions(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("instructions(...) was not handled by the @agent_instructions expander")
+
+    def _execution_env(self) -> dict[str, Any]:
+        import builtins
+
+        env: dict[str, Any] = {
+            "__builtins__": builtins,
+            "self": self.toolset,
+            "tools": AgentInstructions._expander_stub_tools,
+            "instructions": AgentInstructions._expander_stub_instructions,
+        }
+        env.update(self._execution_locals)
+        return env
+
+    def _sync_execution_locals(self, env: dict[str, Any]) -> None:
+        reserved = {"__builtins__", "self", "tools", "instructions"}
+        for name, value in env.items():
+            if name in reserved or name.startswith("__"):
+                continue
+            self._execution_locals[name] = value
+
+    def _eval_expr(self, node: ast.expr) -> Any:
+        env = self._execution_env()
+        value = eval(compile(ast.Expression(node), "<agent_instructions>", "eval"), env, env)
+        self._sync_execution_locals(env)
+        return value
+
+    def _execute_statement(self, statement: ast.stmt) -> None:
+        env = self._execution_env()
+        exec(
+            compile(ast.Module(body=[statement], type_ignores=[]), "<agent_instructions>", "exec"),
+            env,
+            env,
+        )
+        self._sync_execution_locals(env)
+
+    def _run_expr(self, node: ast.expr) -> None:
+        try:
+            value = self._eval_expr(node)
+        except Exception:  # noqa: BLE001
+            return
+        if isinstance(value, str) and value.strip():
+            self._add_prompt(value.strip())
+
+    def _dispatch_for_body(
+        self,
+        body: list[ast.stmt],
+        *,
+        loop_var: str | None = None,
+        loop_item: Any | None = None,
+    ) -> None:
+        for body_stmt in body:
+            if loop_var is not None and loop_item is not None:
+                mode_value = self._loop_var_mode_assign(body_stmt, loop_var)
+                if mode_value is not None:
+                    self._loop_item_modes[id(loop_item)] = mode_value
+                    continue
+                if self._walk_for_each_wrapped(body_stmt, loop_var, loop_item):
+                    continue
+            self._dispatch_statement(body_stmt)
+
+    def _walk_generic_for(self, stmt: ast.For) -> None:
+        if not isinstance(stmt.target, ast.Name):
+            self._execute_statement(stmt)
+            return
+        var_name = stmt.target.id
+        try:
+            items = self._eval_expr(stmt.iter)
+        except Exception:  # noqa: BLE001
+            items = []
+        if not isinstance(items, (list, tuple)):
+            items = list(items) if items is not None else []
+        previous = self._execution_locals.get(var_name, _EXEC_LOCAL_MISSING)
+        for item in items:
+            self._execution_locals[var_name] = item
+            self._dispatch_for_body(stmt.body, loop_var=var_name, loop_item=item)
+        if previous is _EXEC_LOCAL_MISSING:
+            self._execution_locals.pop(var_name, None)
+        else:
+            self._execution_locals[var_name] = previous
+        for body_stmt in stmt.orelse:
+            self._dispatch_statement(body_stmt)
+
+    def _dispatch_instructions_arg(self, arg: ast.AST | None) -> bool:
+        if arg is None:
+            return False
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            self._add_prompt(arg.value.strip())
+            return True
+        if isinstance(arg, ast.JoinedStr):
+            self._add_prompt(self._joined_string(arg))
+            return True
+        cross = (
+            AgentToolSet._provider_cross_call(arg, frozenset({"self"}))
+            if isinstance(arg, ast.Call)
+            else None
+        )
         if cross is not None:
             provider_name, member = cross
             try:
@@ -802,30 +1045,69 @@ class AgentInstructions(AgentTool):
                 return True
             self._expand_member(member, target)
             return True
+        member = self._wrapped_member_name(arg)
+        if member and member in AgentToolSet._instruction_names(type(self.toolset)):
+            self._expand_member(member, self.toolset)
+            return True
         return False
 
-    def _walk_for_each_body(
-        self,
-        stmt: ast.For,
-        var_name: str,
-        target_item: Any,
-    ) -> None:
-        for body_stmt in stmt.body:
-            mode_value = self._loop_var_mode_assign(body_stmt, var_name)
-            if mode_value is not None:
-                self._loop_item_modes[id(target_item)] = mode_value
-                continue
-            if self._walk_for_each_wrapped(body_stmt, var_name, target_item):
-                continue
-            self._dispatch_statement(body_stmt)
+    def _dispatch_expr_statement(self, statement: ast.Expr) -> None:
+        value = statement.value
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            self._add_prompt(value.value.strip())
+            return
+        if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
+            arg = value.args[0] if value.args else None
+            if value.func.id == "tools":
+                if self._dispatch_tools_arg(arg):
+                    return
+            if value.func.id == "instructions":
+                if self._dispatch_instructions_arg(arg):
+                    return
+        if self._super_call_name(value) is not None:
+            self._walk_super()
+            return
+        self._run_expr(value)
+
+    def _dispatch_statement(self, statement: ast.stmt) -> None:
+        mode_value = self._mode_assign_value(statement)
+        if mode_value is not None:
+            self._mode = mode_value
+            return
+        if isinstance(statement, ast.If):
+            try:
+                take_body = bool(self._eval_expr(statement.test))
+            except Exception:  # noqa: BLE001
+                take_body = False
+            branch = statement.body if take_body else statement.orelse
+            for body_stmt in branch:
+                self._dispatch_statement(body_stmt)
+            return
+        if isinstance(statement, ast.Try):
+            for body_stmt in statement.body:
+                self._dispatch_statement(body_stmt)
+            return
+        if isinstance(statement, ast.For):
+            if self._is_companion_for(statement):
+                self._walk_for_each_statement(statement)
+            else:
+                self._walk_generic_for(statement)
+            return
+        if isinstance(statement, ast.With):
+            self._execute_statement(statement)
+            return
+        if isinstance(statement, ast.Expr):
+            self._dispatch_expr_statement(statement)
+            return
+        if isinstance(statement, ast.Pass):
+            return
+        self._execute_statement(statement)
 
     def _walk_for_each_statement(self, stmt: ast.For) -> None:
         iter_node, loop_var = stmt.iter, stmt.target
         if not (isinstance(loop_var, ast.Name) and isinstance(iter_node, ast.Call)):
             return
         iter_member = self._self_member_name(iter_node)
-        if iter_member is None:
-            iter_member = self._recipe_toolset_member_name(iter_node)
         if iter_member is None:
             return
         try:
@@ -837,45 +1119,7 @@ class AgentInstructions(AgentTool):
         if not items:
             items = [None]
         for target_item in items:
-            self._walk_for_each_body(stmt, loop_var.id, target_item)
-
-    def _dispatch_statement(self, statement: ast.stmt) -> None:
-        mode_value = self._mode_assign_value(statement)
-        if mode_value is not None:
-            self._mode = mode_value
-            return
-        if isinstance(statement, ast.For):
-            self._walk_for_each_statement(statement)
-            return
-        expr_node = statement.value if isinstance(statement, ast.Expr) else statement
-        if isinstance(expr_node, ast.Call) and isinstance(expr_node.func, ast.Name):
-            arg = expr_node.args[0] if expr_node.args else None
-            if expr_node.func.id == "tools":
-                member = self._wrapped_member_name(arg)
-                if member:
-                    self._tools.append(member)
-                    return
-            if expr_node.func.id == "instructions":
-                cross = self._recipe_toolset_cross_call(arg) if isinstance(arg, ast.Call) else None
-                if cross is not None:
-                    provider_name, member = cross
-                    try:
-                        target = self._resolve_provider(self.toolset, provider_name)
-                    except Exception as exc:  # noqa: BLE001
-                        self._add_prompt(f"Could not resolve `{provider_name}`: {exc}")
-                        self._tools.append(member)
-                        return
-                    self._expand_member(member, target)
-                    return
-                member = self._wrapped_member_name(arg)
-                if member and member in AgentToolSet._instruction_names(type(self.toolset)):
-                    self._expand_member(member, self.toolset)
-                    return
-        if self._super_call_name(expr_node) is not None:
-            self._walk_super()
-            return
-        if isinstance(statement, ast.Expr):
-            self._add_prompt(self._expression_text(statement.value))
+            self._dispatch_for_body(stmt.body, loop_var=loop_var.id, loop_item=target_item)
 
     def _walk_statements(self, function_def: ast.FunctionDef) -> None:
         skipped_docstring = False
@@ -992,6 +1236,6 @@ def instructions(*calls: Callable[..., Any]) -> str:
 
 
 def agent_instructions(func: Callable[..., Any]) -> Callable[..., Any]:
-    """Mark a method as an agent orchestration recipe; body is expanded, never executed."""
+    """Mark a method as @agent_instructions; unwrapped body code runs during expand."""
     func._is_agent_instructions = True
     return func

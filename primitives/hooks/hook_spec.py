@@ -1,7 +1,4 @@
-"""BDD specs for @hook, HookHarness, and dispatch."""
-import json
-import os
-import subprocess
+"""BDD specs for installer @hook dispatch."""
 import sys
 import tempfile
 from pathlib import Path
@@ -16,62 +13,19 @@ for _cat in ("primitives", "utilities", "primitives/hooks"):
 sys.modules.pop("tools", None)
 sys.modules.pop("hooks", None)
 
-from expects import be_true, contain, equal, expect, have_key, raise_error
+from expects import be_true, equal, expect
 from mamba import context, description, it
 from agent_tools import agent_toolset
 
-from hooks.dispatch import HookBinding
-from hooks.dispatch import dispatch, parse_payload
-from hooks.hook import Hook, HookHarness, hook
-
-
-class _Fixture:
-    @Hook(event="sessionStart")
-    def on_session_start(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="beforeSubmitPrompt")
-    def on_before_submit_prompt(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="afterAgentResponse")
-    def on_after_agent_response(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="afterAgentThought")
-    def on_after_agent_thought(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="stop")
-    def on_stop(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="sessionEnd")
-    def on_session_end(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="preCompact")
-    def on_pre_compact(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="preToolUse")
-    def on_pre_tool_use(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="postToolUse")
-    def on_post_tool_use(self, payload: dict) -> dict:
-        return {"permission": "allow"}
-
-    @Hook(event="postToolUseFailure")
-    def on_post_tool_use_failure(self, payload: dict) -> dict:
-        return {"permission": "allow"}
+from hooks.dispatch import dispatch, parse_payload, set_enabled
+from installer.marks import hook
 
 
 @agent_toolset
 class _DispatchFixture:
     calls: list[str] = []
 
-    @hook(event="afterAgentResponse")
+    @hook("afterAgentResponse")
     def on_after(self, payload: dict) -> dict:
         type(self).calls.append("after")
         return {"agent_message": "ran"}
@@ -81,328 +35,10 @@ class _DispatchFixture:
 class _StopFixture:
     calls: list[str] = []
 
-    @hook(event="stop")
+    @hook("stop")
     def on_stop(self, payload: dict) -> dict:
         type(self).calls.append("stop")
         return {"followup_message": "/turn"}
-
-
-def _registered_events() -> list[str]:
-    return [e["event"] for e in Hook.registered()]
-
-
-with description("an operation method annotated with a Cursor event"):
-
-    with context("that is decorated with sessionStart"):
-        with it("should carry the sessionStart event name"):
-            fn = _Fixture.on_session_start
-            expect(fn._hook_event).to(equal("sessionStart"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("sessionStart"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="sessionStart", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["sessionStart"]))
-
-    with context("that is decorated with beforeSubmitPrompt"):
-        with it("should carry the beforeSubmitPrompt event name"):
-            fn = _Fixture.on_before_submit_prompt
-            expect(fn._hook_event).to(equal("beforeSubmitPrompt"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("beforeSubmitPrompt"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="beforeSubmitPrompt", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["beforeSubmitPrompt"]))
-
-    with context("that is decorated with afterAgentResponse"):
-        with it("should carry the afterAgentResponse event name"):
-            fn = _Fixture.on_after_agent_response
-            expect(fn._hook_event).to(equal("afterAgentResponse"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("afterAgentResponse"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="afterAgentResponse", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["afterAgentResponse"]))
-
-    with context("that is decorated with afterAgentThought"):
-        with it("should carry the afterAgentThought event name"):
-            fn = _Fixture.on_after_agent_thought
-            expect(fn._hook_event).to(equal("afterAgentThought"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("afterAgentThought"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="afterAgentThought", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["afterAgentThought"]))
-
-    with context("that is decorated with stop"):
-        with it("should carry the stop event name"):
-            fn = _Fixture.on_stop
-            expect(fn._hook_event).to(equal("stop"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("stop"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="stop", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["stop"]))
-
-    with context("that is decorated with sessionEnd"):
-        with it("should carry the sessionEnd event name"):
-            fn = _Fixture.on_session_end
-            expect(fn._hook_event).to(equal("sessionEnd"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("sessionEnd"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="sessionEnd", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["sessionEnd"]))
-
-    with context("that is decorated with preCompact"):
-        with it("should carry the preCompact event name"):
-            fn = _Fixture.on_pre_compact
-            expect(fn._hook_event).to(equal("preCompact"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("preCompact"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="preCompact", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["preCompact"]))
-
-    with context("that is decorated with preToolUse"):
-        with it("should carry the preToolUse event name"):
-            fn = _Fixture.on_pre_tool_use
-            expect(fn._hook_event).to(equal("preToolUse"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("preToolUse"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="preToolUse", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["preToolUse"]))
-
-    with context("that is decorated with postToolUse"):
-        with it("should carry the postToolUse event name"):
-            fn = _Fixture.on_post_tool_use
-            expect(fn._hook_event).to(equal("postToolUse"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("postToolUse"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="postToolUse", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["postToolUse"]))
-
-    with context("that is decorated with postToolUseFailure"):
-        with it("should carry the postToolUseFailure event name"):
-            fn = _Fixture.on_post_tool_use_failure
-            expect(fn._hook_event).to(equal("postToolUseFailure"))
-
-        with it("should appear in the hook registry"):
-            expect(_registered_events()).to(contain("postToolUseFailure"))
-
-        with it("should fire a notification when invoked"):
-            notified: list[str] = []
-            @Hook(event="postToolUseFailure", notify=True, notifier=notified.append)
-            def _on(payload: dict) -> dict:
-                return {}
-            _on({})
-            expect(notified).to(equal(["postToolUseFailure"]))
-
-    with context("that is decorated with an unrecognised event"):
-        with it("should raise ValueError"):
-            def bad_decoration():
-                @Hook(event="notAnEvent")
-                def fn(self, payload: dict) -> dict:
-                    return {}
-            expect(bad_decoration).to(raise_error(ValueError))
-
-
-with description("a hook harness"):
-
-    with context("that deploys a sessionStart handler"):
-        with it("should write a sessionStart entry to hooks.json"):
-            registry = [
-                {
-                    "event": "sessionStart",
-                    "handler": lambda p: {},
-                    "matcher": None,
-                    "timeout": 10,
-                    "fail_closed": False,
-                }
-            ]
-            harness = HookHarness(script="primitives/hooks/dispatch.py")
-            with tempfile.TemporaryDirectory() as tmp:
-                dest = Path(tmp) / "hooks.json"
-                harness.deploy(dest, registry=registry)
-                data = json.loads(dest.read_text(encoding="utf-8"))
-                expect(data["hooks"]).to(have_key("sessionStart"))
-
-    with context("that deploys a preToolUse handler with a matcher"):
-        with it("should include the matcher in the hooks.json entry"):
-            registry = [
-                {
-                    "event": "preToolUse",
-                    "handler": lambda p: {},
-                    "matcher": "Write|StrReplace",
-                    "timeout": 10,
-                    "fail_closed": False,
-                }
-            ]
-            harness = HookHarness(script="primitives/hooks/dispatch.py")
-            with tempfile.TemporaryDirectory() as tmp:
-                dest = Path(tmp) / "hooks.json"
-                harness.deploy(dest, registry=registry)
-                data = json.loads(dest.read_text(encoding="utf-8"))
-                hook_entry = data["hooks"]["preToolUse"][0]
-                expect(hook_entry["matcher"]).to(equal("Write|StrReplace"))
-
-    with context("that syncs dispatch entries"):
-        with it("should drop dispatch wiring for events not in the target set"):
-            harness = HookHarness(script="primitives/hooks/dispatch.py")
-            with tempfile.TemporaryDirectory() as tmp:
-                dest = Path(tmp) / "hooks.json"
-                dest.write_text(
-                    json.dumps(
-                        {
-                            "version": 1,
-                            "hooks": {
-                                "beforeSubmitPrompt": [
-                                    {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
-                                        "timeout": 10,
-                                        "failClosed": False,
-                                    },
-                                    {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
-                                        "timeout": 30,
-                                        "failClosed": False,
-                                    },
-                                ],
-                                "afterAgentResponse": [
-                                    {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
-                                        "timeout": 30,
-                                        "failClosed": False,
-                                    },
-                                ],
-                            },
-                        }
-                    )
-                    + "\n",
-                    encoding="utf-8",
-                )
-                harness.sync_dispatch(dest, {"beforeSubmitPrompt"})
-                data = json.loads(dest.read_text(encoding="utf-8"))
-                expect(data["hooks"]).to(have_key("beforeSubmitPrompt"))
-                expect(data["hooks"]).not_to(have_key("afterAgentResponse"))
-                before = data["hooks"]["beforeSubmitPrompt"]
-                expect(len(before)).to(equal(2))
-                expect(before[0]["command"]).to(contain("prompt_log.py"))
-                expect(before[1]["command"]).to(contain("dispatch.py"))
-
-        with it("should keep afterAgentResponse dispatch-only when prompt_log was present"):
-            harness = HookHarness(script="primitives/hooks/dispatch.py")
-            with tempfile.TemporaryDirectory() as tmp:
-                dest = Path(tmp) / "hooks.json"
-                dest.write_text(
-                    json.dumps(
-                        {
-                            "version": 1,
-                            "hooks": {
-                                "afterAgentResponse": [
-                                    {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
-                                        "timeout": 10,
-                                        "failClosed": False,
-                                    },
-                                    {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
-                                        "timeout": 30,
-                                        "failClosed": False,
-                                    },
-                                ],
-                            },
-                        }
-                    )
-                    + "\n",
-                    encoding="utf-8",
-                )
-                harness.sync_dispatch(dest, {"afterAgentResponse"})
-                data = json.loads(dest.read_text(encoding="utf-8"))
-                after = data["hooks"]["afterAgentResponse"]
-                expect(len(after)).to(equal(1))
-                expect(after[0]["command"]).to(contain("dispatch.py"))
-
-        with it("should remove all dispatch wiring when the target set is empty"):
-            harness = HookHarness(script="primitives/hooks/dispatch.py")
-            with tempfile.TemporaryDirectory() as tmp:
-                dest = Path(tmp) / "hooks.json"
-                dest.write_text(
-                    json.dumps(
-                        {
-                            "version": 1,
-                            "hooks": {
-                                "afterAgentResponse": [
-                                    {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
-                                        "timeout": 30,
-                                        "failClosed": False,
-                                    },
-                                ],
-                            },
-                        }
-                    )
-                    + "\n",
-                    encoding="utf-8",
-                )
-                harness.sync_dispatch(dest, set())
-                data = json.loads(dest.read_text(encoding="utf-8"))
-                expect(data["hooks"]).to(equal({}))
 
 
 with description("hook dispatch"):
@@ -410,169 +46,71 @@ with description("hook dispatch"):
     with context("that receives an afterAgentResponse payload"):
 
         with it("should skip handlers when the toggle flag is absent"):
-            Hook.clear()
             _DispatchFixture.calls = []
-            Hook.attach_owners(_DispatchFixture)
-            Hook.set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=False)
-            out = dispatch({"hook_event_name": "afterAgentResponse"})
+            set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=False)
+            out = dispatch(
+                {"hook_event_name": "afterAgentResponse"},
+                hosts=[_DispatchFixture],
+            )
             expect(out).to(equal({"permission": "allow"}))
             expect(_DispatchFixture.calls).to(equal([]))
 
         with it("should invoke enabled handlers"):
-            Hook.clear()
             _DispatchFixture.calls = []
-            Hook.attach_owners(_DispatchFixture)
-            Hook.set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=True)
+            set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=True)
             try:
-                out = dispatch({"hook_event_name": "afterAgentResponse"})
+                out = dispatch(
+                    {"hook_event_name": "afterAgentResponse"},
+                    hosts=[_DispatchFixture],
+                )
                 expect(out["permission"]).to(equal("allow"))
                 expect(out["agent_message"]).to(equal("ran"))
                 expect(_DispatchFixture.calls).to(equal(["after"]))
             finally:
-                Hook.set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=False)
+                set_enabled(
+                    _DispatchFixture, "on_after", "afterAgentResponse", enabled=False
+                )
 
     with context("that receives a stop payload"):
 
         with it("should pass through followup_message from enabled handlers"):
-            Hook.clear()
             _StopFixture.calls = []
-            Hook.attach_owners(_StopFixture)
-            Hook.set_enabled(_StopFixture, "on_stop", "stop", enabled=True)
+            set_enabled(_StopFixture, "on_stop", "stop", enabled=True)
             try:
-                out = dispatch({"hook_event_name": "stop"})
+                out = dispatch({"hook_event_name": "stop"}, hosts=[_StopFixture])
                 expect(out).to(equal({"permission": "allow", "followup_message": "/turn"}))
                 expect(_StopFixture.calls).to(equal(["stop"]))
             finally:
-                Hook.set_enabled(_StopFixture, "on_stop", "stop", enabled=False)
+                set_enabled(_StopFixture, "on_stop", "stop", enabled=False)
 
         with it("should keep user_message separate from agent_message"):
-            Hook.clear()
-
             @agent_toolset
             class _MessageFixture:
-                @hook(event="beforeSubmitPrompt")
+                @hook("beforeSubmitPrompt")
                 def on_before(self, payload: dict) -> dict:
                     return {
                         "user_message": "for user",
                         "agent_message": "for agent",
                     }
 
-            Hook.set_enabled(_MessageFixture, "on_before", "beforeSubmitPrompt", enabled=True)
+            set_enabled(_MessageFixture, "on_before", "beforeSubmitPrompt", enabled=True)
             try:
-                out = dispatch({"hook_event_name": "beforeSubmitPrompt"})
+                out = dispatch(
+                    {"hook_event_name": "beforeSubmitPrompt"},
+                    hosts=[_MessageFixture],
+                )
                 expect(out["user_message"]).to(equal("for user"))
                 expect(out["agent_message"]).to(equal("for agent"))
             finally:
-                Hook.set_enabled(_MessageFixture, "on_before", "beforeSubmitPrompt", enabled=False)
+                set_enabled(
+                    _MessageFixture, "on_before", "beforeSubmitPrompt", enabled=False
+                )
 
     with context("that parses stdin payloads"):
 
         with it("should strip a UTF-8 BOM"):
             raw = b'\xef\xbb\xbf{"hook_event_name":"stop"}'
             expect(parse_payload(raw)).to(equal({"hook_event_name": "stop"}))
-
-
-with description("a hook binding"):
-
-    with context("that exposes skill sources"):
-        with it("should include instructions and flag path for on and off"):
-            binding = HookBinding(
-                event="afterAgentResponse",
-                operation="auto_turn",
-                slug="turn",
-                owner="Turn",
-                folder="utilities/turn",
-            )
-            payloads = binding.skill_sources()
-            expect(len(payloads)).to(equal(2))
-            on_payload = payloads[0]
-            expect(on_payload["name"]).to(equal("auto_turn_after_agent_response_on"))
-            expect(on_payload["body"]).to(contain("`auto_turn`"))
-            expect(on_payload["body"]).to(
-                contain(".context/hooks/turn/auto_turn_after_agent_response.enabled")
-            )
-
-
-with description("auto turn end-to-end"):
-
-    with context("that simulates Cursor afterAgentResponse dispatch"):
-
-        with it("should stage untracked changes and commit when the toggle is on"):
-            repo_root = _REPO_ROOT
-            py = repo_root / ".venv" / "Scripts" / "python.exe"
-            dispatch = repo_root / "primitives" / "hooks" / "dispatch.py"
-            flag = repo_root / ".context" / "hooks" / "turn" / "auto_turn_after_agent_response.enabled"
-            last_run = repo_root / ".context" / "hooks" / "turn" / "auto_turn.last_run.json"
-            flag.parent.mkdir(parents=True, exist_ok=True)
-            flag.write_text("", encoding="utf-8")
-            probe = repo_root / ".context" / "hooks" / "turn" / "hook-spec-probe.txt"
-            probe.write_text("hook-spec-probe\n", encoding="utf-8")
-            (repo_root / "tmp_wrong_cwd").mkdir(exist_ok=True)
-            before_sha = subprocess.check_output(
-                ["git", "rev-parse", "HEAD"],
-                cwd=repo_root,
-                text=True,
-            ).strip()
-            payload = json.dumps(
-                {
-                    "hook_event_name": "afterAgentResponse",
-                    "conversation_id": "hook-spec-e2e",
-                    "generation_id": "spec1",
-                }
-            )
-            env = dict(os.environ)
-            env["PYTHONPATH"] = os.pathsep.join(
-                [
-                    str(repo_root),
-                    str(repo_root / "primitives"),
-                    str(repo_root / "utilities"),
-                ]
-            )
-            completed = subprocess.run(
-                [str(py), str(dispatch)],
-                input=payload,
-                text=True,
-                capture_output=True,
-                cwd=str(repo_root / "tmp_wrong_cwd"),
-                env=env,
-                timeout=60,
-            )
-            expect(completed.returncode).to(equal(0))
-            expect(json.loads(completed.stdout)).to(equal({"permission": "allow"}))
-            after_sha = subprocess.check_output(
-                ["git", "rev-parse", "HEAD"],
-                cwd=repo_root,
-                text=True,
-            ).strip()
-            expect(after_sha).not_to(equal(before_sha))
-            tracked = subprocess.check_output(
-                ["git", "ls-files", "--", str(probe.relative_to(repo_root)).replace("\\", "/")],
-                cwd=repo_root,
-                text=True,
-            ).strip()
-            expect(tracked).to(equal(probe.relative_to(repo_root).as_posix()))
-            expect(last_run.is_file()).to(be_true)
-            run_data = json.loads(last_run.read_text(encoding="utf-8"))
-            expect(run_data["conversation_id"]).to(equal("hook-spec-e2e"))
-            expect(run_data["committed_sha"]).to(equal(after_sha))
-            expect(run_data.get("error")).to(equal(None))
-
-        with it("should run dispatch.py without PYTHONPATH like Cursor hooks do"):
-            repo_root = _REPO_ROOT
-            py = repo_root / ".venv" / "Scripts" / "python.exe"
-            dispatch = repo_root / "primitives" / "hooks" / "dispatch.py"
-            env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
-            completed = subprocess.run(
-                [str(py), str(dispatch)],
-                input='{"hook_event_name":"afterAgentResponse","conversation_id":"no-pythonpath"}',
-                text=True,
-                capture_output=True,
-                cwd=str(repo_root),
-                env=env,
-                timeout=30,
-            )
-            expect(completed.returncode).to(equal(0))
-            expect(json.loads(completed.stdout)).to(equal({"permission": "allow"}))
 
 
 with description("session hook logs"):

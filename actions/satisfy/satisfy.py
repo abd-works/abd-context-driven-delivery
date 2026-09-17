@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from workspace import SessionLog
-from primitives.harness.deployment import toolset_ref_for_type
+from primitives.installer.installation import toolset_ref_for_type
 
 
 @agent_toolset
@@ -15,7 +15,7 @@ class Satisfy(LifecycleAction):
 
     @prompt
     @agent_instructions
-    def satisfy(recipe, tools: list) -> str:
+    def satisfy(self, tools: list) -> str:
         """satisfy"""
         self.begin(tools, action="satisfy")
         from validate.validate import Validate

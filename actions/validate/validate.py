@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
-from agent_tools import agent_instructions, agent_toolset
+from agent_tools import agent_instructions, agent_toolset, instructions
 from scan.rule import Rule
 from workspace import SessionLog
-from primitives.harness.deployment import toolset_ref_for_type
+from primitives.installer.installation import toolset_ref_for_type
 
 
 @agent_toolset
@@ -18,25 +18,19 @@ class Validate(LifecycleAction):
 
     @prompt
     @agent_instructions
-    def validate(recipe, tools: Any, rule: Rule | None = None) -> str:
+    def validate(self, tools: Any, rule: Rule | None = None) -> str:
         """validate"""
         if rule is not None:
-            return rule.validate()
-        host_rules = getattr(tools, "rules", None)
-        if host_rules is not None and not isinstance(tools, list):
-            return host_rules.validate()
-        self.begin(tools, action="validate")
-        for tool in self.listed():
-            tool.contexts
-            tool.scanner.scan()
-            SessionLog.instance().append(
-                toolset=toolset_ref_for_type(type(tool)),
-                name="validate",
-                summary="validate",
-                ok=True,
-                role="run",
-            )
-        self.end()
+            instructions(rule.validate)
+        else:
+            host_rules = getattr(tools, "rules", None)
+            if host_rules is not None and not isinstance(tools, list):
+                instructions(host_rules.validate)
+            else:
+                self.begin(tools, action="validate")
+                for tool in self.listed():
+                    instructions(tool.rules.validate)
+                self.end()
         return "Validation report for artifacts under {session.path}/."
 
 
@@ -46,7 +40,7 @@ class CreateRule(LifecycleAction):
 
     @prompt(name="createRule")
     @agent_instructions
-    def createRule(recipe, tools: list, failed: str, wanted: str) -> str:
+    def createRule(self, tools: list, failed: str, wanted: str) -> str:
         """createRule"""
         self.begin(tools, action="createRule")
         for tool in self.listed():

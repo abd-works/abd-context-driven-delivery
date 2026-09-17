@@ -1,2 +1,0 @@
-toolset: echo.echo:Echo
-action: echo_session

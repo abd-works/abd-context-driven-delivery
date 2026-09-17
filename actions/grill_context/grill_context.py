@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
@@ -80,7 +80,7 @@ class GrillContext(LifecycleAction):
 
     @prompt(name="grill")
     @agent_instructions
-    def grill(recipe, tools: list) -> str:
+    def grill(self, tools: list) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""
         self.begin(tools, action="grill")
         self.grill_with_context()
@@ -95,7 +95,7 @@ class GrillContext(LifecycleAction):
         return Generate()
 
     @agent_instructions
-    def grill_with_context(recipe, plan: str) -> str:
+    def grill_with_context(self, plan: str) -> str:
         """Conduct a relentless grilling interview about {plan} - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Prefer contextual thinking questions over syntax trivia. When a sketch exists for this plan, use grilling to validate what the sketch claimed — sketch and grill must not run disconnected. Batch very similar questions into one AskQuestion so the loop does not run forever. Stage-specific show/persist/review cadence belongs to the wrapping stage (sketch, iterate, ...)."""
         """Step 0 - Resolve roots: explore under session.path; write grill-answers under session.docs_dir ({path}/.context/grill-answers.md). If no sprint exists yet, confirm path with the user, suggest a kebab slug from goal/context, open, then continue. Do not invent a divergent root."""
         """Step 1 - Context discovery: call explore_context_files(root=session.path) and any folders referenced in the plan. Prefer-read any active *-sketch.md for this plan so later questions can validate the sketch's thinking."""

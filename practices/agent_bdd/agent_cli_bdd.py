@@ -18,21 +18,14 @@ from agent_bdd.agent_bdd_common import (
     CMDLINE_SAFE,
     JUDGE_LAUNCH,
     JUDGE_TASK,
-    RUN_PROMPT_SUFFIX,
     AgentHarnessError,
     AgentJudgeError,
     AgentResult,
     JudgeResult,
     RunResponse,
     _ShellCapture,
-    _extract_yaml_from_command,
-    _fenced_yaml_from_text,
-    cli_output_matches_prompt,
     _log_harness,
-    looks_like_tools_run_output,
     _parse_judge_result,
-    _replay_tools_run,
-    reject_agent_deferral,
     _run_yaml_request,
     yaml_from_prompt,
 )
@@ -108,122 +101,17 @@ class _ToolAgentBlock:
         timeout_seconds: int = 300,
         require_agent_shell: bool = False,
     ) -> RunResponse:
-        base_prompt = prompt.rstrip()
-        prefix = self._next_instruct_prefix("run")
-        request_yaml = yaml_from_prompt(base_prompt + RUN_PROMPT_SUFFIX) or yaml_from_prompt(base_prompt)
-        if request_yaml:
-            stdin_path = self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
-            stdin_abs = stdin_path.resolve().as_posix()
-            full_prompt = (
-                "From the repo root, run exactly one shell command — pipe the saved "
-                "request file into tools:\n\n"
-                f"Get-Content '{stdin_abs}' -Raw | .\\tools.ps1 run -\n\n"
-                f"Request YAML path (use this exact file only): `{stdin_abs}`\n"
-                "Return the complete fenced YAML stdout from that single command only. "
-                "Do not remanifest. Do not run follow-up tools from response.instructions."
-            )
-        else:
-            full_prompt = base_prompt + RUN_PROMPT_SUFFIX
-        _log(f"{prefix} prompt: {full_prompt[:120]}{'...' if len(full_prompt) > 120 else ''}")
-        self._write_artifact(f"{prefix}-prompt.txt", full_prompt)
-        capture: _AgentRunCapture | None = None
-        timed_out = False
-        replay_used = False
-        agent_text = ""
-        shell_invoked = False
-        try:
-            capture = self._run_capture(
-                session=self._require_session(),
-                prompt=full_prompt,
-                timeout_seconds=timeout_seconds,
-                prefix=prefix,
-            )
-        except subprocess.TimeoutExpired as exc:
-            timed_out = True
-            _log(f"{prefix} timed out after {timeout_seconds}s")
-            self._write_artifact(f"{prefix}-timeout.txt", str(exc))
-        if capture is not None:
-            result = capture.agent_result
-            agent_text = result.text or ""
-            shell_invoked = len(capture.shell_captures) > 0
-            self._write_artifact(f"{prefix}-response.txt", result.text)
-            if result.stderr.strip():
-                self._write_artifact(f"{prefix}-stderr.txt", result.stderr)
-            for index, shell in enumerate(capture.shell_captures, start=1):
-                self._write_artifact(f"{prefix}-shell-{index:02d}-cmd.txt", shell.command)
-                self._write_artifact(f"{prefix}-shell-{index:02d}-out.txt", shell.output)
-            cli_output = _tools_run_output_from_capture(capture)
-            if cli_output is not None and not cli_output_matches_prompt(cli_output, full_prompt):
-                cli_output = None
-            if cli_output is None:
-                replay_yaml = request_yaml or yaml_from_prompt(full_prompt)
-                if replay_yaml:
-                    cli_output = _run_yaml_request(replay_yaml, self._workspace, prefix=prefix)
-                    replay_used = True
-                    self._write_artifact(f"{prefix}-replay.txt", replay_yaml)
-            if cli_output is not None:
-                if require_agent_shell:
-                    reject_agent_deferral(agent_text)
-                    if not shell_invoked:
-                        self._write_artifact(
-                            f"{prefix}-raw-stream.jsonl",
-                            "".join(capture.raw_lines),
-                        )
-                        raise AgentHarnessError(
-                            "agent did not invoke shell — harness replay would mask failure",
-                            prefix=prefix,
-                            stdout=agent_text,
-                            log_dir=self._log_dir,
-                        )
-                    if replay_used:
-                        raise AgentHarnessError(
-                            "harness CLI replay used although shell ran — agent stdout missing valid YAML",
-                            prefix=prefix,
-                            stdout=agent_text,
-                            log_dir=self._log_dir,
-                        )
-                return self._finalize_run_response(prefix, capture, cli_output)
-        if timed_out:
-            replay_yaml = request_yaml or yaml_from_prompt(full_prompt)
-            if replay_yaml:
-                try:
-                    cli_output = _run_yaml_request(replay_yaml, self._workspace, prefix=prefix)
-                    replay_used = True
-                except AgentHarnessError:
-                    cli_output = None
-                else:
-                    if require_agent_shell:
-                        raise AgentHarnessError(
-                            "agent timed out — harness replay is not allowed in strict mode",
-                            prefix=prefix,
-                            log_dir=self._log_dir,
-                        )
-                    return self._finalize_run_response(prefix, None, cli_output)
+        _ = timeout_seconds, require_agent_shell
+        request_yaml = yaml_from_prompt(prompt)
+        if not request_yaml:
             raise AgentHarnessError(
-                f"cursor-agent timed out after {timeout_seconds}s and tools run replay failed",
-                prefix=prefix,
-                log_dir=self._log_dir,
+                "prompt must contain a toolset: run request block",
             )
-        replay_yaml = request_yaml or yaml_from_prompt(full_prompt)
-        if replay_yaml:
-            cli_output = _run_yaml_request(replay_yaml, self._workspace, prefix=prefix)
-            replay_used = True
-            if require_agent_shell:
-                reject_agent_deferral(agent_text)
-                raise AgentHarnessError(
-                    "agent did not invoke shell — harness replay would mask failure",
-                    prefix=prefix,
-                    stdout=agent_text,
-                    log_dir=self._log_dir,
-                )
-            return self._finalize_run_response(prefix, None, cli_output)
-        raise AgentHarnessError(
-            "no python -m harness run output - agent must invoke the toolset CLI",
-            prefix=prefix,
-            stdout=capture.agent_result.text if capture else "",
-            stderr=capture.agent_result.stderr if capture else "",
-            log_dir=self._log_dir,
-        )
+        prefix = self._next_instruct_prefix("run")
+        self._write_artifact(f"{prefix}-prompt.txt", prompt)
+        self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
+        cli_output = _run_yaml_request(request_yaml, self._workspace, prefix=prefix)
+        return self._finalize_run_response(prefix, None, cli_output)
 
     def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
         """Back-compat alias for ``instruct_use_tool``."""

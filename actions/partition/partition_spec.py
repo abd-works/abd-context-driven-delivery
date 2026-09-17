@@ -1,4 +1,4 @@
-"""BDD spec for Partition - kit prose on BaseContextTool hosts."""
+"""BDD spec for Partition - kit prose on PracticeGuidance hosts."""
 
 import re
 import sys
@@ -22,11 +22,10 @@ from partition.partition import Partition
 from partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
 from primitives.agent_tools.agent_tools import AgentInstructions
-from primitives.harness.runner import InstructionRunRequest, InstructionRunner
-from primitives.instructions import Instruction
-from primitives.instructions import _path_for_name
+from toolset_invoke.toolset_invoke import expand_action
+from primitives.markdown import Markdown
 from agent_tools import AgentToolSet
-from primitives.harness.toolset_loader import ToolsetLoader
+from primitives.installer.toolset_loader import ToolsetLoader
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
@@ -43,20 +42,18 @@ def _expand(
     toolset_path: str,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return InstructionRunner.instance().invoke_action(
-        InstructionRunRequest(
-            request={"toolset": toolset_path, "context": {}},
-            toolset_path=toolset_path,
-            action_name=action_name,
-            context={},
-            arguments=arguments or {},
-            instance=instance,
-        )
+    return expand_action(
+        instance,
+        action_name,
+        toolset_path=toolset_path,
+        context={},
+        arguments=arguments or {},
+        request={"toolset": toolset_path, "context": {}},
     )
 
 
 def _section(name: str) -> str:
-    return Instruction(_path_for_name(_KIT_DIR, name), _KIT_DIR).expand()
+    return Markdown.from_label(Partition(), name).extract()
 
 
 with description("Partition kit prose"):
@@ -68,9 +65,7 @@ with description("Partition kit prose"):
 
 
 with description("Partition kit on hosts"):
-    with it("should not expose partition on BaseContextTool hosts"):
-        from practices.base.base_context_tool import BaseContextTool
-
+    with it("should not expose partition on practice guidance hosts"):
         cls = ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
         host = cls()
         expect("partition" in host.agent_tools).to(equal(False))

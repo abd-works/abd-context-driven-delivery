@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from primitives.agent_tools.agent_tools import agent_instructions
-from practices.base.base_context_tool import BaseContextTool
+from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
+from practices.workspace_bind import init_practice_guidance
+from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
+from primitives.guidance.guidance import PracticeGuidance
 from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
@@ -27,14 +29,20 @@ _CONTEXT_TOOLS_BY_STAGE: dict[str, list[type]] = {
 }
 
 
-class Cdd(BaseContextTool):
+@agent_toolset
+class Cdd(PracticeGuidance):
     """# Instructions"""
 
-    fidelities = {
-        BaseContextTool.DISCOVERY: "discovery",
-        BaseContextTool.SPEC:      "spec",
-        BaseContextTool.ENGINEER:  "engineer",
+    domain_slug = "cdd"
+    STAGE_TO_FIDELITY = {
+        DISCOVERY: "discovery",
+        SPEC: "spec",
+        ENGINEER: "engineer",
     }
+
+    @classmethod
+    def resolve_fidelity(cls, fidelity: str) -> str:
+        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
 
     def __init__(
         self,
@@ -48,8 +56,14 @@ class Cdd(BaseContextTool):
             raise ValueError(
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_CONTEXT_TOOLS_BY_STAGE)}"
             )
-        super().__init__(format=format or _FORMAT[fidelity], path=path, session=session)
-        self.fidelity = fidelity
+        init_practice_guidance(
+            self,
+            format=format or _FORMAT[fidelity],
+            path=path,
+            session=session,
+            fidelity=fidelity,
+            stage_to_fidelity=self.STAGE_TO_FIDELITY,
+        )
 
 
     # -- Context-tool provider -------------------------------------------------
@@ -60,7 +74,7 @@ class Cdd(BaseContextTool):
     def practices(self) -> list:
         stage = self.fidelity
         return [
-            cls(fidelity=cls.fidelities[stage])
+            cls(fidelity=cls.STAGE_TO_FIDELITY[stage])
             for cls in _CONTEXT_TOOLS_BY_STAGE[stage]
         ]
 
@@ -69,7 +83,7 @@ class Cdd(BaseContextTool):
     # Kits own generate / validate / satisfy / document / grill / sketch / iterate.
 
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Provide guidance for orchestrating CDD stages across stories, ddd, ux, clean_engineering, and bdd.
         Call guidance on each stage child and pass that child to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
         super().guidance()

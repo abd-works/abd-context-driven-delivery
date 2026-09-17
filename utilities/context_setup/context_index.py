@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Protocol, Sequence
 
 from agent_tools import agent_instructions, agent_toolset
-from harness.harness_tool import prompt
+from installer.installer_tool import prompt
 from agent_tools.agent_tools import agent_tool
 
 if TYPE_CHECKING:
@@ -171,7 +171,7 @@ class ContextIndex:
 
     @prompt(name="ask")
     @agent_instructions
-    def ask(recipe, question: str, index_path: str) -> str:
+    def ask(self, question: str, index_path: str) -> str:
         """Answer question using the FAISS index at index_path, citing sources.
         question={question}, index_path={index_path}."""
         """Step 1 — Derive a semantic query:

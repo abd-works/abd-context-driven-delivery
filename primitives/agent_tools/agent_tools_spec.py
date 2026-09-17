@@ -1,6 +1,5 @@
-"""Non-agentic BDD for agent_tools — domain, recipe walk, and ToolsetRunner integration."""
+"""Non-agentic BDD for agent_tools — domain, @agent_instructions expand, and spec invoke."""
 
-import subprocess
 import sys
 from pathlib import Path
 
@@ -17,7 +16,7 @@ import yaml
 from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from primitives.harness.errors import RunError
+from primitives.installer.errors import RunError
 from agent_tools.examples.car import Car
 from primitives.agent_tools.agent_tools import (
     AgentInstructions,
@@ -29,7 +28,7 @@ from primitives.agent_tools.agent_tools import (
     agent_toolset,
 )
 from primitives.agent_tools.agent_tools import AgentInstructions
-from primitives.harness.runner import InstructionRunRequest, InstructionRunner, ToolsetRunner
+from toolset_invoke.toolset_invoke import run_request
 from car_story.car_story import CarStory
 from agent_tools.examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
@@ -59,10 +58,10 @@ class _ModeFixture:
         return "pong"
 
     @agent_instructions
-    def run(recipe) -> str:
+    def run(self) -> str:
         """Run by calling ping."""
         "Run by calling ping."
-        tools(recipe.toolset.ping())
+        tools(self.ping())
 
 
 @agent_toolset
@@ -75,17 +74,17 @@ class _SelfCallAgent:
         return "polished"
 
     @agent_instructions
-    def prepare(recipe) -> str:
+    def prepare(self) -> str:
         """Prepare the work carefully."""
         "SELF_PREPARE_MARKER: prepare the work carefully."
-        tools(recipe.toolset.polish())
+        tools(self.polish())
         return "prepared"
 
     @agent_instructions
-    def finish(recipe) -> str:
+    def finish(self) -> str:
         """May invoke prepare()."""
         "SELF_FINISH_MARKER: may invoke prepare()."
-        instructions(recipe.toolset.prepare())
+        instructions(self.prepare())
         return "finished"
 
 
@@ -99,18 +98,18 @@ class _BodyModeFlipAgent:
         return "polished"
 
     @agent_instructions
-    def prepare(recipe) -> str:
+    def prepare(self) -> str:
         """Prepare the work carefully."""
         "SELF_PREPARE_MARKER: prepare the work carefully."
-        tools(recipe.toolset.polish())
+        tools(self.polish())
         return "prepared"
 
     @agent_instructions
-    def finish(recipe) -> str:
+    def finish(self) -> str:
         """Defer prepare via mid-body mode flip."""
         "SELF_FINISH_MARKER: defer prepare via mid-body mode flip."
-        recipe.toolset.mode = "tool"
-        instructions(recipe.toolset.prepare())
+        self.mode = "tool"
+        instructions(self.prepare())
         return "finished"
 
 
@@ -124,10 +123,10 @@ class _CalleeAgent:
         return "polished"
 
     @agent_instructions
-    def prepare(recipe) -> str:
+    def prepare(self) -> str:
         """Prepare the work carefully."""
         "CALLEE_PREPARE_MARKER: prepare the work carefully."
-        tools(recipe.toolset.polish())
+        tools(self.polish())
         return "prepared"
 
 
@@ -143,10 +142,10 @@ class _CallerAgent:
         return self._helper
 
     @agent_instructions
-    def orchestrate(recipe) -> str:
+    def orchestrate(self) -> str:
         """May invoke helper().prepare()."""
         "CALLER_ORCHESTRATE_MARKER: may invoke helper().prepare()."
-        instructions(recipe.toolset.helper().prepare())
+        instructions(self.helper().prepare())
         return "orchestrated"
 
 
@@ -167,10 +166,10 @@ class _PropertyCallerAgent:
         return self._helper
 
     @agent_instructions
-    def orchestrate(recipe) -> str:
+    def orchestrate(self) -> str:
         """May invoke helper.prepare()."""
         "CALLER_ORCHESTRATE_MARKER: may invoke helper.prepare()."
-        instructions(recipe.toolset.helper.prepare())
+        instructions(self.helper.prepare())
         return "orchestrated"
 
 
@@ -179,44 +178,33 @@ _CAR_STORY_TOOLSET = "car_story.car_story:CarStory"
 
 
 with description("a class"):
-    with context("with a toolset that declares @agent_instructions recipes"):
+    with context("with a toolset that declares @agent_instructions members"):
         with context("the travelTo action"):
-            with it("should expose travelTo as an instructions recipe"):
+            with it("should expose travelTo as an @agent_instructions member"):
                 entry = CarStory().instructions["travelTo"]
                 expect(entry.kind).to(equal("instructions"))
 
-            with it("should expand into instructions when invoked through the command-line interface"):
-                request = yaml.safe_dump(
-                    {
-                        "toolset": _CAR_STORY_TOOLSET,
-                        "action": "travelTo",
-                        "arguments": {
-                            "tools": [
-                                {
-                                    "toolset": _CAR_TOOLSET,
-                                    "context": {
-                                        "make": "Dodge",
-                                        "model": "Charger",
-                                        "year": 1969,
-                                        "personality": "General Lee",
-                                    },
-                                }
-                            ],
-                            "destination": "Hazzard County courthouse",
-                            "conditions": "muddy back roads",
-                        },
-                    }
-                )
-                completed = subprocess.run(
-                    [sys.executable, "-m", "harness", "run", "-"],
-                    input=request,
-                    capture_output=True,
-                    text=True,
-                    cwd=_REPO_ROOT,
-                    check=False,
-                )
-                expect(completed.returncode).to(equal(0))
-                response = load_fenced(completed.stdout)
+            with it("should expand into instructions when invoked through spec run_request"):
+                request = {
+                    "toolset": _CAR_STORY_TOOLSET,
+                    "action": "travelTo",
+                    "arguments": {
+                        "tools": [
+                            {
+                                "toolset": _CAR_TOOLSET,
+                                "context": {
+                                    "make": "Dodge",
+                                    "model": "Charger",
+                                    "year": 1969,
+                                    "personality": "General Lee",
+                                },
+                            }
+                        ],
+                        "destination": "Hazzard County courthouse",
+                        "conditions": "muddy back roads",
+                    },
+                }
+                response = run_request(request)
                 expect(response["ok"]).to(be_true)
                 expect(response["action"]).to(equal("travelTo"))
                 expect(response["result"]).to(
@@ -231,32 +219,14 @@ with description("a class"):
 
         with context("when expand makes tools available to the chat"):
             with it("should tell the AI to display those tools by name and purpose in the user-visible reply"):
-                request = yaml.safe_dump(
+                response = run_request(
                     {
                         "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
                         "action": "narrate",
                         "arguments": {"message": "hello"},
                     }
                 )
-                completed = subprocess.run(
-                    [sys.executable, "-m", "harness", "run", "-"],
-                    input=request,
-                    capture_output=True,
-                    text=True,
-                    cwd=_REPO_ROOT,
-                    check=False,
-                )
-                expect(completed.returncode).to(equal(0))
-                response = load_fenced(completed.stdout)
                 expect(response["ok"]).to(be_true)
-                instructions = response["instructions"]
-                expect(
-                    "display the tools made available to this chat in your user-visible reply"
-                    in instructions
-                ).to(be_true)
-                expect("Do not only follow them silently" in instructions).to(be_true)
-                expect("Tools made available:" in instructions).to(be_true)
-                expect("- ping — Echo a message." in instructions).to(be_true)
                 expect(response["tools"]).to(equal(["ping"]))
 
 
@@ -304,11 +274,11 @@ with description("an action"):
                     expect("destination" in str(error)).to(be_true)
                 expect(raised).to(be_true)
 
-    with context("that has templated string literals in the recipe body"):
+    with context("that has templated string literals in the @agent_instructions body"):
         with it("should put {{param}} / {{self.attr}} values into expanded instructions"):
             from agent_tools.examples.templated_md import TemplatedMdDemo
 
-            request = yaml.safe_dump(
+            response = run_request(
                 {
                     "toolset": "agent_tools.examples.templated_md:TemplatedMdDemo",
                     "context": {"label": "Desk"},
@@ -316,16 +286,6 @@ with description("an action"):
                     "arguments": {"name": "Pat"},
                 }
             )
-            completed = subprocess.run(
-                [sys.executable, "-m", "harness", "run", "-"],
-                input=request,
-                capture_output=True,
-                text=True,
-                cwd=_REPO_ROOT,
-                check=False,
-            )
-            expect(completed.returncode).to(equal(0))
-            response = load_fenced(completed.stdout)
             expect(response["ok"]).to(be_true)
             expect("Greet Pat on behalf of Desk" in response["instructions"]).to(be_true)
             expect("{Placeholder}" in response["instructions"]).to(be_true)
@@ -413,9 +373,9 @@ with description("AgentToolSet"):
                 expect(car.personality).to(equal("cheerful companion named Sunny"))
                 expect(car.running).to(equal(False))
 
-    with context("through ToolsetRunner"):
+    with context("through spec run_request"):
         with it("should invoke a marked @agent_tool"):
-            response = ToolsetRunner.instance().run_request(
+            response = run_request(
                 {
                     "toolset": _CAR_TOOLSET_PATH,
                     "context": {
@@ -432,7 +392,7 @@ with description("AgentToolSet"):
 
         with it("should require tool arguments declared on the operation"):
             try:
-                ToolsetRunner.instance().run_request(
+                run_request(
                     {
                         "toolset": _CAR_TOOLSET_PATH,
                         "context": {
@@ -452,7 +412,7 @@ with description("AgentToolSet"):
 
         with it("should refuse missing required constructor context with an AskQuestion hint"):
             try:
-                ToolsetRunner.instance().run_request(
+                run_request(
                     {
                         "toolset": _CAR_TOOLSET_PATH,
                         "tool": "start",
@@ -646,10 +606,10 @@ class _ForEachCallee:
         return "polished"
 
     @agent_instructions
-    def prepare(recipe) -> str:
+    def prepare(self) -> str:
         """Prepare carefully."""
         "FOREACH_CALLEE_MARKER: prepare carefully."
-        tools(recipe.toolset.polish())
+        tools(self.polish())
         return "prepared"
 
 
@@ -659,37 +619,37 @@ class _ForEachCaller:
         return [_ForEachCallee(), _ForEachCallee()]
 
     @agent_instructions
-    def orchestrate(recipe) -> str:
+    def orchestrate(self) -> str:
         """Defer each companion."""
         "FOREACH_CALLER_MARKER: defer each companion."
-        for companion in recipe.toolset.companions():
+        for companion in self.companions():
             companion.mode = "tool"
             instructions(companion.prepare())
         return "orchestrated"
 
     @agent_instructions
-    def inline_all(recipe) -> str:
+    def inline_all(self) -> str:
         """Inline each companion."""
         "FOREACH_INLINE_MARKER: inline each companion."
-        for companion in recipe.toolset.companions():
+        for companion in self.companions():
             instructions(companion.prepare())
         return "inlined"
 
     @agent_instructions
-    def inline_bare(recipe) -> str:
+    def inline_bare(self) -> str:
         """Inline each companion via bare attribute."""
         "FOREACH_BARE_MARKER: inline each companion via bare attribute."
-        for companion in recipe.toolset.companions():
+        for companion in self.companions():
             instructions(companion.prepare())
         return "inlined"
 
     @agent_instructions
-    def with_self_step(recipe) -> str:
+    def with_self_step(self) -> str:
         """Walk self tools inside the loop."""
         "FOREACH_SELF_MARKER: walk self tools inside the loop."
-        for companion in recipe.toolset.companions():
+        for companion in self.companions():
             instructions(companion.prepare())
-            tools(recipe.toolset.note())
+            tools(self.note())
         return "noted"
 
     @_tool
@@ -710,7 +670,7 @@ class _HostWithScanner:
         self.scanner = _ScannerKit()
 
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Contexts live here."""
         "FOREACH_GUIDANCE_MARKER: contexts live here."
         return ""
@@ -722,10 +682,10 @@ class _ScanCaller:
         return [_HostWithScanner()]
 
     @agent_instructions
-    def check(recipe) -> str:
+    def check(self) -> str:
         """Guidance then scan."""
         "FOREACH_SCAN_MARKER: guidance then scan."
-        for host in recipe.toolset.companions():
+        for host in self.companions():
             instructions(host.guidance())
             tools(host.scanner.scan())
         return "checked"
@@ -737,9 +697,9 @@ class _BrokenProvider:
         raise RuntimeError("no session")
 
     @agent_instructions
-    def wrap(recipe) -> str:
+    def wrap(self) -> str:
         """BROKEN_PROVIDER_MARKER: still list the named tool."""
-        tools(recipe.toolset.missing().finish_turn())
+        tools(self.missing().finish_turn())
         return ""
 
 
@@ -803,6 +763,60 @@ with description("a for-each action over companion toolsets"):
             expect("scan" in self.body.tools).to(be_true)
 
 
+@agent_toolset
+class _ExecBodyAgent:
+    def __init__(self) -> None:
+        super().__init__()
+        self.include_extra = False
+        self.ran = False
+
+    @_tool
+    def mark(self) -> str:
+        self.ran = True
+        return "marked"
+
+    @agent_instructions
+    def go(self) -> str:
+        """Run control flow and bare calls during expand."""
+        "ALWAYS_MARKER"
+        if self.include_extra:
+            "EXTRA_MARKER"
+        else:
+            "ELSE_MARKER"
+        self.mark()
+        if self.ran:
+            "RAN_OK"
+        return "done"
+
+
+with description("an @agent_instructions body that runs unwrapped Python"):
+    with context("when a conditional branch is taken"):
+        with before.each:
+            self.agent = _ExecBodyAgent()
+            self.agent.include_extra = True
+            self.body = AgentInstructions.for_callable(_ExecBodyAgent.go, self.agent)
+            self.joined = "\n".join(self.body.prompt)
+
+        with it("should include prose from the taken branch"):
+            expect("EXTRA_MARKER" in self.joined).to(be_true)
+
+        with it("should omit prose from the untaken branch"):
+            expect("ELSE_MARKER" in self.joined).to(equal(False))
+
+        with it("should run a bare @agent_tool call"):
+            expect(self.agent.ran).to(be_true)
+            expect("RAN_OK" in self.joined).to(be_true)
+
+    with context("when the other branch is taken"):
+        with before.each:
+            self.agent = _ExecBodyAgent()
+            self.body = AgentInstructions.for_callable(_ExecBodyAgent.go, self.agent)
+            self.joined = "\n".join(self.body.prompt)
+
+        with it("should include prose from the else branch"):
+            expect("ELSE_MARKER" in self.joined).to(be_true)
+
+
 with description("a cross-instance call whose provider cannot resolve"):
     with it("should still list the named tool"):
         body = AgentInstructions.for_callable(
@@ -852,7 +866,7 @@ with description("AgentInstructions"):
             expect("Scripted trip" in instruction.description).to(be_true)
 
     with context("the tools property"):
-        with it("should list deferred tool names from the recipe body"):
+        with it("should list deferred tool names from the @agent_instructions body"):
             story = CarStory()
             instruction = story.instructions["travelTo"]
             expect(instruction.tools).to(

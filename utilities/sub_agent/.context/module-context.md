@@ -18,4 +18,4 @@ Decorator stacking — inner `@agent_tool` / `@agent_instructions` captures the 
 
 ## Dependencies
 
-`tools.tool`, `harness.harness_tool`, `primitives.agent_tools`
+`tools.tool`, `harness.installer_tool`, `primitives.agent_tools`

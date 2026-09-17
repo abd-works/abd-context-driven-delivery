@@ -5,13 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
-from primitives.agent_tools.agent_tools import agent_instructions
-from practices.base.base_context_tool import BaseContextTool
-from primitives.instructions import Instruction
-from primitives.instructions import instruction
+from practices.stages import DISCOVERY, ENGINEER, SHAPING, SPEC, resolve_stage_fidelity
+from practices.workspace_bind import init_practice_guidance
+from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
+from primitives.guidance.guidance import PracticeGuidance
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
+    from practices.clean_engineering.clean_engineering import CleanEngineering
     from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -39,22 +40,28 @@ class TransformResult(TypedDict):
     content: str
 
 
-class Ddd(BaseContextTool):
+@agent_toolset
+class Ddd(PracticeGuidance):
     """# Instructions
 
     Depends on CleanEngineering (lazy import in ce() and transform to avoid circular imports at
     module load time).
     """
 
+    domain_slug = "ddd"
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
-    fidelities = {
-        BaseContextTool.SHAPING:   "bounded_context",
-        BaseContextTool.DISCOVERY: "bounded_context",
-        BaseContextTool.SPEC:      "building_blocks",
-        BaseContextTool.ENGINEER:  "tactics",
+    STAGE_TO_FIDELITY = {
+        SHAPING: "bounded_context",
+        DISCOVERY: "bounded_context",
+        SPEC: "building_blocks",
+        ENGINEER: "tactics",
     }
+
+    @classmethod
+    def resolve_fidelity(cls, fidelity: str) -> str:
+        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
 
     # Generate / new work: src/. /document defaults to domain/ unless path or folder is set.
     default_workspace_folder: str = "src"
@@ -71,8 +78,14 @@ class Ddd(BaseContextTool):
     ) -> None:
         fidelity = type(self).resolve_fidelity(fidelity)
         resolved_format = self._resolve_format(fidelity, format)
-        super().__init__(
-            format=resolved_format, path=path, session=session, workspace=workspace
+        init_practice_guidance(
+            self,
+            format=resolved_format,
+            path=path,
+            session=session,
+            workspace=workspace,
+            fidelity=fidelity,
+            stage_to_fidelity=self.STAGE_TO_FIDELITY,
         )
         self._fidelity = fidelity
 
@@ -92,15 +105,16 @@ class Ddd(BaseContextTool):
             )
         return resolved
 
-    def ce(self) -> "BaseContextTool":
+    def ce(self) -> "CleanEngineering":
         """CleanEngineering companion at the matching fidelity (tool mode — invoke separately when ready)."""
         from practices.clean_engineering.clean_engineering import CleanEngineering
 
         current = self.workspace.current_work_session
-        working_path = current.path if current is not None else self._raw_path
+        working_path = current.path if current is not None else self.path
         workspace_root = current.workspace_root if current is not None else self.workspace.path
+        ce_fidelity = _CE_FIDELITY[self.fidelity]
         instance = CleanEngineering(
-            fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
+            fidelity=ce_fidelity,
             format=self.format,
             path=working_path,
             session=current.name if current is not None else "",
@@ -128,13 +142,13 @@ class Ddd(BaseContextTool):
         if current is None:
             self.workspace.open(
                 self,
-                name=self._session_name,
-                path=self._raw_path or "",
+                name=self.session,
+                path=self.path or "",
             )
             current = self.workspace.current_work_session
         if current is None:
             raise RuntimeError("DDD work session did not open")
-        if self._raw_path is not None:
+        if self.path is not None:
             return current.path
         if self.default_workspace_folder != generate_folder:
             return current.path
@@ -147,11 +161,8 @@ class Ddd(BaseContextTool):
         current.record_context_root()
         return current.path
 
-    @instruction
-    def contexts(self) -> Instruction: ...
-
     @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Provide guidance for creating bounded contexts, building blocks, and tactics.
         When this DDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
         super().guidance()

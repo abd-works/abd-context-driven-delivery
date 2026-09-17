@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from actions.scan.rule import RulesCollection
-from primitives.agent_tools.agent_tools import agent_instructions
-from primitives.harness.marks import command, rules, skill
+from primitives.agent_tools.agent_tools import ToolSetCollection, agent_instructions, tools
+from primitives.installer.marks import command, mcp, rules, skill
 from primitives.markdown import Markdown, canonical_format, class_file_directory, fidelity_blocks, markdown
 
 
@@ -26,15 +26,14 @@ class Guidance:
         self.path = path
         self.session = session
         self.workspace = workspace
+        self.nested_toolsets = ToolSetCollection()
 
     @markdown("contexts")
     def context(self) -> str:
         """Contexts preamble for this host scope."""
 
     @markdown
-    @skill
-    @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Guidance section body."""
 
     @markdown("shared rules")
@@ -62,6 +61,8 @@ class Guidance:
         return ""
 
     @property
+    @skill
+    @agent_instructions
     def instructions(self) -> str:
         return "\n\n".join(
             part
@@ -74,14 +75,29 @@ class Guidance:
             if part
         )
 
+    @property
+    def tools(self) -> dict[str, Any]:
+        from primitives.agent_tools.agent_tools import AgentTool
+        from primitives.installer.declared_installations import declared_installations
 
-class GuidanceCollection(Guidance):
+        found: dict[str, Any] = {}
+        for declared in declared_installations(self):
+            if (
+                declared.invoke in {"action", "tool"}
+                or declared.kind == "rules"
+            ):
+                found[declared.operation] = AgentTool(
+                    name=declared.operation,
+                    callable=declared.member,
+                    toolset=self,
+                )
+        return found
+
+
+class GuidanceCollection(ToolSetCollection, Guidance):
     def __init__(self, entries: dict[str, Guidance] | None = None) -> None:
-        super().__init__()
-        self.entries: dict[str, Guidance] = dict(entries or {})
-
-    def __iter__(self):
-        return iter(self.entries.values())
+        ToolSetCollection.__init__(self, entries)
+        Guidance.__init__(self)
 
     @property
     def context(self) -> str:  # type: ignore[override]
@@ -117,21 +133,36 @@ class PracticeGuidance(Guidance):
     ) -> None:
         super().__init__(format=format, path=path, session=session, workspace=workspace)
         self.fidelities = GuidanceCollection()
+        self.nested_toolsets = self.fidelities
         self.fidelity: str | None = None
         from actions.scan.scan import Scan
 
         self.scanner = Scan.bound_to(self)
+
+    @property
+    def active(self) -> Any:
+        """Current work session on this practice's workspace, when one is open."""
+        workspace = self.workspace
+        if workspace is None:
+            return None
+        return workspace.current_work_session
 
     @markdown
     def examples(self) -> str:
         """Examples folder content — not part of instructions."""
 
     @property
+   
+    @mcp
+    @skill
+    @agent_instructions
     def instructions(self) -> str:
         parts = [super().instructions]
         if self.fidelities.entries:
-            parts.append(self.fidelities.instructions)
+            for fidelity in self.fidelities.entries.values():
+                tools(fidelity.instructions)
         return "\n\n".join(part for part in parts if part)
+
 
     def domain_markdown_path(self) -> Path:
         class_dir = class_file_directory(self)
@@ -152,6 +183,7 @@ class PracticeGuidance(Guidance):
 
     def attach_fidelities(self, entries: dict[str, Guidance]) -> None:
         self.fidelities = GuidanceCollection(entries)
+        self.nested_toolsets = self.fidelities
 
     def load_fidelities_from_markdown(self) -> None:
         md_path = self.domain_markdown_path()
@@ -196,15 +228,19 @@ class FidelityGuidance(Guidance):
         return practice.prior_fidelity_context(self.name)
 
     @markdown
-    @command
-    @agent_instructions
-    def guidance(recipe) -> str:
+    def guidance(self) -> str:
         """Fidelity guidance section."""
 
     @markdown("rules")
     @rules
     def rules(self) -> RulesCollection:
         """Fidelity rules section."""
+
+    @property
+    @command
+    @agent_instructions
+    def instructions(self) -> str:
+        return super().instructions
 
     @property
     def templates(self) -> dict[str, str]:  # type: ignore[override]

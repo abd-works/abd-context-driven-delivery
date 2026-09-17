@@ -1,4 +1,4 @@
-"""BDD spec for WorkSession - kit prose + tools on BaseContextTool hosts."""
+"""BDD spec for WorkSession - kit prose + tools on PracticeGuidance hosts."""
 
 import shutil
 import sys
@@ -17,10 +17,11 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
 from expects import be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from primitives.harness.runner import InstructionRunRequest, InstructionRunner
-from primitives.instructions import Instruction
+from toolset_invoke.toolset_invoke import expand_action
+from primitives.installer.toolset_loader import ToolsetLoader
+from primitives.markdown import Markdown
 from agent_tools import AgentToolSet
-from primitives.harness.toolset_loader import ToolsetLoader
+from workspace.workspace import WorkSession, Workspace
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
@@ -29,8 +30,6 @@ _CAR_CHRONICLE_TOOLSET = (
 _CHRONICLE_WITH_OUTPUT_TOOLSET = (
     "practices.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
 )
-_BASE_TOOLSET = "practices.base.base_context_tool:BaseContextTool"
-
 
 def _expand(
     instance: AgentToolSet,
@@ -39,23 +38,18 @@ def _expand(
     toolset_path: str,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return InstructionRunner.instance().invoke_action(
-        InstructionRunRequest(
-            request={"toolset": toolset_path, "context": {}},
-            toolset_path=toolset_path,
-            action_name=action_name,
-            context={},
-            arguments=arguments or {},
-            instance=instance,
-        )
+    return expand_action(
+        instance,
+        action_name,
+        toolset_path=toolset_path,
+        context={},
+        arguments=arguments or {},
+        request={"toolset": toolset_path, "context": {}},
     )
 
 
 def _section(name: str) -> str:
-    heading = name.replace("_", " ").replace("-", " ").title()
-    return Instruction(
-        f"# {heading}", _KIT_DIR, domain_slug="workspace_session"
-    ).expand()
+    return Markdown.from_label(WorkSession(Workspace("."), ""), name).extract()
 
 
 with description("WorkSession kit prose"):
@@ -72,7 +66,7 @@ with description("WorkSession kit prose"):
         expect("Consumed handoff" in text or "consume" in text.lower()).to(be_true)
 
 
-with description("WorkSession on a BaseContextTool host"):
+with description("WorkSession on a PracticeGuidance host"):
     with context("CarChronicle generate via Generate kit"):
         with before.all:
             from generate.generate import Generate
@@ -139,8 +133,6 @@ with description("WorkSession on a BaseContextTool host"):
         with before.all:
             from generate.generate import Generate
 
-            cls = ToolsetLoader.instance().load(_BASE_TOOLSET)
-            self.host = cls()
             self.response = _expand(
                 Generate(),
                 "generate",

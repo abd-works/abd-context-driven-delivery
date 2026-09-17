@@ -20,7 +20,7 @@ MCP groups tools, prompts, and resources under **primitives**. There is no proto
 
 ## Modules
 
-Build order: `primitives.tools` | `primitives.instructions` → `mcp_server`
+Build order: `primitives.tools` | `primitives.markdown` → `mcp_server`
 
 ---
 
@@ -28,7 +28,7 @@ Build order: `primitives.tools` | `primitives.instructions` → `mcp_server`
 
 - **Purpose:** MCP-native runtime for CDD tool and prompt discovery and invocation.
 - **Seam (terms):** McpServer, McpToolset, McpTool, McpPrompt
-- **Dependencies (one-way):** `primitives.tools`, `primitives.instructions`
+- **Dependencies (one-way):** `primitives.tools`, `primitives.markdown`
 
 ## McpTool
 

@@ -17,12 +17,12 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from primitives.harness.runner import InstructionRunRequest, InstructionRunner
+from toolset_invoke.toolset_invoke import expand_action
+from primitives.installer.toolset_loader import ToolsetLoader
 import practices  # noqa: F401 - generator package on path
-from primitives.instructions import Instruction
+from primitives.markdown import Markdown
 from scan import ScannerCollection
 from agent_tools import AgentToolSet
-from primitives.harness.toolset_loader import ToolsetLoader
 
 from satisfy.satisfy import Satisfy
 from validate.validate import Validate
@@ -39,7 +39,7 @@ _SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
 
 def _load_clean_engineering(
     *, format_name: str = "python", fidelity: str = "modules"
-) -> Toolset:
+) -> AgentToolSet:
     toolset_cls = ToolsetLoader.instance().load(_CLEAN_ENGINEERING_TOOLSET)
     return toolset_cls(fidelity=fidelity, format=format_name, session=None)
 
@@ -52,44 +52,32 @@ def _expand_action(
     context: dict[str, Any] | None = None,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return InstructionRunner.instance().invoke_action(
-        InstructionRunRequest(
-            request={"toolset": toolset_path, "context": context or {}},
-            toolset_path=toolset_path,
-            action_name=action_name,
-            context=context or {},
-            arguments=arguments or {},
-            instance=instance,
-        )
+    return expand_action(
+        instance,
+        action_name,
+        toolset_path=toolset_path,
+        context=context or {},
+        arguments=arguments or {},
+        request={"toolset": toolset_path, "context": context or {}},
     )
 
 
 def _load_action_prose(action: str, kit_dir: Path | None = None) -> str:
-    from primitives.instructions import _path_for_name
-
     directory = kit_dir or _GENERATE_DIR
-    return Instruction(
-        _path_for_name(directory, action), directory
-    ).expand()
+    return (directory / f"{action}.md").read_text(encoding="utf-8")
 
 
 def _load_contexts_section(module_dir: Path) -> str:
-    return Instruction(
-        "\u00a7 Contexts", module_dir, domain_slug="clean_engineering"
-    ).expand()
+    return Markdown.from_label(_load_clean_engineering(), "contexts").extract()
 
 
 def _load_examples(module_dir: Path) -> str:
-    return Instruction("examples", module_dir, domain_slug="clean_engineering").expand()
+    return Markdown.from_label(_load_clean_engineering(), "examples").extract()
 
 
 def _load_python_template(module_dir: Path) -> str:
-    from primitives.instructions import _path_for_templates
-
-    relative = _path_for_templates(module_dir, "clean_engineering", "python")
-    return Instruction(
-        relative, module_dir, domain_slug="clean_engineering"
-    ).expand()
+    host = _load_clean_engineering()
+    return Markdown.from_label(host, "templates").extract()
 
 
 def _context_rule_slugs(concepts_text: str) -> list[str]:

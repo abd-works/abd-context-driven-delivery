@@ -9,14 +9,14 @@ Four decorators turn a plain Python class into a fully agentic toolset. This fil
 | `@toolset` | `primitives/agent_tools` | Mixes `Toolset` into the class; publishes the manifest the AI reads |
 | `@agent_tool` | `primitives/agent_tools` | Marks a method as directly callable by the AI |
 | `@resource` | `primitives/agent_tools` | Marks a `@property` as observable state the AI can read |
-| `@instruction` | `primitives/instructions` | Marks a method as a content-resolution slot (file / folder / section) |
+| `@markdown` | `primitives/markdown` | Extracts co-located markdown (folder, file, or section) |
 | `@agent_instructions` | `primitives/agent_tools` | Marks a method as an AI-orchestrated recipe; body is parsed as instructions, not executed |
 
 ---
 
 ## Integrated example
 
-`primitives/examples/reporter.py` — `Reporter` uses every decorator and all three instruction forms. Companion files `reporter.md` and `house-guidelines.md` sit beside it in the same folder.
+`primitives/examples/reporter.py` — `Reporter` uses the decorators with `@markdown` extract. Companion files `reporter.md` and `house-guidelines.md` sit beside it in the same folder.
 
 ---
 
@@ -26,15 +26,15 @@ Four decorators turn a plain Python class into a fully agentic toolset. This fil
 |---|---|
 | `@toolset` / `@agent_tool` / `@resource` | `primitives/agent_tools/.context/module-context.md` |
 | `@agent_instructions` | `primitives/agent_tools/.context/module-context.md` |
-| `@instruction` | `primitives/instructions/.context/module-context.md` |
+| `@markdown` | `primitives/markdown/.context/module-context.md` |
 
 ---
 
 ## Dependency direction
 
 ```
-actions  →  primitives/instructions  →  primitives/assets
-tools    →  primitives/instructions
+actions  →  primitives/markdown  →  primitives/assets
+tools    →  primitives/markdown
 ```
 
 Never import `tools` or `actions` from inside `primitives`. Peers self-register through `ToolsetExtensions`.

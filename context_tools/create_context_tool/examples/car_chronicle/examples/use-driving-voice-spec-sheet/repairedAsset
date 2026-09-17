@@ -1,7 +1,0 @@
-## 2026-07-11
-
-**Route:** Hazzard County garage → Hazzard County courthouse  
-**Miles:** 6  
-**Odometer:** 41,288 → 41,294
-
-I woke to Bo turning the key — courthouse run, and I never treat six county miles like an errand. Dust kicked up behind us, sun warmed my hood, and the gravel sang under my tires all the way into town. He kept one hand easy on the wheel; I kept my General Lee heart loud and loyal until we rolled up to the courthouse steps.

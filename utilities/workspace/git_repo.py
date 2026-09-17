@@ -1,4 +1,4 @@
-﻿"""Shim — canonical git model lives in utilities/git."""
+"""Shim — canonical git model lives in utilities/git."""
 
 from git import (
     Commit,

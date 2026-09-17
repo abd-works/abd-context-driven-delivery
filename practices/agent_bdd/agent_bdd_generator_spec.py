@@ -19,13 +19,14 @@ for _p in [
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from primitives.harness.runner import InstructionRunRequest, InstructionRunner
+from toolset_invoke.toolset_invoke import expand_action
+from primitives.installer.toolset_loader import ToolsetLoader
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import practices  # noqa: F401
-from primitives.instructions import Instruction
+from primitives.markdown import Markdown
 from agent_tools import AgentToolSet
-from primitives.harness.toolset_loader import ToolsetLoader
 from validate.validate import Validate
+from practices.bdd.bdd import Bdd
 
 _AGENT_BDD_TOOLSET = "agent_bdd.agent_bdd:AgentBdd"
 _BDD_DIR = _REPO_ROOT / "practices" / "bdd"
@@ -36,12 +37,10 @@ _VALIDATE_TOOLSET = "validate.validate:Validate"
 
 
 def _kit_prose(action: str, kit_dir: Path) -> str:
-    from primitives.instructions import _path_for_name
-
-    return Instruction(_path_for_name(kit_dir, action), kit_dir).expand()
+    return (kit_dir / f"{action}.md").read_text(encoding="utf-8")
 
 
-def _load_agent_bdd(*, format_name: str = "python") -> Toolset:
+def _load_agent_bdd(*, format_name: str = "python") -> AgentToolSet:
     toolset_cls = ToolsetLoader.instance().load(_AGENT_BDD_TOOLSET)
     return toolset_cls(format=format_name)
 
@@ -54,15 +53,13 @@ def _expand_action(
     context: dict[str, Any] | None = None,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return InstructionRunner.instance().invoke_action(
-        InstructionRunRequest(
-            request={"toolset": toolset_path, "context": context or {}},
-            toolset_path=toolset_path,
-            action_name=action_name,
-            context=context or {},
-            arguments=arguments or {},
-            instance=instance,
-        )
+    return expand_action(
+        instance,
+        action_name,
+        toolset_path=toolset_path,
+        context=context or {},
+        arguments=arguments or {},
+        request={"toolset": toolset_path, "context": context or {}},
     )
 
 
@@ -74,10 +71,8 @@ with description("AgentBdd action expansion"):
     with context("an AgentBdd generator with format python"):
         with before.all:
             self.bdd = _load_agent_bdd()
-            self.contexts = Instruction(
-                "\u00a7 Contexts", _AGENT_BDD_DIR, domain_slug="agent_bdd"
-            ).expand()
-            self.bdd_contexts = Instruction("\u00a7 Contexts", _BDD_DIR).expand()
+            self.contexts = Markdown.from_label(self.bdd, "contexts").extract()
+            self.bdd_contexts = Markdown.from_label(Bdd(), "contexts").extract()
 
         with context("that does not own kit lifecycle actions"):
             with it("should not expose generate, validate, satisfy, or repair"):
@@ -100,9 +95,7 @@ with description("AgentBdd action expansion"):
                 _assert_text_inlined(self.response["instructions"], self.contexts)
 
             with it("should inline templates/agent_bdd-templates.py from format resource"):
-                template = Instruction(
-                    "templates/agent_bdd-templates.py", _AGENT_BDD_DIR
-                ).expand()
+                template = Markdown.from_label(self.bdd, "templates").extract()
                 expect("with description" in self.response["instructions"]).to(be_true)
                 expect("ai_judge" in self.response["instructions"]).to(be_true)
                 expect(len(template) > 0).to(be_true)

@@ -1,4 +1,4 @@
-"""Shared agent BDD types, helpers, session management, manifest parsing, and runbook building."""
+"""Shared agent BDD types, helpers, session management, and runbook building."""
 from __future__ import annotations
 
 import ast
@@ -16,8 +16,13 @@ from typing import Any, TypedDict
 
 from agent_bdd.yaml_fence import _fenced, load_fenced
 
+try:
+    import yaml
+except ImportError:  # pragma: no cover
+    yaml = None  # type: ignore
+
 _TOOLS_RUN = re.compile(
-    r"(?:python\s+-m\s+tools\s+run|tools\.ps1\s+run|tools\s+run\b)",
+    r"(?:toolset:\s*\S|action:\s*\w|tool:\s*\w)",
     re.IGNORECASE,
 )
 
@@ -37,11 +42,6 @@ The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
 JUDGE_LAUNCH = (
     "Read {path} and follow it exactly. "
     "Reply with only one JSON line as specified in that file."
-)
-
-RUN_PROMPT_SUFFIX = (
-    "\n\nIMPORTANT: Pipe the YAML above on stdin to .\\tools.ps1 run - from repo root. "
-    "Return the complete fenced YAML stdout. Do not summarize. Do not remanifest."
 )
 
 AGENT_DEFERRAL_PHRASES = (
@@ -125,7 +125,7 @@ class JudgeResult:
 
 @dataclass(frozen=True)
 class RunResponse:
-    """Parsed fenced YAML from ``python -m harness run`` CLI stdout."""
+    """Parsed spec invoke response."""
 
     ok: bool
     toolset: str
@@ -138,25 +138,32 @@ class RunResponse:
     arguments: dict[str, Any] | None = None
 
     @classmethod
-    def from_cli_output(cls, text: str) -> RunResponse:
-        data = load_fenced(text)
+    def from_dict(cls, data: dict[str, Any]) -> RunResponse:
         if not isinstance(data, dict):
-            raise AgentHarnessError(f"tools run output is not a mapping: {text[:200]!r}")
+            raise AgentHarnessError(f"run output is not a mapping: {data!r}")
         if not data.get("ok"):
             error = str(data.get("error") or "unknown error")
-            raise AgentHarnessError(f"tools run returned ok: false - {error}", stdout=text)
+            raise AgentHarnessError(f"run returned ok: false - {error}")
         tools_field = data.get("tools")
+        result = data.get("result")
         return cls(
             ok=True,
             toolset=str(data.get("toolset", "")),
             tool=str(data["tool"]) if data.get("tool") else None,
             action=str(data["action"]) if data.get("action") else None,
-            result=data.get("result"),
+            result=result,
             instructions=str(data["instructions"]) if data.get("instructions") else None,
             tools=list(tools_field) if isinstance(tools_field, list) else None,
             arguments=dict(data["arguments"]) if isinstance(data.get("arguments"), dict) else None,
             resources=dict(data.get("resources") or {}),
         )
+
+    @classmethod
+    def from_cli_output(cls, text: str) -> RunResponse:
+        data = load_fenced(text)
+        if not isinstance(data, dict):
+            raise AgentHarnessError(f"run output is not a mapping: {text[:200]!r}")
+        return cls.from_dict(data)
 
 
 @dataclass(frozen=True)
@@ -294,7 +301,7 @@ def _log_harness(name: str, msg: str) -> None:
 
 
 def looks_like_tools_run_output(text: str) -> bool:
-    """True when text looks like fenced ``python -m harness run`` stdout (not arbitrary prose)."""
+    """True when text looks like a fenced spec invoke response (not arbitrary prose)."""
     has_ok_line = any(line.strip().startswith("ok:") for line in text.splitlines())
     if not has_ok_line:
         return False
@@ -405,43 +412,65 @@ def reject_agent_deferral(agent_text: str) -> None:
     for phrase in AGENT_DEFERRAL_PHRASES:
         if phrase in lowered:
             raise AgentHarnessError(
-                f"agent deferred invoke ({phrase!r}) instead of running tools.ps1"
+                f"agent deferred invoke ({phrase!r}) instead of running the request"
             )
 
 
+def invoke_run_request(request: dict[str, Any]) -> RunResponse:
+    """Invoke one toolset request in-process for specs — not production runtime."""
+    import utilities.sub_agent.register  # noqa: F401 — wire sub-agent tools
+
+    from primitives.installer.errors import RunError
+    from toolset_invoke.toolset_invoke import run_request
+
+    try:
+        response = run_request(request)
+    except RunError as exc:
+        raise AgentHarnessError(str(exc)) from exc
+    return RunResponse.from_dict(response)
+
+
 def _run_yaml_request(yaml_body: str, workspace: Path, *, prefix: str = "") -> str:
-    env = os.environ.copy()
-    env["PYTHONIOENCODING"] = "utf-8"
-    completed = subprocess.run(
-        [sys.executable, "-m", "tools", "run", "-"],
-        input=yaml_body,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        cwd=workspace,
-        check=False,
-        env=env,
-    )
-    stdout = (completed.stdout or "").strip()
-    stderr = (completed.stderr or "").strip()
-    if completed.returncode != 0:
-        raise AgentHarnessError(
-            f"tools run exited {completed.returncode}",
-            prefix=prefix,
-            exit_code=completed.returncode,
-            stdout=stdout,
-            stderr=stderr,
-        )
-    if not stdout or "ok:" not in stdout:
-        raise AgentHarnessError(
-            "tools run produced no ok: response",
-            prefix=prefix,
-            stdout=stdout,
-            stderr=stderr,
-        )
-    RunResponse.from_cli_output(stdout)
-    return stdout
+    if yaml is None:
+        raise AgentHarnessError("PyYAML required to parse run request", prefix=prefix)
+    parsed = yaml.safe_load(yaml_body)
+    if not isinstance(parsed, dict):
+        raise AgentHarnessError("run request must be a mapping", prefix=prefix)
+    response = invoke_run_request(parsed)
+    body = _fenced(_dump_manifest(response_to_dict(response)))
+    return body
+
+
+def response_to_dict(response: RunResponse) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "ok": response.ok,
+        "toolset": response.toolset,
+        "result": response.result,
+    }
+    if response.tool:
+        payload["tool"] = response.tool
+    if response.action:
+        payload["action"] = response.action
+    if response.instructions is not None:
+        payload["instructions"] = response.instructions
+    if response.tools is not None:
+        payload["tools"] = response.tools
+    if response.arguments is not None:
+        payload["arguments"] = response.arguments
+    return payload
+
+
+def _dump_manifest(manifest_data: dict[str, Any]) -> str:
+    if yaml is None:
+        raise RuntimeError("PyYAML required to render YAML")
+    from agent_bdd.yaml_fence import _serialize_value
+
+    return yaml.safe_dump(
+        _serialize_value(manifest_data),
+        sort_keys=False,
+        default_flow_style=False,
+        allow_unicode=True,
+    ).strip()
 
 
 def _replay_tools_run(command: str, workspace: Path) -> str | None:
@@ -546,7 +575,7 @@ class AgentSpecManifest:
 
     @property
     def in_chat(self) -> bool:
-        return self.harness == "in_chat"
+        return self.installer == "in_chat"
 
     @property
     def judge_session(self) -> str | None:
@@ -648,7 +677,7 @@ class AgentSpecRunbook:
 
     def to_dict(self) -> _AgentSpecRunbookDocument:
         return {
-            "harness": self.harness,
+            "harness": self.installer,
             "workspace": self.workspace,
             "spec_path": self.spec_path,
             "chat_instruction": self.chat_instruction,

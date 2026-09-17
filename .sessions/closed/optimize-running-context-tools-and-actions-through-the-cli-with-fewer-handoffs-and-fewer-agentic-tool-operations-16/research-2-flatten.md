@@ -793,27 +793,27 @@ No `@agent_tool` or `@agent_instructions`. HTML/catalog builder consumed by Harn
 
 ---
 
-## primitives/harness/harness.py — `Harness`
+## primitives/installer/harness.py — `Harness`
 
 ### Current
 
 | Kind | Name |
 |------|------|
 | `@agent_instructions` | `generate` |
-| `@agent_tool` | `walk`, `suggested_deploy_path`, `write_deploy`, `generateAgain`, `clean` |
+| `@agent_tool` | `walk`, `suggested_deploy_path`, `install`, `generateAgain`, `clean` |
 
-**CLI:** `/deploy-harness`, harness deploy flow.
+**CLI:** `/install`, harness deploy flow.
 
 **After first expand — separate hops:**
-- `generate` expand: `suggested_deploy_path`, `write_deploy`.
+- `generate` expand: `suggested_deploy_path`, `install`.
 - AskQuestion prose for IDE/filter/path — agentic.
 
 **Already in-process / inlined:**
-- `write_deploy` calls `walk` internally when needed (one hop for write_deploy).
+- `install` calls `walk` internally when needed (one hop for install).
 
 ### Target
 
-**2A — `deploy_generate`:** one `@agent_tool` = suggest path + write_deploy (swallow two listed hops after AskQuestion answered).
+**2A — `deploy_generate`:** one `@agent_tool` = suggest path + install (swallow two listed hops after AskQuestion answered).
 
 **leave** — AskQuestion for IDE/path/filter.
 
@@ -877,7 +877,7 @@ No production `@agent_tool` / `@agent_instructions` outside examples (`recipe_gu
 | **2A coarse** | `Satisfy.satisfy_validate_and_fix` | nested validate scan when redundant hop |
 | **2A coarse** | `Partition.partition_corpus_run` | `index`, `segment`, `verify_segment_completeness` |
 | **2A coarse** | `Workflow.backlog_capture` | `compact_handoff`, `capture_backlog` |
-| **2A coarse** | `Harness.deploy_generate` | `suggested_deploy_path`, `write_deploy` |
+| **2A coarse** | `Harness.deploy_generate` | `suggested_deploy_path`, `install` |
 | **2A coarse** | `AgentBdd.generate_via_bdd` | cross-toolset `Generate.generate` on Bdd companion |
 | **2A coarse** | `ContextSetup.capture_documents_pipeline` | `convert`, partition delegation, `embed` |
 | **2A coarse** | `Sketch.sketch_persist_draft` (optional) | `find_template`, `save_sketch` |

@@ -20,13 +20,10 @@ from agent_bdd.agent_bdd_common import (  # noqa: F401
     read_manifest,
 )
 
-# Spec helpers (expects/mamba) are lazy — `python -m harness` must not require test deps.
+# Spec helpers (expects/mamba) are lazy — importing agent_bdd must not require test deps.
 _SPEC_HELPER_EXPORTS = frozenset(
     {
-        "combined_capture_text",
-        "dump_run_yaml",
-        "expect_agent_invoked_shell",
-        "expect_capture_mentions",
+        "build_run_request",
         "expect_instructions_contain",
         "expect_instructions_contain_any",
         "expect_ok_action",
@@ -37,17 +34,12 @@ _SPEC_HELPER_EXPORTS = frozenset(
         "generate_and_judge",
         "generate_similar_prompt",
         "generate_similar_rubric",
-        "command_fence_yaml",
-        "parse_command_fence",
+        "invoke_toolset",
         "read_workspace",
         "repo_root_from",
         "run_skill",
         "run_toolset",
-        "run_yaml_from_command",
         "sessions_dir",
-        "tools_run_captures",
-        "tools_run_prompt",
-        "tools_run_prompt_from_command",
     }
 )
 
@@ -122,7 +114,7 @@ def instruct_use_tool(
     timeout_seconds: int = 300,
     require_agent_shell: bool = False,
 ) -> RunResponse:
-    """Drive the agent to pipe YAML to ``.\\tools.ps1 run -``; returns parsed RunResponse."""
+    """Parse a toolset run request from the prompt and invoke it in-process."""
     return _current().instruct_use_tool(
         prompt,
         timeout_seconds=timeout_seconds,
