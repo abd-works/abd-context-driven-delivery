@@ -80,15 +80,6 @@ with description("an operation annotated as a Cursor hook"):
 
             expect(bare_hook).to(raise_error(ValueError))
 
-    with context("that is marked always"):
-        with it("should store always on the member"):
-            @hook("preToolUse", always=True)
-            def handler(self, payload: dict) -> dict:
-                return {}
-
-            expect(handler._hook_always).to(equal(True))
-
-
 # --- installation_spec.py ---
 def _skill_names(tree: Path) -> set[str]:
     return {path.parent.name for path in tree.joinpath("skills").glob("*/SKILL.md")}
@@ -498,7 +489,7 @@ with description("a Cursor hooks config") as self:
             expect(data["version"]).to(equal(1))
             expect(data["hooks"]).to(have_key("stop"))
             command = data["hooks"]["stop"][0]["command"]
-            expect(command).to(contain("primitives/hooks/dispatch.py"))
+            expect(command).to(contain("primitives/hooks/hook_server.py"))
 
         with it("should write hook skill files for hook-published operations"):
             expect((self.tree / "skills" / "hook-auto_turn" / "SKILL.md").is_file()).to(

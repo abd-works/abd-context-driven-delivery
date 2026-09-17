@@ -9,6 +9,24 @@ from typing import Any
 from primitives.installer.installer import Destination, Installation
 
 
+class hooks:
+    """Class annotation: disable every hook operation on the toolset."""
+
+    def __new__(cls, target: Any = None, *, disabled: bool = False):
+        inst = object.__new__(cls)
+        inst.disabled = disabled
+        if isinstance(target, type):
+            return inst.annotate(target)
+        return inst
+
+    def __call__(self, cls: type) -> type:
+        return self.annotate(cls)
+
+    def annotate(self, cls: type) -> type:
+        cls._hooks_disabled = self.disabled
+        return cls
+
+
 class hook(Destination):
     flag = "_hook"
     EVENTS = frozenset(
@@ -28,7 +46,7 @@ class hook(Destination):
         }
     )
 
-    def __new__(cls, fn: Any = None, event: str | None = None, *, always: bool = False):
+    def __new__(cls, fn: Any = None, event: str | None = None):
         if isinstance(fn, str):
             event = fn
             fn = None
@@ -42,15 +60,9 @@ class hook(Destination):
             )
         inst = object.__new__(cls)
         inst.name = event
-        inst.always = always
         if callable(fn):
             return inst.annotate(fn)
         return inst
-
-    def annotate(self, fn):
-        fn = super().annotate(fn)
-        fn._hook_always = self.always
-        return fn
 
     @classmethod
     def normalize_event(cls, event: str) -> str:
@@ -62,7 +74,7 @@ class HookInstallation(Installation):
     """Write hook skill files and Cursor ``hooks.json`` dispatch entries."""
 
     channel = "hook"
-    DISPATCH_SCRIPT = "primitives/hooks/dispatch.py"
+    DISPATCH_SCRIPT = "primitives/hooks/hook_server.py"
 
     def __init__(
         self,

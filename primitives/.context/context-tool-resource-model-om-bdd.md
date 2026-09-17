@@ -8,7 +8,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 - **Purpose:** Extract co-located markdown — not assembly. Convert that extract to HTML.
 - **Seam (terms):** `@markdown`, `Markdown`, `HTML`, `AssetLocator`
-- **Dependencies (one-way):** `primitives/assets`
+- **Dependencies (one-way):** none — `AssetLocator` lives in this package
 
 ## HTML
 
@@ -47,7 +47,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 - **Purpose:** Assemble agent instructions from `@markdown` properties; fidelity-scoped guidance nodes.
 - **Seam (terms):** `Guidance`, `PracticeGuidance`, `FidelityGuidance`, `GuidanceCollection`, `RulesCollection`
-- **Dependencies (one-way):** `primitives/markdown`, `primitives/assets`, `workspace`, `actions/scan`
+- **Dependencies (one-way):** `primitives/markdown`, `workspace`, `actions/scan`
 
 ## Guidance
 + Guidance()
@@ -275,7 +275,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 - **Purpose:** *Deployment* + *Harness* + MCP runtime. **Extract** what `Harness.install` / `operation_writes` already do — same artifacts; not new deploy behavior.
 - **Seam (terms):** `Deployment`, `MarkdownInstallation`, `McpInstallation`, `HookInstallation`, `Harness`, `McpServer`, `McpTool`, `McpPrompt`
-- **Dependencies:** registry. Stdio entry: `utilities/mcp_server/__main__.py` loads *McpServer* from here.
+- **Dependencies:** registry. Stdio entry: `python -m primitives.mcp` loads *McpServer* from `primitives/mcp`.
 
 ## Deployment
 

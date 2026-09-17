@@ -33,7 +33,7 @@ Four decorators turn a plain Python class into a fully agentic toolset. This fil
 ## Dependency direction
 
 ```
-actions  →  primitives/markdown  →  primitives/assets
+actions  →  primitives/markdown
 tools    →  primitives/markdown
 ```
 

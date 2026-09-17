@@ -53,7 +53,7 @@ Extract and assemble are sequential — `@markdown` does not compete with `instr
 
 *Markdown* (`primitives/markdown`) — `@markdown` decorator + `Markdown` value object + `HTML`. Extraction and HTML conversion — not instructions assembly.
 
-- **Dependencies:** `primitives/assets` (`AssetLocator`). No `primitives/agent_toolset`.
+- **Dependencies:** none. `AssetLocator` lives in this package. No `primitives/agent_toolset`.
 
 ## Markdown
 
@@ -114,7 +114,7 @@ def examples(self) -> str: ...                # Guidance only — not in instruc
 
 # primitives/guidance
 
-- **Dependencies (one-way):** `primitives/markdown`, `primitives/assets`, `workspace`, `actions/scan` (`Rule`)
+- **Dependencies (one-way):** `primitives/markdown`, `workspace`, `actions/scan` (`Rule`)
 
 ## Guidance
 
@@ -581,7 +581,7 @@ Utilities that are not practices may mixin `Guidance` with `instructions` assemb
 - **Role:** *Deployment* — one deploy seam; *Harness* loads registry and calls `deployment.deploy(deployable)`.
 - **Purpose:** **Extract and name what `Harness.install` already does** — same artifacts, same walks, same decorator stacks. The refactor is not new behavior; it moves deploy logic out of the monolithic *Harness* / MCP server entry so each mechanism is self-contained and subtype-driven.
 - **Seam:** `Deployment`, `MarkdownInstallation`, `McpInstallation`, `HookInstallation`, `Deployable`, `Harness`, `McpServer`, `McpTool`, `McpPrompt`
-- **Dependencies:** registry; `transport` (invoke tails). Stdio entry: `utilities/mcp_server/__main__.py` imports *McpServer* from here.
+- **Dependencies:** registry; `transport` (invoke tails). Stdio entry: `python -m primitives.mcp` imports *McpServer* from `primitives/mcp`.
 
 ## Maps to today (no behavior change)
 
@@ -652,7 +652,7 @@ Same walk as base. Every markdown file is a skill, a command, or a rule — `@sk
 | `mcp=False` (CLI) | `mcp=True` (MCP) |
 | ----------------- | ---------------- |
 | every `@skill` / `@command` / `@rules` / `@instruction` body ends with YAML fence + `.\tools.ps1 run -` | same files; body ends with `Use MCP tool: \`{slug}.{member}(…)\`` |
-| no `mcp.json` | `.cursor/mcp.json` — stdio server → `utilities/mcp_server` |
+| no `mcp.json` | `.cursor/mcp.json` — stdio server → `python -m primitives.mcp` |
 
 **Example** — router skill `@stories` body (mcp mode):
 
@@ -667,7 +667,7 @@ CLI mode (`mcp=False`) — same skill, bottom is YAML fence + `.\tools.ps1 run -
 
 - `render_mcp_invoke(toolset_ref, member)` → str — `primitives/installer/transport.py`; used by `bodies._invoke_tail` when `transport=mcp`
 
-**Today:** `utilities/mcp_server/McpToolset` loads an instance and **rescans** the class with `getmembers` — a second discovery pass unrelated to harness deploy.
+**Today:** `McpServer.start` instantiates each toolset and enrolls members with `@mcp` — no second class rescan.
 
 ## MCP in target
 

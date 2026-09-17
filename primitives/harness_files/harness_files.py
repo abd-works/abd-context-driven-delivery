@@ -1,7 +1,6 @@
 """Skill, command, rule, and agent marks plus markdown install."""
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 from typing import Any
 
@@ -117,23 +116,6 @@ class MarkdownInstallation(Installation):
         body = section.rstrip()
         return f"{body}\n" if body else ""
 
-    def render_mcp_invoke(self, toolset_ref: str, member: Any) -> str:
-        name = member.__name__
-        slug = toolset_ref.split(":")[-1]
-        if "." in toolset_ref and ":" not in toolset_ref:
-            slug = toolset_ref
-        else:
-            slug = slug.replace("_", "-")
-        try:
-            signature = inspect.signature(member)
-            params = inspect.Signature(
-                [p for n, p in signature.parameters.items() if n != "self"]
-            )
-            suffix = str(params)
-        except (TypeError, ValueError):
-            suffix = "()"
-        return f"Use MCP tool: `{slug}.{name}{suffix}`"
-
     def write(self, tool: Any) -> None:
         kind = self.destination
         if tool.kind == "tool":
@@ -145,7 +127,9 @@ class MarkdownInstallation(Installation):
         toolset = tool.toolset
         parts = [tool.docstring]
         if self.mcp_mode:
-            parts.append(self.render_mcp_invoke(tool.slug, member))
+            from primitives.mcp.mcp_server import McpOperationDefinition
+
+            parts.append(McpOperationDefinition.from_tool(tool).invoke_line())
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
         rel = self.relative_path(kind, toolset, member, tool.deploy_name)
         dest = self.path / rel

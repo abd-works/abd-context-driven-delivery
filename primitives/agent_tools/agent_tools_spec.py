@@ -23,9 +23,12 @@ from primitives.agent_tools.agent_tools import (
     instructions,
     AgentToolValidationError,
     AgentToolSet,
+    InstallDestination,
     agent_instructions,
     agent_toolset,
 )
+from primitives.hooks.hooks import hook
+from primitives.mcp.mcp_server import mcp
 from primitives.agent_tools.agent_tools import AgentInstructions
 from car_story.car_story import CarStory
 from agent_tools.examples.super_delegation.super_delegation_demo import (
@@ -834,4 +837,37 @@ with description("AgentInstructions"):
             toolset = _ModeFixture()
             operation = toolset.operations["ping"]
             expect(operation.invoke({})).to(equal("pong"))
+
+
+@agent_toolset
+class _DestinationFixture:
+    @mcp
+    @_tool
+    def ping(self) -> str:
+        return "pong"
+
+    @hook("stop")
+    def on_stop(self, payload: dict) -> dict:
+        return {}
+
+
+with description("AgentToolSet destination catalog"):
+
+    with context("tools_for a destination"):
+
+        with it("should return only members marked for that destination"):
+            host = _DestinationFixture()
+            expect([tool.name for tool in host.tools_for(InstallDestination.MCP)]).to(
+                equal(["ping"])
+            )
+            expect([tool.name for tool in host.tools_for(InstallDestination.HOOK)]).to(
+                equal(["on_stop"])
+            )
+
+    with context("load_toolsets"):
+
+        with it("should instantiate a class once per type"):
+            loaded = AgentToolSet.load_toolsets([_DestinationFixture, _DestinationFixture()])
+            expect(len(loaded)).to(equal(1))
+            expect(type(loaded[0])).to(equal(_DestinationFixture))
 

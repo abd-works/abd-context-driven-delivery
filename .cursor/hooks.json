@@ -3,7 +3,7 @@
   "hooks": {
     "afterAgentResponse": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/hook_server.py",
         "timeout": 30,
         "failClosed": false
       }

@@ -184,23 +184,23 @@ def format_after_agent_response(data: dict) -> str:
 class PromptLog:
     """Audit what Cursor sends the model — one ``@hook`` per event."""
 
-    @hook("beforeSubmitPrompt", always=True)
+    @hook("beforeSubmitPrompt")
     def before_submit_prompt(self, payload: dict) -> dict:
         return handle(payload)
 
-    @hook("beforeReadFile", always=True)
+    @hook("beforeReadFile")
     def before_read_file(self, payload: dict) -> dict:
         return handle(payload)
 
-    @hook("preToolUse", always=True)
+    @hook("preToolUse")
     def pre_tool_use(self, payload: dict) -> dict:
         return handle(payload)
 
-    @hook("subagentStart", always=True)
+    @hook("subagentStart")
     def subagent_start(self, payload: dict) -> dict:
         return handle(payload)
 
-    @hook("afterAgentResponse", always=True)
+    @hook("afterAgentResponse")
     def after_agent_response(self, payload: dict) -> dict:
         return handle(payload)
 

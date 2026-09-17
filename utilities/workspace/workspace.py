@@ -21,7 +21,7 @@ from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
 from agent_tools.agent_tools import agent_tool, agent_toolset
-from primitives.hooks.hooks import hook
+from primitives.hooks.hooks import hook, hooks
 from hooks.session_logs import (
     clear_active_session,
     consolidate_logs_for_close,
@@ -256,6 +256,7 @@ class TurnCommit:
         """Legacy alias — branch name at commit time."""
         return self.branch
 
+@hooks(disabled=True)
 @agent_toolset
 class Turn:
     """Self-sufficient turn commit — no WorkSession or Workspace required."""

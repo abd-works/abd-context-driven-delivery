@@ -1,6 +1,6 @@
 # Installer — installed object model (model fidelity)
 
-Markdown channel for **`primitives/installer`** as it exists today. Describes install-time types and files under `Installer.path` (typically `.cursor/`). Runtime MCP lives in **`utilities/mcp_server`**; domain toolsets live in **`primitives/agent_tools`**.
+Markdown channel for **`primitives/installer`** as it exists today. Describes install-time types and files under `Installer.path` (typically `.cursor/`). Runtime MCP lives in **`primitives/mcp`**; domain toolsets live in **`primitives/agent_tools`**.
 
 **Not in this module:** YAML manifest CLI, `tools.ps1`, fenced `toolset:` invoke blocks in installed bodies, `AgentToolSet` member validation (that is `agent_tools`).
 
@@ -11,7 +11,7 @@ Markdown channel for **`primitives/installer`** as it exists today. Describes in
 | Moment | Owner | Does |
 | ------ | ----- | ---- |
 | **Install** | `Installer.install` → `Installation` | Walk each tool; write markdown skills/commands/rules; record `@mcp` ops; write `mcp.json` / `hooks.json` |
-| **Runtime (MCP)** | `utilities.mcp_server.McpServer` | Read `mcp.json` toolset refs; enroll only `@mcp` ops recorded at install; invoke enrolled tools/prompts |
+| **Runtime (MCP)** | `primitives.mcp.McpServer` | Read `mcp.json` toolset refs; enroll only `@mcp` ops recorded at install; invoke enrolled tools/prompts |
 | **Runtime (agent)** | Cursor agent | Read installed skill/command bodies; follow `@agent_instructions` bodies; call MCP for `@mcp` tails |
 
 Installed skill/command **bodies** are instruction prose from live `AgentInstructions` expansion, or context + `Use MCP tool: \`slug.op(...)\`` when the member is `@mcp`. No shell invoke tail.
@@ -112,19 +112,19 @@ MarkdownInstallation(ide, path)
 
 McpInstallation(ide, path, toolset_ref="")
 ------
-mcp_operations: list[McpOp]
+mcp_operations: list[McpOperationDefinition]
 _bound: bool
 ----
 (write(tool): None)
 	Interaction: record_operation; write_mcp_manifest
 (record_operation(tool): None)
-	Interaction: when tool.install_to_mcp append McpOp(mcp_name=slug.op, kind=tool|prompt, toolset, name, callable)
+	Interaction: when tool.install_to_mcp append McpOperationDefinition(mcp_name=slug.op, kind=tool|prompt, toolset, name, callable)
 (write_mcp_manifest(): None)
 	Interaction:
 		refs = sorted toolset_ref(op.tool) for all recorded ops
 		write path/mcp.json → mcpServers.cdd.args = ["-m", "mcp_server", "--toolsets", refs…]
 (bind(server: McpServer): None)
-	Interaction: for each McpOp call server.enroll(op)
+	Interaction: for each McpOperationDefinition call server.enroll(op)
 
 ---
 
@@ -144,9 +144,9 @@ _handlers: list[dict]
 
 ---
 
-## McpOp                                                              <!-- Md -->
+## McpOperationDefinition                                                              <!-- Md -->
 
-McpOp(mcp_name, kind, tool, operation, member)
+McpOperationDefinition(mcp_name, kind, tool, operation, member)
 ------
 mcp_name: str
 	Invariant: "{tool_slug}.{operation}"
@@ -183,7 +183,7 @@ VS Code uses `prompts/` instead of `commands/`. Path comes from `Installer.path`
 | `PracticeGuidance` | `guidance` | Context tool + fidelities |
 | `Guidance` / `FidelityGuidance` | `guidance` | Skill/command/rules from @markdown marks |
 | `AgentInstructions` | `agent_tools` | Supplies `.prompt` for installed action bodies |
-| `McpServer` / `McpTool` / `McpPrompt` | `utilities/mcp_server` | Runtime enrollment from `McpOp` |
+| `McpServer` / `McpTool` / `McpPrompt` | `primitives/mcp` | Runtime enrollment from `McpOperationDefinition` |
 
 ---
 
@@ -195,7 +195,7 @@ VS Code uses `prompts/` instead of `commands/`. Path comes from `Installer.path`
 | Collect toolsets | `Installer.collect_toolsets` | AST walk the repo |
 | Member walk | `toolset.tools` + `tool.destinations` | `AgentTool` |
 | Markdown files | `MarkdownInstallation.write` | `skills/`, `commands/` or `prompts/`, `rules/` |
-| MCP registration | `McpInstallation.write_mcp_manifest` | `mcp.json`, `McpOp` list |
+| MCP registration | `McpInstallation.write_mcp_manifest` | `mcp.json`, `McpOperationDefinition` list |
 | MCP runtime | `McpServer.bind_from` / `start` | enroll from install-recorded ops only |
 | Hooks | `HookInstallation.write` | Cursor `hooks.json` dispatch + `hook-handlers.json` + `skills/hook-*/SKILL.md` |
 | Toolset import | `AgentToolSet.instantiate` | MCP `start()` constructs `module:Class` refs from `mcp.json` |

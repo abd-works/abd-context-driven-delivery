@@ -110,6 +110,18 @@ _FORMAT_DIR_ALIASES: dict[str, tuple[str, ...]] = {
     "drawio": ("drawio",),
 }
 
+_FORMAT_FILE_EXT: dict[str, str] = {
+    "markdown": ".md",
+    "md": ".md",
+    "python": ".py",
+    "py": ".py",
+    "javascript": ".js",
+    "js": ".js",
+    "typescript": ".ts",
+    "ts": ".ts",
+    "java": ".java",
+}
+
 # CDD stage key → frontmatter fidelity tokens used in template YAML/headers.
 _STAGE_FRONTMATTER_TOKENS: dict[str, tuple[str, ...]] = {
     "discovery": ("discovery",),
@@ -162,6 +174,30 @@ def _frontmatter_tokens(text: str) -> set[str]:
                     tokens.add(tok)
     return tokens
 
+def _slug_variants(domain_slug: str) -> list[str]:
+    variants = [domain_slug]
+    for alt in (domain_slug.replace("_", "-"), domain_slug.replace("-", "_")):
+        if alt not in variants:
+            variants.append(alt)
+    return variants
+
+
+def _named_template_file(module_dir: Path, domain_slug: str, default_format: str) -> Path | None:
+    shared = module_dir / "templates"
+    if not shared.is_dir():
+        return None
+    ext = _FORMAT_FILE_EXT.get(default_format.lower(), "")
+    for slug in _slug_variants(domain_slug):
+        for stem in (f"{slug}-templates", f"{slug}-template"):
+            if ext:
+                preferred = shared / f"{stem}{ext}"
+                if preferred.is_file():
+                    return preferred.resolve()
+            for path in sorted(shared.glob(f"{stem}.*")):
+                return path.resolve()
+    return None
+
+
 def resolve_default_template(
     module_dir: Path,
     domain_slug: str,
@@ -177,12 +213,9 @@ def resolve_default_template(
     """
     if not default_format:
         return None
-    from primitives.assets.assets import _path_for_templates
-
-    relative = _path_for_templates(module_dir, domain_slug, default_format)
-    candidate = (module_dir / relative).resolve()
-    if candidate.is_file():
-        return candidate
+    named = _named_template_file(module_dir, domain_slug, default_format)
+    if named is not None:
+        return named
 
     templates_root = module_dir / "templates"
     if not templates_root.is_dir():
@@ -238,9 +271,7 @@ def resolve_default_template(
 
     if not scored:
         # Single non-sketch file at templates root matching format ext (e.g. DDD).
-        from primitives.assets.assets import _FORMAT_TEMPLATE_EXT
-
-        ext = _FORMAT_TEMPLATE_EXT.get(default_format.lower(), "")
+        ext = _FORMAT_FILE_EXT.get(default_format.lower(), "")
         root_files = [
             p for p in templates_root.iterdir()
             if p.is_file() and "sketch" not in p.name.lower()

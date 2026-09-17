@@ -6,11 +6,11 @@ Extract co-located markdown — folder, file, or section — and convert that ex
 
 ## Seam (terms)
 
-`@markdown`, `Markdown`, `HTML`, `AssetLocator`
+`@markdown`, `Markdown`, `HTML`, `AssetLocator`, `AssetLocation`
 
 ## Dependencies (one-way)
 
-`primitives/assets`
+none — location and extract live in this package
 
 ## Public API
 

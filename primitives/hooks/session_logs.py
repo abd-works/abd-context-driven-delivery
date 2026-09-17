@@ -14,7 +14,6 @@ DEFAULT_SESSION = "default"
 _LEGACY_LOG_PATHS = (
     Path(".context") / "prompt-log.txt",
     Path("primitives/hooks/dispatch.debug"),
-    Path("primitives/hooks/skill_inject.debug"),
     Path("primitives/hooks/prompt_echo.debug"),
     Path("primitives/hooks/prompt_echo/prompt_echo.debug"),
 )

@@ -1,3 +1,0 @@
-PASS
-
-The intro welcomes readers to the card file and states that the card lives in the cards/ subfolder.

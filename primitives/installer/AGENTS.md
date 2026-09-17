@@ -22,7 +22,7 @@ Members come from **`toolset.tools`**. Each tool’s install channels come from 
 - **MCP** — register the operation on the MCP server
 - **skill / command / rule** — write `tool.docstring`. If the tool is also `@mcp`, append `Use MCP tool: …`. Do not assemble `toolset.instructions` or expand a prompt. `@rules` is the same write (`rules/{name}.mdc`). A `RulesCollection` is one tool per rule slug.
 - **MCP** — register the operation on the MCP server. The slash file is still docstring plus that invoke line.
-- **hook** — `@hook("sessionStart")` from `primitives.hooks.hooks` (`hook.EVENTS`). `always=True` runs without an enable flag. `HookInstallation` lives in that same file and writes Cursor `hooks.json` plus `hook-handlers.json`. Runtime is `primitives/hooks/dispatch.py`. **`@hook` and `@mcp` are independent.**
+- **hook** — `@hook("sessionStart")` from `primitives.hooks.hooks` (`hook.EVENTS`). `@hooks(disabled=True)` on the toolset skips those operations. `HookInstallation` lives in that same file and writes Cursor `hooks.json` plus `hook-handlers.json`. Runtime is `primitives/hooks/hook_server.py`. **`@hook` and `@mcp` are independent.**
 - Hook-only members belong in **`toolset.tools`** (same walk as `@agent_tool` / `@agent_instructions`). Install reads `tool.destinations`; do not add a leftover class inspect for `_hook`.
 - Specs expand and invoke on the live toolset (`instructions[name].expand`, `operations[name].invoke`). Do not add a YAML request runner or `RunError` wrapper for tests.
 - Installer specs stay in two files: `installer_spec.py` and `installer_agent_spec.py`. Car deploy/invoke setup lives in those spec files, not a separate installer helper module.

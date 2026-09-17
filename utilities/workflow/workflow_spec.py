@@ -346,13 +346,13 @@ with description("a WorkTicket"):
         context_dir.mkdir(parents=True)
         (context_dir / "workflow-packages.yaml").write_text(
             "packages:\n"
-            "  - location: utilities/mcp_server\n"
+            "  - location: primitives/mcp\n"
             "    layer: MCP Invocation Layer\n"
             "    theme: mcp-invocation-layer\n",
             encoding="utf-8",
         )
         expect(
-            WorkTicket.infer_theme("deploy harness for utilities/mcp_server", tmp)
+            WorkTicket.infer_theme("deploy harness for primitives/mcp", tmp)
         ).to(equal("mcp-invocation-layer"))
         expect(
             WorkTicket.infer_theme("MCP Invocation Layer host tests", tmp)

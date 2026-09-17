@@ -4,10 +4,9 @@ from __future__ import annotations
 import html
 import inspect
 import re
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, TypeVar, get_args, get_origin, get_type_hints
-
-from primitives.assets import AssetLocation, AssetLocator
+from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -58,7 +57,307 @@ def class_file_directory(host: Any) -> Path:
     practice = getattr(host, "practice_guidance", None)
     if practice is not None:
         host = practice
-    return Path(inspect.getfile(type(host))).resolve().parent
+    stored = getattr(host, "module_dir", None)
+    if stored is not None:
+        return Path(stored)
+    try:
+        return Path(inspect.getfile(type(host))).resolve().parent
+    except (TypeError, OSError):
+        return Path(".")
+
+
+_FORMAT_TEMPLATE_EXT = {
+    "python": ".py",
+    "py": ".py",
+    "javascript": ".js",
+    "js": ".js",
+    "markdown": ".md",
+    "md": ".md",
+    "typescript": ".ts",
+    "ts": ".ts",
+    "java": ".java",
+}
+
+_FORMAT_DIR_ALIAS = {
+    "markdown": "md",
+    "md": "md",
+    "python": "py",
+    "py": "py",
+    "typescript": "ts",
+    "ts": "ts",
+    "javascript": "js",
+    "js": "js",
+    "java": "java",
+}
+
+LocationKind = Literal["file", "folder", "section"]
+_MISSING = object()
+
+
+def _slug_variants(domain_slug: str) -> list[str]:
+    variants = [domain_slug]
+    for alt in (domain_slug.replace("_", "-"), domain_slug.replace("-", "_")):
+        if alt not in variants:
+            variants.append(alt)
+    return variants
+
+
+def _active_resource(instance: Any, key: str | None) -> str | None:
+    if not key:
+        return None
+    value = getattr(instance, key, None)
+    return str(value) if value else None
+
+
+def _path_for_templates(module_dir: Path, domain_slug: str, active_format: str | None) -> str:
+    shared = module_dir / "templates"
+    if shared.is_dir():
+        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
+        for slug in _slug_variants(domain_slug):
+            for stem in (f"{slug}-templates", f"{slug}-template"):
+                if ext:
+                    preferred = shared / f"{stem}{ext}"
+                    if preferred.is_file():
+                        return preferred.relative_to(module_dir).as_posix()
+                for path in sorted(shared.glob(f"{stem}.*")):
+                    return path.relative_to(module_dir).as_posix()
+        return "templates"
+    for slug in _slug_variants(domain_slug):
+        for stem in (f"{slug}-templates", f"{slug}-template"):
+            if active_format:
+                format_dir = module_dir / "formats" / active_format
+                if format_dir.is_dir():
+                    for path in sorted(format_dir.glob(f"{stem}.*")):
+                        return path.relative_to(module_dir).as_posix()
+            for path in sorted(module_dir.glob(f"{stem}.*")):
+                return path.name
+    primary = _slug_variants(domain_slug)[0]
+    if active_format:
+        return f"formats/{active_format}/{primary}-templates"
+    return f"{primary}-templates"
+
+
+def _fidelity_scope(host: Any) -> str | None:
+    """Fidelity section name on Guidance hosts only — not WorkSession.name or AgentToolSet.name."""
+    if getattr(host, "practice_guidance", None) is not None:
+        value = getattr(host, "name", None)
+        return str(value) if value else None
+    for cls in type(host).__mro__:
+        if cls is object:
+            continue
+        declared = cls.__dict__.get("name", _MISSING)
+        if declared is _MISSING:
+            continue
+        if isinstance(declared, property):
+            return None
+        value = getattr(host, "name", None)
+        return str(value) if value else None
+    return None
+
+
+@dataclass(frozen=True)
+class AssetLocation:
+    kind: LocationKind
+    module_dir: Path
+    domain_slug: str
+    path: Path | None = None
+    folder: Path | None = None
+    section_file: Path | None = None
+    section_heading: str | None = None
+    label: str | None = None
+    fidelity: str | None = None
+    format: str | None = None
+
+
+class AssetLocator:
+    def __init__(
+        self,
+        host: Any,
+        label: str,
+        *,
+        group: str | None = None,
+        filter_key: str | None = None,
+    ) -> None:
+        self._host = host
+        self._label = label
+        self._group = group
+        self._filter_key = filter_key
+
+    @property
+    def fidelity(self) -> str | None:
+        return _active_resource(self._host, "fidelity")
+
+    @property
+    def format(self) -> str | None:
+        fmt = _active_resource(self._host, "format")
+        if fmt:
+            return fmt
+        fidelity = self.fidelity
+        defaults = getattr(type(self._host), "_fidelity_format_defaults", None) or {}
+        if not defaults:
+            defaults = getattr(self._host, "_fidelity_format_defaults", {}) or {}
+        if fidelity and fidelity in defaults:
+            return str(defaults[fidelity])
+        return None
+
+    def _stamp(self, location: AssetLocation) -> AssetLocation:
+        return replace(
+            location,
+            label=self._label,
+            fidelity=location.fidelity or self.fidelity,
+            format=location.format or self.format,
+        )
+
+    def locate(self) -> AssetLocation:
+        return self._stamp(self._locate())
+
+    def _locate(self) -> AssetLocation:
+        module_dir = class_file_directory(self._host)
+        domain_slug = (
+            getattr(self._host, "domain_slug", None)
+            or getattr(self._host, "toolset_name", None)
+            or module_dir.name
+        )
+        filter_value = _active_resource(self._host, self._filter_key) if self._filter_key else None
+        if self._label == "templates":
+            active_format = filter_value or _active_resource(self._host, "format")
+            located = self._locate_templates(module_dir, domain_slug, active_format)
+            if located.path is not None and located.path.is_file():
+                return located
+            if located.folder is not None and located.folder.is_dir():
+                return located
+            meta = module_dir / "templates"
+            if meta.is_dir():
+                return AssetLocation("folder", module_dir, domain_slug, folder=meta.resolve())
+        search_root = self._search_root(module_dir, filter_value)
+        return self._locate_under(search_root, module_dir, domain_slug)
+
+    def _search_root(self, module_dir: Path, filter_value: str | None) -> Path:
+        root = module_dir
+        if self._group:
+            root = root / self._group
+        if not filter_value:
+            return root
+        as_dir = root / filter_value
+        if as_dir.is_dir():
+            return as_dir
+        return root
+
+    def _locate_under(self, search_root: Path, module_dir: Path, domain_slug: str) -> AssetLocation:
+        fidelity_name = _fidelity_scope(self._host)
+        if fidelity_name:
+            section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
+            return AssetLocation(
+                "section",
+                module_dir,
+                domain_slug,
+                section_file=section_file.resolve(),
+                section_heading=self._label.replace("_", " ").replace("-", " ").title(),
+                fidelity=str(fidelity_name),
+            )
+        folder = search_root / self._label
+        if folder.is_dir():
+            return AssetLocation("folder", module_dir, domain_slug, folder=folder.resolve())
+        for name in (self._label, f"{self._label}.md"):
+            candidate = search_root / name
+            if candidate.is_file():
+                return AssetLocation("file", module_dir, domain_slug, path=candidate.resolve())
+        first = self._first_extension_match(search_root)
+        if first:
+            return AssetLocation("file", module_dir, domain_slug, path=first.resolve())
+        section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
+        return AssetLocation(
+            "section",
+            module_dir,
+            domain_slug,
+            section_file=section_file.resolve(),
+            section_heading=self._label.replace("_", " ").replace("-", " ").title(),
+        )
+
+    def _first_extension_match(self, search_root: Path) -> Path | None:
+        if not search_root.is_dir():
+            return None
+        matches = sorted(c for c in search_root.glob(f"{self._label}.*") if c.is_file())
+        return matches[0] if matches else None
+
+    def _canonical_domain_md(self, module_dir: Path, search_root: Path, domain_slug: str) -> Path:
+        for root in (module_dir, search_root):
+            for slug in _slug_variants(domain_slug):
+                candidate = root / f"{slug}.md"
+                if candidate.is_file():
+                    return candidate
+        return module_dir / f"{domain_slug}.md"
+
+    def _locate_templates(
+        self, module_dir: Path, domain_slug: str, active_format: str | None
+    ) -> AssetLocation:
+        stems = self._template_stems(domain_slug)
+        located = self._locate_in_shared_templates(module_dir, stems, active_format, domain_slug)
+        if located is not None:
+            return located
+        located = self._locate_in_format_dir(module_dir, stems, active_format, domain_slug)
+        if located is not None:
+            return located
+        located = self._locate_by_stem_glob(module_dir, stems, domain_slug)
+        if located is not None:
+            return located
+        relative = _path_for_templates(module_dir, domain_slug, active_format)
+        return AssetLocation("file", module_dir, domain_slug, path=(module_dir / relative).resolve())
+
+    def _template_stems(self, domain_slug: str) -> list[str]:
+        return [
+            f"{slug}-{suffix}"
+            for slug in _slug_variants(domain_slug)
+            for suffix in ("templates", "template")
+        ]
+
+    def _locate_in_shared_templates(
+        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    ) -> AssetLocation | None:
+        shared = module_dir / "templates"
+        if not shared.is_dir():
+            return None
+        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
+        if ext:
+            for stem in stems:
+                path = shared / f"{stem}{ext}"
+                if path.is_file():
+                    return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        if active_format:
+            alias = _FORMAT_DIR_ALIAS.get(active_format, active_format)
+            format_folder = shared / alias
+            if format_folder.is_dir():
+                fidelity = _active_resource(self._host, "fidelity")
+                return AssetLocation(
+                    "folder",
+                    module_dir,
+                    domain_slug,
+                    folder=format_folder.resolve(),
+                    fidelity=fidelity,
+                )
+            return None
+        return AssetLocation("folder", module_dir, domain_slug, folder=shared.resolve())
+
+    def _locate_in_format_dir(
+        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    ) -> AssetLocation | None:
+        if not active_format:
+            return None
+        format_dir = module_dir / "formats" / active_format
+        if not format_dir.is_dir():
+            return None
+        for stem in stems:
+            for path in sorted(format_dir.glob(f"{stem}.*")):
+                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return None
+
+    def _locate_by_stem_glob(
+        self, module_dir: Path, stems: list[str], domain_slug: str
+    ) -> AssetLocation | None:
+        for stem in stems:
+            for path in sorted(module_dir.glob(f"{stem}.*")):
+                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return None
 
 
 class Markdown:

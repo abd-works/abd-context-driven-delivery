@@ -50,8 +50,6 @@ class Installation:
 
 
 from primitives.harness_files.harness_files import MarkdownInstallation, skill
-from primitives.hooks.hooks import HookInstallation
-from primitives.mcp.mcp_server import McpInstallation, mcp
 
 
 @agent_toolset
@@ -89,6 +87,9 @@ class Installer:
         )
         self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
         self._state_file = state_file
+        from primitives.hooks.hooks import HookInstallation
+        from primitives.mcp.mcp_server import McpInstallation
+
         self._mcp = McpInstallation(self.ide, self.path)
         self._hook = HookInstallation(self.ide, self.path)
         self.nested_toolsets = ToolSetCollection()
@@ -177,11 +178,13 @@ class Installer:
             for installation in self.get_installations(tool):
                 installation.install(tool)
 
-    @mcp
     @skill
     @agent_tool
-    def install(self, toolsets: Iterable[Any] | None = None) -> McpInstallation:
+    def install(self, toolsets: Iterable[Any] | None = None) -> Any:
         """Install annotated toolsets into the IDE path — skills, commands, rules, MCP, and hooks."""
+        from primitives.hooks.hooks import HookInstallation
+        from primitives.mcp.mcp_server import McpInstallation
+
         self._mcp = McpInstallation(self.ide, self.path)
         self._hook = HookInstallation(self.ide, self.path)
         if toolsets is None:
@@ -199,6 +202,9 @@ class Installer:
             encoding="utf-8",
         )
         return self._mcp
+
+
+Installer.install._mcp = True
 
 
 __all__ = ["Destination", "Installation", "Installer"]

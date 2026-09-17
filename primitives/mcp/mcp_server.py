@@ -16,7 +16,7 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
-from primitives.agent_tools.agent_tools import AgentToolSet
+from primitives.agent_tools.agent_tools import AgentToolSet, InstallDestination
 from primitives.installer.installer import Destination, Installation
 
 logger = logging.getLogger(__name__)
@@ -38,12 +38,34 @@ class mcp(Destination):
 
 
 @dataclass
-class McpOp:
+class McpOperationDefinition:
     mcp_name: str
     kind: str
     tool: Any
     operation: str
     member: Any
+
+    @classmethod
+    def from_tool(cls, tool: Any) -> McpOperationDefinition:
+        kind = "tool" if tool.kind == "tool" else "prompt"
+        return cls(
+            mcp_name=f"{tool.slug}.{tool.name}",
+            kind=kind,
+            tool=tool.toolset,
+            operation=tool.name,
+            member=tool.callable,
+        )
+
+    def invoke_line(self) -> str:
+        try:
+            signature = inspect.signature(self.member)
+            params = inspect.Signature(
+                [p for n, p in signature.parameters.items() if n != "self"]
+            )
+            suffix = str(params)
+        except (TypeError, ValueError):
+            suffix = "()"
+        return f"Use MCP tool: `{self.mcp_name}{suffix}`"
 
 
 class McpInstallation(Installation):
@@ -53,7 +75,7 @@ class McpInstallation(Installation):
 
     def __init__(self, ide: str, path: Path | str, toolset_ref: str = "") -> None:
         super().__init__(ide, path, toolset_ref)
-        self.mcp_operations: list[McpOp] = []
+        self.mcp_operations: list[McpOperationDefinition] = []
         self._bound = False
 
     def write(self, tool: Any) -> None:
@@ -65,16 +87,7 @@ class McpInstallation(Installation):
     def record_operation(self, tool: Any) -> None:
         if not tool.install_to_mcp:
             return
-        kind = "tool" if tool.kind == "tool" else "prompt"
-        self.mcp_operations.append(
-            McpOp(
-                mcp_name=f"{tool.slug}.{tool.name}",
-                kind=kind,
-                tool=tool.toolset,
-                operation=tool.name,
-                member=tool.callable,
-            )
-        )
+        self.mcp_operations.append(McpOperationDefinition.from_tool(tool))
 
     def write_mcp_manifest(self) -> None:
         if not self.mcp_operations:
@@ -103,12 +116,12 @@ class McpInstallation(Installation):
 
 
 class McpTool:
-    """One MCP tool enrolled from a deploy-recorded ``McpOp``."""
+    """One MCP tool enrolled from a deploy-recorded ``McpOperationDefinition``."""
 
-    def __init__(self, op: McpOp) -> None:
+    def __init__(self, op: McpOperationDefinition) -> None:
         self.mcp_name = op.mcp_name
         self._op = op
-        self.callable = getattr(op.tool, op.operation)
+        self.callable = op.member
         function = getattr(self.callable, "__func__", self.callable)
         self.description = (inspect.getdoc(function) or "").strip()
 
@@ -119,12 +132,12 @@ class McpTool:
 
 
 class McpPrompt:
-    """One MCP prompt enrolled from a deploy-recorded ``McpOp``."""
+    """One MCP prompt enrolled from a deploy-recorded ``McpOperationDefinition``."""
 
-    def __init__(self, op: McpOp) -> None:
+    def __init__(self, op: McpOperationDefinition) -> None:
         self.mcp_name = op.mcp_name
         self._op = op
-        self.callable = getattr(op.tool, op.operation)
+        self.callable = op.member
         function = getattr(self.callable, "__func__", self.callable)
         self.prompt_text = (inspect.getdoc(function) or "").strip()
 
@@ -176,7 +189,7 @@ class McpServer:
     def prompts(self) -> dict[str, McpPrompt]:
         return self._prompts
 
-    def enroll(self, op: McpOp) -> None:
+    def enroll(self, op: McpOperationDefinition) -> None:
         if op.kind == "tool":
             self._tools[op.mcp_name] = McpTool(op)
         else:
@@ -197,10 +210,9 @@ class McpServer:
         self.mcp_installations = []
         self._tools.clear()
         self._prompts.clear()
-        for ref in toolset_refs:
-            toolset = AgentToolSet.instantiate({"toolset": ref, "context": context})
-            installation = McpInstallation("Cursor", ".", ref)
-            for tool in toolset.tools.values():
+        for toolset in AgentToolSet.load_toolsets(list(toolset_refs), context=context):
+            installation = McpInstallation("Cursor", ".", toolset.registration_name)
+            for tool in toolset.tools_for(InstallDestination.MCP):
                 installation.record_operation(tool)
             installation.bind(self)
             self.mcp_installations.append(installation)

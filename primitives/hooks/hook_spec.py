@@ -17,8 +17,24 @@ from expects import be_true, equal, expect
 from mamba import context, description, it
 from agent_tools import agent_toolset
 
-from primitives.hooks.dispatch import dispatch, parse_payload, set_enabled
-from primitives.hooks.hooks import hook
+from primitives.agent_tools.agent_tools import agent_tool
+from primitives.hooks.hook_server import CursorEvent, HandlerCatalog, HookPayload, HookServer
+from primitives.hooks.hooks import hook, hooks
+
+
+def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
+    return HookServer(_REPO_ROOT, toolsets).dispatch(HookPayload(payload)).as_dict()
+
+
+@hooks(disabled=True)
+@agent_toolset
+class _DisabledFixture:
+    calls: list[str] = []
+
+    @hook("afterAgentResponse")
+    def on_after(self, payload: dict) -> dict:
+        type(self).calls.append("after")
+        return {"agent_message": "ran"}
 
 
 @agent_toolset
@@ -41,47 +57,61 @@ class _StopFixture:
         return {"followup_message": "/turn"}
 
 
+@agent_toolset
+class _HookToolset:
+    @hook("stop")
+    def on_stop(self, payload: dict) -> dict:
+        return {}
+
+
+@agent_toolset
+class _ToolOnlyToolset:
+    @agent_tool
+    def ping(self) -> str:
+        return "ok"
+
+
+with description("a handler catalog"):
+
+    with context("built from agent toolsets"):
+
+        with it("should take hook operations from toolset tools"):
+            catalog = HandlerCatalog([_HookToolset(), _ToolOnlyToolset()])
+            handlers = catalog.for_event(CursorEvent("stop"))
+            expect([handler.owner for handler in handlers]).to(equal([_HookToolset]))
+            expect([handler.operation for handler in handlers]).to(equal(["on_stop"]))
+
+
 with description("hook dispatch"):
 
     with context("that receives an afterAgentResponse payload"):
 
-        with it("should skip handlers when the toggle flag is absent"):
-            _DispatchFixture.calls = []
-            set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=False)
-            out = dispatch(
+        with it("should skip handlers when the toolset is annotated hooks disabled"):
+            _DisabledFixture.calls = []
+            out = _dispatch(
                 {"hook_event_name": "afterAgentResponse"},
-                hosts=[_DispatchFixture],
+                toolsets=[_DisabledFixture],
             )
             expect(out).to(equal({"permission": "allow"}))
-            expect(_DispatchFixture.calls).to(equal([]))
+            expect(_DisabledFixture.calls).to(equal([]))
 
-        with it("should invoke enabled handlers"):
+        with it("should invoke handlers when the toolset is not disabled"):
             _DispatchFixture.calls = []
-            set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=True)
-            try:
-                out = dispatch(
-                    {"hook_event_name": "afterAgentResponse"},
-                    hosts=[_DispatchFixture],
-                )
-                expect(out["permission"]).to(equal("allow"))
-                expect(out["agent_message"]).to(equal("ran"))
-                expect(_DispatchFixture.calls).to(equal(["after"]))
-            finally:
-                set_enabled(
-                    _DispatchFixture, "on_after", "afterAgentResponse", enabled=False
-                )
+            out = _dispatch(
+                {"hook_event_name": "afterAgentResponse"},
+                toolsets=[_DispatchFixture],
+            )
+            expect(out["permission"]).to(equal("allow"))
+            expect(out["agent_message"]).to(equal("ran"))
+            expect(_DispatchFixture.calls).to(equal(["after"]))
 
     with context("that receives a stop payload"):
 
         with it("should pass through followup_message from enabled handlers"):
             _StopFixture.calls = []
-            set_enabled(_StopFixture, "on_stop", "stop", enabled=True)
-            try:
-                out = dispatch({"hook_event_name": "stop"}, hosts=[_StopFixture])
-                expect(out).to(equal({"permission": "allow", "followup_message": "/turn"}))
-                expect(_StopFixture.calls).to(equal(["stop"]))
-            finally:
-                set_enabled(_StopFixture, "on_stop", "stop", enabled=False)
+            out = _dispatch({"hook_event_name": "stop"}, toolsets=[_StopFixture])
+            expect(out).to(equal({"permission": "allow", "followup_message": "/turn"}))
+            expect(_StopFixture.calls).to(equal(["stop"]))
 
         with it("should keep user_message separate from agent_message"):
             @agent_toolset
@@ -93,41 +123,34 @@ with description("hook dispatch"):
                         "agent_message": "for agent",
                     }
 
-            set_enabled(_MessageFixture, "on_before", "beforeSubmitPrompt", enabled=True)
-            try:
-                out = dispatch(
-                    {"hook_event_name": "beforeSubmitPrompt"},
-                    hosts=[_MessageFixture],
-                )
-                expect(out["user_message"]).to(equal("for user"))
-                expect(out["agent_message"]).to(equal("for agent"))
-            finally:
-                set_enabled(
-                    _MessageFixture, "on_before", "beforeSubmitPrompt", enabled=False
-                )
+            out = _dispatch(
+                {"hook_event_name": "beforeSubmitPrompt"},
+                toolsets=[_MessageFixture],
+            )
+            expect(out["user_message"]).to(equal("for user"))
+            expect(out["agent_message"]).to(equal("for agent"))
 
-    with context("that receives a payload for an always-on handler"):
+    with context("that invokes a handler whose tool has a docstring"):
 
-        with it("should invoke the handler without an enable flag"):
+        with it("should put that description on the hook event as agent_message"):
             @agent_toolset
-            class _AlwaysFixture:
-                calls: list[str] = []
-
-                @hook("preToolUse", always=True)
+            class _DescribedFixture:
+                @hook("preToolUse")
                 def on_pre_tool(self, payload: dict) -> dict:
-                    type(self).calls.append("pre")
-                    return {"permission": "allow", "agent_message": "logged"}
+                    """Honor the hook operation description."""
+                    return {"permission": "allow"}
 
-            _AlwaysFixture.calls = []
-            out = dispatch({"hook_event_name": "preToolUse"}, hosts=[_AlwaysFixture])
-            expect(out["agent_message"]).to(equal("logged"))
-            expect(_AlwaysFixture.calls).to(equal(["pre"]))
+            out = _dispatch({"hook_event_name": "preToolUse"}, toolsets=[_DescribedFixture])
+            expect(out["agent_message"]).to(equal("Honor the hook operation description."))
+            expect(out["permission"]).to(equal("allow"))
 
     with context("that parses stdin payloads"):
 
         with it("should strip a UTF-8 BOM"):
             raw = b'\xef\xbb\xbf{"hook_event_name":"stop"}'
-            expect(parse_payload(raw)).to(equal({"hook_event_name": "stop"}))
+            expect(HookPayload.from_stdin(raw).as_dict()).to(
+                equal({"hook_event_name": "stop"})
+            )
 
 
 with description("session hook logs"):

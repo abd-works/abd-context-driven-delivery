@@ -4,7 +4,7 @@ Prompt echo hook — detects action skill references in prompts.
 Fires on preToolUse. Parses tool input for known action names, then echoes
 what was detected via user_message so the user sees it in the chat.
 
-Disabled when `.context/hooks/prompt_echo.disabled` exists (default: off).
+Off when the class is annotated ``@hooks(disabled=True)``.
 """
 
 import sys
@@ -20,13 +20,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from agent_tools import agent_toolset
-from primitives.hooks.hooks import hook
-
-_DISABLED_FLAG = _REPO_ROOT / ".context/hooks/prompt_echo.disabled"
-
-
-def is_enabled() -> bool:
-    return not _DISABLED_FLAG.is_file()
+from primitives.hooks.hooks import hook, hooks
 
 ACTIONS = frozenset({
     "car-inspect",
@@ -66,14 +60,13 @@ def _detect_action(data: dict) -> str | None:
     return None
 
 
+@hooks(disabled=True)
 @agent_toolset
 class PromptEcho:
-    """Echo detected action names on preToolUse. Off when prompt_echo.disabled exists."""
+    """Echo detected action names on preToolUse."""
 
-    @hook("preToolUse", always=True)
+    @hook("preToolUse")
     def on_pre_tool_use(self, payload: dict) -> dict:
-        if not is_enabled():
-            return {"permission": "allow"}
         return handle(payload)
 
 

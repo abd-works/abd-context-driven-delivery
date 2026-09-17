@@ -128,6 +128,9 @@ class AgentToolSet:
             merged.setdefault(name, tool)
         return merged
 
+    def tools_for(self, destination: str) -> list[AgentTool]:
+        return [tool for tool in self.tools.values() if tool.install_to(destination)]
+
     @property
     def mode(self) -> ExpansionMode:
         """Execution mode for @agent_instructions calls into this instance.
@@ -384,11 +387,43 @@ class AgentToolSet:
             return cls(**item)
         if isinstance(item, str):
             return cls._load(item)()
+        if isinstance(item, type):
+            return item()
         return item
 
     @classmethod
     def instantiate_all(cls, items: list) -> list:
         return [cls.instantiate(item) for item in items]
+
+    @classmethod
+    def load_toolsets(
+        cls,
+        items: list[Any],
+        *,
+        context: dict[str, object] | None = None,
+        skip_errors: bool = False,
+    ) -> list[Any]:
+        prepared: list[Any] = []
+        for item in items:
+            if isinstance(item, str) and context is not None:
+                prepared.append({"toolset": item, "context": dict(context)})
+            else:
+                prepared.append(item)
+        unique: list[Any] = []
+        seen: set[type] = set()
+        for item in prepared:
+            try:
+                instance = cls.instantiate(item)
+            except Exception:
+                if skip_errors:
+                    continue
+                raise
+            owner = type(instance)
+            if owner in seen:
+                continue
+            seen.add(owner)
+            unique.append(instance)
+        return unique
 
     @classmethod
     def _check_toolset(cls, candidate: type) -> bool:

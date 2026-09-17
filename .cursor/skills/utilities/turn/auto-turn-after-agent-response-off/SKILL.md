@@ -6,6 +6,4 @@ disable-model-invocation: true
 
 Disable the `auto_turn` hook on Cursor event `afterAgentResponse`.
 
-Flag file: `.context/hooks/turn/auto_turn_after_agent_response.enabled`
-
-Remove the flag file so the dispatcher skips this handler.
+Set `@hooks(disabled=True)` on `Turn` in `utilities/workspace/workspace.py` so the hook server skips `auto_turn`.

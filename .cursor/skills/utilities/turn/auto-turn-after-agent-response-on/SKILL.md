@@ -6,8 +6,6 @@ disable-model-invocation: true
 
 Enable the `auto_turn` hook on Cursor event `afterAgentResponse`.
 
-Flag file: `.context/hooks/turn/auto_turn_after_agent_response.enabled`
-
-Create the flag file (empty is fine). The hook dispatcher runs `auto_turn` when this flag exists.
+Set `@hooks(disabled=False)` (or drop `@hooks(disabled=True)`) on `Turn` in `utilities/workspace/workspace.py`. The hook server runs `auto_turn` when the class is not disabled.
 
 On `afterAgentResponse`, auto-turn stages all changes under the repo root (including new untracked files) and commits after each agent reply.
