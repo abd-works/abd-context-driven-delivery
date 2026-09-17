@@ -1,9 +1,8 @@
 """Session-scoped logging — explicit ``SessionLog.append`` (no ``@log`` decorator).
 
-Utility package. Run requests may set ``session``. Events append under
+Utility package. Events append under
 ``{repo_root}/.sessions/{session.name}/logs/`` (repository root, not the
-working path). Expand is logged by the framework; run is logged by author calls
-to ``append``.
+working path). Run is logged by author calls to ``append``.
 """
 from __future__ import annotations
 

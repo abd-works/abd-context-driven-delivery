@@ -1,4 +1,4 @@
-"""Cursor hook runtime — dispatch marked operations; skill inject."""
+"""Cursor hook runtime — stdin JSON to marked ``@hook`` operations."""
 
 from __future__ import annotations
 
@@ -6,26 +6,26 @@ import importlib
 import inspect
 import json
 import os
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Path bootstrap (Cursor hooks omit PYTHONPATH)
-# ---------------------------------------------------------------------------
-
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_NOTIFY_PS1 = Path(__file__).with_name("_notify_test.ps1")
 _HANDLERS_JSON = _REPO_ROOT / ".cursor" / "hook-handlers.json"
-_DEFAULT_HOST_REFS = ("workspace.workspace:Turn",)
+_DEFAULT_HOST_REFS = (
+    "workspace.workspace:Turn",
+    "primitives.hooks.prompt_log.prompt_log:PromptLog",
+    "primitives.hooks.skill_inject:SkillInject",
+    "primitives.hooks.prompt_echo.prompt_echo:PromptEcho",
+)
 
 
 def _hook_debug_path(filename: str) -> Path:
     from hooks.session_logs import session_log_path
 
     return session_log_path(_REPO_ROOT, filename)
+
 
 for _category in ("primitives", "utilities", "primitives/hooks"):
     _entry = str(_REPO_ROOT / _category)
@@ -43,7 +43,15 @@ def toggle_flag(owner: type, method: str, event: str) -> Path:
     return _REPO_ROOT / ".context" / "hooks" / slug / f"{method}_{norm}.enabled"
 
 
+def disabled_flag(owner: type, method: str, event: str) -> Path:
+    return toggle_flag(owner, method, event).with_suffix(".disabled")
+
+
 def is_enabled(owner: type, method: str, event: str) -> bool:
+    member = getattr(owner, method, None)
+    always = bool(getattr(member, "_hook_always", False))
+    if always:
+        return not disabled_flag(owner, method, event).is_file()
     return toggle_flag(owner, method, event).is_file()
 
 
@@ -107,21 +115,11 @@ def _hook_methods(owner: type, event: str) -> list[str]:
     return names
 
 
-# ---------------------------------------------------------------------------
-# Shared stdin parsing
-# ---------------------------------------------------------------------------
-
-
 def parse_payload(raw: bytes) -> dict[str, Any]:
     text = raw.decode("utf-8-sig")
     while text.startswith("\ufeff"):
         text = text[1:]
     return json.loads(text)
-
-
-# ---------------------------------------------------------------------------
-# @hook dispatch
-# ---------------------------------------------------------------------------
 
 
 def _dispatch_debug(msg: str) -> None:
@@ -195,254 +193,21 @@ def dispatch(
     return merged
 
 
-def _run_dispatch_hook(raw: bytes) -> None:
-    _dispatch_debug(f"ENTRY raw_len={len(raw)} raw={raw[:200]!r}")
-    if not raw.strip():
-        _dispatch_debug("empty stdin, allowing")
-        print(json.dumps({"permission": "allow"}))
-        return
-    payload = parse_payload(raw)
-    event = str(payload.get("hook_event_name") or "")
-    if event == "afterAgentResponse":
-        try:
-            from hooks.prompt_log.prompt_log import append_log, format_after_agent_response
-
-            append_log(format_after_agent_response(payload))
-        except OSError:
-            pass
-    out = dispatch(payload)
-    print(json.dumps(out))
-
-
-# ---------------------------------------------------------------------------
-# Skill inject (preToolUse edits + preCompact reset)
-# ---------------------------------------------------------------------------
-
-_SKILLS_ROOT = _REPO_ROOT / ".cursor" / "skills"
-_STATE_DIR = _REPO_ROOT / ".sessions" / "_skill_inject"
-_DIGEST_LINES = 50
-
-_TAG_TO_SKILL: dict[str, Path] = {
-    "@clean-engineering-code": _SKILLS_ROOT
-    / "practices/clean_engineering/clean_engineering-code/SKILL.md",
-    "@clean-engineering-model": _SKILLS_ROOT
-    / "practices/clean_engineering/clean_engineering-model/SKILL.md",
-    "@clean-engineering-modules": _SKILLS_ROOT
-    / "practices/clean_engineering/clean_engineering-modules/SKILL.md",
-    "@clean-engineering": _SKILLS_ROOT / "practices/clean_engineering/SKILL.md",
-    "@stories-story_map": _SKILLS_ROOT / "practices/stories/stories-story_map/SKILL.md",
-    "@stories-scenarios": _SKILLS_ROOT / "practices/stories/stories-scenarios/SKILL.md",
-    "@stories-acceptance_tests": _SKILLS_ROOT
-    / "practices/stories/stories-acceptance_tests/SKILL.md",
-    "@stories": _SKILLS_ROOT / "practices/stories/SKILL.md",
-    "@ddd-bounded_context": _SKILLS_ROOT / "practices/ddd/ddd-bounded_context/SKILL.md",
-    "@ddd-building_blocks": _SKILLS_ROOT / "practices/ddd/ddd-building_blocks/SKILL.md",
-    "@ddd-tactics": _SKILLS_ROOT / "practices/ddd/ddd-tactics/SKILL.md",
-    "@ddd": _SKILLS_ROOT / "practices/ddd/SKILL.md",
-    "@bdd-behavior": _SKILLS_ROOT / "practices/bdd/bdd-behavior/SKILL.md",
-    "@bdd-development": _SKILLS_ROOT / "practices/bdd/bdd-development/SKILL.md",
-    "@bdd-modules": _SKILLS_ROOT / "practices/bdd/bdd-modules/SKILL.md",
-    "@bdd": _SKILLS_ROOT / "practices/bdd/SKILL.md",
-    "@ux-front_end_code": _SKILLS_ROOT / "practices/ux/ux-front_end_code/SKILL.md",
-    "@ux-mockup": _SKILLS_ROOT / "practices/ux/ux-mockup/SKILL.md",
-    "@ux-ia": _SKILLS_ROOT / "practices/ux/ux-ia/SKILL.md",
-    "@ux": _SKILLS_ROOT / "practices/ux/SKILL.md",
-}
-
-_EDIT_TOOLS = {"Write", "StrReplace", "str_replace_editor", "str_replace_based_edit_tool"}
-
-
-def _skill_notify(title: str, body: str) -> None:
-    if _NOTIFY_PS1.exists():
-        subprocess.Popen(
-            [
-                "powershell",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                str(_NOTIFY_PS1),
-                "-Title",
-                title,
-                "-Body",
-                body,
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-
-
-def _skill_inject_log(msg: str) -> None:
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    with open(_hook_debug_path("skill_inject.debug"), "a", encoding="utf-8") as f:
-        f.write(f"{ts} [skill-inject] {msg}\n")
-
-
-def scan_tag(file_path: str) -> str | None:
-    try:
-        with open(file_path, encoding="utf-8", errors="ignore") as f:
-            for _ in range(20):
-                line = f.readline()
-                if not line:
-                    break
-                for tag in _TAG_TO_SKILL:
-                    if tag in line:
-                        return tag
-    except OSError:
-        pass
-    return None
-
-
-def skill_digest(skill_path: Path) -> str:
-    try:
-        lines = skill_path.read_text(encoding="utf-8").splitlines()
-        digest = "\n".join(lines[:_DIGEST_LINES])
-        if len(lines) > _DIGEST_LINES:
-            digest += f"\n\n... [{len(lines) - _DIGEST_LINES} more lines in {skill_path.name}]"
-        return digest
-    except OSError:
-        return f"[skill file not readable: {skill_path}]"
-
-
-def already_injected(conversation_id: str, file_path: str) -> bool:
-    if not conversation_id:
-        return False
-    state_file = _STATE_DIR / f"{conversation_id}.json"
-    if not state_file.exists():
-        return False
-    try:
-        seen = json.loads(state_file.read_text(encoding="utf-8"))
-        return file_path in seen.get("files", [])
-    except (OSError, json.JSONDecodeError):
-        return False
-
-
-def mark_injected(conversation_id: str, file_path: str) -> None:
-    if not conversation_id:
-        return
-    _STATE_DIR.mkdir(parents=True, exist_ok=True)
-    state_file = _STATE_DIR / f"{conversation_id}.json"
-    try:
-        seen = (
-            json.loads(state_file.read_text(encoding="utf-8"))
-            if state_file.exists()
-            else {}
-        )
-    except (OSError, json.JSONDecodeError):
-        seen = {}
-    seen.setdefault("files", [])
-    if file_path not in seen["files"]:
-        seen["files"].append(file_path)
-    state_file.write_text(json.dumps(seen, indent=2), encoding="utf-8")
-
-
-def skill_inject(data: dict[str, Any]) -> dict[str, Any]:
-    tool_name = data.get("tool_name", "")
-    if tool_name not in _EDIT_TOOLS:
-        return {"permission": "allow"}
-
-    tool_input = data.get("tool_input", {})
-    file_path = (
-        tool_input.get("path")
-        or tool_input.get("file_path")
-        or tool_input.get("target_file")
-        or ""
-    )
-    if not file_path:
-        return {"permission": "allow"}
-
-    tag = scan_tag(file_path)
-    if not tag:
-        return {"permission": "allow"}
-
-    conversation_id = data.get("conversation_id", "")
-    if already_injected(conversation_id, file_path):
-        _skill_inject_log(f"already injected tag={tag} file={file_path}")
-        return {"permission": "allow"}
-
-    skill_path = _TAG_TO_SKILL[tag]
-    digest = skill_digest(skill_path)
-    mark_injected(conversation_id, file_path)
-    _skill_inject_log(f"injected tag={tag} file={file_path}")
-    _skill_notify(
-        title=f"Skill Gate: {tag}",
-        body=f"{Path(file_path).name} — rules injected before edit",
-    )
-    msg = (
-        f"SKILL GATE: {file_path} is governed by `{tag}`.\n"
-        f"You MUST follow this skill before editing:\n\n"
-        f"{digest}"
-    )
-    return {
-        "permission": "allow",
-        "agent_message": msg,
-        "user_message": f"\u26a0\ufe0f Skill gate: `{tag}` injected for {Path(file_path).name}",
-    }
-
-
-def skill_inject_compact(data: dict[str, Any]) -> dict[str, Any]:
-    conversation_id = data.get("conversation_id", "")
-    if conversation_id:
-        state_file = _STATE_DIR / f"{conversation_id}.json"
-        if state_file.exists():
-            state_file.unlink()
-            _skill_inject_log(
-                f"reset state on preCompact for conversation={conversation_id}"
-            )
-        else:
-            _skill_inject_log(
-                f"preCompact — no state to reset for conversation={conversation_id}"
-            )
-    return {}
-
-
-def _run_skill_inject_hook(raw: bytes) -> None:
-    if not raw.strip():
-        print(json.dumps({"permission": "allow"}))
-        return
-    try:
-        data = parse_payload(raw)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        print(json.dumps({"permission": "allow"}))
-        return
-    event = data.get("hook_event_name", "")
-    if event == "preCompact":
-        out = skill_inject_compact(data)
-    else:
-        out = skill_inject(data)
-    print(json.dumps(out))
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
-
 def main() -> None:
     os.chdir(_REPO_ROOT)
     from hooks.session_logs import ensure_default_session
 
     ensure_default_session(_REPO_ROOT)
-    if len(sys.argv) > 1 and sys.argv[1] in {"--install", "install"}:
-        print("Hook install is Installer.install — not dispatch.py")
-        return
-
     raw = sys.stdin.buffer.read()
     if not raw.strip():
         print(json.dumps({"permission": "allow"}))
         return
-
     try:
         payload = parse_payload(raw)
     except (json.JSONDecodeError, UnicodeDecodeError):
         print(json.dumps({"permission": "allow"}))
         return
-
-    event = str(payload.get("hook_event_name") or "")
-    if event in {"preToolUse", "preCompact"}:
-        _run_skill_inject_hook(raw)
-        return
-
-    _run_dispatch_hook(raw)
+    print(json.dumps(dispatch(payload)))
 
 
 if __name__ == "__main__":

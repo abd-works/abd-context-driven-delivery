@@ -2441,3 +2441,111 @@
 2026-09-17T19:05:24Z EVENT 'afterAgentResponse' conversation_id='10034378-5620-40b3-bc40-9b27dd28b615' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-17T19:05:24Z ENABLED ['(none)']
 2026-09-17T19:05:24Z MERGED {"permission": "allow"}
+2026-09-17T19:08:33Z ENTRY raw_len=1480 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"c51bd5a7-65b8-4192-ab22-e840ac8f320e","generation_id":"aacd4039-31b7-4d5f-af5f-67cfe9a24a76","model":"cursor-grok-4.6-medium-fast","model_id":"grok-4.6","model_params":[{"id"'
+2026-09-17T19:08:33Z EVENT 'afterAgentResponse' conversation_id='c51bd5a7-65b8-4192-ab22-e840ac8f320e' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-17T19:08:33Z ENABLED ['(none)']
+2026-09-17T19:08:33Z MERGED {"permission": "allow"}
+2026-09-17T19:16:35Z ENTRY raw_len=1750 raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"277f5199-5cc4-4ba2-b558-255b4beeed26","generation_id":"37ef52df-6359-4adb-944c-5b0d28ac1c3b","model":"cursor-grok-4.6-medium-fast","model_id":"grok-4.6","model_params":[{"id"'
+2026-09-17T19:16:35Z EVENT 'afterAgentResponse' conversation_id='277f5199-5cc4-4ba2-b558-255b4beeed26' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-17T19:16:35Z ENABLED ['(none)']
+2026-09-17T19:16:35Z MERGED {"permission": "allow"}
+2026-09-17T19:28:38Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:28:38Z ENABLED ['(none)']
+2026-09-17T19:28:38Z MERGED {"permission": "allow"}
+2026-09-17T19:28:38Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:28:38Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-17T19:28:38Z ENABLED ['_DispatchFixture.on_after']
+2026-09-17T19:28:38Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-17T19:28:38Z EVENT 'stop' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:28:38Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-17T19:28:38Z ENABLED ['_StopFixture.on_stop']
+2026-09-17T19:28:38Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-17T19:28:38Z EVENT 'beforeSubmitPrompt' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:28:38Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-17T19:28:38Z ENABLED ['_MessageFixture.on_before']
+2026-09-17T19:28:38Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-17T19:28:38Z EVENT 'preToolUse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:28:38Z HANDLER _AlwaysFixture.on_pre_tool result_keys=['agent_message', 'permission'] result={"permission": "allow", "agent_message": "logged"}
+2026-09-17T19:28:38Z ENABLED ['_AlwaysFixture.on_pre_tool']
+2026-09-17T19:28:38Z MERGED {"permission": "allow", "agent_message": "logged"}
+2026-09-17T19:28:48Z EVENT 'afterAgentResponse' conversation_id='277f5199-5cc4-4ba2-b558-255b4beeed26' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-17T19:28:48Z HANDLER PromptLog.after_agent_response result_keys=[] result={}
+2026-09-17T19:28:48Z ENABLED ['PromptLog.after_agent_response']
+2026-09-17T19:28:48Z MERGED {"permission": "allow"}
+2026-09-17T19:38:22Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:38:22Z ENABLED ['(none)']
+2026-09-17T19:38:22Z MERGED {"permission": "allow"}
+2026-09-17T19:38:22Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:38:22Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-17T19:38:22Z ENABLED ['_DispatchFixture.on_after']
+2026-09-17T19:38:22Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-17T19:38:22Z EVENT 'stop' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:38:22Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-17T19:38:22Z ENABLED ['_StopFixture.on_stop']
+2026-09-17T19:38:22Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-17T19:38:22Z EVENT 'beforeSubmitPrompt' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:38:22Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-17T19:38:22Z ENABLED ['_MessageFixture.on_before']
+2026-09-17T19:38:22Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-17T19:38:22Z EVENT 'preToolUse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:38:22Z HANDLER _AlwaysFixture.on_pre_tool result_keys=['agent_message', 'permission'] result={"permission": "allow", "agent_message": "logged"}
+2026-09-17T19:38:22Z ENABLED ['_AlwaysFixture.on_pre_tool']
+2026-09-17T19:38:22Z MERGED {"permission": "allow", "agent_message": "logged"}
+2026-09-17T19:38:30Z EVENT 'afterAgentResponse' conversation_id='277f5199-5cc4-4ba2-b558-255b4beeed26' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-17T19:38:30Z HANDLER PromptLog.after_agent_response result_keys=[] result={}
+2026-09-17T19:38:30Z ENABLED ['PromptLog.after_agent_response']
+2026-09-17T19:38:30Z MERGED {"permission": "allow"}
+2026-09-17T19:46:52Z EVENT 'afterAgentResponse' conversation_id='277f5199-5cc4-4ba2-b558-255b4beeed26' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-17T19:46:52Z HANDLER PromptLog.after_agent_response result_keys=[] result={}
+2026-09-17T19:46:52Z ENABLED ['PromptLog.after_agent_response']
+2026-09-17T19:46:52Z MERGED {"permission": "allow"}
+2026-09-17T19:52:09Z EVENT 'afterAgentResponse' conversation_id='57fa16f9-4c5f-4c0e-b423-7d924bb1b4b9' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-17T19:52:09Z HANDLER PromptLog.after_agent_response result_keys=[] result={}
+2026-09-17T19:52:09Z ENABLED ['PromptLog.after_agent_response']
+2026-09-17T19:52:09Z MERGED {"permission": "allow"}
+2026-09-17T19:54:45Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:45Z ENABLED ['(none)']
+2026-09-17T19:54:45Z MERGED {"permission": "allow"}
+2026-09-17T19:54:45Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:45Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-17T19:54:45Z ENABLED ['_DispatchFixture.on_after']
+2026-09-17T19:54:45Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-17T19:54:45Z EVENT 'stop' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:45Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-17T19:54:45Z ENABLED ['_StopFixture.on_stop']
+2026-09-17T19:54:45Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-17T19:54:45Z EVENT 'beforeSubmitPrompt' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:45Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-17T19:54:45Z ENABLED ['_MessageFixture.on_before']
+2026-09-17T19:54:45Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-17T19:54:45Z EVENT 'preToolUse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:45Z HANDLER _AlwaysFixture.on_pre_tool result_keys=['agent_message', 'permission'] result={"permission": "allow", "agent_message": "logged"}
+2026-09-17T19:54:45Z ENABLED ['_AlwaysFixture.on_pre_tool']
+2026-09-17T19:54:45Z MERGED {"permission": "allow", "agent_message": "logged"}
+2026-09-17T19:54:53Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:53Z ENABLED ['(none)']
+2026-09-17T19:54:53Z MERGED {"permission": "allow"}
+2026-09-17T19:54:53Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:53Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-17T19:54:53Z ENABLED ['_DispatchFixture.on_after']
+2026-09-17T19:54:53Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-17T19:54:53Z EVENT 'stop' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:53Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-17T19:54:53Z ENABLED ['_StopFixture.on_stop']
+2026-09-17T19:54:53Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-17T19:54:53Z EVENT 'beforeSubmitPrompt' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:53Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-17T19:54:53Z ENABLED ['_MessageFixture.on_before']
+2026-09-17T19:54:53Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-17T19:54:53Z EVENT 'preToolUse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-17T19:54:53Z HANDLER _AlwaysFixture.on_pre_tool result_keys=['agent_message', 'permission'] result={"permission": "allow", "agent_message": "logged"}
+2026-09-17T19:54:53Z ENABLED ['_AlwaysFixture.on_pre_tool']
+2026-09-17T19:54:53Z MERGED {"permission": "allow", "agent_message": "logged"}
+2026-09-17T19:55:00Z EVENT 'afterAgentResponse' conversation_id='57fa16f9-4c5f-4c0e-b423-7d924bb1b4b9' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-17T19:55:00Z HANDLER PromptLog.after_agent_response result_keys=[] result={}
+2026-09-17T19:55:00Z ENABLED ['PromptLog.after_agent_response']
+2026-09-17T19:55:00Z MERGED {"permission": "allow"}
+2026-09-17T19:56:19Z EVENT 'afterAgentResponse' conversation_id='57fa16f9-4c5f-4c0e-b423-7d924bb1b4b9' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-17T19:56:19Z HANDLER PromptLog.after_agent_response result_keys=[] result={}
+2026-09-17T19:56:19Z ENABLED ['PromptLog.after_agent_response']
+2026-09-17T19:56:19Z MERGED {"permission": "allow"}

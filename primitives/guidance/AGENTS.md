@@ -8,3 +8,4 @@
 - Rules inlined into instructions use `RulesCollection.format_rules()` — do not duplicate formatting on the host.
 - Instructions assembly is the **`instructions`** property on **`Guidance`** — that is the declared operation (`@skill` / `@command` + `@agent_instructions`). `guidance()` is the markdown section that feeds it, not an installed tool.
 - Practice `fidelities` is a `GuidanceCollection` (`ToolSetCollection`). Install walks `toolset.nested_toolsets` then each child’s `tools` — not a merged parent `tools` map.
+- **`Guidance.tools`** lists `@agent_instructions`, `@agent_tool`, and `@rules` members as `AgentTool` entries. Install uses that map and `tool.destinations`.

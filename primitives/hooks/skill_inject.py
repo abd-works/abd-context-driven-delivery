@@ -12,6 +12,17 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+for _category in ("primitives", "utilities", "primitives/hooks"):
+    _entry = str(_REPO_ROOT / _category)
+    if _entry not in sys.path:
+        sys.path.insert(0, _entry)
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from agent_tools import agent_toolset
+from installer.marks import hook
+
 _NOTIFY_PS1 = Path(__file__).parent / "_notify_test.ps1"
 
 
@@ -25,7 +36,6 @@ def notify(title: str, body: str):
             stderr=subprocess.DEVNULL,
         )
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_ROOT = _REPO_ROOT / ".cursor" / "skills"
 _STATE_DIR = _REPO_ROOT / ".sessions" / "_skill_inject"
 _DIGEST_LINES = 50
@@ -54,13 +64,6 @@ _TAG_TO_SKILL: dict[str, Path] = {
 }
 
 _EDIT_TOOLS = {"Write", "StrReplace", "str_replace_editor", "str_replace_based_edit_tool"}
-
-
-def parse_payload(raw: bytes) -> dict:
-    text = raw.decode("utf-8-sig")
-    while text.startswith("\ufeff"):
-        text = text[1:]
-    return json.loads(text)
 
 
 def scan_tag(file_path: str) -> str | None:
@@ -175,6 +178,19 @@ def handle(data: dict) -> dict:
     }
 
 
+@agent_toolset
+class SkillInject:
+    """Inject skill digest before edits; reset after compact."""
+
+    @hook("preToolUse", always=True)
+    def on_pre_tool_use(self, payload: dict) -> dict:
+        return handle(payload)
+
+    @hook("preCompact", always=True)
+    def on_pre_compact(self, payload: dict) -> dict:
+        return handle_compact(payload)
+
+
 def handle_compact(data: dict) -> dict:
     """On preCompact, delete the conversation's injection state so skills
     re-inject after the context window is trimmed."""
@@ -187,27 +203,3 @@ def handle_compact(data: dict) -> dict:
         else:
             _log(f"preCompact — no state to reset for conversation={conversation_id}")
     return {}
-
-
-def main():
-    raw = sys.stdin.buffer.read()
-    if not raw.strip():
-        print(json.dumps({"permission": "allow"}))
-        return
-    try:
-        data = parse_payload(raw)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        print(json.dumps({"permission": "allow"}))
-        return
-
-    event = data.get("hook_event_name", "")
-    if event == "preCompact":
-        out = handle_compact(data)
-    else:
-        out = handle(data)
-
-    print(json.dumps(out))
-
-
-if __name__ == "__main__":
-    main()

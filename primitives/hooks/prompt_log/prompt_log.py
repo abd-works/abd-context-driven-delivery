@@ -19,6 +19,11 @@ for _category in ("primitives", "utilities", "primitives/hooks"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from agent_tools import agent_toolset
+from installer.marks import hook
 _PREVIEW_LINES = 8
 _PREVIEW_CHARS = 600
 
@@ -31,14 +36,6 @@ def log_path() -> Path:
     from hooks.session_logs import session_log_path
 
     return session_log_path(_REPO_ROOT, "prompt-log.txt")
-
-
-def parse_hook_payload(raw: bytes) -> dict:
-    """Strip BOM(s) the way Cursor sends them, then parse JSON."""
-    text = raw.decode("utf-8-sig")
-    while text.startswith("\ufeff"):
-        text = text[1:]
-    return json.loads(text)
 
 
 def _norm_path(path: str) -> str:
@@ -183,6 +180,31 @@ def format_after_agent_response(data: dict) -> str:
     return "\n".join(lines)
 
 
+@agent_toolset
+class PromptLog:
+    """Audit what Cursor sends the model — one ``@hook`` per event."""
+
+    @hook("beforeSubmitPrompt", always=True)
+    def before_submit_prompt(self, payload: dict) -> dict:
+        return handle(payload)
+
+    @hook("beforeReadFile", always=True)
+    def before_read_file(self, payload: dict) -> dict:
+        return handle(payload)
+
+    @hook("preToolUse", always=True)
+    def pre_tool_use(self, payload: dict) -> dict:
+        return handle(payload)
+
+    @hook("subagentStart", always=True)
+    def subagent_start(self, payload: dict) -> dict:
+        return handle(payload)
+
+    @hook("afterAgentResponse", always=True)
+    def after_agent_response(self, payload: dict) -> dict:
+        return handle(payload)
+
+
 def handle(data: dict, *, target: Path | None = None) -> dict:
     event = data.get("hook_event_name", "preToolUse")
 
@@ -203,24 +225,3 @@ def handle(data: dict, *, target: Path | None = None) -> dict:
         return {"permission": "allow"}
 
     return {"permission": "allow"}
-
-
-def main():
-    from hooks.session_logs import ensure_default_session
-
-    ensure_default_session(_REPO_ROOT)
-    raw = sys.stdin.buffer.read()
-    if not raw.strip():
-        print(json.dumps({"permission": "allow"}))
-        return
-    try:
-        data = parse_hook_payload(raw)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        print(json.dumps({"permission": "allow"}))
-        return
-    out = handle(data)
-    print(json.dumps(out))
-
-
-if __name__ == "__main__":
-    main()

@@ -1,6 +1,7 @@
 """Assemble agent instructions from @markdown properties."""
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from typing import Any
 
@@ -78,19 +79,25 @@ class Guidance:
     @property
     def tools(self) -> dict[str, Any]:
         from primitives.agent_tools.agent_tools import AgentTool
-        from primitives.installer.declared_installations import declared_installations
 
         found: dict[str, Any] = {}
-        for declared in declared_installations(self):
-            if (
-                declared.invoke in {"action", "tool"}
-                or declared.kind == "rules"
-            ):
-                found[declared.operation] = AgentTool(
-                    name=declared.operation,
-                    callable=declared.member,
-                    toolset=self,
-                )
+        cls = type(self)
+        seen: set[str] = set()
+        members: list[tuple[str, Any]] = []
+        for name, member in inspect.getmembers(cls, predicate=inspect.isfunction):
+            seen.add(name)
+            members.append((name, member))
+        for name, member in inspect.getmembers(cls, predicate=inspect.isdatadescriptor):
+            getter = getattr(member, "fget", None)
+            if getter is not None and name not in seen:
+                members.append((name, getter))
+        for name, member in members:
+            is_instructions = getattr(member, "_is_agent_instructions", False)
+            is_tool = getattr(member, "_is_agent_tool", False)
+            is_rules = getattr(member, "_rules", False)
+            if not (is_instructions or is_tool or is_rules):
+                continue
+            found[name] = AgentTool(name=name, callable=member, toolset=self)
         return found
 
 

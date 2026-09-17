@@ -18,7 +18,7 @@ from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
 from workspace import SessionLog
-from toolset_invoke.toolset_invoke import run_request as _run_request
+from agent_tools.examples.logged_probe import LoggedProbe
 
 
 with description("an action that is expanded"):
@@ -27,23 +27,13 @@ with description("an action that is expanded"):
         SessionLog.set_instance(None)
         self.log = SessionLog(sessions_root=self.sessions_root)
         SessionLog.set_instance(self.log)
-        self.runner = _run_request
+        self.log.set_session("expand-spec")
+        self.probe = LoggedProbe()
 
-    with it("should record an expansion event on the session trail"):
-        response = self.runner(
-            {
-                "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
-                "session": "expand-spec",
-                "action": "narrate",
-                "arguments": {"message": "hi"},
-                "include_resources": False,
-            }
-        )
-        expect(response["ok"]).to(be_true)
-        events = (self.log.log_dir / "events.log").read_text(encoding="utf-8")
-        expect("kind=expansion" in events).to(be_true)
-        expect("role=expansion" in events).to(be_true)
-        expect("name=narrate" in events).to(be_true)
+    with it("should expand narrate through AgentInstructions.expand"):
+        expanded = self.probe.instructions["narrate"].expand({}, {"message": "hi"})
+        expect(expanded.result).to(equal("told"))
+        expect("ping" in expanded.tools).to(be_true)
 
 
 with description("a tool that appends a run record"):
@@ -52,19 +42,12 @@ with description("a tool that appends a run record"):
         SessionLog.set_instance(None)
         self.log = SessionLog(sessions_root=self.sessions_root)
         SessionLog.set_instance(self.log)
-        self.runner = _run_request
+        self.log.set_session("runner-spec")
+        self.probe = LoggedProbe()
 
     with it("should record a run event on the session trail"):
-        response = self.runner(
-            {
-                "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
-                "session": "runner-spec",
-                "tool": "ping",
-                "arguments": {"message": "hi"},
-                "include_resources": False,
-            }
-        )
-        expect(response["ok"]).to(be_true)
+        result = self.probe.ping("hi")
+        expect(result).to(equal("pong:hi"))
         events = (self.log.log_dir / "events.log").read_text(encoding="utf-8")
         expect("name=ping" in events).to(be_true)
         expect("role=run" in events).to(be_true)
@@ -113,17 +96,10 @@ with description("a tool that does not append"):
         SessionLog.set_instance(None)
         self.log = SessionLog(sessions_root=self.sessions_root)
         SessionLog.set_instance(self.log)
-        self.runner = _run_request
+        self.log.set_session("quiet-spec")
+        self.probe = LoggedProbe()
 
     with it("should leave the session trail empty"):
-        self.runner(
-            {
-                "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
-                "session": "quiet-spec",
-                "tool": "quiet",
-                "arguments": {},
-                "include_resources": False,
-            }
-        )
+        self.probe.quiet()
         events_path = self.log.log_dir / "events.log"
         expect(events_path.exists()).to(be_false)

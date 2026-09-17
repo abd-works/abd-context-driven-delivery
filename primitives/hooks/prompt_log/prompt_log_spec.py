@@ -1,5 +1,4 @@
 """BDD development specs for the prompt_log audit hook."""
-import json
 import sys
 import tempfile
 from pathlib import Path
@@ -153,8 +152,8 @@ with description("a prompt log hook"):
                 expect(text).to(contain("subagentStart"))
                 expect(text).to(contain("prompt_log.py"))
 
-    with context("that is invoked from stdin like Cursor does"):
-        with it("should parse BOM-prefixed JSON and allow the action"):
+    with context("that is invoked from a Cursor payload"):
+        with it("should record the prompt and attachments"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
                 payload = {
@@ -167,8 +166,6 @@ with description("a prompt log hook"):
                         {"type": "rule", "file_path": str(_AGENT)},
                     ],
                 }
-                raw = b"\xef\xbb\xbf" + json.dumps(payload).encode("utf-8")
-                parsed = pl.parse_hook_payload(raw)
-                out = pl.handle(parsed, target=log_file)
+                out = pl.handle(payload, target=log_file)
                 expect(out).to(equal({"continue": True}))
                 expect(log_file.read_text(encoding="utf-8")).to(contain("engineer.md"))

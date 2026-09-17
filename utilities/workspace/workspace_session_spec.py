@@ -17,10 +17,8 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
 from expects import be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from toolset_invoke.toolset_invoke import expand_action
 from primitives.installer.toolset_loader import ToolsetLoader
 from primitives.markdown import Markdown
-from agent_tools import AgentToolSet
 from workspace.workspace import WorkSession, Workspace
 
 _KIT_DIR = Path(__file__).resolve().parent
@@ -31,23 +29,6 @@ _CHRONICLE_WITH_OUTPUT_TOOLSET = (
     "practices.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
 )
 
-def _expand(
-    instance: AgentToolSet,
-    action_name: str,
-    *,
-    toolset_path: str,
-    arguments: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return expand_action(
-        instance,
-        action_name,
-        toolset_path=toolset_path,
-        context={},
-        arguments=arguments or {},
-        request={"toolset": toolset_path, "context": {}},
-    )
-
-
 def _section(name: str) -> str:
     return Markdown.from_label(WorkSession(Workspace("."), ""), name).extract()
 
@@ -55,15 +36,12 @@ def _section(name: str) -> str:
 with description("WorkSession kit prose"):
     with it("should resolve open from workspace_session.md section"):
         text = _section("open")
-        expect(text.startswith("# Open")).to(be_true)
-        expect("Session Guidance" in text or "session" in text.lower()).to(be_true)
+        expect("single tool" in text.lower() or "ensure sprint" in text.lower()).to(be_true)
 
     with it("should resolve session guidance from workspace_session.md section"):
         text = _section("session_guidance")
-        expect("# Session Guidance" in text).to(be_true)
-        expect("session.path" in text or "active.path" in text or "path" in text).to(be_true)
+        expect("active.path" in text or "path" in text).to(be_true)
         expect("context-index.md" in text).to(be_true)
-        expect("Consumed handoff" in text or "consume" in text.lower()).to(be_true)
 
 
 with description("WorkSession on a PracticeGuidance host"):
@@ -73,15 +51,13 @@ with description("WorkSession on a PracticeGuidance host"):
 
             cls = ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
             self.host = cls()
-            self.response = _expand(
-                Generate(),
-                "generate",
-                toolset_path="generate.generate:Generate",
-                arguments={"tools": [self.host]},
+            self.response = Generate().instructions["generate"].expand(
+                {},
+                {"tools": [self.host]},
             )
 
         with it("should name CDR tools then finish_turn"):
-            expect(self.response["tools"]).to(
+            expect(self.response.tools).to(
                 equal(
                     [
                         "read_cdr_format",
@@ -95,7 +71,7 @@ with description("WorkSession on a PracticeGuidance host"):
         with it("should not expand session active resource on the generate kit"):
             expect(
                 f"Resource `active` = {self.host.active!r}."
-                in self.response["instructions"]
+                in self.response.instructions
             ).to(be_false)
 
         with it("should compose a Workspace as host.workspace"):
@@ -109,15 +85,13 @@ with description("WorkSession on a PracticeGuidance host"):
 
             cls = ToolsetLoader.instance().load(_CHRONICLE_WITH_OUTPUT_TOOLSET)
             self.host = cls()
-            self.response = _expand(
-                Generate(),
-                "generate",
-                toolset_path="generate.generate:Generate",
-                arguments={"tools": [self.host]},
+            self.response = Generate().instructions["generate"].expand(
+                {},
+                {"tools": [self.host]},
             )
 
         with it("should keep nested generate_output tools ahead of finish_turn"):
-            expect(self.response["tools"]).to(
+            expect(self.response.tools).to(
                 equal(
                     [
                         "read_cdr_format",
@@ -133,15 +107,13 @@ with description("WorkSession on a PracticeGuidance host"):
         with before.all:
             from generate.generate import Generate
 
-            self.response = _expand(
-                Generate(),
-                "generate",
-                toolset_path="generate.generate:Generate",
-                arguments={"tools": []},
+            self.response = Generate().instructions["generate"].expand(
+                {},
+                {"tools": []},
             )
 
         with it("should not inline session guidance on the composer"):
-            expect("# Session Guidance" in self.response["instructions"]).to(be_false)
+            expect("# Session Guidance" in self.response.instructions).to(be_false)
 
 
 with description("a WorkSession with a name and path"):

@@ -1,17 +1,13 @@
 {
   "mcpServers": {
     "cdd": {
-      "command": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe",
+      "command": "python",
       "args": [
         "-m",
         "mcp_server",
         "--toolsets",
-        "practices.actions.car_story.car_story:CarStory,practices.actions.document.document:Document,practices.actions.generate.generate:Generate,practices.actions.grill_context.grill_context:GrillContext,practices.actions.improvement.improvement:Improvement,practices.actions.iterate.iterate:Iterate,practices.actions.lifecycle:LifecycleAction,practices.actions.partition.partition:Partition,practices.actions.render.render:Render,practices.actions.satisfy.satisfy:Satisfy,practices.actions.scan.scan:Scan,practices.actions.sketch.sketch:Sketch,practices.actions.validate.validate:Validate,practices.actions.validate.validate:CreateRule,practices.agent_bdd.agent_bdd:AgentBdd,practices.base.base_context_tool:BaseContextTool,practices.bdd.bdd:Bdd,practices.car.car:Car,practices.cdd.cdd:Cdd,practices.clean_engineering.clean_engineering:CleanEngineering,practices.create_context_tool.create_context_tool:CreateContextTool,practices.ddd.ddd:Ddd,practices.stories.stories:Stories,practices.ux.ux:Ux,utilities.catalog_generator.catalog_generator:Catalog,utilities.cli_agent.cli_agent:CliAgent,utilities.context_setup.context_index:ContextIndex,utilities.context_setup.context_setup:ContextSetup,utilities.diagnose.diagnose:Diagnose,utilities.echo.echo:Echo,utilities.git.git:Git,utilities.handoff.handoff:Handoff,utilities.plan.plan:PlanCommands,utilities.record_decisions.record_decisions:RecordDecisions,utilities.sub_agent.sub_agent:SubAgent,utilities.swarm.swarm:Swarm,utilities.workflow.workflow:Workflow,utilities.workspace.workspace:Turn,utilities.workspace.workspace:WorkSession,utilities.workspace.workspace:Workspace,primitives.agent_tools.agent_with_actions:AgentWithActions"
-      ],
-      "cwd": "C:\\dev\\abd-cdd-context-tool-refactoring-71",
-      "env": {
-        "PYTHONPATH": "C:\\dev\\abd-cdd-context-tool-refactoring-71;C:\\dev\\abd-cdd-context-tool-refactoring-71\\primitives;C:\\dev\\abd-cdd-context-tool-refactoring-71\\utilities;C:\\dev\\abd-cdd-context-tool-refactoring-71\\practices"
-      }
+        "practices.car.car:Car"
+      ]
     }
   }
 }

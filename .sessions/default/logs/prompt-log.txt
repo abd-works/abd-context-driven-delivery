@@ -5763,3 +5763,104 @@ The map is at `primitives/.context/story-map.md`. The walking-skeleton backlog i
     (E) Register Agent Toolsets
         (S) Author --> Register Agent Toolset
 ... [63 lines, 3662 chars total]
+
+==============================================================================
+2026-09-17T19:08:33Z  afterAgentResponse  conv=c51bd5a7  gen=aacd4039  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The old instruction package is gone and nothing from it was ported.
+
+**Extract only.** Live slots use `@markdown` / `Markdown.from_label`. `AssetLocator` treats `name` as a fidelity scope only on Guidance hosts, so `WorkSession.name` and `AgentToolSet.name` no longer swallow file/section lookup. `Improvement.repair_loop` now returns `repair.md`.
+
+**Specs.** Reporter, workspace session kit prose, agent-bdd, partition, and improvement load markdown through extract or the file on disk — not `Instruction`.
+
+**Green:** `markdown_spec`, `reporter_spec`, `guidance_spec`, and the improvement extract e
+... [7 lines, 725 chars total]
+
+==============================================================================
+2026-09-17T19:16:35Z  afterAgentResponse  conv=277f5199  gen=37ef52df  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: **From the live hooks/installer path: yes.** `Hook`, `HookHarness`, `hook.py`, `deploy.py`, `bootstrap.py`, and `install_dispatch.py` are gone. `primitives/harness` is gone too. Workspace now imports `installer.marks.hook`. I also deleted leftover `hook*.pyc` from `__pycache__`.
+
+**Still not wiped (on purpose or out of that kill):**
+
+- **`deploy/legacy-no-longer-valid/`** — archived old harness still imports `hooks.hook`. That folder is the backup, not the import path.
+- **Mechanical hook scripts** — `dispatch.py`, `prompt_log`, `skill_inject`, `prompt_echo`. Those are the Cursor process, not 
+... [10 lines, 990 chars total]
+
+==============================================================================
+2026-09-17T19:28:48Z  afterAgentResponse  conv=277f5199  gen=84abf222  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Converted. The only remaining **process** is `dispatch.py` — Cursor has to run one command. Prompt log, skill inject, and prompt echo are now `@hook` operations, not their own hook commands.
+
+| Host | Events | How it runs |
+| --- | --- | --- |
+| `PromptLog` | `beforeSubmitPrompt`, `beforeReadFile`, `preToolUse`, `subagentStart`, `afterAgentResponse` | `@hook(..., always=True)` |
+| `SkillInject` | `preToolUse`, `preCompact` | `@hook(..., always=True)` |
+| `PromptEcho` | `preToolUse` | `always=True`; still no-ops if `.context/hooks/prompt_echo.disabled` exists |
+| `Turn.auto_turn` | `afterAgentR
+... [16 lines, 1252 chars total]
+
+==============================================================================
+2026-09-17T19:38:30Z  afterAgentResponse  conv=277f5199  gen=18dc3bb9  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Removed the leftover hook process/install bits that were still sitting around after the conversion.
+
+**Deleted files:** scratch notes (`testing-the-auto-commit-works.md`, `untracked-auto-turn-test.md`). `hook.py` / `deploy.py` / `install_dispatch.py` were already gone on disk.
+
+**Deleted dead code:** stdin parsers on `skill_inject`, `prompt_echo`, and `prompt_log` (dispatch owns parse now); `wipe_session_logs` alias; `HookHarness` special-case in the rename script.
+
+`dispatch.py` is still the only Cursor command. The 15 hook mark/install/dispatch examples passed.
+
+==============================================================================
+2026-09-17T19:46:52Z  afterAgentResponse  conv=277f5199  gen=ac4eb704  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: The model is at `primitives/hooks/.context/hooks-runtime-model.md`, generated from the live mark, install, and dispatch code as requirements.
+
+**Install** stays on `HookMark` and `HookInstallation` (same walk as MCP; different files). **Runtime** is `Dispatcher` plus the resources it owns: `CursorEvent`, `HookPayload`, `HookResult`, `HookHandler`, `HandlerCatalog`, `HookFlag`. Handler bodies stay on the hosts (`PromptLog`, `SkillInject`, `PromptEcho`, workspace `Turn`). Merge, flags, and catalog load sit on those types, not on a bag of module functions.
+
+`module-context.md` now points at that 
+... [5 lines, 658 chars total]
+
+==============================================================================
+2026-09-17T19:52:09Z  afterAgentResponse  conv=57fa16f9  gen=8baae619  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: You don’t need `declared_installations`. It’s a second inspect walk that re-derives what `toolset.tools` and `tool.destinations` already know.
+
+**Install already has the real walk.** `_install_toolset` iterates `toolset.tools` and `get_installations(tool)` reads `tool.destinations` (mcp, skill, command, rules, hook). That is the inventory.
+
+**Then install throws it away.** `Installation.install` calls `declared_installation_for(tool)`, which walks the class again looking for `_skill`, `_command`, `_rules`, `_is_agent_instructions`, `_is_agent_tool`, `_mcp`, `_hook`, and packs those flags into 
+... [11 lines, 1464 chars total]
+
+==============================================================================
+2026-09-17T19:55:00Z  afterAgentResponse  conv=57fa16f9  gen=e1243206  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: `declared_installations` is gone. Install now uses only `toolset.tools` and `tool.destinations`.
+
+**What changed**
+- `AgentToolSet.tools` includes `@hook` members, so hook-only methods (prompt log, skill inject) go through the same walk.
+- `AgentTool` now has `deploy_name` and a default `kind` from the member marks.
+- `Installation.write` / `record_operation` take the `AgentTool` and read destinations off it.
+- `Guidance.tools` discovers `@agent_instructions`, `@agent_tool`, and `@rules` itself.
+- MCP `start` enrolls from `toolset.tools` the same way deploy does.
+... [10 lines, 649 chars total]
+
+==============================================================================
+2026-09-17T19:56:19Z  afterAgentResponse  conv=57fa16f9  gen=33fd5cc2  model=cursor-grok-4.6-medium-fast
+------------------------------------------------------------------------------
+
+text: Yes. `utilities/toolset_invoke` is an in-process stand-in so specs can expand `@agent_instructions` and call `@agent_tool` without going through a deployed skill or MCP. The module says that at the top: specs only, not production runtime.
+
+Nothing in production imports it. Callers are specs (`agent_tools_spec`, partition, improvement, workspace, clean engineering) and agent-BDD helpers that wrap `run_request` for those same specs.
+
+Production invoke is already on the objects:
+
+- `@agent_instructions` expands via `AgentInstructions.expand`
+- `@agent_tool` runs as the method / MCP-enrolled op
+... [11 lines, 867 chars total]

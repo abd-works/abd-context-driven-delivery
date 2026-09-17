@@ -1,7 +1,8 @@
-"""Shared helpers for agent BDD specs — in-process invoke, path layout, assertions.
+"""Shared helpers for agent BDD specs — expand/invoke on live toolsets, path layout, assertions.
 
-Specs stay thin: build a run request, invoke through toolset_invoke, assert response fields.
-Import from ``agent_bdd.spec_helpers`` (or re-exports on ``agent_bdd``).
+Specs stay thin: construct or load a toolset, expand ``instructions[name]`` or
+invoke ``operations[name]``, assert the result. Import from
+``agent_bdd.spec_helpers`` (or re-exports on ``agent_bdd``).
 """
 from __future__ import annotations
 

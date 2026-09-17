@@ -7,8 +7,6 @@ what was detected via user_message so the user sees it in the chat.
 Disabled when `.context/hooks/prompt_echo.disabled` exists (default: off).
 """
 
-import json
-import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +16,12 @@ for _category in ("primitives", "utilities", "primitives/hooks"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from agent_tools import agent_toolset
+from installer.marks import hook
+
 _DISABLED_FLAG = _REPO_ROOT / ".context/hooks/prompt_echo.disabled"
 
 
@@ -42,14 +46,6 @@ ACTIONS = frozenset({
 })
 
 
-def parse_hook_payload(raw: bytes) -> dict:
-    """Strip BOM(s) the way Cursor sends them, then parse JSON."""
-    text = raw.decode("utf-8-sig")
-    while text.startswith("\ufeff"):
-        text = text[1:]
-    return json.loads(text)
-
-
 def _detect_action(data: dict) -> str | None:
     """Find an action name in the tool's input content."""
     tool_input = data.get("tool_input", {})
@@ -68,6 +64,17 @@ def _detect_action(data: dict) -> str | None:
         if action.lower() in lower:
             return action
     return None
+
+
+@agent_toolset
+class PromptEcho:
+    """Echo detected action names on preToolUse. Off when prompt_echo.disabled exists."""
+
+    @hook("preToolUse", always=True)
+    def on_pre_tool_use(self, payload: dict) -> dict:
+        if not is_enabled():
+            return {"permission": "allow"}
+        return handle(payload)
 
 
 def handle(data: dict) -> dict:
@@ -89,48 +96,3 @@ def handle(data: dict) -> dict:
         "permission": "allow",
         "user_message": echo,
     }
-
-
-_DEBUG_LOG = None
-
-
-def _debug_log_path() -> Path:
-    from hooks.session_logs import session_log_path
-
-    return session_log_path(_REPO_ROOT, "prompt_echo.debug")
-
-
-def _debug(msg: str):
-    with open(_debug_log_path(), "a", encoding="utf-8") as f:
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        f.write(f"{ts} {msg}\n")
-
-
-def main():
-    if not is_enabled():
-        print(json.dumps({"permission": "allow"}))
-        return
-
-    raw = sys.stdin.buffer.read()
-    _debug(f"ENTRY raw_len={len(raw)} raw={raw[:200]!r}")
-
-    if not raw.strip():
-        _debug("empty stdin, allowing")
-        print(json.dumps({"permission": "allow"}))
-        return
-
-    try:
-        data = parse_hook_payload(raw)
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        _debug(f"PARSE_ERROR {exc}")
-        print(json.dumps({"permission": "allow"}))
-        return
-
-    _debug(f"PAYLOAD keys={sorted(data.keys())}")
-    out = handle(data)
-    _debug(f"OUTPUT {json.dumps(out)}")
-    print(json.dumps(out))
-
-
-if __name__ == "__main__":
-    main()

@@ -17,7 +17,6 @@ for _cat in ("primitives", "utilities", "practices", "actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from toolset_invoke.toolset_invoke import expand_action
 from primitives.installer.toolset_loader import ToolsetLoader
 import practices  # noqa: F401 - generator package on path
 from primitives.markdown import Markdown
@@ -48,17 +47,12 @@ def _expand_action(
     instance: AgentToolSet,
     action_name: str,
     *,
-    toolset_path: str,
     context: dict[str, Any] | None = None,
     arguments: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return expand_action(
-        instance,
-        action_name,
-        toolset_path=toolset_path,
-        context=context or {},
-        arguments=arguments or {},
-        request={"toolset": toolset_path, "context": context or {}},
+) -> Any:
+    return instance.instructions[action_name].expand(
+        context or {},
+        arguments or {},
     )
 
 
@@ -144,41 +138,36 @@ with description("CleanEngineering action expansion"):
                 self.response = _expand_action(
                     self.clean_engineering,
                     "guidance",
-                    toolset_path=_CLEAN_ENGINEERING_TOOLSET,
                     context={"format": "python"},
                 )
 
-            with it("should set action to guidance"):
-                expect(self.response["action"]).to(equal("guidance"))
-
             with it("should inline the fidelity-sliced Contexts section"):
-                _assert_contexts_inlined(self.response["instructions"], self.contexts)
-                expect("## modules" in self.response["instructions"]).to(be_true)
-                expect("\n## model\n" in self.response["instructions"]).to(equal(False))
-                expect("\n## code\n" in self.response["instructions"]).to(equal(False))
+                _assert_contexts_inlined(self.response.instructions, self.contexts)
+                expect("## modules" in self.response.instructions).to(be_true)
+                expect("\n## model\n" in self.response.instructions).to(equal(False))
+                expect("\n## code\n" in self.response.instructions).to(equal(False))
 
             with it("should inline shopping-cart python examples and omit evals"):
-                _assert_text_inlined(self.response["instructions"], self.examples)
-                expect("class IShoppingCart" in self.response["instructions"]).to(be_true)
-                expect("evals/faultyAsset" in self.response["instructions"]).to(
+                _assert_text_inlined(self.response.instructions, self.examples)
+                expect("class IShoppingCart" in self.response.instructions).to(be_true)
+                expect("evals/faultyAsset" in self.response.instructions).to(
                     equal(False)
                 )
 
             with it("should inline the python template file"):
-                _assert_text_inlined(self.response["instructions"], self.template)
+                _assert_text_inlined(self.response.instructions, self.template)
 
         with context("the Validate kit is expanded with this host"):
             with before.each:
                 self.response = _expand_action(
                     Validate(),
                     "validate",
-                    toolset_path=_VALIDATE_TOOLSET,
                     arguments={"tools": [self.clean_engineering]},
                 )
 
             with it("should inline validate.md from the validate kit"):
                 _assert_text_inlined(
-                    self.response["instructions"],
+                    self.response.instructions,
                     _load_action_prose("validate", _VALIDATE_DIR),
                 )
 
@@ -187,13 +176,12 @@ with description("CleanEngineering action expansion"):
                 self.response = _expand_action(
                     Satisfy(),
                     "satisfy",
-                    toolset_path=_SATISFY_TOOLSET,
                     arguments={"tools": [self.clean_engineering]},
                 )
 
             with it("should inline satisfy.md from the satisfy kit"):
                 _assert_text_inlined(
-                    self.response["instructions"],
+                    self.response.instructions,
                     _load_action_prose("satisfy", _SATISFY_DIR),
                 )
 

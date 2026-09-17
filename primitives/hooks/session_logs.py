@@ -141,8 +141,3 @@ def consolidate_logs_for_close(repo_root: Path, session_name: str) -> None:
         _move_into(repo_root / rel)
 
     clear_active_session(repo_root)
-
-
-def wipe_session_logs(repo_root: Path) -> None:
-    """Legacy name — close uses ``consolidate_logs_for_close`` instead."""
-    consolidate_logs_for_close(repo_root, active_session_name(repo_root))

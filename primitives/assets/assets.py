@@ -65,6 +65,27 @@ def _path_for_templates(module_dir: Path, domain_slug: str, active_format: str |
 LocationKind = Literal["file", "folder", "section"]
 
 
+def _fidelity_scope(host: Any) -> str | None:
+    """Fidelity section name on Guidance hosts only — not WorkSession.name or AgentToolSet.name."""
+    if getattr(host, "practice_guidance", None) is not None:
+        value = getattr(host, "name", None)
+        return str(value) if value else None
+    for cls in type(host).__mro__:
+        if cls is object:
+            continue
+        declared = cls.__dict__.get("name", _MISSING)
+        if declared is _MISSING:
+            continue
+        if isinstance(declared, property):
+            return None
+        value = getattr(host, "name", None)
+        return str(value) if value else None
+    return None
+
+
+_MISSING = object()
+
+
 def _class_file_directory(host: Any) -> Path:
     practice = getattr(host, "practice_guidance", None)
     if practice is not None:
@@ -231,10 +252,7 @@ class AssetLocator:
         return root
 
     def _locate_under(self, search_root: Path, module_dir: Path, domain_slug: str) -> AssetLocation:
-        declared_name = getattr(type(self._host), "name", None)
-        fidelity_name = None if isinstance(declared_name, property) else getattr(
-            self._host, "name", None
-        )
+        fidelity_name = _fidelity_scope(self._host)
         if fidelity_name:
             section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
             return AssetLocation(

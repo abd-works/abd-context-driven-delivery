@@ -106,6 +106,23 @@ with description("hook dispatch"):
                     _MessageFixture, "on_before", "beforeSubmitPrompt", enabled=False
                 )
 
+    with context("that receives a payload for an always-on handler"):
+
+        with it("should invoke the handler without an enable flag"):
+            @agent_toolset
+            class _AlwaysFixture:
+                calls: list[str] = []
+
+                @hook("preToolUse", always=True)
+                def on_pre_tool(self, payload: dict) -> dict:
+                    type(self).calls.append("pre")
+                    return {"permission": "allow", "agent_message": "logged"}
+
+            _AlwaysFixture.calls = []
+            out = dispatch({"hook_event_name": "preToolUse"}, hosts=[_AlwaysFixture])
+            expect(out["agent_message"]).to(equal("logged"))
+            expect(_AlwaysFixture.calls).to(equal(["pre"]))
+
     with context("that parses stdin payloads"):
 
         with it("should strip a UTF-8 BOM"):

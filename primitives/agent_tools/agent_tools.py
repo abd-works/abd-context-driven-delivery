@@ -110,6 +110,8 @@ class AgentToolSet:
         merged: dict[str, AgentTool] = {}
         merged.update(self.operations)
         merged.update(self._discover_instruction_members())
+        for name, tool in self._discover_hook_members().items():
+            merged.setdefault(name, tool)
         return merged
 
     @property
@@ -141,6 +143,17 @@ class AgentToolSet:
         for name, member in inspect.getmembers(type(self), predicate=inspect.isfunction):
             if getattr(member, "_is_agent_instructions", False):
                 discovered[name] = AgentInstructions(
+                    name=name,
+                    callable=getattr(self, name),
+                    toolset=self,
+                )
+        return discovered
+
+    def _discover_hook_members(self) -> dict[str, AgentTool]:
+        discovered: dict[str, AgentTool] = {}
+        for name, member in inspect.getmembers(type(self), predicate=inspect.isfunction):
+            if getattr(member, "_hook", False):
+                discovered[name] = AgentTool(
                     name=name,
                     callable=getattr(self, name),
                     toolset=self,
@@ -420,8 +433,20 @@ class AgentTool:
         return destinations
 
     @property
+    def deploy_name(self) -> str:
+        return (
+            getattr(self.callable, "_command_name", None)
+            or getattr(self.callable, "_skill_name", None)
+            or self.name
+        )
+
+    @property
     def kind(self) -> str:
-        raise TypeError(f"{type(self).__name__} must define kind")
+        if getattr(self.callable, "_is_agent_tool", False):
+            return "tool"
+        if getattr(self.callable, "_is_agent_instructions", False):
+            return "instructions"
+        return "none"
 
     @property
     def description(self) -> str:

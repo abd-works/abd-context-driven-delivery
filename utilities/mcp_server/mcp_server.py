@@ -5,7 +5,6 @@ import inspect
 from typing import Any
 
 from primitives.installer.installation import McpInstallation, McpOp
-from primitives.installer.declared_installations import declared_installations
 from primitives.installer.toolset_loader import ToolsetLoader
 
 
@@ -100,10 +99,10 @@ class McpServer:
         self._tools.clear()
         self._prompts.clear()
         for ref in toolset_refs:
-            tool = self._toolset_loader.load(ref)(**context)
+            toolset = self._toolset_loader.load(ref)(**context)
             installation = McpInstallation("Cursor", ".", ref)
-            for declared in declared_installations(tool):
-                installation.record_operation(tool, declared)
+            for tool in toolset.tools.values():
+                installation.record_operation(tool)
             installation.bind(self)
             self.mcp_installations.append(installation)
         self._started = True

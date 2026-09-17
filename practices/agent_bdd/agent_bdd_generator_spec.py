@@ -19,7 +19,6 @@ for _p in [
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from toolset_invoke.toolset_invoke import expand_action
 from primitives.installer.toolset_loader import ToolsetLoader
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import practices  # noqa: F401
@@ -49,17 +48,12 @@ def _expand_action(
     instance: AgentToolSet,
     action_name: str,
     *,
-    toolset_path: str,
     context: dict[str, Any] | None = None,
     arguments: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return expand_action(
-        instance,
-        action_name,
-        toolset_path=toolset_path,
-        context=context or {},
-        arguments=arguments or {},
-        request={"toolset": toolset_path, "context": context or {}},
+) -> Any:
+    return instance.instructions[action_name].expand(
+        context or {},
+        arguments or {},
     )
 
 
@@ -84,20 +78,16 @@ with description("AgentBdd action expansion"):
                 self.response = _expand_action(
                     self.bdd,
                     "guidance",
-                    toolset_path=_AGENT_BDD_TOOLSET,
                     context={"format": "python"},
                 )
 
-            with it("should set action to guidance"):
-                expect(self.response["action"]).to(equal("guidance"))
-
             with it("should inline agent-BDD concepts from agent_bdd.md"):
-                _assert_text_inlined(self.response["instructions"], self.contexts)
+                _assert_text_inlined(self.response.instructions, self.contexts)
 
             with it("should inline templates/agent_bdd-templates.py from format resource"):
                 template = Markdown.from_label(self.bdd, "templates").extract()
-                expect("with description" in self.response["instructions"]).to(be_true)
-                expect("ai_judge" in self.response["instructions"]).to(be_true)
+                expect("with description" in self.response.instructions).to(be_true)
+                expect("ai_judge" in self.response.instructions).to(be_true)
                 expect(len(template) > 0).to(be_true)
 
         with context("the Validate kit is expanded with this host"):
@@ -105,12 +95,11 @@ with description("AgentBdd action expansion"):
                 self.response = _expand_action(
                     Validate(),
                     "validate",
-                    toolset_path=_VALIDATE_TOOLSET,
                     arguments={"tools": [self.bdd]},
                 )
 
             with it("should inline validate kit prose"):
                 _assert_text_inlined(
-                    self.response["instructions"],
+                    self.response.instructions,
                     _kit_prose("validate", _VALIDATE_DIR),
                 )

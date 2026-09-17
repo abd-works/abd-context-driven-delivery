@@ -16,7 +16,6 @@ import yaml
 from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from primitives.installer.errors import RunError
 from agent_tools.examples.car import Car
 from primitives.agent_tools.agent_tools import (
     AgentInstructions,
@@ -28,7 +27,6 @@ from primitives.agent_tools.agent_tools import (
     agent_toolset,
 )
 from primitives.agent_tools.agent_tools import AgentInstructions
-from toolset_invoke.toolset_invoke import run_request
 from car_story.car_story import CarStory
 from agent_tools.examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
@@ -184,50 +182,41 @@ with description("a class"):
                 entry = CarStory().instructions["travelTo"]
                 expect(entry.kind).to(equal("instructions"))
 
-            with it("should expand into instructions when invoked through spec run_request"):
-                request = {
-                    "toolset": _CAR_STORY_TOOLSET,
-                    "action": "travelTo",
-                    "arguments": {
-                        "tools": [
-                            {
-                                "toolset": _CAR_TOOLSET,
-                                "context": {
-                                    "make": "Dodge",
-                                    "model": "Charger",
-                                    "year": 1969,
-                                    "personality": "General Lee",
-                                },
-                            }
-                        ],
-                        "destination": "Hazzard County courthouse",
-                        "conditions": "muddy back roads",
-                    },
+            with it("should expand into instructions"):
+                arguments = {
+                    "tools": [
+                        {
+                            "toolset": _CAR_TOOLSET,
+                            "context": {
+                                "make": "Dodge",
+                                "model": "Charger",
+                                "year": 1969,
+                                "personality": "General Lee",
+                            },
+                        }
+                    ],
+                    "destination": "Hazzard County courthouse",
+                    "conditions": "muddy back roads",
                 }
-                response = run_request(request)
-                expect(response["ok"]).to(be_true)
-                expect(response["action"]).to(equal("travelTo"))
-                expect(response["result"]).to(
+                response = CarStory().instructions["travelTo"].expand({}, arguments)
+                expect(response.result).to(
                     equal("Instructions for traveling to Hazzard County courthouse")
                 )
-                expect("{destination}" in response["instructions"]).to(be_true)
-                expect("{conditions}" in response["instructions"]).to(be_true)
-                expect(response["tools"]).to(
+                expect("{destination}" in response.instructions).to(be_true)
+                expect("{conditions}" in response.instructions).to(be_true)
+                expect(response.tools).to(
                     equal(["start", "accelerate", "decelerate", "stop", "speak"])
                 )
-                expect(response["arguments"]["destination"]).to(equal("Hazzard County courthouse"))
 
         with context("when expand makes tools available to the chat"):
             with it("should tell the AI to display those tools by name and purpose in the user-visible reply"):
-                response = run_request(
-                    {
-                        "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
-                        "action": "narrate",
-                        "arguments": {"message": "hello"},
-                    }
+                from agent_tools.examples.logged_probe import LoggedProbe
+
+                response = LoggedProbe().instructions["narrate"].expand(
+                    {},
+                    {"message": "hello"},
                 )
-                expect(response["ok"]).to(be_true)
-                expect(response["tools"]).to(equal(["ping"]))
+                expect(response.tools).to(equal(["ping"]))
 
 
 with description("an action"):
@@ -278,17 +267,14 @@ with description("an action"):
         with it("should put {{param}} / {{self.attr}} values into expanded instructions"):
             from agent_tools.examples.templated_md import TemplatedMdDemo
 
-            response = run_request(
-                {
-                    "toolset": "agent_tools.examples.templated_md:TemplatedMdDemo",
-                    "context": {"label": "Desk"},
-                    "action": "greet",
-                    "arguments": {"name": "Pat"},
-                }
+            from agent_tools.examples.templated_md import TemplatedMdDemo
+
+            response = TemplatedMdDemo(label="Desk").instructions["greet"].expand(
+                {},
+                {"name": "Pat"},
             )
-            expect(response["ok"]).to(be_true)
-            expect("Greet Pat on behalf of Desk" in response["instructions"]).to(be_true)
-            expect("{Placeholder}" in response["instructions"]).to(be_true)
+            expect("Greet Pat on behalf of Desk" in response.instructions).to(be_true)
+            expect("{Placeholder}" in response.instructions).to(be_true)
 
 
 with description("super() delegation in action bodies"):
@@ -373,58 +359,28 @@ with description("AgentToolSet"):
                 expect(car.personality).to(equal("cheerful companion named Sunny"))
                 expect(car.running).to(equal(False))
 
-    with context("through spec run_request"):
-        with it("should invoke a marked @agent_tool"):
-            response = run_request(
-                {
-                    "toolset": _CAR_TOOLSET_PATH,
-                    "context": {
-                        "make": "Toyota",
-                        "model": "Camry",
-                        "year": 2024,
-                        "personality": "cheerful companion named Sunny",
-                    },
-                    "tool": "start",
-                }
-            )
-            expect(response["ok"]).to(be_true)
-            expect(response["tool"]).to(equal("start"))
+    with context("when a marked @agent_tool is invoked"):
+        with it("should invoke start on a constructed Car"):
+            car = car_instance()
+            car.operations["start"].invoke({})
+            expect(car.running).to(equal(True))
 
         with it("should require tool arguments declared on the operation"):
+            car = car_instance(running=True)
+            raised = False
             try:
-                run_request(
-                    {
-                        "toolset": _CAR_TOOLSET_PATH,
-                        "context": {
-                            "make": "Toyota",
-                            "model": "Camry",
-                            "year": 2024,
-                            "personality": "cheerful companion named Sunny",
-                        },
-                        "tool": "drive",
-                    }
-                )
-                expect(False).to(be_true)
-            except RunError as exc:
-                response = exc.response
-            expect(response["error"]).to(equal("missing required arguments"))
-            expect("miles" in response["missing"]).to(be_true)
+                car.operations["drive"].invoke({})
+            except TypeError:
+                raised = True
+            expect(raised).to(be_true)
 
-        with it("should refuse missing required constructor context with an AskQuestion hint"):
+        with it("should require constructor arguments on Car"):
+            raised = False
             try:
-                run_request(
-                    {
-                        "toolset": _CAR_TOOLSET_PATH,
-                        "tool": "start",
-                    }
-                )
-                expect(False).to(be_true)
-            except RunError as exc:
-                response = exc.response
-            expect(response["ok"]).to(equal(False))
-            expect(response["error"]).to(equal("missing required context"))
-            expect("make" in response["missing"]).to(be_true)
-            expect("AskQuestion" in response["detail"]).to(be_true)
+                Car()
+            except TypeError:
+                raised = True
+            expect(raised).to(be_true)
 
     with context("the mode resource"):
         with it("should default to 'instructions'"):

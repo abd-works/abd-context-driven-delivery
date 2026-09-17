@@ -22,9 +22,7 @@ from partition.partition import Partition
 from partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
 from primitives.agent_tools.agent_tools import AgentInstructions
-from toolset_invoke.toolset_invoke import expand_action
 from primitives.markdown import Markdown
-from agent_tools import AgentToolSet
 from primitives.installer.toolset_loader import ToolsetLoader
 
 _KIT_DIR = Path(__file__).resolve().parent
@@ -33,23 +31,6 @@ _CAR_CHRONICLE_TOOLSET = (
 )
 _STORIES_TOOLSET = "practices.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Hard fail"
-
-
-def _expand(
-    instance: AgentToolSet,
-    action_name: str,
-    *,
-    toolset_path: str,
-    arguments: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return expand_action(
-        instance,
-        action_name,
-        toolset_path=toolset_path,
-        context={},
-        arguments=arguments or {},
-        request={"toolset": toolset_path, "context": {}},
-    )
 
 
 def _section(name: str) -> str:

@@ -417,17 +417,62 @@ def reject_agent_deferral(agent_text: str) -> None:
 
 
 def invoke_run_request(request: dict[str, Any]) -> RunResponse:
-    """Invoke one toolset request in-process for specs — not production runtime."""
+    """Load a toolset and expand or invoke the named member the same way production does."""
     import utilities.sub_agent.register  # noqa: F401 — wire sub-agent tools
 
-    from primitives.installer.errors import RunError
-    from toolset_invoke.toolset_invoke import run_request
+    from primitives.agent_tools.agent_tools import AgentOperation
+    from primitives.installer.toolset_loader import ToolsetLoader
 
+    toolset_path = request.get("toolset")
+    if not toolset_path:
+        raise AgentHarnessError("request missing toolset")
+    context = dict(request.get("context") or {})
+    arguments = dict(request.get("arguments") or {})
+    session = request.get("session")
+    if session is not None:
+        from workspace import SessionLog
+
+        SessionLog.instance().set_session(str(session))
     try:
-        response = run_request(request)
-    except RunError as exc:
+        instance = ToolsetLoader.instance().load(str(toolset_path))(**context)
+    except TypeError as exc:
         raise AgentHarnessError(str(exc)) from exc
-    return RunResponse.from_dict(response)
+    action_name = request.get("action")
+    tool_name = request.get("tool")
+    if action_name:
+        try:
+            expanded = instance.instructions[str(action_name)].expand(context, arguments)
+        except KeyError as exc:
+            raise AgentHarnessError(f"unknown action {action_name!r}") from exc
+        return RunResponse(
+            ok=True,
+            toolset=str(toolset_path),
+            action=str(action_name),
+            result=expanded.result,
+            instructions=expanded.instructions,
+            tools=list(expanded.tools),
+            arguments=arguments,
+            resources={},
+        )
+    if not tool_name:
+        raise AgentHarnessError("request missing tool or action")
+    member = instance.tools.get(str(tool_name))
+    if member is None:
+        raise AgentHarnessError(f"unknown tool {tool_name!r}")
+    try:
+        if isinstance(member, AgentOperation):
+            result = member.invoke(arguments)
+        else:
+            result = getattr(instance, str(tool_name))(**arguments)
+    except TypeError as exc:
+        raise AgentHarnessError(str(exc)) from exc
+    return RunResponse(
+        ok=True,
+        toolset=str(toolset_path),
+        tool=str(tool_name),
+        result=result,
+        resources={},
+    )
 
 
 def _run_yaml_request(yaml_body: str, workspace: Path, *, prefix: str = "") -> str:
