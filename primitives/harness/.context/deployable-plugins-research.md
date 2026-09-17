@@ -53,7 +53,7 @@ Anthropic created Agent Skills and MCP but is not on the Agent Plugins TSC. Skil
 
 ## 2. Current harness: local IDE deploy, not a plugin
 
-Harness today (`Harness.type` ∈ `{Cursor, VS Code}`) walks `context_tools/` and `utilities/`, then writes into a workspace IDE folder:
+Harness today (`Harness.type` ∈ `{Cursor, VS Code}`) walks `practices/` and `utilities/`, then writes into a workspace IDE folder:
 
 | Source | Cursor write | VS Code write |
 |---|---|---|
@@ -75,7 +75,7 @@ The generated skill is a **catalog pointer**, not the domain guidance. Example (
 
 1. Confirm action via `AskQuestion`.
 2. Confirm fidelity via `AskQuestion`.
-3. Pipe a YAML fence to `.\tools.ps1 run -` with `toolset: context_tools.bdd.bdd:Bdd`.
+3. Pipe a YAML fence to `.\tools.ps1 run -` with `toolset: practices.bdd.bdd:Bdd`.
 4. Follow `response.instructions` only. Do not remanifest.
 
 The real BDD/CE prose, companion graph, contexts, examples, and templates are produced **at run time** by the Python toolset. The skill file does not contain them.
@@ -92,7 +92,7 @@ Context guidances in this repo (each is already one `@agentic_toolset` with one 
 
 | Plugin id (proposed) | Source | Companions already in Python |
 |---|---|---|
-| `cdd` | `context_tools.cdd.cdd:Cdd` | stage children: Stories, Ddd, Ux, CleanEngineering, Bdd |
+| `cdd` | `practices.cdd.cdd:Cdd` | stage children: Stories, Ddd, Ux, CleanEngineering, Bdd |
 | `stories` | stories | — |
 | `ddd` | ddd | — |
 | `ux` | ux | — |
@@ -275,8 +275,8 @@ Short answer: **MCP can replace the “pipe YAML to tools.ps1” hop. It cannot 
 
 The tools CLI already has:
 
-- a machine-readable manifest (`python -m tools manifest …`)
-- a run contract (`python -m tools run -` / `tool` / `action`)
+- a machine-readable manifest (`python -m harness manifest …`)
+- a run contract (`python -m harness run -` / `tool` / `action`)
 - JSON-ish signatures for tools and constructor params
 
 That is an MCP server waiting to happen: stdio process wrapping `_ToolsCli` / `_ToolsetRunner`.
@@ -310,7 +310,7 @@ Useful shapes:
 **Recommended hybrid, not a replacement:**
 
 - **Consumer isolated plugin:** compiled `SKILL.md` (+ references). No MCP required. Works in skills-only clients.
-- **Authoring / this repo:** keep Python as compiler; add optional `mcp.json` pointing at a stdio wrapper of `python -m tools run` so the agent has a real tool instead of a recipe. Skills tell the model *when* and *which* action; MCP performs it.
+- **Authoring / this repo:** keep Python as compiler; add optional `mcp.json` pointing at a stdio wrapper of `python -m harness run` so the agent has a real tool instead of a recipe. Skills tell the model *when* and *which* action; MCP performs it.
 - **Do not** dump the full per-member manifest into the system prompt. That is the thing you already told agents not to remanifest.
 
 MCP is “open to options” in the sense that it is the **portable side-effect channel** the plugin spec already standardized. It is not mature enough or cheap enough to be the knowledge channel. Skills remain the knowledge channel.
@@ -328,7 +328,7 @@ Sketch-level only. Hook/Agent/AgentGuidance stay “later” until plugin emit e
    - Copilot: `com.github.copilot/{commands,agents,rules,hooks}`
    - Cursor: native Cursor Plugin dirs, not `com.cursor.ide/` until Cursor documents that namespace as a loader
    - Claude: separate emitter, later
-5. **Optional `mcp.json`:** one stdio server, command `./` or `python -m tools`, cwd plugin or repo root, `${PLUGIN_ROOT}` for bundled scripts.
+5. **Optional `mcp.json`:** one stdio server, command `./` or `python -m harness`, cwd plugin or repo root, `${PLUGIN_ROOT}` for bundled scripts.
 6. **Companion compile:** reuse existing Python companion methods; do not invent a second graph.
 7. **Commands** in client folders = current `@prompt` fidelity/action files. They are the consistent trigger.
 8. **Hooks** only when there is a deterministic script (scan, format). Do not hook “remember the skill.”
@@ -361,7 +361,7 @@ Success for (3): in this repo, generate runs because a tool was called, not beca
 - Portability gaps: https://www.digitalapplied.com/blog/agent-plugins-1-0-ga-what-still-does-not-port
 - MCP vs skills: https://www.developersdigest.tech/blog/mcp-servers-vs-skills-2026
 - Cursor rules ignored: https://forum.cursor.com/t/agent-ignoring-rules/148566
-- In-repo: `primitives/harness/harness.py`, `bodies.py`, `hook.py` / `agent.py` (stubs), `context_tools/bdd/bdd.py`, `context_tools/cdd/cdd.py`, `context_tools/agent_bdd/agent_bdd.py`, deployed `.cursor/skills/*/SKILL.md`
+- In-repo: `primitives/harness/harness.py`, `bodies.py`, `hook.py` / `agent.py` (stubs), `practices/bdd/bdd.py`, `practices/cdd/cdd.py`, `practices/agent_bdd/agent_bdd.py`, deployed `.cursor/skills/*/SKILL.md`
 
 ---
 

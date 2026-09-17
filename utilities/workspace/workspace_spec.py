@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -16,10 +16,10 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from expects import be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from primitives.actions.action import _ActionExpander
+from primitives.agent_tools.agent_tools import AgentInstructions
 from workspace.git_repo import DirtyBranchSwitchError, NullGitRepo
 from workspace.workspace import ContextToolHost, PathOverride, Turn, Workspace
-from tools.tool import _ToolsetLoader
+from primitives.harness.toolset_loader import ToolsetLoader
 
 
 with description("a context tool"):
@@ -205,7 +205,7 @@ with description("a context tool"):
                                     PathOverride(
                                         tool="bdd",
                                         fidelity="modules",
-                                        path="./context_tools",
+                                        path="./practices",
                                     )
                                 )
                                 self.workspace.save()
@@ -214,7 +214,7 @@ with description("a context tool"):
                                 )
                                 self.session = self.host.run_action("sprint-a")
                                 self.override = str(
-                                    self.tmp / "context_tools"
+                                    self.tmp / "practices"
                                 ).replace("\\", "/")
 
                             with it(
@@ -316,7 +316,7 @@ with description("a context tool"):
                             rule="git-primary-mistake-note",
                             wrong="lived in session yaml",
                             original="it should append the mistake id",
-                            tool="context_tools.bdd.bdd:Bdd",
+                            tool="practices.bdd.bdd:Bdd",
                             fidelity="behavior",
                             introducing_commit=self.introducing,
                         )
@@ -358,7 +358,7 @@ with description("a context tool"):
                     with it("should note the tool name on that commit"):
                         expect(
                             self.git.read_notes(self.introducing).get("tool")
-                        ).to(equal("context_tools.bdd.bdd:Bdd"))
+                        ).to(equal("practices.bdd.bdd:Bdd"))
 
                     with it("should note the fidelity on that commit"):
                         expect(
@@ -386,7 +386,7 @@ with description("a context tool"):
                             rule="git-primary-mistake-note",
                             wrong="lived in session yaml",
                             original="it should append the mistake id",
-                            tool="context_tools.bdd.bdd:Bdd",
+                            tool="practices.bdd.bdd:Bdd",
                             fidelity="behavior",
                             introducing_commit=self.introducing,
                         )
@@ -491,7 +491,7 @@ with description("a context tool"):
                     expect(self.commit.sha).to(equal("commit-1"))
                     expect(self.git.commits[0][1]).to(contain("bdd/run"))
                     expect(self.git.commits[0][1]).to(contain("Context-Tool: bdd"))
-                    expect(self.git.commits[0][1]).to(contain("Action: run"))
+                    expect(self.git.commits[0][1]).to(contain("AgentTool: run"))
 
                 with it("should not write session.yaml"):
                     expect((self.session.folder / "session.yaml").is_file()).to(
@@ -515,7 +515,7 @@ with description("a context tool"):
 with description("Turn"):
     with context("that is a toolset"):
         with it("should load as workspace.workspace:Turn"):
-            loaded = _ToolsetLoader.instance().load("workspace.workspace:Turn")
+            loaded = ToolsetLoader.instance().load("workspace.workspace:Turn")
             expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
             expect("turn" in loaded().tools).to(equal(True))
             expect("finish_turn" in loaded().tools).to(equal(True))
@@ -559,7 +559,7 @@ with description("WorkSession"):
             from workspace.workspace import WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="ws-session-load-"))
-            loaded = _ToolsetLoader.instance().load("workspace.workspace:WorkSession")
+            loaded = ToolsetLoader.instance().load("workspace.workspace:WorkSession")
             kit = loaded(workspace=str(tmp), session="probe-tools")
             expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
             expect("finish_work_session" in kit.tools).to(equal(True))

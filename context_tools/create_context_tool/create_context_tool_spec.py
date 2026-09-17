@@ -12,37 +12,38 @@ for _p in [
     str(_REPO_ROOT),
     *[
         str(_REPO_ROOT / c)
-        for c in ("context_tools", "primitives", "utilities", "context_tools/actions")
+        for c in ("practices", "primitives", "utilities", "actions")
     ],
 ]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import context_tools  # noqa: F401
-from primitives.actions.action import _ActionRunRequest, _ActionRunner
+import practices  # noqa: F401
+from primitives.harness.runner import InstructionRunRequest, InstructionRunner
 from primitives.instructions import Instruction
-from tools.tool import Toolset, _ToolsetLoader
+from agent_tools import AgentToolSet
+from primitives.harness.toolset_loader import ToolsetLoader
 
 _CREATE_DIR = Path(__file__).resolve().parent
 _CREATE_TOOLSET = (
-    "context_tools.create_context_tool.create_context_tool:CreateContextTool"
+    "practices.create_context_tool.create_context_tool:CreateContextTool"
 )
 _META_CONTEXT_MARKER = "scaffold-vs-patch"
 
 
 def _load_create() -> Toolset:
-    return _ToolsetLoader.instance().load(_CREATE_TOOLSET)()
+    return ToolsetLoader.instance().load(_CREATE_TOOLSET)()
 
 
 def _expand_action(
-    instance: Toolset,
+    instance: AgentToolSet,
     action_name: str,
     *,
     toolset_path: str,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return _ActionRunner.instance().invoke_action(
-        _ActionRunRequest(
+    return InstructionRunner.instance().invoke_action(
+        InstructionRunRequest(
             request={"toolset": toolset_path, "context": {}},
             toolset_path=toolset_path,
             action_name=action_name,
@@ -99,7 +100,7 @@ with description("CreateContextTool meta generator"):
                 "satisfy",
                 "repair",
             ):
-                expect(name in self.generator.actions).to(equal(False))
+                expect(name in self.generator.agent_tools).to(equal(False))
 
     with context("guidance expands meta face"):
         with before.each:

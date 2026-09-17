@@ -40,7 +40,7 @@ Stories blob **17,767** / CE **45,100**. Pair B leftover is write + Drawio glue,
 
 ## How to run (locked)
 
-- Pipe YAML to stdin `python -m tools run -`. Do not write `_req.yaml`. Do not remanifest — the skill is the catalog.
+- Pipe YAML to stdin `python -m agent_tools run -`. Do not write `_req.yaml`. Do not remanifest — the skill is the catalog.
 - `tools.ps1` does **not** forward stdin. Set `PYTHONIOENCODING=utf-8` and PYTHONPATH like `tools.ps1`, pipe to `.\.venv\Scripts\python.exe -m tools run -`.
 - PowerShell: `;` not `&&`.
 - `@agent_instructions` are parsed, not executed. Do not invent `action: guidance`.
@@ -64,8 +64,8 @@ toolset: scan.scan:Scan
 - Walker + single-command on **main**. Thin filters on `experiment/thin-fidelity-format` (worktree `C:\dev\abd-cdd-experiment-thin-fidelity-format`).
 - `Turn`, `WorkSession`, `Workspace` are `@toolset` / Turn is `@agentic_toolset`. CLI: string `workspace` + `session`.
 - `performTurn` — open, do work in context, `finish_turn`. `/turn` deployed.
-- Scan kit: `context_tools/actions/scan/`, `scan.scan:Scan`. Hosts implement `_scanner_collection()`. `Scan.bound_to(host)`. Bare `Scan().scan(paths)` raises.
-- `@agent_instructions` kits are `@agentic_toolset`. No `from tools.tool import tool` / `@tool` alias.
+- Scan kit: `actions/scan/`, `scan.scan:Scan`. Hosts implement `_scanner_collection()`. `Scan.bound_to(host)`. Bare `Scan().scan(paths)` raises.
+- `@agent_instructions` kits are `@agentic_toolset`. No `from agent_tools.toolset import tool` / `@tool` alias.
 - Harness utilities emit `tool:` + Python method name (not `action:` + `@prompt` slug). `@agent_instructions` deploy as `action:` + method name (not `guidance`).
 - `SubAgent.run`: actions listed → unchanged; empty/missing → name `performTurn` around the context-tool work.
 
@@ -86,7 +86,7 @@ toolset: scan.scan:Scan
 - `.context/sessions/optimize-running-context-tools-and-actions-through-the-cli-with-fewer-handoffs-and-fewer-agentic-tool-operations-16/backlog.md`
 - `utilities/workspace/.context/module-context.md`
 - `utilities/sub_agent/.context/module-context.md`
-- `context_tools/actions/scan/` (kit)
+- `actions/scan/` (kit)
 - `sandbox/courier/courier.md` (corpus)
 
 ## Protocol reminder

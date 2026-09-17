@@ -21,7 +21,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 
 # Marker attrs copied from a base method onto a subclass override when absent.
-# Action wrappers / chain annotations resolve via MRO in primitives.actions - not here.
+# Agent wrappers / chain annotations resolve via MRO in primitives.agent_tools — not here.
 _INHERITED_MARKER_ATTRS = (
     "_is_agent_instructions",
     "_is_agent_tool",

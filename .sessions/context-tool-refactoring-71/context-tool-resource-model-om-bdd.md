@@ -46,11 +46,11 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 # context_guidance/guidance
 
 - **Purpose:** Assemble agent instructions from `@markdown` properties; fidelity-scoped guidance nodes.
-- **Seam (terms):** `ContextGuidance`, `PracticeGuidance`, `FidelityGuidance`, `GuidanceCollection`, `RulesCollection`
-- **Dependencies (one-way):** `primitives/markdown`, `primitives/assets`, `workspace`, `context_tools/agent_toolset/scan`
+- **Seam (terms):** `Guidance`, `PracticeGuidance`, `FidelityGuidance`, `GuidanceCollection`, `RulesCollection`
+- **Dependencies (one-way):** `primitives/markdown`, `primitives/assets`, `workspace`, `actions/scan`
 
-## ContextGuidance
-+ ContextGuidance()
+## Guidance
++ Guidance()
 	// base — shared context / guidance / rules; no fidelity; instructions live here
 ------
 + context: str
@@ -75,7 +75,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 	// @agent_instructions @skill — same operation deploy as any other recipe; file kind is the skill mark
 	-> self.instructions
 
-## PracticeGuidance : ContextGuidance
+## PracticeGuidance : Guidance
 	// not an AgenticToolset — generate / satisfy / validate / scan are their own hosts
 	// guidance() and rules still deploy through the same leaves as any marked member
 
@@ -90,19 +90,19 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 + << association >> scanner: Scan
 ----
 + rules: RulesCollection
-	// inherited — still @rules from ContextGuidance
+	// inherited — still @rules from Guidance
 + instructions: str
 	// @property override — super.instructions + fidelities.instructions
-	-> ContextGuidance.instructions
+	-> Guidance.instructions
 	-> GuidanceCollection.instructions
 
-## GuidanceCollection : ContextGuidance
-	// Composite — every ContextGuidance read iterates children
+## GuidanceCollection : Guidance
+	// Composite — every Guidance read iterates children
 
-+ GuidanceCollection(entries: dict[str, ContextGuidance])
++ GuidanceCollection(entries: dict[str, Guidance])
 	// keyed children — key is the child's name; FidelityGuidance, nested practice, another collection, …
 ------
-+ entries: dict[str, ContextGuidance]
++ entries: dict[str, Guidance]
 ----
 + context: str
 	-> join each child's context
@@ -119,7 +119,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 	-> each child read as HTML, then join
 + iter()
 
-## FidelityGuidance : ContextGuidance
+## FidelityGuidance : Guidance
 
 + FidelityGuidance(name, stage, default_format, practice_guidance)
 ------
@@ -133,16 +133,16 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 + context: str
 	// inherited @markdown — this name’s scope plus prior ## {name} blocks in declaration order
 + instructions: str
-	// @property — ContextGuidance assembly scoped by name; context already holds the prior stack
+	// @property — Guidance assembly scoped by name; context already holds the prior stack
 + guidance(): str
 	// @agent_instructions @command — same operation deploy; this subclass marks the file a command
 	-> self.instructions
 + rules: RulesCollection
-	// inherited — still @rules from ContextGuidance
+	// inherited — still @rules from Guidance
 
 ---
 
-# context_tools/agent_toolset/scan
+# actions/scan
 
 - **Purpose:** Honor each rule against the current context. Validate is agentic and lives on the rule; the checker lives on the rule too.
 - **Seam (terms):** `Rule`, `RulesCollection`, `Scanner`, `Scan`
@@ -206,7 +206,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 ---
 
-# context_tools/agent_toolset/validate
+# actions/validate
 
 - **Purpose:** Agentic validate against the current context. Default is every rule; pass one rule to narrow.
 - **Seam (terms):** `Validate`
@@ -230,7 +230,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 ---
 
-# primitives/agentic_toolset
+# primitives/agent_tools
 
 - **Purpose:** One type. Two author wrappers on methods: `@agent_tool` and `@agent_instructions`. Unmarked methods are plain operations. Do not split Toolset / InstructionSet.
 - **Seam (terms):** `AgenticToolset`, `@agentic_toolset`, `@agent_tool`, `@agent_instructions`
@@ -289,10 +289,10 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 	when host is AgenticToolset: deployAgenticToolset(host)
 
 + deployPracticeGuidance(practice_guidance: PracticeGuidance)
-	-> deployContextGuidance(practice_guidance)
+	-> deployGuidance(practice_guidance)
 	-> deployFidelityGuidance(fidelity) per practice_guidance.fidelities
 
-+ deployContextGuidance(guidance: ContextGuidance)
++ deployGuidance(guidance: Guidance)
 	// visit this host’s marked members — same leaves as a toolset, not a second writer
 	-> deployAgentInstructions(guidance, guidance.guidance) when guidance() is marked
 	-> write rules files from guidance.rules when rules is @rules
@@ -320,7 +320,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 	// every file is a skill, a command, or a rule — @skill / @command / @rules on the member
 ------
 ----
-+ deployContextGuidance(guidance: ContextGuidance)
++ deployGuidance(guidance: Guidance)
 	// visit only — calls deployAgentInstructions / rules write; do not reimplement render
 + deployFidelityGuidance(fidelity: FidelityGuidance)
 	// visit only — same leaves
@@ -354,7 +354,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 + toolset_ref: str
 + mcp_operations: list  // filled by the leaf writes — bind reuses, no second scan
 ----
-+ deployContextGuidance(guidance: ContextGuidance)
++ deployGuidance(guidance: Guidance)
 	// visit only — record via the same deployAgentInstructions leaf when guidance() is @mcp
 + deployFidelityGuidance(fidelity: FidelityGuidance)
 	// visit only — same leaf
@@ -372,7 +372,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 + HookDeployment(ide, path)
 	// same deploy API as base — implement the leaf writes; the walk stays on Deployment
 ------
-+ deployContextGuidance(guidance: ContextGuidance)
++ deployGuidance(guidance: Guidance)
 	// write hook config for the practice router
 + deployFidelityGuidance(fidelity: FidelityGuidance)
 	// write hook config for that fidelity command
@@ -430,11 +430,11 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 # Object flows
 
-**Implementation order** matches BDD layers below: markdown → ContextGuidance → AgenticToolset **+deploy** → ContextGuidance **+deploy** → shared contexts **+deploy** → fidelities + assembly **+deploy** → MCP → Catalog : HTML → hooks last.
+**Implementation order** matches BDD layers below: markdown → Guidance → AgenticToolset **+deploy** → Guidance **+deploy** → shared contexts **+deploy** → fidelities + assembly **+deploy** → MCP → Catalog : HTML → hooks last.
 
 ## Compound doc
 
-+ ContextGuidance.instructions
++ Guidance.instructions
 	-> own markdown properties → markdown compound doc
 + AgenticToolset.instructions
 	-> iterate instructions_registry — assemble markdown per @agent_instructions operation
@@ -442,7 +442,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 ## Instructions assembly
 
-+ ContextGuidance.instructions
++ Guidance.instructions
 	-> self.context + self.guidance + format_rules(self.rules) + self.templates[format]
 	// FidelityGuidance — same property; name scopes @markdown extract only
 + GuidanceCollection.{context,guidance,templates,instructions}
@@ -501,7 +501,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 	-> registry.load()
 	-> deployment.deploy(host) per registry entry
 		-> deployPracticeGuidance(practice_guidance)
-			-> deployContextGuidance — visit marked members; guidance() → deployAgentInstructions; rules → @rules write
+			-> deployGuidance — visit marked members; guidance() → deployAgentInstructions; rules → @rules write
 			-> deployFidelityGuidance per fidelity — same leaves
 		-> deployAgenticToolset(bare AgenticToolset)
 			-> deployAgentInstructions / deployAgentTool per operation_writes row
@@ -526,7 +526,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 ## Runtime guidance
 
-+ ContextGuidance.guidance()
++ Guidance.guidance()
 	-> self.instructions
 + FidelityGuidance.guidance()
 	-> self.instructions
@@ -552,10 +552,10 @@ Port each layer into the package that owns the subject:
 | Layer | Spec |
 | ----- | ---- |
 | 1 | `primitives/markdown/markdown_spec.py` |
-| 2, 5–6 read | `context_tools/context_guidance/guidance_spec.py` |
-| 3 read | `primitives/agentic_toolset/agentic_toolset_spec.py` |
+| 2, 5–6 read | `primitives/guidance/guidance_spec.py` |
+| 3 read | `primitives/agent_tools/agent_tools_spec.py` |
 | 3–6 deploy | `primitives/harness/deployment_spec.py` |
-| Rule / Validate | `context_tools/agent_toolset/scan_spec.py`, `validate_spec.py` |
+| Rule / Validate | `actions/scan/rule_spec.py`, `actions/validate/validate_spec.py` |
 | 7 | `primitives/harness/mcp_server_spec.py` |
 | 8 | `utilities/catalog_generator/catalog_spec.py` |
 | 9 | `primitives/harness/hook_deployment_spec.py` |
@@ -594,9 +594,9 @@ Read a host, then deploy that same host: skill, command, or rule from the mark. 
 
 **Isolate (done):** remodeled trees live under `legacy-no-longer-valid/` (requirements only).
 
-**Layer 1 (done after isolate):** `primitives/markdown/Markdown` + `@markdown` over `AssetLocator`; `context_tools/context_guidance/guidance_spec.py` layer 1 block with real fixtures under `fixtures/sample_tool` and `fixtures/other_tool`.
+**Layer 1 (done after isolate):** `primitives/markdown/Markdown` + `@markdown` over `AssetLocator`; `primitives/guidance/guidance_spec.py` layer 1 block with real fixtures under `fixtures/sample_tool` and `fixtures/other_tool`.
 
-**Layer 2:** `ContextGuidance` compound `instructions` — context + guidance + formatted rules + selected template.
+**Layer 2:** `Guidance` compound `instructions` — context + guidance + formatted rules + selected template.
 
 ---
 
@@ -628,7 +628,7 @@ describe context guidance
   with the instructions property read
     it should join context, guidance, formatted rules, and the template for the active format
     it should expose instructions as one compound property not as a single markdown label
-    -> ContextGuidance.instructions; not a @markdown label
+    -> Guidance.instructions; not a @markdown label
 ```
 
 ---
@@ -708,7 +708,7 @@ shared context "deploy vscode command paths"
 shared context "deploy full context tool coverage"
   with a registered practice guidance host fully deployed
     it should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass
-    -> deployPracticeGuidance → deployContextGuidance then deployFidelityGuidance per fidelity
+    -> deployPracticeGuidance → deployGuidance then deployFidelityGuidance per fidelity
 ```
 
 ---
@@ -805,7 +805,7 @@ shared context "shared contexts format on practice guidance"
       it should return every child rule's validate instructions in one shot
   with the instructions property read
     it should join context, guidance, formatted rules, and the template for the active format
-    -> PracticeGuidance inherits ContextGuidance.instructions; fidelities are empty in this layer
+    -> PracticeGuidance inherits Guidance.instructions; fidelities are empty in this layer
   with a templates folder beside the module
     with template files such as slug-templates and slug-sketch inside the folder
       with the templates property read
@@ -1039,7 +1039,7 @@ describe a host with an mcp-published member
 
 ## Layer 8 — catalog pages
 
-`Catalog` extends `HTML`. It reads each host’s `@markdown` properties as HTML — same extract as layers 1–6, different consumer. Generate and satisfy stay in `context_tools/agent_toolset/` and out of `guidance_spec.py`. Validate is layer 5.
+`Catalog` extends `HTML`. It reads each host’s `@markdown` properties as HTML — same extract as layers 1–6, different consumer. Generate and satisfy stay in `actions/` and out of `guidance_spec.py`. Validate is layer 5.
 
 ```
 describe generated catalog pages

@@ -36,8 +36,8 @@ It is not an options evaluation. Options stay in `options.md`. This sheet is onl
 Parent writes `_req.yaml` and runs:
 
 ```
-python -m tools manifest sub_agent.sub_agent:SubAgent
-python -m tools run _req.yaml
+python -m agent_tools manifest sub_agent.sub_agent:SubAgent
+python -m agent_tools run _req.yaml
 ```
 
 Request shape:
@@ -51,8 +51,8 @@ context:
   session: optimize-running-context-tools-and-actions-through-the-cli-with-fewer-handoffs-and-fewer-agentic-tool-operations-16
 arguments:
   tools:
-    - context_tools.stories.stories:Stories
-    - context_tools.clean_engineering.clean_engineering:CleanEngineering
+    - practices.stories.stories:Stories
+    - practices.clean_engineering.clean_engineering:CleanEngineering
   actions:
     - generate.generate:Generate
 ```
@@ -87,14 +87,14 @@ Current harness and skills: write `_req.yaml`, `manifest`, then `run _req.yaml`.
 
 ### single-command (1b + 1c + 4c + 5a)
 
-The first option bundle. **Single command** means each slash is one process: pipe a YAML fence to `python -m tools run -`.
+The first option bundle. **Single command** means each slash is one process: pipe a YAML fence to `python -m agent_tools run -`.
 
 | Option | What we apply |
 |---|---|
 | **1b** | `run` prints a slim `[run] invoking …` line. Skills drop the separate `manifest` step. |
 | **1c** | Stdin only. No `_req.yaml` on disk. |
 | **4c** | The skill/command already names the toolset and invoke. Do not remanifest. |
-| **5a** | Harness `resolve_text` emits the filled YAML fence plus `python -m tools run -`. |
+| **5a** | Harness `resolve_text` emits the filled YAML fence plus `python -m agent_tools run -`. |
 
 Not in this bundle: 1a (flags-only), 1d (new `invoke` subcommand), 1e (keep two commands). Pair A and pair B stay two slashes each; only the per-slash recipe changes.
 
@@ -164,7 +164,7 @@ Hops 1. No remanifest. No invented `action: guidance`.
 
 Same instinct as section 3 (fewer hops by combining work). 3 stays deferred.
 
-**3 research (done)** — [research-3-agent-instructions.md](research-3-agent-instructions.md). Nested `@agent_instructions` already merge in the first `action:` expand (`_ActionExpander`). 3C is already implemented. 3A would add hops. Real leftover hops are `@agent_tool` steps after expand (section 2) plus a first-expand author gap: `generate.py` writes `tool.guidance` without `()`.
+**3 research (done)** — [research-3-agent-instructions.md](research-3-agent-instructions.md). Nested `@agent_instructions` already merge in the first `action:` expand (`_AgentToolExpander`). 3C is already implemented. 3A would add hops. Real leftover hops are `@agent_tool` steps after expand (section 2) plus a first-expand author gap: `generate.py` writes `tool.guidance` without `()`.
 
 **2 research (done)** — [research-2-flatten.md](research-2-flatten.md). Ignore 2d. Count only `tool:` / `action:` hops after the first expand.
 

@@ -13,7 +13,7 @@
   - elapsed: 01:05
   - artifact: sandbox/courier/.context/clean-engineering-model.md
 - notes:
-  - First `python -m tools` without PYTHONPATH imported `tools` from OneDrive `paradise-mobile/abd-context-driven-delivery` and failed with `ModuleNotFoundError: No module named 'harness'`. Workaround: prefix PYTHONPATH with this checkout plus `primitives`, `utilities`, `context_tools`, `context_tools/actions` (venv still used).
+  - First `python -m agent_tools` without PYTHONPATH imported `tools` from OneDrive `paradise-mobile/abd-context-driven-delivery` and failed with `ModuleNotFoundError: No module named 'harness'`. Workaround: prefix PYTHONPATH with this checkout plus `primitives`, `utilities`, `context_tools`, `actions` (venv still used).
   - Stories `action: generate` (catalog `story_map.yaml`) returned `unknown action`. Used `action: guidance` with `fidelity: story_map`, `format: markdown`, `path: sandbox/courier`, `session: optimize-running-context-tools-and-actions-through-the-cli-with-fewer-handoffs-and-fewer-agentic-tool-operations-16`.
   - Generate accepted `path` and `session` (not "none"). Nested Stories/CE `action: generate` on the host kit worked; expander `tools` lists were empty of Stories/CE steps (`read_cdr_format` / `finish_turn` / CE also `create_diagram`).
   - Passing `session` on Stories constructed a work session under `sandbox/courier/.context/sessions/...` and `context-index.md` even though this experiment did not call `open` / `finish_turn`.

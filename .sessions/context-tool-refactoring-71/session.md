@@ -52,14 +52,14 @@ Guidance for this ticket came from `BaseContextTool` and the domain context tool
 
 ## Artifacts to read
 
-- `context_tools/base/.context/module-context.md`
-- `context_tools/base/base_context_tool.py`
-- `context_tools/stories/stories.py`
-- `context_tools/clean_engineering/clean_engineering.py`
-- `context_tools/bdd/bdd.py`
-- `context_tools/ddd/ddd.py`
-- `context_tools/ux/ux.py`
-- `context_tools/cdd/cdd.py`
+- `practices/base/.context/module-context.md`
+- `practices/base/base_context_tool.py`
+- `practices/stories/stories.py`
+- `practices/clean_engineering/clean_engineering.py`
+- `practices/bdd/bdd.py`
+- `practices/ddd/ddd.py`
+- `practices/ux/ux.py`
+- `practices/cdd/cdd.py`
 - `.context/context-index.md`
 
 ### #68 — Easier dynamic content creation so that we can have base content be included without having to do hyperlinks for more than just context tools
@@ -122,7 +122,7 @@ https://github.com/abd-works/abd-context-driven-delivery/issues/19
 ## Current recording (from source — do not conclude yet)
 
 - `BaseContextTool` already has `render(format, content="")` that checks `supported_formats` then raises unless a subclass overrides; it has **no** `transform`
-- `Render` lifecycle action (`context_tools/agent_toolset/render/render.py`) loops provided tools and calls `tool.render(format, content)`
+- `Render` lifecycle action (`actions/render/render.py`) loops provided tools and calls `tool.render(format, content)`
 - Clean Engineering, Stories, Ux each define `@agent_tool transform(source_format, target_format, content)` as channel parse → canonical → channel render, and `render` as transform from `self.format` to `format` (content required)
 - Clean Engineering `render`/`transform` also take `previous` and `keep_positioning` (drawio); Stories/Ux/Bdd signatures do not
 - Bdd and Ddd `transform`/`render` delegate to Clean Engineering rather than their own channels
@@ -133,7 +133,7 @@ https://github.com/abd-works/abd-context-driven-delivery/issues/19
 ## Resume
 
 - **Stage:** layer 1 green; layer 2 next
-- **Last work:** Layer 1 — `primitives/markdown`, `@markdown`, `context_tools/context_guidance/guidance_spec.py` + real fixtures; golden-reference workflow documented
+- **Last work:** Layer 1 — `primitives/markdown`, `@markdown`, `primitives/guidance/guidance_spec.py` + real fixtures; golden-reference workflow documented
 - **Next action:** **Layer 2 turn** — minimal `Guidance` compound instructions and catalog (`generate` → migrate → real spec → `/turn`)
 - **Next focus:** Layer 2 only — no deploy yet
 
@@ -152,12 +152,12 @@ https://github.com/abd-works/abd-context-driven-delivery/issues/19
 
 ## Artifacts to read
 
-- `context_tools/base/.context/module-context.md`
-- `context_tools/base/base_context_tool.py`
-- `context_tools/agent_toolset/render/render.py`
-- `context_tools/clean_engineering/clean_engineering.py`
-- `context_tools/stories/stories.py`
-- `context_tools/bdd/bdd.py`
-- `context_tools/ddd/ddd.py`
-- `context_tools/ux/ux.py`
+- `practices/base/.context/module-context.md`
+- `practices/base/base_context_tool.py`
+- `actions/render/render.py`
+- `practices/clean_engineering/clean_engineering.py`
+- `practices/stories/stories.py`
+- `practices/bdd/bdd.py`
+- `practices/ddd/ddd.py`
+- `practices/ux/ux.py`
 - `.context/context-index.md`

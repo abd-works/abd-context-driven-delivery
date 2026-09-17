@@ -1,0 +1,11 @@
+toolset: generate.generate:Generate
+action: generate
+arguments:
+  tools:
+  - toolset: practices.bdd.bdd:Bdd
+    context:
+      fidelity: behavior
+      format: null
+      path: null
+      session: null
+      workspace: null

@@ -9,12 +9,12 @@ from mamba import before, context, description, it
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from primitives.actions.action import agent_instructions
+from primitives.agent_tools.agent_tools import agent_instructions
 from primitives.focus._decorator import focus
 from primitives.instructions.instructions import instruction
 
@@ -24,7 +24,7 @@ from primitives.instructions.instructions import instruction
 # ---------------------------------------------------------------------------
 
 @agent_instructions
-def _stub_action(self) -> None:
+    def _stub_action(recipe) -> None:
     """stub action"""
 
 
@@ -47,7 +47,7 @@ with description("a method annotated to bind a focus group"):
     with context("that is applied to an @agent_instructions method"):
         with before.each:
             @agent_instructions
-            def act(self) -> None:
+    def act(recipe) -> None:
                 """act"""
 
             self.decorated = focus(act, focus="fidelities")
@@ -66,7 +66,7 @@ with description("a method annotated to bind a focus group"):
     with context("that is applied to an @agent_instructions method with a trailing-s group name"):
         with before.each:
             @agent_instructions
-            def act(self) -> None:
+    def act(recipe) -> None:
                 """act"""
 
             self.decorated = focus(act, focus="formats")
@@ -79,7 +79,7 @@ with description("a method annotated to bind a focus group"):
     with context("that is applied to an @agent_instructions method with an explicit filter_key"):
         with before.each:
             @agent_instructions
-            def act(self) -> None:
+    def act(recipe) -> None:
                 """act"""
 
             self.decorated = focus(act, focus="modes", filter_key="mode_override")
@@ -92,7 +92,7 @@ with description("a method annotated to bind a focus group"):
     with context("that is applied twice to the same @agent_instructions method"):
         with before.each:
             @agent_instructions
-            def act(self) -> None:
+    def act(recipe) -> None:
                 """act"""
 
             self.decorated = focus(focus(act, focus="fidelities"), focus="formats")
@@ -139,7 +139,7 @@ with description("a method annotated to bind a focus group"):
     with context("that is used as a decorator factory (no positional func)"):
         with before.each:
             @agent_instructions
-            def act(self) -> None:
+    def act(recipe) -> None:
                 """act"""
 
             decorator = focus(focus="modes")

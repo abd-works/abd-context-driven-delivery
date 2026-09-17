@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -106,9 +106,9 @@ with description("ContextIndex.lookup_root"):
     with context("when the key is present"):
         with it("should return the stored root glob"):
             tmp = Path(tempfile.mkdtemp(prefix="ctx_idx_lookup_"))
-            ContextIndex.upsert_entry(str(tmp), "cdd", "context_tools/cdd")
+            ContextIndex.upsert_entry(str(tmp), "cdd", "practices/cdd")
             result = ContextIndex.lookup_root(str(tmp), "cdd")
-            expect(result).to(equal("./context_tools/cdd/*"))
+            expect(result).to(equal("./practices/cdd/*"))
 
     with context("when the key is absent"):
         with it("should return None"):

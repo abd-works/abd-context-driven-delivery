@@ -23,7 +23,7 @@ GrillContext / Sketcher / Iterator stay in utilities/ (already extracted). BaseC
 
 ### Folder layout
 If not BaseContextTool-only → `utilities/` (workspace_session, scanners, partition_pipeline, repair).  
-BaseContextTool-only → `context_tools/base/` (composer + `artifact_lifecycle`). Kit action prose (`{action}.md`) lives beside the kit `.py`, not under a shared `base-context/`.
+BaseContextTool-only → `practices/base/` (composer + `artifact_lifecycle`). Kit action prose (`{action}.md`) lives beside the kit `.py`, not under a shared `base-context/`.
 
 ### Scan kit home
 `utilities/scanners` — one kit (`Scan` + `ScannerCollection`).
@@ -39,4 +39,4 @@ ArtifactLifecycle is not a peer kit. Lifecycle methods live on BaseContextTool; 
 
 ### Base vs create seam (2026-07-25)
 - `base_context_tool` — base for all concrete domains; no aliases to old `ContextTool` / `@base_context_tool`.
-- `create_context_tool` — domain that scaffolds new domains (`templates/`, `examples/`, meta contexts). Layout: `context_tools/create_context_tool/`.
+- `create_context_tool` — domain that scaffolds new domains (`templates/`, `examples/`, meta contexts). Layout: `practices/create_context_tool/`.

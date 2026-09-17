@@ -5,10 +5,10 @@ import inspect
 from pathlib import Path
 
 from primitives.assets.assets import Asset, AssetCollection, AssetLocator
-from tools.tool import resource, agent_tool, toolset
+from agent_tools.agent_tools import resource, agent_tool, agent_toolset
 
 
-@toolset
+@agent_toolset
 class CardFile:
     """Look up reference cards stored as local markdown files.
 

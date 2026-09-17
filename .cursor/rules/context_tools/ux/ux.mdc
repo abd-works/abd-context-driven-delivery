@@ -11,4 +11,4 @@ When front end code, ia, or mockup, also follow these rules on top of the fideli
 - **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.
 - **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists.
 - **`ia-named-regions-only`** — At IA, regions are named slots; no control detail yet.
-- **`story-domain-js-imported`** — At mockup+, when context_tools/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface.
+- **`story-domain-js-imported`** — At mockup+, when practices/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface.

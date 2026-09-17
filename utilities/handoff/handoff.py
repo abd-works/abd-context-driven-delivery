@@ -10,11 +10,11 @@ from pathlib import Path
 
 from harness.harness_tool import prompt
 from workspace import SessionPaths, Workspace
-from primitives.actions.action import agent_instructions, agentic_toolset
-from tools.tool import agent_tool
+from agent_tools import agent_instructions, agent_toolset
+from agent_tools.agent_tools import agent_tool
 
 
-@agentic_toolset
+@agent_toolset
 class Handoff:
     """Write a compact session handoff for the next agent."""
 
@@ -53,7 +53,7 @@ class Handoff:
 
     @prompt
     @agent_instructions
-    def handoff_session(self, next_focus: str = "") -> str:
+    def handoff_session(recipe, next_focus: str = "") -> str:
         """Write a compact handoff for the current session so the next agent can continue. Tailor to {{next_focus}} when provided."""
         """Draft the handoff markdown from this conversation. Tailor it to {{next_focus}} when provided.
 

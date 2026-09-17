@@ -1,0 +1,11 @@
+toolset: generate.generate:Generate
+action: generate
+arguments:
+  tools:
+  - toolset: practices.stories.stories:Stories
+    context:
+      fidelity: story_map
+      format: null
+      path: null
+      session: null
+      workspace: null

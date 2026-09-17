@@ -1,6 +1,6 @@
 """catalog_generator - discover-and-render primitives for the CDD HTML catalog.
 
-Wraps the real object model directly (Toolset.tools, AgenticToolset.actions,
+Wraps the real object model directly (Toolset.tools, AgentToolSet.agent_tools,
 BaseContextTool.fidelities) - there is no separate scraped schema. See
 ``catalog/cdd-catalog-plan.md`` and ``catalog/cdd-catalog-sketch.md`` for the
 full design; this module implements the "Assemble Catalog Page Data" epic's
@@ -15,8 +15,7 @@ It also implements "Render Self-Contained Catalog Pages" (``CatalogTool`` /
 ``CatalogAction`` / ``CatalogFidelity`` / ``CatalogContextTool`` /
 ``CatalogUtility`` / ``Catalog``, each with one ``generate_catalog(...)``
 operation - see the sketch's Clean Engineering pass), "Make Catalog Output
-Portable" (``git_blob_url``, ``resolve_repo_remote``, ``write_page``,
-``write_raw_manifests`` / ``build_run_request``), and
+Portable" (``git_blob_url``, ``resolve_repo_remote``, ``write_page``, ``build_run_request``), and
 "Configure Illustrated Examples" (``parse_illustrated_examples``,
 ``extract_whole_file``, ``extract_heading_section``, ``extract_comment_tag``).
 """
@@ -31,10 +30,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from harness.harness_tool import prompt
-from tools.tool import agent_tool, toolset
+from agent_tools import agent_tool, agent_toolset
+from primitives.harness.deployment import toolset_ref_for_type
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_BASE_CONTEXT_TOOL_PATH = _REPO_ROOT / "context_tools" / "base" / "base_context_tool.py"
+_BASE_CONTEXT_TOOL_PATH = _REPO_ROOT / "practices" / "base" / "base_context_tool.py"
 _SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
 
 # -- Registry ---------------------------------------------------------------
@@ -44,12 +44,12 @@ _SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
 # other five are the board's context-tool rows.
 
 CONTEXT_TOOL_REGISTRY: tuple[tuple[str, str, str], ...] = (
-    ("Context-driven delivery", "context_tools.cdd.cdd", "Cdd"),
-    ("Stories", "context_tools.stories.stories", "Stories"),
-    ("Clean Engineering", "context_tools.clean_engineering.clean_engineering", "CleanEngineering"),
-    ("User Experience", "context_tools.ux.ux", "Ux"),
-    ("Behavior-Driven Development", "context_tools.bdd.bdd", "Bdd"),
-    ("Domain-Driven Design", "context_tools.ddd.ddd", "Ddd"),
+    ("Context-driven delivery", "practices.cdd.cdd", "Cdd"),
+    ("Stories", "practices.stories.stories", "Stories"),
+    ("Clean Engineering", "practices.clean_engineering.clean_engineering", "CleanEngineering"),
+    ("User Experience", "practices.ux.ux", "Ux"),
+    ("Behavior-Driven Development", "practices.bdd.bdd", "Bdd"),
+    ("Domain-Driven Design", "practices.ddd.ddd", "Ddd"),
 )
 
 # Harness owns generate (replaces the old deploy_agent_skills utility).
@@ -89,11 +89,11 @@ def _load_class(module_path: str, class_name: str) -> type:
 def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
     """Resolve every context-tool and utility registry row to a real class.
 
-    Returns ``(context_tools, utilities)``. Resolution failures raise
+    Returns ``(practices, utilities)``. Resolution failures raise
     (``ImportError`` / ``AttributeError``) immediately - "nothing missing"
     is a hard fail at discover time, not a silently dropped row.
     """
-    context_tools = [
+    practices = [
         RegistryEntry(name, module_path, class_name, _load_class(module_path, class_name))
         for name, module_path, class_name in CONTEXT_TOOL_REGISTRY
     ]
@@ -101,7 +101,7 @@ def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
         RegistryEntry(name, module_path, class_name, _load_class(module_path, class_name))
         for name, module_path, class_name in UTILITY_REGISTRY
     ]
-    return context_tools, utilities
+    return practices, utilities
 
 
 # -- Fidelity scraping --------------------------------------------------------
@@ -552,44 +552,42 @@ def _resolve_actions_from_source(
 
 
 _KIT_LIFECYCLE_SPECS: tuple[tuple[str, Path, str], ...] = (
-        ("partition", _REPO_ROOT / "context_tools" / "actions" / "partition" / "partition.py", "partition"),
-        ("grill", _REPO_ROOT / "context_tools" / "actions" / "grill_context" / "grill_context.py", "grill_context"),
-        ("sketch", _REPO_ROOT / "context_tools" / "actions" / "sketch" / "sketch.py", "sketch"),
-        ("iterate", _REPO_ROOT / "context_tools" / "actions" / "iterate" / "iterate.py", "iterate"),
-        ("generate", _REPO_ROOT / "context_tools" / "actions" / "generate" / "generate.py", "generate"),
-        ("document", _REPO_ROOT / "context_tools" / "actions" / "document" / "document.py", "document"),
-        ("validate", _REPO_ROOT / "context_tools" / "actions" / "validate" / "validate.py", "validate"),
-        ("satisfy", _REPO_ROOT / "context_tools" / "actions" / "satisfy" / "satisfy.py", "satisfy"),
-        ("repair", _REPO_ROOT / "context_tools" / "actions" / "improvement" / "improvement.py", "improvement"),
-        ("createRule", _REPO_ROOT / "context_tools" / "actions" / "validate" / "validate.py", "validate"),
-        ("scan", _REPO_ROOT / "context_tools" / "actions" / "scan" / "scan.py", "scan"),
+        ("partition", _REPO_ROOT / "practices" / "actions" / "partition" / "partition.py", "partition"),
+        ("grill", _REPO_ROOT / "practices" / "actions" / "grill_context" / "grill_context.py", "grill_context"),
+        ("sketch", _REPO_ROOT / "practices" / "actions" / "sketch" / "sketch.py", "sketch"),
+        ("iterate", _REPO_ROOT / "practices" / "actions" / "iterate" / "iterate.py", "iterate"),
+        ("generate", _REPO_ROOT / "practices" / "actions" / "generate" / "generate.py", "generate"),
+        ("document", _REPO_ROOT / "practices" / "actions" / "document" / "document.py", "document"),
+        ("validate", _REPO_ROOT / "practices" / "actions" / "validate" / "validate.py", "validate"),
+        ("satisfy", _REPO_ROOT / "practices" / "actions" / "satisfy" / "satisfy.py", "satisfy"),
+        ("repair", _REPO_ROOT / "practices" / "actions" / "improvement" / "improvement.py", "improvement"),
+        ("createRule", _REPO_ROOT / "practices" / "actions" / "validate" / "validate.py", "validate"),
+        ("scan", _REPO_ROOT / "practices" / "actions" / "scan" / "scan.py", "scan"),
     )
 
 _LIFECYCLE_KIT_IMPORTS: tuple[tuple[str, str, str], ...] = (
-    ("partition", "context_tools.actions.partition.partition", "Partition"),
-    ("grill", "context_tools.actions.grill_context.grill_context", "GrillContext"),
-    ("sketch", "context_tools.actions.sketch.sketch", "Sketch"),
-    ("iterate", "context_tools.actions.iterate.iterate", "Iterate"),
-    ("generate", "context_tools.actions.generate.generate", "Generate"),
-    ("document", "context_tools.actions.document.document", "Document"),
-    ("validate", "context_tools.actions.validate.validate", "Validate"),
-    ("satisfy", "context_tools.actions.satisfy.satisfy", "Satisfy"),
-    ("repair", "context_tools.actions.improvement.improvement", "Improvement"),
-    ("createRule", "context_tools.actions.validate.validate", "CreateRule"),
+    ("partition", "practices.actions.partition.partition", "Partition"),
+    ("grill", "practices.actions.grill_context.grill_context", "GrillContext"),
+    ("sketch", "practices.actions.sketch.sketch", "Sketch"),
+    ("iterate", "practices.actions.iterate.iterate", "Iterate"),
+    ("generate", "practices.actions.generate.generate", "Generate"),
+    ("document", "practices.actions.document.document", "Document"),
+    ("validate", "practices.actions.validate.validate", "Validate"),
+    ("satisfy", "practices.actions.satisfy.satisfy", "Satisfy"),
+    ("repair", "practices.actions.improvement.improvement", "Improvement"),
+    ("createRule", "practices.actions.validate.validate", "CreateRule"),
 )
 
 
 def resolve_lifecycle_action_owner() -> object:
-    """Load live ``Action`` objects for every kit-owned lifecycle action name."""
-    from primitives.actions.action import _discover_actions
-
+    """Load live ``AgentTool`` objects for every kit-owned lifecycle action name."""
     actions: dict[str, object] = {}
     for action_name, module_path, class_name in _LIFECYCLE_KIT_IMPORTS:
         if action_name in actions:
             continue
         module = importlib.import_module(module_path)
         instance = getattr(module, class_name)()
-        discovered = _discover_actions(instance)
+        discovered = instance.agent_tools
         if action_name in discovered:
             actions[action_name] = discovered[action_name]
 
@@ -597,7 +595,7 @@ def resolve_lifecycle_action_owner() -> object:
         pass
 
     owner = _Owner()
-    owner.actions = actions
+    owner.agent_tools = actions
     return owner
 
 
@@ -610,7 +608,7 @@ def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
         if not methods:
             continue
         _method_name, method = methods[0]
-        source_dir = _REPO_ROOT / "context_tools" / "actions" / dir_name
+        source_dir = _REPO_ROOT / "practices" / "actions" / dir_name
         calls = _host_action_calls(method.body, {"generate"})
         results.append(ActionResolution(name=name, source_dir=source_dir, calls=calls))
     return results
@@ -624,7 +622,7 @@ def resolve_lifecycle_actions(
 
     Kit-owned lifecycle actions (``partition``, ``grill``, ``sketch``,
     ``iterate``) are resolved from their action kits under
-    ``context_tools/actions/`` — not from the host composer.
+    ``actions/`` — not from the host composer.
 
     Delegate resolution has no hand-maintained per-action lookup table: a
     peer-kit ``(attr, method)`` call pair is that action's unique delegate
@@ -636,7 +634,7 @@ def resolve_lifecycle_actions(
     two actions calling the *identical* pair (``document`` and ``validate``
     both calling ``self.scanner.scan(...)``), which is excluded from
     delegate resolution. An action with no unique peer-kit pair falls back
-    to ``context_tools/base/``.
+    to ``practices/base/``.
     """
     path = base_context_tool_path or _BASE_CONTEXT_TOOL_PATH
     source = path.read_text(encoding="utf-8")
@@ -665,16 +663,16 @@ def resolve_lifecycle_actions(
             None,
         )
         if method.name in _HOST_LIFECYCLE_ACTIONS:
-            source_dir = _REPO_ROOT / "context_tools" / "base"
+            source_dir = _REPO_ROOT / "practices" / "base"
         elif delegate_attr is not None:
             class_name = peer_kit_attrs[delegate_attr]
             module_path = _import_module_for_class(tree, class_name)
             package_name = module_path.split(".")[0] if module_path else delegate_attr
-            actions_dir = _REPO_ROOT / "context_tools" / "actions" / package_name
+            actions_dir = _REPO_ROOT / "practices" / "actions" / package_name
             utilities_dir = _REPO_ROOT / "utilities" / package_name
             source_dir = actions_dir if actions_dir.is_dir() else utilities_dir
         else:
-            source_dir = _REPO_ROOT / "context_tools" / "base"
+            source_dir = _REPO_ROOT / "practices" / "base"
 
         calls = _same_instance_action_calls(method.body, action_names - {method.name})
         host_results.append(ActionResolution(name=method.name, source_dir=source_dir, calls=calls))
@@ -785,7 +783,7 @@ def write_page(out_root: Path, relative_path: str, html: str) -> Path:
     Every panel's content (markdown guide bodies, ``.context/module-context.md``
     prose, main-file code, illustrated-example bodies) is embedded as literal
     text into ``html`` *before* this is called - there is no runtime fetch
-    back into ``context_tools/`` or ``utilities/`` from the written page.
+    back into ``practices/`` or ``utilities/`` from the written page.
     """
     target = out_root / relative_path
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -820,7 +818,7 @@ def build_run_request(
     action: str,
     fidelity: str | None = None,
 ) -> dict:
-    """Build a ``python -m tools run`` request dict from the live toolset manifest.
+    """Build a ``python -m harness run`` request dict from the live toolset manifest.
 
     Constructor parameters become ``context``; the named action's parameters
     become ``arguments``. ``fidelity`` (when the constructor accepts it) is
@@ -844,7 +842,7 @@ def build_run_request(
             "action": action,
             "arguments": {
                 "tools": [
-                    {"toolset": cls.manifest_path, "context": host_context},
+                    {"toolset": toolset_ref_for_type(cls), "context": host_context},
                 ]
             },
         }
@@ -862,7 +860,7 @@ def build_run_request(
             context[name] = _example_value(name, str(type_str))
 
     request: dict[str, object] = {
-        "toolset": cls.manifest_path,
+        "toolset": toolset_ref_for_type(cls),
         "context": context,
         "action": action,
     }
@@ -897,78 +895,8 @@ def write_raw_manifests(
     context_tool_entries: list[RegistryEntry],
     lifecycle_action_names: list[str],
 ) -> None:
-    """Write request YAML (and full toolset manifests) under ``out_root/manifests/``.
-
-    Per context tool:
-    - ``manifests/{tool}/manifest.yaml`` — live ``front_matter`` from the toolset
-    - ``manifests/{tool}/{fidelity}.yaml`` — run request with ``action: generate``
-    - ``manifests/{tool}/{action}.yaml`` — run request for each lifecycle action
-
-    Per lifecycle action:
-    - ``manifests/actions/{action}.html`` — all tools' request YAML for that action
-    """
-    import html as html_mod
-
-    manifests_root = out_root / "manifests"
-    manifests_root.mkdir(parents=True, exist_ok=True)
-
-    per_action_blocks: dict[str, list[tuple[str, str, str]]] = {
-        name: [] for name in lifecycle_action_names
-    }
-
-    for entry in context_tool_entries:
-        cls = entry.cls
-        tool = _toolset_name_of(cls)
-        tool_dir = manifests_root / tool
-        tool_dir.mkdir(parents=True, exist_ok=True)
-
-        (tool_dir / "manifest.yaml").write_text(cls.manifest.front_matter, encoding="utf-8")
-
-        fidelities = list((getattr(cls, "fidelities", {}) or {}).values())
-        for fidelity in fidelities:
-            (tool_dir / f"{fidelity}.yaml").write_text(
-                dump_run_request_yaml(cls, action="generate", fidelity=fidelity),
-                encoding="utf-8",
-            )
-
-        for action_name in lifecycle_action_names:
-            body = dump_run_request_yaml(cls, action=action_name)
-            (tool_dir / f"{action_name}.yaml").write_text(body, encoding="utf-8")
-            per_action_blocks[action_name].append((entry.display_name, tool, body))
-
-    for action_name, blocks in per_action_blocks.items():
-        sections = []
-        for display_name, tool, body in blocks:
-            rel = f"../{tool}/{action_name}.yaml"
-            sections.append(
-                f"<section>\n"
-                f"<h2>{html_mod.escape(display_name)}</h2>\n"
-                f'<p class="install-source"><a href="{html_mod.escape(rel)}">'
-                f"{html_mod.escape(tool)}/{action_name}.yaml</a></p>\n"
-                f"<pre><code>{html_mod.escape(body)}</code></pre>\n"
-                f"</section>"
-            )
-        page = (
-            "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
-            '<meta charset="utf-8">\n'
-            f"<title>{html_mod.escape(action_name)} — raw request format</title>\n"
-            "<style>\n"
-            "body{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;"
-            "background:#0f1115;color:#e8eaed;padding:2rem;line-height:1.45;}\n"
-            "h1{color:#f97316;font-size:1.25rem;}\n"
-            "h2{margin-top:2rem;font-size:1rem;color:#fb923c;}\n"
-            "pre{background:#1a1d24;padding:1rem;overflow:auto;border-radius:6px;}\n"
-            "a{color:#fb923c;}\n"
-            "p{color:#9aa0a6;}\n"
-            "</style>\n</head>\n<body>\n"
-            f"<h1>action: {html_mod.escape(action_name)}</h1>\n"
-            "<p>Request YAML for <code>python -m tools run</code>, built from each "
-            "context tool&rsquo;s live manifest signature "
-            "(<code>Cls.manifest</code> / <code>python -m tools manifest</code>).</p>\n"
-            + "\n".join(sections)
-            + "\n</body>\n</html>\n"
-        )
-        write_page(out_root, f"manifests/actions/{action_name}.html", page)
+    """Deprecated — manifest YAML/HTML output removed; kept for import compatibility."""
+    return None
 
 
 # -- Illustrated examples -----------------------------------------------------
@@ -1144,7 +1072,6 @@ class CatalogAction:
         import html as html_mod
 
         name = getattr(action, "name", str(action))
-        request_href = f"../manifests/actions/{name}.html"
         return (
             f'<header class="page-hero--detail fidelity-detail-header">'
             f'<p class="s-name">Lifecycle action</p>'
@@ -1153,8 +1080,6 @@ class CatalogAction:
             f'<section class="install-block action-invoke" aria-labelledby="action-invoke-heading">'
             f'<h2 id="action-invoke-heading">Request</h2>'
             f'<p class="install-hint">used as action: <code>{html_mod.escape(name)}</code> in the request</p>'
-            f'<p class="install-source">'
-            f'<a href="{html_mod.escape(request_href)}" id="raw-manifest">Raw manifest format →</a></p>'
             f"</section>\n"
             f'<section class="install-block action-section" aria-label="Tools / actions called">'
             f"<h2>Tools / actions called</h2>"
@@ -1194,15 +1119,12 @@ class CatalogFidelity:
         action_links = ", ".join(
             f'<a href="../actions/{r.name}.html">{r.name}</a>' for r in self.lifecycle_actions
         )
-        request_href = f"../manifests/{toolset_name}/{fidelity_name}.yaml"
         return (
             f'<section class="install-block fidelity-invoke" aria-labelledby="fidelity-invoke-heading">'
             f'<h2 id="fidelity-invoke-heading">Chat invoke</h2>'
             f'<pre class="install-snippet"><code>/{skill_name} &lt;action&gt; {fidelity_name}'
             f" — e.g. /{skill_name} generate {fidelity_name}</code></pre>"
             f'<p class="install-hint">&lt;action&gt; is one of: {action_links}</p>'
-            f'<p class="install-source">'
-            f'<a href="{request_href}" id="raw-manifest">Raw manifest format →</a></p>'
             f"</section>"
         )
 
@@ -1444,7 +1366,7 @@ def _wire_catalog_renderers(
     return catalog_context_tool, catalog_action, catalog_utility
 
 
-@toolset
+@agent_toolset
 class Catalog:
     """The top-level entry point - the only class ``generate_cdd_catalog.py``
     calls. Owns the shared portability config and the fixed roster of live
@@ -1478,7 +1400,7 @@ class Catalog:
         context_tool_entries: list[RegistryEntry],
     ) -> list[dict]:
         from catalog_generator.foundry_chrome import STAGES
-        from context_tools.cdd.cdd import _CONTEXT_TOOLS_BY_STAGE
+        from practices.cdd.cdd import _CONTEXT_TOOLS_BY_STAGE
 
         tools_on_stage: dict[str, set[str]] = {
             stage: {_toolset_name_of(cls) for cls in classes}
@@ -1561,12 +1483,6 @@ class Catalog:
         self.out_root.mkdir(parents=True, exist_ok=True)
         copy_commons(self.out_root)
 
-        write_raw_manifests(
-            self.out_root,
-            context_tool_entries,
-            [r.name for r in lifecycle_actions],
-        )
-
         board_tools = self._board_tool_entries(context_tool_entries)
         action_dicts = [{"name": r.name, "href": f"actions/{r.name}.html"} for r in lifecycle_actions]
         utility_dicts = [
@@ -1639,7 +1555,7 @@ class Catalog:
         # -- action pages --
         action_bodies: list[str] = []
         for resolution in lifecycle_actions:
-            action = action_owner.actions[resolution.name]
+            action = action_owner.agent_tools[resolution.name]
             body = self.catalog_action.generate_catalog(action, action_owner, resolution.source_dir)
             action_bodies.append(body)
             page = page_shell(

@@ -9,7 +9,7 @@ from typing import Any
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -17,29 +17,30 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from expects import be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from primitives.actions.action import _ActionRunRequest, _ActionRunner
+from primitives.harness.runner import InstructionRunRequest, InstructionRunner
 from primitives.instructions import Instruction
-from tools.tool import Toolset, _ToolsetLoader, _discover_tools
+from agent_tools import AgentToolSet
+from primitives.harness.toolset_loader import ToolsetLoader
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _CHRONICLE_WITH_OUTPUT_TOOLSET = (
-    "context_tools.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
+    "practices.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
 )
-_BASE_TOOLSET = "context_tools.base.base_context_tool:BaseContextTool"
+_BASE_TOOLSET = "practices.base.base_context_tool:BaseContextTool"
 
 
 def _expand(
-    instance: Toolset,
+    instance: AgentToolSet,
     action_name: str,
     *,
     toolset_path: str,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return _ActionRunner.instance().invoke_action(
-        _ActionRunRequest(
+    return InstructionRunner.instance().invoke_action(
+        InstructionRunRequest(
             request={"toolset": toolset_path, "context": {}},
             toolset_path=toolset_path,
             action_name=action_name,
@@ -76,7 +77,7 @@ with description("WorkSession on a BaseContextTool host"):
         with before.all:
             from generate.generate import Generate
 
-            cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
+            cls = ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
             self.host = cls()
             self.response = _expand(
                 Generate(),
@@ -112,7 +113,7 @@ with description("WorkSession on a BaseContextTool host"):
         with before.all:
             from generate.generate import Generate
 
-            cls = _ToolsetLoader.instance().load(_CHRONICLE_WITH_OUTPUT_TOOLSET)
+            cls = ToolsetLoader.instance().load(_CHRONICLE_WITH_OUTPUT_TOOLSET)
             self.host = cls()
             self.response = _expand(
                 Generate(),
@@ -138,7 +139,7 @@ with description("WorkSession on a BaseContextTool host"):
         with before.all:
             from generate.generate import Generate
 
-            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
+            cls = ToolsetLoader.instance().load(_BASE_TOOLSET)
             self.host = cls()
             self.response = _expand(
                 Generate(),

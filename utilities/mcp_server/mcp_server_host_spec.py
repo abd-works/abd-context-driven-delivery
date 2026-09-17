@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("utilities", "primitives", "context_tools"):
+for _cat in ("utilities", "primitives", "practices"):
     _path = str(_REPO_ROOT / _cat)
     if _path not in sys.path:
         sys.path.insert(0, _path)
@@ -20,7 +20,7 @@ from mcp.client.stdio import stdio_client
 
 _HOSTING_DEMO = "mcp_server.examples.hosting_demo.hosting_demo:HostingDemo"
 _ECHO = "echo.echo:Echo"
-_BDD = "context_tools.bdd.bdd:Bdd"
+_BDD = "practices.bdd.bdd:Bdd"
 _PARAMETER_TYPES = (
     "mcp_server.examples.parameter_types.parameter_types:ParameterTypes"
 )
@@ -47,7 +47,7 @@ _PYTHONPATH = ";".join(
         str(_REPO_ROOT),
         str(_REPO_ROOT / "utilities"),
         str(_REPO_ROOT / "primitives"),
-        str(_REPO_ROOT / "context_tools"),
+        str(_REPO_ROOT / "practices"),
     ]
 )
 

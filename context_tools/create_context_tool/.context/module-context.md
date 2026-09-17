@@ -1,6 +1,6 @@
 # CreateContextTool
 
-**Purpose:** Meta BaseContextTool domain that scaffolds or patches new context domains under `context_tools/` from `templates/` and the `examples/car_chronicle/` reference extension.
+**Purpose:** Meta BaseContextTool domain that scaffolds or patches new context domains under `practices/` from `templates/` and the `examples/car_chronicle/` reference extension.
 
 **Primary use case:** Generate a thin domain package (class module, `{domain}.md`, examples, optional formats/scanners) without putting new domains inside `base/` except under this kit.
 

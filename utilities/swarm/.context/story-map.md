@@ -19,10 +19,10 @@ section: body
 `utilities/sub_agent/.context/module-context.md`;
 `utilities/workspace/.context/module-context.md`;
 `utilities/cli_agent/.context/module-context.md`;
-`context_tools/agent_bdd/.context/module-context.md`;
-`context_tools/bdd/bdd.md`;
-`context_tools/stories/stories.md`;
-`context_tools/stories/templates/md/story-map.md`
+`practices/agent_bdd/.context/module-context.md`;
+`practices/bdd/bdd.md`;
+`practices/stories/stories.md`;
+`practices/stories/templates/md/story-map.md`
 
 ---
 

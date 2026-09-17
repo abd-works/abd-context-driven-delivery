@@ -1,6 +1,6 @@
 # Sketch — workspace ↔ eval OO realignment
 
-Session **eval-consolidate-workspace**. CE source: `context_tools/actions/workspace/.context/workspace-ce.drawio`.
+Session **eval-consolidate-workspace**. CE source: `actions/workspace/.context/workspace-ce.drawio`.
 
 ---
 
@@ -214,7 +214,7 @@ When an **`@agent_instructions`** recipe is invoked, the framework walks the bod
 | `@agent_tool` | named in recipe; agent invokes (body runs when agent calls it) | Tool on manifest + when-to-use in instructions |
 | `@agent_instructions` | **expand** — inline nested recipe (callee `mode="tool"` → defer like a tool step) | Inlined instructions |
 
-**SessionLog stays its own class** in `context_tools/actions/workspace/session_log.py` — do not fold into `WorkSession`, do not move to the host.
+**SessionLog stays its own class** in `actions/workspace/session_log.py` — do not fold into `WorkSession`, do not move to the host.
 
 **Two logging moments for auditable `@agent_instructions`** (`generate`, `validate`, `document`, `satisfy`, `scan`, `createRule`):
 
@@ -286,7 +286,7 @@ BaseContextTool.generate @agent_instructions   // /generate → Bdd.generate dir
 
 **Vocabulary:** **host** = `BaseContextTool` subclass (`Bdd`, `Cdd`, …). Lifecycle lives **on the host** — `generate`, `validate`, `document`, `satisfy` are `@agent_instructions` on `BaseContextTool` today and stay there.
 
-**`HostLifecycle`** (`host_lifecycle.host_lifecycle:HostLifecycle`) — interim kit from action-owns-context-tools that only loops `host.generate()`. **Target: delete.** Agent skills route `/generate` to **`context_tools.bdd.bdd:Bdd`** `action: generate` (same as invoke-check), not HostLifecycle.
+**`HostLifecycle`** (`host_lifecycle.host_lifecycle:HostLifecycle`) — interim kit from action-owns-context-tools that only loops `host.generate()`. **Target: delete.** Agent skills route `/generate` to **`practices.bdd.bdd:Bdd`** `action: generate` (same as invoke-check), not HostLifecycle.
 
 ### Kill `HostLifecycle` (sketch note — not in this refactor pass)
 
@@ -300,11 +300,11 @@ BaseContextTool.generate @agent_instructions   // /generate → Bdd.generate dir
 
 | Area | Action |
 |---|---|
-| `context_tools/actions/host_lifecycle/` | Delete kit, specs, agent BDD, module-context |
+| `actions/host_lifecycle/` | Delete kit, specs, agent BDD, module-context |
 | `utilities/agent_skills/agent_skills.py` | Remove `generate`, `validate`, `document`, `satisfy` from `_KIT_OWNED_INVOKE_BODIES` — use `_ACTION_INVOKE_BODY` (host-owned) |
 | `utilities/agent_skills/agent_skills_spec.py` | Drop "generate/validate owns HostLifecycle" examples; assert host `action:` chaining instead |
-| `context_tools/actions/.context/module-context.md` | Remove host_lifecycle from kit-owned table |
-| `context_tools/base/.context/module-context.md` | Lifecycle slash → host action, not HostLifecycle |
+| `actions/.context/module-context.md` | Remove host_lifecycle from kit-owned table |
+| `practices/base/.context/module-context.md` | Lifecycle slash → host action, not HostLifecycle |
 | Redeploy skills | Regenerate `.cursor/commands/generate.md` etc. so agent calls `Bdd.generate()`, not HostLifecycle |
 
 **Keep kit-owned for real orchestrators only:** `iterate`, `sketch`, `grill`, `partition`, `repair` — actions that are not full recipes on `BaseContextTool`.
@@ -869,4 +869,4 @@ turn
 
 ## 11. Out of scope
 
-- Relocating `utilities/eval` → `context_tools/actions/eval`.
+- Relocating `utilities/eval` → `actions/eval`.

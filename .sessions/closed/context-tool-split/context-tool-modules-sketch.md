@@ -16,7 +16,7 @@ PartitionPipeline  (utilities/partition_pipeline/)
 Repair  (utilities/repair/)
   write_to_fix; log_fix; repair
 
-BaseContextTool : composer + lifecycle  (context_tools/base/base_context_tool.py)
+BaseContextTool : composer + lifecycle  (practices/base/base_context_tool.py)
   MI merge of utilities kits + inlined lifecycle
   generate validate satisfy document
   generate_output add_generate_header
@@ -25,7 +25,7 @@ BaseContextTool : composer + lifecycle  (context_tools/base/base_context_tool.py
   module_dir, contexts, @base_context_tool
   action prose: # Generate / Validate / Satisfy / Document in base_context_tool.md
 
-CreateContextTool : meta generator domain  (context_tools/create_context_tool/)
+CreateContextTool : meta generator domain  (practices/create_context_tool/)
   @base_context_tool domain that scaffolds new domains
   owns templates/, examples/, create_context_tool.md meta contexts
 
@@ -46,4 +46,4 @@ CreateContextTool → BaseContextTool (via @base_context_tool)
 ## Layout
 
 utilities/: sessions, scanners, partition_pipeline, repair  
-context_tools/base/: base_context_tool.py (+ lifecycle action md), create_context_tool/
+practices/base/: base_context_tool.py (+ lifecycle action md), create_context_tool/

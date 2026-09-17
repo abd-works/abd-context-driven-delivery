@@ -28,6 +28,6 @@ Run the listed context tools and actions as one non-blocking sub-agent.
     tool ``turn``) with context_tool, action, utility, subject, and message.
     Report branch and commit back to the parent.
 
-Bring in every listed context tool (AgenticToolset.context_tools).
+Bring in every listed context tool (AgenticToolset.practices).
 
 Use MCP tool: `cli_agent.run(tools: 'list', actions: 'list | None' = None, prompt: 'str | None' = None) -> 'str'`

@@ -4,12 +4,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from primitives.actions.action import agent_instructions, agentic_toolset
+from agent_tools import agent_instructions, agent_toolset
 from primitives.instructions import Instruction, instruction
-from tools.tool import resource, agent_tool
+from agent_tools.agent_tools import resource, agent_tool
 
 
-@agentic_toolset
+@agent_toolset
 class RecipeGuide:
     """Collect and draft recipes - brainstorm ideas, then write step-by-step recipes."""
 
@@ -70,7 +70,7 @@ class RecipeGuide:
     # Form A - inline prose: each string literal in the body IS instruction text.
     #   {{expr}} substitutions are rendered against the live instance before the AI sees them.
     @agent_instructions
-    def brainstorm(self, theme: str) -> str:
+    def brainstorm(recipe, theme: str) -> str:
         """List 5 recipe ideas for {{theme}} using {{self.cuisine}} techniques."""
         """For each idea write a one-sentence description and name the key ingredient."""
         self.add_draft()
@@ -78,7 +78,7 @@ class RecipeGuide:
 
     # Using named slots: technique (section) and plating (file) are expanded inline.
     @agent_instructions
-    def draft_recipe(self, name: str) -> str:
+    def draft_recipe(recipe, name: str) -> str:
         """Draft a complete recipe called {{name}}."""
         self.technique()   # -> expands # Technique section from recipe_guide.md
         self.plating()     # -> expands plating-rules.md

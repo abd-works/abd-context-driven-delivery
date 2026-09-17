@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from context_tools.base.base_context_tool import BaseContextTool
+from practices.base.base_context_tool import BaseContextTool
 
 
 class CarChronicle(BaseContextTool):

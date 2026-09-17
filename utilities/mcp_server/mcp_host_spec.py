@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("utilities", "primitives", "context_tools"):
+for _cat in ("utilities", "primitives", "practices"):
     _path = str(_REPO_ROOT / _cat)
     if _path not in sys.path:
         sys.path.insert(0, _path)
@@ -13,7 +13,7 @@ for _cat in ("utilities", "primitives", "context_tools"):
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from context_tools.actions.iterate.iterate import Iterate
+from practices.actions.iterate.iterate import Iterate
 from mcp_server.mcp_host import _input_schema_for_callable
 from mcp_server.examples.parameter_types.parameter_types import ParameterTypes
 

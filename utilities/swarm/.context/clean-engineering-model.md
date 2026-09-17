@@ -1,6 +1,6 @@
-<!-- @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering -->
-<!-- invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering -->
-<!-- invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering -->
+<!-- @toolset-manifest python -m harness manifest practices.clean_engineering.clean_engineering:CleanEngineering -->
+<!-- invoke-edit: action satisfy | toolset: practices.clean_engineering.clean_engineering:CleanEngineering -->
+<!-- invoke-check: action validate | toolset: practices.clean_engineering.clean_engineering:CleanEngineering -->
 
 ---
 fidelity: [spec]

@@ -19,9 +19,9 @@ import prompt_log as pl  # noqa: E402
 
 _CURSOR = _REPO_ROOT / ".cursor"
 _RULE = _CURSOR / "rules" / "character-driven-development.mdc"
-_SKILL = _CURSOR / "skills" / "context_tools" / "bdd" / "bdd-behavior" / "SKILL.md"
+_SKILL = _CURSOR / "skills" / "practices" / "bdd" / "bdd-behavior" / "SKILL.md"
 _AGENT = _CURSOR / "agents" / "engineer.md"
-_BEHAVIOR_RULE = _CURSOR / "rules" / "context_tools" / "bdd" / "behavior.mdc"
+_BEHAVIOR_RULE = _CURSOR / "rules" / "practices" / "bdd" / "behavior.mdc"
 
 
 with description("a path classifier for prompt audit"):

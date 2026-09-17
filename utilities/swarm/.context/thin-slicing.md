@@ -6,7 +6,7 @@ format: md
 
 # Thin slicing — Plan And Swarm Utilities
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/grill-answers.md`; `utilities/workflow/.context/module-context.md`; `context_tools/bdd/bdd.md`
+**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/grill-answers.md`; `utilities/workflow/.context/module-context.md`; `practices/bdd/bdd.md`
 
 ## Product / context
 

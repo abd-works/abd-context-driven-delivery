@@ -1,6 +1,6 @@
 # workspace
 
-**Sources / context:** `context_tools/actions/workspace/*.py`, `.context/module-context.md`
+**Sources / context:** `actions/workspace/*.py`, `.context/module-context.md`
 
 ## Workspace
 

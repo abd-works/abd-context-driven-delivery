@@ -15,8 +15,8 @@
 **Paths cited:**
 
 - `.context/research/git-knowledge-and-workflow-backbone.md` §8, G-36, G-37
-- `context_tools/actions/handoff/` — handoff doc pattern
-- `context_tools/actions/workspace/` — WorkSession, session branch, turns
+- `actions/handoff/` — handoff doc pattern
+- `actions/workspace/` — WorkSession, session branch, turns
 
 **Slice note:** Behavior sketch locked; `workflow.py` scaffold landed. Next: spec + agent_skills deploy entry.
 

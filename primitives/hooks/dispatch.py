@@ -282,29 +282,29 @@ _DIGEST_LINES = 50
 
 _TAG_TO_SKILL: dict[str, Path] = {
     "@clean-engineering-code": _SKILLS_ROOT
-    / "context_tools/clean_engineering/clean_engineering-code/SKILL.md",
+    / "practices/clean_engineering/clean_engineering-code/SKILL.md",
     "@clean-engineering-model": _SKILLS_ROOT
-    / "context_tools/clean_engineering/clean_engineering-model/SKILL.md",
+    / "practices/clean_engineering/clean_engineering-model/SKILL.md",
     "@clean-engineering-modules": _SKILLS_ROOT
-    / "context_tools/clean_engineering/clean_engineering-modules/SKILL.md",
-    "@clean-engineering": _SKILLS_ROOT / "context_tools/clean_engineering/SKILL.md",
-    "@stories-story_map": _SKILLS_ROOT / "context_tools/stories/stories-story_map/SKILL.md",
-    "@stories-scenarios": _SKILLS_ROOT / "context_tools/stories/stories-scenarios/SKILL.md",
+    / "practices/clean_engineering/clean_engineering-modules/SKILL.md",
+    "@clean-engineering": _SKILLS_ROOT / "practices/clean_engineering/SKILL.md",
+    "@stories-story_map": _SKILLS_ROOT / "practices/stories/stories-story_map/SKILL.md",
+    "@stories-scenarios": _SKILLS_ROOT / "practices/stories/stories-scenarios/SKILL.md",
     "@stories-acceptance_tests": _SKILLS_ROOT
-    / "context_tools/stories/stories-acceptance_tests/SKILL.md",
-    "@stories": _SKILLS_ROOT / "context_tools/stories/SKILL.md",
-    "@ddd-bounded_context": _SKILLS_ROOT / "context_tools/ddd/ddd-bounded_context/SKILL.md",
-    "@ddd-building_blocks": _SKILLS_ROOT / "context_tools/ddd/ddd-building_blocks/SKILL.md",
-    "@ddd-tactics": _SKILLS_ROOT / "context_tools/ddd/ddd-tactics/SKILL.md",
-    "@ddd": _SKILLS_ROOT / "context_tools/ddd/SKILL.md",
-    "@bdd-behavior": _SKILLS_ROOT / "context_tools/bdd/bdd-behavior/SKILL.md",
-    "@bdd-development": _SKILLS_ROOT / "context_tools/bdd/bdd-development/SKILL.md",
-    "@bdd-modules": _SKILLS_ROOT / "context_tools/bdd/bdd-modules/SKILL.md",
-    "@bdd": _SKILLS_ROOT / "context_tools/bdd/SKILL.md",
-    "@ux-front_end_code": _SKILLS_ROOT / "context_tools/ux/ux-front_end_code/SKILL.md",
-    "@ux-mockup": _SKILLS_ROOT / "context_tools/ux/ux-mockup/SKILL.md",
-    "@ux-ia": _SKILLS_ROOT / "context_tools/ux/ux-ia/SKILL.md",
-    "@ux": _SKILLS_ROOT / "context_tools/ux/SKILL.md",
+    / "practices/stories/stories-acceptance_tests/SKILL.md",
+    "@stories": _SKILLS_ROOT / "practices/stories/SKILL.md",
+    "@ddd-bounded_context": _SKILLS_ROOT / "practices/ddd/ddd-bounded_context/SKILL.md",
+    "@ddd-building_blocks": _SKILLS_ROOT / "practices/ddd/ddd-building_blocks/SKILL.md",
+    "@ddd-tactics": _SKILLS_ROOT / "practices/ddd/ddd-tactics/SKILL.md",
+    "@ddd": _SKILLS_ROOT / "practices/ddd/SKILL.md",
+    "@bdd-behavior": _SKILLS_ROOT / "practices/bdd/bdd-behavior/SKILL.md",
+    "@bdd-development": _SKILLS_ROOT / "practices/bdd/bdd-development/SKILL.md",
+    "@bdd-modules": _SKILLS_ROOT / "practices/bdd/bdd-modules/SKILL.md",
+    "@bdd": _SKILLS_ROOT / "practices/bdd/SKILL.md",
+    "@ux-front_end_code": _SKILLS_ROOT / "practices/ux/ux-front_end_code/SKILL.md",
+    "@ux-mockup": _SKILLS_ROOT / "practices/ux/ux-mockup/SKILL.md",
+    "@ux-ia": _SKILLS_ROOT / "practices/ux/ux-ia/SKILL.md",
+    "@ux": _SKILLS_ROOT / "practices/ux/SKILL.md",
 }
 
 _EDIT_TOOLS = {"Write", "StrReplace", "str_replace_editor", "str_replace_based_edit_tool"}

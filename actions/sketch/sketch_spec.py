@@ -1,0 +1,270 @@
+"""BDD spec for Sketch toolset + ActionExpander integration.
+"""
+
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+for _cat in ("primitives", "utilities", "practices", "actions"):
+    _p = str(_REPO_ROOT / _cat)
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+sys.modules.pop("sketch", None)
+
+from expects import be_true, contain, equal, expect
+from mamba import before, context, description, it
+
+from primitives.agent_tools.agent_tools import AgentInstructions
+from sketch import Sketch
+from primitives.harness.toolset_loader import ToolsetLoader
+
+
+with description("Sketch toolset"):
+    with context("manifest signature"):
+        with it("exposes find_template, save_sketch, list_sketches as tools"):
+            sig = Sketch.manifest.signature
+            expect(sig["find_template"]["kind"]).to(equal("tool"))
+            expect(sig["save_sketch"]["kind"]).to(equal("tool"))
+            expect(sig["list_sketches"]["kind"]).to(equal("tool"))
+
+        with it("exposes sketch as an action with find_template and save_sketch"):
+            entry = Sketch.manifest.signature["sketch"]
+            expect(entry["kind"]).to(equal("action"))
+            expect("find_template" in entry["tools"]).to(be_true)
+            expect("save_sketch" in entry["tools"]).to(be_true)
+            expect("review_sketch" in entry["tools"]).to(be_true)
+            expect(entry.get("chain")).to(equal(None))
+
+    with context("sketch_template property"):
+        with it("returns the default template when agent_dir was not set at construction"):
+            sketcher = Sketch()
+            content = sketcher.sketch_template
+            expect(content).to(contain("terse-indent notation"))
+
+        with it("returns the agent-dir template when agent_dir was set at construction"):
+            import tempfile
+            with tempfile.TemporaryDirectory() as agent_dir:
+                templates_dir = Path(agent_dir) / "templates"
+                templates_dir.mkdir()
+                template_path = templates_dir / "test-sketch.md"
+                template_path.write_text("# constructed agent template\n", encoding="utf-8")
+                sketcher = Sketch(agent_dir=agent_dir)
+                content = sketcher.sketch_template
+                expect(content).to(contain("constructed agent template"))
+
+    with context("find_template tool"):
+        with it("falls back to the default template when no agent_dir template exists"):
+            sketcher = Sketch()
+            content = sketcher.find_template(agent_dir="")
+            expect(content).to(contain("terse-indent notation"))
+
+        with it("returns the agent's own *-sketch.* when the templates directory contains one"):
+            import tempfile
+            with tempfile.TemporaryDirectory() as agent_dir:
+                templates_dir = Path(agent_dir) / "templates"
+                templates_dir.mkdir()
+                template_path = templates_dir / "demo-sketch.md"
+                template_path.write_text("# demo agent template\nrough shape\n", encoding="utf-8")
+                sketcher = Sketch()
+                content = sketcher.find_template(agent_dir=agent_dir)
+                expect(content).to(contain("demo agent template"))
+
+        with it("falls back to the default when agent_dir is set but the directory is missing"):
+            sketcher = Sketch()
+            content = sketcher.find_template(agent_dir="does/not/exist")
+            expect(content).to(contain("terse-indent notation"))
+
+    with context("save_sketch tool"):
+        with before.each:
+            import tempfile
+            self.tmp = tempfile.TemporaryDirectory()
+            self.destination = self.tmp.name
+            self.sketcher = Sketch()
+
+        with it("writes a sprint-folder destination up into path/.context"):
+            sprint = Path(self.destination) / ".context" / "sessions" / "my-sprint"
+            sprint.mkdir(parents=True)
+            path = Path(
+                self.sketcher.save_sketch(
+                    destination=str(sprint),
+                    slug="engagement",
+                    content="rough\n",
+                )
+            )
+            expect(path.parent).to(equal(Path(self.destination) / ".context"))
+            expect(path.name).to(equal("engagement-sketch.md"))
+            expect((sprint / "engagement-sketch.md").exists()).to(equal(False))
+
+        with it("writes to .context/{slug}-sketch.md under the destination"):
+            path = self.sketcher.save_sketch(
+                destination=self.destination,
+                slug="demo-class",
+                content="thing : base thing\n  sub thing\n",
+            )
+            resolved = Path(path)
+            expect(resolved.is_file()).to(be_true)
+            expect(resolved.name).to(equal("demo-class-sketch.md"))
+            expect(resolved.parent.name).to(equal(".context"))
+            expect(resolved.read_text(encoding="utf-8")).to(contain("thing : base thing"))
+
+        with it("creates the .context/ directory when it does not exist"):
+            context_dir = Path(self.destination) / ".context"
+            expect(context_dir.exists()).to(equal(False))
+
+            self.sketcher.save_sketch(
+                destination=self.destination,
+                slug="fresh-class",
+                content="rough shape\n",
+            )
+
+            expect(context_dir.is_dir()).to(be_true)
+
+        with it("overwrites an existing sketch at the same slug"):
+            self.sketcher.save_sketch(
+                destination=self.destination,
+                slug="mutable-class",
+                content="first draft\n",
+            )
+            path = self.sketcher.save_sketch(
+                destination=self.destination,
+                slug="mutable-class",
+                content="second draft\n",
+            )
+            expect(Path(path).read_text(encoding="utf-8")).to(equal("second draft\n"))
+
+        with it("returns the resolved sketch path as a string"):
+            path = self.sketcher.save_sketch(
+                destination=self.destination,
+                slug="typed-class",
+                content="typed shape\n",
+            )
+            expect(isinstance(path, str)).to(be_true)
+            expect(path).to(contain("typed-class-sketch.md"))
+
+    with context("list_sketches tool"):
+        with before.each:
+            import tempfile
+            self.tmp = tempfile.TemporaryDirectory()
+            self.destination = self.tmp.name
+            self.sketcher = Sketch()
+
+        with it("returns an empty string when the .context directory does not exist"):
+            result = self.sketcher.list_sketches(destination=self.destination)
+            expect(result).to(equal(""))
+
+        with it("returns an empty string when the .context directory exists but is empty"):
+            (Path(self.destination) / ".context").mkdir(parents=True)
+
+            result = self.sketcher.list_sketches(destination=self.destination)
+
+            expect(result).to(equal(""))
+
+        with it("lists every *-sketch.md file when no slug filter is given"):
+            self.sketcher.save_sketch(self.destination, "alpha", "a\n")
+            self.sketcher.save_sketch(self.destination, "bravo", "b\n")
+
+            result = self.sketcher.list_sketches(destination=self.destination)
+
+            lines = result.splitlines()
+            expect(len(lines)).to(equal(2))
+            expect(any("alpha-sketch.md" in line for line in lines)).to(be_true)
+            expect(any("bravo-sketch.md" in line for line in lines)).to(be_true)
+
+        with it("filters by slug when a slug is provided"):
+            self.sketcher.save_sketch(self.destination, "alpha", "a\n")
+            self.sketcher.save_sketch(self.destination, "bravo", "b\n")
+
+            result = self.sketcher.list_sketches(destination=self.destination, slug="alpha")
+
+            lines = result.splitlines()
+            expect(len(lines)).to(equal(1))
+            expect(all("alpha-sketch.md" in line for line in lines)).to(be_true)
+
+    with context("sketch action body"):
+        with before.each:
+            self.sketcher = Sketch()
+            self.body = AgentInstructions.for_callable(
+                Sketch.sketch, self.sketcher
+            )
+
+        with it("wires find_template and save_sketch as its tool steps"):
+            expect("find_template" in self.body.tool_steps).to(be_true)
+            expect("save_sketch" in self.body.tool_steps).to(be_true)
+
+        with it("wires review_sketch after save_sketch as a hard review gate"):
+            steps = list(self.body.tool_steps)
+            expect("review_sketch" in steps).to(be_true)
+            expect("save_sketch" in steps).to(be_true)
+            save_i = steps.index("save_sketch")
+            expect("review_sketch" in steps[save_i:]).to(be_true)
+
+        with it("expands prose that instructs the sketcher to persist drafts via save_sketch"):
+            joined = "\n".join(self.body.prompt)
+            expect(joined).to(contain("save_sketch"))
+
+        with it("instructs pause, confirm correctness, and correct mistakes before the next question"):
+            joined = "\n".join(self.body.prompt)
+            expect(joined).to(contain("review_sketch"))
+            expect(joined).to(contain("confirm"))
+            expect(joined).to(contain("mistakes"))
+            expect(joined).to(
+                contain("Asking another grill question before review_sketch confirms correct is a defect")
+            )
+            expect(joined).to(
+                contain("Never defer persistence or review to the end of the grill")
+            )
+
+        with it("instructs carrying named review mistakes into the next sketch"):
+            joined = "\n".join(self.body.prompt)
+            expect(joined).to(contain("carried forward"))
+            expect(joined).to(
+                contain("do not regenerate as if those mistakes never happened")
+            )
+            expect(joined).to(
+                contain("Regenerating as if named mistakes never happened is a defect")
+            )
+
+        with it("instructs grilling to validate the sketch rather than run disconnected"):
+            joined = "\n".join(self.body.prompt)
+            expect(joined).to(contain("validates what the sketch claimed"))
+            expect(joined).to(contain("must not run disconnected"))
+
+        with it("instructs batching similar questions so the loop does not run forever"):
+            joined = "\n".join(self.body.prompt)
+            expect(joined).to(contain("Batch very similar questions"))
+            expect(joined).to(contain("does not run forever"))
+
+        with it("includes the grill_with_context body in sketch"):
+            joined = "\n".join(self.body.prompt)
+            expect(joined).to(contain("(Recommended)"))
+            expect(joined).to(contain("save_sketch"))
+            expect(joined).to(contain("Grill the sketch plan"))
+
+
+with description("a sketch action"):
+    with context("that expands with context tools"):
+        with it("should include the sketch session body in sketch"):
+            body = AgentInstructions.for_callable(Sketch.sketch, Sketch())
+            joined = "\n".join(body.prompt)
+            expect(joined).to(contain("Grill the sketch plan"))
+            expect(joined).to(contain("save_sketch"))
+
+    with context("that pauses for sketch review"):
+        with it("should return the sketch-review marker from review_sketch"):
+            expect(Sketch().review_sketch()).to(equal("sketch-review"))
+
+        with it("should expose review_sketch as a tool"):
+            expect("review_sketch" in Sketch().tools).to(be_true)
+
+
+with description("BaseContextTool host face for sketch"):
+    with it("should not expose sketch on the host composer"):
+        from practices.base.base_context_tool import BaseContextTool
+
+        cls = ToolsetLoader.instance().load(
+            "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+        )
+        host = cls()
+        expect("sketch" in host.agent_tools).to(equal(False))

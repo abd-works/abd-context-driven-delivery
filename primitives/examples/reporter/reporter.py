@@ -4,12 +4,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from primitives.actions.action import agent_instructions, agentic_toolset
+from agent_tools import agent_instructions, agent_toolset
 from primitives.instructions import Instruction, instruction
-from tools.tool import resource, agent_tool
+from agent_tools.agent_tools import resource, agent_tool
 
 
-@agentic_toolset
+@agent_toolset
 class Reporter:
     """Gather notes and file field reports.
 
@@ -82,7 +82,7 @@ class Reporter:
 
     # Form A - inline prose: each string literal in the body IS the instruction text
     @agent_instructions
-    def gather(self, topic: str) -> str:
+    def gather(recipe, topic: str) -> str:
         """Gather notes on {{topic}} for the {{self.beat}} beat."""
         """Find 3-5 distinct facts or quotes. Record each with add_note."""
         self.add_note()
@@ -90,7 +90,7 @@ class Reporter:
 
     # Named slots in an action: expanded and injected before the AI sees the recipe
     @agent_instructions
-    def file_report(self, headline: str) -> str:
+    def file_report(recipe, headline: str) -> str:
         """Write a field report with the headline: {{headline}}."""
         self.style()        # -> expands # Style section from reporter.md
         self.guidelines()   # -> expands house-guidelines.md

@@ -21,7 +21,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("utilities", "primitives", "context_tools"):
+for _cat in ("utilities", "primitives", "practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -42,7 +42,7 @@ from context_setup.context_setup import (
     StructureNote,
     _write_root,
 )
-from primitives.actions.action import _ActionExpander
+from primitives.agent_tools.agent_tools import AgentInstructions
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -102,15 +102,15 @@ def _start_test_server() -> tuple[HTTPServer, int]:
 def _expanded_capture_from_documents() -> str:
     cs = ContextSetup()
     func = getattr(type(cs), "capture_from_documents")
-    body = _ActionExpander.instance().parse_body(func, cs)
-    return "\n".join(body.prose_parts)
+    body = AgentInstructions.for_callable(func, cs)
+    return "\n".join(body.prompt)
 
 
 def _expanded_capture_from_live_app() -> str:
     cs = ContextSetup()
     func = getattr(type(cs), "capture_from_live_app")
-    body = _ActionExpander.instance().parse_body(func, cs)
-    return "\n".join(body.prose_parts)
+    body = AgentInstructions.for_callable(func, cs)
+    return "\n".join(body.prompt)
 
 
 def _write(tmp: Path, name: str, content: str) -> Path:
@@ -265,7 +265,7 @@ with description("a ContextSetup"):
         with it("should produce one structure note per file"):
             expect(self._result.structure_notes).to(have_len(2))
 
-    # ── Action: capture_from_documents (expansion tests) ─────────────────────
+    # ── AgentTool: capture_from_documents (expansion tests) ─────────────────────
 
     with context("whose capture_from_documents action is expanded"):
         with it("should list convert as a tool to call"):
@@ -286,27 +286,27 @@ with description("a ContextSetup"):
 
     with context("whose capture_from_documents action tool_steps are resolved"):
         with it("should include convert"):
-            from primitives.actions.action import _ActionExpander
+            from primitives.agent_tools.agent_tools import AgentInstructions
             cs = ContextSetup()
             func = getattr(type(cs), "capture_from_documents")
-            body = _ActionExpander.instance().parse_body(func, cs)
+            body = AgentInstructions.for_callable(func, cs)
             expect("convert" in body.tool_steps).to(be_true)
 
         with it("should include partition for each context tool (5 total)"):
-            from primitives.actions.action import _ActionExpander
+            from primitives.agent_tools.agent_tools import AgentInstructions
             cs = ContextSetup()
             func = getattr(type(cs), "capture_from_documents")
-            body = _ActionExpander.instance().parse_body(func, cs)
+            body = AgentInstructions.for_callable(func, cs)
             expect(body.tool_steps.count("partition")).to(equal(5))
 
         with it("should include embed from ContextIndex"):
-            from primitives.actions.action import _ActionExpander
+            from primitives.agent_tools.agent_tools import AgentInstructions
             cs = ContextSetup()
             func = getattr(type(cs), "capture_from_documents")
-            body = _ActionExpander.instance().parse_body(func, cs)
+            body = AgentInstructions.for_callable(func, cs)
             expect("embed" in body.tool_steps).to(be_true)
 
-    # ── Action: capture_from_live_app (expansion tests) ──────────────────────
+    # ── AgentTool: capture_from_live_app (expansion tests) ──────────────────────
 
     with context("whose capture_from_live_app action is expanded"):
         with it("should instruct the AI to classify external dependencies"):
@@ -375,25 +375,25 @@ with description("a ContextSetup"):
         with it("should include smoke_test"):
             cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
-            body = _ActionExpander.instance().parse_body(func, cs)
+            body = AgentInstructions.for_callable(func, cs)
             expect("smoke_test" in body.tool_steps).to(be_true)
 
         with it("should include scout_app"):
             cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
-            body = _ActionExpander.instance().parse_body(func, cs)
+            body = AgentInstructions.for_callable(func, cs)
             expect("scout_app" in body.tool_steps).to(be_true)
 
         with it("should include complete_capture"):
             cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
-            body = _ActionExpander.instance().parse_body(func, cs)
+            body = AgentInstructions.for_callable(func, cs)
             expect("complete_capture" in body.tool_steps).to(be_true)
 
         with it("should include embed from ContextIndex"):
             cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
-            body = _ActionExpander.instance().parse_body(func, cs)
+            body = AgentInstructions.for_callable(func, cs)
             expect("embed" in body.tool_steps).to(be_true)
 
     # ── Tool: smoke_test ─────────────────────────────────────────────────────

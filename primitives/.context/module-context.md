@@ -6,11 +6,11 @@ Four decorators turn a plain Python class into a fully agentic toolset. This fil
 
 | Decorator | Lives in | What it does |
 |---|---|---|
-| `@toolset` | `primitives/tools` | Mixes `Toolset` into the class; publishes the manifest the AI reads |
-| `@agent_tool` | `primitives/tools` | Marks a method as directly callable by the AI |
-| `@resource` | `primitives/tools` | Marks a `@property` as observable state the AI can read |
+| `@toolset` | `primitives/agent_tools` | Mixes `Toolset` into the class; publishes the manifest the AI reads |
+| `@agent_tool` | `primitives/agent_tools` | Marks a method as directly callable by the AI |
+| `@resource` | `primitives/agent_tools` | Marks a `@property` as observable state the AI can read |
 | `@instruction` | `primitives/instructions` | Marks a method as a content-resolution slot (file / folder / section) |
-| `@agent_instructions` | `primitives/actions` | Marks a method as an AI-orchestrated recipe; body is parsed as instructions, not executed |
+| `@agent_instructions` | `primitives/agent_tools` | Marks a method as an AI-orchestrated recipe; body is parsed as instructions, not executed |
 
 ---
 
@@ -24,8 +24,8 @@ Four decorators turn a plain Python class into a fully agentic toolset. This fil
 
 | Primitive | Module context |
 |---|---|
-| `@toolset` / `@agent_tool` / `@resource` | `primitives/tools/.context/module-context.md` |
-| `@agent_instructions` | `primitives/actions/.context/module-context.md` |
+| `@toolset` / `@agent_tool` / `@resource` | `primitives/agent_tools/.context/module-context.md` |
+| `@agent_instructions` | `primitives/agent_tools/.context/module-context.md` |
 | `@instruction` | `primitives/instructions/.context/module-context.md` |
 
 ---

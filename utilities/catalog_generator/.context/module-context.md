@@ -29,7 +29,7 @@ Defaults `--out catalog`, `--repo-url` from `git remote get-url origin`, `--ref`
 **Portability (Make Catalog Output Portable):**
 - `git_blob_url` / `git_blob_url_for_callable` — the single seam every citation goes through; never a local filesystem path.
 - `resolve_repo_remote` / `normalize_repo_url` — the CLI's zero-flag defaults.
-- `write_page` — writes one page's already-literal HTML under `out_root`; no runtime fetch back into `context_tools/`/`utilities/`.
+- `write_page` — writes one page's already-literal HTML under `out_root`; no runtime fetch back into `practices/`/`utilities/`.
 - `build_run_request` / `dump_run_request_yaml` / `write_raw_manifests` — at generate time, read each context tool's live `Cls.manifest` signature and write request YAML under `manifests/{tool}/`.
 
 **Illustrated examples (Configure Illustrated Examples):**
@@ -43,4 +43,4 @@ Reads real files/classes; `write_page` is the only place it writes, and only und
 
 ## Dependencies
 
-stdlib only (`ast`, `importlib`, `inspect`, `re`, `subprocess`, `pathlib`, `dataclasses`) plus the real `context_tools.*` / utility classes it discovers and instantiates at call time.
+stdlib only (`ast`, `importlib`, `inspect`, `re`, `subprocess`, `pathlib`, `dataclasses`) plus the real `practices.*` / utility classes it discovers and instantiates at call time.

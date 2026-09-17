@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from tools.tool import agent_tool, toolset
+from agent_tools import agent_tool, agent_toolset
 
 
-@toolset
+@agent_toolset
 class ParameterTypes:
     """Echo typed arguments so MCP schema and invocation can be observed."""
 

@@ -4,12 +4,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from primitives.actions.action import agent_instructions, agentic_toolset
+from agent_tools import agent_instructions, agent_toolset
 from primitives.focus import focus
-from tools.tool import resource, agent_tool
+from agent_tools.agent_tools import resource, agent_tool
 
 
-@agentic_toolset
+@agent_toolset
 class ReviewAssistant:
     """Review code or documents with guidance tuned to the active fidelity level.
 
@@ -57,7 +57,7 @@ class ReviewAssistant:
     # The filter_key defaults to "fidelity" (strip trailing 's' from "fidelities").
     @focus(focus="fidelities")
     @agent_instructions
-    def review(self, subject: str) -> str:
+    def review(recipe, subject: str) -> str:
         """Review {{subject}} and record every issue found."""
         """Use record_finding for each issue. Read findings when done."""
         self.record_finding()

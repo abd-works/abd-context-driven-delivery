@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("utilities", "primitives", "context_tools"):
+for _cat in ("utilities", "primitives", "practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -15,7 +15,7 @@ from expects import be_a, contain, equal, expect
 from mamba import before, context, description, it
 
 from record_decisions.record_decisions import RecordDecisions
-from primitives.actions.action import _ActionExpander
+from primitives.agent_tools.agent_tools import AgentInstructions
 
 
 def _rd():
@@ -26,8 +26,8 @@ def _expanded(action_name: str) -> str:
     """Expand action body and return all prose joined."""
     rd = _rd()
     func = getattr(type(rd), action_name)
-    body = _ActionExpander.instance().parse_body(func, rd)
-    return "\n".join(body.prose_parts)
+    body = AgentInstructions.for_callable(func, rd)
+    return "\n".join(body.prompt)
 
 
 with description("a RecordDecisions toolset"):

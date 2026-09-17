@@ -4,7 +4,7 @@
 - worktree: `C:\dev\abd-cdd-experiment-thin-fidelity-format`
 - options: all smarter-load filters on one branch (contexts by fidelity, examples by format then filename, templates by format folder + fidelity filename). No file split.
 - expand chars: **17767** (parent already measured; this sub-agent did not re-implement)
-- clock: first successful `python -m tools run -` of the pair → artifact written (ISO-8601 local). `session: null`. No remanifest. No invented domain `action: guidance`.
+- clock: first successful `python -m agent_tools run -` of the pair → artifact written (ISO-8601 local). `session: null`. No remanifest. No invented domain `action: guidance`.
 - compare: single-command walker Pair A **00:51** / Pair B **00:37**
 
 ## Courier
@@ -16,7 +16,7 @@ Corpus: worktree `sandbox/courier` (source `courier.md` only). PYTHONPATH = this
 - start: 2026-08-27T15:59:22
 - end: 2026-08-27T16:00:27
 - elapsed: **01:05** (vs single-command **00:51**)
-- hops: 1 (stdin YAML → `python -m tools run -` only)
+- hops: 1 (stdin YAML → `python -m agent_tools run -` only)
 - first_generate_tools: `read_cdr_format`, `list_cdrs`, `write_cdr`, `guidance`, `finish_turn`
 - artifact: `C:\dev\abd-cdd-experiment-thin-fidelity-format\sandbox\courier\.context\story-map.md`
 
@@ -25,7 +25,7 @@ Corpus: worktree `sandbox/courier` (source `courier.md` only). PYTHONPATH = this
 - start: 2026-08-27T16:00:38
 - end: 2026-08-27T16:01:44
 - elapsed: **01:06** (vs single-command **00:37**)
-- hops: 1 (stdin YAML → `python -m tools run -` only)
+- hops: 1 (stdin YAML → `python -m agent_tools run -` only)
 - first_generate_tools: `read_cdr_format`, `list_cdrs`, `write_cdr`, `create_diagram`, `scan`, `repair`, `finish_turn`
 - artifact: `C:\dev\abd-cdd-experiment-thin-fidelity-format\sandbox\courier\.context\clean-engineering-model.md`
 

@@ -18,5 +18,5 @@ Callers must apply `@action` or `@instruction` before `@focus`; applying `@focus
 
 ## Dependencies
 
-- `primitives.actions.action` — `@action` marks the wrapped callable for action expansion
+- `primitives.agent_tools.action` — `@action` marks the wrapped callable for action expansion
 - `primitives.instructions.instructions` — `@instruction` marks the wrapped callable as an instruction slot

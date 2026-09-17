@@ -322,7 +322,7 @@ to-fix: (1) OCR-truncated extras/flaws chunks need a second-pass verify after pa
 
 ### Use Gear ? deep dive before inventory lock
 
-Prove-read equipment/vehicles/headquarters segments + module-context_tools. Ran segment-verify-gear.md (span length PASS; weapon/armor tables + some HQ feature bodies OCR-partial). Mechanics listed and story proposal prepared for user confirm grill ? map not written until inventory locked. Operate Vehicle stays under Use Skills.
+Prove-read equipment/vehicles/headquarters segments + module-practices. Ran segment-verify-gear.md (span length PASS; weapon/armor tables + some HQ feature bodies OCR-partial). Mechanics listed and story proposal prepared for user confirm grill ? map not written until inventory locked. Operate Vehicle stays under Use Skills.
 
 ### Use Gear stories this tick ? locked
 

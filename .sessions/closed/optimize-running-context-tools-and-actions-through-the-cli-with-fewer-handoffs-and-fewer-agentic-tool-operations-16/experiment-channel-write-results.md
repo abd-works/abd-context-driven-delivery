@@ -3,7 +3,7 @@
 - branch: `experiment/channel-write` (`ff6eb1f` from session `11527eb`)
 - worktree: `C:\dev\abd-cdd-experiment-channel-write`
 - options: one `@agent_tool` `generate_output` that parse/renders via the existing Stories/CE formatter and writes `.context/` (old 6c). Header + `SessionLog.append` run inside that tool (old 3a). `Generate.add_generate_header_to_generated` is also `@agent_tool` so expand lists it. CE markdown no longer walks `drawio.render` on generate expand.
-- clock: first successful `python -m tools run -` of the pair → artifact written (ISO-8601 local). `session: null`. No remanifest. No invented domain `action: guidance`.
+- clock: first successful `python -m agent_tools run -` of the pair → artifact written (ISO-8601 local). `session: null`. No remanifest. No invented domain `action: guidance`.
 - compare: thin-ce **00:41 / 00:55**; single-command **00:51 / 00:37**. Isolated thin-templates **00:33 / 00:31** are not the bar.
 
 ## What changed

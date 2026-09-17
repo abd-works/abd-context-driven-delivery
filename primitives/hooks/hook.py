@@ -4,7 +4,7 @@ Usage::
 
     from hooks.hook import hook, HookHarness
 
-    @toolset
+    @agent_toolset
     class Turn:
         @prompt(name="turn")
         @agent_tool

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TypedDict
 
 from primitives.instructions import instruction, tool
-from tools.tool import agent_tool, toolset
+from agent_tools import agent_tool, agent_toolset
 
 
 class PlanWorkResult(TypedDict):
@@ -17,7 +17,7 @@ class OrchestrateResult(TypedDict):
     count: int
 
 
-@toolset
+@agent_toolset
 class HostingDemo:
     """Small toolset hosting AI tools and agent guidance for MCP specs."""
 

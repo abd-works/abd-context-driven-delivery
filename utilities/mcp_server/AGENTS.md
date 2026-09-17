@@ -59,3 +59,5 @@ Lessons from correcting `mcp_server_spec.py`. Record each in the same turn as th
 28. **JSON Schema must match the Python parameter type.** After resolving hints, map `list`/`Sequence`/`tuple` to `array`, `dict`/`Mapping` to `object`, `bool` to `boolean`, `int` to `integer`, `float` to `number`, `str` to `string`, and `X | None` / unions to `anyOf`. Anything else advertised as `string` makes the host send a string; Python then walks characters (`"list"` → `'l'`) instead of loading `module:Class` refs.
 
 29. **Write specs with normal Python spacing.** One blank line between sibling `with` blocks and between top-level functions. Do not put a blank line after every statement — that doubles the file and hides the describe/it hierarchy.
+
+30. **Deploy vs runtime.** `McpDeployment` writes `mcp.json` registration and MCP invoke tails only — never Python server files. This package (`utilities/mcp_server`) is the one stdio host. Enroll from deploy-recorded `@mcp` ops via `bind_from(deployment.mcp)` or `start(toolset_refs)` using the same `operation_writes` walk on loaded refs — not a full-registry rescan.

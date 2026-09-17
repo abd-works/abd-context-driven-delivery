@@ -5,14 +5,14 @@ import re
 from pathlib import Path
 
 from harness.harness_tool import prompt
-from primitives.actions.action import agent_instructions, agentic_toolset
-from tools.tool import agent_tool
+from agent_tools import agent_instructions, agent_toolset, instructions, tools
+from agent_tools.agent_tools import agent_tool
 
 _FORMAT_PATH = Path(__file__).parent / "CDR-FORMAT.md"
 _CDR_NAME_RE = re.compile(r"^(\d{4})-")
 
 
-@agentic_toolset
+@agent_toolset
 class RecordDecisions:
     """Offer CDRs sparingly and persist them under .context/cdr/."""
 
@@ -68,14 +68,14 @@ class RecordDecisions:
 
     @prompt(name="record-decisions-session")
     @agent_instructions
-    def record_decisions_session(self, root: str = ".") -> str:
+    def record_decisions_session(recipe, root: str = ".") -> str:
         """Offer and write Context Decision Records (CDRs) sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions."""
         """Step 1 - Read the format once via read_cdr_format. Internalise the three-criteria gate and the minimal template."""
-        self.read_cdr_format()
+        tools(recipe.toolset.read_cdr_format())
         """Step 2 - Optionally call list_cdrs(root) so you do not re-record an already-captured decision."""
-        self.list_cdrs()
+        tools(recipe.toolset.list_cdrs(root))
         """Step 3 - During the session (grill, sketch, or generate), watch for decisions that meet ALL three: hard to reverse, surprising without context, and a real trade-off. If any criterion is missing, skip the CDR."""
         """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, call write_cdr immediately with a kebab slug and content matching CDR-FORMAT.md. Do not batch; do not wait until the end."""
-        self.write_cdr()
+        tools(recipe.toolset.write_cdr(root, "example-slug", "content"))
         """Step 5 - Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences only when they add genuine value."""
         return "CDR session active for {{root}}."

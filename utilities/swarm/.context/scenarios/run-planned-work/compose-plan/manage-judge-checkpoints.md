@@ -10,7 +10,7 @@ format: md
 
 **Actor:** Practitioner
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/plan/.context/module-context.md`; `context_tools/agent_bdd/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/plan/.context/module-context.md`; `practices/agent_bdd/.context/module-context.md`
 
 ### Domain terms
 

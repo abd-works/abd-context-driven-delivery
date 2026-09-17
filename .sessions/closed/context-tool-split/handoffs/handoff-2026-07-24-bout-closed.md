@@ -6,23 +6,23 @@
 
 ## 2. Resume in three lines
 
-(a) Stage: **model extract + post-extract verify complete** — bout `context-tool-split` on `context_tools/base`; fidelities modules→model.
+(a) Stage: **model extract + post-extract verify complete** — bout `context-tool-split` on `practices/base`; fidelities modules→model.
 (b) Last accepted: MI composer; kits under `utilities/` + `artifact_lifecycle` under base; instruction ownership = concept kit (`partition_guidance`→PartitionPipeline; generate/document/examples/templates→BaseContextTool; composer keeps `module_dir`+`contexts`); duplicate `segment_named_entry_completeness` removed; grill Folder layout / Scan kit home cleaned.
 (c) Next: do not re-open module cut; choose next CE fidelity or land the working tree.
 
 ## 3. Generator state
 
-- Toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering (via BaseContextTool)
-- Bout: context_tools/base/.context/sessions/context-tool-split/ (closing)
-- Modules sketch: context_tools/base/.context/sessions/context-tool-split/context-tool-modules-sketch.md
-- Build order: context_tools/base/.context/module-build-order.md (1–6 done)
-- Composer: context_tools/base/context_tool.py (thin: module_dir + contexts + @base_context_tool)
+- Toolset: practices.clean_engineering.clean_engineering:CleanEngineering (via BaseContextTool)
+- Bout: practices/base/.context/sessions/context-tool-split/ (closing)
+- Modules sketch: practices/base/.context/sessions/context-tool-split/context-tool-modules-sketch.md
+- Build order: practices/base/.context/module-build-order.md (1–6 done)
+- Composer: practices/base/context_tool.py (thin: module_dir + contexts + @base_context_tool)
 - **context_index_path:** .context/context-index.md
-- **Current tool=root:** clean_engineering = ./context_tools/base/*
+- **Current tool=root:** clean_engineering = ./practices/base/*
 
 ## 4. Grilling / skills state
 
-- Grill answers: context_tools/base/.context/sessions/context-tool-split/grill-answers.md
+- Grill answers: practices/base/.context/sessions/context-tool-split/grill-answers.md
 - Headings: Composer shape; Module cut; Workspace + session; Scan naming; Repair vs log_fix; Peer dependencies; Engagement engines; Folder layout; Scan kit home; Engagement wrappers home; Model / extract
 - Process locks:
   - Composer merge, not facade; no DomainContent module
@@ -39,13 +39,13 @@ None (no cdd-sketch in this bout).
 
 ## 6. Artifacts to read
 
-- .context/context-index.md (Current: clean_engineering = ./context_tools/base/*)
-- context_tools/base/.context/sessions/context-tool-split/grill-answers.md
-- context_tools/base/.context/sessions/context-tool-split/context-tool-modules-sketch.md
-- context_tools/base/.context/module-build-order.md
-- context_tools/base/context_tool.py
-- Kit homes: utilities/workspace_session/, utilities/scanners/, utilities/partition_pipeline/, utilities/repair/, context_tools/base/
-- Spec: context_tools/base/context_tool_spec.py (38/38)
+- .context/context-index.md (Current: clean_engineering = ./practices/base/*)
+- practices/base/.context/sessions/context-tool-split/grill-answers.md
+- practices/base/.context/sessions/context-tool-split/context-tool-modules-sketch.md
+- practices/base/.context/module-build-order.md
+- practices/base/context_tool.py
+- Kit homes: utilities/workspace_session/, utilities/scanners/, utilities/partition_pipeline/, utilities/repair/, practices/base/
+- Spec: practices/base/context_tool_spec.py (38/38)
 
 ## 7. Open questions / risks
 

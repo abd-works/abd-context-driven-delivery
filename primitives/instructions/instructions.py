@@ -530,7 +530,9 @@ def _expand_docstring(docstring: str, action_func: Any, *, instance: Any | None 
         if parts:
             return "\n\n".join(parts)
     if instance is not None and _instruction_ref_resolves(instance, text):
-        return Instruction.ref(instance, text).expand()
+        ref_text = Instruction.ref(instance, text).expand()
+        if ref_text.strip():
+            return ref_text
     defining_dir = _defining_module_dir(action_func)
     return Instruction(_path_for_name(defining_dir, text), defining_dir).expand()
 

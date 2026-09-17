@@ -1,8 +1,0 @@
-toolset: context_tools.ddd.ddd:Ddd
-context:
-  fidelity: <fidelity>
-  format: null
-  path: null
-  session: null
-  workspace: null
-action: createRule

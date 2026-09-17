@@ -1,0 +1,11 @@
+toolset: validate.validate:Validate
+action: validate
+arguments:
+  tools:
+  - toolset: practices.ddd.ddd:Ddd
+    context:
+      fidelity: <fidelity>
+      format: null
+      path: null
+      session: null
+      workspace: null

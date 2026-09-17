@@ -11,7 +11,7 @@ from unittest.mock import patch
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -167,11 +167,11 @@ with description("IdeCli"):
                 cli._blank_turn(),
                 [
                     {
-                        "toolset": "context_tools.stories.stories:Stories",
+                        "toolset": "practices.stories.stories:Stories",
                         "context": {"fidelity": "scenarios", "format": "markdown"},
                     },
                     {
-                        "toolset": "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                        "toolset": "practices.clean_engineering.clean_engineering:CleanEngineering",
                         "context": {"fidelity": "model", "format": "markdown"},
                     },
                 ],
@@ -225,7 +225,7 @@ with description("IdeCli"):
             cli = IdeCli()
             hanging = cli._bind_turn(
                 cli._blank_turn(),
-                ["context_tools.stories.stories:Stories"],
+                ["practices.stories.stories:Stories"],
                 "sketch.sketch:Sketch",
             )
             text = cli._turn_prompt(hanging, ["generate.generate:Generate"])
@@ -243,19 +243,19 @@ with description("IdeCli"):
         with it("should copy generate lenses onto judge validate tools"):
             generate = [
                 {
-                    "toolset": "context_tools.stories.stories:Stories",
+                    "toolset": "practices.stories.stories:Stories",
                     "context": {"fidelity": "scenarios", "format": "markdown"},
                 },
                 {
-                    "toolset": "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                    "toolset": "practices.clean_engineering.clean_engineering:CleanEngineering",
                     "context": {"fidelity": "model", "format": "markdown"},
                 },
             ]
             cli = IdeCli()
             aligned = cli._align_tools(
                 [
-                    "context_tools.stories.stories:Stories",
-                    "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                    "practices.stories.stories:Stories",
+                    "practices.clean_engineering.clean_engineering:CleanEngineering",
                 ],
                 generate,
             )
@@ -268,19 +268,19 @@ with description("IdeCli"):
             cli = IdeCli(
                 judge={
                     "tools": [
-                        "context_tools.stories.stories:Stories",
-                        "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                        "practices.stories.stories:Stories",
+                        "practices.clean_engineering.clean_engineering:CleanEngineering",
                     ],
                     "actions": ["validate.validate:Validate"],
                 }
             )
             generate = [
                 {
-                    "toolset": "context_tools.stories.stories:Stories",
+                    "toolset": "practices.stories.stories:Stories",
                     "context": {"fidelity": "scenarios", "format": "markdown"},
                 },
                 {
-                    "toolset": "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                    "toolset": "practices.clean_engineering.clean_engineering:CleanEngineering",
                     "context": {"fidelity": "model", "format": "markdown"},
                 },
             ]
@@ -302,7 +302,7 @@ with description("IdeCli"):
                 cli._blank_turn(),
                 [
                     {
-                        "toolset": "context_tools.stories.stories:Stories",
+                        "toolset": "practices.stories.stories:Stories",
                         "context": {"fidelity": "scenarios", "format": "markdown"},
                     }
                 ],
@@ -1202,13 +1202,13 @@ with description("a CLI agent job_queue"):
                         agent = CliAgent(workspace=str(tmp), session="queue")
                         agent.job_queue = [
                             {
-                                "tools": ["context_tools.stories.stories:Stories"],
+                                "tools": ["practices.stories.stories:Stories"],
                                 "actions": ["generate"],
                                 "prompt": "job one",
                             },
                             {
                                 "tools": [
-                                    "context_tools.clean_engineering.clean_engineering:CleanEngineering"
+                                    "practices.clean_engineering.clean_engineering:CleanEngineering"
                                 ],
                                 "actions": ["generate"],
                                 "prompt": "job two",
@@ -1656,7 +1656,7 @@ with description("CliAgent session log observability"):
             index=1,
             prompt="Write tests",
             tools=["workflow.workflow:Workflow"],
-            actions=["context_tools.bdd.bdd:Bdd"],
+            actions=["practices.bdd.bdd:Bdd"],
             judge=True,
         )
         log.job_finished(
@@ -1664,7 +1664,7 @@ with description("CliAgent session log observability"):
             index=1,
             prompt="Write tests",
             tools=["workflow.workflow:Workflow"],
-            actions=["context_tools.bdd.bdd:Bdd"],
+            actions=["practices.bdd.bdd:Bdd"],
             judge=True,
             summary="Added red tests.",
             refs=["utilities/cli_agent/cli_agent_spec.py"],
@@ -1673,7 +1673,7 @@ with description("CliAgent session log observability"):
         started = next(r for r in records if r.get("kind") == "job_started")
         finished = next(r for r in records if r.get("kind") == "job_finished")
         expect(started.get("tools")).to(equal(["workflow.workflow:Workflow"]))
-        expect(started.get("actions")).to(equal(["context_tools.bdd.bdd:Bdd"]))
+        expect(started.get("actions")).to(equal(["practices.bdd.bdd:Bdd"]))
         expect(started.get("judge")).to(be_true)
         expect(finished.get("tools")).to(equal(["workflow.workflow:Workflow"]))
         expect(finished.get("duration_s")).not_to(equal(None))
@@ -1712,13 +1712,13 @@ with description("CliAgent session log observability"):
             prompt="job",
             argv="agent --resume doer-1",
             tools=["workflow.workflow:Workflow"],
-            actions=["context_tools.bdd.bdd:Bdd"],
+            actions=["practices.bdd.bdd:Bdd"],
             tool_calls=["workflow.workflow:Workflow name=run"],
             job_index=2,
         )
         row = _cli_agent_log_records(work)[0]
         expect(row.get("tools")).to(equal(["workflow.workflow:Workflow"]))
-        expect(row.get("actions")).to(equal(["context_tools.bdd.bdd:Bdd"]))
+        expect(row.get("actions")).to(equal(["practices.bdd.bdd:Bdd"]))
         expect(row.get("tool_calls")).to(
             equal(["workflow.workflow:Workflow name=run"])
         )
@@ -2126,7 +2126,7 @@ with description("CliAgent human check (#53)"):
             os_calls.append({"title": title, "body": body, "error": error})
 
         with patch(
-            "utilities.manifest_hook.manifest_gate_conf.show_os_notification",
+            "utilities.cli_agent.cli_agent._show_ide_notification",
             fake_os,
         ):
             out = agent.run_backlog(

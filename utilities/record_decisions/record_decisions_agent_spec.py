@@ -14,7 +14,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("utilities", "primitives", "context_tools"):
+for _cat in ("utilities", "primitives", "practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -34,7 +34,7 @@ with description("a RecordDecisions toolset"):
             self._ag = agent(_REPO_ROOT, _SESSIONS / "read-cdr-format.json")
             self.session = self._ag.__enter__()
             self.format_response = self.session.instruct_run(
-                "Using shell, run exactly: python -m tools run -\n"
+                "Using shell, run exactly: python -m harness run -\n"
                 "Pipe this YAML on stdin:\n"
                 f"toolset: {_TOOLSET}\n"
                 "tool: read_cdr_format\n"
@@ -71,7 +71,7 @@ with description("a RecordDecisions toolset"):
             self.session2 = self._ag2.__enter__()
             self._tmpdir = tempfile.mkdtemp()
             self.write_response = self.session2.instruct_run(
-                "Using shell, run exactly: python -m tools run -\n"
+                "Using shell, run exactly: python -m harness run -\n"
                 "Pipe this YAML on stdin:\n"
                 f"toolset: {_TOOLSET}\n"
                 "tool: write_cdr\n"

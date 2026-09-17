@@ -8,7 +8,7 @@ from mamba import before, context, description, it
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -120,5 +120,5 @@ with description("a Reporter"):
 
         with it("should register gather and file_report as actions"):
             # Act / Assert
-            action_names = set(Reporter.manifest.actions.keys())
+            action_names = set(Reporter.manifest.agent_tools.keys())
             expect(action_names).to(equal({"gather", "file_report"}))

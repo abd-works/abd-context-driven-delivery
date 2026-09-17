@@ -8,15 +8,15 @@ from mamba import before, context, description, it
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
-_GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
+_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "practices" / "clean_engineering"
+_GENERATOR_DIR = _REPO_ROOT / "practices" / "base"
 _LIFECYCLE_PROSE_DIR = _GENERATOR_DIR  # sections in base_context_tool.md
-_REPAIR_DIR = _REPO_ROOT / "context_tools" / "actions" / "improvement"
+_REPAIR_DIR = _REPO_ROOT / "practices" / "actions" / "improvement"
 
 from primitives.instructions import Instruction
 from primitives.instructions import _active_resource, _format_keys, _path_for_name, _path_for_templates
@@ -74,7 +74,7 @@ with description("Instruction"):
             expect(result).to(contain("Contexts"))
 
 
-_STORIES_DIR = _REPO_ROOT / "context_tools" / "stories"
+_STORIES_DIR = _REPO_ROOT / "practices" / "stories"
 
 
 with description("Instruction.ref smarter load"):
@@ -207,10 +207,10 @@ with description("instruction_slot_names"):
 with description("_expand_docstring"):
     with context("a multi-word docstring"):
         with it("should return it unchanged"):
-            from primitives.actions.action import agent_instructions
+            from primitives.agent_tools.agent_tools import agent_instructions
 
             @agent_instructions
-            def my_action(self) -> str:
+    def my_action(recipe) -> str:
                 """This is literal prose."""
                 return ""
 
@@ -220,10 +220,10 @@ with description("_expand_docstring"):
 
     with context("an empty docstring"):
         with it("should return an empty string"):
-            from primitives.actions.action import agent_instructions
+            from primitives.agent_tools.agent_tools import agent_instructions
 
             @agent_instructions
-            def empty_action(self) -> str:
+    def empty_action(recipe) -> str:
                 """"""
                 return ""
 
@@ -232,7 +232,7 @@ with description("_expand_docstring"):
     with context("a single-word framework action name on a generator subclass"):
         with it("should equal the direct load of # Generate in generate.md"):
             from generate.generate import Generate
-            kit_dir = _REPO_ROOT / "context_tools" / "actions" / "generate"
+            kit_dir = _REPO_ROOT / "practices" / "actions" / "generate"
             expanded = _expand_docstring(
                 "generate", Generate.generate, instance=Generate()
             )
@@ -245,7 +245,7 @@ with description("_expand_docstring"):
     with context("a kit-local path-ref action docstring"):
         with it("should equal the direct load of # Generate in generate.md"):
             from generate.generate import Generate
-            kit_dir = _REPO_ROOT / "context_tools" / "actions" / "generate"
+            kit_dir = _REPO_ROOT / "practices" / "actions" / "generate"
             expanded = _expand_docstring(
                 "generate", Generate.generate, instance=Generate()
             )
@@ -256,8 +256,8 @@ with description("_expand_docstring"):
             expect(expanded).to(equal(direct))
 
     with context("a kit-local repair action docstring"):
-        with it("should equal the direct load of context_tools/actions/improvement/repair.md"):
-            from context_tools.actions.improvement.improvement import Improvement
+        with it("should equal the direct load of actions/improvement/repair.md"):
+            from practices.actions.improvement.improvement import Improvement
 
             expanded = _expand_docstring(
                 "repair", Improvement.repair, instance=Improvement()

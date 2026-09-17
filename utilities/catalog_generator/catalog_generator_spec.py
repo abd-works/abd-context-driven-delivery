@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("context_tools", "primitives", "utilities", "context_tools/actions"):
+for _cat in ("practices", "primitives", "utilities", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -25,8 +25,8 @@ from catalog_generator.catalog_generator import (
     scrape_fidelities,
     skill_slash_name,
 )
-from context_tools.ddd.ddd import Ddd
-from context_tools.stories.stories import Stories
+from practices.ddd.ddd import Ddd
+from practices.stories.stories import Stories
 from generate.generate import Generate
 from partition.partition import Partition
 
@@ -56,18 +56,18 @@ with description("Build Run Request From Live Toolset Manifest"):
             expect(req["toolset"]).to(equal("generate.generate:Generate"))
             expect(req["action"]).to(equal("generate"))
             host = req["arguments"]["tools"][0]
-            expect(host["toolset"]).to(equal("context_tools.stories.stories:Stories"))
+            expect(host["toolset"]).to(equal("practices.stories.stories:Stories"))
             expect(host["context"]["fidelity"]).to(equal("story_map"))
 
 
 with description("Load Context Tool And Utility Registry"):
     with description("given the hardcoded registry lists"):
         with before.all:
-            self.context_tools, self.utilities = load_registry()
+            self.practices, self.utilities = load_registry()
 
         with it("resolves every context tool to a real class with nothing missing"):
-            expect(len(self.context_tools)).to(equal(len(CONTEXT_TOOL_REGISTRY)))
-            for entry in self.context_tools:
+            expect(len(self.practices)).to(equal(len(CONTEXT_TOOL_REGISTRY)))
+            for entry in self.practices:
                 expect(isinstance(entry.cls, type)).to(be_true)
 
         with it("resolves every utility to a real class with nothing missing"):
@@ -76,8 +76,8 @@ with description("Load Context Tool And Utility Registry"):
                 expect(isinstance(entry.cls, type)).to(be_true)
 
         with it("resolves CDD as the header-row entry, first in the list"):
-            expect(self.context_tools[0].display_name).to(equal("Context-driven delivery"))
-            expect(self.context_tools[0].class_name).to(equal("Cdd"))
+            expect(self.practices[0].display_name).to(equal("Context-driven delivery"))
+            expect(self.practices[0].class_name).to(equal("Cdd"))
 
 
 with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections"):
@@ -102,7 +102,7 @@ with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections")
     with description("given a fidelity with no matching ## heading in {tool}.md"):
         with before.all:
             class _NoHeading:
-                __module__ = "context_tools.bdd.bdd"
+                __module__ = "practices.bdd.bdd"
                 fidelities = {"discovery": "modules"}  # BDD has no ## modules section
                 _fidelity_format_defaults = {}
 
@@ -126,27 +126,27 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
             ]))
             expect("generate_fixes_from_validate" in names).to(equal(False))
 
-        with it("resolves partition to its delegate kit dir under context_tools/actions/partition/"):
+        with it("resolves partition to its delegate kit dir under actions/partition/"):
             expect(self.by_name["partition"].source_dir.name).to(equal("partition"))
             expect(self.by_name["partition"].source_dir.parent.name).to(equal("actions"))
 
-        with it("resolves grill to context_tools/actions/grill_context/ and a call to generate"):
+        with it("resolves grill to actions/grill_context/ and a call to generate"):
             expect(self.by_name["grill"].source_dir.name).to(equal("grill_context"))
             expect(self.by_name["grill"].calls).to(contain("generate"))
 
-        with it("resolves sketch to context_tools/actions/sketch/ and a call to generate"):
+        with it("resolves sketch to actions/sketch/ and a call to generate"):
             expect(self.by_name["sketch"].source_dir.name).to(equal("sketch"))
             expect(self.by_name["sketch"].calls).to(contain("generate"))
 
-        with it("resolves iterate to context_tools/actions/iterate/ and a call to generate"):
+        with it("resolves iterate to actions/iterate/ and a call to generate"):
             expect(self.by_name["iterate"].source_dir.name).to(equal("iterate"))
             expect(self.by_name["iterate"].calls).to(contain("generate"))
 
-        with it("resolves repair to context_tools/actions/improvement/ with no same-instance action call"):
+        with it("resolves repair to actions/improvement/ with no same-instance action call"):
             expect(self.by_name["repair"].source_dir.name).to(equal("improvement"))
             expect(self.by_name["repair"].calls).to(equal([]))
 
-        with it("resolves createRule to context_tools/actions/validate/"):
+        with it("resolves createRule to actions/validate/"):
             expect(self.by_name["createRule"].source_dir.name).to(equal("validate"))
             expect(self.by_name["createRule"].calls).to(equal([]))
 

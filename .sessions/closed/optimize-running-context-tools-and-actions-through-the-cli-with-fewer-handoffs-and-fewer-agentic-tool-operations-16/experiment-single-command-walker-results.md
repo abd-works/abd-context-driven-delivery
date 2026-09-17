@@ -3,19 +3,19 @@
 - branch: experiment/single-command
 - worktree: `C:\dev\abd-cdd-experiment-single-command`
 - options: 1b + 1c + 4c + 5a + expander lists tools
-- clock: first `python -m tools run -` of that pair → artifact written (ISO-8601 local)
+- clock: first `python -m agent_tools run -` of that pair → artifact written (ISO-8601 local)
 - pair_a_story_map_generate:
   - start: 2026-08-27T14:03:32
   - end: 2026-08-27T14:04:23
   - elapsed: 00:51
-  - hops: 1 (stdin YAML → `python -m tools run -` only)
+  - hops: 1 (stdin YAML → `python -m agent_tools run -` only)
   - first_generate_tools: [read_cdr_format, list_cdrs, write_cdr, guidance, finish_turn]
   - artifact: `C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\story-map.md`
 - pair_b_model_generate:
   - start: 2026-08-27T14:04:40
   - end: 2026-08-27T14:05:17
   - elapsed: 00:37
-  - hops: 1 (stdin YAML → `python -m tools run -` only)
+  - hops: 1 (stdin YAML → `python -m agent_tools run -` only)
   - first_generate_tools: [read_cdr_format, list_cdrs, write_cdr, create_diagram, scan, repair, finish_turn]
   - artifact: `C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\clean-engineering-model.md`
 - notes:

@@ -67,8 +67,8 @@ def _cli_time(run_yaml: str) -> float:
             root,
             str(_REPO_ROOT / "primitives"),
             str(_REPO_ROOT / "utilities"),
-            str(_REPO_ROOT / "context_tools"),
-            str(_REPO_ROOT / "context_tools" / "actions"),
+            str(_REPO_ROOT / "practices"),
+            str(_REPO_ROOT / "practices" / "actions"),
         ]
     )
     py = str(_REPO_ROOT / ".venv" / "Scripts" / "python.exe")

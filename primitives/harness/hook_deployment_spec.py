@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("context_tools", "primitives", "utilities"):
+for _cat in ("practices", "primitives", "utilities"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -15,8 +15,8 @@ for _cat in ("context_tools", "primitives", "utilities"):
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
-from context_tools.context_guidance.fixtures.agentic_ops.agentic_ops import SampleAgenticOps
-from context_tools.context_guidance.fixtures.agentic_ops.hook_ops import SampleHookOps
+from primitives.guidance.fixtures.agentic_ops.agentic_ops import SampleAgenticOps
+from primitives.guidance.fixtures.agentic_ops.hook_ops import SampleHookOps
 from primitives.harness import Harness
 
 

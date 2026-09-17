@@ -16,7 +16,7 @@ from typing import List
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("utilities", "primitives", "context_tools"):
+for _cat in ("utilities", "primitives", "practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -31,7 +31,7 @@ from context_setup.context_index import (
     RankedChunk,
     SearchResult,
 )
-from primitives.actions.action import _ActionExpander
+from primitives.agent_tools.agent_tools import AgentInstructions
 
 
 # ── Fake embedding provider ───────────────────────────────────────────────────
@@ -77,8 +77,8 @@ def _write_segment(tmp: Path, name: str, content: str) -> Path:
 def _expanded_ask() -> str:
     ci = _make_index()
     func = getattr(type(ci), "ask")
-    body = _ActionExpander.instance().parse_body(func, ci)
-    return "\n".join(body.prose_parts)
+    body = AgentInstructions.for_callable(func, ci)
+    return "\n".join(body.prompt)
 
 
 # ── spec ─────────────────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ with description("a ContextIndex"):
             result = self._ci.search("anything", self._out, top_k=100)
             expect(len(result.chunks)).to(equal(1))
 
-    # ── Action: ask (expansion tests) ────────────────────────────────────────
+    # ── AgentTool: ask (expansion tests) ────────────────────────────────────────
 
     with context("whose ask action is expanded"):
         with it("should list search as a tool to call"):

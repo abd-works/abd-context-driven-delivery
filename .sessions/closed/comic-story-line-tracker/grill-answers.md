@@ -7,12 +7,12 @@ turn.
 Sources read this turn:
 - User's original ask (prior chat turn, verbatim intent captured in
   `cdd-sketch.md` under "Sources / context").
-- `context_tools/cdd/cdd.md`, `context_tools/cdd/cdd.py`,
-  `context_tools/cdd/templates/cdd-sketch.md`,
-  `context_tools/cdd/.context/grill-answers.md`
-- `context_tools/ux/templates/ux-sketch.md`
-- `context_tools/clean_engineering/templates/clean_engineering-sketch.md`
-- `context_tools/bdd/templates/bdd-sketch.md`
+- `practices/cdd/cdd.md`, `practices/cdd/cdd.py`,
+  `practices/cdd/templates/cdd-sketch.md`,
+  `practices/cdd/.context/grill-answers.md`
+- `practices/ux/templates/ux-sketch.md`
+- `practices/clean_engineering/templates/clean_engineering-sketch.md`
+- `practices/bdd/templates/bdd-sketch.md`
 - `.context/context-index.md`, `.context/handoff-latest.md`
 
 ---
@@ -43,8 +43,8 @@ Options (recommended first):
 
 **Frame.** User explicitly named "clean Eng and NDD and ux". `NDD` isn't a
 framework lens; the two plausible reads are `BDD` (keyboard-adjacent to `N`)
-and `DDD` (same "…DD" phonetic). Sources read: `context_tools/cdd/cdd.md`
-lens table + `context_tools/cdd/cdd.py::_CONTEXT_TOOLS_BY_STAGE`.
+and `DDD` (same "…DD" phonetic). Sources read: `practices/cdd/cdd.md`
+lens table + `practices/cdd/cdd.py::_CONTEXT_TOOLS_BY_STAGE`.
 
 Options asked:
 1. **(Recommended) BDD** — keyboard-adjacent typo; forces fidelity ≥ spec.
@@ -686,7 +686,7 @@ default in the `ce:` block; BDD covers both option 1 and option 2 branches.
 Marvel Unlimited coverage. Nothing in the ask says the app must talk to
 Marvel's API. CE `IssueRepository` shape depends on this choice, as does the
 BDD "loads the timeline" scenario surface and the UX filter dropdowns.
-Sources read: `context_tools/cdd/.context/grill-answers.md` (Fake / Isolated
+Sources read: `practices/cdd/.context/grill-answers.md` (Fake / Isolated
 / Production factory pattern).
 
 Options asked:

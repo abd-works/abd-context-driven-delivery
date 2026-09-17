@@ -1,0 +1,4 @@
+toolset: agent_tools.examples.logged_probe:LoggedProbe
+action: narrate
+arguments:
+  message: hello

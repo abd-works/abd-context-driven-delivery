@@ -5,13 +5,13 @@ Fidelity: behavior
 What changed: batch from agent_skills — name filter; scaffold as its own action; full tool fidelity slugs including CE/DDD/UX; echo/handoff prompts; no disable-model-invocation; clean needs @prompt; state beside Harness. ActionBody stays as sketched.
 
 **Refactor these tests:**
-- `context_tools/base/base_context_tool_spec.py` — generate / validate / satisfy / document / render / createRule / host turn tools
-- `context_tools/actions/workspace/workspace_session_spec.py` — generate composer
-- `context_tools/actions/workspace/workspace_spec.py` — host begin_turn / finish_turn / record_* face; keep Workspace stories
-- `context_tools/actions/sketch/sketch_spec.py` — merge sketch_session into sketch
-- `context_tools/actions/iterate/iterate_spec.py` — merge iterate_session into iterate
-- `context_tools/actions/grill_context/grill_context_spec.py` — merge grill_with_context into grill
-- `context_tools/actions/partition/partition_spec.py` — merge partition_corpus into partition
+- `practices/base/base_context_tool_spec.py` — generate / validate / satisfy / document / render / createRule / host turn tools
+- `actions/workspace/workspace_session_spec.py` — generate composer
+- `actions/workspace/workspace_spec.py` — host begin_turn / finish_turn / record_* face; keep Workspace stories
+- `actions/sketch/sketch_spec.py` — merge sketch_session into sketch
+- `actions/iterate/iterate_spec.py` — merge iterate_session into iterate
+- `actions/grill_context/grill_context_spec.py` — merge grill_with_context into grill
+- `actions/partition/partition_spec.py` — merge partition_corpus into partition
 
 a harness
   -> harness = new Harness(type)
@@ -178,7 +178,7 @@ a generated harness tool
     with the action specified
       it should not require it from the context
       it should put the CLI after that
-        -> expect(tool.body).to contain "python -m tools run"
+        -> expect(tool.body).to contain "python -m harness run"
 
 a skill
   -> skill = new Skill(type)

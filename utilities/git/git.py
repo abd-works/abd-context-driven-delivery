@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from tools.tool import toolset
+from agent_tools import agent_toolset
 
 
 class GitConnectError(RuntimeError):
@@ -1688,7 +1688,7 @@ class Repo:
 GitRepo = Repo
 
 
-@toolset
+@agent_toolset
 class Git:
     """Manifest entry for the git utility package."""
 

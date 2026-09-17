@@ -1,6 +1,6 @@
 # Step 1 — Discover with real conditions (mcp_server)
 
-Manual verification per [testing-approach.md](../../../context_tools/clean_engineering/rules/testing-approach.md). No automated tests in this pass — call exactly as a host would.
+Manual verification per [testing-approach.md](../../../practices/clean_engineering/rules/testing-approach.md). No automated tests in this pass — call exactly as a host would.
 
 **Re-verified:** 2026-09-08 — real `echo.echo:Echo` tool discovered as `echo.fence`, invoked successfully; unknown name raises `KeyError`.
 

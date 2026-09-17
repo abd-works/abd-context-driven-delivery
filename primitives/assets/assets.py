@@ -18,6 +18,9 @@ LocationKind = Literal["file", "folder", "section"]
 
 
 def _class_file_directory(host: Any) -> Path:
+    practice = getattr(host, "practice_guidance", None)
+    if practice is not None:
+        host = practice
     try:
         return Path(inspect.getfile(type(host))).resolve().parent
     except (TypeError, OSError):
@@ -149,7 +152,7 @@ class AssetLocator:
                 return located
             if located.folder is not None and located.folder.is_dir():
                 return located
-            # Meta scaffold pack (e.g. context_tools/base/templates/) when no format artifact exists.
+            # Meta scaffold pack (e.g. practices/base/templates/) when no format artifact exists.
             meta = module_dir / "templates"
             if meta.is_dir():
                 return AssetLocation("folder", module_dir, domain_slug, folder=meta.resolve())
@@ -176,6 +179,17 @@ class AssetLocator:
         return root
 
     def _locate_under(self, search_root: Path, module_dir: Path, domain_slug: str) -> AssetLocation:
+        fidelity_name = getattr(self._host, "name", None)
+        if fidelity_name:
+            section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
+            return AssetLocation(
+                "section",
+                module_dir,
+                domain_slug,
+                section_file=section_file.resolve(),
+                section_heading=self._label.replace("_", " ").replace("-", " ").title(),
+                fidelity=str(fidelity_name),
+            )
         folder = search_root / self._label
         if folder.is_dir():
             return AssetLocation("folder", module_dir, domain_slug, folder=folder.resolve())

@@ -5,7 +5,7 @@ Single plan for CDD workspace, sessions, eval traceability, kanban workflow (tic
 extensions, and external tools — with maximum out-of-box Git and minimal custom code.
 
 **Status:** design proposal (Aug 2026)  
-**Related:** `context_tools/actions/workspace/.context/module-context.md`,
+**Related:** `actions/workspace/.context/module-context.md`,
 `eval-consolidate-workspace/workspace-bdd-sketch.md` (Git-primary association),
 `git-primary-association-proof.md`
 
@@ -471,12 +471,12 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 
 | Package | Role |
 | --- | --- |
-| `context_tools/actions/workspace` | Turn, WorkSession, SessionLog, GitRepo, ContextIndex, ContextPackage *(new)* |
-| `context_tools/actions/workspace` | WorkSession, Turn, Mistake, Correction, GitRepo |
-| `context_tools/base` | validate/scan finish → verification trailers |
-| `context_tools/bdd` | agent_bdd judge, regression anchors |
-| `primitives/actions` | expand → SessionLog/SpanLog |
-| `primitives/tools` | manifest paths |
+| `actions/workspace` | Turn, WorkSession, SessionLog, GitRepo, ContextIndex, ContextPackage *(new)* |
+| `actions/workspace` | WorkSession, Turn, Mistake, Correction, GitRepo |
+| `practices/base` | validate/scan finish → verification trailers |
+| `practices/bdd` | agent_bdd judge, regression anchors |
+| `primitives/agent_tools` | expand → SessionLog/SpanLog |
+| `primitives/agent_tools` | manifest paths |
 | `utilities/agent_skills` | deploy, `configure_git_notes`, team `.vscode` settings |
 | `utilities/handoff` | handoff payload + span |
 | `utilities/catalog_generator` | HTML shells (catalog, kanban) |
@@ -837,7 +837,7 @@ G-10 (IDE retrieval), G-17 (tokens), G-15 full (model ID without host API).
 ## References
 
 ### CDD
-- `context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/grill-answers.md`
+- `actions/workspace/.context/sessions/eval-consolidate-workspace/grill-answers.md`
 
 ### Papers (patterns)
 - [Braintrust — Agent observability 2026](https://www.braintrust.dev/articles/agent-observability-complete-guide-2026)

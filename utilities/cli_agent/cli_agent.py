@@ -8,14 +8,40 @@ import shutil
 import signal
 import subprocess
 import time
+import urllib.request
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from harness.harness_tool import prompt
-from primitives.actions.action import agentic_toolset
+from primitives.agent_tools.agent_tools import agent_toolset
 from sub_agent.sub_agent import SubAgent, sub_agent
-from tools.tool import agent_tool
+from agent_tools.agent_tools import agent_tool
+
+
+_IDE_NOTIFIER_URL = "http://127.0.0.1:37291/notify"
+
+
+def _show_ide_notification(title: str, body: str, *, error: bool = False) -> None:
+    """Fire-and-forget IDE notification via the local Cursor extension bridge."""
+    payload = json.dumps(
+        {
+            "title": title,
+            "body": body,
+            "level": "error" if error else "info",
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        _IDE_NOTIFIER_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=1):
+            pass
+    except Exception:
+        pass
 
 
 @dataclass
@@ -1634,7 +1660,7 @@ class VscodeCli(IdeCli):
 
 
 
-@agentic_toolset
+@agent_toolset
 @dataclass
 class CliJobTemplate:
     """A named, reusable list of jobs. Shape is identical to a job queue entry."""
@@ -1990,12 +2016,12 @@ class CliAgent(SubAgent):
 
     def _bring_in_kits(self, tools, actions) -> None:
         refs = self._toolset_refs(tools)
-        for host in self.context_tools(refs):
+        for host in self.instantiate_refs(refs):
             host
         action_refs = self._toolset_refs(actions)
         if not action_refs:
             return
-        for kit in self.context_tools(action_refs):
+        for kit in self.instantiate_refs(action_refs):
             kit
 
     def _first_failure(self, results):
@@ -2411,7 +2437,7 @@ class CliAgent(SubAgent):
     ) -> None:
         """Fire a human-visible notification, then record human_notified in the session log.
 
-        Default channel is the IDE/OS notifier (same bridge as manifest gate). Tests inject
+        Default channel is the IDE/OS notifier. Tests inject
         ``notify_human`` to spy without requiring the Cursor extension.
         """
         title, body = self._human_check_notify_text(work, item, job_index=job_index)
@@ -2420,11 +2446,7 @@ class CliAgent(SubAgent):
             channel = str(notify_human(work, item, title, body) or "test")
         else:
             try:
-                from utilities.manifest_hook.manifest_gate_conf import (
-                    show_os_notification,
-                )
-
-                show_os_notification(title, body)
+                _show_ide_notification(title, body)
             except Exception:
                 # Never block the backlog loop on notifier failure — log still records intent.
                 channel = "os_failed"

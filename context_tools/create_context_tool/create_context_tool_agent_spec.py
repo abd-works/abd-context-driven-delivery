@@ -1,6 +1,6 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
-# session: context_tools/create_context_tool/.context/.agent_bdd_sessions/car-chronicle.json
+# session: practices/create_context_tool/.context/.agent_bdd_sessions/car-chronicle.json
 """BDD agent spec for create_context_tool — generate and repair via shared helpers."""
 
 from expects import be_true, expect
@@ -22,11 +22,11 @@ from agent_bdd import (
 
 _REPO_ROOT = repo_root_from(__file__, parents=2)
 _SESSIONS = sessions_dir(__file__)
-_CAR_ROOT = "context_tools/create_context_tool/examples/car_chronicle"
+_CAR_ROOT = "practices/create_context_tool/examples/car_chronicle"
 _OUTPUT_DIR = _REPO_ROOT / _CAR_ROOT / "output"
 _CAR_CHRONICLE_PY = f"{_CAR_ROOT}/car_chronicle.py"
 _CAR_TOOLSET = (
-    "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 
 with description("a CarChronicle generator"):

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import agent_instructions
-from context_tools.base.base_context_tool import BaseContextTool
-from tools.tool import agent_tool
+from primitives.agent_tools.agent_tools import agent_instructions
+from practices.base.base_context_tool import BaseContextTool
+from agent_tools.agent_tools import agent_tool
 
 
 class ChronicleWithOutput(BaseContextTool):
@@ -18,7 +18,7 @@ class ChronicleWithOutput(BaseContextTool):
         return "car_chronicle"
 
     @agent_instructions
-    def generate_output(self) -> str:
+    def generate_output(recipe) -> str:
         """Append each trip entry to the driving log before validating."""
         self.add_epic()
         return "Chronicle entries saved."

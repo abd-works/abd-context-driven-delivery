@@ -37,8 +37,8 @@ def _cli_run(run_yaml: str) -> dict:
             root,
             str(_REPO / "primitives"),
             str(_REPO / "utilities"),
-            str(_REPO / "context_tools"),
-            str(_REPO / "context_tools" / "actions"),
+            str(_REPO / "practices"),
+            str(_REPO / "practices" / "actions"),
         ]
     )
     py = str(_REPO / ".venv" / "Scripts" / "python.exe")
@@ -119,4 +119,4 @@ with description("harness deploy for car invoke BDD"):
             stage_invoke_commands(_REPO)
             fence = command_fence_yaml(CAR_START, repo_root=_REPO)
             expect("tool: start" in fence).to(equal(True))
-            expect("toolset: context_tools.car.car:Car" in fence).to(equal(True))
+            expect("toolset: practices.car.car:Car" in fence).to(equal(True))

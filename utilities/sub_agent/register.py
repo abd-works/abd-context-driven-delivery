@@ -1,8 +1,8 @@
-"""Register sub-agent tools with Tools - import this package to attach them."""
+"""Register sub-agent tools with ToolsetExtensions — import this package to attach them."""
 from __future__ import annotations
 
 from sub_agent.sub_agent import discover_sub_agent_tools
-from tools.extensions import ToolsetExtensions
+from primitives.harness.extensions import ToolsetExtensions
 
 _registered = False
 

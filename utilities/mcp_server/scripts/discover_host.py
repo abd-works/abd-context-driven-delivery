@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-for _path in (_REPO_ROOT, _REPO_ROOT / "utilities", _REPO_ROOT / "primitives", _REPO_ROOT / "context_tools"):
+for _path in (_REPO_ROOT, _REPO_ROOT / "utilities", _REPO_ROOT / "primitives", _REPO_ROOT / "practices"):
     value = str(_path)
     if value not in sys.path:
         sys.path.insert(0, value)
@@ -17,7 +17,7 @@ from mcp.client.stdio import stdio_client
 
 _PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
 _HOSTING_DEMO = "mcp_server.examples.hosting_demo.hosting_demo:HostingDemo"
-_BDD = "context_tools.bdd.bdd:Bdd"
+_BDD = "practices.bdd.bdd:Bdd"
 
 
 async def _probe(toolsets: str) -> None:
@@ -37,7 +37,7 @@ async def _probe(toolsets: str) -> None:
                     str(_REPO_ROOT),
                     str(_REPO_ROOT / "utilities"),
                     str(_REPO_ROOT / "primitives"),
-                    str(_REPO_ROOT / "context_tools"),
+                    str(_REPO_ROOT / "practices"),
                 ]
             ),
         },

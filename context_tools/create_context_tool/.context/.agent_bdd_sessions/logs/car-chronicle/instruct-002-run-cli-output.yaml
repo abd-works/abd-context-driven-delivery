@@ -1,6 +1,6 @@
 ```yaml
 ok: true
-toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+toolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 action: generate
 result: When done, run validate.
 instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session tools\
@@ -90,8 +90,8 @@ instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session to
   \ the car's voice }\n\n\nPrepend the following block verbatim as the very first\
   \ lines of the file you are writing - before any imports, before any code.\n\nEvery\
   \ tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\n\
-  toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n\
-  context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools\
+  toolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n\
+  context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m agent_tools\
   \ run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n1. tool: ensure_session\n\
   \   arguments:\n     name: <value>\n     goal: <value>\n     fidelities: <value>\n\
   \     contexts: <value>\n     path: <value>\n\n2. tool: read_context_index\n\n3.\

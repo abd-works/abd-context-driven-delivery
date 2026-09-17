@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from sub_agent.sub_agent import sub_agent
-from tools.tool import agent_tool, toolset
+from agent_tools import agent_tool, agent_toolset
 
 
-@toolset
+@agent_toolset
 class ParallelRunner:
     """Toolset that routes heavy analysis work as a non-blocking sub-agent launch.
 

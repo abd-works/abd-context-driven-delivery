@@ -93,14 +93,14 @@ const SMALL_WORK_TURNS: Array<Partial<Turn>> = [
     fidelity: "behavior",
     format: "markdown",
     context: "root-cause",
-    toolKeys: ["context_tools.bdd.bdd:Bdd"],
+    toolKeys: ["practices.bdd.bdd:Bdd"],
   },
   {
     action: "Generate",
     fidelity: "scenarios",
     format: "markdown",
     context: "fix-one-issue",
-    toolKeys: ["context_tools.bdd.bdd:Bdd"],
+    toolKeys: ["practices.bdd.bdd:Bdd"],
   },
 ];
 

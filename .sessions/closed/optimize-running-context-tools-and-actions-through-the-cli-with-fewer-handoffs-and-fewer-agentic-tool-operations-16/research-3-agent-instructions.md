@@ -3,9 +3,9 @@
 **Session:** optimize-running-context-tools-and-actions-through-the-cli-with-fewer-handoffs-and-fewer-agentic-tool-operations-16  
 **Scope:** read-only code research. No implementation. No options 3A/3B/3C applied.
 
-**Question:** Jeff claims nested `@agent_instructions` expand in-process during the first `action:` run; only the first `python -m tools run` with `action:` is a hop. Is section 3 of `options.md` wrong?
+**Question:** Jeff claims nested `@agent_instructions` expand in-process during the first `action:` run; only the first `python -m agent_tools run` with `action:` is a hop. Is section 3 of `options.md` wrong?
 
-**Verdict:** Jeff is correct on the architecture. Section 3 mischaracterizes nested `@agent_instructions` as extra CLI hops and treats 3C (inline nested expand) as future work when `_ActionExpander` already does it. Real follow-on cost is section 2: `@agent_tool` steps the first expand lists for the agent to invoke later, plus section 1 (manifest + file tax).
+**Verdict:** Jeff is correct on the architecture. Section 3 mischaracterizes nested `@agent_instructions` as extra CLI hops and treats 3C (inline nested expand) as future work when `_AgentToolExpander` already does it. Real follow-on cost is section 2: `@agent_tool` steps the first expand lists for the agent to invoke later, plus section 1 (manifest + file tax).
 
 ---
 
@@ -13,37 +13,37 @@
 
 | Path | Relevant seam |
 |---|---|
-| `primitives/actions/.context/module-context.md` | `@agent_instructions` bodies parsed via AST, never executed; expand returns instructions + tool list |
-| `primitives/tools/.context/module-context.md` | `run` with `action:` expands; `run` with `tool:` executes Python |
+| `primitives/agent_tools/.context/module-context.md` | `@agent_instructions` bodies parsed via AST, never executed; expand returns instructions + tool list |
+| `primitives/agent_tools/.context/module-context.md` | `run` with `action:` expands; `run` with `tool:` executes Python |
 | `utilities/workspace/.context/module-context.md` | `SessionLog.append` on expand/run; `Turn.finish_turn` is `@agent_tool` |
 | `utilities/workflow/.context/module-context.md` | `backlog` = instructions; `start`/`finish` = one `@agent_tool` each |
 | `utilities/echo/.context/module-context.md` | `echo_session` = instructions + deferred `fence` tool |
 
 ---
 
-## 1. First `python -m tools run` with `action:` — the hop
+## 1. First `python -m agent_tools run` with `action:` — the hop
 
 ### Call chain (one process)
 
 ```
 cli._ToolsCli._run_main
-  → _ToolsetRunner.run_request          (primitives/tools/tool.py)
+  → _ToolsetRunner.run_request          (primitives/agent_tools/tool.py)
       → _run_action                     when request has action:
-          → ToolsetExtensions.run("action", …)   (primitives/tools/extensions.py)
-              → _ActionRunner.invoke_action      (primitives/actions/register.py → action.py)
-                  → _ActionExpander.expand       (primitives/actions/action.py)
+          → ToolsetExtensions.run("action", …)   (primitives/agent_tools/extensions.py)
+              → _AgentToolRunner.invoke_action      (primitives/agent_tools/register.py → action.py)
+                  → _AgentToolExpander.expand       (primitives/agent_tools/action.py)
                   → _build_response              returns YAML payload
 ```
 
 Evidence:
 
-- `primitives/tools/cli.py` — `_run_main` loads request, calls `_runner.run_request(request)`, prints fenced YAML.
-- `primitives/tools/tool.py` — `_ToolsetRunner.run_request` builds instance; if `parsed.action_name`, calls `_run_action` (not `_run_tool`).
-- `primitives/actions/action.py` — `_ActionRunner.invoke_action` calls `_ActionExpander.expand`, then `_build_response` with keys `ok`, `toolset`, `action`, `result`, `instructions`, `arguments`, `tools`, `resources`.
+- `primitives/agent_tools/cli.py` — `_run_main` loads request, calls `_runner.run_request(request)`, prints fenced YAML.
+- `primitives/agent_tools/tool.py` — `_ToolsetRunner.run_request` builds instance; if `parsed.action_name`, calls `_run_action` (not `_run_tool`).
+- `primitives/agent_tools/action.py` — `_AgentToolRunner.invoke_action` calls `_AgentToolExpander.expand`, then `_build_response` with keys `ok`, `toolset`, `action`, `result`, `instructions`, `arguments`, `tools`, `resources`.
 
 ### What one expand payload contains
 
-`_ActionExpander._build_expansion_result` returns:
+`_AgentToolExpander._build_expansion_result` returns:
 
 | Field | Source |
 |---|---|
@@ -57,7 +57,7 @@ Side effects during expand (same process, not a second CLI):
 - `_walk_session_log_append` → runs `SessionLog.instance().append(…)` when recipe contains that call (e.g. `Generate.generate`).
 - `_run_plain_call` → executes unmarked callees during walk (e.g. workspace open side effects when providers resolve).
 
-This matches `primitives/actions/.context/module-context.md`: recipes are read, not executed as Python — except explicit plain-call / SessionLog prelude hooks the expander runs by design.
+This matches `primitives/agent_tools/.context/module-context.md`: recipes are read, not executed as Python — except explicit plain-call / SessionLog prelude hooks the expander runs by design.
 
 ---
 
@@ -69,18 +69,18 @@ This matches `primitives/actions/.context/module-context.md`: recipes are read, 
 
 | Function | File | Behavior |
 |---|---|---|
-| `_walk_body` | `primitives/actions/action.py` | Entry: walks one `@agent_instructions` body; returns `(prose, tool_steps)` |
+| `_walk_body` | `primitives/agent_tools/action.py` | Entry: walks one `@agent_instructions` body; returns `(prose, tool_steps)` |
 | `_walk_nested_action` | same | Parses nested action source, calls `_walk_body` recursively, merges into `_ProseAccumulator` |
 | `_expand_action_call` | same | If callee `mode == "action"` (default): inline via `_walk_nested_action`. If `mode == "tool"`: append action name to `tool_steps` + deferred-hint prose (`_deferred_action_hint`) — agent must run a **later** `action:` |
 | `_walk_super_statement` | same | Empty-body / `super()` delegation: inlines parent `@agent_instructions` body |
 | `_walk_cross_instance_statement` | same | `self.<provider>().<member>()` on another toolset: inline nested `@agent_instructions` or list `@agent_tool` on target |
 | `_walk_for_each_statement` | same | `for tool in self.context_tools(tools): tool.<action>()` — resolves live instances, inlines per item |
 
-`AgenticToolset.mode` (`primitives/actions/action.py`, `AgenticToolset` docstring): **`action`** = expand inline; **`tool`** = defer to a separate tools-run step.
+`AgenticToolset.mode` (`primitives/agent_tools/action.py`, `AgenticToolset` docstring): **`action`** = expand inline; **`tool`** = defer to a separate tools-run step.
 
 ### Generate → domain tool (the case section 3 cares about)
 
-`context_tools/actions/generate/generate.py` — `Generate.generate`:
+`actions/generate/generate.py` — `Generate.generate`:
 
 ```python
 self.begin(tools, action="generate")          # same-kit @agent_instructions → inline
@@ -93,27 +93,27 @@ for tool in self.context_tools(tools):
 self.end()                                    # same-kit @agent_instructions → inline
 ```
 
-`context_tools/base/base_context_tool.py` — `guidance` is `@agent_instructions`; body references `@instruction` slots (`contexts`, `examples`, `templates`) which `_walk_self_member_statement` inlines via `_inline`.
+`practices/base/base_context_tool.py` — `guidance` is `@agent_instructions`; body references `@instruction` slots (`contexts`, `examples`, `templates`) which `_walk_self_member_statement` inlines via `_inline`.
 
 **Empirical check:** With an open work session, replacing `tool.guidance` with `tool.guidance()` in the walk causes full `# Contexts` prose from `car_chronicle.md` to appear in the merged instructions in the **same** expand (no second CLI). Tool list then includes CDR tools from inlined `begin` → `record_decisions_session` and `finish_turn` from inlined `end`.
 
 ### Parent MRO empty-body delegate
 
-`_is_empty_action_body` + `_walk_super_statement`: an empty `@agent_instructions` on a subclass expands the parent's body in the same walk (documented in `_ActionExpander._is_empty_action_body`).
+`_is_empty_action_body` + `_walk_super_statement`: an empty `@agent_instructions` on a subclass expands the parent's body in the same walk (documented in `_AgentToolExpander._is_empty_action_body`).
 
 ### Explicit opt-out: CDD sets `mode = "tool"`
 
-`context_tools/cdd/cdd.py` — `Cdd.guidance` sets `context_tool.mode = "tool"` before `context_tool.guidance()`. Expander then **defers** each stage child's guidance to a separate `action:` run (`_expand_action_call` lines 827–830). That is intentional cross-hop behavior, not the default.
+`practices/cdd/cdd.py` — `Cdd.guidance` sets `context_tool.mode = "tool"` before `context_tool.guidance()`. Expander then **defers** each stage child's guidance to a separate `action:` run (`_expand_action_call` lines 827–830). That is intentional cross-hop behavior, not the default.
 
 ---
 
 ## 3. When a second CLI hop actually happens
 
-A **new** `python -m tools run` (or equivalent shell invocation) is required when:
+A **new** `python -m agent_tools run` (or equivalent shell invocation) is required when:
 
 | Trigger | Mechanism | Evidence |
 |---|---|---|
-| **`tool:` in request** | `_ToolsetRunner._run_tool` → `_invoke_tool` → executes `@agent_tool` body | `primitives/tools/tool.py` |
+| **`tool:` in request** | `_ToolsetRunner._run_tool` → `_invoke_tool` → executes `@agent_tool` body | `primitives/agent_tools/tool.py` |
 | **New top-level `action:`** | Another `_run_action` → full expand (even same toolset) | `cli.py` / `tool.py` |
 | **Deferred nested action (`mode=tool`)** | First expand lists action name + hint; agent runs separate `action:` on named toolset | `_expand_action_call`, `_deferred_action_hint` |
 | **`@sub_agent` tools** | Listed as tool steps; resolved in `_resolve_runnable` via `ToolsetExtensions.members("sub_agent")` | `tool.py` |
@@ -126,7 +126,7 @@ What is **not** a second CLI hop:
 - Plain prelude calls during expand (`SessionLog.append`, workspace open when resolvable).
 - Cross-toolset **load** during expand (`AgenticToolset.context_tool` uses `_ToolsetLoader` in-process) — loading ≠ running a second expand.
 
-**Manifest** (`python -m tools manifest`) is a separate process (section 1), not an `@agent_instructions` nested hop.
+**Manifest** (`python -m agent_tools manifest`) is a separate process (section 1), not an `@agent_instructions` nested hop.
 
 ---
 
@@ -170,7 +170,7 @@ Policy suggestion, not a hop diagnosis. Grill interview should stay `@agent_inst
 
 ### Option 3C (170–173) — nested action expand in-process
 
-**Already implemented.** `_walk_nested_action`, `_expand_action_call`, `_walk_cross_instance_statement`, `_walk_for_each_statement`, `_walk_super_statement` in `primitives/actions/action.py`. BDD expectations in `utilities/workspace/workspace_session_spec.py` and `context_tools/base/base_context_tool_spec.py` assert merged prose/tools from `Generate.generate` over context-tool hosts in one `_ActionRunner.invoke_action` call.
+**Already implemented.** `_walk_nested_action`, `_expand_action_call`, `_walk_cross_instance_statement`, `_walk_for_each_statement`, `_walk_super_statement` in `primitives/agent_tools/action.py`. BDD expectations in `utilities/workspace/workspace_session_spec.py` and `practices/base/base_context_tool_spec.py` assert merged prose/tools from `Generate.generate` over context-tool hosts in one `_AgentToolRunner.invoke_action` call.
 
 **Impact/risk row (310)** — “3c inline nested expand | yes processes | M” — **false premise**; no new M effort needed for inline nested `@agent_instructions`.
 
@@ -225,12 +225,12 @@ Separate from Jeff's claim; worth recording so section 3 is not "fixed" in the w
 
 | Runtime event | Processes | Code anchor |
 |---|---|---|
-| First `run … --action generate` | 1 | `cli.py` → `tool.py::_run_action` → `action.py::_ActionRunner.invoke_action` |
+| First `run … --action generate` | 1 | `cli.py` → `tool.py::_run_action` → `action.py::_AgentToolRunner.invoke_action` |
 | `self.begin` / `self.end` in same recipe | 0 additional | `action.py::_expand_action_call` → `_walk_nested_action` |
 | `tool.guidance()` with `mode=action` | 0 additional | `action.py::_walk_for_each_statement` → `_expand_action_call` |
 | `tool.guidance()` with `mode=tool` | +1 per deferred action (agent) | `action.py::_expand_action_call` lines 827–830 |
 | `@agent_tool` listed in `response.tools` | +1 per agent invoke | `tool.py::_run_tool` |
-| `python -m tools manifest` | +1 (section 1) | `cli.py::_manifest_main` |
+| `python -m agent_tools manifest` | +1 (section 1) | `cli.py::_manifest_main` |
 
 ---
 

@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("context_tools", "primitives", "utilities"):
+for _cat in ("practices", "primitives", "utilities"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -15,12 +15,12 @@ for _cat in ("context_tools", "primitives", "utilities"):
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
-from context_tools.context_guidance.fixtures.agentic_ops.agentic_ops import (
+from primitives.guidance.fixtures.agentic_ops.agentic_ops import (
     SampleAgenticOps,
     SampleMcpOps,
 )
-from context_tools.context_guidance.fixtures.sample_tool.sample_tool_host import (
-    SampleMcpContextGuidance,
+from primitives.guidance.fixtures.sample_tool.sample_tool_host import (
+    SampleMcpGuidance,
     SampleMcpPractice,
 )
 from primitives.harness import Harness
@@ -41,7 +41,7 @@ with description("an MCP manifest file") as self:
             text = (self.tree / "mcp.json").read_text(encoding="utf-8")
             expect(text).to(contain("python"))
             expect(text).to(contain("--toolsets"))
-            expect(text).to(contain("sample-mcp"))
+            expect(text).to(contain("SampleMcpOps"))
 
     with context("that has been written by a deploy with no mcp-published members"):
         with before.each:
@@ -87,7 +87,7 @@ with description("context guidance with guidance annotated for mcp") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()
         self.harness = Harness(ide="Cursor", path=self._tmp)
-        self.host = SampleMcpContextGuidance(format="markdown")
+        self.host = SampleMcpGuidance(format="markdown")
         self.harness.write_deploy([self.host])
         self.server = McpServer()
         self.server.bind_from(self.harness.deployment.mcp)

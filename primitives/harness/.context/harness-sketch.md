@@ -13,9 +13,9 @@ primitives/
   focus
   harness
     -> Harness.generate
-       // python -m tools run -   (pipe the invoke fence; no _req.yaml; no remanifest)
+       // python -m harness run -   (pipe the invoke fence; no _req.yaml; no remanifest)
        // same one command as grill, sketch, agent_skills — not a new kind of thing
-       // python -m tools run -
+       // python -m harness run -
        // same CLI as every other agentic operation — replaces agent_skills
   context_tools
        // one @agent_instructions — guidance: contexts, examples, templates
@@ -23,7 +23,7 @@ primitives/
 
 Harness
   // @agentic_toolset
-  // python -m tools run -
+  // python -m harness run -
   type
        // must be given at construction
        // Cursor | VS Code implemented now
@@ -48,7 +48,7 @@ Harness
          // AskQuestion: all toolsets (recommended) / enter a substring
        with no source
          // first run is the two CLI commands
-         // walk context_tools/ and utilities/ like agent_skills.scan_toolsets
+         // walk practices/ and utilities/ like agent_skills.scan_toolsets
          // then generate each source into the deploy area
          // also write Harness itself — skill and prompt (not in that walk)
          // later runs: the skill or /deploy-harness
@@ -248,7 +248,7 @@ Harness
   ----
   Resolve
       // action: if you took guidance from the context and not a tool, confirm the use of the context; AskQuestion constrained to the context tools (baked context-tool slugs plus use existing context only)
-      // guidance: if you took an action from the context versus being given an explicit one, confirm the use of the context; AskQuestion constrained to the actions in context_tools/actions (baked slash names)
+      // guidance: if you took an action from the context versus being given an explicit one, confirm the use of the context; AskQuestion constrained to the actions in actions (baked slash names)
       // extended=True swaps both lines: with a straight prompt passed, run this action on the context in general / take the action from the prompt; confirm only what you took from the context and not a straight prompt
       // if the fidelity does not belong to the in-scope tool or has not been provided: guess the correct one and confirm with AskQuestion constrained to the other fidelities — context-tool skills and action bodies only, never a fidelity prompt or ct-fidelity command
       // never AskQuestion constrained to this source — the skill is the guidance, the action prompt is the action
@@ -262,7 +262,7 @@ Harness
       // does not require an action
       // 1. what this skill does — first line of guidance() on the context tool (tooltip too)
       // 2. Resolve — then the CLI; per-fidelity and diagnose prose stay on the tool for the manifest
-      //      pipe invoke fence; python -m tools run -  (no _req.yaml; skill is the catalog)
+      //      pipe invoke fence; python -m harness run -  (no _req.yaml; skill is the catalog)
 
   ----
   ContextToolFidelityBody : ContextToolBody   (extended=True only)
@@ -277,7 +277,7 @@ Harness
  ActionBody
       // already locked — do not port the agent_skills kit-owned / chain-tools recipe
       // same recipe whether the file is a skill or a command
-      // context_tools/actions only — not utilities, not fidelity prompts, not formats
+      // actions only — not utilities, not fidelity prompts, not formats
       // 1. run this action for any provided context tools, or on the context in general
       // 2. class string
       // 3. this operation's instructions — the merged @agent_instructions

@@ -4332,3 +4332,531 @@ text: Deleted `primitives/tools/__main__.py`. `python -m tools` no longer has an
 text: This work is on **main**, in the primary clone `C:\dev\abd-context-driven-delivery`.
 
 There is no sibling worktree for 71. Session `context-tool-refactoring-71` was already using this same checkout (`path: .`).
+
+==============================================================================
+2026-09-17T04:54:00Z  afterAgentResponse  conv=611b05bc  gen=bbb178de  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Refactor is complete and green on the agent_tools specs.
+
+## Test results
+
+| Spec | Result |
+|------|--------|
+| `primitives/agent_tools/agent_tools_spec.py` | **65/65** |
+| `primitives/agent_tools/toolset_spec.py` | **9/9** (rewritten for domain model) |
+... [42 lines, 2225 chars total]
+
+==============================================================================
+2026-09-17T04:55:01Z  afterAgentResponse  conv=611b05bc  gen=04504ccf  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right to flag those — they **do not belong in the domain model**. The refactor renamed legacy doers instead of deleting them.
+
+## What the model says
+
+From `agent-tools-model.md`:
+
+**In scope (domain):**
+- `AgentToolSet`, `AgentTool`, `AgentOperation`, `AgentInstructions`
+... [59 lines, 2746 chars total]
+
+==============================================================================
+2026-09-17T04:58:54Z  afterAgentResponse  conv=611b05bc  gen=4573bdcc  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Legacy doer classes are **gone from `agent_tools`**. Specs are green (65 + 9).
+
+## Deleted from domain (`primitives/agent_tools/`)
+
+| Removed | Replacement |
+|---------|-------------|
+| `RecipeWalker` | `_walk_body`, `_walk_tools`, `_parse_body` in **`recipe.py`** (module-private) |
+| `RecipeValidator` | `_validate_toolset_class`, `_scan_recipe` in **`recipe.py`** |
+... [38 lines, 1453 chars total]
+
+==============================================================================
+2026-09-17T05:00:44Z  afterAgentResponse  conv=611b05bc  gen=f14f2312  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right to question it — **`manifest_hook` is not `primitives/hooks`**, and the name makes that harder to see.
+
+## Two different “hook” systems
+
+| Module | What it is |
+|--------|------------|
+| **`primitives/hooks`** | Cursor hook wiring: `@hook`, `dispatch.py`, `HookHarness`, `Turn.auto_turn`, skill inject, prompt log. This is the real hooks module. |
+| **`utilities/manifest_hook`** | A **separate, older** Cursor hook script for **manifest gating** — not part of the `@hook` dispatch system. |
+... [35 lines, 2309 chars total]
+
+==============================================================================
+2026-09-17T05:02:23Z  afterAgentResponse  conv=611b05bc  gen=682c52bb  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `primitives/agent_tools/cli.py` is **deleted**, along with `__main__.py`. The domain module no longer has a CLI entry point.
+
+## What changed
+
+| Removed | Moved to |
+|---------|----------|
+| `primitives/agent_tools/cli.py` | `primitives/harness/cli.py` |
+| `primitives/agent_tools/__main__.py` | `primitives/harness/__main__.py` |
+... [24 lines, 920 chars total]
+
+==============================================================================
+2026-09-17T05:03:13Z  afterAgentResponse  conv=9ddf9dfa  gen=213e459b  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: The design already had a home for this: **`actions/validate`**, next to generate, scan, and satisfy. `practices/agent_toolset` was a parallel package with a name that collides with the `@agent_toolset` decorator — not a separate layer.
+
+Validate is back on that kit. `Rule` / `RulesCollection` sit on **`actions/scan`**, because those are the objects scan and validate honor.
+
+- `Validate.validate(tools, rule=None)` is on `actions/validate/validate.py` — all rules by default, one `Rule` when passed
+- Specs moved to `actions/validate/validate_spec.py` and `actions/scan/rule_spec.py`
+- `practices/a
+... [7 lines, 621 chars total]
+
+==============================================================================
+2026-09-17T05:05:29Z  afterAgentResponse  conv=611b05bc  gen=1d3d6888  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `primitives/agent_tools/types.py` was **legacy manifest/wire-out junk** — not part of the domain model in `agent-tools-model.md`.
+
+## What it was
+
+A grab-bag of `TypedDict`-style aliases from the old manifest pipeline:
+
+| Type | Purpose (legacy) |
+|------|------------------|
+... [44 lines, 1901 chars total]
+
+==============================================================================
+2026-09-17T05:08:56Z  afterAgentResponse  conv=611b05bc  gen=b6c28d9c  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — **the behavior belongs on the domain objects**. A 1,400-line `recipe.py` with `_RecipeEngine` / `_RecipeValidator` is the old expander pasted beside the model, not the model itself.
+
+## What the model actually places
+
+The model does not define a `RecipeEngine` service. It defines **interactions on two types**:
+
+**`AgentInstructions`**
+- `expand(context, arguments)` → calls `_walk_body(..., recipe=self, ...)`
+... [62 lines, 3283 chars total]
+
+==============================================================================
+2026-09-17T05:11:52Z  afterAgentResponse  conv=611b05bc  gen=ca25f490  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: Done. **`WalkResult`**, **`RecipeBody`**, and all decorate-time validation now live in `agent_tools.py` on the domain types — not in separate `_recipe_*` modules.
+
+## What moved into `agent_tools.py`
+
+- **`WalkResult`** / **`RecipeBody`** — recipe walk result types
+- **`_validate_toolset_class`** and its helpers — `_RecipeBodyScanner`, `_validate_recipe_param`, `_scan_action_body`, etc.
+- **`AgentToolSet.validate()`** and `@agent_toolset` still call `_validate_toolset_class` in the same module
+
+... [24 lines, 917 chars total]
+
+==============================================================================
+2026-09-17T05:13:17Z  afterAgentResponse  conv=611b05bc  gen=8c96289c  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: `recipe.py` is gone. No re-export module.
+
+Callers go to the real code:
+
+- **`agent_tools.py`** — `WalkResult`, `RecipeBody`, `_validate_toolset_class`
+- **`_recipe_walk.py`** — `_parse_body`, `_walk_body`, `_walk_tools`, `_substitute`
+
+`agent_tools_spec.py` + `toolset_spec.py`: **72/72 pass**.
+
+==============================================================================
+2026-09-17T05:16:52Z  afterAgentResponse  conv=611b05bc  gen=4fd9e5bc  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: `_recipe_walk.py` is gone. Recipe parse/walk/validate now lives in `agent_tools.py` with `AgentInstructions.expand()`, `.tools`, and `AgentToolSet.validate()`.
+
+Specs import `_parse_body` / `_substitute` from `agent_tools.agent_tools`. No walk module, no facade.
+
+**72/72** `agent_tools_spec` + `toolset_spec` pass.
+
+==============================================================================
+2026-09-17T05:17:58Z  afterAgentResponse  conv=611b05bc  gen=ed9eb1cc  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: Moved to `primitives/harness/repo_paths_spec.py`, next to `repo_paths.py`.
+
+The import probe now prints `agent_tools.__file__` instead of the old `tools` name.
+
+One example still fails because this `mamba` run uses the Hermes venv (`sys.prefix`), not `abd-cdd-71/.venv`. That check is about the process interpreter, not the move.
+
+==============================================================================
+2026-09-17T05:21:10Z  afterAgentResponse  conv=611b05bc  gen=68720f7e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **`matching-by` was never a named context.** It was the Instructions one-liner “Match `fixtures/examples/car/car.py` as the canonical shape.” That is now a real § Contexts rule on the new tool.
+
+**CreateAgentToolset** lives at `context_tools/create_agent_toolset/`:
+
+| Piece | Role |
+| ----- | ---- |
+| `create_agent_toolset.py` | `BaseContextTool` subclass |
+| `create_agent_toolset.md` | **`matching-by`** → `examples/car/`; recipes use `recipe` + `tools(...)` / `instructions(...)` |
+... [15 lines, 904 chars total]
+
+==============================================================================
+2026-09-17T05:22:19Z  afterAgentResponse  conv=611b05bc  gen=29bfa923  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `introspection.py` is half domain, half wire-out, with one legacy hook.
+
+## In the model
+
+These support `AgentTool` fields and belong in `agent_tools`:
+
+| Function | Model placement |
+|----------|-----------------|
+... [47 lines, 2381 chars total]
+
+==============================================================================
+2026-09-17T05:25:13Z  afterAgentResponse  conv=611b05bc  gen=f7b8c2e8  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done. Summary of what changed:
+
+## Deleted
+- **`introspection.py`** — gone entirely
+- **JSON Schema** (`input_schema`, `output_schema`, `annotation_schema`) — manifest-era shapes, not in the domain model. MCP already has its own in `mcp_host.py`
+- **`_expand_docstring`** coupling — no more markdown file indirection via identifier docstrings or method-name lookup
+- **Legacy specs** — docstring-default / Validate kit tests that depended on Instruction expansion
+
+... [23 lines, 1382 chars total]
+
+==============================================================================
+2026-09-17T05:25:46Z  afterAgentResponse  conv=611b05bc  gen=ae40ec96  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Merged `errors.py` into `agent_tools.py` — `RunError` and `AgentToolValidationError` now live there, `__init__.py` re-exports them, `runner.py` imports from `agent_tools`, and `errors.py` is deleted. All 69 unit specs still pass.
+
+---
+
+## Why two spec pairs?
+
+They are **different fidelity tiers**, not duplicates. Same repo convention as `@bdd` / `@agent_bdd` elsewhere.
+
+... [24 lines, 2183 chars total]
+
+==============================================================================
+2026-09-17T05:27:19Z  afterAgentResponse  conv=611b05bc  gen=bfb15807  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — I sidestepped the actual question.
+
+**There is no design reason for four files.** The model does not require it. One unit file and one agent file (or just one unit file) is enough.
+
+## Why it ended up this way
+
+It is **organizational residue**, not architecture:
+
+... [28 lines, 1698 chars total]
+
+==============================================================================
+2026-09-17T05:28:29Z  afterAgentResponse  conv=611b05bc  gen=99eab78b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done. Two spec files remain:
+
+| File | Role |
+|------|------|
+| `agent_tools_spec.py` | All unit/integration tests |
+| `agent_tools_agent_spec.py` | All agent BDD (travelTo + display-agenda-tools) |
+
+**Merged into `agent_tools_spec.py`** from `toolset_spec.py`:
+... [19 lines, 774 chars total]
+
+==============================================================================
+2026-09-17T05:29:28Z  afterAgentResponse  conv=611b05bc  gen=9b0b9dae  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Same story as the dual spec files — **no design reason**, just leftover structure.
+
+## `examples/` — the real one
+
+Canonical example toolsets people copy and specs run against:
+
+| Path | Purpose |
+|------|---------|
+... [47 lines, 2020 chars total]
+
+==============================================================================
+2026-09-17T05:32:15Z  afterAgentResponse  conv=611b05bc  gen=4143db4f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — **the model is the spec**. Where code diverges, **code** (or harness) needs to change. The model document should stay as-is except maybe deleting the migration sections once work is done.
+
+## Already matches model
+
+- `AgentToolSet`, `AgentTool`, `AgentOperation`, `AgentInstructions`, decorators `@agent_toolset` / `@agent_tool` / `@agent_instructions`
+- Registries: `operations`, `instructions`, `tools`; `name`, `description`; `member_description` / `simple_parameters` / `simple_return_type`
+- `recipe` first param validated at decorate time; cycle rejection in walk; `mode` `"instr
+... [66 lines, 4615 chars total]
+
+==============================================================================
+2026-09-17T05:39:46Z  afterAgentResponse  conv=611b05bc  gen=eb5ade51  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — I was blocked waiting on the agent BDD suite, which spins up real sub-agents and can run for several minutes per example.
+
+**Current status:**
+
+**Unit tests: green** — `agent_tools_spec.py` is **68/68 passing** after fixing the last failure (`instruction.description` comes from the method docstring, not recipe string literals).
+
+**Agent BDD: still running in the background** — `agent_tools_agent_spec.py` invokes live agents (`travelTo`, display-agenda-tools). That was mid-run when you backgrounded it; it is not a code hang, just slow by design.
+
+... [22 lines, 1369 chars total]
+
+==============================================================================
+2026-09-17T05:40:58Z  afterAgentResponse  conv=611b05bc  gen=a871818e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **Validation:** `agent_tools.py` vs `agent-tools-model.md` and clean-engineering model/code **rules** (scanner implementation excluded).
+
+---
+
+## Verdict
+
+The **type model is largely aligned** — root *AgentToolSet*, *AgentTool* subtypes, *ExpansionMode*, *ExpansionResult*, harness wire-out removed, unit tests green. Remaining gaps are **behavior rules** (recipe wrappers, ownership of walk/validate logic) and **artifact hygiene** (stale module-context, module-level helpers).
+
+... [83 lines, 5059 chars total]
+
+==============================================================================
+2026-09-17T05:45:03Z  afterAgentResponse  conv=611b05bc  gen=3049f79d  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes — **`ExpansionResult.instructions`** is the **expanded runbook text** the agent gets when an `@agent_instructions` recipe is expanded.
+
+It is **not** the same thing as:
+
+- **`AgentInstructions.description`** / method **docstring** — deploy/introspection prose about what the recipe is for  
+- **`AgentToolSet.description`** — the toolset class docstring  
+
+Those describe the member; **`ExpansionResult.instructions`** is the **output of `expand()`** — string literals (and nested `instructions(...)` prose) after substitution, joined into the text the harness sends to the agent.
+... [27 lines, 1346 chars total]
+
+==============================================================================
+2026-09-17T05:52:27Z  afterAgentResponse  conv=e37dc6de  gen=0abb79f1  model=cursor-grok-4.6-medium
+------------------------------------------------------------------------------
+
+text: Yeah — I’m here. What do you want to work on?
+
+==============================================================================
+2026-09-17T05:52:39Z  afterAgentResponse  conv=611b05bc  gen=5c533590  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **Environment is fine now.** The earlier hangs were the shell/tooling, not your code.
+
+**What was actually broken:** the refactor moved `_discover_instruction_members` and `_validate_toolset_class` onto `AgentToolSet`, but `primitives/harness/register.py` still imported the old module-level names. That made `python -m harness run` exit 1 and took down the 3 CLI integration examples in the spec.
+
+**Fix:** restored thin module-level aliases at the bottom of `agent_tools.py` that delegate to `AgentToolSet`.
+
+**Now:** **69/69 green** on `agent_tools_spec.py`, including the new `AgentOperation.invo
+... [12 lines, 979 chars total]
+
+==============================================================================
+2026-09-17T05:59:30Z  afterAgentResponse  conv=611b05bc  gen=b9328803  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Those were **module-level passthroughs** — thin wrappers that just forwarded to class methods. They existed so harness code and specs could import short names without touching the classes. That’s the wrong shape; the logic belongs on the classes.
+
+**Removed from `agent_tools.py`:**
+- `member_description`, `simple_type`, `simple_parameters`, `simple_return_type`
+- `_discover_instruction_members`, `_validate_toolset_class`
+- `_parse_body`, `_substitute`
+
+**Callers now use the classes directly:**
+... [23 lines, 1488 chars total]
+
+==============================================================================
+2026-09-17T06:01:04Z  afterAgentResponse  conv=611b05bc  gen=55685eab  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Different things, same word.
+
+**`def tools(...)` (line 1275)** — recipe authoring helper used *inside* `@agent_instructions` bodies:
+
+```python
+@agent_instructions
+def run(recipe) -> str:
+    tools(recipe.toolset.ping())
+... [37 lines, 1832 chars total]
+
+==============================================================================
+2026-09-17T06:01:35Z  afterAgentResponse  conv=611b05bc  gen=b520b861  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Good. If you want to dig into `instructions(...)` or the walker next, say the word.
+
+==============================================================================
+2026-09-17T06:05:06Z  afterAgentResponse  conv=611b05bc  gen=db0a7430  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Some of this is real overlap; some of it is pipeline staging that only *looks* like domain.
+
+**Core domain (what the model cares about):**
+- `AgentToolSet` — the decorated class instance; owns members
+- `AgentInstructions` — one recipe member; `expand()` → `ExpansionResult`
+- `ExpansionResult` — `instructions`, `tools`, `result` after a full expand
+
+**What you flagged:**
+... [32 lines, 2735 chars total]
+
+==============================================================================
+2026-09-17T06:09:07Z  afterAgentResponse  conv=611b05bc  gen=77e2e646  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done. All three trimmed:
+
+**1. `_BodySlots` — killed.** The walker now calls `AgentToolSet._instruction_names()` / `_marked_tool_names()` directly when it needs to know whether a member is a recipe or a tool.
+
+**2. `RecipeBody` — killed.** No cached parse artifact. `AgentInstructions` exposes computed properties that walk each time:
+- `prose_parts`
+- `tools` (was `deferred_tools`)
+- `result_template`
+... [16 lines, 1000 chars total]
+
+==============================================================================
+2026-09-17T06:18:10Z  afterAgentResponse  conv=611b05bc  gen=3fe14760  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Different jobs.
+
+**`_RecipeWalker`** is the walker — all the behavior: parse source, read AST nodes, decide inline vs defer, follow `super()`, substitute placeholders, return `ExpansionResult`. One instance is tied to one `AgentInstructions` (`self.instruction`, `self.callable`, `self.toolset`).
+
+**`_WalkContext`** is per-pass state threaded through one recursive walk. It holds things that change as you descend:
+
+- which recipe/instance/action you're in right now  
+- `visited` (cycle detection for nested `instructions(...)`)  
+... [20 lines, 1816 chars total]
+
+==============================================================================
+2026-09-17T06:20:53Z  afterAgentResponse  conv=611b05bc  gen=245798c9  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fair pushback — the split is weaker here than `_RecipeWalker` vs `_WalkContext`.
+
+**`_WalkContext`** — “where am I in this walk?”
+- current recipe / instance / action name  
+- `visited` (cycle guard for nested recipes)  
+- `defining_class` (for `super()`)  
+- `instance_mode` / `loop_item_modes` (mode overrides inside `for` loops — and `loop_item_modes` **does** get mutated mid-walk)
+
+... [26 lines, 1466 chars total]
+
+==============================================================================
+2026-09-17T06:32:40Z  afterAgentResponse  conv=611b05bc  gen=ff5ac33e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — the old design invented parallel shapes for the same thing.
+
+**What it is now:**
+
+Walk logic lives on **`AgentInstructions`**. One scan produces what the instruction *is*:
+
+- **`prompt`** — prose parts from string literals in the body (docstring is skipped; it's deploy description, not prompt)
+- **`tools`** — deferred `@agent_tool` names from `tools(...)` calls
+... [19 lines, 1140 chars total]
+
+==============================================================================
+2026-09-17T06:33:48Z  afterAgentResponse  conv=611b05bc  gen=5819de8a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Each one is a leftover helper — not a domain object. Here's what it's doing and whether it earns a name:
+
+| Class | Why it's there | Should it stay? |
+|---|---|---|
+| **`_InstructionWalk`** | `AgentInstructions` is frozen, but the AST scan needs mutable `prompt`, `tools`, `visited`, and `mode` while recursing. | **Mechanical only.** Could be a nested class on `AgentInstructions` or plain locals in `_accumulate()` — not something you'd expose. |
+| **`_StaticToolsetShell`** | `AgentInstructions.for_callable(fn)` at validate time has no real toolset instance. | **Stub only.** ~5 lines; could inli
+... [18 lines, 1626 chars total]
+
+==============================================================================
+2026-09-17T06:36:35Z  afterAgentResponse  conv=611b05bc  gen=aa71579a  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `AgentInstructions` is unfrozen now. The AST walk mutates `self` directly — no `_InstructionWalk` scratch object.
+
+**What changed**
+
+- **`AgentInstructions`** — `@dataclass` (not frozen) with scan fields: `_prompt`, `_tools`, `_seen_prompt`, `_visited`, `_defining_class`, `_mode`, `_loop_item_modes`
+- **`_scan()`** — resets and walks the AST on `self`; nested/super calls use `_merge_from(other)` after `other._scan(...)`
+- **Removed** — `_InstructionWalk`, `_FunctionIntrospection`, `_StaticToolsetShell`, `_ScanRequest`, standalone `_RecipeBodyScanner`
+- **`AgentTool.from_callable()`** — introsp
+... [17 lines, 1252 chars total]
+
+==============================================================================
+2026-09-17T06:39:19Z  afterAgentResponse  conv=611b05bc  gen=4d2d19fb  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right to call it out. The complicated shape wasn't forced by good OOAD — it was a **misread of immutability + an under-applied existing rule**.
+
+## What went wrong
+
+The chain was:
+
+1. **`AgentInstructions` marked `frozen=True`** — treated like a value object / immutable domain record.
+2. **AST walk needs mutation** — `prompt`, `tools`, `visited`, `mode` change while recursing.
+... [87 lines, 5837 chars total]
+
+==============================================================================
+2026-09-17T06:41:31Z  afterAgentResponse  conv=611b05bc  gen=15bc7851  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: You're right — that rule is bad guidance.
+
+Listing `*Walk`, `*Context`, `*Accumulator` is **sprawl**: it teaches suffix-matching, not judgment. The next agent just names it `_InstructionScan` instead of `_InstructionWalk` and feels compliant. That's exactly the failure mode your writing guidelines reject — invented vocabulary and mechanical prohibitions instead of naming the actual decision.
+
+## What the decision actually is
+
+Not: "don't use these type names."
+
+... [41 lines, 2501 chars total]
+
+==============================================================================
+2026-09-17T06:42:39Z  afterAgentResponse  conv=611b05bc  gen=e69646d1  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Clarifications added to four existing rules in `practices/clean_engineering/clean_engineering.md` — no new rule ids:
+
+**Model → Shape classes**
+- **`class-not-property-instance-or-subtype`** — multi-step work stays in private fields on the owning class, not another class
+- **`hide-inner-details`** — private fields on the same class are enough; no second class required
+- **`use-property-not-accessor`** — read-only seam = copy/immutable view from a property; not `frozen=True` or a build-step type
+
+**Model → Names and reuse**
+... [14 lines, 905 chars total]
+
+==============================================================================
+2026-09-17T06:43:22Z  afterAgentResponse  conv=611b05bc  gen=e107eb49  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: There’s no design reason — it’s a **leftover alias** from the refactor when walk output was renamed from `prose_parts` to `prompt`.
+
+```451:452:c:\dev\abd-cdd-71\primitives\agent_tools\agent_tools.py
+    def prose_parts(self) -> tuple[str, ...]:
+        return self.prompt
+```
+
+It was kept so older callers wouldn’t break. **`agent_tools_spec.py` already uses `.prompt` everywhere.** The only remaining `prose_parts` callers are:
+... [15 lines, 867 chars total]
+
+==============================================================================
+2026-09-17T06:44:55Z  afterAgentResponse  conv=611b05bc  gen=27f48b2b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Removed:
+
+- **`AgentInstructions.prose_parts`** — deleted from `agent_tools.py` (only alias left on disk; callers already use `.prompt`)
+- **`deferred_tools`** in `runbook.py` → **`tools`** (matches `ExpansionResult.tools`)
+- **`prose`** in `runbook.py` → **`instructions`** (matches `ExpansionResult.instructions`); `runner.py` call site updated
+
+No remaining `prose_parts` or `deferred_tools` in Python. **69/69** `agent_tools_spec` still green.

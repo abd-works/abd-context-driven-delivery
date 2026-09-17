@@ -28,8 +28,8 @@
     {
       "prompt": "Write failing tests before writing any fix. Read the ## Diagnosis in the ticket to determine which tests are required:\n\n- PROMPT/AI CHANGE: write an agentic BDD test using /agent-bdd.development. This is the primary test type for prompt or instruction defects. A mechanical BDD test is rarely needed here \u2014 but not never; include one if the prompt change also has a verifiable mechanical side-effect.\n- CODE CHANGE: write a mechanical (vanilla) BDD test using /bdd.development. Also write an agentic BDD test if the code defect was causing AI/agent misbehaviour.\n- BOTH: write both. Mechanical BDD first.\n\nThe listed items are context tools, not actions. Doer action is generate. Judge action is validate against what the doer generated.\n\nThe failing test is a hard requirement \u2014 write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.\n",
       "tools": [
-        "context_tools.bdd.bdd:Bdd",
-        "context_tools.agent_bdd.agent_bdd:AgentBdd"
+        "practices.bdd.bdd:Bdd",
+        "practices.agent_bdd.agent_bdd:AgentBdd"
       ],
       "actions": [
         "generate"
@@ -40,9 +40,9 @@
     {
       "prompt": "Fix the defect using CleanEngineering generate at code fidelity (/clean_engineering.code) in small iterations. The listed items are context tools, not actions. Doer action is generate. Judge action is validate against what the doer generated. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.\nBefore writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.\nAnnounce on the ticket itself (issue comment or notes body — durable GitHub data, not only local session files) under ## Weak tests and ## Fix: (1) which tests were weak or missing and what they failed to prove; (2) what you had to fix (prompt vs code vs both, files/behaviors). Do this whenever you are fixing a defect so it is trackable later. Update these sections as the fix evolves; they must be present before finish-ticket.\nWhen this item's defect-fix jobs are complete: call finish-ticket before next_backlog_item. CliAgent backlog items use theme:cli-agent; triage the entire backlog up front before jobs.\n",
       "tools": [
-        "context_tools.clean_engineering.clean_engineering:CleanEngineering",
-        "context_tools.bdd.bdd:Bdd",
-        "context_tools.agent_bdd.agent_bdd:AgentBdd"
+        "practices.clean_engineering.clean_engineering:CleanEngineering",
+        "practices.bdd.bdd:Bdd",
+        "practices.agent_bdd.agent_bdd:AgentBdd"
       ],
       "actions": [
         "generate"

@@ -14,7 +14,7 @@
   - elapsed: 01:02
   - artifact: C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\clean-engineering-model.md
 - notes:
-  - Clean clock: stdin YAML to `python -m tools run -` only. Zero `_req.yaml` writes. Never remanifested. No `session=`. PYTHONPATH was the isolated worktree.
+  - Clean clock: stdin YAML to `python -m agent_tools run -` only. Zero `_req.yaml` writes. Never remanifested. No `session=`. PYTHONPATH was the isolated worktree.
   - Each pair started with Generate kit (catalog shape: host in `arguments.tools`). Generate returned empty `tools:` / nested guidance; followed with domain `action: guidance` (Stories then CleanEngineering). `[run] invoking …` on all four hops.
   - Did not open a work session (Generate asked for `open` / `finish_turn`; experiment forbids it). Did not AskQuestion. Did not run generic Scan, validate, Drawio `create_diagram`/`repair`, or CE companion after Stories.
   - Did not write into `c:\dev\abd-context-driven-delivery\sandbox\courier` (parent `.context` files are a concurrent baseline rerun).

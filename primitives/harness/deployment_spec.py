@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("context_tools", "primitives", "utilities"):
+for _cat in ("practices", "primitives", "utilities"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -15,13 +15,13 @@ for _cat in ("context_tools", "primitives", "utilities"):
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
-from context_tools.context_guidance.fixtures.agentic_ops.agentic_ops import (
+from primitives.guidance.fixtures.agentic_ops.agentic_ops import (
     SampleAgenticOps,
     SampleMcpOps,
 )
-from context_tools.context_guidance.fixtures.sample_tool.sample_tool_host import (
-    SampleContextGuidance,
-    SampleMcpContextGuidance,
+from primitives.guidance.fixtures.sample_tool.sample_tool_host import (
+    SampleGuidance,
+    SampleMcpGuidance,
     SamplePracticeGuidance,
     SamplePracticeWithFidelities,
 )
@@ -136,7 +136,7 @@ with description("context guidance registered for deploy") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()
         self.tree = Path(self._tmp)
-        self.host = SampleContextGuidance(format="markdown")
+        self.host = SampleGuidance(format="markdown")
         self.harness = Harness(ide="Cursor", path=self.tree)
         self.harness.write_deploy([self.host])
 
@@ -160,7 +160,7 @@ with description("context guidance with mcp-published guidance registered for de
         self._tmp = tempfile.mkdtemp()
         self.tree = Path(self._tmp)
         self.harness = Harness(ide="Cursor", path=self.tree)
-        self.harness.write_deploy([SampleMcpContextGuidance(format="markdown")])
+        self.harness.write_deploy([SampleMcpGuidance(format="markdown")])
 
     with after.each:
         shutil.rmtree(self._tmp, ignore_errors=True)

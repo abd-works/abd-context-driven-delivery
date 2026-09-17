@@ -285,11 +285,11 @@ def _scope_shape_html(stage_key: str) -> str:
 
 
 def _stage_questions_html(
-    context_tools: list[dict],
+    practices: list[dict],
     *,
     path_prefix: str = "",
 ) -> str:
-    by_name = {t["toolset_name"]: t for t in context_tools}
+    by_name = {t["toolset_name"]: t for t in practices}
     cdd = by_name.get("cdd") or {}
     cells = ['<div class="kanban-stage-questions__spacer" aria-hidden="true"></div>']
     for stage_key, _ in STAGES:
@@ -330,7 +330,7 @@ def _cdd_tour_panel_html() -> str:
 
 
 def render_hub_board(
-    context_tools: list[dict],
+    practices: list[dict],
     actions: list[dict],
     utilities: list[dict],
     *,
@@ -340,9 +340,9 @@ def render_hub_board(
     initial_family: str | None = None,
 ) -> str:
     """Build the Foundry-style stage×tool kanban + policies + Actions/Utilities."""
-    by_name = {t["toolset_name"]: t for t in context_tools}
+    by_name = {t["toolset_name"]: t for t in practices}
     ordered = [by_name[n] for n in FAMILY_ROW_ORDER if n in by_name]
-    for t in context_tools:
+    for t in practices:
         if t["toolset_name"] == "cdd":
             continue
         if t["toolset_name"] not in {x["toolset_name"] for x in ordered}:
@@ -443,7 +443,7 @@ def render_hub_board(
         + "</div>"
     )
 
-    stage_questions = _stage_questions_html(context_tools, path_prefix=path_prefix)
+    stage_questions = _stage_questions_html(practices, path_prefix=path_prefix)
 
     return f"""
 <div class="wrap">

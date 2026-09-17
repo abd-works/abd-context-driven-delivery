@@ -29,6 +29,16 @@ def host_slug(host: Any) -> str:
     return _slugify(type(host).__name__)
 
 
+def toolset_ref_for_type(cls: type) -> str:
+    """Stable ``module:Class`` ref for MCP registration and run requests."""
+    return f"{cls.__module__}:{cls.__name__}"
+
+
+def toolset_ref(host: Any) -> str:
+    """``module:Class`` ref for mcp.json ``--toolsets`` — not a display slug."""
+    return toolset_ref_for_type(type(host))
+
+
 def member_is_mcp(member: Any) -> bool:
     return bool(getattr(member, "_mcp", False))
 
@@ -90,13 +100,13 @@ class MarkdownDeployment:
             or getattr(member, "__name__", "member")
         )
         slug = host_slug(guidance)
-        from primitives.agentic_toolset import AgenticToolset
-        from context_tools.context_guidance.guidance import FidelityGuidance
+        from primitives.agent_tools.agent_tools import AgentToolSet
+        from primitives.guidance.guidance import FidelityGuidance
 
         fidelity_name = getattr(guidance, "name", None)
         is_fidelity = isinstance(guidance, FidelityGuidance)
         if mark == "skill":
-            folder = name if isinstance(guidance, AgenticToolset) else slug
+            folder = name if isinstance(guidance, AgentToolSet) else slug
             return Path("skills") / str(folder) / "SKILL.md"
         if mark == "command":
             if self.ide == "VS Code":
@@ -126,7 +136,7 @@ class MarkdownDeployment:
         op = getattr(member, "__name__", "operation")
         return f"{section.rstrip()}\n\n{_cli_fence(ref, op, invoke)}"
 
-    def deployContextGuidance(self, guidance: Any) -> None:
+    def deployGuidance(self, guidance: Any) -> None:
         return None
 
     def deployFidelityGuidance(self, fidelity: Any) -> None:
@@ -196,44 +206,40 @@ class McpDeployment:
         self.mcp_operations: list[McpOp] = []
         self._bound = False
 
-    def deployContextGuidance(self, guidance: Any) -> None:
+    def deployGuidance(self, guidance: Any) -> None:
         return None
 
     def deployFidelityGuidance(self, fidelity: Any) -> None:
         return None
 
-    def deployAgentInstructions(self, host: Any, operation: OperationWrite) -> None:
+    def record_operation(self, host: Any, operation: OperationWrite) -> None:
+        """Record one ``@mcp`` op from the deploy walk — does not write ``mcp.json``."""
         if not operation.mcp:
             return
         slug = host_slug(host)
+        kind = "tool" if operation.invoke == "tool" else "prompt"
         self.mcp_operations.append(
             McpOp(
                 mcp_name=f"{slug}.{operation.operation}",
-                kind="prompt",
+                kind=kind,
                 host=host,
                 operation=operation.operation,
                 member=operation.member,
             )
         )
-        self._write_manifest()
+
+    def deployAgentInstructions(self, host: Any, operation: OperationWrite) -> None:
+        self.record_operation(host, operation)
+        if operation.mcp:
+            self._write_manifest()
 
     def deployAgentTool(self, host: Any, operation: OperationWrite) -> None:
-        if not operation.mcp:
-            return
-        slug = host_slug(host)
-        self.mcp_operations.append(
-            McpOp(
-                mcp_name=f"{slug}.{operation.operation}",
-                kind="tool",
-                host=host,
-                operation=operation.operation,
-                member=operation.member,
-            )
-        )
-        self._write_manifest()
+        self.record_operation(host, operation)
+        if operation.mcp:
+            self._write_manifest()
 
     def _write_manifest(self) -> None:
-        refs = sorted({host_slug(op.host) for op in self.mcp_operations})
+        refs = sorted({toolset_ref(op.host) for op in self.mcp_operations})
         payload = {
             "mcpServers": {
                 "cdd": {
@@ -262,16 +268,16 @@ class HookDeployment:
         self.path = Path(path)
         self._events: list[dict[str, str]] = []
 
-    def deployContextGuidance(self, guidance: Any) -> None:
+    def deployGuidance(self, guidance: Any) -> None:
         return None
 
     def deployFidelityGuidance(self, fidelity: Any) -> None:
         return None
 
     def deployAgentInstructions(self, toolset: Any, operation: OperationWrite) -> None:
-        from primitives.agentic_toolset import AgenticToolset
+        from primitives.agent_tools.agent_tools import AgentToolSet
 
-        if not isinstance(toolset, AgenticToolset):
+        if not isinstance(toolset, AgentToolSet):
             return
         if not operation.hook:
             return
@@ -298,24 +304,24 @@ class Deployment:
         self.hooks = HookDeployment(ide, self.path)
 
     def deploy(self, host: Any) -> None:
-        from context_tools.context_guidance.guidance import ContextGuidance, PracticeGuidance
-        from primitives.agentic_toolset import AgenticToolset
+        from primitives.guidance.guidance import Guidance, PracticeGuidance
+        from primitives.agent_tools.agent_tools import AgentToolSet
 
         if isinstance(host, PracticeGuidance):
             self.deployPracticeGuidance(host)
-        elif isinstance(host, AgenticToolset):
-            self.deployAgenticToolset(host)
-        elif isinstance(host, ContextGuidance):
-            self.deployContextGuidance(host)
+        elif isinstance(host, AgentToolSet):
+            self.deployAgentToolSet(host)
+        elif isinstance(host, Guidance):
+            self.deployGuidance(host)
 
     def deployPracticeGuidance(self, practice_guidance: Any) -> None:
-        self.deployContextGuidance(practice_guidance)
+        self.deployGuidance(practice_guidance)
         fidelities = getattr(practice_guidance, "fidelities", None)
         entries = getattr(fidelities, "entries", {}) if fidelities is not None else {}
         for fidelity in entries.values():
             self.deployFidelityGuidance(fidelity)
 
-    def deployContextGuidance(self, guidance: Any) -> None:
+    def deployGuidance(self, guidance: Any) -> None:
         for row in operation_writes(guidance):
             if row.invoke == "action" or row.operation == "guidance":
                 self.deployAgentInstructions(guidance, row)
@@ -327,7 +333,7 @@ class Deployment:
                 self.deployAgentInstructions(fidelity, row)
         self.markdown.write_rules(fidelity)
 
-    def deployAgenticToolset(self, host: Any) -> None:
+    def deployAgentToolSet(self, host: Any) -> None:
         for row in operation_writes(host):
             if row.invoke == "action":
                 self.deployAgentInstructions(host, row)

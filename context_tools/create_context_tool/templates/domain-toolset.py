@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import agent_instructions  # noqa: F401
-from context_tools.base.base_context_tool import BaseContextTool
+from primitives.agent_tools.agent_tools import agent_instructions  # noqa: F401
+from practices.base.base_context_tool import BaseContextTool
 
 
 class {ClassName}(BaseContextTool):

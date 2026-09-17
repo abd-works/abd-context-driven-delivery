@@ -7,7 +7,7 @@
 
 ---
 
-## context_tools/base/base_context_tool.py — `BaseContextTool`
+## practices/base/base_context_tool.py — `BaseContextTool`
 
 ### Current
 
@@ -33,7 +33,7 @@
 
 ---
 
-## context_tools/cdd/cdd.py — `Cdd`
+## practices/cdd/cdd.py — `Cdd`
 
 ### Current
 
@@ -42,7 +42,7 @@
 | `@agent_instructions` | `guidance` |
 | `@agent_tool` | *(none)* |
 
-**CLI:** `/cdd` skill → `action: guidance` on `context_tools.cdd.cdd:Cdd`.
+**CLI:** `/cdd` skill → `action: guidance` on `practices.cdd.cdd:Cdd`.
 
 **After first expand — separate hops (expander `tool_steps` on `guidance`, fidelity=discovery):**
 - `guidance` ×4 — one deferred hop per stage child (`Stories`, `Ddd`, `Ux`, `CleanEngineering`) because loop sets `context_tool.mode = "tool"` before `context_tool.guidance()`.
@@ -57,7 +57,7 @@
 
 ---
 
-## context_tools/stories/stories.py — `Stories`
+## practices/stories/stories.py — `Stories`
 
 ### Current
 
@@ -84,7 +84,7 @@
 
 ---
 
-## context_tools/clean_engineering/clean_engineering.py — `CleanEngineering`
+## practices/clean_engineering/clean_engineering.py — `CleanEngineering`
 
 ### Current
 
@@ -111,7 +111,7 @@
 
 ---
 
-## context_tools/ux/ux.py — `Ux`
+## practices/ux/ux.py — `Ux`
 
 ### Current
 
@@ -136,7 +136,7 @@
 
 ---
 
-## context_tools/bdd/bdd.py — `Bdd`
+## practices/bdd/bdd.py — `Bdd`
 
 ### Current
 
@@ -161,7 +161,7 @@
 
 ---
 
-## context_tools/ddd/ddd.py — `Ddd`
+## practices/ddd/ddd.py — `Ddd`
 
 ### Current
 
@@ -189,7 +189,7 @@
 
 ---
 
-## context_tools/create_context_tool/create_context_tool.py — `CreateContextTool`
+## practices/create_context_tool/create_context_tool.py — `CreateContextTool`
 
 ### Current
 
@@ -210,7 +210,7 @@
 
 ---
 
-## context_tools/agent_bdd/agent_bdd.py — `AgentBdd`
+## practices/agent_bdd/agent_bdd.py — `AgentBdd`
 
 ### Current
 
@@ -233,7 +233,7 @@
 
 ---
 
-## context_tools/actions/lifecycle.py — `LifecycleAction`
+## actions/lifecycle.py — `LifecycleAction`
 
 ### Current
 
@@ -259,7 +259,7 @@
 
 ---
 
-## context_tools/actions/generate/generate.py — `Generate`
+## actions/generate/generate.py — `Generate`
 
 ### Current
 
@@ -289,7 +289,7 @@
 
 ---
 
-## context_tools/actions/validate/validate.py — `Validate`, `CreateRule`
+## actions/validate/validate.py — `Validate`, `CreateRule`
 
 ### Current
 
@@ -319,7 +319,7 @@
 
 ---
 
-## context_tools/actions/satisfy/satisfy.py — `Satisfy`
+## actions/satisfy/satisfy.py — `Satisfy`
 
 ### Current
 
@@ -347,7 +347,7 @@
 
 ---
 
-## context_tools/actions/document/document.py — `Document`
+## actions/document/document.py — `Document`
 
 ### Current
 
@@ -375,7 +375,7 @@
 
 ---
 
-## context_tools/actions/render/render.py — `Render`
+## actions/render/render.py — `Render`
 
 ### Current
 
@@ -396,7 +396,7 @@
 
 ---
 
-## context_tools/actions/grill_context/grill_context.py — `GrillContext`
+## actions/grill_context/grill_context.py — `GrillContext`
 
 ### Current
 
@@ -427,7 +427,7 @@
 
 ---
 
-## context_tools/actions/sketch/sketch.py — `Sketch`
+## actions/sketch/sketch.py — `Sketch`
 
 ### Current
 
@@ -453,7 +453,7 @@
 
 ---
 
-## context_tools/actions/iterate/iterate.py — `Iterate`
+## actions/iterate/iterate.py — `Iterate`
 
 ### Current
 
@@ -479,7 +479,7 @@
 
 ---
 
-## context_tools/actions/partition/partition.py — `Partition`
+## actions/partition/partition.py — `Partition`
 
 ### Current
 
@@ -503,7 +503,7 @@
 
 ---
 
-## context_tools/actions/improvement/improvement.py — `Improvement`
+## actions/improvement/improvement.py — `Improvement`
 
 ### Current
 
@@ -819,7 +819,7 @@ No `@agent_tool` or `@agent_instructions`. HTML/catalog builder consumed by Harn
 
 ---
 
-## primitives/actions/action.py — `ActionExpander` / `AgenticToolset`
+## primitives/agent_tools/action.py — `ActionExpander` / `AgenticToolset`
 
 ### Current
 
@@ -830,7 +830,7 @@ Not a kit — invoke surface behavior:
 - Runs `SessionLog.append` and plain calls during expand.
 - **Gap:** `for tool in self.context_tools():` bodies do not emit `self.*` or `self.provider().action()` tool steps.
 
-**CLI:** `python -m tools run module:Class --action NAME` / `--tool NAME`.
+**CLI:** `python -m agent_tools run module:Class --action NAME` / `--tool NAME`.
 
 ### Target
 
@@ -840,7 +840,7 @@ Not a kit — invoke surface behavior:
 
 ---
 
-## primitives/tools/tool.py / cli.py — invoke surface
+## primitives/agent_tools/tool.py / cli.py — invoke surface
 
 ### Current
 

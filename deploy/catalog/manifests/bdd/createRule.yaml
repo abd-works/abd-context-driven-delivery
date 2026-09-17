@@ -1,0 +1,8 @@
+toolset: practices.bdd.bdd:Bdd
+context:
+  fidelity: <fidelity>
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: createRule

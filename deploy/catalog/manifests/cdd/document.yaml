@@ -1,0 +1,10 @@
+toolset: document.document:Document
+action: document
+arguments:
+  tools:
+  - toolset: practices.cdd.cdd:Cdd
+    context:
+      fidelity: <fidelity>
+      format: null
+      path: null
+      session: null

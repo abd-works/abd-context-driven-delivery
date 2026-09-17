@@ -33,8 +33,8 @@ Same as agent_skills `save_state` / `deploy_again`. After generate, save the las
 Same two commands as every other agentic operation (grill, sketch, today’s agent_skills):
 
 ```
-python -m tools manifest harness.harness:Harness
-python -m tools run _req.yaml
+python -m agent_tools manifest harness.harness:Harness
+python -m agent_tools run _req.yaml
 ```
 
 That is how the agent loads `generate` / `generateAgain`. AgentSkills is not the owner of that run.

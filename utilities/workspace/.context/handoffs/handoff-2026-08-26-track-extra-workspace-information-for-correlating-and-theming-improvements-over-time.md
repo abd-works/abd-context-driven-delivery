@@ -9,6 +9,6 @@
 
 ## Artifacts to read
 
-- `context_tools\actions\workspace\.context\workspace-oo-refactor-sketch.md`
-- `context_tools\actions\workspace\.context\module-context.md`
-- `context_tools\actions\workspace\.context\context-index.md`
+- `actions\\workspace\.context\workspace-oo-refactor-sketch.md`
+- `actions\\workspace\.context\module-context.md`
+- `actions\\workspace\.context\context-index.md`

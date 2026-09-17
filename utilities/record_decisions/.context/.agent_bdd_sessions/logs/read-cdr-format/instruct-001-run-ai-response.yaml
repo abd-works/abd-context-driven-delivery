@@ -74,7 +74,7 @@ result: '# CDR Format (Context Decision Record)
 
   - **Structural shape.** Module boundaries, fidelity choices, generator partitioning.
 
-  - **Integration patterns between context_tools.** How concepts compose or hand off.
+  - **Integration patterns between practices.** How concepts compose or hand off.
 
   - **Technology choices that carry lock-in.** Not every library — just the ones that
   would take meaningful effort to swap out.

@@ -20,7 +20,7 @@ An **enhancement**, not a replacement. The default deploy is the original harnes
 - each command contains the run-time guidance: the harness iterates the context
   tool's `action: guidance` at each fidelity exactly like the run-time fence
   (load the class from its file, construct with `context.fidelity`, expand via
-  `_ActionExpander`) and bakes the returned `response.instructions` into the body;
+  `_AgentToolExpander`) and bakes the returned `response.instructions` into the body;
   on failure it falls back to the guidance docstring, then the overview
 - the fence pins `context.fidelity` and `action: generate`; never a fidelity AskQuestion
 - confirm lines swap to consider **straight prompt passed vs ct** (action bodies choose
@@ -47,7 +47,7 @@ named from its module stem with required ctor params in the context block.
 
 - `.\.venv\Scripts\python.exe -m mamba.cli primitives/harness/harness_spec.py --no-color`
   → 73 examples, 0 failures (also `primitives/harness/harness_invoke_fixtures_spec.py` +
-  `context_tools/agent_bdd/spec_helpers_spec.py` → 20 examples, 0 failures)
+  `practices/agent_bdd/spec_helpers_spec.py` → 20 examples, 0 failures)
 - Run via `python -m mamba.cli`; the `mamba.exe` shim points at a stale venv in the
   OneDrive checkout and resolves `primitives` against the wrong repo
 

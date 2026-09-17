@@ -13,7 +13,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("utilities", "primitives", "context_tools"):
+for _cat in ("utilities", "primitives", "practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -33,7 +33,7 @@ with description("an Echo"):
             self._ag = agent(_REPO_ROOT, _SESSIONS / "fence-echo.json")
             self.session = self._ag.__enter__()
             self.fence_response = self.session.instruct_run(
-                "Using shell, run exactly: python -m tools run -\n"
+                "Using shell, run exactly: python -m harness run -\n"
                 "Pipe this YAML on stdin:\n"
                 f"toolset: {_TOOLSET}\n"
                 "tool: fence\n"
@@ -65,7 +65,7 @@ with description("an Echo"):
             self._ag2 = agent(_REPO_ROOT, _SESSIONS / "echo-session.json")
             self.session2 = self._ag2.__enter__()
             self.echo_response = self.session2.instruct_run(
-                "Using shell, run exactly: python -m tools run -\n"
+                "Using shell, run exactly: python -m harness run -\n"
                 "Pipe this YAML on stdin:\n"
                 f"toolset: {_TOOLSET}\n"
                 "action: echo_session\n"

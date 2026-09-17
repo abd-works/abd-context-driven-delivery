@@ -14,8 +14,8 @@ Before launch, read `.context/sessions/{session}/model` (or `sessions/default` w
 
 ## Extend
 
-Decorator stacking — inner `@agent_tool` / `@agent_instructions` captures the signature; `@sub_agent` flips routing so the method surfaces with sub-agent semantics. `register()` attaches the same discoverer as `members("sub_agent")` so `python -m tools run` with `tool:` still executes the method. `/sub-agent` is that stacking on `run`, with `context_tools(tools)` and `context_tools(actions)` resolved the same way other kits resolve `arguments.tools`.
+Decorator stacking — inner `@agent_tool` / `@agent_instructions` captures the signature; `@sub_agent` flips routing so the method surfaces with sub-agent semantics. `register()` attaches the same discoverer as `members("sub_agent")` so `python -m harness run` with `tool:` still executes the method. `/sub-agent` is that stacking on `run`, with `context_tools(tools)` and `context_tools(actions)` resolved the same way other kits resolve `arguments.tools`.
 
 ## Dependencies
 
-`tools.tool`, `harness.harness_tool`, `primitives.actions`
+`tools.tool`, `harness.harness_tool`, `primitives.agent_tools`

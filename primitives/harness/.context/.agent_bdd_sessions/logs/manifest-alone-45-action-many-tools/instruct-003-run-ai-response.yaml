@@ -1,5 +1,5 @@
 ok: true
-toolset: primitives.actions.examples.car:Car
+toolset: primitives.agent_tools.fixtures.examples.car:Car
 tool: speak
 result: 'Dodge Charger says: "yeehaw"'
 resources:

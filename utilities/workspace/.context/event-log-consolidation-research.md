@@ -178,8 +178,8 @@ class _CliAgentLog:
 
 ### 3.1 Framework expand (automatic)
 
-```1279:1292:primitives/actions/action.py
-    def _log_expansion(self, request: _ActionExpandRequest, tool_steps: tuple[str, ...]) -> None:
+```1279:1292:primitives/agent_tools/action.py
+    def _log_expansion(self, request: _AgentToolExpandRequest, tool_steps: tuple[str, ...]) -> None:
         """Framework expand append — every @agent_instructions expansion is logged."""
         ...
         SessionLog.instance().append(
@@ -222,14 +222,14 @@ Run appends are minimal — mostly static strings, not input/output capture.
 
 ## 4. Annotation model today (`@agent_tool` / `@agent_instructions`)
 
-```1455:1458:primitives/actions/action.py
+```1455:1458:primitives/agent_tools/action.py
 def agent_instructions(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as an agent orchestration recipe; body is expanded, never executed."""
     func._is_agent_instructions = True
     return func
 ```
 
-```691:694:primitives/tools/tool.py
+```691:694:primitives/agent_tools/tool.py
 def agent_tool(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as a tool; instructions come from the method docstring."""
     func._is_agent_tool = True
@@ -265,7 +265,7 @@ There is **no** `@event` or `to_log()` in the codebase (grep: zero matches).
 {
   "ts": "2026-09-06T18:31:00Z",
   "seq": 42,
-  "toolset": "context_tools.bdd.bdd:Bdd",
+  "toolset": "practices.bdd.bdd:Bdd",
   "name": "generate",
   "role": "run",
   "ok": true,
@@ -320,7 +320,7 @@ There is **no** `@event` or `to_log()` in the codebase (grep: zero matches).
 
 ### 6.1 Placement
 
-**Module:** `utilities/workspace/session_log.py` (alongside `SessionLog`, `summarize_mapping`) — same package as locked `SessionLog` class; imported by `primitives/actions` and `primitives/tools` via existing `workspace` path bootstrap.
+**Module:** `utilities/workspace/session_log.py` (alongside `SessionLog`, `summarize_mapping`) — same package as locked `SessionLog` class; imported by `primitives/agent_tools` and `primitives/agent_tools` via existing `workspace` path bootstrap.
 
 **Not** on `@agent_tool` / `@agent_instructions` themselves — eval sketch locks logging as non-decorator for those (`sketch:207`). `@event` is a **third marker** for *serialization policy*, not agent exposure.
 
@@ -438,14 +438,14 @@ Expand events default `summary` only (tool step list); full expansion payload op
 |---|---|
 | SessionLog API | `utilities/workspace/session_log.py` |
 | WorkSession trail / close | `utilities/workspace/workspace.py` |
-| Framework expand log | `primitives/actions/action.py` (`_log_expansion`, `_walk_session_log_append`) |
-| CLI runner session bind | `primitives/tools/tool.py` (`run_request`) |
+| Framework expand log | `primitives/agent_tools/action.py` (`_log_expansion`, `_walk_session_log_append`) |
+| CLI runner session bind | `primitives/agent_tools/tool.py` (`run_request`) |
 | Prompt audit hook | `primitives/hooks/prompt_log/prompt_log.py` |
 | Session log paths / close consolidate | `primitives/hooks/session_logs.py` |
 | Hook dispatch debug | `primitives/hooks/dispatch.py` |
 | Manifest gate log | `utilities/manifest_hook/manifest_gate.py` |
 | CLI agent JSONL | `utilities/cli_agent/cli_agent.py` (`_CliAgentLog`) |
-| Agent BDD harness logs | `context_tools/agent_bdd/agent_cli_bdd.py`, `agent_bdd_common.py` |
+| Agent BDD harness logs | `practices/agent_bdd/agent_cli_bdd.py`, `agent_bdd_common.py` |
 | Locked eval decisions | `.sessions/closed/eval-consolidate-workspace/workspace-eval-oo-sketch.md` §4, §9 |
 | BDD specs | `utilities/workspace/session_log_spec.py`, `workspace_spec.py`, `workspace_session_spec.py` |
 | Module context (stale close note) | `utilities/workspace/.context/module-context.md` |

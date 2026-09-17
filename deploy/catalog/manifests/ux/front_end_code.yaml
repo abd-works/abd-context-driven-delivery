@@ -1,0 +1,11 @@
+toolset: generate.generate:Generate
+action: generate
+arguments:
+  tools:
+  - toolset: practices.ux.ux:Ux
+    context:
+      fidelity: front_end_code
+      format: null
+      path: null
+      session: null
+      workspace: null

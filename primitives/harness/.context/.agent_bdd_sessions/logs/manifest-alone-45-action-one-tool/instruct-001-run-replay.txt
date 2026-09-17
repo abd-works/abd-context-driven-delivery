@@ -1,4 +1,4 @@
-toolset: primitives.actions.examples.car:Car
+toolset: primitives.agent_tools.fixtures.examples.car:Car
 context:
   make: Dodge
   model: Charger

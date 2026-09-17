@@ -1,6 +1,6 @@
 ```yaml
 ok: true
-toolset: tools.examples.car:Car
+toolset: agent_tools.examples.car:Car
 tool: start
 result: null
 resources:

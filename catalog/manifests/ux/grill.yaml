@@ -1,8 +1,0 @@
-toolset: context_tools.ux.ux:Ux
-context:
-  fidelity: <fidelity>
-  format: null
-  path: null
-  session: null
-  workspace: null
-action: grill

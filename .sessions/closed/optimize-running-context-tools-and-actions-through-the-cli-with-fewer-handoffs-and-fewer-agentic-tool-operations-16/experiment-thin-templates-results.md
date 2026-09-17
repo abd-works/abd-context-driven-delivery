@@ -3,7 +3,7 @@
 - branch: `experiment/thin-templates`
 - worktree: `C:\dev\abd-cdd-experiment-thin-templates`
 - options: smarter load — templates by format alias + fidelity filename; **no file split**
-- clock: first successful `python -m tools run -` of that pair → artifact written (ISO-8601 local)
+- clock: first successful `python -m agent_tools run -` of that pair → artifact written (ISO-8601 local)
 - compare_to: single-command Pair A **00:51** / Pair B **00:37**
 
 ## In-process first expand
@@ -33,14 +33,14 @@ Listed tools on that expand: `read_cdr_format`, `list_cdrs`, `write_cdr`, `guida
   - start: 2026-08-27T14:52:36
   - end: 2026-08-27T14:53:09
   - elapsed: **00:33**
-  - hops: 1 (stdin YAML → `python -m tools run -` only)
+  - hops: 1 (stdin YAML → `python -m agent_tools run -` only)
   - first_generate_tools: [read_cdr_format, list_cdrs, write_cdr, guidance, finish_turn]
   - artifact: `C:\dev\abd-cdd-experiment-thin-templates\sandbox\courier\.context\story-map.md`
 - pair_b_model_generate:
   - start: 2026-08-27T14:53:09
   - end: 2026-08-27T14:53:40
   - elapsed: **00:31**
-  - hops: 1 (stdin YAML → `python -m tools run -` only)
+  - hops: 1 (stdin YAML → `python -m agent_tools run -` only)
   - first_generate_tools: [read_cdr_format, list_cdrs, write_cdr, create_diagram, scan, repair, finish_turn]
   - artifact: `C:\dev\abd-cdd-experiment-thin-templates\sandbox\courier\.context\clean-engineering-model.md`
 
@@ -48,7 +48,7 @@ vs single-command **00:51 / 00:37**: Pair A faster on the clock; Pair B similar.
 
 ## Notes
 
-- Template files were **not** split or moved. `context_tools/stories/templates/` still has `md/`, `py/`, `ts/`, `js/`, `java/`, `stories-sketch.md`. No `templates/story_map/` pack. No `stories-templates.md`.
+- Template files were **not** split or moved. `practices/stories/templates/` still has `md/`, `py/`, `ts/`, `js/`, `java/`, `stories-sketch.md`. No `templates/story_map/` pack. No `stories-templates.md`.
 - `stories.md` section loading and `examples/` loading were **not** changed.
 - Locator bug: `_locate_in_shared_templates` missed `stories-templates.md` and `locate()` only returned a file path, so the whole `templates/` folder was merged. Fix: when `format` is set, use `templates/{alias}/` (`markdown`→`md`, …) and keep fidelity filenames; when format is unset, merge the whole folder. Also return that folder from `locate()` instead of falling through to the meta dump.
 - CE/BDD `{slug}-templates.{ext}` files still win when present (`clean_engineering-templates.py`).

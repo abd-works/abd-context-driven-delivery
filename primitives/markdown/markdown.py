@@ -43,8 +43,9 @@ def _markdown_to_html(text: str) -> str:
             continue
         lines = block.splitlines()
         if all(re.match(r"^\s*[-*]\s+", line) for line in lines):
+            bullet = re.compile(r"^\s*[-*]\s+")
             items = "".join(
-                f"<li>{html.escape(re.sub(r'^\\s*[-*]\\s+', '', line))}</li>"
+                f"<li>{html.escape(bullet.sub('', line))}</li>"
                 for line in lines
             )
             chunks.append(f"<ul>{items}</ul>")
@@ -54,6 +55,9 @@ def _markdown_to_html(text: str) -> str:
 
 
 def class_file_directory(host: Any) -> Path:
+    practice = getattr(host, "practice_guidance", None)
+    if practice is not None:
+        host = practice
     return Path(inspect.getfile(type(host))).resolve().parent
 
 
@@ -84,7 +88,7 @@ class Markdown:
             return text
         if origin is dict:
             return _templates_path_map(self)
-        from context_tools.agent_toolset.scan import RulesCollection
+        from actions.scan.rule import RulesCollection
 
         if return_type is RulesCollection:
             return RulesCollection.from_markdown(text)
@@ -103,6 +107,8 @@ def _extract_location(location: AssetLocation) -> str:
         return _merge_folder(location.folder)
     if location.kind == "section" and location.section_file is not None:
         heading = location.section_heading or ""
+        if location.fidelity:
+            return _read_fidelity_subsection(location.section_file, location.fidelity, heading)
         if heading and not _section_exists(location.section_file, heading):
             return ""
         return _read_section(location.section_file, heading)
@@ -155,6 +161,60 @@ def _section_exists(file_path: Path, section_heading: str) -> bool:
     content = file_path.read_text(encoding="utf-8")
     wanted = section_heading.casefold()
     return any(heading.casefold() == wanted for _s, _e, _l, heading in _markdown_headings(content))
+
+
+def _h2_blocks(text: str) -> list[tuple[str, str]]:
+    pattern = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+    matches = list(pattern.finditer(text))
+    blocks: list[tuple[str, str]] = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        blocks.append((match.group(1).strip(), text[match.end() : end].strip()))
+    return blocks
+
+
+def fidelity_blocks(text: str) -> list[tuple[str, str]]:
+    marker = re.search(r"^##\s+Fidelities\s*$", text, re.MULTILINE | re.IGNORECASE)
+    if not marker:
+        return []
+    tail = text[marker.end() :]
+    if not re.search(r"^##\s+", tail, re.MULTILINE):
+        return []
+    return [
+        (name, body)
+        for name, body in _h2_blocks(tail)
+        if name.casefold() != "fidelities"
+    ]
+
+
+def _read_fidelity_block(text: str, fidelity_name: str) -> str:
+    wanted = fidelity_name.casefold()
+    for name, body in fidelity_blocks(text):
+        if name.casefold() == wanted:
+            return body
+    return ""
+
+
+def _read_named_subsection(text: str, heading: str) -> str:
+    pattern = re.compile(rf"^###\s+{re.escape(heading)}\s*$", re.MULTILINE | re.IGNORECASE)
+    match = pattern.search(text)
+    if not match:
+        return ""
+    rest = text[match.end() :]
+    next_h = re.search(r"^###\s+\S", rest, re.MULTILINE)
+    chunk = rest[: next_h.start()] if next_h else rest
+    return chunk.strip()
+
+
+def _read_fidelity_subsection(file_path: Path, fidelity_name: str, section_heading: str) -> str:
+    if not file_path.is_file():
+        return ""
+    text = file_path.read_text(encoding="utf-8")
+    block = _read_fidelity_block(text, fidelity_name)
+    if not block:
+        return ""
+    named = _read_named_subsection(block, section_heading)
+    return named or block
 
 
 def _read_section(file_path: Path, section_heading: str) -> str:
@@ -298,7 +358,7 @@ def _markdown_property(fn: _F, prop_label: str) -> property:
             if args and args[0] is HTML:
                 return md.html()
         result = md.coerce(text, return_type)
-        from context_tools.agent_toolset.scan import RulesCollection
+        from actions.scan.rule import RulesCollection
 
         if isinstance(result, RulesCollection):
             class_dir = class_file_directory(self)

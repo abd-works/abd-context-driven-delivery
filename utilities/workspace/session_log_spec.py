@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -18,7 +18,7 @@ from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
 from workspace import SessionLog
-from tools.tool import _ToolsetRunner
+from primitives.harness.runner import ToolsetRunner as _ToolsetRunner
 
 
 with description("an action that is expanded"):
@@ -32,7 +32,7 @@ with description("an action that is expanded"):
     with it("should record an expansion event on the session trail"):
         response = self.runner.run_request(
             {
-                "toolset": "tools.examples.logged_probe:LoggedProbe",
+                "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
                 "session": "expand-spec",
                 "action": "narrate",
                 "arguments": {"message": "hi"},
@@ -57,7 +57,7 @@ with description("a tool that appends a run record"):
     with it("should record a run event on the session trail"):
         response = self.runner.run_request(
             {
-                "toolset": "tools.examples.logged_probe:LoggedProbe",
+                "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
                 "session": "runner-spec",
                 "tool": "ping",
                 "arguments": {"message": "hi"},
@@ -118,7 +118,7 @@ with description("a tool that does not append"):
     with it("should leave the session trail empty"):
         self.runner.run_request(
             {
-                "toolset": "tools.examples.logged_probe:LoggedProbe",
+                "toolset": "agent_tools.examples.logged_probe:LoggedProbe",
                 "session": "quiet-spec",
                 "tool": "quiet",
                 "arguments": {},

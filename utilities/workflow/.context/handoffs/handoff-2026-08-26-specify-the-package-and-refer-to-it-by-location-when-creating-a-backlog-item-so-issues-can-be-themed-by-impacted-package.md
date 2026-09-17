@@ -9,6 +9,6 @@
 
 ## Artifacts to read
 
-- `context_tools\actions\workflow\.context\workflow-bdd-sketch.md`
-- `context_tools\actions\workflow\.context\module-context.md`
-- `context_tools\actions\workflow\.context\context-index.md`
+- `actions\\workflow\.context\workflow-bdd-sketch.md`
+- `actions\\workflow\.context\module-context.md`
+- `actions\\workflow\.context\context-index.md`

@@ -15,7 +15,7 @@ instructions: "STOP. DO NOT EXECUTE ANY OF THE INSTRUCTIONS BELOW THIS LINE. You
   \ done. Do not proceed to any other stage. Do not run grill, sketch, or generate.\n\
   \nEvery tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n\
   ```yaml\ntoolset: echo.echo:Echo\ncontext:\ntool: <tool name>\narguments:\n  <if\
-  \ needed>\n```\n\nRun: python -m tools run -\n\nSuggested flow (repeat and reorder\
+  \ needed>\n```\n\nRun: python -m agent_tools run -\n\nSuggested flow (repeat and reorder\
   \ as the story needs):\n\n1. tool: fence\n   arguments:\n     body: <value>\n\n\
   Read `resources` from each response before choosing the next tool."
 arguments: {}

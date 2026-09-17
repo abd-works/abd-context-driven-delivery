@@ -1,6 +1,6 @@
 Using shell from the repo root, run exactly: .\tools.ps1 run -
 Pipe this YAML on stdin:
-toolset: primitives.actions.examples.car:Car
+toolset: primitives.agent_tools.fixtures.examples.car:Car
 context:
   make: Dodge
   model: Charger

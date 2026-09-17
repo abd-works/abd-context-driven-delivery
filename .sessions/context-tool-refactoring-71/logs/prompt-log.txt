@@ -903,7 +903,7 @@ text: Updated — both module paths now use `agent_toolset`:
 
 | Was | Now |
 |-----|-----|
-| `primitives/actions/` | `primitives/agent_toolset/` |
+| `primitives/agent_tools/` | `primitives/agent_toolset/` |
 | `context_tools/actions/` | `context_tools/agent_toolset/` |
 
 `AgenticToolset` class name unchanged. `scan`, `generate`, `render`, `iterate`, etc. all sit under `context_tools/agent_toolset/`. Session docs and `AGENTS.md` updated.
@@ -953,7 +953,7 @@ On **`AgenticToolset`** there are three separate pieces:
 2026-09-11T03:23:22Z  afterAgentResponse  conv=0e0e3022  gen=252abd1b  model=composer-2.5
 ------------------------------------------------------------------------------
 
-text: Got it — the refactor drops **`actions`** as the registry name. **`@agent_instructions`** methods register as **`instructions`** (replacing today's `actions` / `ToolsetExtensions.members("actions", …)`).
+text: Got it — the refactor drops **`actions`** as the registry name. **`@agent_instructions`** methods register as **`instructions`** (replacing today's `actions` / `ToolsetExtensions.members("agent_tools", …)`).
 
 **Two senses of `instructions` in the target model:**
 

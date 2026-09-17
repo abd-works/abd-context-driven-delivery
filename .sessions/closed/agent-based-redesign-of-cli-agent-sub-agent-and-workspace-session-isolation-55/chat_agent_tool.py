@@ -27,8 +27,8 @@ def run_tool(tool: str, arguments: dict | None = None) -> str:
             str(ROOT),
             str(ROOT / "primitives"),
             str(ROOT / "utilities"),
-            str(ROOT / "context_tools"),
-            str(ROOT / "context_tools" / "actions"),
+            str(ROOT / "practices"),
+            str(ROOT / "practices" / "actions"),
             str(ROOT / "agents"),
         ]
     )

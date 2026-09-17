@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from harness.harness_tool import prompt
 from sub_agent.sub_agent import sub_agent
-from tools.tool import agent_tool, toolset
+from agent_tools import agent_tool, agent_toolset
 
 
-@toolset
+@agent_toolset
 class Diagnose:
     """Disciplined diagnosis loop for hard bugs and performance regressions.
 

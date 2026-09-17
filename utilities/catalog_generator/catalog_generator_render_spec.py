@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("context_tools", "primitives", "utilities"):
+for _cat in ("practices", "primitives", "utilities"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -28,7 +28,7 @@ from catalog_generator.catalog_generator import (
     resolve_lifecycle_actions,
     scrape_fidelities,
 )
-from context_tools.ddd.ddd import Ddd
+from practices.ddd.ddd import Ddd
 from diagnose.diagnose import Diagnose
 
 _REPO_URL = "https://github.com/org/repo"
@@ -44,20 +44,14 @@ with description("Render Action Page With Fixed Sections"):
             hrefs = {name: f"actions/{name}.html" for name in self.resolutions}
             self.catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             resolution = self.resolutions["repair"]
-            action = self.owner.actions["repair"]
+            action = self.owner.agent_tools["repair"]
             self.page = self.catalog_action.generate_catalog(action, self.owner, resolution.source_dir)
 
         with it("carries the Lifecycle action badge and a one-line used-as note"):
             expect("Lifecycle action" in self.page).to(be_true)
             expect("used as action:" in self.page).to(be_true)
             expect("<code>repair</code>" in self.page).to(be_true)
-            expect('href="../manifests/actions/repair.html"' in self.page).to(be_true)
-            expect('id="raw-manifest"' in self.page).to(be_true)
-            # raw-manifest must not point at a github blob of .py source
-            raw_at = self.page.find('id="raw-manifest"')
-            raw_slice = self.page[max(0, raw_at - 120): raw_at + 40]
-            expect("github.com" in raw_slice).to(equal(False))
-            expect(".py\"" in raw_slice).to(equal(False))
+            expect('id="raw-manifest"' in self.page).to(equal(False))
 
         with it("shows calls, markdown instructions, and module overview in order — no Code dump"):
             calls_at = self.page.find("Tools / actions called")
@@ -101,13 +95,10 @@ with description("Render Fidelity Page With Quick-Invoke And Illustrated Example
             ):
                 expect(f">{name}<" in self.page).to(be_true)
 
-        with it("carries a single Raw manifest format subsidiary link in the header, not an inline YAML block there"):
-            # section_0 is prepended ahead of the page header in this fixture
+        with it("does not carry a raw manifest subsidiary link in the header"):
             header = self.page[: self.page.find("</header>")]
-            expect("Raw manifest format" in header).to(be_true)
-            expect("../manifests/ddd/tactics.yaml" in header).to(be_true)
-            expect("toolset:" in header).to(equal(False))
-            expect("github.com" in header).to(equal(False))
+            expect("Raw manifest format" in header).to(equal(False))
+            expect("../manifests/" in header).to(equal(False))
 
         with it("falls back the illustrated-example panel to the no-example message when unconfigured"):
             expect("No illustrated example configured yet" in self.page).to(be_true)
@@ -195,18 +186,8 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             expect((self.tmp / "commons" / "cdd-board.css").is_file()).to(be_true)
             expect('href="commons/site.css' in self.index_html).to(be_true)
 
-        with it("writes raw request YAML from each context tool's live manifest"):
-            expect((self.tmp / "manifests" / "ddd" / "manifest.yaml").is_file()).to(be_true)
-            tactics = (self.tmp / "manifests" / "ddd" / "tactics.yaml").read_text(encoding="utf-8")
-            expect("toolset: generate.generate:Generate" in tactics).to(be_true)
-            expect("context_tools.ddd.ddd:Ddd" in tactics).to(be_true)
-            expect("fidelity: tactics" in tactics).to(be_true)
-            expect("action: generate" in tactics).to(be_true)
-            partition_page = (
-                self.tmp / "manifests" / "actions" / "partition.html"
-            ).read_text(encoding="utf-8")
-            expect("action: partition" in partition_page).to(be_true)
-            expect("context_tools.stories.stories:Stories" in partition_page).to(be_true)
+        with it("does not write manifest YAML under the output catalog"):
+            expect((self.tmp / "manifests").exists()).to(equal(False))
 
         with it("does not ship a maintainer regen-command note on the public hub"):
             expect("generate_cdd_catalog" in self.index_html).to(equal(False))

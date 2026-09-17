@@ -60,7 +60,7 @@ Do **not** remove or redesign the **`@resource`**, **`@skill`**, or **`@prompt` 
 
 These **annotation decorators** stay as they are today. Do not rename, merge, or delete them:
 
-- **`@resource`** — observable toolset state (`primitives/tools`); property getters, instruction inlining, and resource registration behavior are unchanged.
+- **`@resource`** — observable toolset state (`primitives/agent_tools`); property getters, instruction inlining, and resource registration behavior are unchanged.
 - **`@skill`** — harness marker for skill files (`primitives/harness`); still selects which operations deploy as `SKILL.md`.
 - **`@prompt`** — harness marker for prompt/command files (`primitives/harness`); still selects which operations deploy as slash commands / prompt files.
 
@@ -340,7 +340,7 @@ Remove instructions such as:
 - Pipe the block to stdin
 - Do not write a request file
 - `tools.ps1 run -`
-- `python -m tools run -`
+- `python -m harness run -`
 
 from generated skills/prompts/rules.
 
@@ -506,7 +506,7 @@ Generated **content** under those deploy paths **must** change wherever it curre
 
 Harness deploy **is in scope** and **must** be updated as part of this migration.
 
-Any generated host artifact that today tells an agent to call CDD through YAML stdin, `tools.ps1`, or `python -m tools run` must be regenerated to tell the agent to call **MCP tools** instead.
+Any generated host artifact that today tells an agent to call CDD through YAML stdin, `tools.ps1`, or `python -m harness run` must be regenerated to tell the agent to call **MCP tools** instead.
 
 ### Artifacts that must change
 
@@ -531,7 +531,7 @@ Delete from all generated artifacts:
 - “Do not remanifest”
 - “Follow `response.instructions` only” (when that meant YAML/CLI response plumbing)
 - “through the tools cli”
-- `.\tools.ps1 run -` / `python -m tools run -`
+- `.\tools.ps1 run -` / `python -m harness run -`
 
 Replace with a single concise MCP line (see [Harness transport rendering](#harness-transport-rendering)).
 
@@ -554,7 +554,7 @@ After harness generation is updated, run **`deploy-harness`** (or equivalent) so
 Current:
 
 ```yaml
-toolset: context_tools.bdd.bdd:Bdd
+toolset: practices.bdd.bdd:Bdd
 context:
   fidelity: behavior
 tool: find_examples
@@ -715,7 +715,7 @@ There should be no duplicate schema system unless a concrete CDD requirement dem
 The migration is complete when:
 
 1. No generated skill/prompt/rule/command/agent contains YAML invocation instructions.
-2. No normal AI execution path uses `tools.ps1` or `python -m tools run`.
+2. No normal AI execution path uses `tools.ps1` or `python -m harness run`.
 3. MCP invokes annotated `@tool` operations directly.
 4. MCP discovers annotated `@instruction` operations and exposes each as a prompt (docstring) plus its referenced tools; **invoking** an instruction runs its Python body and executes `tool(...)` calls.
 5. Tool schemas come from the actual Python callable.

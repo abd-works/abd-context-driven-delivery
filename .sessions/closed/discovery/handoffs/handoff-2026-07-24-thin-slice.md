@@ -12,7 +12,7 @@
 
 ## 3. Generator state
 
-- Toolset: context_tools.stories.stories:Stories (via Context)
+- Toolset: practices.stories.stories:Stories (via Context)
 - Fidelity / format: discovery / markdown
 - Durable map: sandbox/.context/story-map.md (**map done**; thin-slice next)
 - Bout: sandbox/.context/sessions/discovery/

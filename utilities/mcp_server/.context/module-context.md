@@ -34,7 +34,7 @@ MCP defines **primitives** (tools, prompts, resources) as separate concepts — 
 
 ## Constraint
 
-Callers must use dotted MCP names (`bdd.find_examples`). Do not route AI execution through `tools.ps1`, `python -m tools run`, or YAML stdin blocks.
+Callers must use dotted MCP names (`bdd.find_examples`). Do not route AI execution through `tools.ps1`, `python -m harness run`, or YAML stdin blocks.
 
 ## Extend
 

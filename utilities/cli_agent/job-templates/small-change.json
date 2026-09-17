@@ -29,8 +29,8 @@
       "prompt": "Document the small change in existing models - do not model the whole area from scratch.\n\nThe listed items are context tools, not actions. Doer action is generate. Judge action is validate against what the doer generated.\n\nUse CleanEngineering generate at model fidelity (/clean_engineering.model) and Bdd generate at behavior fidelity (/bdd.behavior).\n\nRules:\n- If a clean-engineering model or module-context already exists for the touched module(s): alter it in place. Do not generate a new model of the entire module or of every module that might be impacted.\n- If a BDD behavior spec already exists for the subject: alter the existing describe/it hierarchy. Add or change only the examples that cover this change and the immediately surrounding pieces that must stay consistent.\n- If no model or behavior spec exists for the exact change surface: create the thinnest new artifact that covers the change and its neighbors - not a full-surface model of the parent area.\n- Scope is the change plus surrounding pieces that callers of the changed seam will see. Do not document the whole impacted area, every public method on the module, or unrelated siblings.\n- Record what you altered vs what you left alone under ## Model on the ticket notes.\n\nDo not implement tests or production code in this job - model/context and behavior signatures only.\n",
       "tools": [
         "workflow.workflow:Workflow",
-        "context_tools.clean_engineering.clean_engineering:CleanEngineering",
-        "context_tools.bdd.bdd:Bdd"
+        "practices.clean_engineering.clean_engineering:CleanEngineering",
+        "practices.bdd.bdd:Bdd"
       ],
       "actions": [
         "generate"
@@ -41,8 +41,8 @@
     {
       "prompt": "Write failing tests for the intended small change before writing any implementation. Orchestrate the most robust testing you can: always use both mechanical BDD and agentic BDD - prefer over-testing to missing a hole.\n\nThe listed items are context tools, not actions. Doer action is generate. Judge action is validate against what the doer generated.\n\n- Mechanical (vanilla) BDD via Bdd generate at development fidelity (/bdd.development) - required.\n- Agentic BDD via AgentBdd generate at development fidelity (/agent-bdd.development) - required. Exercise the real agent/CLI harness path; do not treat a stubbed or patched-out pickup/spawn path as sufficient agentic coverage.\n- Run mechanical BDD first, then agentic BDD.\n- Approach category (prompt/AI vs code vs both) still informs what each suite emphasizes; it does not waive either suite.\n\nThe failing tests are a hard requirement - write them first, run them, confirm they fail (red) for the new behavior. You may alter existing tests or add new ones, but explicit red mechanical and agentic tests capturing the intended change must exist before any implementation is written.\n",
       "tools": [
-        "context_tools.bdd.bdd:Bdd",
-        "context_tools.agent_bdd.agent_bdd:AgentBdd"
+        "practices.bdd.bdd:Bdd",
+        "practices.agent_bdd.agent_bdd:AgentBdd"
       ],
       "actions": [
         "generate"
@@ -53,9 +53,9 @@
     {
       "prompt": "Implement the small change using CleanEngineering generate at code fidelity (/clean_engineering.code) in small iterations. Work one small piece at a time - change just enough to make one or a few tests pass, then move to the next piece. Repeat until all mechanical BDD and agentic BDD tests are green. Always run vanilla BDD first, then agentic BDD. Both suites are required; do not stop when only mechanical is green.\n\nThe listed items are context tools, not actions. Doer action is generate. Judge action is validate against what the doer generated.\n\nFollow the approach recorded under ## Approach. Do not expand scope beyond that approach.\n\nBefore writing any code:\n- Explore the impacted modules and the code they depend on - only as far as the change and surrounding pieces require.\n- Read module-context.md for every module you touch.\n- Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms - follow what is already there. A small change should not require new patterns.\n\nWhen this item's small-change jobs are complete: call finish-ticket before next_backlog_item.\n",
       "tools": [
-        "context_tools.clean_engineering.clean_engineering:CleanEngineering",
-        "context_tools.bdd.bdd:Bdd",
-        "context_tools.agent_bdd.agent_bdd:AgentBdd"
+        "practices.clean_engineering.clean_engineering:CleanEngineering",
+        "practices.bdd.bdd:Bdd",
+        "practices.agent_bdd.agent_bdd:AgentBdd"
       ],
       "actions": [
         "generate"

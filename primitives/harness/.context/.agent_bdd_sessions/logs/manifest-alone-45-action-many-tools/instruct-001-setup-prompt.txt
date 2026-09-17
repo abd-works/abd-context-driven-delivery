@@ -2,7 +2,7 @@ Using shell from the repo root, run this PowerShell exactly as one command (do n
 
 $env:PYTHONIOENCODING="utf-8"
 $yaml = @"
-toolset: primitives.actions.examples.car:Car
+toolset: primitives.agent_tools.fixtures.examples.car:Car
 context:
   make: Dodge
   model: Charger

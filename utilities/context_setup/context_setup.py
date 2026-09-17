@@ -6,15 +6,15 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from primitives.actions.action import agent_instructions, agentic_toolset
+from agent_tools import agent_instructions, agent_toolset
 from harness.harness_tool import prompt
-from tools.tool import agent_tool
+from agent_tools.agent_tools import agent_tool
 from partition.partition import Partition
 
-from context_tools.clean_engineering.clean_engineering import CleanEngineering
-from context_tools.ddd.ddd import Ddd
-from context_tools.stories.stories import Stories
-from context_tools.ux.ux import Ux
+from practices.clean_engineering.clean_engineering import CleanEngineering
+from practices.ddd.ddd import Ddd
+from practices.stories.stories import Stories
+from practices.ux.ux import Ux
 from context_setup.context_index import ContextIndex
 
 
@@ -114,7 +114,7 @@ def _scout_root(repo: Path) -> Path:
     return repo.joinpath(*_SCOUT_DIR)
 
 
-@agentic_toolset
+@agent_toolset
 class ContextSetup:
     """Convert a folder of documents to markdown and delegate partitioning to selected context tools."""
 
@@ -297,7 +297,7 @@ class ContextSetup:
     @prompt(name="capture-from-live-app")
     @agent_instructions
     def capture_from_live_app(
-        self,
+        recipe,
         repo_path: str,
         capture_repo: str = "",
         surface: str = "web",
@@ -372,7 +372,7 @@ class ContextSetup:
     @prompt(name="capture-from-documents")
     @agent_instructions
     def capture_from_documents(
-        self,
+        recipe,
         folder_path: str,
         indexers: Optional[list[str]] = None,
         first: str = "",

@@ -48,7 +48,7 @@ For a **frontend** we want to prove the UI: stub the next layer down (the API it
 ## Summary of Steps
 
 - Stand the app up **alone** with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/context_setup).
-- Document what it actually does with [Stories](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/stories) and [DDD](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/ddd) against that isolated app. Scaffold a story map and a bounded-context / aggregate outline. Then, with a human in the loop, take **one micro-increment** at a time — one story (default), or one BDD describe, or one aggregate operation. Write the Given / When / Then, and the required **domain classes and operations**, including underlying application code required to implement the test. Build / extend fixtures (example data) and mocks / stubs required to support the tests. Render a markdown view of both story map / story scenarios as well as the domain model. Allow the human to review for semantic correctness. Run tests until green, repeat until the app is covered. Once you have confidence the system is working, expand the scope to larger slices.
+- Document what it actually does with [Stories](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/stories) and [DDD](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/ddd) against that isolated app. Scaffold a story map and a bounded-context / aggregate outline. Then, with a human in the loop, take **one micro-increment** at a time — one story (default), or one BDD describe, or one aggregate operation. Write the Given / When / Then, and the required **domain classes and operations**, including underlying application code required to implement the test. Build / extend fixtures (example data) and mocks / stubs required to support the tests. Render a markdown view of both story map / story scenarios as well as the domain model. Allow the human to review for semantic correctness. Run tests until green, repeat until the app is covered. Once you have confidence the system is working, expand the scope to larger slices.
 
 Run each step as **`/stories /ddd /<action>`**. 
 
@@ -124,7 +124,7 @@ follow [this strategy](acceptance-test-strategy.md) — write this story's scena
 
 Read the GWT, the named aggregate/operation, and the running app. Reject invented steps, screen-as-class, and replaying a prior story as a Given. Green tests can still encode the wrong story.
 
-[this should be logged automatically but if it's not, each time youfind a mistake, [log the mistake](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/actions/eval/log_mistake.md) **immediately** — once you have landed on a fix you can [log the correction](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/actions/eval/log_correction.md) with the same `entry_id`.
+[this should be logged automatically but if it's not, each time youfind a mistake, [log the mistake](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/actions/eval/log_mistake.md) **immediately** — once you have landed on a fix you can [log the correction](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/actions/eval/log_correction.md) with the same `entry_id`.
 
 ```
 /log_mistake
@@ -194,8 +194,8 @@ AI should have the commands in Context so you can just use natural language.
 
 **[ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/context_setup)** — `/context-setup /capture_from_live_app` (and `smoke_test`, `scout_app`). Isolate the app: stubs, smoke, scout. No session.
 
-**[Stories](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/stories)** and **[DDD](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/ddd)** — `/stories /ddd /<action>`. Scenarios together with classes, operations, and relationships of aggregates inside a bounded context.
+**[Stories](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/stories)** and **[DDD](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/ddd)** — `/stories /ddd /<action>`. Scenarios together with classes, operations, and relationships of aggregates inside a bounded context.
 
-[Eval](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/actions/eval) — `/stories /ddd /log_mistake` then `/log_correction`. Not automatic on a human reject.
+[Eval](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/actions/eval) — `/stories /ddd /log_mistake` then `/log_correction`. Not automatic on a human reject.
 
 Other tools (Clean Engineering, BDD, Diagnose, …) are in the [context-driven delivery docs](https://forge.abdworks.net/abd-context-driven-delivery/).

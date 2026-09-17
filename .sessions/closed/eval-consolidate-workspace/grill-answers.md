@@ -1,6 +1,6 @@
 ﻿# Grill answers â€” eval-consolidate-workspace Bdd behavior prep
 
-Design source: `context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md`
+Design source: `actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md`
 
 Append-only. Runner adds question blocks; judge adds answers beneath.
 
@@ -22,7 +22,7 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 - `workspace-eval-oo-sketch.md` Â§2 (Workspace model, PathOverride, path overrides table, resolution on open)
 - `workspace-eval-oo-sketch.md` Â§9 workspace checklist items 1â€“2 and 5
 - `workspace-bdd-sketch.md` (existing draft â€” slice 1 path overrides, deferred list)
-- `context_tools/bdd/.context/bdd-grill-sketch-workflow.md`
+- `practices/bdd/.context/bdd-grill-sketch-workflow.md`
 
 **Judge answer:** **Recommend A â€” path overrides only.** Checklist item 1 lists `load` / `save` / `lookupPath` / `upsertPath` on **`Workspace`** together with `pathOverrides`; item 2 isolates **`PathOverride`** row shape. Item 5 (`openWorkSession`) and item 4 (`BaseContextTool.workspace` resolution) are separate slices. OO sketch lines 125â€“131 label the three-step chain as **resolution on `open`** â€” that uses host `context_index_key` and `default_workspace_folder`, not bare `Workspace.lookupPath` in isolation. Option B would mix aggregates in one Bdd subject. Option C skips the usage-story prerequisite (overrides exist before a work session opens). Option D is wrong: existing `workspace-bdd-sketch.md` aligns with A but was never judge-validated â€” keep the hierarchy direction, run validate after a proper sketch turn; do not void without a FAIL on the file.
 
@@ -184,8 +184,8 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 - `workspace-bdd-sketch.md` (consolidated usage story)
 - `workspace-eval-oo-sketch.md` §2 lines 42–93, 125–131; §4 lines 217–266 (turn envelope, SessionLog moments, finish_turn)
-- `context_tools/bdd/bdd.md` — hierarchy shape, `nest-by-enabling-events`, `state-not-when`, `observable-behavior`
-- `context_tools/bdd/.context/bdd-grill-sketch-workflow.md` — grill before sketch; never skip grill on `/bdd /sketch`
+- `practices/bdd/bdd.md` — hierarchy shape, `nest-by-enabling-events`, `state-not-when`, `observable-behavior`
+- `practices/bdd/.context/bdd-grill-sketch-workflow.md` — grill before sketch; never skip grill on `/bdd /sketch`
 - `mistakes/nest-by-enabling-events-2/mistake.md` (db6b3528) — logged state anti-pattern
 
 **Answer (taxonomy — apply before any sketch edit):**

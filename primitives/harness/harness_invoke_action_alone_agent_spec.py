@@ -51,4 +51,4 @@ with description("invoke context tool fidelity command (strict)"):
             )
             expect_agent_invoked_shell(block)
             expect_ok_action(response, "generate")
-            expect(response.toolset).to(equal("context_tools.car.car:Car"))
+            expect(response.toolset).to(equal("practices.car.car:Car"))

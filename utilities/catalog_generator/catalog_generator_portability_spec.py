@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("context_tools", "primitives", "utilities"):
+for _cat in ("practices", "primitives", "utilities"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -59,7 +59,7 @@ with description("Embed Local Assets And Content Into Generated HTML"):
             expect(target.is_file()).to(be_true)
             written = target.read_text(encoding="utf-8")
             expect("literal content here" in written).to(be_true)
-            expect("context_tools/" in written).to(equal(False))
+            expect("practices/" in written).to(equal(False))
             expect("utilities/" in written or "utilities\\" in written).to(equal(False))
 
 

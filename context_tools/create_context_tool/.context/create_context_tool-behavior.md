@@ -1,13 +1,13 @@
 # HIERARCHY: BaseContextTool / CreateContextTool
 
 <!--
-Example in code: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle (context_tools/create_context_tool/examples/car_chronicle/)
-Production domain: context_tools.clean_engineering.clean_engineering:CleanEngineering
-Context spec: context_tools/base/base_context_tool_spec.py — ActionRunner expansion + direct tool calls (in-process)
-Agent spec: context_tools/create_context_tool_agent_spec.py — agent follows instructions; assert shell tool calls
+Example in code: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle (practices/create_context_tool/examples/car_chronicle/)
+Production domain: practices.clean_engineering.clean_engineering:CleanEngineering
+Context spec: practices/base/base_context_tool_spec.py — ActionRunner expansion + direct tool calls (in-process)
+Agent spec: practices/create_context_tool_agent_spec.py — agent follows instructions; assert shell tool calls
 Primitives specs: primitives/instructions/instruction_spec.py, primitives/declared/declared_spec.py, primitives/assets/asset_spec.py, primitives/assets/markdown_extractor_spec.py
-Scanner spec: context_tools/scanners/scanner_spec.py — Scanner, Violation, execute_scan, ScannerCollection
-Per-scanner repair fixtures: context_tools/clean_engineering/evals/engineering/<rule>/faultyAsset and repairedAsset (scanners_spec.py)
+Scanner spec: practices/scanners/scanner_spec.py — Scanner, Violation, execute_scan, ScannerCollection
+Per-scanner repair fixtures: practices/clean_engineering/evals/engineering/<rule>/faultyAsset and repairedAsset (scanners_spec.py)
 -->
 
 Instructions
@@ -34,7 +34,7 @@ Action expansion
       tools should name no tools
       instructions should inline Concepts from clean_engineering (§ Contexts in clean_engineering.md)
       instructions should inline full examples.md
-      instructions should inline templates under context_tools/clean_engineering/templates/
+      instructions should inline templates under practices/clean_engineering/templates/
 
     the validate action is expanded
       action should be validate
@@ -57,30 +57,30 @@ Action expansion
       instructions should inline validate.md from the contexts module
       instructions should inline generator-fix prose from repair.md
 
-  the base BaseContextTool toolset in context_tools/base/context_tool.py
+  the base BaseContextTool toolset in practices/base/context_tool.py
     the generate action is expanded
       instructions should inline meta contexts from context_tool.md
-      instructions should inline all files from context_tools/base/templates/
+      instructions should inline all files from practices/base/templates/
       instructions should inline generate.md action prose
-      instructions should inline worked samples from context_tools/examples
+      instructions should inline worked samples from practices/examples
 
   a domain BaseContextTool whose generate_output target calls self.add_epic()
-    context_tools/create_context_tool/examples/car_chronicle/chronicle_with_output.py — ChronicleWithOutput
+    practices/create_context_tool/examples/car_chronicle/chronicle_with_output.py — ChronicleWithOutput
     the generate action is expanded
       tools should name add_epic
       instructions should include prose from the generate_output target
 
   a domain BaseContextTool with no generate_output target wired
-    context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py — base CarChronicle
+    practices/create_context_tool/examples/car_chronicle/car_chronicle.py — base CarChronicle
     the generate action is expanded
       instructions should not include generate-output steps from a subclass target
 
 Scanner tools
 
-  context_tools/clean_engineering/scanners/scanners_spec.py — scan rules under evals/engineering/
+  practices/clean_engineering/scanners/scanners_spec.py — scan rules under evals/engineering/
 
   the scan tool is invoked on a CleanEngineering generator with format python
-    the report rules should list every rule slug from context_tools/clean_engineering/scanners/
+    the report rules should list every rule slug from practices/clean_engineering/scanners/
 
   the scan tool is invoked with an explicit path list
     the report should be deterministic for exactly those paths
@@ -88,7 +88,7 @@ Scanner tools
 Agent
 
   with agent and generate action
-    Agent reading this file: run in chat via @agent-spec-manifest (python -m tools agent-spec context_tools/create_context_tool_agent_spec.py)
+    Agent reading this file: run in chat via @agent-spec-manifest (python -m harness agent-spec practices/create_context_tool_agent_spec.py)
     agent-instruct-read car_chronicle/car_chronicle.py, then natural generate prompt for a driving chronicle
       it should parse generate action response with instructions
       it should name no tools on generate

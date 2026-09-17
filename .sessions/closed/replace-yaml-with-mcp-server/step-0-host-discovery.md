@@ -1,6 +1,6 @@
 # Step 0 — MCP stdio host discovery
 
-Manual verification per `context_tools/clean_engineering/rules/testing-approach.md`. Real stdio subprocess — same path Cursor uses.
+Manual verification per `practices/clean_engineering/rules/testing-approach.md`. Real stdio subprocess — same path Cursor uses.
 
 **Re-verified:** 2026-09-09
 

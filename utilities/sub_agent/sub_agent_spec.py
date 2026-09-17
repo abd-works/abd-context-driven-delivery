@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
+for _cat in ("primitives", "utilities", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -14,7 +14,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from expects import be_a, be_true, equal, expect
 from mamba import before, context, description, it
 
-from tools.tool import agent_tool as _tool
+from agent_tools.agent_tools import agent_tool as _tool
 from utilities.sub_agent.sub_agent import (
     SubAgent,
     SubAgentTool,

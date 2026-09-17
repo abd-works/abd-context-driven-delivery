@@ -12,23 +12,24 @@ for _p in [
     str(_REPO_ROOT),
     *[
         str(_REPO_ROOT / c)
-        for c in ("context_tools", "primitives", "utilities", "context_tools/actions")
+        for c in ("practices", "primitives", "utilities", "actions")
     ],
 ]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import context_tools  # noqa: F401
-from primitives.actions.action import _ActionRunRequest, _ActionRunner
-from tools.tool import Toolset, _ToolsetLoader
+import practices  # noqa: F401
+from primitives.harness.runner import InstructionRunRequest, InstructionRunner
+from agent_tools import AgentToolSet
+from primitives.harness.toolset_loader import ToolsetLoader
 from generate.generate import Generate
 
 _CAR_DIR = Path(__file__).resolve().parent
 _CAR_TOOLSET = (
-    "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _WITH_OUTPUT_TOOLSET = (
-    "context_tools.create_context_tool.examples.car_chronicle"
+    "practices.create_context_tool.examples.car_chronicle"
     ".chronicle_with_output:ChronicleWithOutput"
 )
 _GENERATE_TOOLSET = "generate.generate:Generate"
@@ -39,18 +40,18 @@ class _CarChronicleSpecSupport:
     """Load and expand car chronicle toolsets for the package specs."""
 
     def load(self, toolset_path: str) -> Toolset:
-        return _ToolsetLoader.instance().load(toolset_path)()
+        return ToolsetLoader.instance().load(toolset_path)()
 
     def expand(
         self,
-        instance: Toolset,
+        instance: AgentToolSet,
         action_name: str,
         *,
         toolset_path: str,
         arguments: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return _ActionRunner.instance().invoke_action(
-            _ActionRunRequest(
+        return InstructionRunner.instance().invoke_action(
+            InstructionRunRequest(
                 request={"toolset": toolset_path, "context": {}},
                 toolset_path=toolset_path,
                 action_name=action_name,
@@ -72,7 +73,7 @@ with description("a CarChronicle domain"):
 
         with it("should not expose generate, validate, satisfy, or repair"):
             for name in _LIFECYCLE:
-                expect(name in self.chronicle.actions).to(equal(False))
+                expect(name in self.chronicle.agent_tools).to(equal(False))
 
 
 with description("a ChronicleWithOutput domain"):

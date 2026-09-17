@@ -34,7 +34,7 @@ Modern reasoning models need the **why behind every rule and guidance point** �
   - `@property` → stored and computed access indistinguishable; `get_`/`set_` splits behavior from state at the seam
   - Two jobs on one operation/class → two conflicting change vectors, brittle
 
-### What changed in `context_tools/clean_engineering/clean_engineering.md`
+### What changed in `practices/clean_engineering/clean_engineering.md`
 
 - Opener + all three fidelity **Goals** (modules deferral, model as review surface, code as real system + clean code preserves design)
 - **Shared rules** vocabulary whys
@@ -50,8 +50,8 @@ Modern reasoning models need the **why behind every rule and guidance point** �
 
 ### Files
 
-- `context_tools/stories/stories.md`
-- `context_tools/bdd/bdd.md`
+- `practices/stories/stories.md`
+- `practices/bdd/bdd.md`
 
 ### stories.md — audit
 
@@ -100,8 +100,8 @@ Rename **Mental model** → **Guidance** if not already done (stories pattern).
 
 ### Files
 
-- `context_tools/ddd/ddd.md`
-- `context_tools/ux/ux.md`
+- `practices/ddd/ddd.md`
+- `practices/ux/ux.md`
 
 ### ddd.md — audit
 
@@ -134,12 +134,12 @@ Same three-layer pass. DDD: lean on existing **failure modes** and **input traps
 
 ## Artifacts to read
 
-- `context_tools/clean_engineering/clean_engineering.md` — reference implementation for why density
-- `context_tools/stories/stories.md`
-- `context_tools/stories/examples/telco-website/` — golden fixture example (do not break)
-- `context_tools/bdd/bdd.md`
-- `context_tools/ddd/ddd.md`
-- `context_tools/ux/ux.md`
+- `practices/clean_engineering/clean_engineering.md` — reference implementation for why density
+- `practices/stories/stories.md`
+- `practices/stories/examples/telco-website/` — golden fixture example (do not break)
+- `practices/bdd/bdd.md`
+- `practices/ddd/ddd.md`
+- `practices/ux/ux.md`
 - Recent commits: `dff2ebad`, `21a9b186`, `ef871f3a`
 
 ---

@@ -6,7 +6,7 @@ format: md
 
 # BDD — Execute themed tickets on a configured Plan Workflow
 
-**Sources / context:** `utilities/swarm/.context/thin-slicing.md`; `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/workflow/.context/module-context.md`; `context_tools/bdd/bdd.md`; `utilities/plan/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/thin-slicing.md`; `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/workflow/.context/module-context.md`; `practices/bdd/bdd.md`; `utilities/plan/.context/module-context.md`
 
 Increment 1 spine: preconfigured Plan as project Workflow; themed defects/small changes; root cause; `/bdd` with Clean Engineering under the hood; one fix; ticket Backlog → In Progress → Done.
 
@@ -22,7 +22,7 @@ a preconfigured Plan used as a project Workflow
     with tool_keys Bdd and CleanEngineering on the BDD Turn
       it should be ready to start without Compose
         -> expect(plan.turns).not_to be empty
-        -> expect(plan.turns[0].tool_keys).to equal ["context_tools.bdd.bdd:Bdd", "context_tools.clean_engineering.clean_engineering:CleanEngineering"]
+        -> expect(plan.turns[0].tool_keys).to equal ["practices.bdd.bdd:Bdd", "practices.clean_engineering.clean_engineering:CleanEngineering"]
 
   that is started for a themed ticket
     with Workflow start moving the GitHub ticket to In Progress
@@ -47,11 +47,11 @@ a themed defect ticket under one common theme
         -> bdd = new Bdd(fidelity="behavior")
         -> ce = bdd.ce()
         -> plan.execute_turn()
-        -> expect(turn.tool_keys).to include("context_tools.bdd.bdd:Bdd")
-        -> expect(turn.tool_keys).to include("context_tools.clean_engineering.clean_engineering:CleanEngineering")
+        -> expect(turn.tool_keys).to include("practices.bdd.bdd:Bdd")
+        -> expect(turn.tool_keys).to include("practices.clean_engineering.clean_engineering:CleanEngineering")
         -> expect(ce).to be_a(CleanEngineering)
       it should not run Bdd without CleanEngineering
-        -> expect(turn.tool_keys).not_to equal ["context_tools.bdd.bdd:Bdd"]
+        -> expect(turn.tool_keys).not_to equal ["practices.bdd.bdd:Bdd"]
 
   that fixes one issue at a time
     with Mistake and Correction on the Turn

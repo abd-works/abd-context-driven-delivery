@@ -1,5 +1,5 @@
 branch: session/eval-consolidate-workspace
-path: context_tools/actions/workspace
+path: actions/workspace
 cdd_at: fab54f7de84c850917db59c42f417a697dcf8d27
 turns:
 - id: 7f0c79ab
@@ -306,16 +306,16 @@ turns:
     - 1ad49040
     sha: f8c6fba1ad6f3d84b56047091084d7e30cd94924
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=d6ddab78, rule=domain-practice-alignment
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=1ad49040, rule=usage-order-behaviors
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=d6ddab78, status=fixed
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=1ad49040, status=fixed
   mistakes: []
@@ -334,10 +334,10 @@ turns:
     - 23dd937b
     sha: 5863f0c7f23b2021cc582be418bec47ead31ab82
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=23dd937b, rule=usage-order-behaviors
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=23dd937b, status=fixed
   mistakes: []
@@ -358,22 +358,22 @@ turns:
     - 0bf09f1e
     sha: 10eb37e332d2ebc3753e2f493e2ab3dbba97e86d
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=acddcec1, rule=domain-practice-alignment
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=e4736325, rule=usage-order-behaviors
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=0bf09f1e, rule=describe-is-plain-english
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=acddcec1, status=fixed
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=e4736325, status=fixed
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=0bf09f1e, status=fixed
   mistakes: []
@@ -393,16 +393,16 @@ turns:
     - 18df551a
     sha: 767739a36982ba7480e42d8809586eb8ae3fb670
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=a4b78031, rule=usage-order-behaviors
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=18df551a, rule=state-oriented-hierarchy
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=a4b78031, status=fixed
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=18df551a, status=fixed
   mistakes: []
@@ -421,10 +421,10 @@ turns:
     - 95ae9520
     sha: a734ec2ad4a8cf1a2d736f85671097cdc2b04668
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=95ae9520, rule=domain-practice-alignment
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=95ae9520, status=fixed
   mistakes: []
@@ -443,10 +443,10 @@ turns:
     - 1bcaf881
     sha: eaa725b29c426ab524179c459132dad8fdadeeb3
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=1bcaf881, rule=usage-order-behaviors
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=1bcaf881, status=fixed
   mistakes: []
@@ -465,10 +465,10 @@ turns:
     - ee24d3a0
     sha: ae199e47cb419d3ac5b166fca83d4f885a040d18
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=ee24d3a0, rule=observable-behavior
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=ee24d3a0, status=fixed
   mistakes: []
@@ -487,10 +487,10 @@ turns:
     - ad49022f
     sha: 03e273471a314d523e22f7373664b84a6665f163
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=ad49022f, rule=usage-order-behaviors
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=ad49022f, status=fixed
   mistakes: []
@@ -523,10 +523,10 @@ turns:
     - 89c985b0
     sha: c2949f081d7e6a898c0aace1064b7beb58f133a6
   tool_calls:
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_mistake
     summary: entry_id=89c985b0, rule=observable-behavior
-  - toolset: context_tools.bdd.bdd:Bdd
+  - toolset: practices.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=89c985b0, status=fixed
   mistakes: []
@@ -648,7 +648,7 @@ turns:
   tool_calls: []
   mistakes:
   - entry_id: 745db890
-    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    artifact: actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
     rule: usage-order-behaviors
     wrong: Ran /bdd /sketch without grilling the consolidated usage story. Sketcher
       generate wrote workspace_spec.py and edited the hierarchy without grill tick
@@ -730,7 +730,7 @@ turns:
         under that has finished its turn.
       status: fixed
   - entry_id: db6b3528
-    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    artifact: actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
     rule: nest-by-enabling-events
     wrong: 'Used operation outcomes as nested states: `that has logged its action
       run` and `that has expanded its action instructions`. Logging is not a standing
@@ -795,7 +795,7 @@ turns:
   tool_calls: []
   mistakes:
   - entry_id: 9d033ff4
-    artifact: context_tools/bdd/.context/bdd-grill-sketch-workflow.md
+    artifact: practices/bdd/.context/bdd-grill-sketch-workflow.md
     rule: eval-turn-single-process
     wrong: 'Ran begin_eval_turn, log_mistake, log_correction, and finish_eval_turn
       as separate tools.ps1 run calls. Each process reloads session.yaml only; mistakes
@@ -828,8 +828,8 @@ turns:
         \ | `bdd judge validate ΓÇö <slice name>` | Independent rubric + scan report;\
         \ mistakes logged if FAIL |\n\n**Never** combine grill + sketch in one turn.\
         \ **Never** skip `begin_eval_turn` / `finish_eval_turn`.\n\n## Eval toolset\
-        \ (default)\n\n```yaml\ntoolset: context_tools.bdd.bdd:Bdd\ncontext:\n  fidelity:\
-        \ behavior\n  path: <module under test, e.g. context_tools/actions/workspace>\n\
+        \ (default)\n\n```yaml\ntoolset: practices.bdd.bdd:Bdd\ncontext:\n  fidelity:\
+        \ behavior\n  path: <module under test, e.g. actions/workspace>\n\
         \  session: <eval session slug, e.g. eval-consolidate-workspace>\n```\n\n\
         Use `.\\tools.ps1` from repo root. Write `_req.yaml`, run, delete.\n\n## Eval\
         \ turn — single process (required)\n\n**Never** run `begin_eval_turn`, `log_mistake`,\
@@ -862,7 +862,7 @@ turns:
         \ grill/sketch turns)\n\n## Source-of-truth read order (judge prove-read)\n\
         \n1. User-cited OO / CE sketch (e.g. `workspace-eval-oo-sketch.md`)\n2. `{module}/.context/module-context.md`\n\
         3. Existing `*-bdd-sketch.md` and `grill-answers.md` in session folder\n4.\
-        \ `context_tools/bdd/bdd.md`, `templates/bdd-sketch.md`\n5. Production source\
+        \ `practices/bdd/bdd.md`, `templates/bdd-sketch.md`\n5. Production source\
         \ only when documenting **current** behavior (`document`); target-model Bdd\
         \ follows sketch, not today's code\n\n## Judge mistakes\n\nWhen judge FAILs:\n\
         \n1. `log_mistake` ΓÇö artifact path, rule name, wrong, original excerpt\n\
@@ -894,7 +894,7 @@ turns:
   tool_calls: []
   mistakes:
   - entry_id: cb4724b1
-    artifact: context_tools/bdd/.context/bdd-grill-sketch-workflow.md
+    artifact: practices/bdd/.context/bdd-grill-sketch-workflow.md
     rule: eval-turn-single-process
     wrong: Documented log_mistake and log_correction in the same turn / same finish_eval_turn.
       Mistake and correction are separate turns; only begin+tool+finish share one
@@ -931,8 +931,8 @@ turns:
         \ | `bdd judge validate ΓÇö <slice name>` | Independent rubric + scan report;\
         \ mistakes logged if FAIL |\n\n**Never** combine grill + sketch in one turn.\
         \ **Never** skip `begin_eval_turn` / `finish_eval_turn`.\n\n## Eval toolset\
-        \ (default)\n\n```yaml\ntoolset: context_tools.bdd.bdd:Bdd\ncontext:\n  fidelity:\
-        \ behavior\n  path: <module under test, e.g. context_tools/actions/workspace>\n\
+        \ (default)\n\n```yaml\ntoolset: practices.bdd.bdd:Bdd\ncontext:\n  fidelity:\
+        \ behavior\n  path: <module under test, e.g. actions/workspace>\n\
         \  session: <eval session slug, e.g. eval-consolidate-workspace>\n```\n\n\
         Use `.\\tools.ps1` from repo root. Write `_req.yaml`, run, delete.\n\n## Eval\
         \ turn — one process per turn (required)\n\n**Mistake and correction are different\
@@ -969,7 +969,7 @@ turns:
         \ grill/sketch turns)\n\n## Source-of-truth read order (judge prove-read)\n\
         \n1. User-cited OO / CE sketch (e.g. `workspace-eval-oo-sketch.md`)\n2. `{module}/.context/module-context.md`\n\
         3. Existing `*-bdd-sketch.md` and `grill-answers.md` in session folder\n4.\
-        \ `context_tools/bdd/bdd.md`, `templates/bdd-sketch.md`\n5. Production source\
+        \ `practices/bdd/bdd.md`, `templates/bdd-sketch.md`\n5. Production source\
         \ only when documenting **current** behavior (`document`); target-model Bdd\
         \ follows sketch, not today's code\n\n## Judge mistakes\n\nWhen judge FAILs:\n\
         \n1. **Mistake turn:** `begin_eval_turn` → `log_mistake` → `finish_eval_turn`\
@@ -1012,7 +1012,7 @@ turns:
   tool_calls: []
   mistakes:
   - entry_id: 4b1a8711
-    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    artifact: actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
     rule: nest-by-enabling-events
     wrong: Nested commit under `with a dirty working tree on its session branch` at
       turn finish. Finishing a turn after work always commits scoped changes — dirty
@@ -1089,7 +1089,7 @@ turns:
   tool_calls: []
   mistakes:
   - entry_id: 32453ccf
-    artifact: context_tools/actions/workspace/workspace_spec.py
+    artifact: actions/workspace/workspace_spec.py
     rule: usage-order-behaviors
     wrong: 'Hand-edited workspace_spec.py while the consolidated sketch is still in
       grill/sketch. bdd-grill-sketch-workflow.md: {module}_spec.py only after sketch
@@ -1103,9 +1103,9 @@ turns:
     fidelity: behavior
     folder: repairs/usage-order-behaviors/usage-order-behaviors
     correction:
-      improved: "# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd\n\
-        # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd\n# invoke-check:\
-        \ action validate | toolset: context_tools.bdd.bdd:Bdd\n\"\"\"BDD behavior\
+      improved: "# @toolset-manifest python -m agent_tools manifest practices.bdd.bdd:Bdd\n\
+        # invoke-edit: action satisfy | toolset: practices.bdd.bdd:Bdd\n# invoke-check:\
+        \ action validate | toolset: practices.bdd.bdd:Bdd\n\"\"\"BDD behavior\
         \ signatures — Workspace target model (slices A–E).\"\"\"\n\nfrom mamba import\
         \ context, description, it\n\n\nwith description(\"a context tool\"):\n  \
         \  with context(\"with a workspace\"):\n        with context(\"that has an\
@@ -1198,7 +1198,7 @@ turns:
   tool_calls: []
   mistakes:
   - entry_id: 3170dd3e
-    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    artifact: actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
     rule: usage-order-behaviors
     wrong: 'Nested enabling event `that has an action run against it` before standing
       `with a workspace`. Grill tick 8: subject `a context tool` → standing `with
@@ -1273,7 +1273,7 @@ turns:
   tool_calls: []
   mistakes:
   - entry_id: 1c9526fa
-    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/grill-answers.md
+    artifact: actions/workspace/.context/sessions/eval-consolidate-workspace/grill-answers.md
     rule: usage-order-behaviors
     wrong: 'Grill tick 9 asked slice-boundary / process options (where should the
       first extension boundary fall) instead of BDD design-tree questions: highest-level
@@ -1315,7 +1315,7 @@ turns:
     folder: repairs/usage-order-behaviors/usage-order-behaviors-4
     correction:
       improved: "\uFEFF# Grill answers â€” eval-consolidate-workspace Bdd behavior\
-        \ prep\n\nDesign source: `context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md`\n\
+        \ prep\n\nDesign source: `actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md`\n\
         \nAppend-only. Runner adds question blocks; judge adds answers beneath.\n\n\
         ---\n\n### Turn 9266b3db â€” grill tick 1\n\n**Question:** For the **first**\
         \ Bdd behavior sketch slice (Â§9 workspace module checklist), where should\
@@ -1334,7 +1334,7 @@ turns:
         \ Â§2 (Workspace model, PathOverride, path overrides table, resolution on\
         \ open)\n- `workspace-eval-oo-sketch.md` Â§9 workspace checklist items 1â€“2\
         \ and 5\n- `workspace-bdd-sketch.md` (existing draft â€” slice 1 path overrides,\
-        \ deferred list)\n- `context_tools/bdd/.context/bdd-grill-sketch-workflow.md`\n\
+        \ deferred list)\n- `practices/bdd/.context/bdd-grill-sketch-workflow.md`\n\
         \n**Judge answer:** **Recommend A â€” path overrides only.** Checklist item\
         \ 1 lists `load` / `save` / `lookupPath` / `upsertPath` on **`Workspace`**\
         \ together with `pathOverrides`; item 2 isolates **`PathOverride`** row shape.\
@@ -1509,8 +1509,8 @@ turns:
         \ classes as subjects.\n\n**Runner paths read:**\n\n- `workspace-bdd-sketch.md`\
         \ (consolidated usage story)\n- `workspace-eval-oo-sketch.md` §2 lines 42–93,\
         \ 125–131; §4 lines 217–266 (turn envelope, SessionLog moments, finish_turn)\n\
-        - `context_tools/bdd/bdd.md` — hierarchy shape, `nest-by-enabling-events`,\
-        \ `state-not-when`, `observable-behavior`\n- `context_tools/bdd/.context/bdd-grill-sketch-workflow.md`\
+        - `practices/bdd/bdd.md` — hierarchy shape, `nest-by-enabling-events`,\
+        \ `state-not-when`, `observable-behavior`\n- `practices/bdd/.context/bdd-grill-sketch-workflow.md`\
         \ — grill before sketch; never skip grill on `/bdd /sketch`\n- `mistakes/nest-by-enabling-events-2/mistake.md`\
         \ (db6b3528) — logged state anti-pattern\n\n**Answer (taxonomy — apply before\
         \ any sketch edit):**\n\n| Line | Category | What may nest | Reject |\n|---|---|---|---|\n\
@@ -1583,7 +1583,7 @@ turns:
         \ Repair bucket first. Likely violates nest-by-enabling-events unless a prior\
         \ event is named.\n\n**Runner paths read:**\n\n- `workspace-eval-oo-sketch.md`\
         \ §4 lines 393–394, 408, 427–446, 660–683; §191 domain chain\n- `workspace-bdd-sketch.md`\
-        \ — `that has a turn open` through turn finish\n- `context_tools/bdd/bdd.md`\
+        \ — `that has a turn open` through turn finish\n- `practices/bdd/bdd.md`\
         \ — hierarchy shape, nest-by-enabling-events, state-not-when\n- `grill-answers.md`\
         \ tick 8 taxonomy\n\n**Answer:** _(pending — user)_\n\n**Slice unlocked:**\
         \ **no** — tick 10 drills **substates** under the chosen branch: nested `with`\

@@ -15,14 +15,14 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from primitives.actions.action import agent_instructions, agentic_toolset
+from agent_tools import agent_instructions, agent_toolset
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
-from tools.repo_paths import ensure_venv
-from tools.tool import resource, agent_tool, toolset
+from primitives.harness.repo_paths import ensure_venv
+from agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.prompt import prompt
 from hooks.hook import hook
 from hooks.session_logs import (
@@ -266,7 +266,7 @@ class TurnCommit:
         return self.branch
 
 
-@toolset
+@agent_toolset
 class Turn:
     """Self-sufficient turn commit — no WorkSession or Workspace required."""
 
@@ -855,7 +855,6 @@ class Repairs:
         return len(self._by_theme)
 
 
-@agentic_toolset
 class WorkSession:
     """One named work session — owns openTurn, turns, repairs, git; session.md kit."""
 
@@ -1190,7 +1189,6 @@ class WorkSession:
     def session_guidance(self) -> Instruction: ...
 
     @property
-    @resource
     def active(self) -> WorkSession:
         return self
 
@@ -2315,7 +2313,7 @@ class WorkSession:
         )
 
 
-@agentic_toolset
+@agent_toolset
 class Workspace:
     """Parent of `.context/` — workSessions, currentWorkSession, pathOverrides."""
 
@@ -2421,7 +2419,7 @@ class Workspace:
 
     @prompt(name="model")
     @agent_instructions
-    def model(self, model: str = "", session: str = "", workspace: str = "") -> str:
+    def model(recipe, model: str = "", session: str = "", workspace: str = "") -> str:
         """Set the preferred IDE/CLI model for this work session (slash ``/model``).
 
         Persist under ``.sessions/{session}/model``. When no session is open,

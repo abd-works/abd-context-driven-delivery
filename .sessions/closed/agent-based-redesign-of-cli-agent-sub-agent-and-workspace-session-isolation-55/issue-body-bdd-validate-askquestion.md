@@ -13,7 +13,7 @@
 - **Assigned capture transcript:** `accb1945-7ef7-4d19-b9ef-d3a5ef26f726`
 - **Branch:** `session/agent-based-redesign-of-cli-agent-sub-agent-and-workspace-session-isolation-55`
 - **Current commit (Turn / handoff window):** `bf410070` (`finish` — nested runtime refactor in `agents/agent_spec.py`). **Not the cause** of missing AskQuestion-guided validate UX.
-- **Cause:** Pre-existing `context_tools/bdd` `validate` behavior (flat violation list; no Ask Questions integration). Large violation sets from mid-migration `agents/agent_spec.py` (mixed signatures + real bodies) made the gap more painful during this session but did not introduce it.
+- **Cause:** Pre-existing `practices/bdd` `validate` behavior (flat violation list; no Ask Questions integration). Large violation sets from mid-migration `agents/agent_spec.py` (mixed signatures + real bodies) made the gap more painful during this session but did not introduce it.
 
 ## Grill headings
 

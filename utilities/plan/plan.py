@@ -9,8 +9,8 @@ from typing import Any
 
 from git.git import Repo, TicketState
 from harness.harness_tool import prompt
-from primitives.actions.action import agentic_toolset
-from tools.tool import agent_tool
+from primitives.agent_tools.agent_tools import agent_toolset
+from agent_tools.agent_tools import agent_tool
 from workspace.workspace import Turn, WorkSession, Workspace
 from workflow.workflow import Workflow
 
@@ -105,14 +105,14 @@ _PREBAKED_WORKFLOWS: dict[str, list[TurnTemplate]] = {
             fidelity="behavior",
             format="markdown",
             context="root-cause",
-            tool_keys=["context_tools.bdd.bdd:Bdd"],
+            tool_keys=["practices.bdd.bdd:Bdd"],
         ),
         TurnTemplate(
             action="Generate",
             fidelity="scenarios",
             format="markdown",
             context="fix-one-issue",
-            tool_keys=["context_tools.bdd.bdd:Bdd"],
+            tool_keys=["practices.bdd.bdd:Bdd"],
         ),
     ],
 }
@@ -570,7 +570,7 @@ class SmallWorkRunner:
         return payload
 
 
-@agentic_toolset
+@agent_toolset
 class PlanCommands:
     """Slash `/plan` and `/plan /small-work {context}` — load Workflow into a Plan."""
 

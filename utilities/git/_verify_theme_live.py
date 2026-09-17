@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
-for part in ("", "utilities", "primitives", "context_tools"):
+for part in ("", "utilities", "primitives", "practices"):
     p = str(_REPO / part) if part else str(_REPO)
     if p not in sys.path:
         sys.path.insert(0, p)

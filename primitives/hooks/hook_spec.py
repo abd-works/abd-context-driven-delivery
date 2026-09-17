@@ -18,7 +18,7 @@ sys.modules.pop("hooks", None)
 
 from expects import be_true, contain, equal, expect, have_key, raise_error
 from mamba import context, description, it
-from tools.tool import toolset
+from agent_tools import agent_toolset
 
 from hooks.dispatch import HookBinding
 from hooks.dispatch import dispatch, parse_payload
@@ -67,7 +67,7 @@ class _Fixture:
         return {"permission": "allow"}
 
 
-@toolset
+@agent_toolset
 class _DispatchFixture:
     calls: list[str] = []
 
@@ -77,7 +77,7 @@ class _DispatchFixture:
         return {"agent_message": "ran"}
 
 
-@toolset
+@agent_toolset
 class _StopFixture:
     calls: list[str] = []
 
@@ -448,7 +448,7 @@ with description("hook dispatch"):
         with it("should keep user_message separate from agent_message"):
             Hook.clear()
 
-            @toolset
+            @agent_toolset
             class _MessageFixture:
                 @hook(event="beforeSubmitPrompt")
                 def on_before(self, payload: dict) -> dict:

@@ -114,4 +114,4 @@ Self-sufficient commit kit — **no WorkSession or Workspace required**.
 
 ## Dependencies
 
-stdlib (+ optional yaml); `tools.tool`; consumed by `context_tools.base.base_context_tool`.
+stdlib (+ optional yaml); `tools.tool`; consumed by `practices.base.base_context_tool`.

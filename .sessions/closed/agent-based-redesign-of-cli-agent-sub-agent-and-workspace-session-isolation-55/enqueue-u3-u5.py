@@ -21,13 +21,13 @@ JOBS = [
         """Run /sub-agent with Bdd and CleanEngineering tools and Generate action.
 
 Migration U3: base_context_tool.py opens agent.agent.Workspace + AgentSession. Remove workspace.workspace WorkSession import. Canonical: agents/.context/agent-session-redesign-sketch.md. Vanilla BDD first; green base_context_tool_spec. Finish the Turn. Do not contact the judge or edit the job queue.""",
-        "PASS only when: (1) BaseContextTool uses agent.agent.Workspace.open -> AgentSession; (2) WorkSession import gone; (3) mamba context_tools/base/base_context_tool_spec.py green; (4) judge ran validate with Bdd + CleanEngineering.",
+        "PASS only when: (1) BaseContextTool uses agent.agent.Workspace.open -> AgentSession; (2) WorkSession import gone; (3) mamba practices/base/base_context_tool_spec.py green; (4) judge ran validate with Bdd + CleanEngineering.",
     ),
     (
         "U4",
         """Run /sub-agent with Bdd and CleanEngineering tools and Generate action.
 
-Migration U4: SessionLog and tools run coalesce/bind to AgentSession (name, folder, turn). Judge validate shares session with agent BDD. Touch utilities/workspace/session_log.py and primitives/tools/tool.py only. Canonical: agents/.context/agent-session-redesign-sketch.md. Finish the Turn. Do not contact the judge or edit the job queue.""",
+Migration U4: SessionLog and tools run coalesce/bind to AgentSession (name, folder, turn). Judge validate shares session with agent BDD. Touch utilities/workspace/session_log.py and primitives/agent_tools/tool.py only. Canonical: agents/.context/agent-session-redesign-sketch.md. Finish the Turn. Do not contact the judge or edit the job queue.""",
         "PASS only when: (1) SessionLog and tools run bind AgentSession; (2) validate kit on agents passes; (3) judge ran validate with Bdd + CleanEngineering.",
     ),
     (
@@ -56,8 +56,8 @@ def run_tool(tool: str, arguments: dict | None = None) -> str:
             str(ROOT),
             str(ROOT / "primitives"),
             str(ROOT / "utilities"),
-            str(ROOT / "context_tools"),
-            str(ROOT / "context_tools" / "actions"),
+            str(ROOT / "practices"),
+            str(ROOT / "practices" / "actions"),
             str(ROOT / "agents"),
         ]
     )

@@ -116,12 +116,12 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
     are now unbroken. See `grill-answers.md` § "Visual metaphor swap" for the
     decision record.
 - Framework references:
-  - `context_tools/cdd/cdd.md` (stage table, sketch rules)
-  - `context_tools/cdd/templates/cdd-sketch.md` (this scaffold)
-  - `context_tools/ux/templates/ux-sketch.md` (mockup notation)
-  - `context_tools/clean_engineering/templates/clean_engineering-sketch.md`
+  - `practices/cdd/cdd.md` (stage table, sketch rules)
+  - `practices/cdd/templates/cdd-sketch.md` (this scaffold)
+  - `practices/ux/templates/ux-sketch.md` (mockup notation)
+  - `practices/clean_engineering/templates/clean_engineering-sketch.md`
     (module nest + class indent notation)
-  - `context_tools/bdd/templates/bdd-sketch.md` (behavior notation)
+  - `practices/bdd/templates/bdd-sketch.md` (behavior notation)
 
 flow:
   status: more-same-stage

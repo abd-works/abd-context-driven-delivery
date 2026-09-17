@@ -6,7 +6,7 @@ from typing import Any
 
 from cli_agent.cli_agent import CliAgent, IdeCli
 from plan.plan import Plan, PlanExecution
-from primitives.actions.action import agentic_toolset
+from primitives.agent_tools.agent_tools import agent_toolset
 from workspace.workspace import Turn, WorkSession, Workspace
 
 
@@ -114,7 +114,7 @@ class Agent(CliAgent):
             session.open_turn = swarm_turns[0]
 
 
-@agentic_toolset
+@agent_toolset
 class Supervisor:
     """Owns Outcome and rubric; compare reads Turn JudgeCheckpoint results — does not judge."""
 
@@ -224,7 +224,7 @@ class Supervisor:
         }
 
 
-@agentic_toolset
+@agent_toolset
 class Swarm:
     """Plan plus shared turns slice, Supervisor, and Agents. Front-end to git."""
 
