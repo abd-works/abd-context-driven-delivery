@@ -52,7 +52,7 @@ Everything lands under **this repo’s `.cursor/`**, not a second project folder
 | `.cursor/hooks.json` | Cursor hooks (dispatch into this repo’s Python).                                                                     |
 
 
-Source of those files is this repo (`practices/`, `utilities/`, `primitives/`, `rules/`). Re-run `.\setup.ps1` or `/install` after you change a skill source and want the editor copy refreshed.
+Source of those files is this repo (`practices/`, `tools/`, `primitives/`, `rules/`). Re-run `.\setup.ps1` or `/install` after you change a skill source and want the editor copy refreshed.
 
 VS Code Copilot agents, when you deploy that IDE, live under `.github/agents/`.
 

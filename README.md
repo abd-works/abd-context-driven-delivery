@@ -45,14 +45,14 @@ Everything lands under **this repo’s `.cursor/`**, not a second project folder
 
 | Path                 | What it is                                                                                                           |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `.cursor/skills/`    | Slash skills: actions, context tools and fidelities, format prompts, utilities, `/install`, `/clean-harness`. |
+| `.cursor/skills/`    | Slash skills: actions, context tools and fidelities, format prompts, tools, `/install`, `/clean-harness`. |
 | `.cursor/rules/`     | Repo rules plus per-tool `.mdc` guidance.                                                                            |
 | `.cursor/agents/`    | Role agents (Partitioner, Scaffolder, Discoverer, Specifier, Implementer, …).                                        |
 | `.cursor/mcp.json`   | Project MCP server that exposes the toolsets.                                                                        |
 | `.cursor/hooks.json` | Cursor hooks (dispatch into this repo’s Python).                                                                     |
 
 
-Source of those files is this repo (`practices/`, `utilities/`, `primitives/`, `rules/`). Re-run `.\setup.ps1` or `/install` after you change a skill source and want the editor copy refreshed.
+Source of those files is this repo (`practices/`, `tools/`, `primitives/`, `rules/`). Re-run `.\setup.ps1` or `/install` after you change a skill source and want the editor copy refreshed.
 
 VS Code Copilot agents, when you deploy that IDE, live under `.github/agents/`.
 

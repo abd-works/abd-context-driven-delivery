@@ -13,7 +13,7 @@ for _p in [
     str(_REPO_ROOT),
     *[
         str(_REPO_ROOT / c)
-        for c in ("practices", "primitives", "utilities", "actions")
+        for c in ("practices", "primitives", "tools", "actions")
     ],
 ]:
     if _p not in sys.path:

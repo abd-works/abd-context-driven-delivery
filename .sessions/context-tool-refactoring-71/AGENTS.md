@@ -37,7 +37,7 @@
 
 Command that passed (79 examples, split by package):
 
-`mamba primitives/markdown/markdown_spec.py primitives/agent_tools/agent_tools_spec.py primitives/guidance/guidance_spec.py actions/scan/rule_spec.py actions/validate/validate_spec.py primitives/installer/installation_spec.py primitives/installer/mcp_server_spec.py primitives/installer/hook_installation_spec.py utilities/catalog_generator/catalog_spec.py`
+`mamba primitives/markdown/markdown_spec.py primitives/agent_tools/agent_tools_spec.py primitives/guidance/guidance_spec.py actions/scan/rule_spec.py actions/validate/validate_spec.py primitives/installer/installation_spec.py primitives/installer/mcp_server_spec.py primitives/installer/hook_installation_spec.py tools/catalog_generator/catalog_spec.py`
 
 (venv `python -m mamba` is not available here; system `mamba` CLI was used.)
 

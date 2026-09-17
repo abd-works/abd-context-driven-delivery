@@ -417,7 +417,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 
 ---
 
-# utilities/catalog_generator
+# tools/catalog_generator
 
 ## Catalog : HTML
 
@@ -557,7 +557,7 @@ Port each layer into the package that owns the subject:
 | 3–6 deploy | `primitives/installer/installation_spec.py` |
 | Rule / Validate | `actions/scan/rule_spec.py`, `actions/validate/validate_spec.py` |
 | 7 | `primitives/installer/mcp_server_spec.py` |
-| 8 | `utilities/catalog_generator/catalog_spec.py` |
+| 8 | `tools/catalog_generator/catalog_spec.py` |
 | 9 | `primitives/installer/hook_installation_spec.py` |
 
 Read a host, then deploy that same host: skill, command, or rule from the mark. `@mcp` writes the context section plus the invoke tail. Layer 7 is manifest and host invoke.

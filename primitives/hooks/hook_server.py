@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-for _category in ("primitives", "utilities"):
+for _category in ("primitives", "tools"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)

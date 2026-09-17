@@ -1,6 +1,6 @@
 # Guidance resource model (proposed remodel)
 
-**Sources / context:** `.sessions/context-tool-refactoring-71/session.md` (#71, #22, #68, #21); today `practices/base/base_context_tool.py` (`BaseContextTool`) → target `primitives/guidance/` (*Guidance*, *Guidance*, …); `primitives/installer/`; `utilities/catalog_generator/`. **Out of scope for this pass:** full `document` channel implementation (ticket #19 partial). **In scope in model:** where `render` / `iterate` live relative to *Guidance* vs lifecycle action kits.
+**Sources / context:** `.sessions/context-tool-refactoring-71/session.md` (#71, #22, #68, #21); today `practices/base/base_context_tool.py` (`BaseContextTool`) → target `primitives/guidance/` (*Guidance*, *Guidance*, …); `primitives/installer/`; `tools/catalog_generator/`. **Out of scope for this pass:** full `document` channel implementation (ticket #19 partial). **In scope in model:** where `render` / `iterate` live relative to *Guidance* vs lifecycle action kits.
 
 **Three roles — do not collapse them:**
 
@@ -733,7 +733,7 @@ Harness.install(mcp=False)
 
 ---
 
-# utilities/catalog_generator
+# tools/catalog_generator
 
 - **Purpose:** Write catalog pages. `Catalog` extends `HTML` and reads each host’s `@markdown` properties via `Markdown.html()`.
 - **Dependencies:** guidance registry — **not** `harness.bodies`, **not** heading scrape

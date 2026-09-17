@@ -28,7 +28,7 @@ Assemble Catalog Page Data
         every action's home and neighbors are found by walking code, not a hand-maintained list
             given BaseContextTool's lifecycle-actions section with its public @action methods in source order
             when the maintainer runs the discover step over that section
-            then each action resolves to its delegate kit dir under utilities/{name}/ or falls back to practices/base/
+            then each action resolves to its delegate kit dir under tools/{name}/ or falls back to practices/base/
                 and same-instance self.<other_action>() calls resolve as that action's tools-called list
     Maintainer --> Collect Skill Slash-Command Map From SKILL Frontmatter
         the Section 0 quick-invoke block needs a real skill name per tool
@@ -68,14 +68,14 @@ Assemble Catalog Page Data
         every card is also reachable from a plain list, not only the board
             given every rendered tool, fidelity, action, and utility card
             when the maintainer runs the render step for the grid pages
-            then context-tools.html, fidelities.html, actions.html, and utilities.html each list every card of that kind
+            then context-tools.html, fidelities.html, actions.html, and tools.html each list every card of that kind
 
     Make Catalog Output Portable
     Maintainer --> Embed Local Assets And Content Into Generated HTML
         the catalog has to work with no other folder present
             given the commons CSS/JS, migrated diagram images, and every panel's markdown/code content
             when the maintainer runs the generator's emit step
-            then every asset and every panel's content is written literally into the generated HTML with no runtime fetch back into practices/ or utilities/
+            then every asset and every panel's content is written literally into the generated HTML with no runtime fetch back into practices/ or tools/
     Maintainer --> Build Git-URL Source Citation For Every Reference
         every view-source link has to survive the catalog leaving this machine
             given the repo's resolved remote URL and ref
@@ -83,7 +83,7 @@ Assemble Catalog Page Data
             then the citation renders as {repo_url}/blob/{ref}/{path} and no local filesystem path appears anywhere in the output
     Maintainer --> Regenerate Catalog Via CLI With Default And Override Flags
         regenerating the whole site is one command with sane defaults
-            given the bare command python -m utilities.catalog_generator.generate_cdd_catalog
+            given the bare command python -m tools.catalog_generator.generate_cdd_catalog
             when the maintainer runs it with no flags
             then the catalog regenerates into catalog/ using the current HEAD and the origin remote, with --out, --repo-url, and --ref available to override any of those three
 
@@ -130,11 +130,11 @@ Assemble Catalog Page Data
 
 ---
 
-## Clean Engineering pass — `/clean-engineering sketch` on `utilities/catalog_generator/`
+## Clean Engineering pass — `/clean-engineering sketch` on `tools/catalog_generator/`
 
 The story map above says *what* the generator must do; it says nothing about the classes that do it. Ran `/clean-engineering`'s `sketch` action (grill → generate) against that gap, at **model** fidelity, in markdown — per `clean_engineering.md`'s own progression (`modules → model → code`) and its markdown channel shape (`practices/clean_engineering/class_model/markdown_class_model.py`).
 
-**Prove-read before asking** (`grill_context.md`'s gate): read `primitives/agent_tools/tool.py` (`Toolset`, `@tool`, `@resource`, `_Tool`/`_Resource` dataclasses), `primitives/agent_tools/action.py` (`AgenticToolset`, `@action`, `Action` dataclass, `_AgentToolExpander`), `primitives/assets/assets.py` + `markdown_extractor.py` (the framework's own module-relative markdown/section resolver), `practices/clean_engineering/class_model/` (canonical-model + render-channel precedent), `practices/base/base_context_tool.py` (`fidelities` ClassVar, lifecycle `@action`s), and `utilities/agent_skills/agent_skills.py` in full (closest sibling utility — same "scrape the repo, emit files" shape).
+**Prove-read before asking** (`grill_context.md`'s gate): read `primitives/agent_tools/tool.py` (`Toolset`, `@tool`, `@resource`, `_Tool`/`_Resource` dataclasses), `primitives/agent_tools/action.py` (`AgenticToolset`, `@action`, `Action` dataclass, `_AgentToolExpander`), `primitives/assets/assets.py` + `markdown_extractor.py` (the framework's own module-relative markdown/section resolver), `practices/clean_engineering/class_model/` (canonical-model + render-channel precedent), `practices/base/base_context_tool.py` (`fidelities` ClassVar, lifecycle `@action`s), and `tools/agent_skills/agent_skills.py` in full (closest sibling utility — same "scrape the repo, emit files" shape).
 
 **Grilled two branches** (full framing + resolution in `catalog/.context/sessions/cdd-catalog/grill-answers.md`, written live during the grill, not reconstructed after):
 

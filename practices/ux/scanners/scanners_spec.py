@@ -9,7 +9,7 @@ from mamba import before, description, it
 _REPO = Path(__file__).resolve().parents[3]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
-for _cat in ("primitives", "utilities", "practices", "actions"):
+for _cat in ("primitives", "tools", "practices", "actions"):
     _p = str(_REPO / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)

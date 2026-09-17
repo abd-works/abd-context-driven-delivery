@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "primitives", "utilities"):
+for _cat in ("practices", "primitives", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -17,7 +17,7 @@ from mamba import context, description, it
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
 from primitives.agent_tools.agent_tools import AgentInstructions
-from utilities.diagnose.diagnose import Diagnose
+from tools.diagnose.diagnose import Diagnose
 
 
 class _DddSpecSupport:

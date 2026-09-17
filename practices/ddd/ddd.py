@@ -13,7 +13,7 @@ from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
     from practices.clean_engineering.clean_engineering import CleanEngineering
-    from utilities.diagnose.diagnose import Diagnose
+    from tools.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
     "bounded_context": "markdown",
@@ -125,7 +125,7 @@ class Ddd(PracticeGuidance):
 
     def diagnostic(self) -> "Diagnose":
         """Diagnose companion — common six-phase loop as a tool (not inlined)."""
-        from utilities.diagnose.diagnose import Diagnose
+        from tools.diagnose.diagnose import Diagnose
 
         return Diagnose()
 

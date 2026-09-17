@@ -14,4 +14,4 @@ Rule scanners that validate Clean Engineering concepts against module folders an
 
 ## Dependencies
 
-`utilities.scanners.Scanner` / `ScannerCollection`; `class_model` language channels for parse; stdlib `ast` where structural Python checks are needed.
+`tools.scanners.Scanner` / `ScannerCollection`; `class_model` language channels for parse; stdlib `ast` where structural Python checks are needed.

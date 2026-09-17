@@ -1,6 +1,6 @@
 # CDD Workflow
 
-Browse the [catalog](index.html) for the full map of tools, actions, fidelities, and utilities.
+Browse the [catalog](index.html) for the full map of tools, actions, fidelities, and tools.
 
 ## What the pieces are
 
@@ -34,8 +34,8 @@ Browse the [catalog](index.html) for the full map of tools, actions, fidelities,
 
 **Utilities** are session helpers, not lenses.
 
-- [/handoff](utilities/handoff.html) — compact the session for a fresh agent.
-- [/diagnose](utilities/diagnose.html) — stuck RED / bug-fix loop.
+- [/handoff](tools/handoff.html) — compact the session for a fresh agent.
+- [/diagnose](tools/diagnose.html) — stuck RED / bug-fix loop.
 
 ## How to use them
 
@@ -177,5 +177,5 @@ Use when artifacts already exist but have violations or need refinement.
 
 | Utility | What it does |
 |---|---|
-| [/handoff](utilities/handoff.html) | Compact the session for a fresh agent. |
-| [/diagnose](utilities/diagnose.html) | Stuck RED / bug-fix loop. |
+| [/handoff](tools/handoff.html) | Compact the session for a fresh agent. |
+| [/diagnose](tools/diagnose.html) | Stuck RED / bug-fix loop. |

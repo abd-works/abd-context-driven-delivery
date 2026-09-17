@@ -15,7 +15,7 @@ from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
     from practices.clean_engineering.clean_engineering import CleanEngineering
-    from utilities.diagnose.diagnose import Diagnose
+    from tools.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
     "scaffold": "markdown",
@@ -126,7 +126,7 @@ class Stories(PracticeGuidance):
     def diagnostic(self) -> "Diagnose":
         """Diagnose companion — common six-phase loop as a tool (not inlined)."""
         # lazy import: keeps diagnose optional at module load
-        from utilities.diagnose.diagnose import Diagnose
+        from tools.diagnose.diagnose import Diagnose
 
         return Diagnose()
 
@@ -156,7 +156,7 @@ class Stories(PracticeGuidance):
 
     def _resolve_tests_root(self) -> str | None:
         """Workspace-relative prefix for code renders. ``None`` → default ``tests``."""
-        from utilities.workspace.context_index import ContextIndex
+        from tools.workspace.context_index import ContextIndex
 
         workspace_path = Path(self.workspace.path).resolve()
         key = getattr(type(self), "context_index_key", "") or ""

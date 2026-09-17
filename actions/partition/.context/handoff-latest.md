@@ -6,7 +6,7 @@ Add `@instruction def scaffold(self): ...` to each tool class, update `partition
 
 ## Resume in three lines
 
-- Stage: **partition pipeline cleanup** · no active generator session · scope is `utilities/partition_pipeline` + all five `practices/{tool}/`
+- Stage: **partition pipeline cleanup** · no active generator session · scope is `tools/partition_pipeline` + all five `practices/{tool}/`
 - Last accepted: Step 1 complete — `## scaffold` fidelity section added to all five tool `.md` files (bdd, ddd, stories, ux, clean_engineering); `partition_guidance.md` cleaned of redundancy; domain `partition.md` files stripped to near-empty stubs
 - Next action: add `@instruction def scaffold(self): ...` to each `.py` tool class → update `partition_guidance()` → delete `partition.md` files
 
@@ -14,7 +14,7 @@ Add `@instruction def scaffold(self): ...` to each tool class, update `partition
 
 - No active toolset session
 - Context index: `stories = ./tests/*` (see `context_index_path` below)
-- Working folder: `utilities/partition_pipeline/.context`
+- Working folder: `tools/partition_pipeline/.context`
 
 ## Architecture decisions made this session
 
@@ -28,13 +28,13 @@ The instruction system's `_path_for_name()` (in `primitives/instructions/instruc
 
 ## What was changed this session
 
-### `utilities/partition_pipeline/partition_guidance.md`
+### `tools/partition_pipeline/partition_guidance.md`
 - Now a `{{param}}`-substituted template (domain-slug, primary_artifact, secondary_artifact, artifact_naming_rule, skim_focus, index_columns, lens_name, partition_done_checks)
 - Must follow section rewritten to explain WHY each item is read and what you do with it
 - Hard fail removed (was duplicated from here into partition_pipeline.md — kept here, removed from base)
 - Cross-references fixed: "base partition.md" → `partition_pipeline.md`
 
-### `utilities/partition_pipeline/partition_pipeline.py`
+### `tools/partition_pipeline/partition_pipeline.py`
 - `_partition_params()` method added (base returns `{}`)
 - `partition_guidance()` substitutes all `{{key}}` from `{"domain_slug": ..., "partition_done_checks": "", **self._partition_params()}`
 - Still reads `partition.md` for domain content — **this is step 2 to change**
@@ -113,8 +113,8 @@ Remove-Item practices/clean_engineering/partition.md
 
 ## Artifacts to read
 
-- `utilities/partition_pipeline/partition_pipeline.py` — current `partition_guidance()` method
-- `utilities/partition_pipeline/partition_guidance.md` — current template
+- `tools/partition_pipeline/partition_pipeline.py` — current `partition_guidance()` method
+- `tools/partition_pipeline/partition_guidance.md` — current template
 - `primitives/instructions/instructions.py` lines 30–47 — `_path_for_name()` section resolution
 - `practices/clean_engineering/clean_engineering.md § scaffold` — verify CE scaffold has all CE-specific content before deleting partition.md
 - `practices/clean_engineering/partition.md` — compare against CE scaffold section

@@ -5,7 +5,7 @@
 
 text: It’s a lookup table for GitHub ticket **themes**.
 
-When you create or update a ticket, `/tickets` reads `.context/workflow-packages.yaml` and matches the work to a package. If the issue body mentions `utilities/mcp_server` (or “MCP Invocation Layer”), it stamps the ticket with `theme:mcp-invocation-layer` so the board groups that work.
+When you create or update a ticket, `/tickets` reads `.context/workflow-packages.yaml` and matches the work to a package. If the issue body mentions `tools/mcp_server` (or “MCP Invocation Layer”), it stamps the ticket with `theme:mcp-invocation-layer` so the board groups that work.
 
 Right now it has one row:
 
@@ -21,10 +21,10 @@ text: You’re right that **location on the ticket is the useful part**. The lay
 
 **What actually reads the file**
 
-Only `WorkTicket.infer_theme` in `utilities/workflow/work_ticket.py`. Ticket create uses it when nobody passed an explicit theme:
+Only `WorkTicket.infer_theme` in `tools/workflow/work_ticket.py`. Ticket create uses it when nobody passed an explicit theme:
 
 - scan title + body
-- if the text contains `utilities/mcp_server` → label `mcp-invocation-layer`
+- if the text contains `tools/mcp_server` → label `mcp-invocation-layer`
 ... [18 lines, 1268 chars total]
 
 ==============================================================================
@@ -3952,7 +3952,7 @@ Three shaded columns:
 2026-09-15T20:25:00Z  afterAgentResponse  conv=0a6a1960  gen=a09be75b  model=cursor-grok-4.6-medium-fast
 ------------------------------------------------------------------------------
 
-text: The kit index ask did not return a hit â€” `tools.ps1` dies on a missing `utilities.conf_secrets` module, and there is no FAISS index at the documented `.context` path. The three bullets are taken from ABDâ€™s own quals and enablement material instead.
+text: The kit index ask did not return a hit â€” `tools.ps1` dies on a missing `tools.conf_secrets` module, and there is no FAISS index at the documented `.context` path. The three bullets are taken from ABDâ€™s own quals and enablement material instead.
 
 On `#9` the lead is now:
 
@@ -4317,7 +4317,7 @@ text: Session **context-tool-refactoring-71** is already on this clone (`C:\dev\
 
 **Next (from the session file):** whether domain transform and render can live on `BaseContextTool`.
 
-The kit CLI failed on `utilities.conf_secrets`, so I did not get a fresh `start_work_session` handshake. The session folder is already here; we are in it.
+The kit CLI failed on `tools.conf_secrets`, so I did not get a fresh `start_work_session` handshake. The session folder is already here; we are in it.
 
 ==============================================================================
 2026-09-15T23:41:50Z  afterAgentResponse  conv=c1654368  gen=b415ff61  model=cursor-grok-4.6-medium
@@ -4386,7 +4386,7 @@ text: You're right to question it — **`manifest_hook` is not `primitives/hooks
 | Module | What it is |
 |--------|------------|
 | **`primitives/hooks`** | Cursor hook wiring: `@hook`, `dispatch.py`, `HookHarness`, `Turn.auto_turn`, skill inject, prompt log. This is the real hooks module. |
-| **`utilities/manifest_hook`** | A **separate, older** Cursor hook script for **manifest gating** — not part of the `@hook` dispatch system. |
+| **`tools/manifest_hook`** | A **separate, older** Cursor hook script for **manifest gating** — not part of the `@hook` dispatch system. |
 ... [35 lines, 2309 chars total]
 
 ==============================================================================
@@ -4884,8 +4884,8 @@ text: Good — `practices/base` is gone on disk. The deletions are still unstage
 **Still pointing at the dead path** (live code, not closed sessions):
 
 - All practice domains: `stories`, `bdd`, `ddd`, `ux`, `cdd`, `car`, `agent_bdd`, `clean_engineering`, … → `from practices.base.base_context_tool import BaseContextTool`
-- `utilities/catalog_generator/catalog_generator.py` — `_BASE_CONTEXT_TOOL_PATH` and fallback comment
-- `utilities/workspace/workspace_session_spec.py` — `_BASE_TOOLSET = "practices.base.base_context_tool:BaseContextTool"`
+- `tools/catalog_generator/catalog_generator.py` — `_BASE_CONTEXT_TOOL_PATH` and fallback comment
+- `tools/workspace/workspace_session_spec.py` — `_BASE_TOOLSET = "practices.base.base_context_tool:BaseContextTool"`
 - Several action specs + `cre
 ... [12 lines, 969 chars total]
 
@@ -5253,7 +5253,7 @@ It reflects **what’s in code now**, not the old `harness-sketch.md` (CLI, agen
 - **`Harness`** → composite **`Deployment`** (markdown + MCP + hooks)
 - **`operation_writes`** → **`OperationWrite`** rows from host marks
 - **Deploy outputs** under `Harness.path`: `skills/`, `commands/` or `prompts/`, `rules/`, `mcp.json`, `hooks.json`
-- **Runtime split**: deploy in `deployment.py`; in-process invoke in `runner.py`; MCP in `utilities/mcp_serve
+- **Runtime split**: deploy in `deployment.py`; in-process invoke in `runner.py`; MCP in `tools/mcp_serve
 ... [10 lines, 721 chars total]
 
 ==============================================================================
@@ -5360,7 +5360,7 @@ Here is the actual shape:
 
 text: Done. **`Installer`** now only owns **`scan()`** — everything else delegates out.
 
-**`Installer.scan()`** walks the CDD folders (`practices/`, `primitives/`, `actions/`, `utilities/`, `context_tools/`), AST-parses each `.py` for install marks, and returns instantiated hosts.
+**`Installer.scan()`** walks the CDD folders (`practices/`, `primitives/`, `actions/`, `tools/`, `context_tools/`), AST-parses each `.py` for install marks, and returns instantiated hosts.
 
 **`Installer.install()`** is thin:
 1. Create an **`InstallContext`** (shared MCP ops + hook events for this run)
@@ -5855,7 +5855,7 @@ text: `declared_installations` is gone. Install now uses only `toolset.tools` an
 2026-09-17T19:56:19Z  afterAgentResponse  conv=57fa16f9  gen=33fd5cc2  model=cursor-grok-4.6-medium-fast
 ------------------------------------------------------------------------------
 
-text: Yes. `utilities/toolset_invoke` is an in-process stand-in so specs can expand `@agent_instructions` and call `@agent_tool` without going through a deployed skill or MCP. The module says that at the top: specs only, not production runtime.
+text: Yes. `tools/toolset_invoke` is an in-process stand-in so specs can expand `@agent_instructions` and call `@agent_tool` without going through a deployed skill or MCP. The module says that at the top: specs only, not production runtime.
 
 Nothing in production imports it. Callers are specs (`agent_tools_spec`, partition, improvement, workspace, clean engineering) and agent-BDD helpers that wrap `run_request` for those same specs.
 

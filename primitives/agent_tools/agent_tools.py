@@ -448,7 +448,7 @@ class AgentToolSet:
         parts = module_name.split(".")
         repo = Path(__file__).resolve().parents[2]
         search_roots = [repo] + [
-            repo / name for name in ("primitives", "utilities", "practices", "actions")
+            repo / name for name in ("primitives", "tools", "practices", "actions")
         ]
         module_file = None
         for root in search_roots:

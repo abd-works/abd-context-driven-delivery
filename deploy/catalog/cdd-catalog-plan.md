@@ -9,16 +9,16 @@ todos:
     content: "Apply planned fidelity renames in code+guides (not catalog-only): DDD code→tactics, UX code→front_end_code; update ClassVars, ## sections, format defaults, specs, cdd.md, skills"
     status: done
   - id: rename-utilities
-    content: "Apply utility renames in code. (1) DONE — sessions→workspace: top-level package folder utilities/sessions/ renamed to utilities/workspace/ only; every internal file name (session.py, session_log.py, workspace_session.py, context_index.py, their *_spec.py files) and class name (Session, SessionLog, SessionPaths, ContextIndex, WorkspaceSession) stayed exactly the same — only the import prefix changed (from sessions.X → from workspace.X) across base_context_tool.py, action.py, tool.py, handoff.py, grill_context.py, sketch.py, logged_probe(.py/_spec.py), and the package's own internal imports. (2) Outstanding — agent_skills→deploy_agent_skills (folder, .py, classes AgentSkills, .context/module-context.md, skills; agent_skills has no top-level agent_skills.md either). (3) sub_agent stays sub_agent — not renamed. It is a decorator mechanism (@sub_agent, SubAgentTool, kind: sub_agent manifest key, wired into primitives/agent_tools/action.py), not a toolset like the other utilities."
+    content: "Apply utility renames in code. (1) DONE — sessions→workspace: top-level package folder tools/sessions/ renamed to tools/workspace/ only; every internal file name (session.py, session_log.py, workspace_session.py, context_index.py, their *_spec.py files) and class name (Session, SessionLog, SessionPaths, ContextIndex, WorkspaceSession) stayed exactly the same — only the import prefix changed (from sessions.X → from workspace.X) across base_context_tool.py, action.py, tool.py, handoff.py, grill_context.py, sketch.py, logged_probe(.py/_spec.py), and the package's own internal imports. (2) Outstanding — agent_skills→deploy_agent_skills (folder, .py, classes AgentSkills, .context/module-context.md, skills; agent_skills has no top-level agent_skills.md either). (3) sub_agent stays sub_agent — not renamed. It is a decorator mechanism (@sub_agent, SubAgentTool, kind: sub_agent manifest key, wired into primitives/agent_tools/action.py), not a toolset like the other tools."
     status: pending
   - id: chrome-templates
-    content: "Copy Foundry commons CSS/JS + fork slim hub/tool/fidelity/action/utility/grid HTML templates into utilities/catalog_generator/templates/ (no npx/plugin slots, dev-time source only)"
+    content: "Copy Foundry commons CSS/JS + fork slim hub/tool/fidelity/action/utility/grid HTML templates into tools/catalog_generator/templates/ (no npx/plugin slots, dev-time source only)"
     status: done
     note: "Done. templates/commons/ (site.css + Foundry JS + brand SVGs) + foundry-catalog.css (extracted from abd-skills hub) + cdd-board.css (6×3 stage override). foundry_chrome.py copies them into catalog/commons/ on every generate and wraps every page in the Foundry shell (hero + nav + board + scripts). Hub board is real kb-ticket grid with Actions/Utilities crosscut strips — not nested bare articles."
   - id: generator
-    content: "Create utilities/catalog_generator/ package (catalog_generator.py + generate_cdd_catalog.py CLI); scrape fidelities, BaseContextTool lifecycle actions→md, utilities, illustrated examples, and the tool→skill-name map from .cursor/skills/*/SKILL.md frontmatter (note clean-engineering is hyphenated) for each Fidelity page's Section 0 quick-invoke block; emit self-contained HTML to root catalog/ (default), with all local content/assets embedded/copied in and every source citation built as a git URL ({repo_url}/blob/{ref}/{path}), never a local filesystem path."
+    content: "Create tools/catalog_generator/ package (catalog_generator.py + generate_cdd_catalog.py CLI); scrape fidelities, BaseContextTool lifecycle actions→md, utilities, illustrated examples, and the tool→skill-name map from .cursor/skills/*/SKILL.md frontmatter (note clean-engineering is hyphenated) for each Fidelity page's Section 0 quick-invoke block; emit self-contained HTML to root catalog/ (default), with all local content/assets embedded/copied in and every source citation built as a git URL ({repo_url}/blob/{ref}/{path}), never a local filesystem path."
     status: done
-    note: "Built end-to-end via /stories acceptance_tests, one story at a time. utilities/catalog_generator/catalog_generator.py implements every function/class named across all four epics; generate_cdd_catalog.py is the thin CLI (--out/--repo-url/--ref, defaulting from git remote + HEAD). 41 acceptance tests across 4 spec files (catalog_generator_spec.py, catalog_generator_render_spec.py, catalog_generator_portability_spec.py, catalog_generator_illustrated_examples_spec.py) — one `it` per sketch story's single main-flow scenario, all green. Ran the real CLI end-to-end against this actual repo (out=.tmp-catalog-smoke, deleted after inspection) and confirmed every page type writes, including the sub_agent utility page's non-instantiable-class fallback. Full fast regression suite still shows the same 5 pre-existing, unrelated failures noted in rename-utilities — nothing here regressed them. Two design corrections made mid-build, both because the live base_context_tool.py picked up a new `improve` action from unrelated concurrent work while this was underway: resolve_lifecycle_actions' delegate-uniqueness check moved from bare-attribute uniqueness to (attribute, method)-pair uniqueness, so two actions can each own a distinct call on the same peer kit (repair→repairer.repair, improve→repairer.improve) without colliding, while true shared infra (document/validate both calling scanner.scan) still correctly excludes."
+    note: "Built end-to-end via /stories acceptance_tests, one story at a time. tools/catalog_generator/catalog_generator.py implements every function/class named across all four epics; generate_cdd_catalog.py is the thin CLI (--out/--repo-url/--ref, defaulting from git remote + HEAD). 41 acceptance tests across 4 spec files (catalog_generator_spec.py, catalog_generator_render_spec.py, catalog_generator_portability_spec.py, catalog_generator_illustrated_examples_spec.py) — one `it` per sketch story's single main-flow scenario, all green. Ran the real CLI end-to-end against this actual repo (out=.tmp-catalog-smoke, deleted after inspection) and confirmed every page type writes, including the sub_agent utility page's non-instantiable-class fallback. Full fast regression suite still shows the same 5 pre-existing, unrelated failures noted in rename-utilities — nothing here regressed them. Two design corrections made mid-build, both because the live base_context_tool.py picked up a new `improve` action from unrelated concurrent work while this was underway: resolve_lifecycle_actions' delegate-uniqueness check moved from bare-attribute uniqueness to (attribute, method)-pair uniqueness, so two actions can each own a distinct call on the same peer kit (repair→repairer.repair, improve→repairer.improve) without colliding, while true shared infra (document/validate both calling scanner.scan) still correctly excludes."
   - id: hub-board
     content: Emit hub stage×tool board + Actions row + Utilities row + flat grids
     status: done
@@ -116,20 +116,20 @@ All four are collapsible/expandable `<details>`, open by default for (1) and clo
 
 | # | Action | Resolved source dir | 1. Calls | 2. Markdown guide | 3. Module overview | 4. Code (main file) |
 |---|---|---|---|---|---|---|
-| 1 | `partition` | `utilities/partition/` | none | ✅ `[partition.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\partition\partition.md)` | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\partition\.context\module-context.md)` | ✅ `[partition.py](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\partition\partition.py)` |
-| 2 | `grill` | `utilities/grill_context/` | → `generate` | ❌ none | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\grill_context\.context\module-context.md)` | ✅ `[grill_context.py](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\grill_context\grill_context.py)` |
-| 3 | `sketch` | `utilities/sketch/` | → `generate` | ✅ `[sketch.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\sketch\sketch.md)` | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\sketch\.context\module-context.md)` | ✅ `[sketch.py](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\sketch\sketch.py)` |
+| 1 | `partition` | `tools/partition/` | none | ✅ `[partition.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\partition\partition.md)` | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\partition\.context\module-context.md)` | ✅ `[partition.py](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\partition\partition.py)` |
+| 2 | `grill` | `tools/grill_context/` | → `generate` | ❌ none | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\grill_context\.context\module-context.md)` | ✅ `[grill_context.py](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\grill_context\grill_context.py)` |
+| 3 | `sketch` | `tools/sketch/` | → `generate` | ✅ `[sketch.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\sketch\sketch.md)` | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\sketch\.context\module-context.md)` | ✅ `[sketch.py](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\sketch\sketch.py)` |
 | 4 | `generate` | `practices/base/` | none | ✅ `[base_context_tool.md](c:\dev\abd-works-repo\abd-context-driven-delivery\practices\base\base_context_tool.md)` | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\practices\base\.context\module-context.md)` | ✅ `[base_context_tool.py](c:\dev\abd-works-repo\abd-context-driven-delivery\practices\base\base_context_tool.py)` |
 | 5 | `document` | `practices/base/` | none (calls `scanner.scan`, tool) | ✅ same as `generate` | ✅ same as `generate` | ✅ same as `generate` |
-| 6 | `iterate` | `utilities/iterate/` | → `generate` | ❌ none | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\iterate\.context\module-context.md)` | ✅ `[iterate.py](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\iterate\iterate.py)` |
+| 6 | `iterate` | `tools/iterate/` | → `generate` | ❌ none | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\iterate\.context\module-context.md)` | ✅ `[iterate.py](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\iterate\iterate.py)` |
 | 7 | `validate` | `practices/base/` | none (calls `scanner.scan`, tool) | ✅ same as `generate` | ✅ same as `generate` | ✅ same as `generate` |
 | 8 | `satisfy` | `practices/base/` | none | ✅ same as `generate` | ✅ same as `generate` | ✅ same as `generate` |
-| 9 | `repair` | `utilities/repair/` | none (calls `self.scan()`, tool) | ✅ `[repair.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\repair\repair.md)` | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\repair\.context\module-context.md)` | ✅ `[repair.py](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\repair\repair.py)` |
-| 10 | `improve` | `utilities/repair/` | none (calls `self.repairer.improve()`) | ✅ `[improve.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\repair\improve.md)` | ✅ same as `repair` | ✅ same as `repair` |
+| 9 | `repair` | `tools/repair/` | none (calls `self.scan()`, tool) | ✅ `[repair.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\repair\repair.md)` | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\repair\.context\module-context.md)` | ✅ `[repair.py](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\repair\repair.py)` |
+| 10 | `improve` | `tools/repair/` | none (calls `self.repairer.improve()`) | ✅ `[improve.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\repair\improve.md)` | ✅ same as `repair` | ✅ same as `repair` |
 
 Skipped (override hooks, not top-level lifecycle actions): `generate_output`, `add_generate_header_to_generated`, `generate_fixes_from_validate`.
 
-Generator resolves the source dir by walking the `@action` body (delegate call → peer kit dir under `utilities/{name}/`) or, for actions with no delegate call (`generate`, `document`, `validate`, `satisfy`), falls back to `practices/base/`. Same walk collects same-instance `self.<other_public_action>()` calls for section 1, and probes the two fixed filenames (`{action}.md` preferred over `{dirname}.md` when both exist — so `improve` gets `improve.md` while sharing `utilities/repair/` with `repair`), plus `.context/module-context.md` and the single main `{dirname}.py` for sections 2–4. `@tool` calls (`scan`, `log_mistake`, `log_correction`, session tools) go in section 1 as plain text — they are not hyperlinked because there is no catalog page for them, not omitted from the list.
+Generator resolves the source dir by walking the `@action` body (delegate call → peer kit dir under `tools/{name}/`) or, for actions with no delegate call (`generate`, `document`, `validate`, `satisfy`), falls back to `practices/base/`. Same walk collects same-instance `self.<other_public_action>()` calls for section 1, and probes the two fixed filenames (`{action}.md` preferred over `{dirname}.md` when both exist — so `improve` gets `improve.md` while sharing `tools/repair/` with `repair`), plus `.context/module-context.md` and the single main `{dirname}.py` for sections 2–4. `@tool` calls (`scan`, `log_mistake`, `log_correction`, session tools) go in section 1 as plain text — they are not hyperlinked because there is no catalog page for them, not omitted from the list.
 
 ### Utilities row (under Actions)
 
@@ -140,7 +140,7 @@ True utilities — not lifecycle actions. Catalog cards; two renames land in cod
 | `deploy_agent_skills` | `agent_skills` | rename folder, module, classes, skills |
 | `diagnose` | `diagnose` | keep |
 | `handoff` | `handoff` | keep |
-| `workspace` | `sessions` | **done.** Top-level package folder only — `utilities/sessions/` → `utilities/workspace/`. Every file name (`session.py`, `session_log.py`, `workspace_session.py`, `context_index.py`, their `*_spec.py`s) and class name (`Session`, `SessionLog`, `SessionPaths`, `ContextIndex`, `WorkspaceSession`) is unchanged — only the import prefix moved from `sessions.X` to `workspace.X`. |
+| `workspace` | `sessions` | **done.** Top-level package folder only — `tools/sessions/` → `tools/workspace/`. Every file name (`session.py`, `session_log.py`, `workspace_session.py`, `context_index.py`, their `*_spec.py`s) and class name (`Session`, `SessionLog`, `SessionPaths`, `ContextIndex`, `WorkspaceSession`) is unchanged — only the import prefix moved from `sessions.X` to `workspace.X`. |
 | `sub_agent` | `sub_agent` | **not renamed.** `sub_agent` is a decorator mechanism (`@sub_agent`, `SubAgentTool` dataclass, `discover_sub_agent_tools`, a `"kind": "sub_agent"` manifest key, registered into `primitives/agent_tools/action.py`'s tool discovery) — not a toolset with callable tools like the other four rows. Catalog shows it under its real name; no code change. |
 
 `base` is **not** out of scope — its lifecycle `@action`s are the entire Actions row (§ above), and four of those ten action pages (`generate`, `document`, `validate`, `satisfy`) resolve straight to `practices/base/` for guide, overview, and code. There is simply no separate **context-tool row** for `base` (it's not a stage×tool cell) — it shows up as Actions, not as a sixth Stories/DDD/UX/… row.
@@ -206,11 +206,11 @@ True utilities — not lifecycle actions. Catalog cards; two renames land in cod
 
 **Utility page**  
 
-- Purpose + seam from `[utilities/*/ .context/module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\diagnose\.context\module-context.md)`  
+- Purpose + seam from `[tools/*/ .context/module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\diagnose\.context\module-context.md)`  
 - Link to `{utility}.md` guide when present  
 - Not stage tickets; not listed on the Actions row unless also a lifecycle `@action`
 
-**Flat grids:** `context-tools.html`, `fidelities.html`, `actions.html`, `utilities.html` — same card chrome as Foundry skills/plugins grids.
+**Flat grids:** `context-tools.html`, `fidelities.html`, `actions.html`, `tools.html` — same card chrome as Foundry skills/plugins grids.
 
 ## Illustrated examples (per fidelity)
 
@@ -278,27 +278,27 @@ All six extend `[BaseContextTool](c:\dev\abd-works-repo\abd-context-driven-deliv
 
 | Catalog name | Module | Class | Today (pre-rename) |
 |---|---|---|---|
-| `deploy_agent_skills` | `utilities.deploy_agent_skills.deploy_agent_skills` | `DeployAgentSkills` | *(outstanding — today: `utilities.agent_skills.agent_skills.AgentSkills`)* |
-| `diagnose` | `utilities.diagnose.diagnose` | `Diagnose` | *(no rename)* |
-| `handoff` | `utilities.handoff.handoff` | `Handoff` | *(no rename)* |
-| `workspace` | `utilities.workspace.workspace_session` | `Session` | *(done — top-level package folder only: `utilities.sessions` → `utilities.workspace`; the entry class stays `Session`, still living in `workspace_session.py`; no file or class was renamed)* |
-| `sub_agent` | `utilities.sub_agent.sub_agent` | `SubAgentTool` | *(no rename)* |
+| `deploy_agent_skills` | `tools.deploy_agent_skills.deploy_agent_skills` | `DeployAgentSkills` | *(outstanding — today: `tools.agent_skills.agent_skills.AgentSkills`)* |
+| `diagnose` | `tools.diagnose.diagnose` | `Diagnose` | *(no rename)* |
+| `handoff` | `tools.handoff.handoff` | `Handoff` | *(no rename)* |
+| `workspace` | `tools.workspace.workspace_session` | `Session` | *(done — top-level package folder only: `tools.sessions` → `tools.workspace`; the entry class stays `Session`, still living in `workspace_session.py`; no file or class was renamed)* |
+| `sub_agent` | `tools.sub_agent.sub_agent` | `SubAgentTool` | *(no rename)* |
 
 **Decision pinned down here:** the only class rename among the utilities is `DeployAgentSkills` (was `AgentSkills`) — everything else, including every class inside the renamed `workspace` package, keeps its existing name. `rename-utilities` above tracks the still-outstanding `deploy_agent_skills` half of this todo.
 
 ## Generator (slim, CDD-native)
 
-Do **not** port full `abd-skill-catalog`. This is a real `utilities/` package, not a loose root script.
+Do **not** port full `abd-skill-catalog`. This is a real `tools/` package, not a loose root script.
 
-**Code location:** `[utilities/catalog_generator/](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\catalog_generator)` — snake_case (not `Catalog-generator`) to stay consistent with every other utility folder (`grill_context`, `record_decisions`, `sessions`→`workspace`, …) and importable as `utilities.catalog_generator` if it ever needs a `@toolset` face; a hyphenated/capitalized folder name is not a valid Python package.
+**Code location:** `[tools/catalog_generator/](c:\dev\abd-works-repo\abd-context-driven-delivery\tools\catalog_generator)` — snake_case (not `Catalog-generator`) to stay consistent with every other utility folder (`grill_context`, `record_decisions`, `sessions`→`workspace`, …) and importable as `tools.catalog_generator` if it ever needs a `@toolset` face; a hyphenated/capitalized folder name is not a valid Python package.
 
 Layout, mirroring the shape of an existing utility:
 
 ```
-utilities/catalog_generator/
+tools/catalog_generator/
   __init__.py
   catalog_generator.py       # main entry: discover -> resolve -> render -> emit
-  generate_cdd_catalog.py    # thin CLI wrapper (python -m utilities.catalog_generator.generate_cdd_catalog)
+  generate_cdd_catalog.py    # thin CLI wrapper (python -m tools.catalog_generator.generate_cdd_catalog)
   templates/                 # forked Foundry HTML templates (hub, tool, fidelity, action, utility, grid)
   .context/
     module-context.md
@@ -311,25 +311,25 @@ utilities/catalog_generator/
 1. Hardcoded registry of **CDD (header row) + the five context-tool toolsets** + path to class (mirrors `FAMILY_PACKAGES` but tiny)
 2. Import / AST-read `fidelities` + format defaults
 3. Parse `{tool}.md` for `## {fidelity_name}` sections
-4. AST-walk `BaseContextTool` lifecycle `@action` methods (public only, source order) → resolve source dir (delegate kit dir `utilities/{name}/`, or `practices/base/` fallback), collect same-instance `self.<other_public_action>()` / `self.<tool>()` calls for section ①, and probe `{name}.md` / `.context/module-context.md` / `{dirname}.py` for sections ②–④
+4. AST-walk `BaseContextTool` lifecycle `@action` methods (public only, source order) → resolve source dir (delegate kit dir `tools/{name}/`, or `practices/base/` fallback), collect same-instance `self.<other_public_action>()` / `self.<tool>()` calls for section ①, and probe `{name}.md` / `.context/module-context.md` / `{dirname}.py` for sections ②–④
 5. Hardcoded **Utilities** registry after renames: `deploy_agent_skills`, `diagnose`, `handoff`, `workspace`, `sub_agent`
 6. Read context-tool + action-target + utility `module-context.md` Purpose blocks
 7. Parse each tool's `## Illustrated examples` config table (see § Illustrated examples) → resolve fidelity → example anchor for the Fidelity page's fifth panel
 8. Emit HTML into `abd-context-driven-delivery/catalog/` (build output)
 
-**Templates (dev-time source only):** fork only the Foundry templates needed — hub, tool detail, fidelity detail, action detail, utility detail, grids — from `[abd-skill-catalog/templates/](c:\dev\abd-works-repo\abd-skills\other\skill-builder\skills\abd-skill-catalog)`, copied once into `utilities/catalog_generator/templates/`. This is a one-time authoring source, not a runtime dependency — the shipped generator never reaches back into `abd-skills` at generation time, and the generated `catalog/` never links to it either.
+**Templates (dev-time source only):** fork only the Foundry templates needed — hub, tool detail, fidelity detail, action detail, utility detail, grids — from `[abd-skill-catalog/templates/](c:\dev\abd-works-repo\abd-skills\other\skill-builder\skills\abd-skill-catalog)`, copied once into `tools/catalog_generator/templates/`. This is a one-time authoring source, not a runtime dependency — the shipped generator never reaches back into `abd-skills` at generation time, and the generated `catalog/` never links to it either.
 
 ### Portability — the generated `catalog/` folder is self-contained
 
 Two separate rules, because "portable" means two different things here:
 
-1. **Local assets ship inside `catalog/`.** All CSS/JS/fonts (`catalog/commons/`), any rendered images from the migrated `.drawio` files (`catalog/assets/diagrams/`), and every piece of page *content* — module-overview prose, `{name}.md` guide bodies, `{dirname}.py` main-file code, illustrated-example text — is embedded as literal text/markup **into the generated HTML at build time**. No generated page does a runtime fetch back into `practices/` or `utilities/`. Zip `catalog/`, serve it from anywhere, open `index.html` with no other folder present, and every panel still renders — because the content is baked in, not linked in.
+1. **Local assets ship inside `catalog/`.** All CSS/JS/fonts (`catalog/commons/`), any rendered images from the migrated `.drawio` files (`catalog/assets/diagrams/`), and every piece of page *content* — module-overview prose, `{name}.md` guide bodies, `{dirname}.py` main-file code, illustrated-example text — is embedded as literal text/markup **into the generated HTML at build time**. No generated page does a runtime fetch back into `practices/` or `tools/`. Zip `catalog/`, serve it from anywhere, open `index.html` with no other folder present, and every panel still renders — because the content is baked in, not linked in.
 2. **"View source" links point at git, not the filesystem.** Every citation back to the canonical file — the Code panel's file, the Markdown guide's file, `module-context.md`, an illustrated-example source — gets a **git URL**, not a local path. Resolve the repo's remote once at generation time (`git remote get-url origin` + `git rev-parse HEAD` or `--ref`, or explicit `--repo-url`/`--ref` flags for CI), then build every source link as `{repo_url}/blob/{ref}/{relative_path}` (optionally `#L{start}-L{end}` for the excerpted region). **No `c:\dev\...`, no `file://`, no absolute local filesystem path ever appears in generated output** — those are fine in this planning doc (author's machine) but never in `catalog/`'s HTML.
 
 **Regenerate command** (from CDD root):
 
 ```powershell
-$env:PYTHONIOENCODING="utf-8"; python -m utilities.catalog_generator.generate_cdd_catalog
+$env:PYTHONIOENCODING="utf-8"; python -m tools.catalog_generator.generate_cdd_catalog
 ```
 
 Optional flags to design in from the start (defaults make the bare command above just work): `--out catalog` (default), `--repo-url <git-url>` (default: resolved from `git remote get-url origin`), `--ref <branch-or-sha>` (default: current `HEAD`).
@@ -346,7 +346,7 @@ Optional flags to design in from the start (defaults make the bare command above
 ## Deliverables
 
 1. Root `catalog/` static site (hub + boards + tool/fidelity/action/utility pages + commons) — self-contained, zero runtime dependency on the rest of the repo
-2. `utilities/catalog_generator/` package + minimal forked templates (dev-time source, not shipped as a catalog runtime dependency)
+2. `tools/catalog_generator/` package + minimal forked templates (dev-time source, not shipped as a catalog runtime dependency)
 2b. Every source citation in generated output is a `{repo_url}/blob/{ref}/{path}` git link, never a local filesystem path
 3. Code+guide fidelity renames landed (`ddd` `code`→`tactics`, `ux` `code`→`front_end_code`) wherever those strings live
 4. Utility renames landed (`agent_skills`→`deploy_agent_skills`; `sessions`→`workspace` — top-level package folder only, done, no py/md/class name changed)

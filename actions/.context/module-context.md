@@ -8,7 +8,7 @@ toolset once with `arguments.tools` listing the in-scope context tool(s).
 ## Membership
 Host-action kits: `generate`, `validate`, `document`, `satisfy`, `render`,
 `sketch`, `iterate`, `grill_context`, `partition`, `improvement`, `scan`
-Companions that left this tree: `echo` and `handoff` live under `utilities/`;
+Companions that left this tree: `echo` and `handoff` live under `tools/`;
 `workflow` is still listed here until it moves.
 
 Host-action skill/command names match the operation (`grill`, not `grill-context`).
@@ -18,8 +18,8 @@ not a place for these kits. First-order kits subclass `LifecycleAction`: open th
 workspace if it is not already open; the turn and decision records hang off the
 work session; finish that session turn at the end.
 
-Non-action tooling stays under `utilities/` (`diagnose`, …). Scan moved here from
-`utilities/scanners` — `/scan` is a host-action kit, not a path-only utility.
+Non-action tooling stays under `tools/` (`diagnose`, …). Scan moved here from
+`tools/scanners` — `/scan` is a host-action kit, not a path-only utility.
 
 ## Kit-owned actions
 

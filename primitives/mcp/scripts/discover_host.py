@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-for _path in (_REPO_ROOT, _REPO_ROOT / "utilities", _REPO_ROOT / "practices", _REPO_ROOT / "actions"):
+for _path in (_REPO_ROOT, _REPO_ROOT / "tools", _REPO_ROOT / "practices", _REPO_ROOT / "actions"):
     value = str(_path)
     if value not in sys.path:
         sys.path.insert(0, value)
@@ -35,7 +35,7 @@ async def _probe(toolsets: str) -> None:
             "PYTHONPATH": ";".join(
                 [
                     str(_REPO_ROOT),
-                    str(_REPO_ROOT / "utilities"),
+                    str(_REPO_ROOT / "tools"),
                     str(_REPO_ROOT / "practices"),
                     str(_REPO_ROOT / "actions"),
                 ]

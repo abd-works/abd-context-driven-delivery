@@ -15,7 +15,7 @@ def attach_practice_workspace(
     session: str | None = None,
     workspace: str | None = None,
 ) -> None:
-    from utilities.workspace.workspace import Workspace
+    from tools.workspace.workspace import Workspace
 
     if path is not None:
         practice.path = path

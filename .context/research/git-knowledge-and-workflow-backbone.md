@@ -104,7 +104,7 @@ Worked **examples (ASCII)**: **§12**.
 ┌──────────────────────────────────────────────────────────────────┐
 │  L4  Views — GitLens, Git Graph, catalog HTML, kanban (generated) │
 ├──────────────────────────────────────────────────────────────────┤
-│  L3  utilities/trace_graph — build_eval_graph, regen_*_index      │
+│  L3  tools/trace_graph — build_eval_graph, regen_*_index      │
 ├──────────────────────────────────────────────────────────────────┤
 │  L2  turn-index.jsonl, workflow-index.jsonl, spans.jsonl,      │
 │      context-package.yaml (per turn, under session folder)       │
@@ -477,10 +477,10 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | `practices/bdd` | agent_bdd judge, regression anchors |
 | `primitives/agent_tools` | expand → SessionLog/SpanLog |
 | `primitives/agent_tools` | manifest paths |
-| `utilities/agent_skills` | deploy, `configure_git_notes`, team `.vscode` settings |
-| `utilities/handoff` | handoff payload + span |
-| `utilities/catalog_generator` | HTML shells (catalog, kanban) |
-| `utilities/trace_graph` *(new)* | `build_eval_graph`, `regen_*_index` |
+| `tools/agent_skills` | deploy, `configure_git_notes`, team `.vscode` settings |
+| `tools/handoff` | handoff payload + span |
+| `tools/catalog_generator` | HTML shells (catalog, kanban) |
+| `tools/trace_graph` *(new)* | `build_eval_graph`, `regen_*_index` |
 
 ### External tools (team baseline)
 
@@ -521,7 +521,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | --- | --- | --- | --- | --- | --- |
 | G-11 | Causal graph | `SpanLog` + expand hooks | `spans.jsonl` | `build_eval_graph` Mermaid | **1** |
 | G-12 | Run identity | single `tools.ps1 run`/turn; `run_id` at open | run_id in index/spans | — | **1** |
-| G-13 | Handoff | extend `utilities/handoff` | `handoff-payload.yaml` + span | — | **2** |
+| G-13 | Handoff | extend `tools/handoff` | `handoff-payload.yaml` + span | — | **2** |
 | G-14 | Rationale/rejected | design-turn `Rationale:`/`Rejected:` in body | commit body | GitLens search | **3** |
 
 ### Runtime
@@ -572,7 +572,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | ID | Gap | CDD extension | Artifacts | External tools | Phase |
 | --- | --- | --- | --- | --- | --- |
 | G-32 | Index cache | `TurnIndex.append` | turn-index.jsonl, workflow-index.jsonl | agents read jsonl | **1** |
-| G-33 | Query/graph | `utilities/trace_graph` | JSON, Mermaid, HTML | Git Graph topology | **2** |
+| G-33 | Query/graph | `tools/trace_graph` | JSON, Mermaid, HTML | Git Graph topology | **2** |
 | G-34 | Kanban projection | workflow graph → board HTML | generated page | browser | **3** |
 | G-35 | Team git/IDE setup | `configure_git_notes`; `.vscode` GitLens | notes fetch; settings | GitLens, Git Notes | **0** ✓ / **1** |
 
@@ -766,7 +766,7 @@ trailers, `configure_git_notes`.
 
 | Gaps | CDD work | External |
 | --- | --- | --- |
-| G-09, G-28, G-33 | `utilities/trace_graph`; regen tools | Git Graph compare |
+| G-09, G-28, G-33 | `tools/trace_graph`; regen tools | Git Graph compare |
 | G-13 | handoff payload + span | — |
 | G-21, G-24 | verification/scan trailers on finish | — |
 

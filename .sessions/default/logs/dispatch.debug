@@ -2801,3 +2801,22 @@
 2026-09-17T22:25:31Z HANDLER _DescribedFixture.on_pre_tool result={"permission": "allow", "agent_message": "Honor the hook operation description."}
 2026-09-17T22:25:31Z ENABLED ['_DescribedFixture.on_pre_tool']
 2026-09-17T22:25:31Z MERGED {"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-09-17T23:15:46Z EVENT 'afterAgentResponse' conversation_id='' payload_keys=['hook_event_name']
+2026-09-17T23:15:46Z ENABLED ['(none)']
+2026-09-17T23:15:46Z MERGED {"permission": "allow"}
+2026-09-17T23:15:46Z EVENT 'afterAgentResponse' conversation_id='' payload_keys=['hook_event_name']
+2026-09-17T23:15:46Z HANDLER _DispatchFixture.on_after result={"permission": "allow", "agent_message": "ran"}
+2026-09-17T23:15:46Z ENABLED ['_DispatchFixture.on_after']
+2026-09-17T23:15:46Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-17T23:15:46Z EVENT 'stop' conversation_id='' payload_keys=['hook_event_name']
+2026-09-17T23:15:46Z HANDLER _StopFixture.on_stop result={"permission": "allow", "followup_message": "/turn"}
+2026-09-17T23:15:46Z ENABLED ['_StopFixture.on_stop']
+2026-09-17T23:15:46Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-17T23:15:46Z EVENT 'beforeSubmitPrompt' conversation_id='' payload_keys=['hook_event_name']
+2026-09-17T23:15:46Z HANDLER _MessageFixture.on_before result={"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-17T23:15:46Z ENABLED ['_MessageFixture.on_before']
+2026-09-17T23:15:46Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-17T23:15:46Z EVENT 'preToolUse' conversation_id='' payload_keys=['hook_event_name']
+2026-09-17T23:15:46Z HANDLER _DescribedFixture.on_pre_tool result={"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-09-17T23:15:46Z ENABLED ['_DescribedFixture.on_pre_tool']
+2026-09-17T23:15:46Z MERGED {"permission": "allow", "agent_message": "Honor the hook operation description."}

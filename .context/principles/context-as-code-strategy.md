@@ -47,7 +47,7 @@ For a **frontend** we want to prove the UI: stub the next layer down (the API it
 
 ## Summary of Steps
 
-- Stand the app up **alone** with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/context_setup).
+- Stand the app up **alone** with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/tools/context_setup).
 - Document what it actually does with [Stories](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/stories) and [DDD](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/ddd) against that isolated app. Scaffold a story map and a bounded-context / aggregate outline. Then, with a human in the loop, take **one micro-increment** at a time — one story (default), or one BDD describe, or one aggregate operation. Write the Given / When / Then, and the required **domain classes and operations**, including underlying application code required to implement the test. Build / extend fixtures (example data) and mocks / stubs required to support the tests. Render a markdown view of both story map / story scenarios as well as the domain model. Allow the human to review for semantic correctness. Run tests until green, repeat until the app is covered. Once you have confidence the system is working, expand the scope to larger slices.
 
 Run each step as **`/stories /ddd /<action>`**. 
@@ -62,7 +62,7 @@ One increment at a time. Green, then the next, until the outline is covered.
 
 ### 1 — Set up the sandbox
 
-Isolate the app with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/context_setup). Classify externals, write the **minimum** stubs (canned neighbor bodies) at the outermost boundary, smoke-test, scout pages. Do not stub the seam you are proving. For a **non-core** aggregate, take stubs from **that aggregate's folder / source repository** (`domain/{bounded-context}/{aggregate}/stubs/{system}/`) — do not invent a stub inside the story test. Point it at the **application repository on disk**. That writes `tests/stubs/{system}/` (global) or `domain/{aggregate}/stubs/{system}/` (domain-owned) and `sandbox/extracted-context/app-extraction/` in the **capture repo**. Never a domain folder inside `tests/` or inside `tests/stubs/`.
+Isolate the app with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/tools/context_setup). Classify externals, write the **minimum** stubs (canned neighbor bodies) at the outermost boundary, smoke-test, scout pages. Do not stub the seam you are proving. For a **non-core** aggregate, take stubs from **that aggregate's folder / source repository** (`domain/{bounded-context}/{aggregate}/stubs/{system}/`) — do not invent a stub inside the story test. Point it at the **application repository on disk**. That writes `tests/stubs/{system}/` (global) or `domain/{aggregate}/stubs/{system}/` (domain-owned) and `sandbox/extracted-context/app-extraction/` in the **capture repo**. Never a domain folder inside `tests/` or inside `tests/stubs/`.
 
 ```
 /context-setup /capture_from_live_app
@@ -192,7 +192,7 @@ AI should have the commands in Context so you can just use natural language.
 
 ## Tools
 
-**[ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/context_setup)** — `/context-setup /capture_from_live_app` (and `smoke_test`, `scout_app`). Isolate the app: stubs, smoke, scout. No session.
+**[ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/tools/context_setup)** — `/context-setup /capture_from_live_app` (and `smoke_test`, `scout_app`). Isolate the app: stubs, smoke, scout. No session.
 
 **[Stories](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/stories)** and **[DDD](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/ddd)** — `/stories /ddd /<action>`. Scenarios together with classes, operations, and relationships of aggregates inside a bounded context.
 

@@ -12,7 +12,7 @@ from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
     from practices.clean_engineering.clean_engineering import CleanEngineering
-    from utilities.diagnose.diagnose import Diagnose
+    from tools.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
     "modules": "markdown",   # delegates to CE; no BDD-specific spec file written
@@ -119,7 +119,7 @@ class Bdd(PracticeGuidance):
     def diagnostic(self) -> "Diagnose":
         """Diagnose companion — common six-phase loop as a tool (not inlined)."""
         # lazy import: keeps diagnose optional at module load
-        from utilities.diagnose.diagnose import Diagnose
+        from tools.diagnose.diagnose import Diagnose
 
         return Diagnose()
 

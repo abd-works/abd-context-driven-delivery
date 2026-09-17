@@ -51,6 +51,6 @@ class CatalogScraper:
         ]
         utilities = [
             UtilityEntry(name=name, tools=list(utility.tools))
-            for name, utility in roster.utilities.items()
+            for name, utility in roster.tools.items()
         ]
         return CatalogModel(practices=practices, utilities=utilities)

@@ -38,7 +38,7 @@ practices/engineering_specification/mern_domain_driven/
 ├── mern_domain_driven.py
 ├── mern_domain_driven.md          # § Instructions / § Contexts (rules below) / § Generate
 ├── templates/                      # ported from old templates/ (domain-module, app-server, app-client, tests)
-├── scanners/typescript/            # ported scanners, on utilities.scanners.Scanner contract
+├── scanners/typescript/            # ported scanners, on tools.scanners.Scanner contract
 └── examples/
     └── examples.md                 # worked slice, e.g. recipients / wire-payment
 ```
@@ -194,7 +194,7 @@ Once the two `?` items above are resolved, scaffold for real via
 `practices/create_context_tool/templates/` (folder is currently just
 this session — `scaffold-vs-patch` says build the full tree), port
 `rules/*.md` prose into `mern_domain_driven.md` § Contexts as written above,
-port `scanners/typescript/*.py` onto `utilities.scanners.Scanner` /
+port `scanners/typescript/*.py` onto `tools.scanners.Scanner` /
 `ScannerCollection`, port `templates/`, and write one worked example under
 `examples/` (recipients or wire-payment slice, matching the old spec's
 worked example).

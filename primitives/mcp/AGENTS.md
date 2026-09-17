@@ -1,6 +1,6 @@
 # MCP — agent rules
 
-1. **One package.** Annotation (`@mcp`), install (`McpInstallation`), runtime (`McpServer` / `McpHost`), and `python -m primitives.mcp` live in `primitives/mcp`. Do not add a second host under `utilities/` or `harness/`.
+1. **One package.** Annotation (`@mcp`), install (`McpInstallation`), runtime (`McpServer` / `McpHost`), and `python -m primitives.mcp` live in `primitives/mcp`. Do not add a second host under `tools/` or `harness/`.
 
 2. **Enroll recorded `@mcp` ops.** `McpServer.start` uses **`AgentToolSet.load_toolsets`** and **`tools_for(InstallDestination.MCP)`**. Do not rescan the class with `getmembers` or invent a `McpToolset` adapter.
 

@@ -37,7 +37,7 @@ The 18 old-world rules (`rules/*.md`) and their paired TypeScript scanners
 (`scanners/typescript/*.py`) are **both** ported:
 
 - Scanners become this tool's own `scanners/` package (adapted to the
-  `utilities.scanners` `Scanner` / `ScannerCollection` contract used by every
+  `tools.scanners` `Scanner` / `ScannerCollection` contract used by every
   other context tool, not the old standalone argparse runner), wired through
   this tool's own `scan()`.
 - Each rule is **also** written out as a named rule bullet under this tool's

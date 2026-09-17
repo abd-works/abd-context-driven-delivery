@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("utilities", "practices", "actions"):
+for _cat in ("tools", "practices", "actions"):
     _path = str(_REPO_ROOT / _cat)
     if _path not in sys.path:
         sys.path.insert(0, _path)
@@ -44,7 +44,7 @@ _PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
 _PYTHONPATH = ";".join(
     [
         str(_REPO_ROOT),
-        str(_REPO_ROOT / "utilities"),
+        str(_REPO_ROOT / "tools"),
         str(_REPO_ROOT / "practices"),
         str(_REPO_ROOT / "actions"),
     ]
