@@ -418,8 +418,6 @@ def reject_agent_deferral(agent_text: str) -> None:
 
 def invoke_run_request(request: dict[str, Any]) -> RunResponse:
     """Load a toolset and expand or invoke the named member the same way production does."""
-    import utilities.sub_agent.register  # noqa: F401 — wire sub-agent tools
-
     from primitives.agent_tools.agent_tools import AgentOperation
     from primitives.installer.toolset_loader import ToolsetLoader
 
