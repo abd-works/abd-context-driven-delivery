@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
 from agent_tools import agent_instructions, agent_toolset
@@ -15,12 +15,12 @@ from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 
 @agent_toolset
-class Partition(LifecycleAction):
+class Partition(GuidanceAction):
     """Corpus partition: index, segment, completeness.
 
     Real toolset (not a mixin). Slash ``/partition`` runs this kit with
     ``arguments.guidance``. Workspace open and the hanging session turn come from
-    ``LifecycleAction.begin`` / ``end``.
+    ``GuidanceAction.begin`` / ``end``.
     """
 
     @property

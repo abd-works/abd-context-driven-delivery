@@ -84,18 +84,18 @@ with description("an asset locator"):
         with it("should resolve to practices/clean_engineering/examples"):
             expect(self.location.folder).to(equal((_CLEAN_ENGINEERING_DIR / "examples").resolve()))
 
-    with context("that locates contexts on a clean-engineering host"):
+    with context("that locates overview on a clean-engineering host"):
         with before.each:
             class _Host:
                 module_dir = _CLEAN_ENGINEERING_DIR
                 format = "python"
                 toolset_name = "clean_engineering"
 
-            self.location = AssetLocator(_Host(), "contexts").locate()
+            self.location = AssetLocator(_Host(), "overview").locate()
 
-        with it("should resolve to # Contexts in clean_engineering.md"):
+        with it("should resolve to Overview in clean_engineering.md"):
             expect(self.location.kind).to(equal("section"))
-            expect(self.location.section_heading).to(equal("Contexts"))
+            expect(self.location.section_heading).to(equal("Overview"))
             expect(self.location.section_file).to(
                 equal((_CLEAN_ENGINEERING_DIR / "clean_engineering.md").resolve())
             )

@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 Implementation fidelity for a **domain-module-organized LERN stack** ([lowdb](https://github.com/typicode/lowdb)
 JSON files / Express / React / Node, TypeScript everywhere) on an already-designed

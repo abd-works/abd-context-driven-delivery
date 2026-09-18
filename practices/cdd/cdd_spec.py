@@ -150,4 +150,4 @@ with description("a CDD orchestrator"):
 
     with context("whose contexts slot is expanded"):
         with it("should include the order-themes-by-journey rule slug"):
-            expect("order-themes-by-journey" in Cdd().contexts().expand()).to(be_true)
+            expect("order-themes-by-journey" in Cdd().scoped_markdown()).to(be_true)

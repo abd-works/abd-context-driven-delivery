@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools.agent_tools import AgentToolSet, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from installation.harness_files.harness_files import Skill
@@ -46,7 +46,7 @@ class ScanReport:
         return False
 
 @agent_toolset
-class Scan(LifecycleAction):
+class Scan(GuidanceAction):
     """Action kit: ``/scan`` lists context tools; composed ``self.scanner`` is bound to the host."""
 
     def __init__(self, path: str = ".", session: str = "") -> None:

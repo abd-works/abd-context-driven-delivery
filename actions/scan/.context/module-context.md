@@ -12,6 +12,6 @@
 
 Eval Repair (sketch) consumes the scan result as **ScanReport**: `ok`, `matches(mistake)`; overloads `scan(paths)` and `scan(paths, root, rule)`.
 
-**Dependencies:** `lifecycle.LifecycleAction` (slash begin/end); engine types have none.
+**Dependencies:** `guidance_actions.GuidanceAction` (slash begin/end); engine types have none.
 
 **Mechanism:** Host association is required to know which scanners run. `Scan.bound_to(host)` (or an explicit `collection=`) binds the rule set. Override the host scanner-collection hook on the context tool. `Scanner.is_skipped_path` skips demo dirs such as `examples/`, except repair fixtures (`faultyAsset` / `repairedAsset`, or files under `faultyAssets/` / `repairedAssets/`) which stay scannable for regression. Paths the caller names in `scan(paths=…)` are also exempt for that call — via `Scanner.explicitly_requested` — so an agent that asks about a fixture is not told it is clean because the path was filtered out.

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 from workspace import SessionLog
 
 @agent_toolset
-class Document(LifecycleAction):
+class Document(GuidanceAction):
     """Document existing state for provided context tools."""
 
     @Mcp

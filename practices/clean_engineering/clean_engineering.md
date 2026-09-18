@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 Structure the problem into independent modules with small public interfaces, substantial hidden functionality, and one-way dependencies. Implement those modules with rigorous object-oriented and clean-code practices. When boundaries hold, a change stays inside one module; when they blur, callers depend on internal decisions and must change with them.
 
@@ -26,7 +26,10 @@ If the user asks for language while generating **modules** or **model**, use thi
 
 ## Fidelities
 
-## modules
+### modules
+
+#### Overview
+
 
 **Default format:** markdown  
 **Diagram format:** `drawio` (modules view with blue boxes, public-interface bullets, and one-way dependency arrows; template `templates/modules.drawio`). Programming-language channels are for **model** and later.
@@ -35,11 +38,11 @@ If the user asks for language while generating **modules** or **model**, use thi
 
 Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
-### Language
+#### Language
 
 **When the user asks for language** rather than full generation at this fidelity, apply the top-level Language section. Do not use Guidance, Scaffold, or Module rules. **Stop reading this skill when writing language.**
 
-### Guidance
+#### Guidance
 
 **Create deep modules.** Group closely related classes around one domain concept. Give each module a narrow public interface with substantial implementation behind it so callers can understand the interface without reading the implementation. Avoid shallow modules that add another call without hiding a decision.
 
@@ -49,7 +52,7 @@ Each **module** is a named structural boundary that groups closely related class
 
 Document only the **public seam** — how to use the module, how to extend it, and what it depends on. One name per concept on the seam (prefer the type name — `Ability`, not `Ability, Abilities`). Write language for the terms you name. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
 
-### Scaffold
+#### Scaffold
 
 **When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use Guidance or Module rules below.
 
@@ -59,7 +62,7 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 **Stop reading this skill when scaffolding.**
 
-### Rules
+#### Rules
 
 **Form the module**
 
@@ -85,7 +88,10 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 - `nesting` — Nest a child only when it shares mechanics or is a sub-system; keep independent modules flat. Put shared behavior on the parent. A child may depend on the parent, not on siblings.
 
 ---
-## model
+### model
+
+#### Overview
+
 
 **Default format:** Python
 
@@ -93,11 +99,11 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 **Goal:** Analyze modules and design its object model — the classes, what they remember and do, and how they relate. Stub empty properties and operations. No production behavior yet. A model is the whole design in one place — who owns what, what they do, how they connect — so a human or an agent can read it, challenge it, and refactor before any body or call site exists. Those are the decisions that are cheap here and expensive in code: once behavior is written, moving an operation means rewriting the body and every caller.
 
-### Language
+#### Language
 
 **When the user asks for language** rather than full generation at this fidelity, apply the top-level Language section. Do not use Guidance or Rules. **Stop reading this skill when writing language.**
 
-### Guidance
+#### Guidance
 
 Analyze the source context to identify the concepts and operations the domain already names. Group concepts with their own identity, state, and behavior into **classes**. Model them **behaviors first and data second**: **properties** are noun phrases describing what an object remembers or derives from the state it already owns, and **operations** are verb phrases describing what it does. A derived property recalculates internally when read but still looks like a field to its caller; it takes no owner or state parameters. An `Order` calculates its own total; a `Cart` checks itself out. Do not invent a `Manager`, `Service`, `Helper`, or `Processor` to perform behavior owned by another object. A Service or Gateway that names a real external system is different: it represents that system's operations rather than holding displaced domain logic.
 
@@ -115,12 +121,12 @@ Analyze the source context to identify the concepts and operations the domain al
 
 Extend module level **public seam** documentation — what callers invoke, what they must or must not do, and how to extend — plus **dependencies**: every other-module class or operation this module calls. See `@clean_engineering-modules`. Refresh the language for new or updated terms now on the public API. Do not document internal design, private participants, or implementation notes — documented internals read as promises, and callers write against them.
 
-### Interfaces
+#### Interfaces
 
 Use an interface when the model requires more than one implementation, when a caller must depend on a stable contract owned by another module, or when the domain describes access to an external system. Default to the concrete class when none of these conditions exists. A domain wrapper may name and represent the external type it wraps, but the external-system type must not import the domain wrapper or expose domain types; knowledge points from the domain toward the external contract, not back into the domain.
 
 
-### Rules
+#### Rules
 
 **Shape classes**
 - `model-modules-follow-the-partition` — Use the module names and boundaries established by the partition artifact as the model's top-level modules. Change the partition before moving a model boundary, because otherwise the two artifacts describe different designs.
@@ -160,13 +166,16 @@ Use an interface when the model requires more than one implementation, when a ca
 
 
 
-## code
+### code
+
+#### Overview
+
 
 **Default format:** Python
 
 **Goal:** Turn the model into working production code — where the design actually runs. Implement the types and seams the model named, then fill real behavior behind them: real persistence, services, and UI. Clean code here is not polish at the end; it is how you keep the module boundaries and object model intact as the system grows — behavior stays on the object that owns it, operations stay short, dependencies stay visible — so a change lands in one place instead of spreading. Write a real backend and real frontend, not a demo shell with stand-ins that lets tests pass while broken seams hide until more callers depend on them.
 
-### Guidance
+#### Guidance
 
 Follow the idioms in [`../language-tools.md`](../language-tools.md).
 
@@ -186,7 +195,7 @@ When writing out code take care to **Fill out all interactions with real code.**
 
 
 
-### Rules
+#### Rules
 
 **Implement the model**
 - `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data — once they read the storage directly it becomes a public contract you cannot change. Private fields on the same class hide implementation; you do not need a second class for that. Read-only to callers can mean return a copy or immutable view from a property — it does not require a frozen class or a second type to hold build steps.

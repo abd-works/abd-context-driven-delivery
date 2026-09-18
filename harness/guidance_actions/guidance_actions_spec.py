@@ -1,4 +1,4 @@
-"""BDD spec for LifecycleAction — optional default work session."""
+"""BDD spec for GuidanceAction — optional default work session."""
 
 import sys
 import tempfile
@@ -32,9 +32,10 @@ for _cat in ("harness", "tools", "practices", "actions"):
 sys.path.insert(0, _root)
 for _name in list(sys.modules):
     if (
-        _name in {"harness", "scan", "lifecycle", "workspace", "practices", "tools"}
+        _name in {"harness", "scan", "lifecycle", "guidance_actions", "workspace", "practices", "tools"}
         or _name.startswith("harness.")
         or _name.startswith("scan.")
+        or _name.startswith("guidance_actions.")
         or _name.startswith("practices.")
         or _name.startswith("tools.")
         or _name.startswith("workspace.")
@@ -45,31 +46,31 @@ from expects import equal, expect
 from mamba import description, it
 
 
-with description("LifecycleAction"):
+with description("GuidanceAction"):
     with it("should open the default work session when begin runs without a session name"):
-        from lifecycle import LifecycleAction
+        from guidance_actions import GuidanceAction
 
-        tmp = Path(tempfile.mkdtemp(prefix="lifecycle-default-"))
-        kit = LifecycleAction(path=str(tmp))
+        tmp = Path(tempfile.mkdtemp(prefix="guidance-action-default-"))
+        kit = GuidanceAction(path=str(tmp))
         warning = kit.begin(action="sketch")
         session = kit.workspace.current_work_session
         expect(session).not_to(equal(None))
         expect(session.name).to(equal("default"))
-        expect(session.folder).to(equal(tmp / ".context" / "sessions" / "default"))
+        expect(session.folder).to(equal(tmp / ".sessions" / "default"))
         expect(warning).to(equal(""))
 
     with it("should run the passed operation once when guidance is a string"):
-        from lifecycle import LifecycleAction
+        from guidance_actions import GuidanceAction
 
-        kit = LifecycleAction(path=str(Path(tempfile.mkdtemp(prefix="lifecycle-run-"))))
+        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-run-"))))
         seen: list = []
         kit.run("just this text", seen.append, action="generate")
         expect(seen).to(equal(["just this text"]))
 
     with it("should run the passed operation on each host when guidance is a list"):
-        from lifecycle import LifecycleAction
+        from guidance_actions import GuidanceAction
 
-        kit = LifecycleAction(path=str(Path(tempfile.mkdtemp(prefix="lifecycle-run-"))))
+        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-run-"))))
         first, second = object(), object()
         seen: list = []
         kit.run([first, second], seen.append, action="generate")

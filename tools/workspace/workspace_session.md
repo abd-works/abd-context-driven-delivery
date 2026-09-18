@@ -41,7 +41,7 @@ Resume leaves `session.md` Start as written. Goal / fidelities / contexts apply 
 
 When launching `/cli-agent`, the parent does not call `open` or `start_work_session`. CliAgent opens the session, switches to that path, and binds doer/judge.
 
-Do **not** separately chain `read_context_index` or `record_context_root` from lifecycle bodies — `open` already does that.
+Do **not** separately chain `read_context_index` or `record_context_root` from guidance-action bodies — `open` already does that.
 
 ## Layout
 

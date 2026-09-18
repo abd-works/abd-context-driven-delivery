@@ -3,8 +3,7 @@
 Describe what this domain generates and who reads the output.
 
 ---
-# Contexts
-
+# Overview
 ## First concept
 
 One paragraph — what good output looks like.

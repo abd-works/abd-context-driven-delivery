@@ -55,7 +55,7 @@ with description("a context tool module with one domain markdown file named for 
         self.host = SamplePracticeGuidance(format="markdown")
 
     with context("with the context property read"):
-        with it("should return the Contexts preamble"):
+        with it("should return the Overview preamble"):
             expect(self.host.context).to(contain("sample preamble"))
 
     with context("with the guidance property read"):
@@ -87,7 +87,7 @@ with description("a context tool module with section files and subsection folder
         self.host = SplitPracticeGuidance(format="markdown")
 
     with context("with the context property read"):
-        with it("should return the Contexts preamble"):
+        with it("should return the Overview preamble"):
             expect(self.host.context).to(contain("split preamble from contexts file"))
 
     with context("with the guidance property read"):

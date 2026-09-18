@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools.agent_tools import agent_toolset
 from agent_tools.agent_tools import agent_tool
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 
 @agent_toolset
-class Render(LifecycleAction):
+class Render(GuidanceAction):
     """Render already-generated output for provided context tools."""
 
     @Mcp

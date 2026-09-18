@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 Write **agent BDD specs** — mamba tests that drive a real agent through the `agent(...)` harness and assert on the parsed `RunResponse` plus AI-judged prose.
 
@@ -8,7 +8,7 @@ The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA,
 
 ## Guidance
 
-Read `practices/bdd/bdd.md` § Contexts — the underlying test discipline applies here too. Scaffold from `templates/agent_bdd-templates.py`: `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`. Assert immediately after each step. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
+Read `practices/bdd/bdd.md` § Overview — the underlying test discipline applies here too. Scaffold from `templates/agent_bdd-templates.py`: `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`. Assert immediately after each step. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
 
 ### Harness
 
@@ -66,8 +66,8 @@ Read `practices/bdd/bdd.md` § Contexts — the underlying test discipline appli
 ---
 # Generate
 
-1. Read `practices/bdd/bdd.md` § Contexts — the underlying test discipline applies here too.
-2. Read § Contexts above and the harness surface: `practices/agent_bdd/__init__.py`, `practices/agent_bdd/agent_bdd_common.py` (types `AgentResult`, `RunResponse`, `JudgeResult`).
+1. Read `practices/bdd/bdd.md` § Overview — the underlying test discipline applies here too.
+2. Read § Overview above and the harness surface: `practices/agent_bdd/__init__.py`, `practices/agent_bdd/agent_bdd_common.py` (types `AgentResult`, `RunResponse`, `JudgeResult`).
 3. Scaffold from `templates/agent_bdd-templates.py`:
    - `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`.
    - Assert immediately after each step — `expect(response.ok).to(be_true)` right after `instruct_use_tool`, `ai_judge(...)` right after the final `instruct`. No `self.*`, no `before.all`.

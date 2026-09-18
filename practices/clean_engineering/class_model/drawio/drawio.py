@@ -47,7 +47,7 @@ class Drawio:
     def domain_slug(self) -> str:
         return "drawio"
 
-    @markdown
+    @markdown("overview")
     def contexts(self) -> str: ...
 
     @markdown

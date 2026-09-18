@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
 
@@ -134,17 +134,20 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 ## Fidelities
 
-## modules
+### modules
+
+#### Overview
+
 
 **Default format:** markdown
 
 **Goal:** Name the BDD subject tree before behavior signatures — delegates module structure to Clean Engineering at the same depth.
 
-### Guidance
+#### Guidance
 
 Name the BDD subject tree before behavior signatures. Delegate module structure to Clean Engineering at the same depth. Rough subject index for a partition pass: domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
 
-### Scaffold
+#### Scaffold
 
 **When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ## behavior / ## development below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
 
@@ -152,13 +155,16 @@ Rough subject index for a **partition** pass or first cut — domain things, sta
 
 Key rules: `state-not-when` — nest by the state or condition that enables an observation, never by a `when` trigger; `nest-by-enabling-events` — sub-groupings are conditions that unlock further behavior, not implementation steps; `context-setup-expresses-state` — setup under a label must establish that label's state, not unrelated host boot.
 
-## behavior
+### behavior
+
+#### Overview
+
 
 **Default format:** Python
 
 **Goal:** map observation to a real test before implementation. Lock the sketched hierarchy as framework `describe` / `it` nesting. Every `it` body is exactly one `BDD: SIGNATURE` marker — nothing else.
 
-### Guidance
+#### Guidance
 
 - Sketch nesting (subjects → `with`/`that`/events → `it should`) is agreed
 - **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest/TypeScript or JUnit 5/Java when the project uses those.
@@ -167,7 +173,7 @@ Key rules: `state-not-when` — nest by the state or condition that enables an o
 
 Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 
-### Rules
+#### Rules
 
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
 - **`framework-syntax`** — Refer to [`practices/language-tools.md`](/practices/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
@@ -183,13 +189,16 @@ it('should apply a percentage discount to eligible items', () => {
 
 ---
 
-## development
+### development
+
+#### Overview
+
 
 **Default format:** Python
 
 **Goal:** Replace `BDD: SIGNATURE` markers one at a time with `it should` / expect bodies, then minimum production code until green. Inherit the framework from the **behavior** artifact if already completed.
 
-### Guidance
+#### Guidance
 
 **Procedure:** Follow the **Test shape ladder** in `@clean_engineering` `## code` § Procedure — real conditions first, then stub TDD, then e2e swap on request.
 
@@ -204,7 +213,7 @@ it('should apply a percentage discount to eligible items', () => {
 7. Refactor only while green. Move to the next marker.
 8. Repeat until zero markers remain, then run **validate**.
 
-### Coverage check (existing module)
+#### Coverage check (existing module)
 
 When generating or satisfying against a module that already exists, check the behavior tree before touching the spec:
 
@@ -213,17 +222,17 @@ When generating or satisfying against a module that already exists, check the be
 3. Add hierarchy and `it should` entries for missing behaviors — not one entry per public member on the class.
 4. Then proceed with RED-GREEN-REFACTOR.
 
-### The RED-GREEN-REFACTOR cycle
+#### The RED-GREEN-REFACTOR cycle
 
 **RED** — fail for the right reason before production code exists.  
 **GREEN** — least production code that makes this assertion pass.  
 **REFACTOR** — clean up while green. One test, one production change, one green — do not batch all bodies first.
 
-### Arrange-Act-Assert
+#### Arrange-Act-Assert
 
 Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behavior` above). Split unrelated expects. Shared construction → `beforeEach` / factory at three sibling dupes.
 
-### Rules
+#### Rules
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count. Changing the tree during implementation drops behaviors that were agreed on, or adds ones nobody specified.
 - **`red-then-green`** — Fix code by writing the test first, then watching it fail, then making production code changes.
 - **`minimum-green`** / **`code-minimalism`** — Least production code that makes this assertion pass. Refactor only while green.

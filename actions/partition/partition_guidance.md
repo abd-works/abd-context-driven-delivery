@@ -4,7 +4,7 @@ Each primary artifact must represent a mechanically distinct concept — not a c
 
 ## Must follow (read before indexing)
 1. Read all **source context** in full.
-2. Read **`{{slug}}.md` § Contexts** — artifact model; top-level structure, sub-groupings, and key rules.
+2. Read **`{{slug}}.md` § Overview** — artifact model; top-level structure, sub-groupings, and key rules.
 3. Read **`templates/{{slug}}-sketch.md`** — sketch at the active fidelity.
 4. Read **This file** — existing chunks and source spans are evidence.
 

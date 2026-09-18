@@ -1,4 +1,4 @@
-"""First-order action prelude — workspace, then the session's hanging turn and decisions."""
+"""First-order guidance-action prelude — workspace, then the session's hanging turn and decisions."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ GuidanceArg = Union[str, list]
 
 
 def listed(host) -> list:
-    """Instantiate guidance hosts bound on ``host._tool_items`` for lifecycle recipe bodies."""
+    """Instantiate guidance hosts bound on ``host._tool_items`` for guidance-action recipe bodies."""
     if getattr(host, "_guidance_text", None) is not None:
         return []
     raw = getattr(host, "_tool_items", None) or []
@@ -21,7 +21,7 @@ def listed(host) -> list:
 
 
 @agent_toolset
-class LifecycleAction:
+class GuidanceAction:
     """Open workspace if needed. Turn and decision records hang off the work session."""
 
     def __init__(self, path: str = ".", session: str = "") -> None:
@@ -106,7 +106,7 @@ class LifecycleAction:
 
     @agent_instructions
     def begin(self, guidance: GuidanceArg | None = None, action: str = "") -> str:
-        """Start a lifecycle action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one."""
+        """Start a guidance action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one."""
         self._bind_guidance(guidance)
         warning = ""
         if self.workspace.current_work_session is None:
@@ -126,6 +126,6 @@ class LifecycleAction:
 
     @agent_instructions
     def end(self) -> str:
-        """Close the lifecycle action by committing the session turn."""
-        tools(self._turn().turn(utility="lifecycle"))
+        """Close the guidance action by committing the session turn."""
+        tools(self._turn().turn(utility="guidance_action"))
         return ""

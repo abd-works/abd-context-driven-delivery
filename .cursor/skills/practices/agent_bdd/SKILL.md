@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 Write **agent BDD specs** — mamba tests that drive a real agent through the `agent(...)` harness and assert on the parsed `RunResponse` plus AI-judged prose.
 
@@ -8,7 +8,7 @@ The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA,
 
 ## Guidance
 
-Read `practices/bdd/bdd.md` § Contexts — the underlying test discipline applies here too. Scaffold from `templates/agent_bdd-templates.py`: `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`. Assert immediately after each step. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
+Read `practices/bdd/bdd.md` § Overview — the underlying test discipline applies here too. Scaffold from `templates/agent_bdd-templates.py`: `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`. Assert immediately after each step. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
 
 ### Harness
 

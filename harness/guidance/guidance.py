@@ -45,9 +45,9 @@ class Guidance:
         self.workspace = workspace
         self.nested_toolsets = ToolSetCollection()
 
-    @markdown("contexts")
+    @markdown("overview")
     def context(self) -> str:
-        """Contexts preamble for this host scope."""
+        """Overview preamble for this host scope."""
 
     @markdown
     def guidance(self) -> str:
@@ -240,6 +240,20 @@ class PracticeGuidance(Guidance):
             child = entries[self.fidelity]
             self.format = child.default_format or self.format
 
+    def scoped_markdown(self) -> str:
+        """Overview, practice sections, and the active fidelity (or every fidelity)."""
+        parts = [
+            Markdown.from_label(self, label).extract()
+            for label in ("overview", "guidance", "shared rules", "language")
+        ]
+        md_path = self.domain_markdown_path()
+        if md_path.is_file():
+            for name, body in fidelity_blocks(md_path.read_text(encoding="utf-8")):
+                if self.fidelity and name != self.fidelity:
+                    continue
+                parts.append(f"### {name}\n\n{body}")
+        return "\n\n".join(part for part in parts if part.strip())
+
 
 class FidelityGuidance(Guidance):
     def __init__(
@@ -268,9 +282,11 @@ class FidelityGuidance(Guidance):
     @property
     def context(self) -> str:  # type: ignore[override]
         practice = self.practice_guidance
-        if practice is None or not self.name:
-            return super().context
-        return practice.prior_fidelity_context(self.name)
+        prior = ""
+        if practice is not None and self.name:
+            prior = practice.prior_fidelity_context(self.name)
+        own = Markdown.from_label(self, "overview").extract()
+        return "\n\n".join(part for part in (prior, own) if part.strip())
 
     @markdown
     def guidance(self) -> str:

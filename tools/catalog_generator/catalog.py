@@ -23,7 +23,7 @@ class Catalog(HTML):
         slug = getattr(host, "domain_slug", None) or type(host).__name__
         for label in ("context", "guidance", "examples"):
             try:
-                md = Markdown.from_label(host, "contexts" if label == "context" else label)
+                md = Markdown.from_label(host, "overview" if label == "context" else label)
                 page = md.html()
             except Exception:
                 continue

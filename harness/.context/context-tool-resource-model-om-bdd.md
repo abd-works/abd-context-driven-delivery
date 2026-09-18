@@ -213,7 +213,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 - **Dependencies (one-way):** `Rule`, `RulesCollection`
 
 ## Validate
-	// LifecycleAction — changing: default all rules, optional one rule
+	// GuidanceAction — changing: default all rules, optional one rule
 
 + Validate()
 ------

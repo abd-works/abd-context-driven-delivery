@@ -1,4 +1,21 @@
-### Guidance
+#### Overview
+
+
+**Default format:** markdown
+
+**Produce:** Story map.
+
+**Goal:** Define a visual hierarchy of how users and systems achieve business outcomes: `Epic` -> nestable `Sub-Epic` -> `Story`. It is easier to change the map while Stories are titles than after Scenarios, screens, and tests exist.
+
+**Actors** are people or systems that interact with the system being described. Examples include `Customer`, `Support Agent`, `Order Service`, and `Payment Provider`.
+
+**Epics** name major business capabilities or end-to-end outcomes. Examples include `Manage Customer Orders` and `Process Payments`.
+
+**Sub-Epics** name one outcome within an Epic and contain the interactions that achieve it. Examples include `Place Customer Order` and `Collect Payment`.
+
+**Stories** name discrete, observable interactions that can be tested independently. Examples include `Submit Order`, `Validate Payment`, and `Authorize Card Transaction`.
+
+#### Guidance
 
 **Decompose through interactions.** Cover the business capability with Epics, then ground each Epic in Stories that demonstrate real behaviour. Find the **walking skeleton**, the smallest end-to-end path that works and delivers value, and validate it before adding later increments. Split increments by actor, data, workflow, channel, interface, non-functional requirement, or business rule when that creates a demonstrable step.
 
@@ -6,7 +23,7 @@
 
 **Treat a system hop as a boundary interaction.** A hop is an observable request and response across a named system boundary, not every internal function call. Keep internal fan-out within the boundary Story unless another system exposes its own observable interaction. Give an intermediary its own Story when it validates, decides, or translates; keep simple forwarding or display as an outcome on the caller's Story.
 
-### Rules
+#### Rules
 
 - **verb-noun-format** — Name every Epic, Sub-Epic, and Story with a base-form verb and noun. Epics and Sub-Epics name goals rather than an actor's activity or a supporting system call, because grammar alone does not preserve the right level of abstraction.
 - **story-name-captures-system-mechanic** — At Story level, use a verb that names the operation and a noun that names the record or concept it acts on. Replace vague names such as `Handle Request`, `Process Data`, or `Manage Record`, because they hide what the system does.

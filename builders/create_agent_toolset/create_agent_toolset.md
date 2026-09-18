@@ -7,8 +7,7 @@ Scaffold from **`templates/`**. **Matching by** the canonical example under **`e
 Every generate ends with **validate**.
 
 ---
-# Contexts
-
+# Overview
 ## Matching by the car example
 
 - **`matching-by`** — Shape the new toolset after **`examples/car/`**. Same decorator marks, `recipe` first parameter on `@agent_instructions`, `tools(...)` / `instructions(...)` wrappers, ordinary `@property` state — not a parallel layout, not `@resource`, not bare `self.tool()` in a recipe.
@@ -37,7 +36,7 @@ Every generate ends with **validate**.
 ---
 # Generate
 
-1. Read § Contexts and **`examples/car/`** — matching by that shape.
+1. Read § Overview and **`examples/car/`** — matching by that shape.
 2. Scaffold from **`templates/`**.
 3. Fill every `{Placeholder}` — class name, constructor params, tools, recipe(s), return statement.
 4. Place the generated file in the domain folder that owns the toolset.

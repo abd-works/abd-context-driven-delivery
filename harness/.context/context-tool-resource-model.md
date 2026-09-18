@@ -338,7 +338,7 @@ Guidance                   # ContextSection + AgenticToolset
 | `_generate_fidelity_methods()`                         | **Retire** — `Generate` / `Satisfy` stay independent `@agent_instructions`; `Validate` is on `Rule` / `RulesCollection` / the Validate action |
 | `_set_fidelity`                                        | **Retire** — invoke sets `practice.fidelity`; format from the matching child in `fidelities` |
 | `generate_fixes_from_validate()`                       | **Retire** — Satisfy action recipe                                    |
-| # Open prelude on base md                              | Workspace + `LifecycleAction.begin`                                   |
+| # Open prelude on base md                              | Workspace + `GuidanceAction.begin`                                   |
 | Render iterate loops on CT                             | `actions/render/`                                                       |
 
 
@@ -760,7 +760,7 @@ Harness.install(mcp=False)
 | fidelity ops    | `_generate_fidelity_methods`, `_set_fidelity` on CT     | **Retire** — fidelity lookup on `GuidanceCollection`; `@agent_instructions` stay on *Guidance* |
 | session         | `session_guidance` on CT                                | Workspace only                                                                              |
 | satisfy hook    | `generate_fixes_from_validate` on CT                    | Satisfy action recipe + validate report                                                     |
-| setup           | # Open prelude on `base_context_tool.md`                | Workspace + `LifecycleAction.begin`                                                         |
+| setup           | # Open prelude on `base_context_tool.md`                | Workspace + `GuidanceAction.begin`                                                         |
 | render iterate  | implied on CT / base md                                 | `actions/render/` + channel action md                                                  |
 | #68             | hyperlinks to other fidelities                          | prior `## {name}` blocks in `FidelityGuidance.context` per `GuidanceCollection` order       |
 | #21             | catalog scrape + Harness overlap                        | `.instructions` on *Guidance*; `Catalog : HTML`; *Deployment* subtypes only write files |

@@ -65,8 +65,8 @@ with description("AgentBdd action expansion"):
     with context("an AgentBdd generator with format python"):
         with before.all:
             self.bdd = _load_agent_bdd()
-            self.contexts = Markdown.from_label(self.bdd, "contexts").extract()
-            self.bdd_contexts = Markdown.from_label(Bdd(), "contexts").extract()
+            self.contexts = Markdown.from_label(self.bdd, "overview").extract()
+            self.bdd_contexts = Markdown.from_label(Bdd(), "overview").extract()
 
         with context("that does not own kit lifecycle actions"):
             with it("should not expose generate, validate, satisfy, or repair"):

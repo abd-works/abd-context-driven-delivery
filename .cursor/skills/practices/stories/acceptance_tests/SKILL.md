@@ -1,3 +1,6 @@
+#### Overview
+
+
 **Default format:** markdown
 
 **Produce:** Story map.
@@ -12,7 +15,7 @@
 
 **Stories** name discrete, observable interactions that can be tested independently. Examples include `Submit Order`, `Validate Payment`, and `Authorize Card Transaction`.
 
-### Guidance
+#### Guidance
 
 **Decompose through interactions.** Cover the business capability with Epics, then ground each Epic in Stories that demonstrate real behaviour. Find the **walking skeleton**, the smallest end-to-end path that works and delivers value, and validate it before adding later increments. Split increments by actor, data, workflow, channel, interface, non-functional requirement, or business rule when that creates a demonstrable step.
 
@@ -20,11 +23,11 @@
 
 **Treat a system hop as a boundary interaction.** A hop is an observable request and response across a named system boundary, not every internal function call. Keep internal fan-out within the boundary Story unless another system exposes its own observable interaction. Give an intermediary its own Story when it validates, decides, or translates; keep simple forwarding or display as an outcome on the caller's Story.
 
-### Scaffold
+#### Scaffold
 
 **When scaffolding only** (`/partition` or a names-only first cut), follow this subsection. Write only verb-noun Epic, Sub-Epic, and Story names. Read the source material in full, split distinct mechanics, and apply `verb-noun-format`, `branch-on-mechanical-uniqueness`, and `do-not-invent-requirements`. Do not write Scenarios, increments, or explanatory prose. Do not read or apply the Rules below. **Stop reading this skill when scaffolding.**
 
-### Rules
+#### Rules
 
 - **`verb-noun-format`** - Name every Epic, Sub-Epic, and Story with a base-form verb and noun. Epics and Sub-Epics name goals rather than an actor's activity or a supporting system call, because grammar alone does not preserve the right level of abstraction.
 - **`story-name-captures-system-mechanic`** - At Story level, use a verb that names the operation and a noun that names the record or concept it acts on. Replace vague names such as `Handle Request`, `Process Data`, or `Manage Record`, because they hide what the system does.
@@ -35,13 +38,16 @@
 
 ---
 
+#### Overview
+
+
 **Default format:** project language
 
 **Produce:** Scenario specifications in the requested format.
 
 **Goal:** Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.
 
-### Guidance
+#### Guidance
 
 **Create testable specifications.** Use **Given** for state the system already has, **When** for the operation under test, and **Then** for results a person or another system can observe. Use **And** to continue the current kind of step. Use **But** for a missing record or an action not taken. Start a new **When** only when a new interaction begins, because each outcome must trace to the operation that produced it.
 
@@ -51,7 +57,7 @@
 
 **Use the correct evidence mode.** For brownfield capture, inspect the running product when it exists and reconcile the Story Map and Scenarios with observed behaviour before finalizing them. For greenfield specification, agreed Scenarios define intended behaviour before production code exists.
 
-### Rules
+#### Rules
 
 - **`gwt-steps-trace-to-domain-operations`** - Map every Given, When, and Then to a named domain operation or property. Express continuation as an operation on the aggregate that receives control, because routes, waits, and framework calls do not describe domain behaviour.
 - **`behavioral-and-system-observable-outcomes`** - Write each Then as a result a person or another system can observe, such as changed information, a returned response, or a changed interface state. Keep internal flags and function-local state out of Then, because they do not prove delivered behaviour.
@@ -73,7 +79,16 @@
 
 ---
 
-### Guidance
+#### Overview
+
+
+**Default format:** project language
+
+**Produce:** Runnable acceptance specifications and the production code that makes them pass.
+
+**Goal:** Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
+
+#### Guidance
 
 Apply `@stories` `#scenarios` § Guidance and § Rules to acceptance tests. Use the **Test shape ladder** in the `testing-approach` rule under `clean_engineering/rules/`: start with the real application when it is available, use deterministic external-system stubs while developing, and replace them with end-to-end boundaries when requested.
 
@@ -81,7 +96,7 @@ Apply `@stories` `#scenarios` § Guidance and § Rules to acceptance tests. Use 
 
 Refer to [`../language-tools.md`](../language-tools.md) for language-specific test tools and idioms.
 
-### Rules
+#### Rules
 
 - **examples-trace-domain-model** — Shape every fixture from the domain model and its owning system. Use the external system's record shape at that boundary and the product's aggregate shape inside the domain, because convenient mixed objects conceal mapping errors.
 - **examples-declare-seed-vs-interaction** — Identify each fixture as **Seed** state owned by a system or **Interaction** data entered, displayed, or validated through the product. Use both when the Story needs both, because persisted records and user-facing data often represent the same concept differently.

@@ -2,7 +2,7 @@
 
 Reads source material, builds an index of what matters for this context tool, extracts the relevant passages as chunk files, and checks that nothing was missed.
 
-Read `partition_guidance.md` before indexing — it references `{slug}.md § Scaffold` and `{slug}.md § Contexts` for what to look for. If those don't exist, use the user's description or the surrounding material.
+Read `partition_guidance.md` before indexing — it references `{slug}.md § Scaffold` and `{slug}.md § Overview` for what to look for. If those don't exist, use the user's description or the surrounding material.
 
 **Parameters**
 
@@ -25,7 +25,7 @@ Build or update an index of what's in the source material.
 
 1. Read the source.
 2. If `{subject}-index.md` already exists, **open it and add to it — do not replace it.** See **Multi-pass** below.
-3. Read `partition_guidance.md` (filled in with `{slug}.md § Contexts` and `§ Scaffold`). The things the context tool cares about — epics, subjects, screens, modules — **must** appear as entries in the index. Ignoring them or just copying the source's headings as entries is a hard fail.
+3. Read `partition_guidance.md` (filled in with `{slug}.md § Overview` and `§ Scaffold`). The things the context tool cares about — epics, subjects, screens, modules — **must** appear as entries in the index. Ignoring them or just copying the source's headings as entries is a hard fail.
 4. Let the context tool determine the structure, not the source's table of contents. Source chapters and files tell you where the material lives — they don't decide what the entries are.
 5. **Anti-mirror check:** if your entry count matches the number of top-level headings or chapters in the source, you've mirrored it. Regroup before writing.
 6. Write the index to `{session.path}/.context/{subject}-index.md` (or `{out_root}/.context/{subject}-index.md` when `out_root` is set). All context tools write to the same index file — not one file each. Each tool adds its own columns. Keep it shallow: one entry per epic, module, screen, or subject — not full stories or APIs. **See the example at the bottom of this file for the expected structure and column order.**
@@ -109,7 +109,7 @@ Running partition again with a different context tool adds to what's already the
 ### What a later pass does
 
 1. If `{subject}-index.md` or chunk files already exist, you're adding to them — not starting over.
-2. Read `{slug}.md § Contexts` to understand what the new context tool cares about (epics, screens, subjects, modules, …).
+2. Read `{slug}.md § Overview` to understand what the new context tool cares about (epics, screens, subjects, modules, …).
 3. Add columns for the new context tool. Link each new entry to the chunk files that already exist. One chunk may serve multiple entries; one entry may span multiple chunks. Keep all existing columns and links.
 4. Go to Step 2 only for passages not yet covered by an existing chunk.
 5. When done: existing chunk links still work; new columns are filled in; nothing was removed.

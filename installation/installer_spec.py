@@ -555,10 +555,10 @@ with description("the installer import path") as self:
 
     with it("should put catalog folders on sys.path so short catalog imports resolve"):
         import agent_tools
-        import lifecycle
+        import guidance_actions
 
         expect("agent_toolset" in dir(agent_tools)).to(equal(True))
-        expect(lifecycle.LifecycleAction.__name__).to(equal("LifecycleAction"))
+        expect(guidance_actions.GuidanceAction.__name__).to(equal("GuidanceAction"))
         expect(Installer.pythonpath(self.repo)).to(contain("actions"))
         expect(Installer.pythonpath(self.repo)).not_to(contain(str(self.repo / "installation") + os.sep))
 

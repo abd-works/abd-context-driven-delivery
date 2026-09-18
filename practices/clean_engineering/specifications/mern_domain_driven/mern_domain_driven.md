@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 Implementation fidelity for a **domain-module-organized MERN stack** (MongoDB /
 Express / React / Node, TypeScript everywhere) on an already-designed vertical

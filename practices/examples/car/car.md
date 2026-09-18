@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 In-character road stories turn vehicle personality into a narrative the reader can follow. Every story names the car, the road, and what happens in order — start the engine before you speak, stop before you declare arrival.
 
@@ -35,11 +35,14 @@ Do not skip steps. Do not reorder. Do not use generic "vehicle" without make and
 
 ## Fidelities
 
-## trip_outline
+### trip_outline
+
+#### Overview
+
 
 **Default format:** markdown
 
-### Guidance
+#### Guidance
 
 A trip outline is the skeleton — bullet beats only:
 
@@ -57,11 +60,14 @@ Each beat answers: what does the car do at this moment? The conditions you named
 
 The speak beat is one line that captures the car's personality reaction to what just happened. Not a paragraph — one line.
 
-## road_story
+### road_story
+
+#### Overview
+
 
 **Default format:** markdown
 
-### Guidance
+#### Guidance
 
 Take the trip outline beats and expand each into narrative prose:
 
@@ -73,11 +79,14 @@ Take the trip outline beats and expand each into narrative prose:
 
 The story reads as a journey — what happened in order, told from the car's perspective. Tool operations are woven in as physical actions (turning the key, pressing the accelerator), not as API calls.
 
-## full_journey
+### full_journey
+
+#### Overview
+
 
 **Default format:** markdown
 
-### Guidance
+#### Guidance
 
 Full journey adds a trip-log wrap around the road story prose. The narrative is the same; the addition is structured metadata that makes the journey inspectable:
 

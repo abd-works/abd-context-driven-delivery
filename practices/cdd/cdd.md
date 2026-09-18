@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 **CDD** (context-driven delivery) orchestrates practice contexts across delivery stages:
 
@@ -76,34 +76,46 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 
 ## Fidelities
 
-## discovery
+### discovery
+
+#### Overview
+
 
 **Default format:** markdown
 
-### Guidance
+#### Guidance
 
 Whole-solution shape. Default run scope is the entire solution, or a large subsection. Sketch themes and lens blocks in `cdd-sketch.md` before piping child `run` messages.
 
-## explore
+### explore
+
+#### Overview
+
 
 **Default format:** markdown
 
-### Guidance
+#### Guidance
 
 Current increment. Default run scope is the increment, or a large subsection of it. Deepen the same sketch file; do not invent detail from spec or engineer.
 
-## spec
+### spec
+
+#### Overview
+
 
 **Default format:** python
 
-### Guidance
+#### Guidance
 
 Narrow, concrete work — about a sub-epic inside the solution or increment. Child practices lock tactics, exploration stories, mockup, code, and BDD development.
 
-## engineer
+### engineer
+
+#### Overview
+
 
 **Default format:** python
 
-### Guidance
+#### Guidance
 
 Working software at about sub-epic scope. Production UI follows stories + clean_engineering at this stage, honouring the UX spec from **spec**.

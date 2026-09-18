@@ -1,8 +1,15 @@
-### Guidance
+#### Overview
+
+
+**Default format:** drawio
+
+**Goal:** What screens exist and how users move between them — missing coverage shows as absent nodes.
+
+#### Guidance
 
 Screens, layouts, named regions, transitions, nav components, content types. Story names and domain terms attach as traces. Optional `ux-context.md` for invariants not on the canvas. No control types, no interaction JS, no brand.
 
-### Rules
+#### Rules
 
 - **tab-states-are-separate-screens-screen-story-budget-ia-named-regions-only-as-above** — **`tab-states-are-separate-screens`** / **`screen-story-budget`** / **`ia-named-regions-only`** — as above.
 - **system-stories-group-with-visible-trigger** — System stories group with the closest user-visible screen.

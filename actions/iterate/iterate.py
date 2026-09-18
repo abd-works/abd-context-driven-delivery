@@ -7,14 +7,14 @@ iterate_session (which calls grill_with_context in-method).
 from __future__ import annotations
 
 from grill_context.grill_context import GrillContext
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 
 @agent_toolset
-class Iterate(LifecycleAction):
+class Iterate(GuidanceAction):
     """Iterate formal generate output with scanners - tiny grilled slices only; never dump a whole artifact in one tick."""
 
     def _grill_context(self) -> GrillContext:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
@@ -10,7 +10,7 @@ from scan.rule import Rule
 from workspace import SessionLog
 
 @agent_toolset
-class Validate(LifecycleAction):
+class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
 
     @Mcp

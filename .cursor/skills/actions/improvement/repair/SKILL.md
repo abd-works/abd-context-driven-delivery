@@ -1,3 +1,3 @@
-Open a domain repair on each passed context tool and instruct the fix.
+Open a domain repair on each passed Guidance host and instruct the fix. Pass a string to repair that text once.
 
-Use MCP tool: `improvement.repair(tools: 'list', asset: 'str', violation: 'str')`
+Use MCP tool: `improvement.repair(guidance: 'GuidanceArg', asset: 'str', violation: 'str')`

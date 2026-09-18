@@ -1,4 +1,4 @@
-### Rules
+#### Rules
 
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
 - **`story-domain-js-imported`** — Import real modules; do not invent a UX-only adapter shape.

@@ -5,8 +5,7 @@ Write a **driving chronicle** — a markdown log of trips in the car's voice. Ea
 Use the template for entry shape. Match the tone and structure in the examples file.
 
 ---
-# Contexts
-
+# Overview
 ## Driving voice
 
 The chronicle is told from the car's perspective — personality, quirks, and reactions to weather and traffic.
@@ -23,7 +22,7 @@ Each entry covers one outing with date, route summary, odometer delta, and a sho
 ---
 # Generate
 
-1. Read § Contexts and `examples/examples.md` for voice and shape.
+1. Read § Overview and `examples/examples.md` for voice and shape.
 2. Fill `car_chronicle-templates.md` for each new trip entry.
 3. Save generated chronicles under `output/` (e.g. `output/driving-log.md`).
 4. Run **validate**; fix until scan passes on concept slugs.

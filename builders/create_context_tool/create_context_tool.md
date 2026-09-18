@@ -7,11 +7,10 @@ Scaffold from **`practices/create_context_tool/templates/`** (all files, no form
 Every domain action ends with **validate**.
 
 ---
-# Contexts
-
+# Overview
 ## Favour defaults
 
-- **`favour-defaults`** — The framework (`BaseContextTool`, `@instruction` slots, bare action/tool names → kit `{slug}.md` **sections** or `{name}.md` beside the defining peer kit / domain md) already wires contexts, domain § Generate, examples, format template, and action prose. **Do not override** instruction slots or action docstrings. **Do not override `module_dir`** — put the `.py` file inside the domain folder; default resolution is enough (`practices/agent_bdd/agent_bdd.py` is the model). Override **action bodies** only to add steps (e.g. compose another toolset). Session / workspace layout and tools live in **`utilities/workspace/workspace_session.md`**. Shared surface also includes **`partition` / `index` / `segment`** (prose in `utilities/partition_pipeline/partition_pipeline.md`) and optional domain **`partition.md`** (top-level artifacts only; base default if missing). Partition is a **hard fail** if domain `partition.md` / `{domain}.md` § Contexts are ignored or the index mirrors corpus TOC/chapters. **Multi-pass is additive:** later lenses (Stories / UX / BDD / CE) **add columns** mapped to existing `{module}/.context/*-segment.md` chunks — they must not wipe the shared `{subject}-index.md` or re-chunk the corpus (see **Partition** in `partition_pipeline.md`).
+- **`favour-defaults`** — The framework (`BaseContextTool`, `@instruction` slots, bare action/tool names → kit `{slug}.md` **sections** or `{name}.md` beside the defining peer kit / domain md) already wires contexts, domain § Generate, examples, format template, and action prose. **Do not override** instruction slots or action docstrings. **Do not override `module_dir`** — put the `.py` file inside the domain folder; default resolution is enough (`practices/agent_bdd/agent_bdd.py` is the model). Override **action bodies** only to add steps (e.g. compose another toolset). Session / workspace layout and tools live in **`utilities/workspace/workspace_session.md`**. Shared surface also includes **`partition` / `index` / `segment`** (prose in `utilities/partition_pipeline/partition_pipeline.md`) and optional domain **`partition.md`** (top-level artifacts only; base default if missing). Partition is a **hard fail** if domain `partition.md` / `{domain}.md` § Overview are ignored or the index mirrors corpus TOC/chapters. **Multi-pass is additive:** later lenses (Stories / UX / BDD / CE) **add columns** mapped to existing `{module}/.context/*-segment.md` chunks — they must not wipe the shared `{subject}-index.md` or re-chunk the corpus (see **Partition** in `partition_pipeline.md`).
 
 ## Minimal Python module
 
@@ -19,7 +18,7 @@ Every domain action ends with **validate**.
 
 ## Canonical markdown only
 
-- **`canonical-markdown-only`** — All domain prose lives in **`{domain-slug}.md`**: § Instructions, § Contexts, § Generate. **No** `reference/` folder, **no** duplicate `reference/generate.md`, **no** copying framework action prose into the domain md. Criteria live as named bullets under § Contexts.
+- **`canonical-markdown-only`** — All domain prose lives in **`{domain-slug}.md`**: § Instructions, § Overview, § Generate. **No** `reference/` folder, **no** duplicate `reference/generate.md`, **no** copying framework action prose into the domain md. Criteria live as named bullets under § Overview.
 
 ## Compose other toolsets in plain code
 

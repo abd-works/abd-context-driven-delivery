@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from installation.harness_files.harness_files import Skill
@@ -12,7 +12,7 @@ from installation.mcp.mcp_server import Mcp
 from workspace import docs_dir
 
 @agent_toolset
-class GrillContext(LifecycleAction):
+class GrillContext(GuidanceAction):
     """Interview a plan relentlessly against the codebase context until reaching shared understanding."""
 
     def _grill_answers_path(self, root: str) -> Path:

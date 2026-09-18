@@ -1,7 +1,7 @@
 # actions — peer action kits
 
 ## Purpose
-Lifecycle and companion kits always used in the BaseContextTool frame. Deployed as
+Guidance and companion kits always used in the BaseContextTool frame. Deployed as
 **skills and** Cursor commands / VS Code prompts. Kit-owned actions run their
 toolset once with `arguments.tools` listing the in-scope context tool(s).
 
@@ -14,7 +14,7 @@ Companions that left this tree: `echo` and `handoff` live under `tools/`;
 Host-action skill/command names match the operation (`grill`, not `grill-context`).
 
 `harness/agent_tools` is the agent-tools framework (`agent_tools.py`, `@agent_instructions`),
-not a place for these kits. First-order kits subclass `LifecycleAction`: open the
+not a place for these kits. First-order kits subclass `GuidanceAction`: open the
 workspace if it is not already open; the turn and decision records hang off the
 work session; finish that session turn at the end.
 

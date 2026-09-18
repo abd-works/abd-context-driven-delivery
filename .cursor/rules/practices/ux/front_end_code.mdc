@@ -1,4 +1,4 @@
-### Rules
+#### Rules
 
 - **`real-frontend-not-mockup`** — Shipping UI is production frontend code, not the greybox Story Demo frame.
 - **`real-backend-wired`** — Client talks to real services/persistence (CE **code**); no silent Fake path as the only path.

@@ -4,7 +4,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
 from agent_tools.agent_tools import agent_tool
@@ -13,7 +13,7 @@ from installation.mcp.mcp_server import Mcp
 from workspace import SessionLog
 
 @agent_toolset
-class Improvement(LifecycleAction):
+class Improvement(GuidanceAction):
     """Slash ``/repair`` runs this kit with ``arguments.guidance``; not composed on the host."""
 
     @property

@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 Rules for rendering and auditing UML class diagrams in Draw.io under clean engineering. Layout is a judgment call constrained by these rules — not a script dump. Prefer incremental edits when a `.drawio` already exists; full regeneration destroys manual positioning. Pass **`keep_positioning=true`** on `render` / `create_diagram` (or `transform` with `previous` XML) to update class contents in place, leave existing relationship routing, and layout only new classes.
 

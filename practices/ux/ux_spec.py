@@ -102,7 +102,7 @@ with description("Ux contexts instruction"):
     with context("the contexts slot is expanded"):
         with before.each:
             self.ux = Ux(fidelity="ia")
-            self.contexts = self.ux.contexts().expand()
+            self.contexts = self.ux.scoped_markdown()
 
         with it("should return non-empty prose"):
             expect(len(self.contexts) > 0).to(be_true)

@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 Build the solution around how the business actually works, in the words the business already uses. When the software mirrors the business, it holds the business's logic and knowledge where that understanding actually lives; when it mirrors a database, a framework, or a screen layout, every business conversation has to be re-translated and what the business knows ends up scattered wherever the technology happened to put it.
 
@@ -58,7 +58,10 @@ When documenting an existing system, tactical wraps live under the DDD working a
 
 ## Fidelities
 
-## bounded_context
+### bounded_context
+
+#### Overview
+
 
 **Default format:** markdown
 
@@ -66,7 +69,7 @@ When documenting an existing system, tactical wraps live under the DDD working a
 
 **Produce:** `bounded-context-map.md` from `templates/bounded-context-template.md`. Call clean_engineering at **modules**.
 
-### Guidance
+#### Guidance
 
 **Start from the language, not the structure.** Read the source context and watch the vocabulary. A **bounded context** is where one model and one ubiquitous language hold — inside it every term has exactly one meaning. So the first move is not drawing boxes; it is noticing where the vocabulary shifts. The same word carrying two meanings in two conversations, or two words describing what looks like one thing, is the signal that you are standing on a boundary. Boundaries drawn from screens, or existing services will cut straight through a single language and leave you translating inside what should have been one model.
 
@@ -84,7 +87,7 @@ In a service-per-capability or event-driven design where you control the model, 
 
 **Then read the map back and look for what it is hiding.** The same real thing modeled twice, one word quietly meaning two things, or contexts that mirror UI journeys rather than vocabularies. Check the aggregates too: one holding concepts that never change together, or a rule the business relies on that nobody wrote down. These are cheap to fix while contexts and aggregates are still names; once building blocks, stories, and code hang off them, moving a boundary means moving all of that with it.
 
-### Scaffold
+#### Scaffold
 
 **When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use Guidance or Rules below.
 
@@ -94,7 +97,7 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 **Stop reading this skill when scaffolding.**
 
-### Rules
+#### Rules
 
 - **`experts-words-preferred`** — Use the words domain experts use. A ported telephone number is `TelephoneNumber` with `PortingInformation`, not `PortabilityRequest`; the operation is `port()`, not `requestPortability()`. A invented synonym becomes a second term every reader must translate.
 - **`domain-concepts-not-technical-names`** — Name contexts, aggregates, and concepts — not `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, or `*Request`. Do not invent a type for fields that already belong on a concept (`OrderResult` → fields on `Order`). A technical name carries no meaning the business would recognize, so rules parked on it cannot be found where the concept lives and get re-implemented elsewhere.
@@ -110,7 +113,10 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 ---
 
-## building_blocks
+### building_blocks
+
+#### Overview
+
 
 **Default format:** markdown
 
@@ -118,7 +124,7 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 **Produce:** Update `bounded-context-map.md` using `templates/bounded-context-template.md`. Call clean_engineering at **model**.
 
-### Guidance
+#### Guidance
 
 **Work through one bounded context and one aggregate at a time.** Call clean_engineering at **model** fidelity and use its object-oriented analysis to deepen the Bounded Contexts and aggregates inside them: begin at the root, work inward through the objects it governs, then work outward through its dependencies. Classify each concept with one or more of the DDD **building blocks** below.
 
@@ -140,7 +146,7 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 **Use a Specification for a named rule that must mean the same thing in several operations.** A `PreferredCustomerSpecification` can define what makes a Customer preferred, support a query for preferred customers, validate an existing customer, and guide a Factory creating one. Keep the predicate in the Specification and let the Entity or Factory perform the state change; otherwise the same definition is copied into queries, validation, and creation and eventually disagrees with itself.
 
-### Rules
+#### Rules
 
 - **`identity-test-entity-vs-vo`** — Entity when identity transcends attributes; otherwise prefer Value Object. A type that is the access boundary for a cluster is **Aggregate Root + Entity**, not a Domain Service (`Catalog` is not `<<Service>>` because it "does" selection).
 - **`aggregate-root-identity-and-entry`** — Every aggregate states the root's identity and uses that root as its only entry point. If identity or entry is ambiguous, the root cannot protect changes across the aggregate.
@@ -164,7 +170,10 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 ---
 
-## tactics
+### tactics
+
+#### Overview
+
 
 **Default format:** Python
 
@@ -172,7 +181,7 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 **Produce:** Implementation under the project layout; call clean_engineering at **code**.
 
-### Guidance
+#### Guidance
 
 **Read the project's architecture before deciding anything.** Check project context (`.context/`, ADRs, stack). If none exists, ask. If nothing is available, default to a Node-shaped app with JSON file persistence (package TBD).
 
@@ -186,7 +195,7 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 **Load with the identity already in hand** when wrapping live code. Do not assume a browser session. Load once and reuse the variable. A cart has no identity outside its prospect — reach it through the owner, not `cartRepository().current()`.
 
-### Rules
+#### Rules
 
 - **`one-pattern-per-building-block`** — Each building block in play gets one named implementation pattern — technology, extension mechanism, test approach — used by every instance of that block. Divergent implementations of the same block make the solution unreadable and untestable as a whole.
 - **`architectural-granularity-decided`** — State what a bounded context, an aggregate, and a repository are at runtime (in-process module, container, service with its own store). Left undecided, the first adapter written silently sets it for everything after.

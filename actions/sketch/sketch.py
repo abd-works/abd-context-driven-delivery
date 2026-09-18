@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from grill_context.grill_context import GrillContext
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from installation.harness_files.harness_files import Skill
@@ -18,7 +18,7 @@ from workspace import docs_dir
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
 @agent_toolset
-class Sketch(LifecycleAction):
+class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
     def __init__(self, agent_dir: str = "", path: str = ".", session: str = "") -> None:

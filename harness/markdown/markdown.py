@@ -252,7 +252,7 @@ class AssetLocator:
                 module_dir,
                 domain_slug,
                 section_file=section_file.resolve(),
-                section_heading=self._label.replace("_", " ").replace("-", " ").title(),
+                section_heading=_section_heading(self._label),
                 fidelity=str(fidelity_name),
             )
         folder = search_root / self._label
@@ -271,7 +271,7 @@ class AssetLocator:
             module_dir,
             domain_slug,
             section_file=section_file.resolve(),
-            section_heading=self._label.replace("_", " ").replace("-", " ").title(),
+            section_heading=_section_heading(self._label),
         )
 
     def _first_extension_match(self, search_root: Path) -> Path | None:
@@ -371,10 +371,7 @@ class Markdown:
 
     def extract(self) -> str:
         location = AssetLocator(self._host, self._label).locate()
-        text = _extract_location(location)
-        if self._label in {"context", "contexts"}:
-            text = _preamble_before_h2(text)
-        return text
+        return _extract_location(location)
 
     def html(self) -> HTML:
         return HTML.from_markdown(self.extract())
@@ -462,77 +459,21 @@ def _section_exists(file_path: Path, section_heading: str) -> bool:
     return any(heading.casefold() == wanted for _s, _e, _l, heading in _markdown_headings(content))
 
 
-def _h2_blocks(text: str) -> list[tuple[str, str]]:
-    pattern = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
-    matches = list(pattern.finditer(text))
-    blocks: list[tuple[str, str]] = []
-    for index, match in enumerate(matches):
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        blocks.append((match.group(1).strip(), text[match.end() : end].strip()))
-    return blocks
+def _section_heading(label: str) -> str:
+    if label.casefold() in {"context", "contexts", "overview"}:
+        return "Overview"
+    return label.replace("_", " ").replace("-", " ").title()
 
 
-def fidelity_blocks(text: str) -> list[tuple[str, str]]:
-    marker = re.search(r"^##\s+Fidelities\s*$", text, re.MULTILINE | re.IGNORECASE)
-    if not marker:
-        return []
-    tail = text[marker.end() :]
-    if not re.search(r"^##\s+", tail, re.MULTILINE):
-        return []
-    return [
-        (name, body)
-        for name, body in _h2_blocks(tail)
-        if name.casefold() != "fidelities"
-    ]
-
-
-def _read_fidelity_block(text: str, fidelity_name: str) -> str:
-    wanted = fidelity_name.casefold()
-    for name, body in fidelity_blocks(text):
-        if name.casefold() == wanted:
-            return body
-    return ""
-
-
-def _read_named_subsection(text: str, heading: str) -> str:
-    pattern = re.compile(rf"^###\s+{re.escape(heading)}\s*$", re.MULTILINE | re.IGNORECASE)
-    match = pattern.search(text)
-    if not match:
-        return ""
-    rest = text[match.end() :]
-    next_h = re.search(r"^###\s+\S", rest, re.MULTILINE)
-    chunk = rest[: next_h.start()] if next_h else rest
-    heading_line = text[match.start() : match.end()].strip()
-    return f"{heading_line}\n\n{chunk.strip()}".strip()
-
-
-def _read_fidelity_subsection(file_path: Path, fidelity_name: str, section_heading: str) -> str:
-    if not file_path.is_file():
-        return ""
-    text = file_path.read_text(encoding="utf-8")
-    block = _read_fidelity_block(text, fidelity_name)
-    if not block:
-        return ""
-    named = _read_named_subsection(block, section_heading)
-    if named:
-        return named
-    if section_heading.casefold() in {"rules", "shared rules"}:
-        return ""
-    return f"## {fidelity_name}\n\n{block}".strip()
-
-
-def _read_section(file_path: Path, section_heading: str) -> str:
-    if not file_path.is_file():
-        return ""
-    content = file_path.read_text(encoding="utf-8")
-    if not section_heading:
+def _slice_heading(content: str, heading: str) -> str:
+    if not heading:
         return content
     headings = _markdown_headings(content)
     found = next(
         (
             (index, item)
             for index, item in enumerate(headings)
-            if item[3].casefold() == section_heading.casefold()
+            if item[3].casefold() == heading.casefold()
         ),
         None,
     )
@@ -546,11 +487,82 @@ def _read_section(file_path: Path, section_heading: str) -> str:
     return content[start:end].strip()
 
 
-def _preamble_before_h2(text: str) -> str:
-    match = re.search(r"^##\s+\S", text, re.MULTILINE)
-    if not match:
-        return text.strip()
-    return text[: match.start()].strip()
+def _child_blocks(text: str, parent_heading: str) -> list[tuple[str, str]]:
+    headings = _markdown_headings(text)
+    parent = next(
+        (
+            (index, item)
+            for index, item in enumerate(headings)
+            if item[3].casefold() == parent_heading.casefold()
+        ),
+        None,
+    )
+    if parent is None:
+        return []
+    index, (_start, _heading_end, level, _name) = parent
+    child_level = level + 1
+    blocks: list[tuple[str, str]] = []
+    for child_index in range(index + 1, len(headings)):
+        start, heading_end, next_level, name = headings[child_index]
+        if next_level <= level:
+            break
+        if next_level != child_level:
+            continue
+        end = next(
+            (
+                headings[later][0]
+                for later in range(child_index + 1, len(headings))
+                if headings[later][2] <= child_level
+            ),
+            len(text),
+        )
+        body = text[heading_end:end].lstrip("\r\n").strip()
+        blocks.append((name, body))
+    return blocks
+
+
+def fidelity_blocks(text: str) -> list[tuple[str, str]]:
+    return [
+        (name, body)
+        for name, body in _child_blocks(text, "Fidelities")
+        if name.casefold() != "fidelities"
+    ]
+
+
+def _read_fidelity_block(text: str, fidelity_name: str) -> str:
+    wanted = fidelity_name.casefold()
+    for name, body in fidelity_blocks(text):
+        if name.casefold() == wanted:
+            return body
+    return ""
+
+
+def _read_named_subsection(text: str, heading: str) -> str:
+    return _slice_heading(text, heading)
+
+
+def _read_fidelity_subsection(file_path: Path, fidelity_name: str, section_heading: str) -> str:
+    if not file_path.is_file():
+        return ""
+    text = file_path.read_text(encoding="utf-8")
+    block = _read_fidelity_block(text, fidelity_name)
+    if not block:
+        return ""
+    named = _read_named_subsection(block, _section_heading(section_heading) if section_heading else "")
+    if named:
+        return named
+    if _section_heading(section_heading).casefold() in {"rules", "shared rules"}:
+        return ""
+    return ""
+
+
+def _read_section(file_path: Path, section_heading: str) -> str:
+    if not file_path.is_file():
+        return ""
+    content = file_path.read_text(encoding="utf-8")
+    if not section_heading:
+        return content
+    return _slice_heading(content, _section_heading(section_heading))
 
 
 _EXT_TO_FORMAT = {

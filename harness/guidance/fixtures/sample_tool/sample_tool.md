@@ -1,4 +1,4 @@
-# Contexts
+## Overview
 
 sample preamble
 
@@ -12,22 +12,22 @@ known prose for guidance in sample tool
 
 ## Fidelities
 
-## sketch
+### sketch
 
-### Guidance
+#### Guidance
 
 sketch guidance body only
 
-### Rules
+#### Rules
 
 - **sketch-rule** — sketch rule body
 
-## spec
+### spec
 
-### Guidance
+#### Guidance
 
 spec guidance body only
 
-### Rules
+#### Rules
 
 - **spec-rule** — spec rule body

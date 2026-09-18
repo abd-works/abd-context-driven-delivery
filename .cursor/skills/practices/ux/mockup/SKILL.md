@@ -1,12 +1,15 @@
+#### Overview
+
+
 **Default format:** drawio
 
 **Goal:** What screens exist and how users move between them — missing coverage shows as absent nodes.
 
-### Guidance
+#### Guidance
 
 Screens, layouts, named regions, transitions, nav components, content types. Story names and domain terms attach as traces. Optional `ux-context.md` for invariants not on the canvas. No control types, no interaction JS, no brand.
 
-### Scaffold
+#### Scaffold
 
 **When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
 
@@ -19,14 +22,21 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 - Optional `ux-context.md` for invariants / notes not on the canvas.
 - No control types, no interaction JS, no brand.
 
-### Rules
+#### Rules
 
 - **`tab-states-are-separate-screens`** / **`screen-story-budget`** / **`ia-named-regions-only`** — as above.
 - **`system-stories-group-with-visible-trigger`** — System stories group with the closest user-visible screen.
 
 ---
 
-### Guidance
+#### Overview
+
+
+**Default format:** html
+
+**Goal:** Lock controls and key interactions as runnable html+js (greybox) inside the **Story Demo shell**. Drawio peer channel still available.
+
+#### Guidance
 
 1. Ensure story/domain JS via Stories / CE `transform` when missing (`ensure_javascript`).
 2. Deepen regions with typed controls, states, and interactions.
@@ -44,7 +54,7 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
    Do not invent brand. When active, pick the sibling folder under `specifications/` for the brand that applies (e.g. `specifications/abd-works/`) and start from its matching page rather than inventing tokens; if no named brand applies, `specifications/generic/` (no brand layer) is the default. Fall back to whatever brand/css tokens already exist in the workspace when neither covers it. Add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
 9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
 
-### Rules
+#### Rules
 
 - **controls-match-interaction-decisions** — Exact control types; no invented affordances.
 - **story-domain-js-imported** — Import real modules; do not invent a UX-only adapter shape.

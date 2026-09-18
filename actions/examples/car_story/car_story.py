@@ -1,13 +1,13 @@
 """CarStory — actions that orchestrate Car context tools for scripted trips."""
 from __future__ import annotations
 
-from lifecycle import GuidanceArg, LifecycleAction
+from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset, tools, instructions
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 
 @agent_toolset
-class CarStory(LifecycleAction):
+class CarStory(GuidanceAction):
     """Scripted trip actions over one or more Car context tools."""
 
     @Mcp

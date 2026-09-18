@@ -119,9 +119,9 @@ with description("Stories"):
         with it("should tell the agent to use Scaffold under story_map for names only"):
             prose = _expanded(Stories(fidelity="story_map"), "instructions")
             expect("names only" in prose).to(be_true)
-            expect("When scaffolding only" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
-            expect("Stop reading this skill when scaffolding" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
-            expect("### Scaffold" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
+            expect("When scaffolding only" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
+            expect("Stop reading this skill when scaffolding" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
+            expect("#### Scaffold" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
 
         with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
             prose = _expanded(Stories(), "instructions")
@@ -218,22 +218,22 @@ with description("Stories"):
     with context("whose contexts slot is expanded at story_map"):
         with before.each:
             self.stories = Stories(fidelity="story_map")
-            self.contexts = self.stories.contexts().expand()
+            self.contexts = self.stories.scoped_markdown()
 
         with it("should return non-empty prose"):
             expect(len(self.contexts) > 0).to(be_true)
 
         with it("should include Shared rules and the story_map heading"):
             expect("## Shared rules" in self.contexts).to(be_true)
-            expect("## story_map" in self.contexts).to(be_true)
-            expect("### Scaffold" in self.contexts).to(be_true)
+            expect("### story_map" in self.contexts).to(be_true)
+            expect("#### Scaffold" in self.contexts).to(be_true)
 
         with it("should include the verb-noun-format rule slug"):
             expect("verb-noun-format" in self.contexts).to(be_true)
 
         with it("should omit other fidelity headings"):
-            expect("## scenarios" in self.contexts).to(equal(False))
-            expect("## acceptance_tests" in self.contexts).to(equal(False))
+            expect("### scenarios" in self.contexts).to(equal(False))
+            expect("### acceptance_tests" in self.contexts).to(equal(False))
 
         with it("should omit scenario-only rule slugs"):
             expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(equal(False))
@@ -242,7 +242,7 @@ with description("Stories"):
     with context("whose contexts slot is expanded at scenarios"):
         with before.each:
             self.stories = Stories(fidelity="scenarios")
-            self.contexts = self.stories.contexts().expand()
+            self.contexts = self.stories.scoped_markdown()
 
         with it("should include the gwt-steps-trace-to-domain-operations rule slug"):
             expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(be_true)
@@ -272,12 +272,12 @@ with description("Stories"):
             expect("infrastructure-in-lifecycle-hooks" in self.contexts).to(equal(False))
 
         with it("should omit the story_map heading"):
-            expect("## story_map" in self.contexts).to(equal(False))
+            expect("### story_map" in self.contexts).to(equal(False))
 
     with context("whose contexts slot is expanded at acceptance_tests"):
         with before.each:
             self.stories = Stories(fidelity="acceptance_tests")
-            self.contexts = self.stories.contexts().expand()
+            self.contexts = self.stories.scoped_markdown()
 
         with it("should reference scenarios rules via deployed skill notation"):
             expect("@stories" in self.contexts).to(be_true)
@@ -293,7 +293,7 @@ with description("Stories"):
             expect("same rule as **scenarios**" in self.contexts).to(equal(False))
 
         with it("should omit the scenarios heading"):
-            expect("## scenarios" in self.contexts).to(equal(False))
+            expect("### scenarios" in self.contexts).to(equal(False))
 
     with context("whose examples slot is expanded at markdown"):
         with it("should omit python example files"):

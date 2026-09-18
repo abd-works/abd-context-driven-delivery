@@ -62,7 +62,7 @@ def _load_action_prose(action: str, kit_dir: Path | None = None) -> str:
 
 
 def _load_contexts_section(module_dir: Path) -> str:
-    return Markdown.from_label(_load_clean_engineering(), "contexts").extract()
+    return Markdown.from_label(_load_clean_engineering(), "overview").extract()
 
 
 def _load_examples(module_dir: Path) -> str:
@@ -119,7 +119,7 @@ def _assert_contexts_inlined(instructions: str, concepts_text: str) -> None:
     for slug in slugs:
         expect(slug in instructions).to(be_true)
     # Prefer full-section inline; fall back to slug/bullet coverage when validate
-    # composes a shorter rubric than the full # Contexts body.
+    # composes a shorter rubric than the full Overview body.
     if concepts_text not in instructions:
         for bullet in bullets:
             expect(bullet in instructions).to(be_true)
@@ -129,7 +129,7 @@ with description("CleanEngineering action expansion"):
     with context("a CleanEngineering generator constructed with format python"):
         with before.all:
             self.clean_engineering = _load_clean_engineering(format_name="python")
-            self.contexts = self.clean_engineering.contexts().expand()
+            self.contexts = self.clean_engineering.scoped_markdown()
             self.examples = self.clean_engineering.examples().expand()
             self.template = self.clean_engineering.templates().expand()
 
@@ -190,16 +190,16 @@ with description("CleanEngineering action expansion"):
             self.host = _load_clean_engineering(
                 format_name="markdown", fidelity="model"
             )
-            self.contexts = self.host.contexts().expand()
+            self.contexts = self.host.scoped_markdown()
             self.examples = self.host.examples().expand()
 
         with it("should keep Language and model contexts only"):
             expect("## Shared rules" in self.contexts).to(be_true)
             expect("honor-every-rule-in-the-artifact" in self.contexts).to(be_true)
             expect("## Language" in self.contexts).to(be_true)
-            expect("## model" in self.contexts).to(be_true)
-            expect("\n## modules\n" in self.contexts).to(equal(False))
-            expect("\n## code\n" in self.contexts).to(equal(False))
+            expect("### model" in self.contexts).to(be_true)
+            expect("\n### modules\n" in self.contexts).to(equal(False))
+            expect("\n### code\n" in self.contexts).to(equal(False))
 
         with it("should inline shopping-cart markdown examples and omit evals"):
             expect("ShoppingCart" in self.examples).to(be_true)
