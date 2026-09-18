@@ -2,33 +2,35 @@
 
 from __future__ import annotations
 
-from lifecycle import LifecycleAction
+from lifecycle import GuidanceArg, LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from workspace import SessionLog
 
 @agent_toolset
 class Document(LifecycleAction):
     """Document existing state for provided context tools."""
 
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
-    def document(self, tools: list, paths: list[str]) -> str:
-        """Record what already exists for the listed context tools without correcting it. Scan the given paths, read contexts and templates, and write the observed state under the session path so violations are flagged, not fixed."""
-        self.begin(tools, action="document")
-        for tool in self.listed():
-            tool.contexts
-            tool.templates
-            tool.scanner.scan(paths)
-            tool.generate_output()
+    def document(self, guidance: GuidanceArg, paths: list[str]) -> str:
+        """Record what already exists for the listed Guidance hosts without correcting it. Scan the given paths, read contexts and templates, and write the observed state under the session path so violations are flagged, not fixed. Pass a string to document that text once."""
+        def on(item) -> None:
+            if isinstance(item, str):
+                return
+            item.contexts
+            item.templates
+            item.scanner.scan(paths)
+            item.generate_output()
             SessionLog.instance().append(
-                toolset=tool.registration_name,
+                toolset=item.registration_name,
                 name="document",
                 summary="document",
                 ok=True,
                 role="run",
             )
-        self.end()
+
+        self.run(guidance, on, action="document")
         return "Document existing state under {session.path}/ - violations flagged, none corrected."

@@ -57,3 +57,20 @@ with description("LifecycleAction"):
         expect(session.name).to(equal("default"))
         expect(session.folder).to(equal(tmp / ".context" / "sessions" / "default"))
         expect(warning).to(equal(""))
+
+    with it("should run the passed operation once when guidance is a string"):
+        from lifecycle import LifecycleAction
+
+        kit = LifecycleAction(path=str(Path(tempfile.mkdtemp(prefix="lifecycle-run-"))))
+        seen: list = []
+        kit.run("just this text", seen.append, action="generate")
+        expect(seen).to(equal(["just this text"]))
+
+    with it("should run the passed operation on each host when guidance is a list"):
+        from lifecycle import LifecycleAction
+
+        kit = LifecycleAction(path=str(Path(tempfile.mkdtemp(prefix="lifecycle-run-"))))
+        first, second = object(), object()
+        seen: list = []
+        kit.run([first, second], seen.append, action="generate")
+        expect(seen).to(equal([first, second]))

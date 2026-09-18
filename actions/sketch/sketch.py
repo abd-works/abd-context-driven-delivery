@@ -8,11 +8,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from grill_context.grill_context import GrillContext
-from lifecycle import LifecycleAction
+from lifecycle import GuidanceArg, LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from workspace import docs_dir
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
@@ -43,7 +43,7 @@ class Sketch(LifecycleAction):
 
         return Generate()
 
-    @mcp
+    @Mcp
     @agent_tool
     def find_template(self, agent_dir: str = "") -> str:
         """Locate a sketch template using tiered discovery.
@@ -60,7 +60,7 @@ class Sketch(LifecycleAction):
                         return path.read_text(encoding="utf-8")
         return _DEFAULT_TEMPLATE.read_text(encoding="utf-8")
 
-    @mcp
+    @Mcp
     @agent_tool
     def save_sketch(
         self,
@@ -79,7 +79,7 @@ class Sketch(LifecycleAction):
         target.write_text(content, encoding="utf-8")
         return str(target)
 
-    @mcp
+    @Mcp
     @agent_tool
     def list_sketches(self, destination: str, slug: str = "") -> str:
         """List sketch files under the destination docs dir.
@@ -91,7 +91,7 @@ class Sketch(LifecycleAction):
         pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"
         return "\n".join(str(path) for path in sorted(context_dir.glob(pattern)))
 
-    @mcp
+    @Mcp
     @agent_tool
     def review_sketch(self) -> str:
         """Hard gate after every save_sketch — pause for human review before any next grill question.
@@ -104,17 +104,16 @@ class Sketch(LifecycleAction):
         Grill must validate the sketch's thinking here — not run as a disconnected interview."""
         return "sketch-review"
 
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
-    def sketch(self, tools: list) -> str:
-        """Grill the plan with grill: ask short framed questions and wait for answers. After each small batch of answers, sketch only what those answers unlocked, save it, and get user feedback before asking more. Work in short cycles until the sketch is agreed. Then generate the formal artifact from that sketch — do not generate the full product during the sketch loop."""
-        self.begin(tools, action="sketch")
+    def sketch(self, guidance: GuidanceArg) -> str:
+        """Grill the plan with grill: ask short framed questions and wait for answers. After each small batch of answers, sketch only what those answers unlocked, save it, and get user feedback before asking more. Work in short cycles until the sketch is agreed. Then generate the formal artifact from that sketch — do not generate the full product during the sketch loop. Pass a string to sketch that text once."""
+        self.begin(guidance, action="sketch")
         self._grill_context().grill_with_context()
         self.find_template()
         self.save_sketch()
         self.review_sketch()
-        for host in self.listed():
-            self._generate().generate(tools=[host])
+        self.each(lambda item: self._generate().generate(item if isinstance(item, str) else [item]))
         self.end()
         return "Sketch complete; generate instructions applied."

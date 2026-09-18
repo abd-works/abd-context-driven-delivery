@@ -142,7 +142,7 @@ with description("Scan"):
                 def end(self):
                     return ""
 
-            result = _Kit().scan(paths=[str(self.fixture)], tools=[self.host])
+            result = _Kit().scan(paths=[str(self.fixture)], guidance=[self.host])
             expect(result).to(contain("flag-every-file"))
 
 

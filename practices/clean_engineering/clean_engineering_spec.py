@@ -162,7 +162,7 @@ with description("CleanEngineering action expansion"):
                 self.response = _expand_action(
                     Validate(),
                     "validate",
-                    arguments={"tools": [self.clean_engineering]},
+                    arguments={"guidance": [self.clean_engineering]},
                 )
 
             with it("should inline validate.md from the validate kit"):
@@ -176,7 +176,7 @@ with description("CleanEngineering action expansion"):
                 self.response = _expand_action(
                     Satisfy(),
                     "satisfy",
-                    arguments={"tools": [self.clean_engineering]},
+                    arguments={"guidance": [self.clean_engineering]},
                 )
 
             with it("should inline satisfy.md from the satisfy kit"):

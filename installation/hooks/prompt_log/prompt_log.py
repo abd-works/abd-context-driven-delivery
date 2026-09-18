@@ -23,7 +23,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from agent_tools import agent_toolset
-from installation.hooks.hooks import hook
+from installation.hooks.hooks import Hook
 _PREVIEW_LINES = 8
 _PREVIEW_CHARS = 600
 
@@ -182,25 +182,25 @@ def format_after_agent_response(data: dict) -> str:
 
 @agent_toolset
 class PromptLog:
-    """Audit what Cursor sends the model — one ``@hook`` per event."""
+    """Audit what Cursor sends the model — one ``@Hook`` per event."""
 
-    @hook("beforeSubmitPrompt")
+    @Hook("beforeSubmitPrompt")
     def before_submit_prompt(self, payload: dict) -> dict:
         return handle(payload)
 
-    @hook("beforeReadFile")
+    @Hook("beforeReadFile")
     def before_read_file(self, payload: dict) -> dict:
         return handle(payload)
 
-    @hook("preToolUse")
+    @Hook("preToolUse")
     def pre_tool_use(self, payload: dict) -> dict:
         return handle(payload)
 
-    @hook("subagentStart")
+    @Hook("subagentStart")
     def subagent_start(self, payload: dict) -> dict:
         return handle(payload)
 
-    @hook("afterAgentResponse")
+    @Hook("afterAgentResponse")
     def after_agent_response(self, payload: dict) -> dict:
         return handle(payload)
 

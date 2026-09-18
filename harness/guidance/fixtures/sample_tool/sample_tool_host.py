@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from harness.guidance.guidance import Guidance, PracticeGuidance
 from harness.agent_tools.agent_tools import agent_instructions
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from harness.markdown import HTML, Markdown, markdown
 
 
@@ -29,8 +29,8 @@ class SampleGuidance(Guidance):
 
 class SampleMcpGuidance(SampleGuidance):
     @property
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """context"""
@@ -51,8 +51,8 @@ class SamplePracticeWithFidelities(SamplePracticeGuidance):
 
 class SampleMcpPractice(SamplePracticeWithFidelities):
     @property
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """context"""

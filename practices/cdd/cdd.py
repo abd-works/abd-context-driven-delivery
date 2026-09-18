@@ -6,8 +6,8 @@ from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
@@ -85,8 +85,8 @@ class Cdd(PracticeGuidance):
     # Kits own generate / validate / satisfy / document / grill / sketch / iterate.
 
     @property
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """Provide guidance for orchestrating CDD stages across stories, ddd, ux, clean_engineering, and bdd.

@@ -111,7 +111,7 @@ with description("a ChronicleWithOutput domain"):
                 Generate(),
                 "generate",
                 toolset_path=_GENERATE_TOOLSET,
-                arguments={"tools": [self.chronicle]},
+                arguments={"guidance": [self.chronicle]},
             )
 
         with it("should name add_epic on the generate tools list"):

@@ -35,7 +35,7 @@ with description("a partition action"):
                     toolset=_PARTITION,
                     action="partition",
                     arguments={
-                        "tools": [_BDD],
+                        "guidance": [_BDD],
                         "context": _CONTEXT,
                         "mode": "one_go",
                     },

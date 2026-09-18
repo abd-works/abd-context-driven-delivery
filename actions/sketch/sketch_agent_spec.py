@@ -35,7 +35,7 @@ with description("a sketch action"):
                 response = run_toolset(
                     toolset=_SKETCHER,
                     action="sketch",
-                    arguments={"tools": [_BDD]},
+                    arguments={"guidance": [_BDD]},
                     timeout_seconds=300,
                 )
                 expect_ok_action(response, "sketch")
@@ -62,7 +62,7 @@ with description("a sketch action"):
                 response = run_toolset(
                     toolset=_SKETCHER,
                     action="sketch",
-                    arguments={"tools": [_BDD]},
+                    arguments={"guidance": [_BDD]},
                     timeout_seconds=300,
                 )
                 expect_ok_action(response, "sketch")

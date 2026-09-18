@@ -515,7 +515,7 @@ def _same_instance_action_calls(body: list[ast.stmt], action_names: set[str]) ->
     return calls
 
 def _host_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
-    """``host.<method>()`` or ``Generate().generate(tools=[host])`` kit dispatch."""
+    """``host.<method>()`` or ``Generate().generate(guidance=[host])`` kit dispatch."""
     calls: list[str] = []
     for stmt in body:
         for node in ast.walk(stmt):
@@ -577,7 +577,7 @@ _LIFECYCLE_KIT_IMPORTS: tuple[tuple[str, str, str], ...] = (
     ("validate", "practices.actions.validate.validate", "Validate"),
     ("satisfy", "practices.actions.satisfy.satisfy", "Satisfy"),
     ("repair", "practices.actions.improvement.improvement", "Improvement"),
-    ("createRule", "practices.actions.validate.validate", "CreateRule"),
+    ("createRule", "practices.actions.validate.validate", "Validate"),
 )
 
 def resolve_lifecycle_action_owner() -> object:
@@ -752,7 +752,7 @@ def build_run_request(
 
     Context tools do not own generate / validate / satisfy / document — those
     live on the kits. A request for one of those actions on a context tool
-    is rewritten to the kit with ``arguments.tools`` carrying the host.
+    is rewritten to the kit with ``arguments.guidance`` carrying the host.
     """
     if action in _HOST_LIFECYCLE_KITS and getattr(cls, "_is_context", False):
         signature = cls.manifest.signature
@@ -767,7 +767,7 @@ def build_run_request(
             "toolset": _HOST_LIFECYCLE_KITS[action],
             "action": action,
             "arguments": {
-                "tools": [
+                "guidance": [
                     {"toolset": f"{cls.__module__}:{cls.__name__}", "context": host_context},
                 ]
             },

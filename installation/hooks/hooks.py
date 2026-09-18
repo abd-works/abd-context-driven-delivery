@@ -6,10 +6,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-from installation.installer import Destination, Installation
+from installation.destination import Destination, Installation
 
 
-class hooks:
+class Hooks:
     """Class annotation: disable every hook operation on the toolset."""
 
     def __new__(cls, target: Any = None, *, disabled: bool = False):
@@ -27,7 +27,7 @@ class hooks:
         return cls
 
 
-class hook(Destination):
+class Hook(Destination):
     flag = "_hook"
     EVENTS = frozenset(
         {
@@ -52,7 +52,7 @@ class hook(Destination):
             fn = None
         if not event:
             raise ValueError(
-                'hook requires a Cursor event: @hook("sessionStart") or @hook(event="sessionStart")'
+                'Hook requires a Cursor event: @Hook("sessionStart") or @Hook(event="sessionStart")'
             )
         if event not in cls.EVENTS:
             raise ValueError(
@@ -82,8 +82,9 @@ class HookInstallation(Installation):
         path: Path | str,
         *,
         python: str = ".venv/Scripts/python.exe",
+        repo: Path | str | None = None,
     ) -> None:
-        super().__init__(ide, path)
+        super().__init__(ide, path, repo=repo)
         self.python = python
         self._handlers: list[dict[str, str]] = []
 

@@ -4,17 +4,17 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from lifecycle import LifecycleAction
+from lifecycle import GuidanceArg, LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
 from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from workspace import SessionLog
 
 @agent_toolset
 class Improvement(LifecycleAction):
-    """Slash ``/repair`` runs this kit with ``arguments.tools``; not composed on the host."""
+    """Slash ``/repair`` runs this kit with ``arguments.guidance``; not composed on the host."""
 
     @property
     def module_dir(self) -> Path:
@@ -25,22 +25,24 @@ class Improvement(LifecycleAction):
     def repair_loop(self) -> str:
         """Deep root-cause recipe — why the toolset's expected behavior failed."""
 
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
-    def repair(self, tools: list, asset: str, violation: str) -> str:
-        """Open a domain repair on each passed context tool and instruct the fix."""
+    def repair(self, guidance: GuidanceArg, asset: str, violation: str) -> str:
+        """Open a domain repair on each passed Guidance host and instruct the fix. Pass a string to repair that text once."""
         self.repair_loop
-        self.begin(tools, action="repair")
-        for host in self.listed():
+
+        def on(item) -> None:
+            if isinstance(item, str):
+                return
             current = self._session()
             if current is None:
                 raise ValueError("No current work session — open failed")
             repair = current.repairs.for_violation(asset, violation)
-            repair.open(host, asset, violation)
-            host.contexts
-            host.examples
-            host.templates
+            repair.open(item, asset, violation)
+            item.contexts
+            item.examples
+            item.templates
             SessionLog.instance().append(
                 toolset=self.registration_name,
                 name="repair",
@@ -48,7 +50,8 @@ class Improvement(LifecycleAction):
                 ok=True,
                 role="run",
             )
-        self.end()
+
+        self.run(guidance, on, action="repair")
         return (
             "Diagnose why the toolset's expected behavior failed for {{asset}} "
             "(run diagnose.diagnose:Diagnose). State the proposed kit change "
@@ -56,14 +59,17 @@ class Improvement(LifecycleAction):
             "at the seam. See repair.md."
         )
 
-    @mcp
+    @Mcp
+    @Skill
     @agent_tool
-    def verify_fix(self, tools: list, theme: str) -> str:
-        """Re-run the regression check for a themed repair bucket on each listed context tool. Open the work session first."""
-        lines: list[str] = []
-        for host in self.listed():
+    def verify_fix(self, guidance: GuidanceArg, theme: str) -> str:
+        """Re-run the regression check for a themed repair bucket on each listed Guidance host. Open the work session first. Pass a string to verify that text once."""
+        def on(item) -> str:
             current = self.workspace.current_work_session
             if current is None:
                 raise ValueError("No current work session — open first")
-            lines.append(current.repairs[theme].verify_fix())
+            return current.repairs[theme].verify_fix()
+
+        self._bind_guidance(guidance)
+        lines = [line for line in self.each(on) if line]
         return "\n".join(lines) if lines else f"verify_fix theme={theme}"

@@ -7,8 +7,8 @@ from typing import Any
 
 from actions.scan.rule import RulesCollection
 from harness.agent_tools.agent_tools import ToolSetCollection, agent_instructions, tools
-from installation.harness_files.harness_files import rules, skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Rules, Skill
+from installation.mcp.mcp_server import Mcp
 from harness.markdown import Markdown, canonical_format, class_file_directory, fidelity_blocks, markdown
 
 
@@ -54,7 +54,7 @@ class Guidance:
         """Guidance section body."""
 
     @property
-    @rules
+    @Rules
     def rules_markdown(self) -> str:
         return Markdown.from_label(self, "shared rules").extract().strip()
 
@@ -82,7 +82,7 @@ class Guidance:
         return ""
 
     @property
-    @skill
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """context"""
@@ -190,8 +190,8 @@ class PracticeGuidance(Guidance):
         """Examples folder content — not part of instructions."""
 
     @property
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """context"""
@@ -277,7 +277,7 @@ class FidelityGuidance(Guidance):
         """Fidelity guidance section."""
 
     @property
-    @rules
+    @Rules
     def rules_markdown(self) -> str:
         return Markdown.from_label(self, "rules").extract().strip()
 
@@ -286,7 +286,7 @@ class FidelityGuidance(Guidance):
         """Fidelity rules section."""
 
     @property
-    @skill
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """context"""

@@ -1,5 +1,6 @@
 """Installer BDD — annotations, install tree, MCP, hooks, and deploy fixtures."""
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -28,8 +29,8 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SamplePracticeWithFidelities,
 )
-from installation import Installer
-from installation.hooks.hooks import hook
+from installation.installer import Installer
+from installation.hooks.hooks import Hook
 from installation.mcp.mcp_server import McpServer
 from agent_bdd.spec_helpers import repo_root_from
 from harness.agent_tools.agent_tools import AgentToolSet
@@ -45,7 +46,7 @@ CAR_INSPECT = ".cursor/skills/actions/car-inspect/SKILL.md"
 def stage_invoke_commands(repo_root: Path) -> None:
     car = AgentToolSet.instantiate(CAR)
     car.load_fidelities_from_markdown()
-    car_story = AgentToolSet.instantiate("car_story.car_story:CarStory")
+    car_story = AgentToolSet.instantiate("actions.examples.car_story.car_story:CarStory")
     Installer("Cursor", path=repo_root / ".cursor").install([car, car_story])
 
 
@@ -53,9 +54,9 @@ with description("an operation annotated as a Cursor hook"):
 
     with context("that names a documented Cursor event"):
         with it("should store that event on the member"):
-            for event in sorted(hook.EVENTS):
+            for event in sorted(Hook.EVENTS):
 
-                @hook(event)
+                @Hook(event)
                 def handler(self, payload: dict) -> dict:
                     return {}
 
@@ -65,7 +66,7 @@ with description("an operation annotated as a Cursor hook"):
     with context("that names an unknown event"):
         with it("should raise ValueError"):
             def bad_decoration():
-                @hook("notAnEvent")
+                @Hook("notAnEvent")
                 def handler(self, payload: dict) -> dict:
                     return {}
 
@@ -74,7 +75,7 @@ with description("an operation annotated as a Cursor hook"):
     with context("that omits the event"):
         with it("should raise ValueError"):
             def bare_hook():
-                @hook
+                @Hook
                 def handler(self, payload: dict) -> dict:
                     return {}
 
@@ -377,6 +378,7 @@ with description("an MCP manifest file") as self:
             expect(text).to(contain("python"))
             expect(text).to(contain("--toolsets"))
             expect(text).to(contain("SampleMcpOps"))
+            expect(text).to(contain("PYTHONPATH"))
 
     with context("that has been written by a deploy with no mcp-published members"):
         with before.each:
@@ -544,3 +546,66 @@ with description("the installer toolset installing itself") as self:
     with it("should record install as an MCP operation"):
         names = [op.mcp_name for op in self.mcp.mcp_operations]
         expect(names).to(contain("installer.install"))
+
+
+with description("the installer import path") as self:
+    with before.each:
+        self.repo = Path(__file__).resolve().parents[1]
+        Installer.ensure_import_path(self.repo)
+
+    with it("should put catalog folders on sys.path so short catalog imports resolve"):
+        import agent_tools
+        import lifecycle
+
+        expect("agent_toolset" in dir(agent_tools)).to(equal(True))
+        expect(lifecycle.LifecycleAction.__name__).to(equal("LifecycleAction"))
+        expect(Installer.pythonpath(self.repo)).to(contain("actions"))
+        expect(Installer.pythonpath(self.repo)).not_to(contain(str(self.repo / "installation") + os.sep))
+
+    with it("should not collect toolsets under examples folders"):
+        refs = Installer(ide="Cursor", path=self.repo / ".cursor", repo=self.repo).collect_toolsets()
+        expect(any("examples" in ref.replace("\\", "/") for ref in refs)).to(equal(False))
+        expect(any("car_story" in ref for ref in refs)).to(equal(False))
+
+
+def _skill_tool(name: str):
+    def _fn(self):
+        return None
+
+    _fn._skill = True
+    return type("Tool", (), {"name": name, "deploy_name": name, "install_to_skill": True, "callable": _fn})()
+
+
+with description("markdown skill paths for a kit with several skill operations"):
+    with it("should write each skill as a peer folder named for the operation"):
+        from installation.harness_files.harness_files import MarkdownInstallation
+
+        writer = MarkdownInstallation("Cursor", Path("."), "skill")
+        tools = {"validate": _skill_tool("validate"), "createRule": _skill_tool("createRule")}
+        toolset = type("Kit", (), {"install_folder": Path("actions/validate"), "tools": tools})()
+        expect(
+            writer.relative_path("skill", toolset, tools["validate"].callable, "validate").as_posix()
+        ).to(equal("skills/actions/validate/validate/SKILL.md"))
+        expect(
+            writer.relative_path("skill", toolset, tools["createRule"].callable, "createRule").as_posix()
+        ).to(equal("skills/actions/validate/create-rule/SKILL.md"))
+
+    with it("should keep a single matching operation at the kit folder"):
+        from installation.harness_files.harness_files import MarkdownInstallation
+
+        writer = MarkdownInstallation("Cursor", Path("."), "skill")
+        tools = {"generate": _skill_tool("generate")}
+        toolset = type("Kit", (), {"install_folder": Path("actions/generate"), "tools": tools})()
+        expect(
+            writer.relative_path("skill", toolset, tools["generate"].callable, "generate").as_posix()
+        ).to(equal("skills/actions/generate/SKILL.md"))
+
+    with it("should name a single unmatched operation for the operation not the kit folder"):
+        from installation.harness_files.harness_files import MarkdownInstallation
+
+        writer = MarkdownInstallation("Cursor", Path("."), "skill")
+        tools = {"grill": _skill_tool("grill")}
+        toolset = type("Kit", (), {"install_folder": Path("actions/grill_context"), "tools": tools})()
+        expect(
+            writer.relative_path("skill", toolset, tools["grill"].callable, "grill").as_posix()
+        ).to(equal("skills/actions/grill_context/grill/SKILL.md"))

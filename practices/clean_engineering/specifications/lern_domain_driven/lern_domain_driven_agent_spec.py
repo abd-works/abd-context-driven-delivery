@@ -37,7 +37,7 @@ with description("a LernDomainDriven generator"):
                 response = run_toolset(
                     toolset="generate.generate:Generate",
                     action="generate",
-                    arguments={"tools": [_TOOLSET]},
+                    arguments={"guidance": [_TOOLSET]},
                     context={},
                     timeout_seconds=180,
                 )

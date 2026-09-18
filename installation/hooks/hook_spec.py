@@ -1,4 +1,4 @@
-"""BDD specs for installer @hook dispatch."""
+"""BDD specs for installer @Hook dispatch."""
 import sys
 import tempfile
 from pathlib import Path
@@ -19,19 +19,19 @@ from agent_tools import agent_toolset
 
 from harness.agent_tools.agent_tools import agent_tool
 from installation.hooks.hook_server import CursorEvent, HandlerCatalog, HookPayload, HookServer
-from installation.hooks.hooks import hook, hooks
+from installation.hooks.hooks import Hook, Hooks
 
 
 def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
     return HookServer(_REPO_ROOT, toolsets).dispatch(HookPayload(payload)).as_dict()
 
 
-@hooks(disabled=True)
+@Hooks(disabled=True)
 @agent_toolset
 class _DisabledFixture:
     calls: list[str] = []
 
-    @hook("afterAgentResponse")
+    @Hook("afterAgentResponse")
     def on_after(self, payload: dict) -> dict:
         type(self).calls.append("after")
         return {"agent_message": "ran"}
@@ -41,7 +41,7 @@ class _DisabledFixture:
 class _DispatchFixture:
     calls: list[str] = []
 
-    @hook("afterAgentResponse")
+    @Hook("afterAgentResponse")
     def on_after(self, payload: dict) -> dict:
         type(self).calls.append("after")
         return {"agent_message": "ran"}
@@ -51,7 +51,7 @@ class _DispatchFixture:
 class _StopFixture:
     calls: list[str] = []
 
-    @hook("stop")
+    @Hook("stop")
     def on_stop(self, payload: dict) -> dict:
         type(self).calls.append("stop")
         return {"followup_message": "/turn"}
@@ -59,7 +59,7 @@ class _StopFixture:
 
 @agent_toolset
 class _HookToolset:
-    @hook("stop")
+    @Hook("stop")
     def on_stop(self, payload: dict) -> dict:
         return {}
 
@@ -116,7 +116,7 @@ with description("hook dispatch"):
         with it("should keep user_message separate from agent_message"):
             @agent_toolset
             class _MessageFixture:
-                @hook("beforeSubmitPrompt")
+                @Hook("beforeSubmitPrompt")
                 def on_before(self, payload: dict) -> dict:
                     return {
                         "user_message": "for user",
@@ -135,7 +135,7 @@ with description("hook dispatch"):
         with it("should put that description on the hook event as agent_message"):
             @agent_toolset
             class _DescribedFixture:
-                @hook("preToolUse")
+                @Hook("preToolUse")
                 def on_pre_tool(self, payload: dict) -> dict:
                     """Honor the hook operation description."""
                     return {"permission": "allow"}

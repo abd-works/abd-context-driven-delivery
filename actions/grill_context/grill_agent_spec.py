@@ -34,7 +34,7 @@ with description("a grill action"):
                 response = run_toolset(
                     toolset=_GRILL_CONTEXT,
                     action="grill",
-                    arguments={"tools": [_BDD]},
+                    arguments={"guidance": [_BDD]},
                     timeout_seconds=300,
                 )
                 expect_ok_action(response, "grill")
@@ -61,7 +61,7 @@ with description("a grill action"):
                 response = run_toolset(
                     toolset=_GRILL_CONTEXT,
                     action="grill",
-                    arguments={"tools": [_BDD]},
+                    arguments={"guidance": [_BDD]},
                     timeout_seconds=300,
                 )
                 expect_ok_action(response, "grill")

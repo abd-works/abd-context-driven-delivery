@@ -27,7 +27,7 @@ Non-action tooling stays under `tools/` (`diagnose`, …). Scan moved here from
 | --- | --- | --- |
 | `/generate` | `generate.generate:Generate` | `generate(tools)` |
 | `/validate` | `validate.validate:Validate` | `validate(tools)` |
-| `/createRule` | `validate.validate:CreateRule` | `createRule(tools, failed, wanted)` |
+| `/createRule` | `validate.validate:Validate` | `createRule(tools, failed, wanted)` |
 | `/document` | `document.document:Document` | `document(tools, paths)` |
 | `/satisfy` | `satisfy.satisfy:Satisfy` | `satisfy(tools)` |
 | `/render` | `render.render:Render` | `render(tools, format, content)` |

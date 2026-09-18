@@ -66,19 +66,19 @@ def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
             "context": dict(CAR_CTX),
         },
         TRAVEL_TO.replace("\\", "/"): {
-            "toolset": "car_story.car_story:CarStory",
+            "toolset": "actions.examples.car_story.car_story:CarStory",
             "action": "travelTo",
             "arguments": {
-                "tools": [car_tool_argument()],
+                "guidance": [car_tool_argument()],
                 "destination": "town",
                 "conditions": "dry",
             },
         },
         CAR_INSPECT.replace("\\", "/"): {
-            "toolset": "car_story.car_story:CarStory",
+            "toolset": "actions.examples.car_story.car_story:CarStory",
             "action": "inspect_trip",
             "arguments": {
-                "tools": [car_tool_argument()],
+                "guidance": [car_tool_argument()],
                 "plan": "Night run to Atlanta.",
             },
         },
@@ -94,7 +94,7 @@ def stage_invoke_commands(repo_root: Path) -> None:
 
     car = AgentToolSet.instantiate(CAR)
     car.load_fidelities_from_markdown()
-    car_story = AgentToolSet.instantiate("car_story.car_story:CarStory")
+    car_story = AgentToolSet.instantiate("actions.examples.car_story.car_story:CarStory")
     Installer("Cursor", path=repo_root / ".cursor").install([car, car_story])
 
 

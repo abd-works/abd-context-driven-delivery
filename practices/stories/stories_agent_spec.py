@@ -28,7 +28,7 @@ with description("a Stories generator"):
                 response = run_toolset(
                     toolset="generate.generate:Generate",
                     action="generate",
-                    arguments={"tools": [_TOOLSET]},
+                    arguments={"guidance": [_TOOLSET]},
                     context={"fidelity": "discovery", "format": "markdown"},
                     timeout_seconds=180,
                 )

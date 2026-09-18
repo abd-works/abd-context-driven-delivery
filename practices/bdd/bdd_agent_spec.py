@@ -28,7 +28,7 @@ with description("a Bdd generator"):
                 response = run_toolset(
                     toolset="generate.generate:Generate",
                     action="generate",
-                    arguments={"tools": [_TOOLSET]},
+                    arguments={"guidance": [_TOOLSET]},
                     context={"fidelity": "behavior", "format": "python"},
                     timeout_seconds=300,
                 )

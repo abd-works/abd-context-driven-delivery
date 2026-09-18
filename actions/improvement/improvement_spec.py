@@ -44,7 +44,7 @@ with description("Improvement repair recipe"):
             self.response = self.kit.instructions["repair"].expand(
                 {},
                 {
-                    "tools": [],
+                    "guidance": [],
                     "asset": "practices/base/base_context_tool.md",
                     "violation": "generate swallowed a whole model in one turn",
                 },

@@ -9,8 +9,8 @@ from practices.stages import DISCOVERY, ENGINEER, SHAPING, SPEC, resolve_stage_f
 from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
@@ -164,8 +164,8 @@ class Ddd(PracticeGuidance):
         return current.path
 
     @property
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """Provide guidance for creating bounded contexts, building blocks, and tactics.

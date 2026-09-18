@@ -102,7 +102,7 @@ with description("sketch after the refactor (#32)"):
             response = run_skill(
                 _SKETCH_CMD,
                 repo_root=_REPO,
-                arguments={"tools": [_CE, _STORIES]},
+                arguments={"guidance": [_CE, _STORIES]},
                 timeout_seconds=300,
                 require_agent_shell=True,
             )

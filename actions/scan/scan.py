@@ -6,11 +6,11 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from lifecycle import LifecycleAction
+from lifecycle import GuidanceArg, LifecycleAction
 from harness.agent_tools.agent_tools import AgentToolSet, agent_toolset
 from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 
 from .scanner import Scanner
 from .scanner_collection import ScannerCollection, ScannerReport
@@ -63,6 +63,8 @@ class Scan(LifecycleAction):
         inst._bound_collection = collection
         inst.workspace = getattr(host, "workspace", None)
         inst._session_name = ""
+        inst._guidance_text = None
+        inst._tool_items = []
         return inst
 
     def _scanner_collection(self) -> ScannerCollection:
@@ -93,24 +95,26 @@ class Scan(LifecycleAction):
             result["ok"] = len(result["violations"]) == 0
         return str(result)
 
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_tool
     def scan(
         self,
         paths: list[str],
         root: str | None = None,
         rule: str | None = None,
-        tools: list | None = None,
+        guidance: GuidanceArg | None = None,
     ) -> str:
-        """Run the listed context tools' mechanical scanners on the given paths and report potential violations. Fix the source that failed the rule; do not patch the scanner to make the report green."""
-        if tools:
-            self.begin(tools, action="scan")
-            last = ""
-            for host in self.listed():
-                last = Scan.bound_to(host)._run(
-                    host._scanner_collection(), paths, root, rule
-                )
-            self.end()
-            return last
-        return self._run(self._scanner_collection(), paths, root, rule)
+        """Run the listed Guidance hosts' mechanical scanners on the given paths and report potential violations. Fix the source that failed the rule; do not patch the scanner to make the report green. Pass a string to scan once with the bound collection."""
+        if guidance is None:
+            return self._run(self._scanner_collection(), paths, root, rule)
+
+        def on(item) -> str:
+            if isinstance(item, str):
+                return self._run(self._scanner_collection(), paths, root, rule)
+            return Scan.bound_to(item)._run(
+                item._scanner_collection(), paths, root, rule
+            )
+
+        results = self.run(guidance, on, action="scan")
+        return results[-1] if results else ""

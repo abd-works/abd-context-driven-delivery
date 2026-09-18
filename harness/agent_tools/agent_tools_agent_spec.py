@@ -47,7 +47,7 @@ with description("a class"):
                         TRAVEL_TO,
                         repo_root=_REPO_ROOT,
                         arguments={
-                            "tools": [car_tool_argument()],
+                            "guidance": [car_tool_argument()],
                             "destination": "Hazzard County courthouse",
                             "conditions": "muddy back roads, Sheriff Rosco in pursuit",
                         },

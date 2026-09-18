@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 
 if TYPE_CHECKING:
     from practices.stories.stories import Stories
@@ -60,8 +60,8 @@ class LernDomainDriven(PracticeGuidance):
         return instance
 
     @property
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """1. Follow session_guidance (handled by the inherited body below). Fill

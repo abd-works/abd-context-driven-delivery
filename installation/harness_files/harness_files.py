@@ -5,10 +5,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-from installation.installer import Destination, Installation
+from installation.destination import Destination, Installation
 
 
-class skill(Destination):
+class Skill(Destination):
     flag = "_skill"
 
     def __new__(cls, fn: Any = None, name: str | None = None):
@@ -22,7 +22,7 @@ class skill(Destination):
         return inst
 
 
-class command(Destination):
+class Command(Destination):
     flag = "_command"
 
     def __new__(cls, fn: Any = None, name: str | None = None):
@@ -36,7 +36,7 @@ class command(Destination):
         return inst
 
 
-class rules(Destination):
+class Rules(Destination):
     flag = "_rules"
 
     def __new__(cls, fn: Any = None):
@@ -47,7 +47,7 @@ class rules(Destination):
         return inst
 
 
-class agent(Destination):
+class Agent(Destination):
     flag = "_agent"
 
     def __new__(cls, fn: Any = None, name: str | None = None):
@@ -61,7 +61,7 @@ class agent(Destination):
         return inst
 
 
-class agent_guidance(Destination):
+class AgentGuidance(Destination):
     flag = "_agent_guidance"
 
     def __new__(cls, fn: Any = None, name: str | None = None):
@@ -97,21 +97,36 @@ class MarkdownInstallation(Installation):
     ) -> Path:
         name = name or getattr(member, "__name__", "tool")
         folder = self.folder_for(toolset)
+        op = self._op_slug(name)
         if destination == "skill":
-            return Path("skills") / self._skill_folder(folder, name) / "SKILL.md"
+            return Path("skills") / self._skill_folder(folder, op, toolset) / "SKILL.md"
         if destination == "command":
             base = Path("prompts") if self.ide == "VS Code" else Path("commands")
-            return base / folder / f"{name}.md"
+            return base / folder / f"{op}.md"
         if destination == "rules":
             return Path("rules") / folder.with_suffix(".mdc")
         return folder / str(name)
 
-    def _skill_folder(self, folder: Path, name: str) -> Path:
-        op = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", name).replace("_", "-").lower()
+    def _op_slug(self, name: str) -> str:
+        return re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", name).replace("_", "-").lower()
+
+    def _skill_ops(self, toolset: Any) -> list[str]:
+        bag = getattr(toolset, "tools", None) or {}
+        values = bag.values() if isinstance(bag, dict) else bag
+        names: list[str] = []
+        for tool in values:
+            if not getattr(tool, "install_to_skill", False):
+                continue
+            names.append(self._op_slug(getattr(tool, "deploy_name", None) or tool.name))
+        return names
+
+    def _skill_folder(self, folder: Path, op: str, toolset: Any = None) -> Path:
         if op in {"instructions", "rules-markdown"}:
             return folder
         last = folder.name.replace("_", "-").lower()
-        if op == last or last.startswith(op) or op.startswith(last):
+        if len(self._skill_ops(toolset)) > 1:
+            return folder / op
+        if op == last:
             return folder
         return folder / op
 

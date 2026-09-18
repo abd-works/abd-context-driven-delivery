@@ -21,7 +21,7 @@ from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
 from agent_tools.agent_tools import agent_tool, agent_toolset
-from installation.hooks.hooks import hook, hooks
+from installation.hooks.hooks import Hook, Hooks
 from installation.hooks.session_logs import (
     clear_active_session,
     consolidate_logs_for_close,
@@ -256,7 +256,7 @@ class TurnCommit:
         """Legacy alias — branch name at commit time."""
         return self.branch
 
-@hooks(disabled=True)
+@Hooks(disabled=True)
 @agent_toolset
 class Turn:
     """Self-sufficient turn commit — no WorkSession or Workspace required."""
@@ -500,7 +500,7 @@ class Turn:
             encoding="utf-8",
         )
 
-    @hook("afterAgentResponse")
+    @Hook("afterAgentResponse")
     def auto_turn(self, payload: dict) -> dict:
         """Commit dirty checkout after each agent response when enabled."""
         git = self._git()

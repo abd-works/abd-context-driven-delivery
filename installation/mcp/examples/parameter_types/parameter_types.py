@@ -4,14 +4,14 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from installation.mcp.mcp_server import mcp
+from installation.mcp.mcp_server import Mcp
 
 
 @agent_toolset
 class ParameterTypes:
     """Echo typed arguments so MCP schema and invocation can be observed."""
 
-    @mcp
+    @Mcp
     @agent_tool
     def echo(
         self,
@@ -64,19 +64,19 @@ class ParameterTypes:
             "text_or_count": text_or_count,
         }
 
-    @mcp
+    @Mcp
     @agent_tool
     def echo_sequence(self, value: Sequence[str]) -> list[str]:
         """Return a sequence as a list."""
         return list(value)
 
-    @mcp
+    @Mcp
     @agent_tool
     def echo_mapping(self, value: Mapping[str, int]) -> dict[str, int]:
         """Return a mapping as a dict."""
         return dict(value)
 
-    @mcp
+    @Mcp
     @agent_tool
     def echo_unannotated(self, value) -> object:
         """Return an unannotated argument."""

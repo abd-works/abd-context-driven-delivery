@@ -33,7 +33,7 @@ with description("an iterate action"):
                 response = run_toolset(
                     toolset=_ITERATOR,
                     action="iterate",
-                    arguments={"tools": [_BDD]},
+                    arguments={"guidance": [_BDD]},
                     timeout_seconds=300,
                 )
                 expect_ok_action(response, "iterate")

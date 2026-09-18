@@ -26,9 +26,9 @@ with description("a validate action on practice guidance") as self:
 
     with context("with no rule passed"):
         with it("should return validate instructions for every rule in one shot"):
-            expect(self.action.validate(self.host)).to(contain("sample-rule-one"))
+            expect(self.action.validate([self.host])).to(contain("sample-rule-one"))
 
     with context("with one rule passed"):
         with it("should return validate instructions for that rule only"):
             rule = self.host.rules.entries["sample-rule-one"]
-            expect(self.action.validate(self.host, rule)).to(contain("sample-rule-one"))
+            expect(self.action.validate([self.host], rule)).to(contain("sample-rule-one"))

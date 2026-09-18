@@ -27,10 +27,10 @@ from harness.agent_tools.agent_tools import (
     agent_instructions,
     agent_toolset,
 )
-from installation.hooks.hooks import hook
-from installation.mcp.mcp_server import mcp
+from installation.hooks.hooks import Hook
+from installation.mcp.mcp_server import Mcp
 from harness.agent_tools.agent_tools import AgentInstructions
-from car_story.car_story import CarStory
+from actions.examples.car_story.car_story import CarStory
 from agent_tools.examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
     EmptyWithReturn,
@@ -175,7 +175,7 @@ class _PropertyCallerAgent:
 
 
 _CAR_TOOLSET = "practices.car.car:Car"
-_CAR_STORY_TOOLSET = "car_story.car_story:CarStory"
+_CAR_STORY_TOOLSET = "actions.examples.car_story.car_story:CarStory"
 
 
 with description("a class"):
@@ -187,7 +187,7 @@ with description("a class"):
 
             with it("should expand into instructions"):
                 arguments = {
-                    "tools": [
+                    "guidance": [
                         {
                             "toolset": _CAR_TOOLSET,
                             "context": {
@@ -841,12 +841,12 @@ with description("AgentInstructions"):
 
 @agent_toolset
 class _DestinationFixture:
-    @mcp
+    @Mcp
     @_tool
     def ping(self) -> str:
         return "pong"
 
-    @hook("stop")
+    @Hook("stop")
     def on_stop(self, payload: dict) -> dict:
         return {}
 

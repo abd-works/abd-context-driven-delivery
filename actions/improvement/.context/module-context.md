@@ -6,7 +6,7 @@ Slash `/repair` invokes `improvement.improvement:Improvement` with `arguments.to
 
 ## Public API
 - `repair(tools, asset, violation)` — `@agent_instructions` (opens the bucket; does **not** `finish_turn`)
-- `verify_fix(tools, theme)` — `@agent_tool`
+- `verify_fix(tools, theme)` — `@agent_tool` `@Skill` (peer skill of `/repair`)
 
 Domain `Repair` lives on `WorkSession.repairs` (workspace package).
 

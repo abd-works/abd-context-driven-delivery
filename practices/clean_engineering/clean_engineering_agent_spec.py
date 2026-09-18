@@ -28,7 +28,7 @@ with description("a Clean Code generator"):
                 generate = run_toolset(
                     toolset="generate.generate:Generate",
                     action="generate",
-                    arguments={"tools": [_HOST]},
+                    arguments={"guidance": [_HOST]},
                     timeout_seconds=180,
                 )
                 expect_ok_action(generate, "generate")
@@ -51,7 +51,7 @@ with description("a Clean Code generator"):
                 validate = run_toolset(
                     toolset="validate.validate:Validate",
                     action="validate",
-                    arguments={"tools": [_HOST]},
+                    arguments={"guidance": [_HOST]},
                     timeout_seconds=180,
                 )
                 expect_ok_action(validate, "validate")

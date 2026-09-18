@@ -33,3 +33,12 @@ Never invent a technical-sounding phrase in between: "consistency cluster" is no
 - Good: "the errors stay uncaught until users actually test it"
 
 When adding a rationale to a rule, append one short clause — what goes wrong if you ignore it. Do not double the length of the section.
+
+
+**Banned Word**
+do not use AI jargon in place of actual meaningfully specific domain terms. you are banned from using the following terms
+- ticks
+- slots
+- rows
+- 
+update this list whenever I say this word is banned.

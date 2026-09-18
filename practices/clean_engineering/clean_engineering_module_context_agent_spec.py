@@ -48,7 +48,7 @@ with description("CleanEngineering module-context"):
                 generate = run_toolset(
                     toolset="generate.generate:Generate",
                     action="generate",
-                    arguments={"tools": [_HOST]},
+                    arguments={"guidance": [_HOST]},
                     timeout_seconds=300,
                 )
                 expect_ok_action(generate, "generate")

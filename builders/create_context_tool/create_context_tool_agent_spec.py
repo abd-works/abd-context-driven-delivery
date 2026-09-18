@@ -38,7 +38,7 @@ with description("a CarChronicle generator"):
                 response = run_toolset(
                     toolset="generate.generate:Generate",
                     action="generate",
-                    arguments={"tools": [_CAR_TOOLSET]},
+                    arguments={"guidance": [_CAR_TOOLSET]},
                     timeout_seconds=120,
                 )
                 expect_ok_action(response, "generate")
@@ -79,7 +79,7 @@ with description("a CarChronicle generator"):
                     toolset="improvement.improvement:Improvement",
                     action="repair",
                     arguments={
-                        "tools": [_CAR_TOOLSET],
+                        "guidance": [_CAR_TOOLSET],
                         "asset": f"{_CAR_ROOT}/output/driving-log.md",
                         "violation": (
                             "Scanner use-driving-voice - chronicle reads like a spec sheet"

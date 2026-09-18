@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TypedDict
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from installation.mcp.mcp_server import mcp
+from installation.mcp.mcp_server import Mcp
 
 
 class PlanWorkResult(TypedDict):
@@ -25,14 +25,14 @@ class HostingDemo:
         self._count = 0
         super().__init__()
 
-    @mcp
+    @Mcp
     @agent_tool
     def increment(self, step: int = 1) -> int:
         """Increase the running count."""
         self._count += int(step)
         return self._count
 
-    @mcp
+    @Mcp
     @agent_tool
     def read_count(self) -> int:
         """Return the current count."""
@@ -41,20 +41,20 @@ class HostingDemo:
     def _ordinary_helper(self) -> str:
         return "plain-result"
 
-    @mcp
+    @Mcp
     @agent_tool
     def plan_work(self, concept: str) -> PlanWorkResult:
         """Think about the concept before acting."""
         count = self.increment(step=2)
         return {"concept": concept, "count": int(count)}
 
-    @mcp
+    @Mcp
     @agent_tool
     def guidance_only(self) -> str:
         """Guidance with no orchestrated AI tools."""
         return "guidance-text"
 
-    @mcp
+    @Mcp
     @agent_tool
     def orchestrate_with_plain(self) -> OrchestrateResult:
         """Mix explicit AI tool use with ordinary code."""

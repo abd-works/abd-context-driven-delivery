@@ -17,7 +17,7 @@ from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from installation.installer import Destination, Installation
+from installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
@@ -26,7 +26,7 @@ _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}
 
 
-class mcp(Destination):
+class Mcp(Destination):
     flag = "_mcp"
 
     def __new__(cls, fn: Any = None):
@@ -69,12 +69,12 @@ class McpOperationDefinition:
 
 
 class McpInstallation(Installation):
-    """Record ``@mcp`` ops, write ``mcp.json``, enroll at server start."""
+    """Record ``@Mcp`` ops, write ``mcp.json``, enroll at server start."""
 
     channel = "mcp"
 
-    def __init__(self, ide: str, path: Path | str, toolset_ref: str = "") -> None:
-        super().__init__(ide, path, toolset_ref)
+    def __init__(self, ide: str, path: Path | str, toolset_ref: str = "", repo: Path | str | None = None) -> None:
+        super().__init__(ide, path, toolset_ref, repo=repo)
         self.mcp_operations: list[McpOperationDefinition] = []
         self._bound = False
 
@@ -92,7 +92,10 @@ class McpInstallation(Installation):
     def write_mcp_manifest(self) -> None:
         if not self.mcp_operations:
             return
+        from installation.installer import Installer
+
         refs = sorted({op.tool.registration_name for op in self.mcp_operations})
+        repo = self.repo or Path(__file__).resolve().parents[2]
         payload = {
             "mcpServers": {
                 "cdd": {
@@ -103,6 +106,7 @@ class McpInstallation(Installation):
                         "--toolsets",
                         ",".join(refs),
                     ],
+                    "env": {"PYTHONPATH": Installer.pythonpath(repo)},
                 }
             }
         }
@@ -162,7 +166,7 @@ class McpPrompt:
 
 
 class McpServer:
-    """Load toolset refs and enroll only ``@mcp`` ops from the deploy walk."""
+    """Load toolset refs and enroll only ``@Mcp`` ops from the deploy walk."""
 
     def __init__(
         self,
@@ -173,6 +177,9 @@ class McpServer:
         self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
         self.project = Path(project).resolve() if project is not None else self.repo
         self.venv = self.repo / ".venv"
+        from installation.installer import Installer
+
+        Installer.ensure_import_path(self.repo)
         self.mcp_installations: list[McpInstallation] = []
         self._tools: dict[str, McpTool] = {}
         self._prompts: dict[str, McpPrompt] = {}

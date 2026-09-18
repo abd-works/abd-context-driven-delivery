@@ -5,21 +5,21 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from lifecycle import LifecycleAction
+from lifecycle import GuidanceArg, LifecycleAction
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
 from agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
 from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 
 @agent_toolset
 class Partition(LifecycleAction):
     """Corpus partition: index, segment, completeness.
 
     Real toolset (not a mixin). Slash ``/partition`` runs this kit with
-    ``arguments.tools``. Workspace open and the hanging session turn come from
+    ``arguments.guidance``. Workspace open and the hanging session turn come from
     ``LifecycleAction.begin`` / ``end``.
     """
 
@@ -27,7 +27,7 @@ class Partition(LifecycleAction):
     def module_dir(self) -> Path:
         return Path(inspect.getfile(type(self))).resolve().parent
 
-    @mcp
+    @Mcp
     @agent_tool
     def verify_segment_completeness(
         self,
@@ -81,7 +81,7 @@ class Partition(LifecycleAction):
             resolved.read_text(encoding="utf-8", errors="replace"),
         )
 
-    @mcp
+    @Mcp
     @agent_tool
     def index(self, context: str, out_root: str | None = None) -> str:
         """Write the partition index for this corpus under the session .context folder. Name every expected segment so completeness can be checked later."""
@@ -90,7 +90,7 @@ class Partition(LifecycleAction):
             "(out_root overrides session.path when set)."
         )
 
-    @mcp
+    @Mcp
     @agent_tool
     def segment(self, out_root: str | None = None) -> str:
         """Write verbatim source chunks from the index into segment files under the session path. Completeness must use named entries, not length alone."""
@@ -122,27 +122,30 @@ class Partition(LifecycleAction):
             "Hard fail if any new chunk fails named-entry completeness."
         )
 
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def partition(self,
-        tools: list,
+        guidance: GuidanceArg,
         context: str,
         mode: str = "one_go",
         out_root: str | None = None,
     ) -> str:
-        """Split the given context into an index plus verbatim segments for each listed context tool. Fail if any new chunk misses a named entry the index required."""
-        self.begin(tools, action="partition")
-        for host in self.listed():
-            host.contexts
+        """Split the given context into an index plus verbatim segments for each listed Guidance host. Fail if any new chunk misses a named entry the index required. Pass a string to partition that text once."""
+        def on(item) -> None:
+            if isinstance(item, str):
+                self.partition_corpus(context, mode, out_root)
+                return
+            item.contexts
             self.partition_corpus(
                 context,
                 mode,
                 out_root,
-                slug=host.domain_slug,
-                scaffold=host.scaffold,
+                slug=item.domain_slug,
+                scaffold=item.scaffold,
             )
-        self.end()
+
+        self.run(guidance, on, action="partition")
         return (
             "Partition of {{context}} finished (mode {{mode}}); "
             "docs under {session.path}/.context/. "

@@ -11,8 +11,8 @@ from practices.stages import DISCOVERY, ENGINEER, SHAPING, SPEC, resolve_stage_f
 from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
@@ -205,8 +205,8 @@ class Stories(PracticeGuidance):
         return target_cls()
 
     @property
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """Provide guidance for creating story maps, scenarios, and acceptance tests.
@@ -232,7 +232,7 @@ class Stories(PracticeGuidance):
             "Clean Engineering rules."
         )
 
-    @mcp
+    @Mcp
     @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:
         """Parse content from source_format into the canonical StoryMap, then render into target_format.
@@ -250,7 +250,7 @@ class Stories(PracticeGuidance):
         rendered = target.render(canonical)
         return {"format": target_format, "content": rendered}
 
-    @mcp
+    @Mcp
     @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated story output into ``format`` via channel parse/render."""
@@ -280,7 +280,7 @@ class Stories(PracticeGuidance):
             source = self.format or "markdown"
         return self.transform(source, format, content)
 
-    @mcp
+    @Mcp
     @agent_tool
     def render_chunks(self, content: str, chunk_size: int = 80) -> dict:
         """Render story map into Miro SVG chunks for incremental board upload.
@@ -304,7 +304,7 @@ class Stories(PracticeGuidance):
         return {"format": "miro", "chunk_count": len(chunks), "chunks": chunks}
 
     @agent_tool
-    @mcp
+    @Mcp
     def render_miro(
         self,
         content: str,

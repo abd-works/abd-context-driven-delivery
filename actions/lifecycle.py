@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+from typing import Union
+
 from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
-from installation.mcp.mcp_server import mcp
+from installation.mcp.mcp_server import Mcp
 from workspace.workspace import SessionModel, Turn, Workspace
+
+# Runtime-safe alias: a Guidance list (or toolset refs) or a string to act on directly.
+GuidanceArg = Union[str, list]
 
 
 def listed(host) -> list:
-    """Instantiate toolset refs bound on ``host._tool_items`` for lifecycle recipe bodies."""
+    """Instantiate guidance hosts bound on ``host._tool_items`` for lifecycle recipe bodies."""
+    if getattr(host, "_guidance_text", None) is not None:
+        return []
     raw = getattr(host, "_tool_items", None) or []
     return AgentToolSet.instantiate_all(raw)
 
@@ -22,6 +29,8 @@ class LifecycleAction:
         self.workspace = Workspace(str(path))
         self.workspace.load()
         self._session_name = session
+        self._guidance_text: str | None = None
+        self._tool_items: list = []
         if session:
             self._open_session(session, path=path)
 
@@ -51,11 +60,38 @@ class LifecycleAction:
         )
         return session.branch_warning()
 
+    def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
+        """String: run once. Not a string: iterate the guidance list."""
+        if isinstance(guidance, str):
+            self._guidance_text = guidance
+            self._tool_items = []
+            return
+        self._guidance_text = None
+        self._tool_items = list(guidance or [])
+
+    def guidance_text(self) -> str | None:
+        """The string to run this action on, when guidance was not a host list."""
+        return self._guidance_text
+
     def listed(self) -> list:
-        """Return the context toolsets bound on this run from the tools argument."""
+        """Return the Guidance hosts bound on this run from the guidance argument."""
         return listed(self)
 
-    @mcp
+    def each(self, operation):
+        """Run ``operation`` once on a guidance string, or once per Guidance host."""
+        text = self._guidance_text
+        if text is not None:
+            return [operation(text)]
+        return [operation(host) for host in self.listed()]
+
+    def run(self, guidance: GuidanceArg, operation, *, action: str = "") -> list:
+        """Begin the turn, run ``operation`` on the string or each host, then end."""
+        self.begin(guidance, action=action)
+        results = self.each(operation)
+        self.end()
+        return results
+
+    @Mcp
     @agent_tool
     def open_workspace(self, name: str = "", path: str = "") -> str:
         """Open a work session on this workspace if one is not already open. Pass a name to open or switch to that session; returns the session name and any branch warning."""
@@ -68,8 +104,9 @@ class LifecycleAction:
         return session_name
 
     @agent_instructions
-    def begin(self, tools: list | None = None, action: str = "") -> str:
+    def begin(self, guidance: GuidanceArg | None = None, action: str = "") -> str:
         """Start a lifecycle action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one."""
+        self._bind_guidance(guidance)
         warning = ""
         if self.workspace.current_work_session is None:
             warning = self._open_session(self._session_name)

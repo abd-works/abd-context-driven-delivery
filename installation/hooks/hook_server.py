@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-for _category in ("harness", "tools"):
+for _category in ("harness", "tools", "practices", "actions"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
@@ -17,7 +17,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from installation.hooks.hooks import hook
+from installation.hooks.hooks import Hook
 
 
 class CursorEvent:
@@ -27,7 +27,7 @@ class CursorEvent:
         self.name = name
 
     def normalize(self) -> str:
-        return hook.normalize_event(self.name)
+        return Hook.normalize_event(self.name)
 
 
 class HookPayload:

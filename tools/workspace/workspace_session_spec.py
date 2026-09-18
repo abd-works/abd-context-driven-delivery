@@ -53,7 +53,7 @@ with description("WorkSession on a PracticeGuidance host"):
             self.host = cls()
             self.response = Generate().instructions["generate"].expand(
                 {},
-                {"tools": [self.host]},
+                {"guidance": [self.host]},
             )
 
         with it("should name CDR tools then finish_turn"):
@@ -87,7 +87,7 @@ with description("WorkSession on a PracticeGuidance host"):
             self.host = cls()
             self.response = Generate().instructions["generate"].expand(
                 {},
-                {"tools": [self.host]},
+                {"guidance": [self.host]},
             )
 
         with it("should keep nested generate_output tools ahead of finish_turn"):
@@ -109,7 +109,7 @@ with description("WorkSession on a PracticeGuidance host"):
 
             self.response = Generate().instructions["generate"].expand(
                 {},
-                {"tools": []},
+                {"guidance": []},
             )
 
         with it("should not inline session guidance on the composer"):

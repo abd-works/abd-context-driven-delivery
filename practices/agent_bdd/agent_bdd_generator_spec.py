@@ -95,7 +95,7 @@ with description("AgentBdd action expansion"):
                 self.response = _expand_action(
                     Validate(),
                     "validate",
-                    arguments={"tools": [self.bdd]},
+                    arguments={"guidance": [self.bdd]},
                 )
 
             with it("should inline validate kit prose"):

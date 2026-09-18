@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import sys
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 from harness.agent_tools.agent_tools import (
     AgentToolSet,
@@ -14,64 +15,8 @@ from harness.agent_tools.agent_tools import (
     agent_tool,
     agent_toolset,
 )
-
-
-class Destination:
-    """Base annotation to define the installation destination of a tool. Subclasses annotate the member."""
-
-    flag = ""
-
-    def annotate(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        setattr(fn, self.flag, True)
-        name = getattr(self, "name", None)
-        if name is not None:
-            setattr(fn, f"{self.flag}_name", name)
-        return fn
-
-    def __call__(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        return self.annotate(fn)
-
-
-class Installation:
-    """``install(tool)`` writes the channel; subclass ``write``."""
-
-    channel = ""
-
-    def __init__(
-        self,
-        ide: str,
-        path: Path | str,
-        toolset_ref: str = "",
-        repo: Path | str | None = None,
-    ) -> None:
-        self.ide = ide
-        self.path = Path(path)
-        self.toolset_ref = toolset_ref
-        self.repo = Path(repo).resolve() if repo is not None else None
-
-    def folder_for(self, toolset: Any) -> Path:
-        """Repo-relative package folder the toolset already knows (practice dir, fidelity leaf)."""
-        raw = getattr(toolset, "install_folder", None)
-        if raw is None:
-            slug = getattr(toolset, "slug", None) or "toolset"
-            return Path(str(slug))
-        folder = Path(raw)
-        repo = self.repo
-        if repo is None:
-            return folder
-        try:
-            return folder.resolve().relative_to(repo)
-        except ValueError:
-            return Path(folder.name)
-
-    def install(self, tool: Any) -> None:
-        self.write(tool)
-
-    def write(self, tool: Any) -> None:
-        raise NotImplementedError
-
-
-from installation.harness_files.harness_files import MarkdownInstallation, skill
+from installation.destination import Destination, Installation
+from installation.harness_files.harness_files import MarkdownInstallation, Skill
 
 
 @agent_toolset
@@ -99,10 +44,22 @@ class Installer:
             "harness",
         }
     )
+    _CATALOG_DIRS = ("harness", "tools", "practices", "actions")
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
     _ANNOTATIONS = frozenset(
-        {"skill", "command", "rules", "mcp", "hook", "agent_tool", "agent_instructions"}
+        {
+            "Skill",
+            "Command",
+            "Rules",
+            "Agent",
+            "AgentGuidance",
+            "Mcp",
+            "Hook",
+            "Hooks",
+            "agent_tool",
+            "agent_instructions",
+        }
     )
 
     def __init__(
@@ -127,15 +84,40 @@ class Installer:
         from installation.hooks.hooks import HookInstallation
         from installation.mcp.mcp_server import McpInstallation
 
-        self._mcp = McpInstallation(self.ide, self.path)
-        self._hook = HookInstallation(self.ide, self.path)
+        self.ensure_import_path(self.repo)
+        self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
+        self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
         self.nested_toolsets = ToolSetCollection()
+
+    @classmethod
+    def import_path_entries(cls, repo: Path | str) -> list[str]:
+        """Repo root plus catalog folders. Never includes ``installation/`` (that shadows the MCP SDK)."""
+        root = Path(repo).resolve()
+        entries = [str(root)]
+        for name in cls._CATALOG_DIRS:
+            folder = root / name
+            if folder.is_dir():
+                entries.append(str(folder))
+        return entries
+
+    @classmethod
+    def pythonpath(cls, repo: Path | str) -> str:
+        return os.pathsep.join(cls.import_path_entries(repo))
+
+    @classmethod
+    def ensure_import_path(cls, repo: Path | str) -> None:
+        entries = cls.import_path_entries(repo)
+        root = entries[0]
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        for entry in entries[1:]:
+            if entry not in sys.path:
+                sys.path.insert(0, entry)
 
     def collect_toolsets(self, repo: Path | None = None) -> list[Any]:
         """Parse the repo for toolset classes whose members carry install annotations."""
         root = (repo or self.repo).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
+        self.ensure_import_path(root)
         toolsets: list[Any] = []
         seen: set[str] = set()
         for py_file in sorted(root.rglob("*.py")):
@@ -161,7 +143,7 @@ class Installer:
         return toolsets
 
     def _skip_collect_path(self, py_file: Path) -> bool:
-        if any(part in self._SKIP_DIRS for part in py_file.parts):
+        if any(part.lower() in self._SKIP_DIRS for part in py_file.parts):
             return True
         name = py_file.name
         if name in self._SKIP_FILE_NAMES:
@@ -229,15 +211,16 @@ class Installer:
             for installation in self.get_installations(tool):
                 installation.install(tool)
 
-    @skill
+    @Skill
     @agent_tool
     def install(self, toolsets: Iterable[Any] | None = None) -> Any:
         """Install annotated toolsets into the IDE path — skills, commands, rules, MCP, and hooks."""
         from installation.hooks.hooks import HookInstallation
         from installation.mcp.mcp_server import McpInstallation
 
-        self._mcp = McpInstallation(self.ide, self.path)
-        self._hook = HookInstallation(self.ide, self.path)
+        self.ensure_import_path(self.repo)
+        self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
+        self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
         if toolsets is None:
             toolsets = self.collect_toolsets()
         for item in toolsets:

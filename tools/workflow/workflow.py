@@ -10,7 +10,7 @@ import yaml
 from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
-from installation.harness_files.harness_files import skill
+from installation.harness_files.harness_files import Skill
 from agent_tools import agent_instructions, agent_toolset
 from sub_agent.sub_agent import sub_agent
 from agent_tools.agent_tools import agent_tool
@@ -429,7 +429,7 @@ class Workflow:
             "labels": ", ".join(sorted(set(issue.labels))),
         }
 
-    @skill(name="tickets")
+    @Skill(name="tickets")
     @agent_instructions
     def manage_tickets(self, request: str, workspace: str = "") -> str:
         """Manage project tickets from {{request}}.

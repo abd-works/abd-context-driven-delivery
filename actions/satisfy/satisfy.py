@@ -2,33 +2,36 @@
 
 from __future__ import annotations
 
-from lifecycle import LifecycleAction
+from lifecycle import GuidanceArg, LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from workspace import SessionLog
 
 @agent_toolset
 class Satisfy(LifecycleAction):
     """Satisfy artifacts for provided context tools."""
 
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
-    def satisfy(self, tools: list) -> str:
-        """Run validate for each provided guidance tool against the content; apply generate_fixes_from_validate, then validate again when done."""
-        self.begin(tools, action="satisfy")
+    def satisfy(self, guidance: GuidanceArg) -> str:
+        """Run validate for each provided Guidance host against the content; apply generate_fixes_from_validate, then validate again when done. Pass a string to satisfy that text once."""
         from validate.validate import Validate
 
-        for tool in self.listed():
-            Validate().validate(tools=[tool])
-            tool.generate_fixes_from_validate()
+        def on(item) -> None:
+            if isinstance(item, str):
+                Validate().validate(item)
+                return
+            Validate().validate(guidance=[item])
+            item.generate_fixes_from_validate()
             SessionLog.instance().append(
-                toolset=tool.registration_name,
+                toolset=item.registration_name,
                 name="satisfy",
                 summary="satisfy",
                 ok=True,
                 role="run",
             )
-        self.end()
+
+        self.run(guidance, on, action="satisfy")
         return "When done, run validate on artifacts under {session.path}/."

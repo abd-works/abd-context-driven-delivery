@@ -5,8 +5,8 @@ from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool
 
 _TRIP_HEADER = "===== TRIP LOG (read only) ====="
@@ -103,8 +103,8 @@ class Car(PracticeGuidance):
         return self._running
 
     @property
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_instructions
     def instructions(self) -> str:
         """Provide guidance for in-character road stories at the current fidelity.
