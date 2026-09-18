@@ -18,16 +18,16 @@ class Validate(LifecycleAction):
     @agent_instructions
     def validate(self, guidance: GuidanceArg, rule: Rule | None = None) -> str:
         """Check artifacts against rules. Pass a string to validate that text once. Pass a list of Guidance to walk each host's rules. Pass a single Rule to check only that rule."""
-        def on(item) -> None:
+        def on(item) -> str:
             if rule is not None:
-                instructions(rule.validate)
-            elif isinstance(item, str):
-                instructions(item)
-            else:
-                instructions(item.rules.validate)
+                return instructions(rule.validate)
+            if isinstance(item, str):
+                return instructions(item)
+            return instructions(item.rules.validate)
 
-        self.run(guidance, on, action="validate")
-        return "Validation report for artifacts under {session.path}/."
+        parts = [part for part in self.run(guidance, on, action="validate") if part]
+        report = "Validation report for artifacts under {session.path}/."
+        return "\n\n".join(parts + [report])
 
     @Mcp
     @Skill

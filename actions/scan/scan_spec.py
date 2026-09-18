@@ -136,7 +136,7 @@ with description("Scan"):
 
         with it("should run each listed context tool collection when tools are passed"):
             class _Kit(Scan):
-                def begin(self, tools=None, action=""):
+                def begin(self, guidance=None, action=""):
                     return ""
 
                 def end(self):

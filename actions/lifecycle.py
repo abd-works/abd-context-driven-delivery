@@ -86,6 +86,7 @@ class LifecycleAction:
 
     def run(self, guidance: GuidanceArg, operation, *, action: str = "") -> list:
         """Begin the turn, run ``operation`` on the string or each host, then end."""
+        self._bind_guidance(guidance)
         self.begin(guidance, action=action)
         results = self.each(operation)
         self.end()
