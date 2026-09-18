@@ -1,0 +1,22 @@
+The command exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Stdin was empty, so `run -` had no YAML request (no `toolset`) to process.The command exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Stdin was empty, so `run -` had no YAML request (no `toolset`) to process.The command exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Stdin was empty, so `run -` had no YAML request (no `toolset`) to process.

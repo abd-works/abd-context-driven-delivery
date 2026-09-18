@@ -7,7 +7,7 @@
 `RecordDecisions` is composed on the work session — not an IDE skill. Do not deploy a `record_decisions` skill. CDR helpers stay `@agent_tool`. `record_decisions_session` is `@prompt(name="record-decisions-session")` plus `@agent_instructions` so `/record-decisions-session` is the slash command.
 
 ## Dependencies
-`primitives.agent_tools`, `tools.tool`
+`harness.agent_tools`, `tools.tool`
 
 ## Mechanism
 Three-criteria gate — a CDR is offered only when all three hold: hard to reverse, surprising without context, genuine trade-off. Any missing criterion means skipping the CDR entirely.

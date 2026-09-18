@@ -21,6 +21,8 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 ---
 
+## Fidelities
+
 ## story_map
 
 **Default format:** markdown

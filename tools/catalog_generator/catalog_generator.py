@@ -1516,7 +1516,7 @@ class Catalog:
         harness_href = git_blob_url(
             self.repo_url,
             self.ref,
-            _REPO_ROOT / "primitives" / "harness" / "harness.py",
+            _REPO_ROOT / "harness" / "harness" / "harness.py",
         )
         hub_body = (
             '<section class="catalog-workflow" aria-labelledby="catalog-workflow-heading">'
@@ -1536,7 +1536,7 @@ class Catalog:
             "checkout the agent can see).</li>"
             "<li>Drop "
             f'<a href="{html_mod.escape(harness_href)}" target="_blank" rel="noopener noreferrer">'
-            "<code>primitives/installer/harness.py</code></a> "
+            "<code>installation/harness.py</code></a> "
             "into the chat and ask the agent to run "
             "<strong>generate</strong> "
             "(action <code>generate</code>). "

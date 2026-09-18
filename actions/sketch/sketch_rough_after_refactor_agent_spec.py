@@ -26,7 +26,7 @@ from agent_bdd import (
     run_skill,
     sessions_dir,
 )
-from installer.installer import Installer
+from installation.installer import Installer
 
 _REPO = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)

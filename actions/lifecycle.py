@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
+from installation.mcp.mcp_server import mcp
 from workspace.workspace import SessionModel, Turn, Workspace
 
 
@@ -51,11 +52,13 @@ class LifecycleAction:
         return session.branch_warning()
 
     def listed(self) -> list:
+        """Return the context toolsets bound on this run from the tools argument."""
         return listed(self)
 
+    @mcp
     @agent_tool
     def open_workspace(self, name: str = "", path: str = "") -> str:
-        """Open the workspace if it is not already open. /open-workspace"""
+        """Open a work session on this workspace if one is not already open. Pass a name to open or switch to that session; returns the session name and any branch warning."""
         if self.workspace.current_work_session is not None and not name:
             return self.workspace.current_work_session.name
         warning = self._open_session(name or self._session_name, path=path)
@@ -66,7 +69,7 @@ class LifecycleAction:
 
     @agent_instructions
     def begin(self, tools: list | None = None, action: str = "") -> str:
-        """Open the workspace if it is not already open. The turn hangs off the work session — it is already there when the session is awake. Decision records hang off the work session. Session is optional — actions work without one."""
+        """Start a lifecycle action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one."""
         warning = ""
         if self.workspace.current_work_session is None:
             warning = self._open_session(self._session_name)
@@ -85,6 +88,6 @@ class LifecycleAction:
 
     @agent_instructions
     def end(self) -> str:
-        """Commit the turn via ``/turn`` (``Turn.turn``)."""
+        """Close the lifecycle action by committing the session turn."""
         tools(self._turn().turn(utility="lifecycle"))
         return ""

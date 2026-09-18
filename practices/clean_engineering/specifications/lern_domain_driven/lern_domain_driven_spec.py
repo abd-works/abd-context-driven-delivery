@@ -16,7 +16,7 @@ sys.path[:] = [
 if _root in sys.path:
     sys.path.remove(_root)
 sys.path.insert(0, _root)
-for _cat in ("primitives", "tools", "practices", "actions"):
+for _cat in ("harness", "tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p in sys.path:
         sys.path.remove(_p)
@@ -24,8 +24,8 @@ for _cat in ("primitives", "tools", "practices", "actions"):
 sys.path.insert(0, _root)
 for _name in list(sys.modules):
     if (
-        _name in {"primitives", "scan", "lifecycle", "workspace", "practices", "tools"}
-        or _name.startswith("primitives.")
+        _name in {"harness", "scan", "lifecycle", "workspace", "practices", "tools"}
+        or _name.startswith("harness.")
         or _name.startswith("scan.")
         or _name.startswith("practices.")
         or _name.startswith("tools.")

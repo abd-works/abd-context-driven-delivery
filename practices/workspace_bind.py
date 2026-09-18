@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from primitives.guidance.guidance import FidelityGuidance, PracticeGuidance
+    from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 
 
 def attach_practice_workspace(
@@ -36,7 +36,7 @@ def apply_fidelity_stages(
     practice: PracticeGuidance,
     stage_to_fidelity: dict[str, str],
 ) -> None:
-    from primitives.guidance.guidance import FidelityGuidance
+    from harness.guidance.guidance import FidelityGuidance
 
     fidelity_to_stage = {fidelity: stage for stage, fidelity in stage_to_fidelity.items()}
     for name, child in practice.fidelities.entries.items():
@@ -54,7 +54,7 @@ def init_practice_guidance(
     fidelity: str | None = None,
     stage_to_fidelity: dict[str, str] | None = None,
 ) -> None:
-    from primitives.guidance.guidance import PracticeGuidance
+    from harness.guidance.guidance import PracticeGuidance
 
     PracticeGuidance.__init__(
         practice,

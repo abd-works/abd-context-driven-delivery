@@ -1,0 +1,166 @@
+"""Cursor hook mark and hook install — one destination packager."""
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+from installation.installer import Destination, Installation
+
+
+class hooks:
+    """Class annotation: disable every hook operation on the toolset."""
+
+    def __new__(cls, target: Any = None, *, disabled: bool = False):
+        inst = object.__new__(cls)
+        inst.disabled = disabled
+        if isinstance(target, type):
+            return inst.annotate(target)
+        return inst
+
+    def __call__(self, cls: type) -> type:
+        return self.annotate(cls)
+
+    def annotate(self, cls: type) -> type:
+        cls._hooks_disabled = self.disabled
+        return cls
+
+
+class hook(Destination):
+    flag = "_hook"
+    EVENTS = frozenset(
+        {
+            "sessionStart",
+            "beforeSubmitPrompt",
+            "afterAgentResponse",
+            "afterAgentThought",
+            "stop",
+            "sessionEnd",
+            "preCompact",
+            "preToolUse",
+            "postToolUse",
+            "postToolUseFailure",
+            "beforeReadFile",
+            "subagentStart",
+        }
+    )
+
+    def __new__(cls, fn: Any = None, event: str | None = None):
+        if isinstance(fn, str):
+            event = fn
+            fn = None
+        if not event:
+            raise ValueError(
+                'hook requires a Cursor event: @hook("sessionStart") or @hook(event="sessionStart")'
+            )
+        if event not in cls.EVENTS:
+            raise ValueError(
+                f"Unknown Cursor event {event!r}. Valid events: {sorted(cls.EVENTS)}"
+            )
+        inst = object.__new__(cls)
+        inst.name = event
+        if callable(fn):
+            return inst.annotate(fn)
+        return inst
+
+    @classmethod
+    def normalize_event(cls, event: str) -> str:
+        stepped = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", event)
+        return stepped.replace("-", "_").lower()
+
+
+class HookInstallation(Installation):
+    """Write hook skill files and Cursor ``hooks.json`` dispatch entries."""
+
+    channel = "hook"
+    DISPATCH_SCRIPT = "installation/hooks/hook_server.py"
+
+    def __init__(
+        self,
+        ide: str,
+        path: Path | str,
+        *,
+        python: str = ".venv/Scripts/python.exe",
+    ) -> None:
+        super().__init__(ide, path)
+        self.python = python
+        self._handlers: list[dict[str, str]] = []
+
+    @property
+    def dispatch_command(self) -> str:
+        return f"{self.python} {self.DISPATCH_SCRIPT}"
+
+    def write(self, tool: Any) -> None:
+        from harness.agent_tools.agent_tools import AgentToolSet
+
+        toolset = tool.toolset
+        if not isinstance(toolset, AgentToolSet):
+            return
+        if not tool.install_to_hook:
+            return
+        event = getattr(tool.callable, "_hook_name", None)
+        if not event:
+            return
+        dest = self.path / "skills" / f"hook-{tool.name}" / "SKILL.md"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(tool.description or tool.name, encoding="utf-8")
+        self._handlers.append(
+            {
+                "event": str(event),
+                "operation": tool.name,
+                "ref": toolset.registration_name,
+            }
+        )
+        self.write_hooks_manifest()
+        self.write_handlers()
+
+    def write_handlers(self) -> None:
+        if not self._handlers:
+            return
+        dest = self.path / "hook-handlers.json"
+        dest.write_text(
+            json.dumps({"handlers": self._handlers}, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+    def write_hooks_manifest(self) -> None:
+        if not self._handlers:
+            return
+        events = {item["event"] for item in self._handlers}
+        dispatch_cmd = self.dispatch_command
+        hooks: dict[str, list[dict[str, Any]]] = {}
+        dest = self.path / "hooks.json"
+        if dest.is_file():
+            try:
+                existing = json.loads(dest.read_text(encoding="utf-8"))
+                hooks = dict(existing.get("hooks") or {})
+            except (OSError, json.JSONDecodeError):
+                hooks = {}
+
+        for event_name in list(hooks.keys()):
+            bucket = hooks[event_name]
+            kept = [item for item in bucket if item.get("command") != dispatch_cmd]
+            if kept:
+                hooks[event_name] = kept
+            else:
+                del hooks[event_name]
+
+        hook_def: dict[str, Any] = {
+            "command": dispatch_cmd,
+            "timeout": 30,
+            "failClosed": False,
+        }
+        for event in sorted(events):
+            if event == "afterAgentResponse":
+                hooks[event] = [dict(hook_def)]
+                continue
+            bucket = hooks.setdefault(event, [])
+            if not any(item.get("command") == dispatch_cmd for item in bucket):
+                bucket.append(dict(hook_def))
+
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(
+            json.dumps({"version": 1, "hooks": hooks}, indent=2) + "\n",
+            encoding="utf-8",
+        )

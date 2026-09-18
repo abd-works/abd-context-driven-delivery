@@ -29,7 +29,7 @@ with description("a Car toolset"):
     with context("with agent following travelTo instructions"):
         with it("drives travelTo, checks shell captures, then judges the story"):
             with agent(_REPO_ROOT, _SESSIONS / "shell-captures-example.json") as block:
-                read_workspace("primitives/agent_tools/examples/car/car.py")
+                read_workspace("harness/agent_tools/examples/car/car.py")
 
                 response = run_toolset(
                     toolset="agent_tools.examples.car:Car",

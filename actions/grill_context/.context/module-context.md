@@ -7,7 +7,7 @@
 `GrillContext`
 
 ## Dependencies
-`primitives.agent_tools`, `tools.tool`, `sessions`
+`harness.agent_tools`, `tools.tool`, `sessions`
 
 ## Public API
 - `explore_context_files`, `read_context_file`, `write_grill_answer`

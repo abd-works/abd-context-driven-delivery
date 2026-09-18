@@ -7,8 +7,8 @@ from typing import Any
 
 from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
-from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
-from primitives.guidance.guidance import PracticeGuidance
+from harness.agent_tools.agent_tools import agent_toolset
+from harness.guidance.guidance import PracticeGuidance
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -84,11 +84,6 @@ class Ux(PracticeGuidance):
             fidelity=fidelity,
             stage_to_fidelity=self.STAGE_TO_FIDELITY,
         )
-
-    @agent_instructions
-    def guidance(self) -> str:
-        """Provide guidance for creating IA, mockups, and front-end code."""
-        return super().guidance()
 
     @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:

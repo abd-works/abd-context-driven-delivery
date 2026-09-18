@@ -1,0 +1,23 @@
+## Shared rules
+
+- **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON
+- **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository`
+- **`organize-by-domain-module`** — feature package present with process boot (`app.ts`, `serve.ts`, `main.tsx`) and nested domain dirs each having `{domain}.ts`, `{domain}-server.ts`, `{domain}-client.tsx`.
+- **`share-domain-logic`** — entities, value objects, Zod schemas, and business rules defined once in `<domain>.ts`; `<domain>-server.ts` and `<domain>-client.tsx` import from there, never re-derive.
+- **`maintain-layer-purity`** — `<domain>.ts` is framework-free (no Express, no React, no lowdb); `<domain>-server.ts` and `<domain>-client.tsx` never cross-import each other.
+- **`use-ubiquitous-language`** — names come from the domain model; no `Manager`, `Handler`, `Helper`, or `Domain*` prefixes/suffixes.
+- **`cross-layer-method-naming`** — the same `{verbNoun}` method stem flows through every tier where an operation appears (domain core → client → server → route → HTTP); subclasses keep every inherited base operation unchanged.
+- **`preserve-arg-names-across-layers`** — argument names stay identical across layer boundaries and across base → extension; only types narrow.
+- **`property-casing-transform`** — `camelCase` in TypeScript; `snake_case` in JSON (lowdb documents and HTTP bodies).
+- **`consistent-view-naming`** — React components end in `View` or `CardView`; never `Page`.
+- **`delegate-routes-to-domain-server`** — route handlers in `<domain>-server.ts` are thin: parse the request, delegate to a server-side domain class; never call the repository or apply domain-core logic inline.
+- **`ensure-type-safe-routes`** — route handlers compile without implicit `any`; `req.user` and other request extensions are typed.
+- **`standard-mutation-response`** — every mutation on the same aggregate returns the same response shape.
+- **`implement-domain-entities-correctly`** — business rules live on domain classes; the Zod schema validates at the repository boundary, not inline in routes or views. Production repositories import from `lowdb` / `lowdb/node`.
+- **`implement-full-interfaces`** — every `implements` clause covers all interface members; no stub no-ops standing in for real behavior.
+- **`use-valid-package-names`** — one package per feature (`@scope/epicSlug`) with subpath exports into nested domains (`./recipients`, `./recipients/recipient-server`, …); no placeholder scopes; no phantom imports; no legacy flat `*-shared` / `*-server` / `*-client` package split.
+- **`include-all-external-dependencies`** — every import has a declared dependency (`lowdb` on the server); the project compiles after a clean install.
+- **`test-story-driven`** — tests mirror the story hierarchy (epic → folder, sub-epic → file, story → `describe`, scenario → `it`); Given/When/Then helpers present at all three tiers.
+- **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` present at the workspace root; unit/component and E2E runners stay separate (Vitest vs Playwright), and `vitest.config.ts` / `playwright.config.ts` don't pick up each other's spec files.
+- **`use-thorough-e2e-tests`** — E2E tests are independent (no wiping an entire JSON store or `unlink` of `data/*.json` between tests); delete only the aggregate roots the test created. The feature package must exist and serve the real frontend (`npm run dev`) before E2E tests can pass.
+- **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories.

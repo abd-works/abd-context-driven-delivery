@@ -16,7 +16,7 @@ from typing import List
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "primitives", "practices"):
+for _cat in ("tools", "harness", "practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -31,7 +31,7 @@ from context_setup.context_index import (
     RankedChunk,
     SearchResult,
 )
-from primitives.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.agent_tools import AgentInstructions
 
 
 # ── Fake embedding provider ───────────────────────────────────────────────────

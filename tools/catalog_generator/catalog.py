@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Iterable
 
-from primitives.markdown import HTML, Markdown
+from harness.markdown import HTML, Markdown
 
 
 class Catalog(HTML):

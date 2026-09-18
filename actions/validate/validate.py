@@ -6,6 +6,8 @@ from typing import Any
 
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset, instructions
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from scan.rule import Rule
 from workspace import SessionLog
 
@@ -13,9 +15,11 @@ from workspace import SessionLog
 class Validate(LifecycleAction):
     """Validate artifacts for provided context tools."""
 
+    @mcp
+    @skill
     @agent_instructions
     def validate(self, tools: Any, rule: Rule | None = None) -> str:
-        """validate"""
+        """Check the listed context tools' artifacts against their rules. Pass a single Rule to check only that rule; otherwise walk each tool's rules collection and return a validation report."""
         if rule is not None:
             instructions(rule.validate)
         else:
@@ -33,9 +37,11 @@ class Validate(LifecycleAction):
 class CreateRule(LifecycleAction):
     """Write a named rule and scanner into the provided context tool."""
 
+    @mcp
+    @skill
     @agent_instructions
     def createRule(self, tools: list, failed: str, wanted: str) -> str:
-        """createRule"""
+        """Add a named rule and matching scanner to each listed context tool from a failed example and the wanted behavior. Then scan the asset with that rule so the same mistake is detected."""
         self.begin(tools, action="createRule")
         for tool in self.listed():
             tool.contexts

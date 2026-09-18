@@ -31,9 +31,9 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 # Mirror _pythonpath_env() from manifest_gate.py:
-#   root     → practices, tools, primitives, actions (namespace packages)
-#   primitives/ → tools, actions, assets, declared, focus, instructions, guidance
+#   root     → practices, tools, harness, actions (namespace packages)
+#   harness/ → agent_tools, guidance, markdown, cli_agent, sub_agent, swarm
 #   tools/  → scanners, diagnose, agent_skills, …
 #   practices/ → cdd, stories, ux, …
 #   actions/ → workspace, sketch, repair, grill_context, …
-where = [".", "primitives", "tools", "practices", "actions"]
+where = [".", "harness", "tools", "practices", "actions"]

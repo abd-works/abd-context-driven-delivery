@@ -12,9 +12,10 @@ and CleanEngineering already enforce, not a restatement of them.
 `acceptance_tests` with `format="typescript"`; production code arrives via
 Stories' `ce()` companion at `code` / `typescript`.
 
----
 
-## Domain-driven design (reference)
+## Guidance
+
+### Domain-driven design (reference)
 
 This architecture **is** DDD tactics on JSON-file persistence. Stereotypes,
 invariants, and repository seams come from
@@ -37,7 +38,7 @@ callers never open the JSON store themselves.
 
 ---
 
-## Persistence: one lowdb JSON store per aggregate
+### Persistence: one lowdb JSON store per aggregate
 
 [lowdb](https://github.com/typicode/lowdb) is the adapter (`JSONFilePreset` /
 `JSONFile` from `lowdb/node` in production; `Memory` from `lowdb` in tests).
@@ -77,7 +78,7 @@ below) — then keep that choice for the slice.
 
 ---
 
-## Domain module organization
+### Domain module organization
 
 Packages follow the feature → domain hierarchy: a feature package owns process
 boot and the feature view; each domain (aggregate) it needs lives as a
@@ -100,7 +101,7 @@ packages/<epicSlug>/                    ← feature package — e.g. wires/
 - **`share-domain-logic`** — entities, value objects, Zod schemas, and business rules defined once in `<domain>.ts`; `<domain>-server.ts` and `<domain>-client.tsx` import from there, never re-derive.
 - **`maintain-layer-purity`** — `<domain>.ts` is framework-free (no Express, no React, no lowdb); `<domain>-server.ts` and `<domain>-client.tsx` never cross-import each other.
 
-## Naming / layering
+### Naming / layering
 
 Every artifact instantiates from the domain — file, class, and method names
 derive from domain classes/operations. `<domain>.ts` keeps plain domain names
@@ -133,23 +134,23 @@ same `{verbNoun}` with the same argument names — only types narrow.
 - **`property-casing-transform`** — `camelCase` in TypeScript; `snake_case` in JSON (lowdb documents and HTTP bodies).
 - **`consistent-view-naming`** — React components end in `View` or `CardView`; never `Page`.
 
-## App server / routes
+### App server / routes
 
 - **`delegate-routes-to-domain-server`** — route handlers in `<domain>-server.ts` are thin: parse the request, delegate to a server-side domain class; never call the repository or apply domain-core logic inline.
 - **`ensure-type-safe-routes`** — route handlers compile without implicit `any`; `req.user` and other request extensions are typed.
 - **`standard-mutation-response`** — every mutation on the same aggregate returns the same response shape.
 
-## Types & entities
+### Types & entities
 
 - **`implement-domain-entities-correctly`** — business rules live on domain classes; the Zod schema validates at the repository boundary, not inline in routes or views. Production repositories import from `lowdb` / `lowdb/node`.
 - **`implement-full-interfaces`** — every `implements` clause covers all interface members; no stub no-ops standing in for real behavior.
 
-## Packaging
+### Packaging
 
 - **`use-valid-package-names`** — one package per feature (`@scope/epicSlug`) with subpath exports into nested domains (`./recipients`, `./recipients/recipient-server`, …); no placeholder scopes; no phantom imports; no legacy flat `*-shared` / `*-server` / `*-client` package split.
 - **`include-all-external-dependencies`** — every import has a declared dependency (`lowdb` on the server); the project compiles after a clean install.
 
-## Testing architecture
+### Testing architecture
 
 Companion to `stories`'s `acceptance_tests` fidelity — this tool pins the
 generic `*_spec.{tier}` to `tier ∈ {server, client, e2e}` and the stub policy
@@ -174,14 +175,14 @@ fixtures.
 - **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` present at the workspace root; unit/component and E2E runners stay separate (Vitest vs Playwright), and `vitest.config.ts` / `playwright.config.ts` don't pick up each other's spec files.
 - **`use-thorough-e2e-tests`** — E2E tests are independent (no wiping an entire JSON store or `unlink` of `data/*.json` between tests); delete only the aggregate roots the test created. The feature package must exist and serve the real frontend (`npm run dev`) before E2E tests can pass.
 
-## UX hand-off
+### UX hand-off
 
 Screens and navigation for this slice were designed upstream by `ux` before
 this tool runs. `generate` cites that artifact under **Sources / context** on
 the touched view files (`packages/<epicSlug>/<Feature>View.tsx`, views inside
 `<domain>/<domain>-client.tsx`, …) — it does not call `ux` itself.
 
-## Generating stories — cross-aggregate sync
+### Generating stories — cross-aggregate sync
 
 When a story (or the slice) involves **more than one aggregate**, those
 aggregates stay in separate JSON stores. Synchronization is a **choice**,
@@ -228,3 +229,27 @@ recorded before scenarios are written.
 4. Cite the ux screen/navigation artifact for this slice under **Sources /
    context** on the touched view files — this tool does not call `ux` itself.
 5. Run validate. If it fails, fix and validate again until it passes.
+
+## Shared rules
+
+- **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON
+- **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository`
+- **`organize-by-domain-module`** — feature package present with process boot (`app.ts`, `serve.ts`, `main.tsx`) and nested domain dirs each having `{domain}.ts`, `{domain}-server.ts`, `{domain}-client.tsx`.
+- **`share-domain-logic`** — entities, value objects, Zod schemas, and business rules defined once in `<domain>.ts`; `<domain>-server.ts` and `<domain>-client.tsx` import from there, never re-derive.
+- **`maintain-layer-purity`** — `<domain>.ts` is framework-free (no Express, no React, no lowdb); `<domain>-server.ts` and `<domain>-client.tsx` never cross-import each other.
+- **`use-ubiquitous-language`** — names come from the domain model; no `Manager`, `Handler`, `Helper`, or `Domain*` prefixes/suffixes.
+- **`cross-layer-method-naming`** — the same `{verbNoun}` method stem flows through every tier where an operation appears (domain core → client → server → route → HTTP); subclasses keep every inherited base operation unchanged.
+- **`preserve-arg-names-across-layers`** — argument names stay identical across layer boundaries and across base → extension; only types narrow.
+- **`property-casing-transform`** — `camelCase` in TypeScript; `snake_case` in JSON (lowdb documents and HTTP bodies).
+- **`consistent-view-naming`** — React components end in `View` or `CardView`; never `Page`.
+- **`delegate-routes-to-domain-server`** — route handlers in `<domain>-server.ts` are thin: parse the request, delegate to a server-side domain class; never call the repository or apply domain-core logic inline.
+- **`ensure-type-safe-routes`** — route handlers compile without implicit `any`; `req.user` and other request extensions are typed.
+- **`standard-mutation-response`** — every mutation on the same aggregate returns the same response shape.
+- **`implement-domain-entities-correctly`** — business rules live on domain classes; the Zod schema validates at the repository boundary, not inline in routes or views. Production repositories import from `lowdb` / `lowdb/node`.
+- **`implement-full-interfaces`** — every `implements` clause covers all interface members; no stub no-ops standing in for real behavior.
+- **`use-valid-package-names`** — one package per feature (`@scope/epicSlug`) with subpath exports into nested domains (`./recipients`, `./recipients/recipient-server`, …); no placeholder scopes; no phantom imports; no legacy flat `*-shared` / `*-server` / `*-client` package split.
+- **`include-all-external-dependencies`** — every import has a declared dependency (`lowdb` on the server); the project compiles after a clean install.
+- **`test-story-driven`** — tests mirror the story hierarchy (epic → folder, sub-epic → file, story → `describe`, scenario → `it`); Given/When/Then helpers present at all three tiers.
+- **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` present at the workspace root; unit/component and E2E runners stay separate (Vitest vs Playwright), and `vitest.config.ts` / `playwright.config.ts` don't pick up each other's spec files.
+- **`use-thorough-e2e-tests`** — E2E tests are independent (no wiping an entire JSON store or `unlink` of `data/*.json` between tests); delete only the aggregate roots the test created. The feature package must exist and serve the real frontend (`npm run dev`) before E2E tests can pass.
+- **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories.

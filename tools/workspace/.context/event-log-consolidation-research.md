@@ -91,12 +91,12 @@ Expand vs run call sites (locked):
 ### 2.3 Prompt / IDE wire audit — `prompt-log.txt`
 
 **Sink:** `.context/sessions/{name}/logs/prompt-log.txt` (via `session_log_path`)  
-**Writer:** `primitives/hooks/prompt_log/prompt_log.py` — Cursor hooks: `beforeSubmitPrompt`, `beforeReadFile`, `preToolUse`, `subagentStart`, `afterAgentResponse`  
+**Writer:** `installation/hooks/prompt_log/prompt_log.py` — Cursor hooks: `beforeSubmitPrompt`, `beforeReadFile`, `preToolUse`, `subagentStart`, `afterAgentResponse`  
 **Format:** Human-readable blocks with `===` headers, timestamps, previews (8 lines / 600 chars)  
 **Lifecycle:** Session-scoped; legacy repo-root `.context/prompt-log.txt` moved on close (`session_logs.py:13–18`, `94–127`)  
 **Parseability:** Low — prose blocks, not machine-first.
 
-```4:8:primitives/hooks/prompt_log/prompt_log.py
+```4:8:installation/hooks/prompt_log/prompt_log.py
 Appends to ``.context/sessions/{name}/logs/prompt-log.txt`` on:
 - beforeSubmitPrompt — user prompt + rule/file attachments
 - beforeReadFile — file content Cursor sends to the model
@@ -107,9 +107,9 @@ Appends to ``.context/sessions/{name}/logs/prompt-log.txt`` on:
 ### 2.4 Hook dispatch debug — `dispatch.debug`, `skill_inject.debug`
 
 **Sink:** `.context/sessions/{name}/logs/dispatch.debug` (and `skill_inject.debug`) via `_hook_debug_path` (`dispatch.py:25–28`, `178–179`, `332–334`)  
-**Writer:** `primitives/hooks/dispatch.py` — hook routing diagnostics  
+**Writer:** `installation/hooks/dispatch.py` — hook routing diagnostics  
 **Format:** Plain text lines (`ENTRY`, `ENABLED`, `MERGED`, etc.)  
-**Lifecycle:** Legacy paths under `primitives/hooks/` consolidated on session close (`session_logs.py:15–18`)  
+**Lifecycle:** Legacy paths under `installation/hooks/` consolidated on session close (`session_logs.py:15–18`)  
 **Parseability:** Low — debug prose.
 
 ### 2.5 Manifest gate — `manifest_gate.log`
@@ -129,7 +129,7 @@ Appends to ``.context/sessions/{name}/logs/prompt-log.txt`` on:
 | `cli-agent-doer.log` / `cli-agent-judge.log` | `_CliSpawner.append_log` | Text blocks `--- spawn {stamp} ---` + argv |
 | `cli-agent.json`, job queue, task txt files | CliAgent lifecycle | Config / prompts — not event stream |
 
-```576:659:tools/cli_agent/cli_agent.py
+```576:659:harness/cli_agent/cli_agent.py
 class _CliAgentLog:
     """Append-only event log for a cli-agent session: cli-agent-session.jsonl."""
     ...
@@ -178,7 +178,7 @@ class _CliAgentLog:
 
 ### 3.1 Framework expand (automatic)
 
-```1279:1292:primitives/agent_tools/action.py
+```1279:1292:harness/agent_tools/action.py
     def _log_expansion(self, request: _AgentToolExpandRequest, tool_steps: tuple[str, ...]) -> None:
         """Framework expand append — every @agent_instructions expansion is logged."""
         ...
@@ -222,14 +222,14 @@ Run appends are minimal — mostly static strings, not input/output capture.
 
 ## 4. Annotation model today (`@agent_tool` / `@agent_instructions`)
 
-```1455:1458:primitives/agent_tools/action.py
+```1455:1458:harness/agent_tools/action.py
 def agent_instructions(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as an agent orchestration recipe; body is expanded, never executed."""
     func._is_agent_instructions = True
     return func
 ```
 
-```691:694:primitives/agent_tools/tool.py
+```691:694:harness/agent_tools/tool.py
 def agent_tool(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as a tool; instructions come from the method docstring."""
     func._is_agent_tool = True
@@ -320,7 +320,7 @@ There is **no** `@event` or `to_log()` in the codebase (grep: zero matches).
 
 ### 6.1 Placement
 
-**Module:** `tools/workspace/session_log.py` (alongside `SessionLog`, `summarize_mapping`) — same package as locked `SessionLog` class; imported by `primitives/agent_tools` and `primitives/agent_tools` via existing `workspace` path bootstrap.
+**Module:** `tools/workspace/session_log.py` (alongside `SessionLog`, `summarize_mapping`) — same package as locked `SessionLog` class; imported by `harness/agent_tools` and `harness/agent_tools` via existing `workspace` path bootstrap.
 
 **Not** on `@agent_tool` / `@agent_instructions` themselves — eval sketch locks logging as non-decorator for those (`sketch:207`). `@event` is a **third marker** for *serialization policy*, not agent exposure.
 
@@ -438,13 +438,13 @@ Expand events default `summary` only (tool step list); full expansion payload op
 |---|---|
 | SessionLog API | `tools/workspace/session_log.py` |
 | WorkSession trail / close | `tools/workspace/workspace.py` |
-| Framework expand log | `primitives/agent_tools/action.py` (`_log_expansion`, `_walk_session_log_append`) |
-| CLI runner session bind | `primitives/agent_tools/tool.py` (`run_request`) |
-| Prompt audit hook | `primitives/hooks/prompt_log/prompt_log.py` |
-| Session log paths / close consolidate | `primitives/hooks/session_logs.py` |
-| Hook dispatch debug | `primitives/hooks/dispatch.py` |
+| Framework expand log | `harness/agent_tools/action.py` (`_log_expansion`, `_walk_session_log_append`) |
+| CLI runner session bind | `harness/agent_tools/tool.py` (`run_request`) |
+| Prompt audit hook | `installation/hooks/prompt_log/prompt_log.py` |
+| Session log paths / close consolidate | `installation/hooks/session_logs.py` |
+| Hook dispatch debug | `installation/hooks/dispatch.py` |
 | Manifest gate log | `tools/manifest_hook/manifest_gate.py` |
-| CLI agent JSONL | `tools/cli_agent/cli_agent.py` (`_CliAgentLog`) |
+| CLI agent JSONL | `harness/cli_agent/cli_agent.py` (`_CliAgentLog`) |
 | Agent BDD harness logs | `practices/agent_bdd/agent_cli_bdd.py`, `agent_bdd_common.py` |
 | Locked eval decisions | `.sessions/closed/eval-consolidate-workspace/workspace-eval-oo-sketch.md` §4, §9 |
 | BDD specs | `tools/workspace/session_log_spec.py`, `workspace_spec.py`, `workspace_session_spec.py` |

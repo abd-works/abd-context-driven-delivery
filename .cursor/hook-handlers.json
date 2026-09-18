@@ -1,0 +1,9 @@
+{
+  "handlers": [
+    {
+      "event": "stop",
+      "operation": "auto_turn",
+      "ref": "harness.guidance.fixtures.agentic_ops.hook_ops:SampleHookOps"
+    }
+  ]
+}

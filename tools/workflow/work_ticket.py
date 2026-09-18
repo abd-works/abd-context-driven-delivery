@@ -35,7 +35,7 @@ class WorkTicket:
         ),
         "Feature": (
             "Standing up a new module — a new package/folder (tools/, "
-            "primitives/, practices/, …). Example: creating the CLI agent. "
+            "harness/, practices/, …). Example: creating the CLI agent. "
             "A small change to an existing feature or utility is not a Feature; "
             "that has to be very large to count."
         ),

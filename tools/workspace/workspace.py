@@ -16,13 +16,13 @@ from pathlib import Path
 from typing import Any
 
 from agent_tools import agent_instructions, agent_toolset
-from primitives.markdown import markdown
+from harness.markdown import markdown
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
 from agent_tools.agent_tools import agent_tool, agent_toolset
-from primitives.hooks.hooks import hook, hooks
-from hooks.session_logs import (
+from installation.hooks.hooks import hook, hooks
+from installation.hooks.session_logs import (
     clear_active_session,
     consolidate_logs_for_close,
     write_active_session,
@@ -446,7 +446,7 @@ class Turn:
         expansion or run entry in the session events.log. Falls back to
         empty strings when no log is available.
         """
-        from hooks.session_logs import session_logs_dir, active_session_name
+        from installation.hooks.session_logs import session_logs_dir, active_session_name
 
         root = Path(__file__).resolve().parents[2]
         log_file = session_logs_dir(root) / "events.log"

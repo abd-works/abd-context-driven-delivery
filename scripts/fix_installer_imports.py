@@ -11,7 +11,7 @@ def skip(path: Path) -> bool:
 
 def fix(text: str) -> str:
     text = text.replace("from installer.", "from installer.")
-    text = text.replace("primitives.installer.installation", "primitives.installer.installation")
+    text = text.replace("installation.installation", "installation.installation")
     text = text.replace("from .installation import", "from .installation import")
     text = text.replace("from .installer import", "from .installer import")
     text = text.replace("import Installer", "import Installer")

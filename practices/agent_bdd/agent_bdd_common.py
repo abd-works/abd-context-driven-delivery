@@ -418,7 +418,7 @@ def reject_agent_deferral(agent_text: str) -> None:
 
 def invoke_run_request(request: dict[str, Any]) -> RunResponse:
     """Load a toolset and expand or invoke the named member the same way production does."""
-    from primitives.agent_tools.agent_tools import AgentOperation, AgentToolSet
+    from harness.agent_tools.agent_tools import AgentOperation, AgentToolSet
 
     toolset_path = request.get("toolset")
     if not toolset_path:
@@ -756,7 +756,7 @@ class AgentSpecRunbook:
 
 def _infer_repo_root(start: Path) -> Path:
     for parent in [start, *start.parents]:
-        if (parent / "primitives").is_dir() and (parent / "contexts").is_dir():
+        if (parent / "harness").is_dir() and (parent / "contexts").is_dir():
             return parent
     return start.parent.parent
 

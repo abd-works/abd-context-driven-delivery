@@ -1,4 +1,4 @@
-# Instructions
+# Contexts
 
 **CDD** (context-driven delivery) orchestrates practice contexts across delivery stages:
 
@@ -16,10 +16,9 @@ CDD does **not** restate child rules. It picks **stage + context(s)**, sketches 
 
 **Defaults:** grill + sketch first. AI decides **order** and which lenses to run. One sketch file steers themes, flow, and the action trail.
 
----
-# Contexts
+## Guidance
 
-## Stages (CDD fidelity)
+Infer CDD fidelity from workspace artifacts, sketch, and user intent. Grill and sketch at CDD level. When following a child `tools run`, skip nested child grill/sketch; apply the child generate body only.
 
 | Fidelity | Intent | Default run scope |
 |---|---|---|
@@ -30,8 +29,6 @@ CDD does **not** restate child rules. It picks **stage + context(s)**, sketches 
 
 Grill and sketch work **much finer** inside that scope. Do not invent detail from a deeper stage.
 
-### Stage → child fidelities
-
 | CDD | stories | ddd | ux | clean_engineering | bdd |
 |---|---|---|---|---|---|
 | **discovery** | discovery | bounded_context | ia | modules | — |
@@ -40,8 +37,6 @@ Grill and sketch work **much finer** inside that scope. Do not invent detail fro
 | **engineer** | engineering | tactics | — | code | **development** |
 
 UX has no engineering fidelity — production UI follows stories + clean_engineering at **engineer**, honouring the UX spec from **spec**.
-
-### Sketch (one file)
 
 Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 
@@ -54,18 +49,7 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 - **Flow** — after each chunk: more at this stage, or proceed. Recommend proceed only when views agree.
 - **Trail** — `TODO` → `doing` → `pass #label` (or `skip #why`). Move passes to `## log` as `stage / scope / theme / …`.
 
-### Rules
-
-- **`stage-from-context`** — Infer CDD fidelity from workspace artifacts, sketch, and user intent; confirm when ambiguous.
-- **`cdd-owns-grill-sketch`** — Grill and sketch at CDD level. When following a child `tools run`, skip nested child grill/sketch; apply the child generate body only.
-- **`views-agree-before-proceed`** — Recommend proceed only when the views in play for the current scope agree; otherwise more at the same stage. User can override.
-- **`todo-trail-in-sketch`** — Persist actions as TODO/doing/pass #label in the sketch; archive passes under `## log`.
-- **`scaffold-before-content`** — **Hard gate.** Do not write `cdd-sketch.md` (or a file called `sketch.md`) until you have (1) **read** `templates/cdd-sketch.md` and each active child's `sketch_template` from `resolve_targets`, and (2) **AskQuestion** has confirmed which lenses are in play (`confirm-lenses-before-sketch`). Free prose instead of the scaffold is a defect.
-- **`scaffold-inside-sketch-file`** — **Hard gate.** Scaffold and sketch are one artifact lifecycle. Start with scaffold lines in theme lens blocks, then deepen those same lines. Never split scaffold into another file or another standalone section.
-- **`order-themes-by-journey`** — When the theme is the customer journey / epic, order themes by the story map / customer experience (Onboarding before Selfcare), not by UX IA.
-
----
-# Generate
+### Generate
 
 1. Confirm CDD fidelity and **run scope** (defaults above); set `context.fidelity` if needed.
 2. **Grill + sketch** — **`scaffold-before-content` first.** Read `templates/cdd-sketch.md` and each active child's `sketch_template`. AskQuestion to confirm lenses. Only then follow `sketch.md`: scaffold if needed, grill per theme, fill lens blocks from child `sketch_template` notation only. Do not dump free prose into the sketch file.
@@ -79,3 +63,47 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 4. **Check agreement** — after sketching any lens, ask: does this raise questions another lens would answer? If yes, sketch that lens too (same theme, same file). Only when all active views agree, move to the next theme or deepen.
 5. Update **flow**: recommend proceed or more-same-stage; wait for user override if they disagree.
 6. When proceeding, deepen fidelity or move scope; keep the `## log`.
+
+## Shared rules
+
+- **`stage-from-context`** — Infer CDD fidelity from workspace artifacts, sketch, and user intent; confirm when ambiguous.
+- **`cdd-owns-grill-sketch`** — Grill and sketch at CDD level. When following a child `tools run`, skip nested child grill/sketch; apply the child generate body only.
+- **`views-agree-before-proceed`** — Recommend proceed only when the views in play for the current scope agree; otherwise more at the same stage. User can override.
+- **`todo-trail-in-sketch`** — Persist actions as TODO/doing/pass #label in the sketch; archive passes under `## log`.
+- **`scaffold-before-content`** — **Hard gate.** Do not write `cdd-sketch.md` (or a file called `sketch.md`) until you have (1) **read** `templates/cdd-sketch.md` and each active child's `sketch_template` from `resolve_targets`, and (2) **AskQuestion** has confirmed which lenses are in play (`confirm-lenses-before-sketch`). Free prose instead of the scaffold is a defect.
+- **`scaffold-inside-sketch-file`** — **Hard gate.** Scaffold and sketch are one artifact lifecycle. Start with scaffold lines in theme lens blocks, then deepen those same lines. Never split scaffold into another file or another standalone section.
+- **`order-themes-by-journey`** — When the theme is the customer journey / epic, order themes by the story map / customer experience (Onboarding before Selfcare), not by UX IA.
+
+## Fidelities
+
+## discovery
+
+**Default format:** markdown
+
+### Guidance
+
+Whole-solution shape. Default run scope is the entire solution, or a large subsection. Sketch themes and lens blocks in `cdd-sketch.md` before piping child `run` messages.
+
+## explore
+
+**Default format:** markdown
+
+### Guidance
+
+Current increment. Default run scope is the increment, or a large subsection of it. Deepen the same sketch file; do not invent detail from spec or engineer.
+
+## spec
+
+**Default format:** python
+
+### Guidance
+
+Narrow, concrete work — about a sub-epic inside the solution or increment. Child practices lock tactics, exploration stories, mockup, code, and BDD development.
+
+## engineer
+
+**Default format:** python
+
+### Guidance
+
+Working software at about sub-epic scope. Production UI follows stories + clean_engineering at this stage, honouring the UX spec from **spec**.

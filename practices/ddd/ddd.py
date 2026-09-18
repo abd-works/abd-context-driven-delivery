@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING, TypedDict
 
 from practices.stages import DISCOVERY, ENGINEER, SHAPING, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
-from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
-from primitives.guidance.guidance import PracticeGuidance
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
+from harness.guidance.guidance import PracticeGuidance
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
@@ -161,12 +163,21 @@ class Ddd(PracticeGuidance):
         current.record_context_root()
         return current.path
 
+    @property
+    @mcp
+    @skill
     @agent_instructions
-    def guidance(self) -> str:
+    def instructions(self) -> str:
         """Provide guidance for creating bounded contexts, building blocks, and tactics.
         When this DDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
-        super().guidance()
-        self.ce().guidance()
+        return super().instructions
+
+    @property
+    @agent_instructions
+    def guidance(self) -> str:
+        """Expand this practice's Guidance section, then Clean Engineering companion guidance."""
+        super().guidance
+        self.ce().guidance
         return (
             "When this DDD work is done, call guidance on the Clean Engineering companion "
             "and pass that companion to this action as a separate tools run. "

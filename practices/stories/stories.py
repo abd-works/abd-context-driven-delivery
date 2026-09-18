@@ -9,8 +9,10 @@ from typing import TYPE_CHECKING, Any
 
 from practices.stages import DISCOVERY, ENGINEER, SHAPING, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
-from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
-from primitives.guidance.guidance import PracticeGuidance
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
+from harness.guidance.guidance import PracticeGuidance
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
@@ -202,23 +204,35 @@ class Stories(PracticeGuidance):
             return target_cls(tests_root=self._resolve_tests_root())
         return target_cls()
 
+    @property
+    @mcp
+    @skill
     @agent_instructions
-    def guidance(self) -> str:
+    def instructions(self) -> str:
         """Provide guidance for creating story maps, scenarios, and acceptance tests.
         At scaffold fidelity: write epic, sub-epic, and story names only.
         At story_map fidelity: write the story map and thin-slice only.
         At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story folder beside story-scenarios.md (use tests/ only when that is the chosen output root).
-        At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts (one GWT file per story per seam, no story folder). When those files are written, call guidance on the CE companion and pass that companion to this action as a separate tools run so wrap classes under domain/ stay in sync.
-        If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails).
-        When this Stories work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
-        super().guidance()
-        self.ce().guidance()
+        At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts (one GWT file per story per seam, no story folder). After writing each acceptance test, use Clean Engineering at code fidelity to ensure the test is properly written, then to write the underlying code sufficient to make the test pass, then run the code and refactor according to Clean Engineering rules.
+        If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
+        return super().instructions
+
+    @property
+    @agent_instructions
+    def guidance(self) -> str:
+        """Expand this practice's Guidance section, then code-fidelity Clean Engineering at acceptance_tests."""
+        text = super().guidance
+        if self.fidelity != "acceptance_tests":
+            return text
+        self.ce().guidance
         return (
-            "When this Stories work is done, call guidance on the Clean Engineering companion "
-            "and pass that companion to this action as a separate tools run. "
-            "The action already knows what to do for every tool. Do not inline."
+            "After writing each acceptance test, use Clean Engineering at code fidelity "
+            "to ensure the test is properly written, then to write the underlying code "
+            "sufficient to make the test pass. Run the code, then refactor according to "
+            "Clean Engineering rules."
         )
 
+    @mcp
     @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:
         """Parse content from source_format into the canonical StoryMap, then render into target_format.
@@ -236,6 +250,7 @@ class Stories(PracticeGuidance):
         rendered = target.render(canonical)
         return {"format": target_format, "content": rendered}
 
+    @mcp
     @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated story output into ``format`` via channel parse/render."""
@@ -265,6 +280,7 @@ class Stories(PracticeGuidance):
             source = self.format or "markdown"
         return self.transform(source, format, content)
 
+    @mcp
     @agent_tool
     def render_chunks(self, content: str, chunk_size: int = 80) -> dict:
         """Render story map into Miro SVG chunks for incremental board upload.
@@ -288,6 +304,7 @@ class Stories(PracticeGuidance):
         return {"format": "miro", "chunk_count": len(chunks), "chunks": chunks}
 
     @agent_tool
+    @mcp
     def render_miro(
         self,
         content: str,

@@ -4,15 +4,19 @@ from __future__ import annotations
 
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from workspace import SessionLog
 
 @agent_toolset
 class Satisfy(LifecycleAction):
     """Satisfy artifacts for provided context tools."""
 
+    @mcp
+    @skill
     @agent_instructions
     def satisfy(self, tools: list) -> str:
-        """satisfy"""
+        """Run validate for each provided guidance tool against the content; apply generate_fixes_from_validate, then validate again when done."""
         self.begin(tools, action="satisfy")
         from validate.validate import Validate
 

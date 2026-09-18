@@ -89,8 +89,8 @@ def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
 
 
 def stage_invoke_commands(repo_root: Path) -> None:
-    from installer.installer import Installer
-    from primitives.agent_tools.agent_tools import AgentToolSet
+    from installation.installer import Installer
+    from harness.agent_tools.agent_tools import AgentToolSet
 
     car = AgentToolSet.instantiate(CAR)
     car.load_fidelities_from_markdown()

@@ -4,9 +4,9 @@
       "command": "python",
       "args": [
         "-m",
-        "primitives.mcp",
+        "installation.mcp",
         "--toolsets",
-        "practices.car.car:Car"
+        "actions.car_story.car_story:CarStory,actions.document.document:Document,actions.generate.generate:Generate,actions.grill_context.grill_context:GrillContext,actions.improvement.improvement:Improvement,actions.iterate.iterate:Iterate,actions.lifecycle:LifecycleAction,actions.partition.partition:Partition,actions.render.render:Render,actions.satisfy.satisfy:Satisfy,actions.scan.scan:Scan,actions.sketch.sketch:Sketch,actions.validate.validate:CreateRule,actions.validate.validate:Validate,installation.installer:Installer,practices.agent_bdd.agent_bdd:AgentBdd,practices.bdd.bdd:Bdd,practices.clean_engineering.specifications.lern_domain_driven.lern_domain_driven:LernDomainDriven,practices.clean_engineering.specifications.mern_domain_driven.mern_domain_driven:MernDomainDriven,practices.stories.stories:Stories,practices.ux.ux:Ux,tools.echo.echo:Echo"
       ]
     }
   }

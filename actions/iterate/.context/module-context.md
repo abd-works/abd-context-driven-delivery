@@ -7,7 +7,7 @@
 `Iterate`
 
 ## Dependencies
-`grill_context.grill_context`, `primitives.agent_tools`, `tools.tool`
+`grill_context.grill_context`, `harness.agent_tools`, `tools.tool`
 
 ## Public API
 - `mark_iterate_tick`

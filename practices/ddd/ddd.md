@@ -22,6 +22,28 @@ Build the solution around how the business actually works, in the words the busi
 
 **Keep the language alive.** As understanding deepens, rename and restructure — in the model and in the code together. A glossary that no longer matches the code is worse than none, because readers trust it and it is wrong.
 
+### Default folder
+
+`default_workspace_folder` is `src/` for **generate**. `/document` calls `apply_document_workspace_default`: working area becomes `domain/` unless `path` was passed or `default_workspace_folder` was already overwritten. Clean Engineering does not choose this folder; `ce()` follows DDD's working path.
+
+### Document
+
+Take the persona of a **neutral observer** — describe what exists, do not prescribe what should exist.
+
+When documenting an existing system, tactical wraps live under the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. Leave production `src/` alone unless the user directs otherwise. Generate / greenfield work may still use `src/`.
+
+- **`load-with-identity-in-hand`** — same rule as **tactics**.
+- **`user-facing-system-first`** — same rule as **bounded_context**.
+
+### Generate
+
+1. Confirm fidelity (`bounded_context` → `building_blocks` → `tactics`) and format.
+2. Read the active fidelity section above (including its Rules). Do not re-author CE OO theory.
+3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `templates/ddd-sketch.md`).
+4. Fill / deepen `bounded-context-map.md`; at **tactics**, resolve architecture first.
+5. Call clean_engineering at the mapped fidelity (`generate_output`).
+6. Run **validate**.
+
 ---
 
 ## Shared rules
@@ -33,6 +55,8 @@ Build the solution around how the business actually works, in the words the busi
 - **`do-not-invent-concepts`** — Only model contexts, aggregates, and types the source describes or the user explicitly asks for. Invented contexts and DTO-shaped nouns become code nobody asked for and integrations nobody planned.
 
 ---
+
+## Fidelities
 
 ## bounded_context
 
@@ -169,31 +193,3 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 - **`preserve-upstream-names`** — Public API names match the building_blocks model. Renaming here breaks traceability back to the map and the stories.
 - **`load-with-identity-in-hand`** — A live `load` takes the identity already in hand. Do not assume ambient session state. Reach owned aggregates through their owner.
 - **`ports-behind-adapters`** — Persistence, messaging, and external systems integrate through ports — not direct imports from the domain core.
-
----
-
-# Default folder
-
-`default_workspace_folder` is `src/` for **generate**. `/document` calls `apply_document_workspace_default`: working area becomes `domain/` unless `path` was passed or `default_workspace_folder` was already overwritten. Clean Engineering does not choose this folder; `ce()` follows DDD's working path.
-
----
-
-# Document
-
-Take the persona of a **neutral observer** — describe what exists, do not prescribe what should exist.
-
-When documenting an existing system, tactical wraps live under the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. Leave production `src/` alone unless the user directs otherwise. Generate / greenfield work may still use `src/`.
-
-- **`load-with-identity-in-hand`** — same rule as **tactics**.
-- **`user-facing-system-first`** — same rule as **bounded_context**.
-
----
-
-# Generate
-
-1. Confirm fidelity (`bounded_context` → `building_blocks` → `tactics`) and format.
-2. Read the active fidelity section above (including its Rules). Do not re-author CE OO theory.
-3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `templates/ddd-sketch.md`).
-4. Fill / deepen `bounded-context-map.md`; at **tactics**, resolve architecture first.
-5. Call clean_engineering at the mapped fidelity (`generate_output`).
-6. Run **validate**.

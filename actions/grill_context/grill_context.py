@@ -7,6 +7,8 @@ from pathlib import Path
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from workspace import docs_dir
 
 @agent_toolset
@@ -32,6 +34,7 @@ class GrillContext(LifecycleAction):
         entry = f"### {heading}\n\n{body.strip()}\n\n"
         return base + entry
 
+    @mcp
     @agent_tool
     def explore_context_files(self, root: str) -> str:
         """Scan a directory tree for context files.
@@ -55,12 +58,14 @@ class GrillContext(LifecycleAction):
                 results.append({"path": str(candidate), "kind": "context-folder"})
         return json.dumps(results, indent=2)
 
+    @mcp
     @agent_tool
     def read_context_file(self, path: str) -> str:
         """Read a context file and return its contents.
         Use after explore_context_files to read files assessed as relevant."""
         return Path(path).read_text(encoding="utf-8")
 
+    @mcp
     @agent_tool
     def write_grill_answer(self, root: str, heading: str, body: str) -> str:
         """Append one insight to grill-answers.md under the given heading.
@@ -76,9 +81,11 @@ class GrillContext(LifecycleAction):
         answers_path.write_text(self._appended_answers_content(existing, heading, body), encoding="utf-8")
         return str(answers_path)
 
+    @mcp
+    @skill
     @agent_instructions
     def grill(self, tools: list) -> str:
-        """Grill then generate - pure grill loop, then the host generate body."""
+        """Interview the plan against codebase context until questions are grounded in files you have read, then generate each listed context tool. Ask one framed question at a time and write each resolved insight to grill-answers.md."""
         self.begin(tools, action="grill")
         self.grill_with_context()
         for host in self.listed():

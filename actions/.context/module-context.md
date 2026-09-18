@@ -13,7 +13,7 @@ Companions that left this tree: `echo` and `handoff` live under `tools/`;
 
 Host-action skill/command names match the operation (`grill`, not `grill-context`).
 
-`primitives/agent_tools` is the agent-tools framework (`agent_tools.py`, `@agent_instructions`),
+`harness/agent_tools` is the agent-tools framework (`agent_tools.py`, `@agent_instructions`),
 not a place for these kits. First-order kits subclass `LifecycleAction`: open the
 workspace if it is not already open; the turn and decision records hang off the
 work session; finish that session turn at the end.

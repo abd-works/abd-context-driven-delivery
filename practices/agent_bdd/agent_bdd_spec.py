@@ -15,7 +15,7 @@ from agent_bdd.agent_bdd_common import (
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_TOOLS_SPEC = _REPO_ROOT / "primitives" / "tools" / "tools_agent_spec.py"
+_TOOLS_SPEC = _REPO_ROOT / "harness" / "tools" / "tools_agent_spec.py"
 
 
 with description("an agent spec file"):
@@ -36,7 +36,7 @@ with description("an agent spec file"):
             expect(len(scenario.setup) >= 1).to(be_true)
 
         with it("should extract instruct prompts from actions_agent_spec"):
-            runbook = build_runbook(_REPO_ROOT / "primitives" / "actions" / "actions_agent_spec.py")
+            runbook = build_runbook(_REPO_ROOT / "harness" / "actions" / "actions_agent_spec.py")
             setup = runbook.scenarios[0].setup
             expect(len(setup) >= 2).to(be_true)
             prompts = " ".join(step.prompt or "" for step in setup)

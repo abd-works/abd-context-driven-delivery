@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agent_tools import agent_instructions, agent_toolset, instructions, tools
-from primitives.markdown import markdown
+from harness.markdown import markdown
 from scan.scan import Scan
 from sub_agent.sub_agent import sub_agent
 from agent_tools.agent_tools import agent_tool

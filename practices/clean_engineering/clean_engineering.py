@@ -13,8 +13,8 @@ from practices.clean_engineering.class_model.python_class_model import PythonCle
 from practices.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
 from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
-from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
-from primitives.guidance.guidance import PracticeGuidance
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
+from harness.guidance.guidance import PracticeGuidance
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -89,11 +89,6 @@ class CleanEngineering(PracticeGuidance):
         )
         self.drawio = Drawio(workspace=self.workspace)
         self.drawio.mode = "tool"
-
-    @agent_instructions
-    def guidance(self) -> str:
-        """Provide guidance for creating OO modules, models, and code."""
-        return super().guidance()
 
     @agent_instructions
     def generate_output(self) -> str:

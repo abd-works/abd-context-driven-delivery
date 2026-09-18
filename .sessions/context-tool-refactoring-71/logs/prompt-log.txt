@@ -987,7 +987,7 @@ Both `.instructions` and `.catalog` are **assembled documents** read from the ho
 2026-09-11T03:33:09Z  afterAgentResponse  conv=0e0e3022  gen=8dc12a28  model=composer-2.5
 ------------------------------------------------------------------------------
 
-text: Consolidated everything under **`primitives/installer`** — one module for all IDE deploy artifacts.
+text: Consolidated everything under **`installation`** — one module for all IDE deploy artifacts.
 
 ### Unified model
 
@@ -1061,7 +1061,7 @@ text: With `deployMember` and `@rules` / `@skill` / `@prompt` all on members, **
 
 It is only there because today's code has it:
 
-```288:289:primitives/installer/installer_tool.py
+```288:289:installation/installer_tool.py
 class InstallerTool:
     """One generated IDE file. ``type`` is Cursor, VS Code, or Kilo."""
 ```

@@ -9,7 +9,7 @@ from typing import Any
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "tools", "practices", "actions"):
+for _cat in ("harness", "tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -17,8 +17,8 @@ for _cat in ("primitives", "tools", "practices", "actions"):
 from expects import be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from primitives.agent_tools.agent_tools import AgentToolSet
-from primitives.markdown import Markdown
+from harness.agent_tools.agent_tools import AgentToolSet
+from harness.markdown import Markdown
 from workspace.workspace import WorkSession, Workspace
 
 _KIT_DIR = Path(__file__).resolve().parent

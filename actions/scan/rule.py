@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any, Iterator
 
-from primitives.agent_tools.agent_tools import instructions, tools
+from harness.agent_tools.agent_tools import instructions, tools
 
 from .scanner import Scanner
 
@@ -62,9 +62,10 @@ class RulesCollection:
         entries: dict[str, Rule | RulesCollection] = {}
         for raw in text.splitlines():
             stripped = raw.strip()
-            if stripped.startswith(("-", "*")):
-                rule = Rule.from_bullet(stripped, fidelity=fidelity)
-                entries[rule.slug] = rule
+            if not re.match(r"^[-*]\s+", stripped):
+                continue
+            rule = Rule.from_bullet(stripped, fidelity=fidelity)
+            entries[rule.slug] = rule
         return cls(entries)
 
     def __iter__(self) -> Iterator[Rule]:

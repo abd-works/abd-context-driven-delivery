@@ -5,8 +5,8 @@ from __future__ import annotations
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 from practices.bdd.bdd import Bdd
 from practices.workspace_bind import init_practice_guidance
-from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset  # noqa: F401
-from primitives.guidance.guidance import PracticeGuidance
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset  # noqa: F401
+from harness.guidance.guidance import PracticeGuidance
 
 
 @agent_toolset
@@ -22,11 +22,6 @@ class AgentBdd(PracticeGuidance):
             path=path,
             session=session,
         )
-
-    @agent_instructions
-    def guidance(self) -> str:
-        """Provide guidance for writing agent BDD specs against the agent harness."""
-        return super().guidance()
 
     def _bdd(self) -> Bdd:
         active = self.workspace.current_work_session if self.workspace else None

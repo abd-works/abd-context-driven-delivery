@@ -13,16 +13,16 @@ for _p in [
     str(_REPO_ROOT),
     *[
         str(_REPO_ROOT / c)
-        for c in ("practices", "primitives", "tools", "actions")
+        for c in ("practices", "harness", "tools", "actions")
     ],
 ]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from primitives.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import practices  # noqa: F401
-from primitives.markdown import Markdown
+from harness.markdown import Markdown
 from agent_tools import AgentToolSet
 from validate.validate import Validate
 from practices.bdd.bdd import Bdd

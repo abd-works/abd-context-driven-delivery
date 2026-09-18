@@ -11,6 +11,8 @@ from grill_context.grill_context import GrillContext
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from workspace import docs_dir
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
@@ -41,6 +43,7 @@ class Sketch(LifecycleAction):
 
         return Generate()
 
+    @mcp
     @agent_tool
     def find_template(self, agent_dir: str = "") -> str:
         """Locate a sketch template using tiered discovery.
@@ -57,6 +60,7 @@ class Sketch(LifecycleAction):
                         return path.read_text(encoding="utf-8")
         return _DEFAULT_TEMPLATE.read_text(encoding="utf-8")
 
+    @mcp
     @agent_tool
     def save_sketch(
         self,
@@ -75,6 +79,7 @@ class Sketch(LifecycleAction):
         target.write_text(content, encoding="utf-8")
         return str(target)
 
+    @mcp
     @agent_tool
     def list_sketches(self, destination: str, slug: str = "") -> str:
         """List sketch files under the destination docs dir.
@@ -86,6 +91,7 @@ class Sketch(LifecycleAction):
         pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"
         return "\n".join(str(path) for path in sorted(context_dir.glob(pattern)))
 
+    @mcp
     @agent_tool
     def review_sketch(self) -> str:
         """Hard gate after every save_sketch — pause for human review before any next grill question.
@@ -98,16 +104,11 @@ class Sketch(LifecycleAction):
         Grill must validate the sketch's thinking here — not run as a disconnected interview."""
         return "sketch-review"
 
+    @mcp
+    @skill
     @agent_instructions
     def sketch(self, tools: list) -> str:
-        """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        """Sketch interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.path (durable {path}/.context/) — not session.folder. Module sketches: {session.path}/{module}. Question shape (frame + options) comes from grill_with_context - do not restate bare options here. Hard rule: call save_sketch as soon as the first interim draft exists; overwrite on every regeneration; call review_sketch after every save_sketch and do not ask the next grill question until the person confirms the sketch is correct. Never defer persistence or review to the end of the grill. Mistakes named in review (bad assumptions, poor performance, poor hygiene, or anything else) must be carried forward into the next sketch — correct the model; do not regenerate as if those mistakes never happened. Grill validates what the sketch claimed — sketch and grill must not run disconnected."""
-        """Step 0 - Grill the sketch plan (concept-grounded, thinking-first questions via grill_with_context). Batch very similar questions into one AskQuestion when they share a frame (e.g. port-as-is vs change for several peers) so the loop does not run forever."""
-        """Step 1 - Resolve destination: session.path (or session.docs_dir). Module -> {session.path}/{module}. If no session sprint exists yet, confirm path with the user, suggest a kebab slug, open, then use session.path. Do not invent {path}/.context/{session-name}/ or write the sketch into sessions/{name}/."""
-        """Step 2 - locate the sketch template via find_template(agent_dir=agent_dir). agent_dir is the concrete host toolset module directory (manifest chain agent_dir / module_dir of the invoked Context). If the caller supplied a template directly in context, use that instead."""
-        """Step 3 - draft a rough sketch inspired by the template. Show it in chat, then IMMEDIATELY call save_sketch(destination, slug, content), then IMMEDIATELY call review_sketch. A sketch that exists only in chat is a defect - the file under the destination docs dir is the working record. Asking another grill question before review_sketch confirms correct is a defect."""
-        """Step 4 - After every 2-3 grill answers (or one batched multi-choice), regenerate the sketch showing exactly what changed AND incorporating every mistake named in prior review_sketch rounds, show it in chat, IMMEDIATELY call save_sketch again (same path), then IMMEDIATELY call review_sketch again. Regenerating as if named mistakes never happened is a defect. Use placeholders for unresolved branches. Do not write formal generate artifacts during the sketch loop - that is iterate/generate territory."""
-        """Step 5 - Repeat until the sketch is stable, the user is satisfied, or the user switches to iterate/generate. Every new grill question still follows grill's Step 3a-3b and must wait for review_sketch confirmed-correct; this stage owns sketch persist/show/review cadence and uses grilling to validate the sketch. Carry forward all named mistakes into each next sketch."""
+        """Grill the plan with grill: ask short framed questions and wait for answers. After each small batch of answers, sketch only what those answers unlocked, save it, and get user feedback before asking more. Work in short cycles until the sketch is agreed. Then generate the formal artifact from that sketch — do not generate the full product during the sketch loop."""
         self.begin(tools, action="sketch")
         self._grill_context().grill_with_context()
         self.find_template()

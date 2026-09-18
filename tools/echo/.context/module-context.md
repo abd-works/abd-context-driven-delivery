@@ -19,4 +19,4 @@ Compose `fence` around any instruction body the agent should display without fol
 
 ## Dependencies
 
-`primitives.agent_tools`, `tools.tool`
+`harness.agent_tools`, `tools.tool`

@@ -10,7 +10,7 @@ import yaml
 from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
-from primitives.harness_files.harness_files import skill
+from installation.harness_files.harness_files import skill
 from agent_tools import agent_instructions, agent_toolset
 from sub_agent.sub_agent import sub_agent
 from agent_tools.agent_tools import agent_tool

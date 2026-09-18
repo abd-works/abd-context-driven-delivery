@@ -24,7 +24,7 @@ Add `@instruction def scaffold(self): ...` to each tool class, update `partition
 - These are NOT aliases; `partition` uses `scaffold` as its target fidelity
 
 **Why `@instruction def scaffold()` works without a new file:**
-The instruction system's `_path_for_name()` (in `primitives/instructions/instructions.py` line ~30–47) searches all `.md` files in the module directory for a heading matching the method name. `scaffold` → heading `Scaffold` → finds `## scaffold` in `{tool}.md` → resolves to `{tool}.md § Scaffold`. No new file needed.
+The instruction system's `_path_for_name()` (in `harness/instructions/instructions.py` line ~30–47) searches all `.md` files in the module directory for a heading matching the method name. `scaffold` → heading `Scaffold` → finds `## scaffold` in `{tool}.md` → resolves to `{tool}.md § Scaffold`. No new file needed.
 
 ## What was changed this session
 
@@ -80,7 +80,7 @@ if (self.module_dir / "partition.md").is_file():
     ...
 
 # AFTER
-from primitives.instructions.instructions import _instruction_ref_resolves
+from harness.instructions.instructions import _instruction_ref_resolves
 if _instruction_ref_resolves(self, "scaffold"):
     domain = Instruction.ref(self, "scaffold").expand()
     for k, v in params.items():
@@ -115,7 +115,7 @@ Remove-Item practices/clean_engineering/partition.md
 
 - `tools/partition_pipeline/partition_pipeline.py` — current `partition_guidance()` method
 - `tools/partition_pipeline/partition_guidance.md` — current template
-- `primitives/instructions/instructions.py` lines 30–47 — `_path_for_name()` section resolution
+- `harness/instructions/instructions.py` lines 30–47 — `_path_for_name()` section resolution
 - `practices/clean_engineering/clean_engineering.md § scaffold` — verify CE scaffold has all CE-specific content before deleting partition.md
 - `practices/clean_engineering/partition.md` — compare against CE scaffold section
 - `C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\.context\context-index.md`

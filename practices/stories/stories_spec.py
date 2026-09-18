@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "primitives", "tools"):
+for _cat in ("practices", "harness", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -15,7 +15,7 @@ from expects import be_a, be_true, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from practices.stories.stories import Stories
-from primitives.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.agent_tools import AgentInstructions
 from tools.diagnose.diagnose import Diagnose
 
 _SAMPLE_MARKDOWN = """\
@@ -111,31 +111,31 @@ with description("Stories"):
             ):
                 expect(name in host.agent_tools).to(equal(False))
 
-    with context("whose guidance action is expanded"):
+    with context("whose instructions action is expanded"):
         with it("should name `{story}.{tier}.py` at acceptance_tests"):
-            prose = _expanded(Stories(fidelity="acceptance_tests"), "guidance")
+            prose = _expanded(Stories(fidelity="acceptance_tests"), "instructions")
             expect("{story}.{tier}.py" in prose).to(be_true)
 
         with it("should tell the agent to use Scaffold under story_map for names only"):
-            prose = _expanded(Stories(fidelity="story_map"), "guidance")
+            prose = _expanded(Stories(fidelity="story_map"), "instructions")
             expect("names only" in prose).to(be_true)
             expect("When scaffolding only" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
             expect("Stop reading this skill when scaffolding" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
             expect("### Scaffold" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
 
         with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
-            prose = _expanded(Stories(), "guidance")
+            prose = _expanded(Stories(), "instructions")
             expect("diagnostic().diagnose()" in prose).to(be_true)
 
-        with it("should tell the caller to call companion guidance and pass it to this action"):
-            prose = _expanded(Stories(), "guidance")
-            expect("call guidance" in prose).to(be_true)
-            expect("pass that companion to this action" in prose).to(be_true)
-            expect("already knows what to do" in prose).to(be_true)
-            expect("Clean Engineering" in prose).to(be_true)
+        with it("should tell the caller to use code-fidelity CE after each acceptance test"):
+            prose = _expanded(Stories(fidelity="acceptance_tests"), "instructions")
+            expect("After writing each acceptance test" in prose).to(be_true)
+            expect("ensure the test is properly written" in prose).to(be_true)
+            expect("underlying code sufficient to make the test pass" in prose).to(be_true)
+            expect("refactor according to Clean Engineering rules" in prose).to(be_true)
 
         with it("should NOT inline CleanEngineering generate instructions"):
-            prose = _expanded(Stories(), "guidance")
+            prose = _expanded(Stories(), "instructions")
             expect("Deepen OO design" in prose).to(equal(False))
 
     with context("whose transform tool converts markdown to python"):

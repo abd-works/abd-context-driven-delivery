@@ -1,8 +1,0 @@
-toolset: practices.stories.stories:Stories
-context:
-  fidelity: <fidelity>
-  format: null
-  path: null
-  session: null
-  workspace: null
-action: grill

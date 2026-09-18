@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING, TypedDict
 
 from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
-from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
-from primitives.guidance.guidance import PracticeGuidance
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
+from harness.guidance.guidance import PracticeGuidance
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
@@ -125,8 +127,11 @@ class Bdd(PracticeGuidance):
 
     # -- Lifecycle actions: BDD first, then CE classes -----------------------
 
+    @property
+    @mcp
+    @skill
     @agent_instructions
-    def guidance(self) -> str:
+    def instructions(self) -> str:
         """Provide guidance for creating behavior skeletons and development tests.
         At modules fidelity: no BDD spec file is written — bootstrap CE class structure via the companion.
         At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
@@ -134,8 +139,14 @@ class Bdd(PracticeGuidance):
         When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
         BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
         When this BDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
-        super().guidance()
-        self.ce().guidance()
+        return super().instructions
+
+    @property
+    @agent_instructions
+    def guidance(self) -> str:
+        """Expand this practice's Guidance section, then Clean Engineering companion guidance."""
+        super().guidance
+        self.ce().guidance
         return (
             "When this BDD work is done, call guidance on the Clean Engineering companion "
             "and pass that companion to this action as a separate tools run. "

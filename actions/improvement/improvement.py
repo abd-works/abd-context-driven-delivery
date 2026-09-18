@@ -6,8 +6,10 @@ from pathlib import Path
 
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
-from primitives.markdown import markdown
+from harness.markdown import markdown
 from agent_tools.agent_tools import agent_tool
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from workspace import SessionLog
 
 @agent_toolset
@@ -23,6 +25,8 @@ class Improvement(LifecycleAction):
     def repair_loop(self) -> str:
         """Deep root-cause recipe — why the toolset's expected behavior failed."""
 
+    @mcp
+    @skill
     @agent_instructions
     def repair(self, tools: list, asset: str, violation: str) -> str:
         """Open a domain repair on each passed context tool and instruct the fix."""
@@ -52,9 +56,10 @@ class Improvement(LifecycleAction):
             "at the seam. See repair.md."
         )
 
+    @mcp
     @agent_tool
     def verify_fix(self, tools: list, theme: str) -> str:
-        """verify_fix — regression check on a themed repair bucket."""
+        """Re-run the regression check for a themed repair bucket on each listed context tool. Open the work session first."""
         lines: list[str] = []
         for host in self.listed():
             current = self.workspace.current_work_session

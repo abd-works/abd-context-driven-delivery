@@ -475,8 +475,8 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | `actions/workspace` | WorkSession, Turn, Mistake, Correction, GitRepo |
 | `practices/base` | validate/scan finish → verification trailers |
 | `practices/bdd` | agent_bdd judge, regression anchors |
-| `primitives/agent_tools` | expand → SessionLog/SpanLog |
-| `primitives/agent_tools` | manifest paths |
+| `harness/agent_tools` | expand → SessionLog/SpanLog |
+| `harness/agent_tools` | manifest paths |
 | `tools/agent_skills` | deploy, `configure_git_notes`, team `.vscode` settings |
 | `tools/handoff` | handoff payload + span |
 | `tools/catalog_generator` | HTML shells (catalog, kanban) |

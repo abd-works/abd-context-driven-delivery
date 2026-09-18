@@ -2,6 +2,10 @@
 
 Structure the problem into independent modules with small public interfaces, substantial hidden functionality, and one-way dependencies. Implement those modules with rigorous object-oriented and clean-code practices. When boundaries hold, a change stays inside one module; when they blur, callers depend on internal decisions and must change with them.
 
+## Guidance
+
+Partition first, then type the objects, then implement. Keep the same names in language, modules, model, and code. Honour every rule in the artifact you are writing — prose, diagrams, and source.
+
 ## Shared rules
 
 - **`honor-every-rule-in-the-artifact`** — Honor every rule in the artifact you are writing. One-way dependencies, named seams, and localized behavior apply to language and markdown as well as to code. Do not create a dependency in prose that violates isolation. Treat prose with the same respect you treat the model and the code.
@@ -19,6 +23,8 @@ When asked to express output using language, write the same names, definitions, 
 If the user asks for language while generating **modules** or **model**, use this Language section and stop before the fidelity Guidance and Rules.
 
 ---
+
+## Fidelities
 
 ## modules
 
@@ -53,7 +59,7 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 **Stop reading this skill when scaffolding.**
 
-### Module rules
+### Rules
 
 **Form the module**
 

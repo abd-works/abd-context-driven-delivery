@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from lifecycle import LifecycleAction
-from primitives.agent_tools.agent_tools import AgentToolSet, agent_toolset
+from harness.agent_tools.agent_tools import AgentToolSet, agent_toolset
 from agent_tools.agent_tools import agent_tool
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 
 from .scanner import Scanner
 from .scanner_collection import ScannerCollection, ScannerReport
@@ -91,6 +93,8 @@ class Scan(LifecycleAction):
             result["ok"] = len(result["violations"]) == 0
         return str(result)
 
+    @mcp
+    @skill
     @agent_tool
     def scan(
         self,
@@ -99,22 +103,7 @@ class Scan(LifecycleAction):
         rule: str | None = None,
         tools: list | None = None,
     ) -> str:
-        """scan
-
-        ``tools`` names the context tool(s) whose scanner collection runs.
-        Slash ``/scan`` must pass them — a path-only scan has no rules.
-        Composed ``self.scanner.scan(paths)`` uses the host this kit was bound to.
-
-        ``root`` defaults to ``cwd`` for ordinary project scans. Callers that
-        already know the narrow directory a scan belongs to (e.g. one
-        regression fixture folder) should pass it explicitly - a graph-wide
-        scanner (``StoryWorkspaceScanner``) loads everything under ``root``,
-        so an unscoped ``cwd`` makes it walk the whole repo.
-
-        ``rule`` narrows the ``ok`` verdict to violations of that one rule
-        slug - a regression fixture built to exercise a single rule is not
-        a complete artifact and would otherwise trip every unrelated
-        scanner too."""
+        """Run the listed context tools' mechanical scanners on the given paths and report potential violations. Fix the source that failed the rule; do not patch the scanner to make the report green."""
         if tools:
             self.begin(tools, action="scan")
             last = ""

@@ -9,8 +9,10 @@ from lifecycle import LifecycleAction
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
 from agent_tools import agent_instructions, agent_toolset
-from primitives.markdown import markdown
+from harness.markdown import markdown
 from agent_tools.agent_tools import agent_tool
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 
 @agent_toolset
 class Partition(LifecycleAction):
@@ -25,6 +27,7 @@ class Partition(LifecycleAction):
     def module_dir(self) -> Path:
         return Path(inspect.getfile(type(self))).resolve().parent
 
+    @mcp
     @agent_tool
     def verify_segment_completeness(
         self,
@@ -78,17 +81,19 @@ class Partition(LifecycleAction):
             resolved.read_text(encoding="utf-8", errors="replace"),
         )
 
+    @mcp
     @agent_tool
     def index(self, context: str, out_root: str | None = None) -> str:
-        """index"""
+        """Write the partition index for this corpus under the session .context folder. Name every expected segment so completeness can be checked later."""
         return (
             "Index written for {{context}} under {session.path}/.context/ "
             "(out_root overrides session.path when set)."
         )
 
+    @mcp
     @agent_tool
     def segment(self, out_root: str | None = None) -> str:
-        """segment"""
+        """Write verbatim source chunks from the index into segment files under the session path. Completeness must use named entries, not length alone."""
         return (
             "Verbatim source chunks written under {session.path}/{artifact}/.context/ "
             "from {subject}-index.md. "
@@ -104,7 +109,7 @@ class Partition(LifecycleAction):
         scaffold: str = ""
 
     ) -> str:
-        """partition"""
+        """Build the index and segment files for one corpus. Fail if any new chunk misses a named entry the index required."""
         self.partition_guidance
         self.index(context, out_root)
         self.segment(out_root)
@@ -117,6 +122,8 @@ class Partition(LifecycleAction):
             "Hard fail if any new chunk fails named-entry completeness."
         )
 
+    @mcp
+    @skill
     @agent_instructions
     def partition(self,
         tools: list,
@@ -124,7 +131,7 @@ class Partition(LifecycleAction):
         mode: str = "one_go",
         out_root: str | None = None,
     ) -> str:
-        """partition"""
+        """Split the given context into an index plus verbatim segments for each listed context tool. Fail if any new chunk misses a named entry the index required."""
         self.begin(tools, action="partition")
         for host in self.listed():
             host.contexts

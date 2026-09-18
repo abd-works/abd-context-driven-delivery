@@ -6,8 +6,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from practices.workspace_bind import init_practice_guidance
-from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
-from primitives.guidance.guidance import PracticeGuidance
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
+from harness.guidance.guidance import PracticeGuidance
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 
 if TYPE_CHECKING:
     from practices.stories.stories import Stories
@@ -55,8 +57,11 @@ class MernDomainDriven(PracticeGuidance):
         instance.mode = "tool"
         return instance
 
+    @property
+    @mcp
+    @skill
     @agent_instructions
-    def guidance(self) -> str:
+    def instructions(self) -> str:
         """1. Follow session_guidance (handled by the inherited body below). Fill
         templates/ for the feature package this slice touches ({epicSlug}/ with
         nested domain module + process boot) if not already present.
@@ -69,8 +74,14 @@ class MernDomainDriven(PracticeGuidance):
         context on the touched view files - this tool does not call ux itself.
         4. Run validate. If it fails, fix and validate again until it passes.
         When this MERN work is done, call guidance on the Stories companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
-        super().guidance()
-        self._stories().guidance()
+        return super().instructions
+
+    @property
+    @agent_instructions
+    def guidance(self) -> str:
+        """Expand this practice's Guidance section, then Stories companion guidance."""
+        super().guidance
+        self._stories().guidance
         return (
             "When this MERN work is done, call guidance on the Stories companion "
             "and pass that companion to this action as a separate tools run. "

@@ -2,5 +2,5 @@
 
 ## Start
 
-- **date:** 2026-09-09
+- **date:** 2026-09-17
 - **note:** implicit default — no named work session open

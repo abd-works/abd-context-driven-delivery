@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
 from practices.workspace_bind import init_practice_guidance
-from primitives.agent_tools.agent_tools import agent_instructions, agent_toolset
-from primitives.guidance.guidance import PracticeGuidance
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
+from harness.guidance.guidance import PracticeGuidance
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
@@ -82,14 +84,23 @@ class Cdd(PracticeGuidance):
     # Stage children are companions: list each as a tool-mode guidance run.
     # Kits own generate / validate / satisfy / document / grill / sketch / iterate.
 
+    @property
+    @mcp
+    @skill
     @agent_instructions
-    def guidance(self) -> str:
+    def instructions(self) -> str:
         """Provide guidance for orchestrating CDD stages across stories, ddd, ux, clean_engineering, and bdd.
         Call guidance on each stage child and pass that child to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
-        super().guidance()
+        return super().instructions
+
+    @property
+    @agent_instructions
+    def guidance(self) -> str:
+        """Expand this practice's Guidance section, then each stage child's guidance."""
+        super().guidance
         for context_tool in self.practices():
             context_tool.mode = "tool"
-            context_tool.guidance()
+            context_tool.guidance
         return (
             "Call guidance on each stage child and pass that child to this action "
             "as a separate tools run. The action already knows what to do for every tool. "

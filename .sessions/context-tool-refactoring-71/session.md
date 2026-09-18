@@ -74,7 +74,7 @@ https://github.com/abd-works/abd-context-driven-delivery/issues/21
 
 # Catalog and harness likely overlap on classes, skills, actions, and render
 
-Guidance for this ticket came from `tools/catalog_generator` and `primitives/installer` (not a domain context tool such as Bdd or Stories).
+Guidance for this ticket came from `tools/catalog_generator` and `installation` (not a domain context tool such as Bdd or Stories).
 
 ## Forward requirements (from prompt)
 
@@ -103,8 +103,8 @@ Guidance for this ticket came from `tools/catalog_generator` and `primitives/ins
 
 - `tools/catalog_generator/.context/module-context.md`
 - `tools/catalog_generator/catalog_generator.py`
-- `primitives/installer/harness.py`
-- `primitives/installer/.context/harness-sketch.md`
+- `installation/harness.py`
+- `installation/.context/harness-sketch.md`
 - `.context/context-index.md`
 
 ### #19 — Investigate whether domain transform and render can live on BaseContextTool

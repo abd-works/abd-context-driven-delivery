@@ -7,7 +7,7 @@
 `Sketch`
 
 ## Dependencies
-`grill_context.grill_context`, `primitives.agent_tools`, `tools.tool`, `sessions`
+`grill_context.grill_context`, `harness.agent_tools`, `tools.tool`, `sessions`
 
 ## Public API
 - `find_template`

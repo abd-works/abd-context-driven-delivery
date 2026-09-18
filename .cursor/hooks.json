@@ -1,9 +1,9 @@
 {
   "version": 1,
   "hooks": {
-    "afterAgentResponse": [
+    "stop": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/hook_server.py",
+        "command": ".venv/Scripts/python.exe installation/hooks/hook_server.py",
         "timeout": 30,
         "failClosed": false
       }

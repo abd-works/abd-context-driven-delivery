@@ -1,6 +1,6 @@
 # Contexts
 
-UX looks at the product through user navigatin and information architecture, from layout and transitions to more formal screens, regions, and controls — how users see and act on the solution — mapped at increasing fidelity.
+UX looks at the product through user navigation and information architecture, from layout and transitions to more formal screens, regions, and controls — how users see and act on the solution — mapped at increasing fidelity.
 
 **Canonical model** (reuse, do not reinvent): `UxMap` → `Screen` → `Region` → `Control` → `Interaction`, plus `Transition`, `ContentType`, `NavComponent` on the map. Optional `UxContext` holds notes/invariants not visible on screens.
 
@@ -60,6 +60,10 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 ---
 
+## Guidance
+
+Start from grill + sketch and deepen. Each level **adds** artifacts — do not invent detail from a deeper fidelity. Primary path is **drawio (IA) → html (mockup/spec)** then real frontend at **front_end_code**.
+
 ## Shared rules
 
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
@@ -70,12 +74,17 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 ---
 
+## Fidelities
 
 ## ia
 
 **Default format:** drawio
 
 **Goal:** What screens exist and how users move between them — missing coverage shows as absent nodes.
+
+### Guidance
+
+Screens, layouts, named regions, transitions, nav components, content types. Story names and domain terms attach as traces. Optional `ux-context.md` for invariants not on the canvas. No control types, no interaction JS, no brand.
 
 ### Scaffold
 
@@ -103,6 +112,8 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 
 **Goal:** Lock controls and key interactions as runnable html+js (greybox) inside the **Story Demo shell**. Drawio peer channel still available.
 
+### Guidance
+
 1. Ensure story/domain JS via Stories / CE `transform` when missing (`ensure_javascript`).
 2. Deepen regions with typed controls, states, and interactions.
 3. For each control that participates in a story Given/When/Then (emphasize in Play, or run When in Interactive), use **`StoryDemoControl`** with:
@@ -117,6 +128,7 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
    - The user explicitly asks for brand at this step, or
    - Brand/css tokens already exist somewhere in the workspace (check before deciding).
    Do not invent brand. When active, pick the sibling folder under `specifications/` for the brand that applies (e.g. `specifications/abd-works/`) and start from its matching page rather than inventing tokens; if no named brand applies, `specifications/generic/` (no brand layer) is the default. Fall back to whatever brand/css tokens already exist in the workspace when neither covers it. Add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
+9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
 
 ### Rules
 
@@ -126,7 +138,6 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 - **`story-demo-control-for-gwt`** — GWT-bound controls are `StoryDemoControl` in the model so HTML gets `data-story-steps`.
 - **`shell-from-template`** — Use `mockup_shell.html` / render channel; do not drop the explorer when generating screens.
 - **`brand-is-opt-in`** — Do not add css / design tokens / brand unless asked or pre-existing. Greybox is the default output.
-9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
 - **`stub-catalogue-honest`** — Every faked behaviour is listed in the html or a companion context note.
 
 ---
@@ -136,6 +147,8 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 **Default format:** html (or the host app’s frontend stack)
 
 **Goal:** Real frontend for the product — production UI and client wiring to a real backend. Not greybox, not Story Demo as the shipping surface, not stub-only services.
+
+### Guidance
 
 - Replace mockup stubs with the real client (routing, state, API calls, auth as needed).
 - Call CE **code**-fidelity backend / Production collaborators — not Fake factory or in-browser demo domain alone.

@@ -4,8 +4,6 @@ Behavior-driven development turns domain vocabulary into passing tests. Every BD
 
 **Tooling & Idioms:** Refer to [`practices/language-tools.md`](/practices/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
 
-## Hierarchy shape (required)
-
 ```
 describe {subject — domain thing, state, or observable condition}
   that {event or condition that sets the subject up}
@@ -28,7 +26,7 @@ a logged tool                        ← splits the same subject; use one action
 when no session name is given        ← never "when" for state — use "with …"
 ```
 
-### Guidance
+## Guidance
 
 Design the tree hierarchy by building a flowing sentence. Build every hierarchy so that reading from the outermost `describe` through every nested `that`/`with` down to the `it should` produces a clean, flowing English sentence — spoken aloud, it describes the behavior naturally. When it does not read as a sentence, the nesting is grouping tests for convenience instead of following the conditions the behavior depends on — and you can no longer reason about all the possible behaviors and alternate behaviors that require coverage.
 
@@ -113,7 +111,15 @@ describe a Payment                          describe a Payment
                                                 ...
 ```
 
-**Shared Rules:**
+Start from an agreed sketch and deepen toward green tests and production code. Each level **adds** artifacts and **extends** the previous — do not fill in details from a more detailed fidelity.
+
+| Fidelity | Output |
+|---|---|
+| **modules** | Thin subject index — top-level `describe`s with candidate `that`/`with` + TODOs (partition pass) |
+| **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
+| **development** | Implemented tests + production code |
+
+## Shared rules
 
 - **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals. Assertions on internals break when the code is refactored and still pass when the behavior is wrong.
 - **`domain-practice-alignment`** — Describe names must match domain language / model exactly, so the business, the spec, and the code all use the same words.
@@ -126,21 +132,17 @@ describe a Payment                          describe a Payment
 - **`full-surface-coverage`** — Full coverage means the behavior tree is complete — every observable outcome has an `it should` in the right branch. Walk the describe/`that`/`with` tree for missing subjects, states, and outcomes; do not add one `it` per public method just because the member exists.
 - **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`practices.bdd.spec_helpers`). Do not invent a parallel eval spec harness.
 
----
-
-This skill operates at **multiple levels of fidelity**. Start from an agreed sketch and deepen toward green tests and production code. Each level **adds** artifacts and **extends** the previous — do not fill in details from a more detailed fidelity. Least detail → most detail below.
-
-| Fidelity | Output |
-|---|---|
-| **modules** | Thin subject index — top-level `describe`s with candidate `that`/`with` + TODOs (partition pass) |
-| **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
-| **development** | Implemented tests + production code |
+## Fidelities
 
 ## modules
 
 **Default format:** markdown
 
 **Goal:** Name the BDD subject tree before behavior signatures — delegates module structure to Clean Engineering at the same depth.
+
+### Guidance
+
+Name the BDD subject tree before behavior signatures. Delegate module structure to Clean Engineering at the same depth. Rough subject index for a partition pass: domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
 
 ### Scaffold
 
@@ -155,6 +157,8 @@ Key rules: `state-not-when` — nest by the state or condition that enables an o
 **Default format:** Python
 
 **Goal:** map observation to a real test before implementation. Lock the sketched hierarchy as framework `describe` / `it` nesting. Every `it` body is exactly one `BDD: SIGNATURE` marker — nothing else.
+
+### Guidance
 
 - Sketch nesting (subjects → `with`/`that`/events → `it should`) is agreed
 - **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest/TypeScript or JUnit 5/Java when the project uses those.
@@ -183,7 +187,9 @@ it('should apply a percentage discount to eligible items', () => {
 
 **Default format:** Python
 
-**Goal:** Replace `BDD: SIGNATURE` markers one at a time with it shgould /expect bodies, then minimum production code until green. Inherit the framework from the **behavior** artifactif already completed.
+**Goal:** Replace `BDD: SIGNATURE` markers one at a time with `it should` / expect bodies, then minimum production code until green. Inherit the framework from the **behavior** artifact if already completed.
+
+### Guidance
 
 **Procedure:** Follow the **Test shape ladder** in `@clean_engineering` `## code` § Procedure — real conditions first, then stub TDD, then e2e swap on request.
 

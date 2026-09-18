@@ -10,6 +10,8 @@ from grill_context.grill_context import GrillContext
 from lifecycle import LifecycleAction
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 
 @agent_toolset
 class Iterate(LifecycleAction):
@@ -24,12 +26,15 @@ class Iterate(LifecycleAction):
 
         return Generate()
 
+    @mcp
     @agent_tool
     def mark_iterate_tick(self) -> str:
         """Record that an iterate show/validate/fix tick is due (no I/O).
         Call only after 2-3 grill answers that unlock ONE small slice - never as a prelude to dumping the whole artifact."""
         return "iterate-tick"
 
+    @mcp
+    @skill
     @agent_instructions
     def iterate(self, tools: list) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
