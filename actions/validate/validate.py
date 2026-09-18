@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from lifecycle import GuidanceArg, LifecycleAction
-from agent_tools import agent_instructions, agent_toolset, instructions
+from agent_tools import agent_instructions, agent_toolset
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 from scan.rule import Rule
@@ -20,10 +20,10 @@ class Validate(LifecycleAction):
         """Check artifacts against rules. Pass a string to validate that text once. Pass a list of Guidance to walk each host's rules. Pass a single Rule to check only that rule."""
         def on(item) -> str:
             if rule is not None:
-                return instructions(rule.validate)
+                return rule.validate()
             if isinstance(item, str):
-                return instructions(item)
-            return instructions(item.rules.validate)
+                return item
+            return item.rules.validate()
 
         parts = [part for part in self.run(guidance, on, action="validate") if part]
         report = "Validation report for artifacts under {session.path}/."
