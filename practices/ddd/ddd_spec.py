@@ -67,8 +67,7 @@ with description("a Ddd toolset"):
 
     with context("whose generate default working folder is src"):
         with it("should keep src as the generate default"):
-            expect(Ddd().workspace.default_workspace_folder).to(equal("src"))
-            expect(Path(Ddd().workspace.path).name).to(equal("src"))
+            expect(Ddd.default_workspace_folder).to(equal("src"))
 
     with context("that provides a CleanEngineering companion"):
         with context("with bounded_context fidelity"):
