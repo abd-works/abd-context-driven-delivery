@@ -68,12 +68,14 @@ class HookResult:
         user_message: str | None = None,
         agent_message: str | None = None,
         followup_message: str | None = None,
+        additional_context: str | None = None,
     ) -> None:
         self.permission = permission
         self.continue_flag = continue_flag
         self.user_message = user_message
         self.agent_message = agent_message
         self.followup_message = followup_message
+        self.additional_context = additional_context
 
     @classmethod
     def from_handler(cls, raw: dict[str, Any] | None) -> HookResult:
@@ -86,6 +88,7 @@ class HookResult:
             user_message=_text(raw.get("user_message")),
             agent_message=_text(raw.get("agent_message")),
             followup_message=_text(raw.get("followup_message")),
+            additional_context=_text(raw.get("additional_context")),
         )
 
     def with_description(self, description: str) -> HookResult:
@@ -103,6 +106,7 @@ class HookResult:
             self.user_message,
             text,
             self.followup_message,
+            self.additional_context,
         )
 
     @classmethod
@@ -111,6 +115,7 @@ class HookResult:
         continue_flag: bool | None = None
         user_parts: list[str] = []
         agent_parts: list[str] = []
+        context_parts: list[str] = []
         followup: str | None = None
         for item in results:
             if item.permission == "deny":
@@ -121,6 +126,8 @@ class HookResult:
                 user_parts.append(item.user_message)
             if item.agent_message:
                 agent_parts.append(item.agent_message)
+            if item.additional_context:
+                context_parts.append(item.additional_context)
             if item.followup_message:
                 followup = item.followup_message
         return cls(
@@ -129,6 +136,7 @@ class HookResult:
             "\n".join(user_parts) or None,
             "\n".join(agent_parts) or None,
             followup,
+            "\n\n".join(context_parts) or None,
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -141,6 +149,8 @@ class HookResult:
             payload["agent_message"] = self.agent_message
         if self.followup_message:
             payload["followup_message"] = self.followup_message
+        if self.additional_context:
+            payload["additional_context"] = self.additional_context
         return payload
 
 

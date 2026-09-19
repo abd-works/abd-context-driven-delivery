@@ -13,7 +13,6 @@ from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, t
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 _CHANNELS: dict[str, type] = {
     "markdown": MarkdownCleanEngineeringModel,
@@ -82,38 +81,3 @@ class CleanEngineering(PracticeGuidance):
         """
         tools(self.drawio.render())
         return "Artifact written under {session.path}/."
-
-    @agent_tool
-    def render(
-        self,
-        format: str,
-        content: str,
-        source: str | None = None,
-        previous: str = "",
-        keep_positioning: bool = False,
-    ) -> dict:
-        """Parse content into the canonical model, then render into format.
-        source defaults to this instance's format. Peer channels at the same fidelity.
-        When format is drawio and keep_positioning is true, pass previous Draw.io XML
-        so existing class positions and relationship routing are kept."""
-        source_format = source or self.format
-        if not source_format:
-            raise ValueError("source format is not set")
-        if source_format not in _CHANNELS:
-            raise ValueError(
-                f"Unsupported source {source_format!r}. Choose from: {sorted(_CHANNELS)}"
-            )
-        if format not in _CHANNELS:
-            raise ValueError(
-                f"Unsupported format {format!r}. Choose from: {sorted(_CHANNELS)}"
-            )
-        canonical = _CHANNELS[source_format].parse(content)
-        if format == "drawio":
-            rendered = _CHANNELS[format].render(
-                canonical,
-                previous=previous or None,
-                keep_positioning=keep_positioning,
-            )
-        else:
-            rendered = _CHANNELS[format].render(canonical)
-        return {"format": format, "content": rendered}

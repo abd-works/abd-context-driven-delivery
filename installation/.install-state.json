@@ -1,9 +1,11 @@
 {
   "ide": "Cursor",
-  "path": "C:\\dev\\abd-works-repo\\jeff-sandbox\\.cursor",
+  "path": "C:\\dev\\abd-cdd-context-tool-refactoring-71\\.cursor",
   "installed_files": [
     "mcp.json",
     "skills/actions/document/SKILL.md",
+    "hooks.json",
+    "hook-handlers.json",
     "skills/actions/generate/SKILL.md",
     "skills/actions/grill_context/grill/SKILL.md",
     "skills/actions/improvement/verify-fix/SKILL.md",
@@ -16,8 +18,6 @@
     "skills/actions/sketch/SKILL.md",
     "skills/actions/validate/create-rule/SKILL.md",
     "skills/actions/validate/validate/SKILL.md",
-    "hooks.json",
-    "hook-handlers.json",
     "skills/installation/clean/SKILL.md",
     "skills/installation/install/SKILL.md",
     "skills/practices/agent_bdd/SKILL.md",

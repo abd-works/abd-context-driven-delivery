@@ -75,3 +75,29 @@ with description("GuidanceAction"):
         seen: list = []
         kit.run([first, second], seen.append, action="generate")
         expect(seen).to(equal([first, second]))
+
+    with it("should inject listed hosts rules markdown after this action returns"):
+        from generate.generate import Generate
+        from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance
+
+        kit = Generate(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-inject-"))))
+        result = kit.inject_rules(
+            {
+                "tool_name": "generate.generate",
+                "tool_input": {"guidance": [SampleGuidance(format="markdown")]},
+            }
+        )
+        expect("sample rule one" in (result.get("additional_context") or "")).to(equal(True))
+
+    with it("should skip inject_rules for document"):
+        from document.document import Document
+        from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance
+
+        kit = Document(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-doc-"))))
+        result = kit.inject_rules(
+            {
+                "tool_name": "document.document",
+                "tool_input": {"guidance": [SampleGuidance(format="markdown")]},
+            }
+        )
+        expect(result).to(equal({}))

@@ -34,7 +34,17 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--brand",
         default=None,
-        help="brand folder to overlay on commons/brand (default: bundled abd.works)",
+        help="collection name or brand folder (default: bundled abd-works)",
+    )
+    parser.add_argument(
+        "--brands",
+        default=None,
+        help="folder whose children are named brand directories",
+    )
+    parser.add_argument(
+        "--apply-brand",
+        default=None,
+        help="overlay a named brand onto an existing catalog without regenerating",
     )
     args = parser.parse_args(argv)
 
@@ -43,8 +53,16 @@ def main(argv: list[str] | None = None) -> None:
     ref = args.ref or default_ref
     out_root = _REPO_ROOT / args.out
 
-    catalog = Catalog(repo_url=repo_url, ref=ref, out_root=str(out_root))
-    message = catalog.generate_catalog(brand=args.brand or "")
+    catalog = Catalog(
+        repo_url=repo_url,
+        ref=ref,
+        out_root=str(out_root),
+        brands_root=args.brands,
+    )
+    if args.apply_brand:
+        message = catalog.apply_brand(args.apply_brand)
+    else:
+        message = catalog.generate_catalog(brand=args.brand or "")
     print(message)
 
 

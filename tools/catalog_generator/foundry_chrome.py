@@ -151,6 +151,19 @@ def brand_folders(root: Path | None = None) -> dict[str, Path]:
     return folders
 
 
+def resolve_brand(name: str, root: Path | None = None) -> Path | None:
+    if not name:
+        return None
+    candidate = Path(name)
+    if candidate.is_dir():
+        return candidate
+    folders = brand_folders(root)
+    if name in folders:
+        return folders[name]
+    known = ", ".join(sorted(folders))
+    raise ValueError(f"Unknown brand {name!r}. Known brands: {known}")
+
+
 def apply_brand(commons_dest: Path, brand: Path | None = None) -> Path:
     """Copy brand assets into ``commons_dest/brand``.
 
@@ -162,6 +175,17 @@ def apply_brand(commons_dest: Path, brand: Path | None = None) -> Path:
     dest.mkdir(parents=True, exist_ok=True)
     shutil.copytree(source, dest, dirs_exist_ok=True)
     return dest
+
+
+def apply_named_brand(
+    out_root: Path,
+    name: str,
+    brands_root: Path | None = None,
+) -> Path:
+    """Overlay a collection name or brand path onto ``{out_root}/commons/brand``."""
+    commons = Path(out_root) / "commons"
+    commons.mkdir(parents=True, exist_ok=True)
+    return apply_brand(commons, resolve_brand(name, brands_root))
 
 
 def copy_commons(out_root: Path, brand: Path | None = None) -> Path:

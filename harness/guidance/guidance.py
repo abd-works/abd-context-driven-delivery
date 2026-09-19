@@ -1,7 +1,9 @@
 """Assemble agent instructions from @markdown properties."""
 from __future__ import annotations
 
+import fnmatch
 import inspect
+import json
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +16,7 @@ from harness.agent_tools.agent_tools import (
     tools,
 )
 from installation.harness_files.harness_files import rules, skill
+from installation.hooks.hooks import Hook
 from installation.hooks.prompt_echo.prompt_echo import echo
 from installation.mcp.mcp_server import mcp
 from harness.markdown import (
@@ -26,6 +29,35 @@ from harness.markdown import (
     fidelity_stage,
     markdown,
 )
+
+
+def _hook_tool_path(payload: dict[str, Any]) -> str:
+    raw = payload.get("tool_input") or {}
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError:
+            return ""
+    if not isinstance(raw, dict):
+        return ""
+    return str(
+        raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or ""
+    )
+
+
+def _path_matches_globs(path: str, globs: str) -> bool:
+    if not path or not globs:
+        return False
+    posix = Path(path).as_posix()
+    name = Path(path).name
+    for pattern in (part.strip().strip("\"'") for part in globs.split(",")):
+        if not pattern:
+            continue
+        if Path(posix).match(pattern) or fnmatch.fnmatch(posix, pattern) or fnmatch.fnmatch(
+            name, pattern.split("/")[-1]
+        ):
+            return True
+    return False
 
 
 class Guidance:
@@ -77,6 +109,22 @@ class Guidance:
     @markdown("shared rules")
     def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
+
+    @Hook("preToolUse")
+    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Inject this host's rules markdown when the agent writes a matching file."""
+        data = payload or {}
+        tool_name = str(data.get("tool_name") or "")
+        if tool_name not in {"Write", "StrReplace", "EditNotebook"}:
+            return {}
+        path = _hook_tool_path(data)
+        globs = getattr(getattr(self.rules, "appliesTo", None), "globs", "") or ""
+        if not path or not _path_matches_globs(path, globs):
+            return {}
+        body = (self.rules_markdown or "").strip()
+        if not body:
+            return {}
+        return {"permission": "allow", "additional_context": body, "agent_message": body}
 
     @markdown
     def templates(self) -> str:

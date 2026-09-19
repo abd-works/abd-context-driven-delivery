@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Union
+import json
+import re
+from typing import Any, Union
 
 from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
+from installation.hooks.hooks import Hook
 from installation.hooks.prompt_echo.prompt_echo import echo
 from installation.mcp.mcp_server import mcp
 from workspace.workspace import SessionModel, Turn, Workspace
@@ -125,6 +128,46 @@ class GuidanceAction:
             if not warning:
                 warning = session.branch_warning()
         return warning
+
+    @Hook("postToolUse")
+    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Inject listed guidance hosts' rules markdown after this action returns."""
+        if type(self).__name__ == "Document":
+            return {}
+        data = payload or {}
+        if not self._payload_is_this_action(data):
+            return {}
+        self._bind_guidance_from_payload(data)
+        parts = []
+        for host in self.listed():
+            text = (getattr(host, "rules_markdown", None) or "").strip()
+            if text:
+                parts.append(text)
+        if not parts:
+            return {}
+        body = "\n\n".join(parts)
+        return {"additional_context": body}
+
+    def _payload_is_this_action(self, payload: dict[str, Any]) -> bool:
+        tool = str(payload.get("tool_name") or "").lower()
+        if not tool:
+            return False
+        name = type(self).__name__
+        snake = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
+        aliases = {name.lower(), snake, snake.replace("_", "-"), snake.replace("_", "")}
+        return any(alias and alias in tool for alias in aliases)
+
+    def _bind_guidance_from_payload(self, payload: dict[str, Any]) -> None:
+        raw = payload.get("tool_input") or {}
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except json.JSONDecodeError:
+                raw = {}
+        if not isinstance(raw, dict):
+            return
+        if "guidance" in raw:
+            self._bind_guidance(raw.get("guidance"))
 
     @agent_instructions
     def end(self) -> str:

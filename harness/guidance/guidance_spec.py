@@ -55,6 +55,26 @@ with description("context guidance"):
             expect("sample-rule-one" in host.rules.entries).to(equal(True))
             expect(host.rules_markdown).to(contain("sample rule one"))
 
+        with it("should inject rules markdown when the agent writes a matching path"):
+            host = SampleGuidance(format="markdown")
+            result = host.inject_rules(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"path": "pkg/foo_sample_bar.py"},
+                }
+            )
+            expect(result.get("additional_context")).to(contain("sample rule one"))
+
+        with it("should not inject rules markdown when the agent writes a non-matching path"):
+            host = SampleGuidance(format="markdown")
+            result = host.inject_rules(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"path": "pkg/other.py"},
+                }
+            )
+            expect(result).to(equal({}))
+
 
 with description("a context tool module with one domain markdown file named for the context tool") as self:
     with before.each:

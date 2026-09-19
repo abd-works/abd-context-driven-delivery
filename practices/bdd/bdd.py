@@ -47,13 +47,6 @@ class Bdd(PracticeGuidance):
             stage=stage,
         )
 
-    def diagnostic(self) -> "Diagnose":
-        """Diagnose companion — common six-phase loop as a tool (not inlined)."""
-        # lazy import: keeps diagnose optional at module load
-        from tools.diagnose.diagnose import Diagnose
-
-        return Diagnose()
-
     @property
     @Mcp
     @Skill
