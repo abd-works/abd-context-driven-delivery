@@ -14,7 +14,6 @@ from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
-    from practices.clean_engineering.clean_engineering import CleanEngineering
     from tools.diagnose.diagnose import Diagnose
 
 _CODE_FORMATS = frozenset({"python", "typescript", "java", "javascript"})
@@ -105,30 +104,6 @@ class Stories(PracticeGuidance):
 
         return Diagnose()
 
-    def ce(self) -> "CleanEngineering":
-        """CleanEngineering companion at code fidelity — used at acceptance_tests fidelity
-        to generate or update matching production class implementations after writing specs.
-        Invoke as a tool (not inlined into stories guidance). Passes this Stories instance's
-        own format through to CleanEngineering when CE recognizes it as a code channel
-        (typescript, java, javascript, python) - e.g. format="typescript" here means the
-        companion writes TypeScript, not CE's unrelated Python default."""
-        from practices.clean_engineering.clean_engineering import CleanEngineering
-
-        ce_format = self.format if self.format in _CODE_FORMATS else None
-        instance = CleanEngineering(
-            fidelity="code",
-            format=ce_format,
-            path=self.path,
-            session=(
-                self.workspace.current_work_session.name
-                if self.workspace.current_work_session
-                else ""
-            ),
-            workspace=self.workspace.path,
-        )
-        instance.mode = "tool"
-        return instance
-
     def _resolve_tests_root(self) -> str | None:
         """Workspace-relative prefix for code renders. ``None`` → default ``tests``."""
         from tools.workspace.context_index import ContextIndex
@@ -185,27 +160,11 @@ class Stories(PracticeGuidance):
         """Map stakeholder and system interactions as behaviours that deliver a solution. Every later fidelity builds on these behaviours, so the story map must describe operations that named actors perform and results they can observe."""
         return super().instructions
 
-    @property
-    @agent_instructions
-    def guidance(self) -> str:
-        """Expand this practice's Guidance section, then code-fidelity Clean Engineering at acceptance_tests."""
-        text = super().guidance
-        if self.fidelities.current.fidelity != "acceptance_tests":
-            return text
-        self.ce().guidance
-        return (
-            "After writing each acceptance test, use Clean Engineering at code fidelity "
-            "to ensure the test is properly written, then to write the underlying code "
-            "sufficient to make the test pass. Run the code, then refactor according to "
-            "Clean Engineering rules."
-        )
-
     @Mcp
     @agent_tool
     def render(self, format: str, content: str, source: str | None = None) -> dict:
         """Parse content into the canonical StoryMap, then render into format.
-        source defaults to this instance's format. Peer channels at the same fidelity.
-        At acceptance_tests fidelity: after rendering, call ce().render() or call guidance on the CE companion and pass that companion to this action as a separate tools run."""
+        source defaults to this instance's format. Peer channels at the same fidelity."""
         source_format = source or self.format or "markdown"
         source_cls = _load_channel_class(source_format)
         target = self._make_target(format)

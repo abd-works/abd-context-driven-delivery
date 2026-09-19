@@ -38,9 +38,7 @@ class LernDomainDriven(PracticeGuidance):
         )
 
     def _stories(self) -> "Stories":
-        """Stories companion pinned at acceptance_tests fidelity, typescript format -
-        writes *_spec.{tier} for tier in (server, client, e2e) and, via its own ce(),
-        the matching TypeScript production code (ce() passes format through)."""
+        """Stories companion pinned at acceptance_tests fidelity, typescript format."""
         from practices.stories.stories import Stories
 
         instance = Stories(
@@ -64,15 +62,3 @@ class LernDomainDriven(PracticeGuidance):
     def instructions(self) -> str:
         """Implementation fidelity for a domain-module-organized LERN stack (lowdb JSON files / Express / React / Node, TypeScript everywhere) on an already-designed vertical slice — story map, module boundaries, and screens all exist before this tool runs."""
         return super().instructions
-
-    @property
-    @agent_instructions
-    def guidance(self) -> str:
-        """Expand this practice's Guidance section, then Stories companion guidance."""
-        super().guidance
-        self._stories().guidance
-        return (
-            "When this LERN work is done, call guidance on the Stories companion "
-            "and pass that companion to this action as a separate tools run. "
-            "The action already knows what to do for every tool. Do not inline."
-        )

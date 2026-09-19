@@ -14,6 +14,7 @@ from pathlib import Path
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
 _COMMONS_SRC = _TEMPLATES / "commons"
 _DEFAULT_BRAND = _COMMONS_SRC / "brand"
+_BRANDS_ROOT = _TEMPLATES / "brands"
 _FOUNDRY_CSS_SRC = _TEMPLATES / "foundry-catalog.css"
 
 # Stage columns — keys stay discovery/spec/engineer (code); labels are lowercase.
@@ -136,6 +137,18 @@ def family_class(toolset_name: str) -> str:
 
 def family_perspective(toolset_name: str) -> str:
     return _FAM_LABEL.get(toolset_name, "other")
+
+
+def brand_folders(root: Path | None = None) -> dict[str, Path]:
+    """Named brand directories. Bundled abd-works plus each child of ``root``."""
+    folders = {"abd-works": _DEFAULT_BRAND}
+    collection = Path(root) if root is not None else _BRANDS_ROOT
+    if not collection.is_dir():
+        return folders
+    for child in sorted(collection.iterdir()):
+        if child.is_dir() and not child.name.startswith("."):
+            folders[child.name] = child
+    return folders
 
 
 def apply_brand(commons_dest: Path, brand: Path | None = None) -> Path:

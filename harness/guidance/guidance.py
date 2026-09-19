@@ -234,12 +234,24 @@ class PracticeGuidance(Guidance):
             return None
         return workspace.current_work_session
 
+    def _current_companion(self) -> FidelityGuidance | None:
+        return self._companion_for(self.fidelities.current)
+
+    def _companion_for(self, fidelity: Guidance | None) -> FidelityGuidance | None:
+        companion = getattr(fidelity, "clean_engineering", None)
+        return companion if isinstance(companion, FidelityGuidance) else None
+
+    def companion_instructions(self, fidelity: Guidance | None = None) -> str:
+        companion = self._companion_for(fidelity if fidelity is not None else self.fidelities.current)
+        if companion is None:
+            return ""
+        return companion.instructions
+
     @property
     @agent_instructions
     def guidance(self) -> str:
         text = Markdown.from_label(self, "guidance").extract()
-        companion = self._current_companion()
-        extra = companion.instructions if companion is not None else ""
+        extra = self.companion_instructions()
         return "\n\n".join(part for part in (text, extra) if part)
 
     @markdown
@@ -314,18 +326,13 @@ class PracticeGuidance(Guidance):
             session=self.session or "",
             workspace=workspace if workspace is not None else None,
         )
+        if self.format in {"python", "typescript", "java", "javascript"}:
+            ce.format = self.format
         for name, ce_fidelity in companions.items():
             child = self.fidelities.entries.get(name)
             companion = ce.fidelities.entries.get(ce_fidelity)
             if isinstance(child, FidelityGuidance):
                 child.clean_engineering = companion if isinstance(companion, FidelityGuidance) else None
-
-    def _current_companion(self) -> FidelityGuidance | None:
-        current = self.fidelities.current
-        if current is None:
-            return None
-        companion = getattr(current, "clean_engineering", None)
-        return companion if isinstance(companion, FidelityGuidance) else None
 
     @property
     def formats(self) -> dict[str, Any]:
@@ -459,12 +466,14 @@ class FidelityGuidance(Guidance):
         practice = self.practice_guidance
         parent = ()
         templates = ""
+        companion_text = ""
         if practice is not None:
             parent = (
                 (practice.overview or "").strip(),
-                (practice.guidance or "").strip(),
+                Markdown.from_label(practice, "guidance").extract().strip(),
                 (practice.rules_markdown or "").strip(),
             )
+            companion_text = practice.companion_instructions(self)
             previous = practice.fidelities.current
             previous_format = practice.format
             practice.fidelities.current = practice.fidelities[self.name]
@@ -484,6 +493,7 @@ class FidelityGuidance(Guidance):
                 (self.guidance or "").strip(),
                 (self.rules_markdown or "").strip(),
                 templates,
+                companion_text,
             )
             if part
         )

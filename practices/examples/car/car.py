@@ -84,16 +84,6 @@ class Car(PracticeGuidance):
         """In-character road stories turn vehicle personality into a narrative the reader can follow. Every story names the car, the road, and what happens in order — start the engine before you speak, stop before you declare arrival."""
         return super().instructions
 
-    @property
-    @agent_instructions
-    def guidance(self) -> str:
-        """Expand this practice's Guidance section."""
-        super().guidance
-        return (
-            "When the story needs a scripted trip, call travelTo on the CarStory companion "
-            "and pass this Car as a tool argument. Do not inline vehicle tools into prose."
-        )
-
     @agent_instructions
     def generate(self) -> str:
         """Generate the road-story artifact for the current fidelity."""

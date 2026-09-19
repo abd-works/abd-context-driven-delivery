@@ -95,8 +95,9 @@ with description("a LernDomainDriven generator"):
         with it("should pin format to typescript"):
             expect(self.stories.format).to(equal("typescript"))
 
-        with it("should carry that format through to its own ce() companion"):
-            expect(self.stories.ce().format).to(equal("typescript"))
+        with it("should carry that format through to the Clean Engineering companion"):
+            companion = self.stories.fidelities.current.clean_engineering
+            expect(companion.practice_guidance.format).to(equal("typescript"))
 
     with context("whose contexts slot is expanded"):
         with before.each:

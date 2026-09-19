@@ -84,18 +84,21 @@ with description("Stories"):
         with it("should return a Diagnose instance from diagnostic"):
             expect(Stories().diagnostic()).to(be_a(Diagnose))
 
-    with context("that provides a CleanEngineering companion via ce()"):
+    with context("that provides a CleanEngineering companion"):
         with it("should pass a code format through to the companion"):
             stories = Stories(fidelity="acceptance_tests", format="typescript")
-            expect(stories.ce().format).to(equal("typescript"))
+            companion = stories.fidelities.current.clean_engineering
+            expect(companion.practice_guidance.format).to(equal("typescript"))
 
         with it("should pass python through unchanged"):
             stories = Stories(fidelity="acceptance_tests", format="python")
-            expect(stories.ce().format).to(equal("python"))
+            companion = stories.fidelities.current.clean_engineering
+            expect(companion.practice_guidance.format).to(equal("python"))
 
         with it("should fall back to CE's own default for a non-code format"):
-            stories = Stories(fidelity="story_map", format="markdown")
-            expect(stories.ce().format).to(equal("python"))
+            stories = Stories(fidelity="acceptance_tests", format="markdown")
+            companion = stories.fidelities.current.clean_engineering
+            expect(companion.default_format).to(equal("python"))
 
     with context("that does not own kit lifecycle actions"):
         with it("should not expose generate, validate, satisfy, repair, grill, sketch, or iterate"):
@@ -131,12 +134,9 @@ with description("Stories"):
             prose = _expanded(Stories(), "instructions")
             expect("diagnostic().diagnose()" in prose).to(be_true)
 
-        with it("should tell the caller to use code-fidelity CE after each acceptance test"):
+        with it("should include the Clean Engineering companion's instructions"):
             prose = _expanded(Stories(fidelity="acceptance_tests"), "instructions")
-            expect("After writing each acceptance test" in prose).to(be_true)
-            expect("ensure the test is properly written" in prose).to(be_true)
-            expect("underlying code sufficient to make the test pass" in prose).to(be_true)
-            expect("refactor according to Clean Engineering rules" in prose).to(be_true)
+            expect("Write working production code" in prose).to(be_true)
 
         with it("should NOT inline CleanEngineering generate instructions"):
             prose = _expanded(Stories(), "instructions")

@@ -1292,6 +1292,7 @@ class Catalog:
         repo_url: str = "",
         ref: str = "",
         out_root: str = "catalog",
+        brands_root: str | Path | None = None,
         catalog_context_tool: CatalogContextTool | None = None,
         catalog_action: CatalogAction | None = None,
         catalog_utility: CatalogUtility | None = None,
@@ -1301,6 +1302,9 @@ class Catalog:
         self.ref = ref or default_ref
         self.out_root = Path(out_root)
         self.brand = None
+        from catalog_generator.foundry_chrome import _BRANDS_ROOT
+
+        self.brands_root = Path(brands_root) if brands_root is not None else _BRANDS_ROOT
         if catalog_context_tool is None or catalog_action is None or catalog_utility is None:
             wired = _wire_catalog_renderers(self.repo_url, self.ref)
             self.catalog_context_tool = catalog_context_tool or wired[0]
