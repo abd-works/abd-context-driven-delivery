@@ -1,20 +1,20 @@
 {
   "mcpServers": {
     "cdd": {
-      "command": "python",
+      "command": "C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
       "args": [
-        "-m",
-        "installation.mcp",
+        "-u",
+        "C:\\dev\\abd-cdd-context-tool-refactoring-71\\installation\\mcp\\scripts\\start_host.py",
         "--toolsets",
         "actions.document.document:Document,actions.generate.generate:Generate,actions.grill_context.grill_context:GrillContext,actions.improvement.improvement:Improvement,actions.iterate.iterate:Iterate,actions.partition.partition:Partition,actions.render.render:Render,actions.satisfy.satisfy:Satisfy,actions.scan.scan:Scan,actions.sketch.sketch:Sketch,actions.validate.validate:Validate,harness.guidance.guidance:FidelityGuidance,installation.installer:Installer,practices.agent_bdd.agent_bdd:AgentBdd,practices.bdd.bdd:Bdd,practices.clean_engineering.clean_engineering:CleanEngineering,practices.clean_engineering.specifications.lern_domain_driven.lern_domain_driven:LernDomainDriven,practices.clean_engineering.specifications.mern_domain_driven.mern_domain_driven:MernDomainDriven,practices.ddd.ddd:Ddd,practices.stories.stories:Stories,practices.ux.ux:Ux,tools.catalog_generator.catalog_generator:Catalog,tools.context_setup.context_index:ContextIndex,tools.context_setup.context_setup:ContextSetup,tools.echo.echo:Echo,tools.handoff.handoff:Handoff,tools.record_decisions.record_decisions:RecordDecisions,tools.workspace.workspace:Turn,tools.workspace.workspace:Workspace",
         "--repo",
-        "C:\\dev\\abd-cdd-71"
+        "C:\\dev\\abd-cdd-context-tool-refactoring-71"
       ],
-      "cwd": "C:\\dev\\abd-cdd-71",
+      "cwd": "C:\\dev\\abd-cdd-context-tool-refactoring-71",
       "env": {
-        "PYTHONPATH": "C:\\dev\\abd-cdd-71;C:\\dev\\abd-cdd-71\\harness;C:\\dev\\abd-cdd-71\\tools;C:\\dev\\abd-cdd-71\\practices;C:\\dev\\abd-cdd-71\\actions",
+        "PYTHONPATH": "C:\\dev\\abd-cdd-context-tool-refactoring-71;C:\\dev\\abd-cdd-context-tool-refactoring-71\\harness;C:\\dev\\abd-cdd-context-tool-refactoring-71\\tools;C:\\dev\\abd-cdd-context-tool-refactoring-71\\practices;C:\\dev\\abd-cdd-context-tool-refactoring-71\\actions",
         "PYTHONIOENCODING": "utf-8",
-        "CDD_REPO": "C:\\dev\\abd-cdd-71"
+        "CDD_REPO": "C:\\dev\\abd-cdd-context-tool-refactoring-71"
       }
     }
   }

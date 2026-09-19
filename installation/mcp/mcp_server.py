@@ -4,6 +4,8 @@ from __future__ import annotations
 import inspect
 import json
 import logging
+import re
+import sys
 import types as py_types
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -21,6 +23,7 @@ from installation.installer import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
+_MCP_NAME_ILLEGAL = re.compile(r"[^A-Za-z0-9_.-]+")
 _UNION_ORIGINS = {Union, py_types.UnionType}
 _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}
@@ -40,6 +43,22 @@ class Mcp(Destination):
 mcp = Mcp
 
 
+class McpStandupFailed(Exception):
+    """The MCP host could not stand up or failed diagnose."""
+
+    def __init__(
+        self,
+        operation: str,
+        host: Any,
+        message: str,
+        cause: BaseException | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.operation = operation
+        self.host = host
+        self.cause = cause
+
+
 @dataclass
 class McpOperationDefinition:
     mcp_name: str
@@ -56,6 +75,7 @@ class McpOperationDefinition:
             mcp_name = tool.slug
         else:
             mcp_name = f"{tool.slug}.{tool.name}"
+        mcp_name = _MCP_NAME_ILLEGAL.sub("-", mcp_name).strip("-.") or "tool"
         return cls(
             mcp_name=mcp_name,
             kind=kind,
@@ -85,6 +105,8 @@ class McpInstallation(Installation):
         super().__init__(ide, path, toolset_ref, repo=repo)
         self.mcp_operations: list[McpOperationDefinition] = []
         self._bound = False
+        self.host: McpHost | None = None
+        self.diagnosis: dict[str, Any] | None = None
 
     def write(self, tool: Any) -> None:
         if not tool.install_to_mcp:
@@ -104,13 +126,14 @@ class McpInstallation(Installation):
 
         refs = sorted({op.tool.registration_name for op in self.mcp_operations})
         repo = self.repo or Path(__file__).resolve().parents[2]
+        host = repo / "installation" / "mcp" / "scripts" / "start_host.py"
         payload = {
             "mcpServers": {
                 "cdd": {
-                    "command": "python",
+                    "command": sys.executable,
                     "args": [
-                        "-m",
-                        "installation.mcp",
+                        "-u",
+                        str(host),
                         "--toolsets",
                         ",".join(refs),
                         "--repo",
@@ -134,6 +157,15 @@ class McpInstallation(Installation):
         self._bound = True
         for op in self.mcp_operations:
             server.enroll(op)
+
+    def standup(self) -> McpHost:
+        self.host = McpHost.standup(self.path / "mcp.json", repo=self.repo)
+        return self.host
+
+    def diagnose(self) -> dict[str, Any]:
+        host = self.host if self.host is not None else self.standup()
+        self.diagnosis = host.diagnose()
+        return self.diagnosis
 
 
 def _prompt_message(op: McpOperationDefinition) -> str:
@@ -435,6 +467,64 @@ class McpHost:
 
     def run(self) -> None:
         anyio.run(self.run_stdio)
+
+    def ping(self) -> str:
+        return "pong"
+
+    def diagnose(self) -> dict[str, Any]:
+        reply = self.ping()
+        if reply != "pong":
+            raise McpStandupFailed("diagnose", self, "MCP host ping failed")
+        tools = [
+            BUILTIN_PING_TOOL,
+            *sorted(self._runtime.tools),
+            *sorted(self._runtime.prompts),
+        ]
+        return {"ok": True, "ping": reply, "tools": tools}
+
+    @staticmethod
+    def _arg_after(args: list[str], flag: str) -> str:
+        if flag not in args:
+            return ""
+        index = args.index(flag)
+        if index + 1 >= len(args):
+            return ""
+        return str(args[index + 1])
+
+    @classmethod
+    def refs_from_manifest(cls, manifest: Path | str) -> tuple[str, ...]:
+        path = Path(manifest)
+        if not path.is_file():
+            return ()
+        servers = json.loads(path.read_text(encoding="utf-8")).get("mcpServers") or {}
+        args = [str(item) for item in (servers.get("cdd") or {}).get("args") or []]
+        raw = cls._arg_after(args, "--toolsets")
+        return tuple(ref.strip() for ref in raw.split(",") if ref.strip())
+
+    @classmethod
+    def _loadable_refs(cls, refs: tuple[str, ...]) -> tuple[str, ...]:
+        loadable: list[str] = []
+        for ref in refs:
+            try:
+                AgentToolSet.instantiate(ref)
+            except TypeError as error:
+                if "is not a @agent_toolset class" in str(error):
+                    continue
+                raise McpStandupFailed("standup", None, str(error), error) from error
+            except Exception as error:
+                raise McpStandupFailed("standup", None, str(error), error) from error
+            loadable.append(ref)
+        return tuple(loadable)
+
+    @classmethod
+    def standup(cls, manifest: Path | str, *, repo: Path | str | None = None) -> McpHost:
+        path = Path(manifest)
+        refs = cls._loadable_refs(cls.refs_from_manifest(path))
+        resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
+        try:
+            return cls.build(refs, repo=str(resolved), project=str(resolved))
+        except Exception as error:
+            raise McpStandupFailed("standup", None, str(error), error) from error
 
     @classmethod
     def build(

@@ -1,21 +1,26 @@
 """BDD spec for MCP host JSON Schema binding of Python parameter types."""
+import re
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "practices", "actions", "harness"):
     _path = str(_REPO_ROOT / _cat)
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
 from expects import contain, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
+from installation.installer import Installer
 from installation.mcp.examples.parameter_types.parameter_types import ParameterTypes
 from installation.mcp.mcp_server import McpHost
 from actions.iterate.iterate import Iterate
+from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 
 
 def _sorted_any_of_types(schema: dict) -> list[str]:
@@ -238,3 +243,47 @@ with description("an MCP host input schema"):
                 expect(schema["properties"]["tools"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
+
+
+with description("an MCP host") as self:
+    with context("that has stood up without a manifest file"):
+        with before.each:
+            self.host = McpHost.standup(Path("no-such-mcp.json"), repo=_REPO_ROOT)
+
+        with it("should answer ping with pong"):
+            expect(self.host.diagnose()["ping"]).to(equal("pong"))
+
+        with it("should include the built-in health-check tool"):
+            expect(self.host.diagnose()["tools"]).to(contain("cdd.ping"))
+
+    with context("that has enrolled a turn toolset"):
+        with before.each:
+            self.host = McpHost.build(
+                ("tools.workspace.workspace:Turn",),
+                repo=str(_REPO_ROOT),
+                project=str(_REPO_ROOT),
+            )
+
+        with it("should name the turn operation turn.turn"):
+            expect(self.host.diagnose()["tools"]).to(contain("turn.turn"))
+
+        with it("should advertise MCP tool names Cursor can load"):
+            illegal = [
+                name
+                for name in self.host.diagnose()["tools"]
+                if re.fullmatch(r"[A-Za-z0-9_.-]+", name) is None
+            ]
+            expect(illegal).to(equal([]))
+
+    with context("that has stood up from a written mcp.json"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            self.tree = Path(self._tmp)
+            Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
+            self.host = McpHost.standup(self.tree / "mcp.json", repo=_REPO_ROOT)
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should enroll a published operation from the manifest"):
+            expect(self.host.diagnose()["tools"]).to(contain("sample-mcp.generate"))

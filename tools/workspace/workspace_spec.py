@@ -505,8 +505,8 @@ with description("a context tool"):
                     ).to(be_false)
 
                 with it("should describe the turn from context tool and action skills"):
-                    expect(self.turn.name).to(contain("bdd/run"))
-                    expect(self.turn.name).to(contain("shipped"))
+                    expect(self.turn.commit_subject).to(contain("bdd/run"))
+                    expect(self.turn.commit_subject).to(contain("shipped"))
 
                 with it("should push its session branch to origin"):
                     expect(self.git.pushes).to(equal(["session/sprint-a"]))

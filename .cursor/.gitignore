@@ -1,3 +1,4 @@
 # Installed IDE artifacts — regenerate with installer
 *
 !.gitignore
+!mcp.json

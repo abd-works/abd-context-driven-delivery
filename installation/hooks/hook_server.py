@@ -205,6 +205,22 @@ class HandlerCatalog:
         return handlers
 
 
+class HookStandupFailed(Exception):
+    """The hook server could not stand up or failed diagnose."""
+
+    def __init__(
+        self,
+        operation: str,
+        server: Any,
+        message: str,
+        cause: BaseException | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.operation = operation
+        self.server = server
+        self.cause = cause
+
+
 class HookServer:
     """Cursor process for every hooked event."""
 
@@ -258,6 +274,65 @@ class HookServer:
             print(json.dumps(HookResult().as_dict()))
             return
         print(json.dumps(self.dispatch(payload).as_dict()))
+
+    def ping(self) -> str:
+        return "pong"
+
+    def _event_names(self) -> list[str]:
+        names: list[str] = []
+        for toolset in self._catalog.toolsets:
+            for tool in toolset.tools_for(InstallDestination.HOOK):
+                event = getattr(tool.callable, "_hook_name", None)
+                if event and event not in names:
+                    names.append(str(event))
+        return names
+
+    def diagnose(self) -> dict[str, Any]:
+        reply = self.ping()
+        if reply != "pong":
+            raise HookStandupFailed("diagnose", self, "hook server ping failed")
+        self.dispatch(HookPayload({}))
+        return {"ok": True, "ping": reply, "events": self._event_names()}
+
+    @classmethod
+    def refs_from_handlers(cls, handlers: Path | str) -> tuple[str, ...]:
+        path = Path(handlers)
+        if not path.is_file():
+            return ()
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return ()
+        refs: list[str] = []
+        for item in payload.get("handlers") or []:
+            ref = item.get("ref")
+            if ref and str(ref) not in refs:
+                refs.append(str(ref))
+        return tuple(refs)
+
+    @classmethod
+    def _loadable_refs(cls, refs: tuple[str, ...]) -> tuple[str, ...]:
+        loadable: list[str] = []
+        for ref in refs:
+            try:
+                AgentToolSet.instantiate(ref)
+            except TypeError as error:
+                if "is not a @agent_toolset class" in str(error):
+                    continue
+                raise HookStandupFailed("standup", None, str(error), error) from error
+            except Exception as error:
+                raise HookStandupFailed("standup", None, str(error), error) from error
+            loadable.append(ref)
+        return tuple(loadable)
+
+    @classmethod
+    def standup(cls, handlers: Path | str, *, repo: Path | str | None = None) -> HookServer:
+        resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
+        refs = cls._loadable_refs(cls.refs_from_handlers(handlers))
+        try:
+            return cls(resolved, toolsets=list(refs))
+        except Exception as error:
+            raise HookStandupFailed("standup", None, str(error), error) from error
 
     def _append_debug(self, message: str) -> None:
         from installation.hooks.session_logs import session_log_path

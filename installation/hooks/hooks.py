@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -74,7 +75,7 @@ hook = Hook
 hooks = Hooks
 
 class HookInstallation(Installation):
-    """Write hook skill files and Cursor ``hooks.json`` dispatch entries."""
+    """Write Cursor ``hooks.json`` dispatch and ``hook-handlers.json`` refs."""
 
     channel = "hook"
     DISPATCH_SCRIPT = "installation/hooks/hook_server.py"
@@ -84,37 +85,32 @@ class HookInstallation(Installation):
         ide: str,
         path: Path | str,
         *,
-        python: str = ".venv/Scripts/python.exe",
+        python: str | None = None,
         repo: Path | str | None = None,
     ) -> None:
         super().__init__(ide, path, repo=repo)
-        self.python = python
+        self.python = python or sys.executable
         self._handlers: list[dict[str, str]] = []
+        self.server: Any = None
+        self.diagnosis: dict[str, Any] | None = None
 
     @property
     def dispatch_command(self) -> str:
-        return f"{self.python} {self.DISPATCH_SCRIPT}"
+        repo = self.repo or Path(__file__).resolve().parents[2]
+        script = (repo / self.DISPATCH_SCRIPT).resolve()
+        return f"{self.python} -u {script}"
 
     def write(self, tool: Any) -> None:
-        from harness.agent_tools.agent_tools import AgentToolSet
-
-        toolset = tool.toolset
-        if not isinstance(toolset, AgentToolSet):
-            return
         if not tool.install_to_hook:
             return
         event = getattr(tool.callable, "_hook_name", None)
         if not event:
             return
-        dest = self.path / "skills" / f"hook-{tool.name}" / "SKILL.md"
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(tool.description or tool.name, encoding="utf-8")
-        self.track_write(dest)
         self._handlers.append(
             {
                 "event": str(event),
                 "operation": tool.name,
-                "ref": toolset.registration_name,
+                "ref": tool.registration_name,
             }
         )
         self.write_hooks_manifest()
@@ -171,3 +167,14 @@ class HookInstallation(Installation):
             encoding="utf-8",
         )
         self.track_write(dest)
+
+    def standup(self) -> Any:
+        from installation.hooks.hook_server import HookServer
+
+        self.server = HookServer.standup(self.path / "hook-handlers.json", repo=self.repo)
+        return self.server
+
+    def diagnose(self) -> dict[str, Any]:
+        server = self.server if self.server is not None else self.standup()
+        self.diagnosis = server.diagnose()
+        return self.diagnosis

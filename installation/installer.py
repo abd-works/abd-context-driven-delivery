@@ -369,6 +369,10 @@ class Installer:
             for child in nested:
                 self._install_toolset(child)
         self._save_state()
+        self._mcp.standup()
+        self._mcp.diagnose()
+        self._hook.standup()
+        self._hook.diagnose()
         return self._mcp
 
 

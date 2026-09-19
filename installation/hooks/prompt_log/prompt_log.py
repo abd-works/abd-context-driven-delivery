@@ -23,7 +23,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from agent_tools import agent_toolset
-from installation.hooks.hooks import Hook
+from installation.hooks.hooks import Hook, Hooks
 _PREVIEW_LINES = 8
 _PREVIEW_CHARS = 600
 
@@ -180,6 +180,7 @@ def format_after_agent_response(data: dict) -> str:
     return "\n".join(lines)
 
 
+@Hooks(disabled=True)
 @agent_toolset
 class PromptLog:
     """Audit what Cursor sends the model — one ``@Hook`` per event."""

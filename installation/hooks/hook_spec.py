@@ -1,4 +1,6 @@
 """BDD specs for installer @Hook dispatch."""
+import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -13,8 +15,8 @@ for _cat in ("harness", "tools"):
 sys.modules.pop("tools", None)
 sys.modules.pop("hooks", None)
 
-from expects import be_true, equal, expect
-from mamba import context, description, it
+from expects import be_true, contain, equal, expect
+from mamba import after, before, context, description, it
 from agent_tools import agent_toolset
 
 from harness.agent_tools.agent_tools import agent_tool
@@ -174,3 +176,45 @@ with description("session hook logs"):
                 log.write_text("probe\n", encoding="utf-8")
                 expect(log.is_file()).to(be_true)
                 expect((folder / "session.md").is_file()).to(be_true)
+
+
+with description("a hook server") as self:
+    with context("that has stood up without a handlers file"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            self.server = HookServer.standup(
+                Path(self._tmp) / "missing.json", repo=self._tmp
+            )
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should answer ping with pong"):
+            expect(self.server.diagnose()["ping"]).to(equal("pong"))
+
+    with context("that has stood up from written hook handlers"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            dest = Path(self._tmp) / "hook-handlers.json"
+            dest.write_text(
+                json.dumps(
+                    {
+                        "handlers": [
+                            {
+                                "event": "stop",
+                                "operation": "auto_turn",
+                                "ref": "harness.guidance.fixtures.agentic_ops.hook_ops:SampleHookOps",
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.server = HookServer.standup(dest, repo=self._tmp)
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should list the installed hook event"):
+            expect(self.server.diagnose()["events"]).to(contain("stop"))

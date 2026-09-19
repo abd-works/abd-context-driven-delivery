@@ -349,8 +349,7 @@ class Turn:
         return Commit.format(self._subject_line(), self._trailers())
 
     @property
-    def name(self) -> str:
-        """Legacy alias — first line of the commit message."""
+    def commit_subject(self) -> str:
         return self.commit_message.splitlines()[0]
 
     def bind_from_host(self, host: Any, *, action: str = "") -> None:

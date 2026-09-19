@@ -17,6 +17,7 @@ for _cat in ("practices", "harness", "tools", "actions"):
 from expects import be_true, contain, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 
+from installation.installer import Installer
 from harness.guidance.fixtures.agentic_ops.agentic_ops import (
     SampleAgenticOps,
     SampleMcpOps,
@@ -29,8 +30,8 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SamplePracticeWithFidelities,
 )
-from installation.installer import Installer
 from installation.hooks.hooks import Hook
+from installation.hooks.prompt_log.prompt_log import PromptLog
 from installation.mcp.mcp_server import McpServer
 from agent_bdd.spec_helpers import repo_root_from
 from harness.agent_tools.agent_tools import AgentToolSet
@@ -187,6 +188,9 @@ with description("a bare agentic toolset with mcp-published operations registere
         with it("should not bind tool handlers during deploy"):
             server_bound = getattr(self.mcp, "_bound", False)
             expect(server_bound).to(equal(False))
+
+        with it("should diagnose that the MCP host answers ping"):
+            expect(self.mcp.diagnosis["ping"]).to(equal("pong"))
 
 
 with description("context guidance registered for deploy") as self:
@@ -406,6 +410,49 @@ with description("an MCP manifest file") as self:
             expect((self.tree / "mcp.json").exists()).to(equal(False))
 
 
+with description("an installer that has finished writing the IDE path") as self:
+    with before.each:
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+        self.installer = Installer(ide="Cursor", path=self.tree)
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with context("with mcp-published operations installed"):
+        with before.each:
+            self.mcp = self.installer.install([SampleMcpOps()])
+
+        with it("should diagnose that the MCP host answers ping"):
+            expect(self.mcp.diagnosis["ping"]).to(equal("pong"))
+
+        with it("should list the built-in health-check tool"):
+            expect(self.mcp.diagnosis["tools"]).to(contain("cdd.ping"))
+
+        with it("should diagnose that the hook server answers ping"):
+            expect(self.installer._hook.diagnosis["ping"]).to(equal("pong"))
+
+    with context("with no mcp-published members installed"):
+        with before.each:
+            self.mcp = self.installer.install([SampleAgenticOps()])
+
+        with it("should diagnose that the MCP host answers ping"):
+            expect(self.mcp.diagnosis["ping"]).to(equal("pong"))
+
+        with it("should diagnose that the hook server answers ping"):
+            expect(self.installer._hook.diagnosis["ping"]).to(equal("pong"))
+
+    with context("with hook operations installed"):
+        with before.each:
+            self.mcp = self.installer.install([SampleHookOps()])
+
+        with it("should diagnose that the hook server answers ping"):
+            expect(self.installer._hook.diagnosis["ping"]).to(equal("pong"))
+
+        with it("should list the installed hook event"):
+            expect(self.installer._hook.diagnosis["events"]).to(contain("stop"))
+
+
 with description("a bare agentic toolset with an agent-tool operation annotated for mcp") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()
@@ -526,15 +573,35 @@ with description("a Cursor hooks config") as self:
             command = data["hooks"]["stop"][0]["command"]
             expect(command).to(contain("installation/hooks/hook_server.py"))
 
-        with it("should write hook skill files for hook-published operations"):
-            expect((self.tree / "skills" / "hook-auto_turn" / "SKILL.md").is_file()).to(
-                equal(True)
-            )
+        with it("should write the skill file for the skill-annotated operation"):
+            skill_files = [
+                path
+                for path in self.tree.rglob("SKILL.md")
+                if not path.parent.name.startswith("hook-")
+            ]
+            expect(len(skill_files) > 0).to(equal(True))
 
         with it("should write handler refs for dispatch"):
             data = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
             expect(data["handlers"][0]["event"]).to(equal("stop"))
             expect(data["handlers"][0]["operation"]).to(equal("auto_turn"))
+
+    with context("that has been deployed with the prompt log hook toolset"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            self.tree = Path(self._tmp)
+            Installer(ide="Cursor", path=self.tree).install([PromptLog()])
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should write hooks.json dispatch for beforeSubmitPrompt"):
+            data = json.loads((self.tree / "hooks.json").read_text(encoding="utf-8"))
+            expect(data["hooks"]).to(have_key("beforeSubmitPrompt"))
+
+        with it("should not write a skill file for a hook-only operation"):
+            hook_skills = list((self.tree / "skills").glob("hook-*/SKILL.md"))
+            expect(hook_skills).to(equal([]))
 
     with context("that has been partially deployed with no hook sources emitted"):
         with before.each:

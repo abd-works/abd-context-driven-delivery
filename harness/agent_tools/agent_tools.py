@@ -100,7 +100,7 @@ class AgentToolSet:
     def slug(self) -> str:
         if self.domain_slug:
             return str(self.domain_slug).replace("_", "-")
-        return self.name.replace("_", "-")
+        return AgentToolSet._slugify_class_name(type(self).__name__).replace("_", "-")
 
     @property
     def install_folder(self) -> Path:
