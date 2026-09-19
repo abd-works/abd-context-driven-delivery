@@ -83,6 +83,5 @@ class RecordDecisions:
         tools(self.list_cdrs(root))
         """Step 3 - During the session (grill, sketch, or generate), watch for decisions that meet ALL three: hard to reverse, surprising without context, and a real trade-off. If any criterion is missing, skip the CDR."""
         """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, call write_cdr immediately with a kebab slug and content matching CDR-FORMAT.md. Do not batch; do not wait until the end."""
-        tools(self.write_cdr(root, "example-slug", "content"))
         """Step 5 - Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences only when they add genuine value."""
         return "CDR session active for {{root}}."

@@ -11,7 +11,10 @@ primitives/tools/hooks/manifest_gate.log
 # Sandbox Node toolchain
 sandbox/node_modules/
 
-# Generated deploy state (local; the deployed .cursor artifacts are tracked)
+# Cursor install tree — regenerate with installer
+.cursor/
+
+# Generated deploy state (local)
 .kilo/
 tools/agent_skills/.deploy-state.json
 primitives/harness/.deploy-state.json
