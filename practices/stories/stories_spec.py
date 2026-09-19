@@ -33,15 +33,15 @@ def _expanded(stories, action_name):
 
 
 with description("Stories"):
-    with context("that resolves shaping to the first fidelity"):
+    with context("that resolves discovery stage to story_map"):
         with before.each:
-            self.stories = Stories(fidelity="scaffold")
+            self.stories = Stories(stage="discovery")
 
         with it("should default format to markdown"):
             expect(self.stories.format).to(equal("markdown"))
 
-        with it("should map scaffold to story_map"):
-            expect(self.stories.fidelity).to(equal("story_map"))
+        with it("should select story_map"):
+            expect(self.stories.fidelities.current.fidelity).to(equal("story_map"))
 
     with context("that is constructed with fidelity story_map"):
         with before.each:
@@ -51,7 +51,7 @@ with description("Stories"):
             expect(self.stories.format).to(equal("markdown"))
 
         with it("should retain fidelity story_map"):
-            expect(self.stories.fidelity).to(equal("story_map"))
+            expect(self.stories.fidelities.current.fidelity).to(equal("story_map"))
 
     with context("that is constructed with fidelity scenarios"):
         with before.each:
@@ -61,7 +61,7 @@ with description("Stories"):
             expect(self.stories.format).to(equal("python"))
 
         with it("should retain fidelity scenarios"):
-            expect(self.stories.fidelity).to(equal("scenarios"))
+            expect(self.stories.fidelities.current.fidelity).to(equal("scenarios"))
 
     with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):
@@ -141,10 +141,10 @@ with description("Stories"):
     with context("whose transform tool converts markdown to python"):
         with before.each:
             self.stories = Stories(fidelity="story_map")
-            self.result = self.stories.transform(
-                source_format="markdown",
-                target_format="python",
+            self.result = self.stories.render(
+                format="python",
                 content=_SAMPLE_MARKDOWN,
+                source="markdown",
             )
 
         with it("should return a dict"):
@@ -169,10 +169,10 @@ with description("Stories"):
                 fidelity="scenarios",
                 workspace=self.tempdir.name,
             )
-            self.result = self.stories.transform(
-                source_format="markdown",
-                target_format="typescript",
+            self.result = self.stories.render(
+                format="typescript",
                 content=_SAMPLE_MARKDOWN,
+                source="markdown",
             )
 
         with after.each:
@@ -197,10 +197,10 @@ with description("Stories"):
                 workspace=str(root),
                 path=str(deploy / "story-scenarios.md"),
             )
-            self.result = self.stories.transform(
-                source_format="markdown",
-                target_format="typescript",
+            self.result = self.stories.render(
+                format="typescript",
                 content=_SAMPLE_MARKDOWN,
+                source="markdown",
             )
 
         with after.each:
@@ -312,7 +312,7 @@ with description("Stories"):
         with before.each:
             self.templates = Stories(
                 fidelity="story_map", format="markdown", session=None
-            ).templates().expand()
+            ).templates
 
         with it("should inline the markdown story-map template only"):
             expect("Story Map" in self.templates).to(be_true)
@@ -336,7 +336,7 @@ with description("Stories"):
         with it("should inline story-map template only"):
             templates = Stories(
                 fidelity="story_map", format="markdown", session=None
-            ).templates().expand()
+            ).templates
             expect("Story Map" in templates).to(be_true)
             expect("Thin slicing" in templates).to(equal(False))
             expect("thin-slice.md" in templates).to(equal(False))
@@ -345,10 +345,10 @@ with description("Stories"):
         with before.each:
             self.templates = Stories(
                 fidelity="scenarios", format="python", session=None
-            ).templates().expand()
+            ).templates
 
         with it("should inline the flat scenario-template without helpers"):
-            expect("scenario-template.py" in self.templates).to(be_true)
+            expect("Scenario template" in self.templates).to(be_true)
             expect("class StoryNodeTransformer" in self.templates).to(equal(False))
             expect("copy once per tests/ tree if missing" in self.templates).to(be_true)
             expect("templates/py/story_test.py" in self.templates).to(be_true)
@@ -393,10 +393,9 @@ with description("Stories"):
         with before.each:
             self.templates = Stories(
                 fidelity="scenarios", format="markdown", session=None
-            ).templates().expand()
+            ).templates
 
-        with it("should inline the merged scenario-template with outline default and inline alternate"):
-            expect("scenario-template.md" in self.templates).to(be_true)
+        with it("should inline the scenarios markdown template"):
             expect("Default — Scenario Outline" in self.templates).to(be_true)
             expect("Alternate — inline scenarios" in self.templates).to(be_true)
             expect("scenario-inline.md" in self.templates).to(equal(False))
@@ -407,14 +406,14 @@ with description("Stories"):
         with it("should inline sign-up-style scenario-template.ts"):
             text = Stories(
                 fidelity="scenarios", format="typescript", session=None
-            ).templates().expand()
-            expect("scenario-template.ts" in text).to(be_true)
+            ).templates
+            expect("Scenario template" in text).to(be_true)
             expect("templates/ts/story-test.ts" in text).to(be_true)
             expect("export function story" in text).to(equal(False))
             expect("copy once per tests/ tree if missing" in text).to(be_true)
             expect("tests/story-test.ts" in text).to(be_true)
             expect("export function background" in text).to(equal(False))
-            expect("Naming rules" in text).to(be_true)
+            expect("Path naming" in text).to(be_true)
             expect("background(({ given })" in text).to(be_true)
             expect("beforeAll" in text).to(be_true)
             expect("afterAll" in text).to(be_true)

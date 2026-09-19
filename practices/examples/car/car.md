@@ -41,6 +41,9 @@ Do not skip steps. Do not reorder. Do not use generic "vehicle" without make and
 
 
 **Default format:** markdown
+**Stage:** discovery
+
+**Goal:** Name the beats of a trip — destination, conditions, start, drive, speak, stop.
 
 #### Guidance
 
@@ -66,6 +69,9 @@ The speak beat is one line that captures the car's personality reaction to what 
 
 
 **Default format:** markdown
+**Stage:** specification
+
+**Goal:** Tell the road story in character — what the car does and says, in order.
 
 #### Guidance
 
@@ -85,6 +91,9 @@ The story reads as a journey — what happened in order, told from the car's per
 
 
 **Default format:** markdown
+**Stage:** implementation
+
+**Goal:** Tell the full journey with an inspectable trip log.
 
 #### Guidance
 

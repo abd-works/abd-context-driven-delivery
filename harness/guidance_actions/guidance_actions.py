@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Union
 
 from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
-from installation.mcp.mcp_server import Mcp
+from installation.mcp.mcp_server import mcp
 from workspace.workspace import SessionModel, Turn, Workspace
 
 # Runtime-safe alias: a Guidance list (or toolset refs) or a string to act on directly.
@@ -92,7 +92,7 @@ class GuidanceAction:
         self.end()
         return results
 
-    @Mcp
+    @mcp
     @agent_tool
     def open_workspace(self, name: str = "", path: str = "") -> str:
         """Open a work session on this workspace if one is not already open. Pass a name to open or switch to that session; returns the session name and any branch warning."""

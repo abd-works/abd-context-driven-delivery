@@ -48,6 +48,8 @@ When documenting an existing system, tactical wraps live under the DDD working a
 
 ## Shared rules
 
+Use these rules when defining domain logic in code, a model, or language.
+
 - **`ubiquitous-language-everywhere`** — One term per concept, taken from the business, used identically on the map, in the model, in the code, and in the tests. A technical synonym makes every reader keep a translation in their head, and the two names drift until they mean different things.
 - **`model-the-domain-not-the-implementation`** — Model what the business does, not what the current database, screens, or vendor API expose. A model shaped by an existing implementation locks in decisions nobody chose on purpose.
 - **`vocabulary-traces-to-domain-source`** — Trace every term back to domain experts or an upstream artifact. Invent a word and each layer keeps its own glossary.
@@ -64,6 +66,7 @@ When documenting an existing system, tactical wraps live under the DDD working a
 
 
 **Default format:** markdown
+**Stage:** discovery
 
 **Goal:** Draw where language changes — context boundaries, the aggregates that protect invariants inside each context, and the dependency arcs between contexts — using the experts' words. Names and boundaries are cheap to change here; they are expensive once building blocks, stories, and code hang off them.
 
@@ -99,11 +102,13 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 #### Rules
 
-- **`experts-words-preferred`** — Use the words domain experts use. A ported telephone number is `TelephoneNumber` with `PortingInformation`, not `PortabilityRequest`; the operation is `port()`, not `requestPortability()`. A invented synonym becomes a second term every reader must translate.
-- **`domain-concepts-not-technical-names`** — Name contexts, aggregates, and concepts — not `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, or `*Request`. Do not invent a type for fields that already belong on a concept (`OrderResult` → fields on `Order`). A technical name carries no meaning the business would recognize, so rules parked on it cannot be found where the concept lives and get re-implemented elsewhere.
-- **`bc-by-lifecycle-not-ui-themes`** — Partition by ubiquitous language and how fast the model changes, not by UI themes or journey stages. Do not mint Selfcare / Onboarding / Acquisition contexts that duplicate Customer, Catalog, and Subscription. Screens and journeys are redrawn while language boundaries hold; a boundary cut along the UI has to move with every redesign and drags the model with it.
+Use these rules when drawing where language changes — context boxes, aggregates inside them, and the arcs between contexts.
+
+- **`experts-words-preferred`** — Use the words domain experts use. An invented synonym becomes a second term every reader must translate.
+- **`domain-concepts-not-technical-names`** — Name contexts, aggregates, and concepts — not `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, or `*Request`. Do not invent a type for fields that already belong on a concept. A technical name carries no meaning the business would recognize, so rules parked on it cannot be found where the concept lives and get re-implemented elsewhere.
+- **`bc-by-lifecycle-not-ui-themes`** — Partition by ubiquitous language and how fast the model changes, not by UI themes or journey stages. Do not mint journey-themed contexts that duplicate core domain contexts. Screens and journeys are redrawn while language boundaries hold; a boundary cut along the UI has to move with every redesign and drags the model with it.
 - **`one-meaning-per-context`** — Inside a context, one definition per term; name and translate false cognates across contexts. Several aggregates per context is normal. Do not wrap each aggregate in its own bounded context. Two meanings under one word become contradictory code that both looks consistent; a context per aggregate walls one language off from itself and charges integration cost for nothing.
-- **`dependency-fields-tracked`** — Every arc names direction, what crosses, how integration happens, and the relationship pattern — or a dated follow-up with owner. An arc with only "integrates with Catalog" does not tell anyone what to build.
+- **`dependency-fields-tracked`** — Every arc names direction, what crosses, how integration happens, and the relationship pattern — or a dated follow-up with owner. An arc that names only a neighbor context does not tell anyone what to build.
 - **`no-orphan-contexts`** — Every context on the map appears in a dependency arc or is declared standalone with a reason. A box with no arcs is either missing relationships or should not be on the map.
 - **`vendor-not-implementation`** — The context title carries vendor after `|` (`custom`, `bespoke`, or vendor name). Owning team and implementation stack belong elsewhere, because they can change while the domain meaning remains stable.
 - **`context-tree-bc-aggregate-concept`** — Three levels on the bounded_context card only: BC → Aggregate → concept. Deeper structure and stereotypes wait for **building_blocks**; tree shape is in the template. Structure drawn before the boundary settles is discarded when the boundary moves — and until then it argues for leaving the boundary where it is.
@@ -119,8 +124,9 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 
 **Default format:** markdown
+**Stage:** specification
 
-**Goal:** Deepen the same context map — under each aggregate already placed at **bounded_context**, add clean_engineering compact class detail and DDD stereotypes. You are classifying and shaping what is already on the map, not inventing a parallel model.
+**Goal:** Classify each concept on the map — entity, value, repository, event, service — and shape the classes that carry them.
 
 **Produce:** Update `bounded-context-map.md` using `templates/bounded-context-template.md`. Call clean_engineering at **model**.
 
@@ -148,10 +154,12 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 #### Rules
 
-- **`identity-test-entity-vs-vo`** — Entity when identity transcends attributes; otherwise prefer Value Object. A type that is the access boundary for a cluster is **Aggregate Root + Entity**, not a Domain Service (`Catalog` is not `<<Service>>` because it "does" selection).
+Use these rules when tagging types already on the map — entity vs value, repository, event, service — not inventing a parallel model.
+
+- **`identity-test-entity-vs-vo`** — Entity when identity transcends attributes; otherwise prefer Value Object. A type that is the access boundary for a cluster is **Aggregate Root + Entity**, not a Domain Service.
 - **`aggregate-root-identity-and-entry`** — Every aggregate states the root's identity and uses that root as its only entry point. If identity or entry is ambiguous, the root cannot protect changes across the aggregate.
 - **`every-concept-classified`** — Every source concept appears with supporting model content (or `Unresolved`). When harvesting from a sketch, every named type in the sketch appears — do not render a handful of classes from a large map.
-- **`service-is-homeless`** — Domain Service is a rare doer only when the operation cannot sit on one domain object. Not SOA: do not invent `FooService` to park verbs. `CheckoutService.placeOrder` is `Cart.checkout`.
+- **`service-is-homeless`** — Domain Service is a rare doer only when the operation cannot sit on one domain object. Not SOA: do not invent `FooService` to park verbs.
 - **`repository-is-collection-lifecycle`** — Add a Repository only when the business finds, stores, and retires an Aggregate Root independently. Model it as a typed collection of that root with explicit collection multiplicity; reach an owned aggregate through its owner when it has no independent lookup, because a Repository without an independent collection invents a lifecycle the business does not have.
 - **`repository-owns-aggregate-lifecycle`** — Put creation, loading, search, update, and retirement of an Aggregate Root on its Repository; keep changes to an already loaded aggregate on the root or its members. An aggregate instance does not create or load itself, because collection lifecycle and aggregate behaviour have different owners.
 - **`external-system-access-is-service-interface`** — Represent another system with a named Service or Gateway interface that exposes that system's operations. Let a Repository collaborate with that interface when persistence crosses the system boundary, but do not model the external system as a collection of domain roots, because the external system owns a different model and lifecycle.
@@ -163,7 +171,7 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 - **`no-premature-infrastructure`** — Design intent only: no tables, brokers, framework annotations, or endpoints.
 - **`hang-deps-on-owning-bc`** — Keep `→` links on the concept or aggregate from **bounded_context**. No global `## Dependencies` parking lot.
 - **`building-blocks-fidelity-requires-tactical-stereotype`** — Every class carries a tactical tag (`<<Aggregate Root>>`, `<<Entity>>`, `<<Value Object>>`, …). Bare names are incomplete.
-- **`flaccid-data-object-no-behavior`** — A type is not a field bag. Give it the operations that are **its** work. Credentials does not grow `signIn`.
+- **`flaccid-data-object-no-behavior`** — A type is not a field bag. Give it the operations that are **its** work.
 - **`screen-interface-not-a-domain-object`** — `open()` / `isShowing()` screen drivers are not domain types. The user action is an operation on the aggregate that owns it.
 - **`private-method-naming`** — Public `+name`; private `- _name`. `derive*` helpers are private.
 - **`no-orphaned-objects`** — Every domain object has at least one relationship. Value objects that are attributes sit on their owner — not as unconnected cards.
@@ -176,6 +184,7 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 
 **Default format:** Python
+**Stage:** implementation
 
 **Goal:** Decide one implementation pattern for each building block the model uses, then implement the domain against it — preserving every name and boundary from upstream.
 
@@ -196,6 +205,8 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 **Load with the identity already in hand** when wrapping live code. Do not assume a browser session. Load once and reuse the variable. A cart has no identity outside its prospect — reach it through the owner, not `cartRepository().current()`.
 
 #### Rules
+
+Use these rules when choosing how a repository, event, or factory is stored, published, and tested, then writing that implementation.
 
 - **`one-pattern-per-building-block`** — Each building block in play gets one named implementation pattern — technology, extension mechanism, test approach — used by every instance of that block. Divergent implementations of the same block make the solution unreadable and untestable as a whole.
 - **`architectural-granularity-decided`** — State what a bounded context, an aggregate, and a repository are at runtime (in-process module, container, service with its own store). Left undecided, the first adapter written silently sets it for everything after.

@@ -30,6 +30,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from agent_tools import agent_tool, agent_toolset
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
@@ -554,30 +556,30 @@ def _resolve_actions_from_source(
     return [(m.name, m) for m in methods]
 
 _KIT_LIFECYCLE_SPECS: tuple[tuple[str, Path, str], ...] = (
-        ("partition", _REPO_ROOT / "practices" / "actions" / "partition" / "partition.py", "partition"),
-        ("grill", _REPO_ROOT / "practices" / "actions" / "grill_context" / "grill_context.py", "grill_context"),
-        ("sketch", _REPO_ROOT / "practices" / "actions" / "sketch" / "sketch.py", "sketch"),
-        ("iterate", _REPO_ROOT / "practices" / "actions" / "iterate" / "iterate.py", "iterate"),
-        ("generate", _REPO_ROOT / "practices" / "actions" / "generate" / "generate.py", "generate"),
-        ("document", _REPO_ROOT / "practices" / "actions" / "document" / "document.py", "document"),
-        ("validate", _REPO_ROOT / "practices" / "actions" / "validate" / "validate.py", "validate"),
-        ("satisfy", _REPO_ROOT / "practices" / "actions" / "satisfy" / "satisfy.py", "satisfy"),
-        ("repair", _REPO_ROOT / "practices" / "actions" / "improvement" / "improvement.py", "improvement"),
-        ("createRule", _REPO_ROOT / "practices" / "actions" / "validate" / "validate.py", "validate"),
-        ("scan", _REPO_ROOT / "practices" / "actions" / "scan" / "scan.py", "scan"),
+        ("partition", _REPO_ROOT / "actions" / "partition" / "partition.py", "partition"),
+        ("grill", _REPO_ROOT / "actions" / "grill_context" / "grill_context.py", "grill_context"),
+        ("sketch", _REPO_ROOT / "actions" / "sketch" / "sketch.py", "sketch"),
+        ("iterate", _REPO_ROOT / "actions" / "iterate" / "iterate.py", "iterate"),
+        ("generate", _REPO_ROOT / "actions" / "generate" / "generate.py", "generate"),
+        ("document", _REPO_ROOT / "actions" / "document" / "document.py", "document"),
+        ("validate", _REPO_ROOT / "actions" / "validate" / "validate.py", "validate"),
+        ("satisfy", _REPO_ROOT / "actions" / "satisfy" / "satisfy.py", "satisfy"),
+        ("repair", _REPO_ROOT / "actions" / "improvement" / "improvement.py", "improvement"),
+        ("createRule", _REPO_ROOT / "actions" / "validate" / "validate.py", "validate"),
+        ("scan", _REPO_ROOT / "actions" / "scan" / "scan.py", "scan"),
     )
 
 _LIFECYCLE_KIT_IMPORTS: tuple[tuple[str, str, str], ...] = (
-    ("partition", "practices.actions.partition.partition", "Partition"),
-    ("grill", "practices.actions.grill_context.grill_context", "GrillContext"),
-    ("sketch", "practices.actions.sketch.sketch", "Sketch"),
-    ("iterate", "practices.actions.iterate.iterate", "Iterate"),
-    ("generate", "practices.actions.generate.generate", "Generate"),
-    ("document", "practices.actions.document.document", "Document"),
-    ("validate", "practices.actions.validate.validate", "Validate"),
-    ("satisfy", "practices.actions.satisfy.satisfy", "Satisfy"),
-    ("repair", "practices.actions.improvement.improvement", "Improvement"),
-    ("createRule", "practices.actions.validate.validate", "Validate"),
+    ("partition", "actions.partition.partition", "Partition"),
+    ("grill", "actions.grill_context.grill_context", "GrillContext"),
+    ("sketch", "actions.sketch.sketch", "Sketch"),
+    ("iterate", "actions.iterate.iterate", "Iterate"),
+    ("generate", "actions.generate.generate", "Generate"),
+    ("document", "actions.document.document", "Document"),
+    ("validate", "actions.validate.validate", "Validate"),
+    ("satisfy", "actions.satisfy.satisfy", "Satisfy"),
+    ("repair", "actions.improvement.improvement", "Improvement"),
+    ("createRule", "actions.validate.validate", "Validate"),
 )
 
 def resolve_lifecycle_action_owner() -> object:
@@ -608,7 +610,7 @@ def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
         if not methods:
             continue
         _method_name, method = methods[0]
-        source_dir = _REPO_ROOT / "practices" / "actions" / dir_name
+        source_dir = _REPO_ROOT / "actions" / dir_name
         calls = _host_action_calls(method.body, {"generate"})
         results.append(ActionResolution(name=name, source_dir=source_dir, calls=calls))
     return results
@@ -1343,6 +1345,8 @@ class Catalog:
             )
         return tools
 
+    @mcp
+    @skill
     @agent_tool
     def generate_catalog(
         self,

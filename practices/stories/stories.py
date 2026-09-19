@@ -7,8 +7,6 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from practices.stages import DISCOVERY, ENGINEER, SHAPING, SPEC, resolve_stage_fidelity
-from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
@@ -20,7 +18,6 @@ if TYPE_CHECKING:
     from tools.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
-    "scaffold": "markdown",
     "story_map": "markdown",
     "scenarios": "typescript",
     "acceptance_tests": "typescript",
@@ -86,17 +83,6 @@ class Stories(PracticeGuidance):
     _fidelity_format_defaults = _FIDELITY_FORMAT_DEFAULTS
     supported_formats = _SUPPORTED_FORMATS
 
-    STAGE_TO_FIDELITY = {
-        SHAPING: "scaffold",
-        DISCOVERY: "story_map",
-        SPEC: "scenarios",
-        ENGINEER: "acceptance_tests",
-    }
-
-    @classmethod
-    def resolve_fidelity(cls, fidelity: str) -> str:
-        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
-
     def __init__(
         self,
         fidelity: str = "story_map",
@@ -104,25 +90,15 @@ class Stories(PracticeGuidance):
         path: str | None = None,
         session: str | None = None,
         workspace: str | None = None,
+        stage: str | None = None,
     ) -> None:
-        fidelity = type(self).resolve_fidelity(fidelity)
-        if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
-            raise ValueError(
-                f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
-            )
-        resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        if resolved_format not in _SUPPORTED_FORMATS:
-            raise ValueError(
-                f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
-            )
-        init_practice_guidance(
-            self,
-            format=resolved_format,
+        super().__init__(
+            format=format,
             path=path,
             session=session,
             workspace=workspace,
             fidelity=fidelity,
-            stage_to_fidelity=self.STAGE_TO_FIDELITY,
+            stage=stage,
         )
 
     def diagnostic(self) -> "Diagnose":
@@ -209,12 +185,7 @@ class Stories(PracticeGuidance):
     @Skill
     @agent_instructions
     def instructions(self) -> str:
-        """Provide guidance for creating story maps, scenarios, and acceptance tests.
-        At scaffold fidelity: write epic, sub-epic, and story names only.
-        At story_map fidelity: write the story map and thin-slice only.
-        At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story folder beside story-scenarios.md (use tests/ only when that is the chosen output root).
-        At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts (one GWT file per story per seam, no story folder). After writing each acceptance test, use Clean Engineering at code fidelity to ensure the test is properly written, then to write the underlying code sufficient to make the test pass, then run the code and refactor according to Clean Engineering rules.
-        If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
+        """Map stakeholder and system interactions as behaviours that deliver a solution. Every later fidelity builds on these behaviours, so the story map must describe operations that named actors perform and results they can observe."""
         return super().instructions
 
     @property
@@ -222,7 +193,7 @@ class Stories(PracticeGuidance):
     def guidance(self) -> str:
         """Expand this practice's Guidance section, then code-fidelity Clean Engineering at acceptance_tests."""
         text = super().guidance
-        if self.fidelity != "acceptance_tests":
+        if self.fidelities.current.fidelity != "acceptance_tests":
             return text
         self.ce().guidance
         return (
@@ -234,58 +205,27 @@ class Stories(PracticeGuidance):
 
     @Mcp
     @agent_tool
-    def transform(self, source_format: str, target_format: str, content: str) -> dict:
-        """Parse content from source_format into the canonical StoryMap, then render into target_format.
-        All formatters are peer channels. Sideways format move at the same fidelity.
-        At acceptance_tests fidelity: after transforming story artifacts, call ce().transform() or call guidance on the CE companion and pass that companion to this action as a separate tools run."""
+    def render(self, format: str, content: str, source: str | None = None) -> dict:
+        """Parse content into the canonical StoryMap, then render into format.
+        source defaults to this instance's format. Peer channels at the same fidelity.
+        At acceptance_tests fidelity: after rendering, call ce().render() or call guidance on the CE companion and pass that companion to this action as a separate tools run."""
+        source_format = source or self.format or "markdown"
         source_cls = _load_channel_class(source_format)
-        source = source_cls()
-        target = self._make_target(target_format)
+        target = self._make_target(format)
         parsed_input = _normalize_input(source_format, content)
-        canonical = source.parse(parsed_input)
-        if source_format == "markdown" and target_format in _CODE_FORMATS:
+        canonical = source_cls().parse(parsed_input)
+        if source_format == "markdown" and format in _CODE_FORMATS:
             from practices.stories.document.markdown.nodes import MarkdownScenario
             scenarios = MarkdownScenario.parse_text(content, self.path or "story-scenarios.md")
             canonical.attach_scenarios(scenarios)
-        rendered = target.render(canonical)
-        return {"format": target_format, "content": rendered}
-
-    @Mcp
-    @agent_tool
-    def render(self, format: str, content: str = "") -> dict:
-        """Render already-generated story output into ``format`` via channel parse/render."""
-        source = None
-        if not content:
-            if self.path:
-                p = Path(self.path)
-                if p.is_file():
-                    content = p.read_text(encoding="utf-8")
-                    if p.suffix == ".md":
-                        source = "markdown"
-                    elif p.suffix == ".json":
-                        source = "json"
-                    elif p.suffix in (".ts", ".tsx"):
-                        source = "typescript"
-                    elif p.suffix == ".js":
-                        source = "javascript"
-                elif p.is_dir():
-                    for name in ("story-scenarios.md", "story-map.md"):
-                        if (p / name).exists():
-                            content = (p / name).read_text(encoding="utf-8")
-                            source = "markdown"
-                            break
-            if not content:
-                raise ValueError("content is required — pass the already-generated artifact or a valid path")
-        if not source:
-            source = self.format or "markdown"
-        return self.transform(source, format, content)
+        return {"format": format, "content": target.render(canonical)}
 
     @Mcp
     @agent_tool
     def render_chunks(self, content: str, chunk_size: int = 80) -> dict:
         """Render story map into Miro SVG chunks for incremental board upload.
 
-        Use instead of transform/render when the target is a Miro board.
+        Use instead of render when the target is a Miro board.
         Each chunk is a valid SVG string with single-quoted attribute values
         (safe for MCP JSON transport). Call canvas_create_from_svg with
         is_repository=True for each chunk in the returned list, in order.

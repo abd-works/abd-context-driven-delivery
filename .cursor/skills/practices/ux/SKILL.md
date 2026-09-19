@@ -60,128 +60,14 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 ---
 
-## front_end_code
+ia — Decide what screens exist and how users move between them.
 
-# UX — Procedural Guidance (front_end_code fidelity)
+Use MCP tool: `ux-ia()`
 
-## From mockup to production frontend
+mockup — Lock screens as runnable greybox — typed controls and key interactions.
 
-This fidelity is about real shipping UI, not enhanced greybox. The thinking shift:
+Use MCP tool: `ux-mockup()`
 
-1. **Replace stubs with real clients** — routing, state management, API calls, authentication. The mockup's faked behaviors become real service integrations.
-2. **Wire to real backend** — CE code-fidelity backend with Production collaborators. Not Fake factory, not in-browser demo domain.
-3. **Story Demo is now a companion, not the product** — the Story Demo shell may still exist for review/exploration, but it's not the shipping UI.
-4. **Carry forward all IA decisions** — layout vocabulary, control decisions, screen decomposition from earlier fidelities are still authoritative. Don't re-decide screens under a new product name.
+front_end_code — Ship the product UI — production frontend talking to a real backend.
 
-## What "real frontend" means
-
-A vertical is NOT at code fidelity while it depends on:
-- A mockup/Story Demo shell as the only UI
-- In-memory or fake factories as the only "backend"
-
-Code means real backend AND real frontend — not greybox + demo domain alone.
-
-## Host framework awareness
-
-At this fidelity, the host app's frontend stack takes over (React, Vue, Angular, vanilla). The IA and mockup decisions inform component structure and routing, but the implementation uses the real framework's patterns.
-
-
-## ia
-
-# UX — Procedural Guidance (ia fidelity)
-
-## How to build the information architecture
-
-IA answers: what screens exist, how users move between them, and what's on each screen (named regions only — no control detail yet).
-
-1. **Start from user goals** — each distinct user goal gets a screen. "Sign up" is a screen. "Browse products" is a screen. "Manage subscription" is a screen.
-2. **Map the transitions** — how does the user get from one screen to another? Click a button, select a tab, follow a wizard step? Each transition is an explicit arc.
-3. **Name the regions** — each screen is divided into named slots: header, main content, sidebar, footer. At IA, these are just names — no control types yet.
-4. **Group system stories with visible triggers** — a system story (background sync, notification push) groups with the closest user-visible screen that triggers or displays it.
-
-## Screen decomposition thinking
-
-When deciding whether something is one screen or many:
-
-- **Different tab contents = different screens** — even if they share the same header/nav chrome. Use `chrome_of` to share the frame.
-- **Different states of the same form = same screen** — editing vs viewing an order is one screen with states, not two screens.
-- **Different user types seeing different things = different screens** — admin vs customer dashboard, even if the URL is the same.
-
-## Layout pattern thinking
-
-Before sketching a screen's regions from scratch, check `specifications/generic/` (or the brand-specific folder). There are 43 layout patterns with ready-to-adapt reference artifacts. Read the matching pattern's slots first, then alter for the real screen. Don't invent layouts when a pattern already covers the shape.
-
-## No control detail at IA
-
-At IA, regions are named slots only. Don't specify control types (dropdowns, radio buttons, text inputs). Don't add interaction JavaScript. Don't apply branding. Those come at mockup fidelity.
-
-
-## mockup
-
-# UX — Procedural Guidance (mockup fidelity)
-
-## How to build mockups
-
-Mockups deepen IA regions into typed controls with key interactions, running inside the Story Demo shell:
-
-1. **Ensure story/domain JS exists** — if Stories or CE haven't emitted JavaScript modules yet, run `transform` first. The mockup imports real domain modules, not UX-only adapters.
-2. **Deepen regions with controls** — each IA region slot gets concrete control types: text input, dropdown, button, list, tabs.
-3. **Wire GWT-bound controls** — controls that participate in story Given/When/Then use `StoryDemoControl` with `bound_field` (the expose path) and `story_steps` (matching step text exactly). This generates `data-story-steps` attributes for the Story Demo explorer.
-4. **One HTML per user goal** — not one file per screen, not one mega-file per epic. Each concrete user goal the user can demo gets its own HTML file.
-
-## Interactive controls thinking
-
-For controls that take user input or display dynamic data:
-
-- **Number/quantity inputs** → `data-input-field`
-- **Bound lists** → `data-bound-list` + `data-bound-field` (expose path) + optional `data-item-story-steps`
-- **Don't bake product words into the template** — "catalog," "cart" are bound_field paths and story language, not template tokens.
-
-## Branding is opt-in
-
-Default output is greybox — functional, no branding. Add brand/CSS only when:
-- The user explicitly asks for it, or
-- Brand tokens already exist in the workspace
-
-When branding is active, use the matching `specifications/` folder (e.g. `specifications/abd-works/`). Don't invent brand tokens.
-
-## Stub catalogue honesty
-
-Every faked behavior must be explicitly listed. No silent pretence of production services. If the mockup stubs a payment gateway, that's documented in the HTML or a companion note.
-
-## Shell layout is fixed
-
-Product mockup on the LEFT (`#story-demo-frame`). Explorer on the RIGHT (`#explorer-frame`). `data-goto` navigates between product screens. Don't rebuild the shell — use `mockup_shell.html` and fill screens/controls on the model.
-
-
-## shared
-
-# UX — Procedural Guidance (shared)
-
-## Think in screens, not features
-
-A screen is a coherent user goal — one thing the user is trying to accomplish. Not a feature list, not a component library, not a page in the app's routing table.
-
-Key thinking:
-
-1. **Each screen answers one question** — "What am I looking at?" "What can I do here?" If a screen tries to answer three different questions, it's probably three screens.
-2. **~4 user stories per screen** — this is the budget. If a screen serves more stories than that, it needs decomposition. Fewer is fine.
-3. **Tab states are separate screens** — if a tab shows fundamentally different content with different interactions, it's a separate screen that shares chrome with its siblings.
-
-## Name screens in domain language
-
-Screen labels come from the domain, not from technical or chapter labels. "Browse Catalog" not "ProductList." "Verify Identity" not "KYCForm." If domain language exists (from DDD or Stories), the screen name traces to it.
-
-## Invariants and context notes
-
-Things that aren't visible on screens but constrain the UX (business rules, interaction constraints, timing dependencies) go in `ux-context.md`. This is the same role as `story-context.md` or `module-context.md` — notes the visual artifact can't express.
-
-## Shared rules
-
-- **tab-states-are-separate-screens** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
-- **screen-story-budget** — ~4 user stories per screen; more signals missed decomposition.
-- **screen-names-use-domain-terms** — Screen labels trace to domain language when it exists.
-- **ia-named-regions-only** — At IA, regions are named slots; no control detail yet.
-- **story-domain-js-imported** — At mockup+, when practices/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface.
-
-Use MCP tool: `ux.instructions()`
+Use MCP tool: `ux-front-end-code()`

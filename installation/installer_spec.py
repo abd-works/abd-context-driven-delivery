@@ -93,6 +93,11 @@ def _command_names(tree: Path) -> set[str]:
     return {path.stem for path in folder.glob("*.md")}
 
 
+def _skill_path(tree: Path, operation: str) -> Path | None:
+    matches = list(tree.rglob(f"{operation}/SKILL.md"))
+    return matches[0] if matches else None
+
+
 with description("a bare agentic toolset registered for deploy") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()
@@ -196,10 +201,10 @@ with description("context guidance registered for deploy") as self:
         shutil.rmtree(self._tmp, ignore_errors=True)
 
     with context("with a Cursor deploy output tree"):
-        with it("should write a skill file whose body is the instructions docstring"):
+        with it("should write a skill file whose body is the overview"):
             skill = self.tree / "skills" / "sample-tool" / "SKILL.md"
             expect(skill.is_file()).to(equal(True))
-            expect(skill.read_text(encoding="utf-8")).to(contain("context"))
+            expect(skill.read_text(encoding="utf-8")).to(contain("sample preamble"))
 
         with it("should write one rules file whose body is the rules section markdown"):
             rule = self.tree / "rules" / "sample-tool.mdc"
@@ -218,10 +223,10 @@ with description("context guidance with mcp-published guidance registered for de
         shutil.rmtree(self._tmp, ignore_errors=True)
 
     with context("with a deployed practice skill when guidance is mcp-published"):
-        with it("should write the instructions docstring plus MCP invoke tail"):
+        with it("should write the overview plus MCP invoke tail"):
             text = (self.tree / "skills" / "sample-tool" / "SKILL.md").read_text(encoding="utf-8")
             expect(text).to(contain("Use MCP tool:"))
-            expect(text).to(contain("context"))
+            expect(text).to(contain("sample preamble"))
             expect(text).not_to(contain("active format template body for sample tool"))
 
     with context("with a deploy output tree for tools whose members are annotated mcp"):
@@ -245,9 +250,9 @@ with description("a context tool module with shared contexts format registered f
         shutil.rmtree(self._tmp, ignore_errors=True)
 
     with context("with a Cursor deploy output tree"):
-        with it("should write a skill file whose body is the instructions docstring"):
+        with it("should write a skill file whose body is the overview"):
             text = (self.tree / "skills" / "sample-tool" / "SKILL.md").read_text(encoding="utf-8")
-            expect(text).to(contain("context"))
+            expect(text).to(contain("sample preamble"))
 
         with it("should write one practice guidance rules file whose body is the shared rules section"):
             expect((self.tree / "rules" / "sample-tool.mdc").is_file()).to(equal(True))
@@ -267,9 +272,17 @@ with description("a context tool module with fidelity sections registered for de
         shutil.rmtree(self._tmp, ignore_errors=True)
 
     with context("with a Cursor deploy output tree"):
-        with it("should write one fidelity command file per fidelity whose body is the instructions docstring"):
+        with it("should write one fidelity command file per fidelity whose body is the overview"):
             sketch = (self.tree / "commands" / "sample-tool-sketch.md").read_text(encoding="utf-8")
-            expect(sketch).to(contain("context"))
+            expect(sketch).to(contain("sketch guidance body only"))
+
+        with it("should list each fidelity MCP signature and a one-liner on the practice skill"):
+            text = (self.tree / "skills" / "sample-tool" / "SKILL.md").read_text(encoding="utf-8")
+            expect(text).to(contain("sample preamble"))
+            expect(text).to(contain("sketch"))
+            expect(text).to(contain("Use MCP tool:"))
+            expect(text).to(contain("sample-tool-sketch()"))
+            expect(text).not_to(contain("sketch guidance body only"))
 
         with it("should write one fidelity rules file whose body is that fidelity's rules section"):
             sketch_rules = self.tree / "rules" / "sample-tool-sketch.mdc"
@@ -480,6 +493,21 @@ with description("fidelity guidance with guidance annotated for mcp") as self:
                     expect(any("instructions" in n for n in names)).to(equal(True))
 
 
+with description("an MCP server") as self:
+    with context("that has started from practice guidance toolset refs"):
+        with before.each:
+            self.server = McpServer(repo=_REPO_ROOT)
+            self.server.start(
+                (
+                    "practices.stories.stories:Stories",
+                    "harness.guidance.guidance:FidelityGuidance",
+                )
+            )
+
+        with it("should enroll nested fidelity instructions under the fidelity slug"):
+            expect("stories-scenarios" in self.server.prompts).to(equal(True))
+
+
 # --- hook_installation_spec.py ---
 with description("a Cursor hooks config") as self:
     with context("that has been deployed with hook sources in the walk"):
@@ -527,6 +555,40 @@ with description("a Cursor hooks config") as self:
             expect(text).to(contain("keep-me"))
 
 
+with description("an installer that recorded files from a prior install") as self:
+    with before.each:
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+        self.installer = Installer(ide="Cursor", path=self.tree)
+        self.installer.install([SampleAgenticOps()])
+        self.orphan = self.tree / "skills" / "stale-orphan" / "SKILL.md"
+        self.orphan.parent.mkdir(parents=True, exist_ok=True)
+        self.orphan.write_text("orphan", encoding="utf-8")
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with context("whose clean operation runs directly"):
+        with it("should remove only files recorded in install state"):
+            prior_skill = _skill_path(self.tree, "generate")
+            expect(prior_skill is not None).to(equal(True))
+            removed = Installer(ide="Cursor", path=self.tree).clean()
+            expect(len(removed) > 0).to(be_true)
+            expect(prior_skill.is_file()).to(equal(False))
+            expect(self.orphan.is_file()).to(equal(True))
+
+    with context("that runs install again for a different toolset"):
+        with before.each:
+            self.installer.install([SampleGuidance(format="markdown")])
+
+        with it("should remove tracked files from the prior install before writing"):
+            expect(_skill_path(self.tree, "generate") is None).to(equal(True))
+            expect(_skill_path(self.tree, "sample_tool") is not None).to(equal(True))
+
+        with it("should leave untracked orphans in place"):
+            expect(self.orphan.is_file()).to(equal(True))
+
+
 with description("the installer toolset installing itself") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()
@@ -543,9 +605,10 @@ with description("the installer toolset installing itself") as self:
         expect(text).to(contain("Use MCP tool:"))
         expect(text).to(contain("installer.install"))
 
-    with it("should record install as an MCP operation"):
+    with it("should record install and clean as MCP operations"):
         names = [op.mcp_name for op in self.mcp.mcp_operations]
         expect(names).to(contain("installer.install"))
+        expect(names).to(contain("installer.clean"))
 
 
 with description("the installer import path") as self:
@@ -609,3 +672,27 @@ with description("markdown skill paths for a kit with several skill operations")
         expect(
             writer.relative_path("skill", toolset, tools["grill"].callable, "grill").as_posix()
         ).to(equal("skills/actions/grill_context/grill/SKILL.md"))
+
+
+with description("markdown skill paths for a fidelity nested under a practice"):
+    with it("should keep the practice folder and name the leaf practice-fidelity"):
+        from installation.harness_files.harness_files import MarkdownInstallation
+
+        writer = MarkdownInstallation("Cursor", Path("."), "skill")
+        tools = {"instructions": _skill_tool("instructions")}
+        practice = type("Practice", (), {"slug": "stories"})()
+        toolset = type(
+            "Fidelity",
+            (),
+            {
+                "install_folder": Path("practices/stories/scenarios"),
+                "tools": tools,
+                "practice_guidance": practice,
+                "slug": "stories-scenarios",
+            },
+        )()
+        expect(
+            writer.relative_path(
+                "skill", toolset, tools["instructions"].callable, "instructions"
+            ).as_posix()
+        ).to(equal("skills/practices/stories/stories-scenarios/SKILL.md"))

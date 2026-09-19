@@ -60,16 +60,7 @@ def init_practice_guidance(
         practice,
         format=format,
         path=path,
-        session=session or "",
-    )
-    attach_practice_workspace(
-        practice,
-        path=path,
         session=session,
         workspace=workspace,
+        fidelity=fidelity,
     )
-    if fidelity is not None:
-        practice.fidelity = fidelity
-    practice.load_fidelities_from_markdown()
-    if stage_to_fidelity:
-        apply_fidelity_stages(practice, stage_to_fidelity)

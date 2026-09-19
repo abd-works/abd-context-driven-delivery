@@ -42,10 +42,10 @@ _support = _DddSpecSupport()
 
 with description("a Ddd toolset"):
     with context("that is created"):
-        with context("with scaffold stage alias"):
+        with context("with discovery stage"):
             with it("should resolve to bounded_context and default to markdown format"):
-                tool = Ddd(fidelity="scaffold")
-                expect(tool.fidelity).to(equal("bounded_context"))
+                tool = Ddd(stage="discovery")
+                expect(tool.fidelities.current.fidelity).to(equal("bounded_context"))
                 expect(tool.format).to(equal("markdown"))
 
         with context("with building_blocks fidelity"):
@@ -104,19 +104,19 @@ with description("a Ddd toolset"):
             with it("should return a CleanEngineering instance at modules fidelity"):
                 ce = Ddd(fidelity="bounded_context").ce()
                 expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelity).to(equal("modules"))
+                expect(ce.fidelities.current.fidelity).to(equal("modules"))
 
         with context("with building_blocks fidelity"):
             with it("should return a CleanEngineering instance at model fidelity"):
                 ce = Ddd(fidelity="building_blocks").ce()
                 expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelity).to(equal("model"))
+                expect(ce.fidelities.current.fidelity).to(equal("model"))
 
         with context("with tactics fidelity"):
             with it("should return a CleanEngineering instance at code fidelity"):
                 ce = Ddd(fidelity="tactics").ce()
                 expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelity).to(equal("code"))
+                expect(ce.fidelities.current.fidelity).to(equal("code"))
 
         with context("with a path set"):
             with it("should carry the same path to the CE companion"):
@@ -219,6 +219,6 @@ with description("a Ddd toolset"):
 
     with context("whose transform tool is called"):
         with it("should delegate to CleanEngineering and return a dict"):
-            result = Ddd().transform("python", "markdown", "class Foo:\n    pass\n")
+            result = Ddd().render("markdown", "class Foo:\n    pass\n", source="python")
             expect(result).to(be_a(dict))
             expect(result["format"]).to(equal("markdown"))

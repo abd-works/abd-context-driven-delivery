@@ -105,36 +105,13 @@ def _slug_variants(domain_slug: str) -> list[str]:
 def _active_resource(instance: Any, key: str | None) -> str | None:
     if not key:
         return None
+    if key == "fidelity":
+        current = getattr(getattr(instance, "fidelities", None), "current", None)
+        if current is not None:
+            value = getattr(current, "fidelity", None) or getattr(current, "name", None)
+            return str(value) if value else None
     value = getattr(instance, key, None)
     return str(value) if value else None
-
-
-def _path_for_templates(module_dir: Path, domain_slug: str, active_format: str | None) -> str:
-    shared = module_dir / "templates"
-    if shared.is_dir():
-        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
-        for slug in _slug_variants(domain_slug):
-            for stem in (f"{slug}-templates", f"{slug}-template"):
-                if ext:
-                    preferred = shared / f"{stem}{ext}"
-                    if preferred.is_file():
-                        return preferred.relative_to(module_dir).as_posix()
-                for path in sorted(shared.glob(f"{stem}.*")):
-                    return path.relative_to(module_dir).as_posix()
-        return "templates"
-    for slug in _slug_variants(domain_slug):
-        for stem in (f"{slug}-templates", f"{slug}-template"):
-            if active_format:
-                format_dir = module_dir / "formats" / active_format
-                if format_dir.is_dir():
-                    for path in sorted(format_dir.glob(f"{stem}.*")):
-                        return path.relative_to(module_dir).as_posix()
-            for path in sorted(module_dir.glob(f"{stem}.*")):
-                return path.name
-    primary = _slug_variants(domain_slug)[0]
-    if active_format:
-        return f"formats/{active_format}/{primary}-templates"
-    return f"{primary}-templates"
 
 
 def _fidelity_scope(host: Any) -> str | None:
@@ -189,16 +166,7 @@ class AssetLocator:
 
     @property
     def format(self) -> str | None:
-        fmt = _active_resource(self._host, "format")
-        if fmt:
-            return fmt
-        fidelity = self.fidelity
-        defaults = getattr(type(self._host), "_fidelity_format_defaults", None) or {}
-        if not defaults:
-            defaults = getattr(self._host, "_fidelity_format_defaults", {}) or {}
-        if fidelity and fidelity in defaults:
-            return str(defaults[fidelity])
-        return None
+        return _active_resource(self._host, "format")
 
     def _stamp(self, location: AssetLocation) -> AssetLocation:
         return replace(
@@ -224,11 +192,12 @@ class AssetLocator:
             located = self._locate_templates(module_dir, domain_slug, active_format)
             if located.path is not None and located.path.is_file():
                 return located
-            if located.folder is not None and located.folder.is_dir():
-                return located
-            meta = module_dir / "templates"
-            if meta.is_dir():
-                return AssetLocation("folder", module_dir, domain_slug, folder=meta.resolve())
+            return AssetLocation(
+                "file",
+                module_dir,
+                domain_slug,
+                path=(module_dir / ".no-template").resolve(),
+            )
         search_root = self._search_root(module_dir, filter_value)
         return self._locate_under(search_root, module_dir, domain_slug)
 
@@ -291,72 +260,66 @@ class AssetLocator:
     def _locate_templates(
         self, module_dir: Path, domain_slug: str, active_format: str | None
     ) -> AssetLocation:
-        stems = self._template_stems(domain_slug)
-        located = self._locate_in_shared_templates(module_dir, stems, active_format, domain_slug)
+        fidelity = _active_resource(self._host, "fidelity")
+        if fidelity:
+            located = self._named_template_file(
+                module_dir, fidelity, active_format, domain_slug, practice=False
+            )
+            if located is not None:
+                return located
+        located = self._named_template_file(
+            module_dir, domain_slug, active_format, domain_slug, practice=True
+        )
         if located is not None:
             return located
-        located = self._locate_in_format_dir(module_dir, stems, active_format, domain_slug)
-        if located is not None:
-            return located
-        located = self._locate_by_stem_glob(module_dir, stems, domain_slug)
-        if located is not None:
-            return located
-        relative = _path_for_templates(module_dir, domain_slug, active_format)
-        return AssetLocation("file", module_dir, domain_slug, path=(module_dir / relative).resolve())
+        return AssetLocation(
+            "file",
+            module_dir,
+            domain_slug,
+            path=(module_dir / ".no-template").resolve(),
+        )
 
-    def _template_stems(self, domain_slug: str) -> list[str]:
-        return [
-            f"{slug}-{suffix}"
-            for slug in _slug_variants(domain_slug)
-            for suffix in ("templates", "template")
-        ]
-
-    def _locate_in_shared_templates(
-        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    def _named_template_file(
+        self,
+        module_dir: Path,
+        name: str,
+        active_format: str | None,
+        domain_slug: str,
+        *,
+        practice: bool,
     ) -> AssetLocation | None:
+        stems = list(_slug_variants(name))
+        if practice:
+            stems = [
+                extra
+                for slug in _slug_variants(name)
+                for extra in (slug, f"{slug}-templates", f"{slug}-template")
+            ]
+        folders: list[Path] = []
         shared = module_dir / "templates"
-        if not shared.is_dir():
-            return None
-        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
-        if ext:
-            for stem in stems:
-                path = shared / f"{stem}{ext}"
-                if path.is_file():
-                    return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
         if active_format:
             alias = _FORMAT_DIR_ALIAS.get(active_format, active_format)
-            format_folder = shared / alias
-            if format_folder.is_dir():
-                fidelity = _active_resource(self._host, "fidelity")
-                return AssetLocation(
-                    "folder",
-                    module_dir,
-                    domain_slug,
-                    folder=format_folder.resolve(),
-                    fidelity=fidelity,
-                )
-            return None
-        return AssetLocation("folder", module_dir, domain_slug, folder=shared.resolve())
-
-    def _locate_in_format_dir(
-        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
-    ) -> AssetLocation | None:
-        if not active_format:
-            return None
-        format_dir = module_dir / "formats" / active_format
-        if not format_dir.is_dir():
-            return None
-        for stem in stems:
-            for path in sorted(format_dir.glob(f"{stem}.*")):
-                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
-        return None
-
-    def _locate_by_stem_glob(
-        self, module_dir: Path, stems: list[str], domain_slug: str
-    ) -> AssetLocation | None:
-        for stem in stems:
-            for path in sorted(module_dir.glob(f"{stem}.*")):
-                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+            folders.append(shared / alias)
+            folders.append(module_dir / "formats" / active_format)
+        folders.append(shared)
+        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
+        for folder in folders:
+            if not folder.is_dir():
+                continue
+            if ext:
+                for stem in stems:
+                    path = folder / f"{stem}{ext}"
+                    if path.is_file() and "sketch" not in path.stem.casefold():
+                        return AssetLocation(
+                            "file", module_dir, domain_slug, path=path.resolve()
+                        )
+                continue
+            for stem in stems:
+                for path in sorted(folder.glob(f"{stem}.*")):
+                    if path.is_file() and "sketch" not in path.stem.casefold():
+                        return AssetLocation(
+                            "file", module_dir, domain_slug, path=path.resolve()
+                        )
         return None
 
 
@@ -400,6 +363,12 @@ def _extract_location(location: AssetLocation) -> str:
             return ""
         return location.path.read_text(encoding="utf-8")
     if location.kind == "folder" and location.folder is not None:
+        if location.fidelity:
+            for stem in _slug_variants(location.fidelity):
+                for path in sorted(location.folder.glob(f"{stem}.*")):
+                    if path.is_file() and "sketch" not in path.stem.casefold():
+                        return path.read_text(encoding="utf-8")
+            return ""
         return _merge_folder(location.folder)
     if location.kind == "section" and location.section_file is not None:
         heading = location.section_heading or ""
@@ -527,6 +496,14 @@ def fidelity_blocks(text: str) -> list[tuple[str, str]]:
         for name, body in _child_blocks(text, "Fidelities")
         if name.casefold() != "fidelities"
     ]
+
+
+def fidelity_stage(body: str) -> str:
+    match = re.search(r"(?im)^\*\*Stage:\*\*\s*`?(\S+?)`?\s*$", body)
+    if match:
+        return match.group(1)
+    match = re.search(r"(?im)^stage:\s*`?(\S+?)`?\s*$", body)
+    return match.group(1) if match else ""
 
 
 def _read_fidelity_block(text: str, fidelity_name: str) -> str:

@@ -17,7 +17,7 @@ from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from installation.destination import Destination, Installation
+from installation.installer import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
@@ -37,6 +37,9 @@ class Mcp(Destination):
         return inst
 
 
+mcp = Mcp
+
+
 @dataclass
 class McpOperationDefinition:
     mcp_name: str
@@ -48,10 +51,15 @@ class McpOperationDefinition:
     @classmethod
     def from_tool(cls, tool: Any) -> McpOperationDefinition:
         kind = "tool" if tool.kind == "tool" else "prompt"
+        toolset = tool.toolset
+        if getattr(toolset, "practice_guidance", None) is not None:
+            mcp_name = tool.slug
+        else:
+            mcp_name = f"{tool.slug}.{tool.name}"
         return cls(
-            mcp_name=f"{tool.slug}.{tool.name}",
+            mcp_name=mcp_name,
             kind=kind,
-            tool=tool.toolset,
+            tool=toolset,
             operation=tool.name,
             member=tool.callable,
         )
@@ -105,19 +113,41 @@ class McpInstallation(Installation):
                         "installation.mcp",
                         "--toolsets",
                         ",".join(refs),
+                        "--repo",
+                        str(repo),
                     ],
-                    "env": {"PYTHONPATH": Installer.pythonpath(repo)},
+                    "cwd": str(repo),
+                    "env": {
+                        "PYTHONPATH": Installer.pythonpath(repo),
+                        "PYTHONIOENCODING": "utf-8",
+                        "CDD_REPO": str(repo),
+                    },
                 }
             }
         }
         dest = self.path / "mcp.json"
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        self.track_write(dest)
 
     def bind(self, server: Any) -> None:
         self._bound = True
         for op in self.mcp_operations:
             server.enroll(op)
+
+
+def _prompt_message(op: McpOperationDefinition) -> str:
+    if op.operation == "instructions":
+        message = getattr(op.tool, "prompt_message", None)
+        if callable(message):
+            message = message()
+        if isinstance(message, str) and message.strip():
+            return message.strip()
+        overview = getattr(op.tool, "overview", None)
+        if isinstance(overview, str) and overview.strip():
+            return overview.strip()
+    function = getattr(op.member, "__func__", op.member)
+    return (inspect.getdoc(function) or "").strip()
 
 
 class McpTool:
@@ -127,8 +157,7 @@ class McpTool:
         self.mcp_name = op.mcp_name
         self._op = op
         self.callable = op.member
-        function = getattr(self.callable, "__func__", self.callable)
-        self.description = (inspect.getdoc(function) or "").strip()
+        self.description = _prompt_message(op)
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
         if callable(self.callable):
@@ -143,8 +172,7 @@ class McpPrompt:
         self.mcp_name = op.mcp_name
         self._op = op
         self.callable = op.member
-        function = getattr(self.callable, "__func__", self.callable)
-        self.prompt_text = (inspect.getdoc(function) or "").strip()
+        self.prompt_text = _prompt_message(op)
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
         tool = self._op.tool
@@ -219,12 +247,20 @@ class McpServer:
         self._tools.clear()
         self._prompts.clear()
         for toolset in AgentToolSet.load_toolsets(list(toolset_refs), context=context):
-            installation = McpInstallation("Cursor", ".", toolset.registration_name)
-            for tool in toolset.tools_for(InstallDestination.MCP):
-                installation.record_operation(tool)
-            installation.bind(self)
-            self.mcp_installations.append(installation)
+            self._enroll_toolset(toolset)
+            nested = getattr(toolset, "nested_toolsets", None) or ()
+            for child in nested:
+                self._enroll_toolset(child)
         self._started = True
+
+    def _enroll_toolset(self, toolset: Any) -> None:
+        if getattr(toolset, "practice_guidance", "missing") is None:
+            return
+        installation = McpInstallation("Cursor", ".", toolset.registration_name)
+        for tool in toolset.tools_for(InstallDestination.MCP):
+            installation.record_operation(tool)
+        installation.bind(self)
+        self.mcp_installations.append(installation)
 
     def invoke_tool(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
         return self._tools[mcp_name].invoke(arguments)

@@ -1,4 +1,11 @@
+---
+alwaysApply: true
+description: "Use these rules when nesting describe / that / with / it should — subjects and states, never internals."
+---
+
 ## Shared rules
+
+Use these rules when nesting describe / that / with / it should — subjects and states, never internals.
 
 - **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals. Assertions on internals break when the code is refactored and still pass when the behavior is wrong.
 - **`domain-practice-alignment`** — Describe names must match domain language / model exactly, so the business, the spec, and the code all use the same words.

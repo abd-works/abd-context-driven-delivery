@@ -10,7 +10,7 @@ for _cat in ("practices", "harness", "tools", "actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import contain, equal, expect
+from expects import be_below, contain, equal, expect
 from mamba import before, context, description, it
 
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
@@ -32,15 +32,21 @@ with description("context guidance"):
             expect(text).to(contain("sample preamble"))
             expect(text).to(contain("known prose for guidance in sample tool"))
             expect(text).to(contain("sample-rule-one"))
+            expect(text).to(contain("## Shared rules"))
             expect(text).to(contain("active format template body for sample tool"))
+
+        with it("should publish the overview as the prompt message"):
+            host = SampleGuidance(format="markdown")
+            expect(host.prompt_message).to(equal(host.overview.strip()))
+            expect(host.prompt_message).not_to(contain("known prose for guidance in sample tool"))
 
         with it(
             "should expose instructions as one compound property not as a single markdown label"
         ):
             host = SampleGuidance(format="markdown")
-            expect(host.instructions).not_to(equal(host.context))
+            expect(host.instructions).not_to(equal(host.overview))
             expect(host.instructions).not_to(equal(host.guidance))
-            expect(host.instructions).to(contain(host.context.strip()))
+            expect(host.instructions).to(contain(host.overview.strip()))
             expect(host.instructions).to(contain(host.guidance.strip()))
 
     with context("with the rules collection and the rules markdown read"):
@@ -54,9 +60,9 @@ with description("a context tool module with one domain markdown file named for 
     with before.each:
         self.host = SamplePracticeGuidance(format="markdown")
 
-    with context("with the context property read"):
+    with context("with the overview property read"):
         with it("should return the Overview preamble"):
-            expect(self.host.context).to(contain("sample preamble"))
+            expect(self.host.overview).to(contain("sample preamble"))
 
     with context("with the guidance property read"):
         with it("should return the Guidance section body only"):
@@ -74,8 +80,8 @@ with description("a context tool module with one domain markdown file named for 
     with context("with a templates folder beside the module"):
         with context("with template files such as slug-templates and slug-sketch inside the folder"):
             with context("with the templates property read"):
-                with it("should map each format key to a relative path under templates"):
-                    expect(self.host.templates.get("markdown")).to(contain("templates/"))
+                with it("should return the active format template body"):
+                    expect(self.host.templates).to(contain("active format template body for sample tool"))
 
             with context("with one format key selected"):
                 with it("should return the file content at the mapped path"):
@@ -86,9 +92,9 @@ with description("a context tool module with section files and subsection folder
     with before.each:
         self.host = SplitPracticeGuidance(format="markdown")
 
-    with context("with the context property read"):
+    with context("with the overview property read"):
         with it("should return the Overview preamble"):
-            expect(self.host.context).to(contain("split preamble from contexts file"))
+            expect(self.host.overview).to(contain("split preamble from contexts file"))
 
     with context("with the guidance property read"):
         with it("should return the Guidance section body only"):
@@ -106,6 +112,11 @@ with description("a context tool module with one domain markdown file named for 
         self.sketch = self.practice.fidelities.entries["sketch"]
         self.spec = self.practice.fidelities.entries["spec"]
 
+    with context("with a Stage attribute on the fidelity markdown"):
+        with it("should set stage on that fidelity guidance"):
+            expect(self.sketch.stage).to(equal("discovery"))
+            expect(self.spec.stage).to(equal("specification"))
+
     with context("with the guidance property read on fidelity guidance"):
         with it("should return Guidance under that fidelity name only"):
             expect(self.sketch.guidance).to(contain("sketch guidance body only"))
@@ -118,13 +129,34 @@ with description("a context tool module with one domain markdown file named for 
         with it("should not include rules from sibling fidelity sections"):
             expect("spec-rule" in self.sketch.rules.entries).to(equal(False))
 
+    with context("with the instructions property read on fidelity guidance"):
+        with it("should include the parent overview, guidance, and shared rules"):
+            text = self.sketch.instructions
+            expect(text).to(contain("sample preamble"))
+            expect(text).to(contain("known prose for guidance in sample tool"))
+            expect(text).to(contain("sample-rule-one"))
+
+        with it("should still include this fidelity's own guidance and rules"):
+            expect(self.sketch.instructions).to(contain("sketch guidance body only"))
+            expect(self.sketch.instructions).to(contain("sketch-rule"))
+            expect(self.sketch.instructions).to(contain("#### Rules"))
+
+        with it("should put the fidelity template under a Template heading"):
+            from practices.stories.stories import Stories
+
+            story_map = Stories(fidelity="story_map").fidelities.entries["story_map"]
+            text = story_map.instructions
+            expect(text).to(contain("#### Template"))
+            expect(text.index("#### Template")).to(be_below(text.index("Story Map")))
+
     with context("with two fidelities declared shallower before deeper in the collection"):
         with context("with the instructions property read on the deeper fidelity guidance"):
-            with it("should include prior fidelity sections in context in declaration order"):
-                expect(self.spec.context).to(contain("sketch guidance body only"))
+            with it("should not include prior fidelity sections in the overview"):
+                expect(self.spec.overview).not_to(contain("sketch guidance body only"))
+                expect(self.spec.instructions).not_to(contain("sketch guidance body only"))
 
             with it("should not include later fidelity sections or sibling templates"):
-                expect(self.sketch.context).not_to(contain("spec guidance body only"))
+                expect(self.sketch.overview).not_to(contain("spec guidance body only"))
 
         with context("with a markdown-backed property read as HTML on the deeper fidelity guidance"):
             with it("should return HTML formatted from that fidelity section body"):
@@ -188,6 +220,39 @@ with description("practice guidance with fidelities examples and templates besid
 
     with context("with fidelity set at invoke on practice guidance"):
         with it("should resolve active format from the named fidelity default format"):
-            self.host.fidelity = "sketch"
-            self.host.format = self.host.fidelities.entries["sketch"].default_format or self.host.format
-            expect(self.host.fidelity).to(equal("sketch"))
+            self.host.fidelities.current = self.host.fidelities["sketch"]
+            self.host.format = self.host.fidelities["sketch"].default_format or self.host.format
+            expect(self.host.fidelities.current.fidelity).to(equal("sketch"))
+
+
+with description("practice and fidelity template files"):
+    with context("with a fidelity-named file under templates/{format}"):
+        with it("should load that file"):
+            from practices.stories.stories import Stories
+
+            text = Stories(fidelity="story_map", format="markdown").templates
+            expect(text).to(contain("Story Map"))
+            expect(text).not_to(contain("Stories sketch"))
+
+    with context("with no fidelity-named file"):
+        with it("should load the practice-named template"):
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+
+            text = CleanEngineering(fidelity="modules", format="markdown").templates
+            expect(text).to(contain("clean_engineering markdown template"))
+
+        with it("should load that same practice-named template for every fidelity"):
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+
+            modules = CleanEngineering(fidelity="modules", format="markdown").templates
+            model = CleanEngineering(fidelity="model", format="markdown").templates
+            expect(model).to(equal(modules))
+
+    with context("with no fidelity-named file and no practice-named template"):
+        with it("should return no template"):
+            from practices.ddd.ddd import Ddd
+
+            expect(Ddd(fidelity="tactics", format="python").templates).to(equal(""))
+            expect(Ddd(fidelity="building_blocks", format="markdown").templates).to(
+                equal("")
+            )

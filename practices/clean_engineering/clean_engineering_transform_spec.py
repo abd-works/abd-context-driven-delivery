@@ -27,10 +27,10 @@ def _load_clean_engineering(*, fidelity: str = "modules", format: str = "markdow
 
 
 def _invoke_transform(instance, source_format: str, target_format: str, content: str) -> dict:
-    return instance.transform(
-        source_format=source_format,
-        target_format=target_format,
+    return instance.render(
+        format=target_format,
         content=content,
+        source=source_format,
     )
 
 

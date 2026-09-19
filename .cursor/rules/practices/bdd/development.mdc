@@ -1,4 +1,12 @@
+---
+alwaysApply: true
+description: "Use these rules when implementing BDD tests with production code."
+---
+
 #### Rules
+
+Use these rules when implementing BDD tests with production code.
+
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count. Changing the tree during implementation drops behaviors that were agreed on, or adds ones nobody specified.
 - **`red-then-green`** — Fix code by writing the test first, then watching it fail, then making production code changes.
 - **`minimum-green`** / **`code-minimalism`** — Least production code that makes this assertion pass. Refactor only while green.

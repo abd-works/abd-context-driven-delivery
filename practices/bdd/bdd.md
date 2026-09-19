@@ -115,11 +115,12 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 | Fidelity | Output |
 |---|---|
-| **modules** | Thin subject index — top-level `describe`s with candidate `that`/`with` + TODOs (partition pass) |
 | **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
 | **development** | Implemented tests + production code |
 
 ## Shared rules
+
+Use these rules when nesting describe / that / with / it should — subjects and states, never internals.
 
 - **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals. Assertions on internals break when the code is refactored and still pass when the behavior is wrong.
 - **`domain-practice-alignment`** — Describe names must match domain language / model exactly, so the business, the spec, and the code all use the same words.
@@ -134,35 +135,15 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 ## Fidelities
 
-### modules
-
-#### Overview
-
-
-**Default format:** markdown
-
-**Goal:** Name the BDD subject tree before behavior signatures — delegates module structure to Clean Engineering at the same depth.
-
-#### Guidance
-
-Name the BDD subject tree before behavior signatures. Delegate module structure to Clean Engineering at the same depth. Rough subject index for a partition pass: domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
-
-#### Scaffold
-
-**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ## behavior / ## development below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
-
-Rough subject index for a **partition** pass or first cut — domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
-
-Key rules: `state-not-when` — nest by the state or condition that enables an observation, never by a `when` trigger; `nest-by-enabling-events` — sub-groupings are conditions that unlock further behavior, not implementation steps; `context-setup-expresses-state` — setup under a label must establish that label's state, not unrelated host boot.
-
 ### behavior
 
 #### Overview
 
 
 **Default format:** Python
+**Stage:** specification
 
-**Goal:** map observation to a real test before implementation. Lock the sketched hierarchy as framework `describe` / `it` nesting. Every `it` body is exactly one `BDD: SIGNATURE` marker — nothing else.
+**Goal:** Define BDD signatures — describe/it names for every observation, no test bodies.
 
 #### Guidance
 
@@ -175,6 +156,11 @@ Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.
 
 #### Rules
 
+Use these rules when defining BDD signatures — describe/it names only, no test bodies yet.
+
+- **`state-not-when`** — Nest by the state or condition that enables an observation, never by a `when` trigger.
+- **`nest-by-enabling-events`** — Sub-groupings are conditions that unlock further behavior, not implementation steps.
+- **`context-setup-expresses-state`** — Setup under a label must establish that label's state, not unrelated host boot.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
 - **`framework-syntax`** — Refer to [`practices/language-tools.md`](/practices/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 
@@ -195,8 +181,9 @@ it('should apply a percentage discount to eligible items', () => {
 
 
 **Default format:** Python
+**Stage:** implementation
 
-**Goal:** Replace `BDD: SIGNATURE` markers one at a time with `it should` / expect bodies, then minimum production code until green. Inherit the framework from the **behavior** artifact if already completed.
+**Goal:** Implement BDD tests with production code.
 
 #### Guidance
 
@@ -233,6 +220,9 @@ When generating or satisfying against a module that already exists, check the be
 Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behavior` above). Split unrelated expects. Shared construction → `beforeEach` / factory at three sibling dupes.
 
 #### Rules
+
+Use these rules when implementing BDD tests with production code.
+
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count. Changing the tree during implementation drops behaviors that were agreed on, or adds ones nobody specified.
 - **`red-then-green`** — Fix code by writing the test first, then watching it fail, then making production code changes.
 - **`minimum-green`** / **`code-minimalism`** — Least production code that makes this assertion pass. Refactor only while green.

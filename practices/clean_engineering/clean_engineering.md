@@ -8,6 +8,8 @@ Partition first, then type the objects, then implement. Keep the same names in l
 
 ## Shared rules
 
+Use these rules whenever you name a concept, draw a dependency, or write a public seam — in prose, a diagram, or source.
+
 - **`honor-every-rule-in-the-artifact`** — Honor every rule in the artifact you are writing. One-way dependencies, named seams, and localized behavior apply to language and markdown as well as to code. Do not create a dependency in prose that violates isolation. Treat prose with the same respect you treat the model and the code.
 - **`vocabulary-traces-to-source`** — Take every term from the source. The English term and the code name are the same word: *shopping cart* is `ShoppingCart`. When the code says a different word than the domain, every reader keeps a translation in their head, and the two names drift until they mean different things.
 - **`do-not-invent-terms`** — Do not invent a second noun or a parallel vocabulary. A second noun for the same thing becomes a second class, and then the same rule has to be written and fixed in both. Keep `do-not-invent-parallel-object-models` on the model for wrappers and `*Model` / `*Entry` families.
@@ -32,9 +34,10 @@ If the user asks for language while generating **modules** or **model**, use thi
 
 
 **Default format:** markdown  
+**Stage:** discovery
 **Diagram format:** `drawio` (modules view with blue boxes, public-interface bullets, and one-way dependency arrows; template `templates/modules.drawio`). Programming-language channels are for **model** and later.
 
-**Goal:** Partition a problem or solution space into independently understandable units. Each deep module has a narrow public interface and substantial implementation behind it. Name the units, their public interfaces, and their one-way dependencies. Identify only enough classes and terms to show independence; defer method bodies and relationship kinds until the boundaries settle.
+**Goal:** Partition a problem into independently understandable units — name each unit, its public seam, and its one-way dependencies.
 
 Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
@@ -63,6 +66,8 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 **Stop reading this skill when scaffolding.**
 
 #### Rules
+
+Use these rules when partitioning a problem into independently understandable units — naming each unit, its public seam, and its one-way dependencies, including `module-context.md` and the modules diagram.
 
 **Form the module**
 
@@ -94,10 +99,11 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 
 **Default format:** Python
+**Stage:** specification
 
 **Other formats:** markdown for a language model and `drawio` through `class_model/drawio` for a class diagram. The same classes, operations, and relationships must appear in every selected representation.
 
-**Goal:** Analyze modules and design its object model — the classes, what they remember and do, and how they relate. Stub empty properties and operations. No production behavior yet. A model is the whole design in one place — who owns what, what they do, how they connect — so a human or an agent can read it, challenge it, and refactor before any body or call site exists. Those are the decisions that are cheap here and expensive in code: once behavior is written, moving an operation means rewriting the body and every caller.
+**Goal:** Design the object model — the classes, what they remember and do, and how they relate.
 
 #### Language
 
@@ -127,6 +133,8 @@ Use an interface when the model requires more than one implementation, when a ca
 
 
 #### Rules
+
+Use these rules when deciding which classes exist, what they remember and do, and how they relate — stubs only, no production bodies.
 
 **Shape classes**
 - `model-modules-follow-the-partition` — Use the module names and boundaries established by the partition artifact as the model's top-level modules. Change the partition before moving a model boundary, because otherwise the two artifacts describe different designs.
@@ -172,8 +180,9 @@ Use an interface when the model requires more than one implementation, when a ca
 
 
 **Default format:** Python
+**Stage:** implementation
 
-**Goal:** Turn the model into working production code — where the design actually runs. Implement the types and seams the model named, then fill real behavior behind them: real persistence, services, and UI. Clean code here is not polish at the end; it is how you keep the module boundaries and object model intact as the system grows — behavior stays on the object that owns it, operations stay short, dependencies stay visible — so a change lands in one place instead of spreading. Write a real backend and real frontend, not a demo shell with stand-ins that lets tests pass while broken seams hide until more callers depend on them.
+**Goal:** Write working production code — real persistence, services, and UI behind the public seams.
 
 #### Guidance
 
@@ -197,6 +206,8 @@ When writing out code take care to **Fill out all interactions with real code.**
 
 #### Rules
 
+Use these rules when filling production method bodies, constructors, and call sites — real persistence and real collaborators, not a demo shell.
+
 **Implement the model**
 - `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data — once they read the storage directly it becomes a public contract you cannot change. Private fields on the same class hide implementation; you do not need a second class for that. Read-only to callers can mean return a copy or immutable view from a property — it does not require a frozen class or a second type to hold build steps.
 - `keep-operations-small-focused` — Keep each operation short enough to read as one thought — under 20 lines. When it grows, extract a private helper whose name says why that slice exists.
@@ -209,6 +220,7 @@ When writing out code take care to **Fill out all interactions with real code.**
 - `use-consistent-naming` — Use one word per concept. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`). Two words for one concept is how the same logic gets written twice — nobody searching for `fetch_` finds the `retrieve_` that already does the job.
 - `provide-meaningful-context` — Give a number or literal a name that says why it is there (`SECONDS_PER_DAY`, not `86400`). Do not number variables (`item1`).
 - `eliminate-duplication` — Give repeated logic one canonical function. Every copy is another place the fix has to be repeated, and the copy you miss is the bug.
+- `no-legacy-api-after-refactor` — When you rename or reshape a public seam, update every caller — tests, dependencies, and adjacent modules — to the new API. Do not keep compatibility aliases, re-exports, or thin wrappers that preserve the old name.
 
 **Errors / comments**
 - `use-exceptions-properly` — Raise a domain exception that names the failure (`CartAlreadyCheckedOut`, not `Error` or a bare string). Catch the specific type you can handle. Do not use a bare `except`. A generic exception cannot be caught selectively, so the caller has to handle everything or nothing.

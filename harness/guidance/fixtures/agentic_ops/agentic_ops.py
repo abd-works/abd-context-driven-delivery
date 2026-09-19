@@ -6,8 +6,8 @@ from harness.agent_tools.agent_tools import (
     agent_tool,
     agent_toolset,
 )
-from installation.harness_files.harness_files import Command, Skill
-from installation.mcp.mcp_server import Mcp
+from installation.harness_files.harness_files import command, skill
+from installation.mcp.mcp_server import mcp
 
 
 @agent_toolset
@@ -16,12 +16,12 @@ class SampleAgenticOps:
 
     domain_slug = "sample-ops"
 
-    @Skill
+    @skill
     @agent_instructions
     def generate(self) -> str:
         """compound generate instructions"""
 
-    @Command
+    @command
     @agent_instructions
     def sketch(self) -> str:
         """compound sketch instructions"""
@@ -31,7 +31,7 @@ class SampleAgenticOps:
         """pong"""
         return "pong"
 
-    @Skill
+    @skill
     @agent_tool
     def listed(self) -> str:
         """listed-tool-result"""
@@ -42,14 +42,14 @@ class SampleAgenticOps:
 class SampleMcpOps:
     domain_slug = "sample-mcp"
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def generate(self) -> str:
         """full generate instructions that must not appear in the slash file"""
 
-    @Mcp
-    @Command
+    @mcp
+    @command
     @agent_instructions
     def sketch(self) -> str:
         """full sketch instructions that must not appear in the slash file"""

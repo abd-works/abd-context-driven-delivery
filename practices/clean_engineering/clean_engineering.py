@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from focus import focus
-from practices.clean_engineering.class_model.drawio.drawio import Drawio
 from practices.clean_engineering.class_model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from practices.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
 from practices.clean_engineering.class_model.javascript_class_model import JavaScriptCleanEngineeringModel
@@ -11,10 +9,10 @@ from practices.clean_engineering.class_model.json_class_model import JsonCleanEn
 from practices.clean_engineering.class_model.markdown_class_model import MarkdownCleanEngineeringModel
 from practices.clean_engineering.class_model.python_class_model import PythonCleanEngineeringModel
 from practices.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
-from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
-from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
 from harness.guidance.guidance import PracticeGuidance
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -48,16 +46,6 @@ class CleanEngineering(PracticeGuidance):
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
-    STAGE_TO_FIDELITY = {
-        DISCOVERY: "modules",
-        SPEC: "model",
-        ENGINEER: "code",
-    }
-
-    @classmethod
-    def resolve_fidelity(cls, fidelity: str) -> str:
-        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
-
     def __init__(
         self,
         fidelity: str = "modules",
@@ -65,30 +53,30 @@ class CleanEngineering(PracticeGuidance):
         path: str | None = None,
         session: str | None = None,
         workspace: str | None = None,
+        stage: str | None = None,
     ) -> None:
-        if fidelity == "language":
-            raise ValueError(
-                "language is not a fidelity - it is a prose layer refined at "
-                "every stage. Use fidelity 'modules' (after partition), then 'model', "
-                f"'specification', or 'code'. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
-            )
-        fidelity = type(self).resolve_fidelity(fidelity)
-        if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
-            raise ValueError(
-                f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
-            )
-        resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        init_practice_guidance(
-            self,
-            format=resolved_format,
+        super().__init__(
+            format=format,
             path=path,
             session=session,
             workspace=workspace,
             fidelity=fidelity,
-            stage_to_fidelity=self.STAGE_TO_FIDELITY,
+            stage=stage,
         )
-        self.drawio = Drawio(workspace=self.workspace)
-        self.drawio.mode = "tool"
+        self.drawio = None
+        if self.format == "drawio":
+            from practices.clean_engineering.class_model.drawio.drawio import Drawio
+
+            self.drawio = Drawio(workspace=self.workspace)
+            self.drawio.mode = "tool"
+
+    @property
+    @Mcp
+    @Skill
+    @agent_instructions
+    def instructions(self) -> str:
+        """Structure the problem into independent modules with small public interfaces, substantial hidden functionality, and one-way dependencies. Implement those modules with rigorous object-oriented and clean-code practices. When boundaries hold, a change stays inside one module; when they blur, callers depend on internal decisions and must change with them."""
+        return super().instructions
 
     @agent_instructions
     def generate_output(self) -> str:
@@ -104,59 +92,36 @@ class CleanEngineering(PracticeGuidance):
         return "Artifact written under {session.path}/."
 
     @agent_tool
-    def transform(
+    def render(
         self,
-        source_format: str,
-        target_format: str,
+        format: str,
         content: str,
+        source: str | None = None,
         previous: str = "",
         keep_positioning: bool = False,
     ) -> dict:
-        """Parse content from source_format into the canonical model, then render into target_format.
-        Supported transform channels: markdown, json, python, typescript, java, javascript, drawio.
-        drawio auto-selects modules view (system-context style) vs UML class view from model content.
-        When target_format is drawio and keep_positioning is true, pass previous Draw.io XML
-        (or leave previous empty and use drawio.render / create_diagram with a path) so existing
-        class positions and relationship routing are kept; only new classes/edges are laid out.
-        For a persisted class diagram with layout scan/repair, use ``drawio.render`` (via generate when format is drawio) instead of transform alone.
-        Moves content sideways between formats at the same fidelity - no analytical upgrade."""
+        """Parse content into the canonical model, then render into format.
+        source defaults to this instance's format. Peer channels at the same fidelity.
+        When format is drawio and keep_positioning is true, pass previous Draw.io XML
+        so existing class positions and relationship routing are kept."""
+        source_format = source or self.format
+        if not source_format:
+            raise ValueError("source format is not set")
         if source_format not in _CHANNELS:
             raise ValueError(
-                f"Unsupported source_format {source_format!r}. Choose from: {sorted(_CHANNELS)}"
+                f"Unsupported source {source_format!r}. Choose from: {sorted(_CHANNELS)}"
             )
-        if target_format not in _CHANNELS:
+        if format not in _CHANNELS:
             raise ValueError(
-                f"Unsupported target_format {target_format!r}. Choose from: {sorted(_CHANNELS)}"
+                f"Unsupported format {format!r}. Choose from: {sorted(_CHANNELS)}"
             )
         canonical = _CHANNELS[source_format].parse(content)
-        if target_format == "drawio":
-            rendered = _CHANNELS[target_format].render(
+        if format == "drawio":
+            rendered = _CHANNELS[format].render(
                 canonical,
                 previous=previous or None,
                 keep_positioning=keep_positioning,
             )
         else:
-            rendered = _CHANNELS[target_format].render(canonical)
-        return {"format": target_format, "content": rendered}
-
-    @agent_tool
-    def render(
-        self,
-        format: str,
-        content: str = "",
-        previous: str = "",
-        keep_positioning: bool = False,
-    ) -> dict:
-        """Render already-generated output into ``format`` via channel parse/render."""
-        if not content:
-            raise ValueError("content is required — pass the already-generated artifact")
-        source = self.format
-        if not source:
-            raise ValueError("source format is not set")
-        return self.transform(
-            source,
-            format,
-            content,
-            previous=previous,
-            keep_positioning=keep_positioning,
-        )
+            rendered = _CHANNELS[format].render(canonical)
+        return {"format": format, "content": rendered}

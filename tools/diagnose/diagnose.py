@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from sub_agent.sub_agent import sub_agent
 from agent_tools import agent_tool, agent_toolset
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 
 @agent_toolset
 class Diagnose:
@@ -13,6 +15,8 @@ class Diagnose:
     """
 
     @sub_agent
+    @mcp
+    @skill
     @agent_tool
     def diagnose(self) -> str:
         """A discipline for hard bugs. Skip phases only when explicitly justified.

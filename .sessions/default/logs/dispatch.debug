@@ -2820,3 +2820,42 @@
 2026-09-17T23:15:46Z HANDLER _DescribedFixture.on_pre_tool result={"permission": "allow", "agent_message": "Honor the hook operation description."}
 2026-09-17T23:15:46Z ENABLED ['_DescribedFixture.on_pre_tool']
 2026-09-17T23:15:46Z MERGED {"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-09-18T18:30:56Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'loop_count', 'model', 'model_id', 'model_params', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:30:56Z ENABLED ['(none)']
+2026-09-18T18:30:56Z MERGED {"permission": "allow"}
+2026-09-18T18:35:04Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'loop_count', 'model', 'model_id', 'model_params', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:35:04Z ENABLED ['(none)']
+2026-09-18T18:35:04Z MERGED {"permission": "allow"}
+2026-09-18T18:35:17Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'loop_count', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:35:17Z ENABLED ['(none)']
+2026-09-18T18:35:17Z MERGED {"permission": "allow"}
+2026-09-18T18:38:25Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'loop_count', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:38:25Z ENABLED ['(none)']
+2026-09-18T18:38:25Z MERGED {"permission": "allow"}
+2026-09-18T18:40:07Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'loop_count', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:40:07Z ENABLED ['(none)']
+2026-09-18T18:40:07Z MERGED {"permission": "allow"}
+2026-09-18T18:41:49Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'loop_count', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:41:49Z ENABLED ['(none)']
+2026-09-18T18:41:49Z MERGED {"permission": "allow"}
+2026-09-18T18:44:16Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'loop_count', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:44:16Z ENABLED ['(none)']
+2026-09-18T18:44:16Z MERGED {"permission": "allow"}
+2026-09-18T18:47:03Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'loop_count', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:47:03Z ENABLED ['(none)']
+2026-09-18T18:47:03Z MERGED {"permission": "allow"}
+2026-09-18T18:53:53Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'loop_count', 'model', 'model_id', 'model_params', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:53:53Z ENABLED ['(none)']
+2026-09-18T18:53:53Z MERGED {"permission": "allow"}
+2026-09-18T18:59:06Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'loop_count', 'model', 'model_id', 'model_params', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T18:59:06Z ENABLED ['(none)']
+2026-09-18T18:59:06Z MERGED {"permission": "allow"}
+2026-09-18T19:02:13Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'loop_count', 'model', 'model_id', 'model_params', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T19:02:13Z ENABLED ['(none)']
+2026-09-18T19:02:13Z MERGED {"permission": "allow"}
+2026-09-18T19:06:42Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'loop_count', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T19:06:42Z ENABLED ['(none)']
+2026-09-18T19:06:42Z MERGED {"permission": "allow"}
+2026-09-18T19:08:13Z EVENT 'stop' conversation_id='fd59d198-7b91-4f40-94ba-2ec4cd292c9d' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'loop_count', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'status', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-18T19:08:13Z ENABLED ['(none)']
+2026-09-18T19:08:13Z MERGED {"permission": "allow"}

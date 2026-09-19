@@ -70,7 +70,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 	// scopes @markdown extract; None on practice guidance
 ----
 + instructions: str
-	// @property — context + guidance + format_rules(rules) + templates[format]; same logic on every host
+	// @property — context + guidance + rules_markdown + templates; same logic on every host
 + guidance(): str
 	// @agent_instructions @skill — same operation deploy as any other recipe; file kind is the skill mark
 	-> self.instructions
@@ -131,9 +131,9 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 	// CDD stage key
 ----
 + context: str
-	// inherited @markdown — this name’s scope plus prior ## {name} blocks in declaration order
+	// inherited @markdown — this fidelity’s overview only; later fidelities do not inherit earlier bodies
 + instructions: str
-	// @property — Guidance assembly scoped by name; context already holds the prior stack
+	// @property — practice parent plus this fidelity’s own body
 + guidance(): str
 	// @agent_instructions @command — same operation deploy; this subclass marks the file a command
 	-> self.instructions
@@ -443,7 +443,7 @@ Extract from `context-tool-resource-model.md`. **Canonical for object flows and 
 ## Instructions assembly
 
 + Guidance.instructions
-	-> self.context + self.guidance + format_rules(self.rules) + self.templates[format]
+	-> self.context + self.guidance + self.rules_markdown + self.templates
 	// FidelityGuidance — same property; name scopes @markdown extract only
 + GuidanceCollection.{context,guidance,templates,instructions}
 	-> iterate children; join each child's same read
@@ -874,7 +874,7 @@ shared context "fidelity sections in shared contexts format"
     it should not include rules from sibling fidelity sections
   with two fidelities declared shallower before deeper in the collection
     with the instructions property read on the deeper fidelity guidance
-      it should include prior fidelity sections in context in declaration order
+      it should not include prior fidelity sections in context
       it should not include later fidelity sections or sibling templates
     with the templates property read on the deeper fidelity guidance
       it should return only that fidelity entries from the templates scan

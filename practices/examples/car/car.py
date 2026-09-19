@@ -1,8 +1,6 @@
 """Car — example context tool for in-character road stories and vehicle tools."""
 from __future__ import annotations
 
-from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
-from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
@@ -32,16 +30,6 @@ class Car(PracticeGuidance):
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = frozenset({"markdown"})
 
-    STAGE_TO_FIDELITY = {
-        DISCOVERY: "trip_outline",
-        SPEC: "road_story",
-        ENGINEER: "full_journey",
-    }
-
-    @classmethod
-    def resolve_fidelity(cls, fidelity: str) -> str:
-        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
-
     def __init__(
         self,
         fidelity: str = "road_story",
@@ -53,22 +41,15 @@ class Car(PracticeGuidance):
         path: str | None = None,
         session: str | None = None,
         workspace: str | None = None,
+        stage: str | None = None,
     ) -> None:
-        fidelity = type(self).resolve_fidelity(fidelity)
-        if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
-            raise ValueError(
-                f"Unsupported fidelity {fidelity!r}. "
-                f"Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
-            )
-        resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        init_practice_guidance(
-            self,
-            format=resolved_format,
+        super().__init__(
+            format=format,
             path=path,
             session=session,
             workspace=workspace,
             fidelity=fidelity,
-            stage_to_fidelity=self.STAGE_TO_FIDELITY,
+            stage=stage,
         )
         self._make = make
         self._model = model
@@ -107,12 +88,7 @@ class Car(PracticeGuidance):
     @Skill
     @agent_instructions
     def instructions(self) -> str:
-        """Provide guidance for in-character road stories at the current fidelity.
-        At trip_outline fidelity: write bullet beats only — destination, conditions, tool order.
-        At road_story fidelity: write full prose with start, drive, speak, and stop woven in.
-        At full_journey fidelity: write prose and call wrap_story when a trip log is needed for inspection.
-        Every tool call uses this toolset with context make, model, year, and personality.
-        When the story needs a scripted trip, call travelTo on the CarStory companion and pass this Car as a tool argument."""
+        """In-character road stories turn vehicle personality into a narrative the reader can follow. Every story names the car, the road, and what happens in order — start the engine before you speak, stop before you declare arrival."""
         return super().instructions
 
     @property
@@ -133,9 +109,9 @@ class Car(PracticeGuidance):
     @agent_instructions
     def generate_output(self) -> str:
         """Write the artifact for the active fidelity — outline, prose, or full journey."""
-        if self.fidelity == "trip_outline":
+        if self.fidelities.current.fidelity == "trip_outline":
             return "Write bullet beats: destination, conditions, start, drive, speak, stop."
-        if self.fidelity == "road_story":
+        if self.fidelities.current.fidelity == "road_story":
             return "Write full in-character prose; invoke vehicle tools as the story needs."
         return "Write full journey prose; use wrap_story when inspection output is required."
 

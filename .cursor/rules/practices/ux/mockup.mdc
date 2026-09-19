@@ -1,4 +1,11 @@
+---
+alwaysApply: true
+description: "Use these rules when placing typed controls in greybox HTML and wiring story steps — Story Demo shell, honest stubs."
+---
+
 #### Rules
+
+Use these rules when placing typed controls in greybox HTML and wiring story steps — Story Demo shell, honest stubs.
 
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
 - **`story-domain-js-imported`** — Import real modules; do not invent a UX-only adapter shape.

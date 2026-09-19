@@ -8,11 +8,13 @@ known prose for guidance in sample tool
 
 ## Shared rules
 
-- sample rule one
+- **sample-rule-one** — sample rule one
 
 ## Fidelities
 
 ### sketch
+
+**Stage:** discovery
 
 #### Guidance
 
@@ -23,6 +25,8 @@ sketch guidance body only
 - **sketch-rule** — sketch rule body
 
 ### spec
+
+**Stage:** specification
 
 #### Guidance
 

@@ -27,8 +27,8 @@ from harness.agent_tools.agent_tools import (
     agent_instructions,
     agent_toolset,
 )
-from installation.hooks.hooks import Hook
-from installation.mcp.mcp_server import Mcp
+from installation.hooks.hooks import hook
+from installation.mcp.mcp_server import mcp
 from harness.agent_tools.agent_tools import AgentInstructions
 from actions.examples.car_story.car_story import CarStory
 from agent_tools.examples.super_delegation.super_delegation_demo import (
@@ -841,12 +841,12 @@ with description("AgentInstructions"):
 
 @agent_toolset
 class _DestinationFixture:
-    @Mcp
+    @mcp
     @_tool
     def ping(self) -> str:
         return "pong"
 
-    @Hook("stop")
+    @hook("stop")
     def on_stop(self, payload: dict) -> dict:
         return {}
 

@@ -1,0 +1,33 @@
+---
+alwaysApply: true
+description: "Use these rules when partitioning a problem into independently understandable units — naming each unit, its public seam, and its one-way dependencies, including `module-context.md` and the modules diagram."
+---
+
+#### Rules
+
+Use these rules when partitioning a problem into independently understandable units — naming each unit, its public seam, and its one-way dependencies, including `module-context.md` and the modules diagram.
+
+**Form the module**
+
+- `domain-nouns-only` — Name modules after domain concepts or paths, never action verbs or generic `*Model` and `*Runtime` suffixes. A technical container name does not tell callers which business knowledge it owns.
+- `named-seam-and-constraint` — Name the seam (public classes and operations) and the constraint (what callers must or must not do). A constraint you do not name is one callers find by breaking it at runtime.
+- `high-cohesion` — Group classes that share one purpose and the same domain concept, or else unrelated work will keep landing in the same module and every feature ends up editing it.
+- `single-boundary` — Do not let another module hold, mutate, or duplicate this module’s concept. The two modules will drift, and every rule change has to be found and made in both.
+
+**Shape the seam**
+
+- `deep-module` — Keep most top-level symbols private (at most **40%** public). Substantial work stays behind a short seam. Every public symbol is a signature you cannot change without editing every caller, so public parts are much harder to refactor than private ones.
+- `abstraction-focus` — Name *what* the module does for callers, not internal steps or storage. A seam named after its implementation has to be renamed, with every caller updated, whenever the implementation changes.
+- `public-seam-only` — Document only the public seam and dependencies on other modules. Do not document internals or tests. Documented internals are misunderstood as public promises, and callers start writing code against them.
+- `use-typed-signatures` — Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists on them — an untyped bag moves every shape error to runtime and leaves the caller guessing which keys are required.
+- `general-purpose-surface` — Do not shape the seam for one caller’s UI or workflow. The second caller then either needs a near-duplicate operation or has to reshape its data to look like the first caller’s.
+- `temporal-independence` — Leave the module valid after every public operation. Do not require a call order unless you document it, because an undocumented order fails on the first untested path.
+
+**Define dependencies**
+
+- `one-way-deps` — Make dependencies flow in one direction without cycles. A cycle prevents either module from changing or being tested independently.
+- `low-coupling` — Depend only through other modules’ seams. Keep sibling imports few. Reaching past a seam freezes that module’s internals — it can no longer change them without breaking you.
+- `layer-separation` — keep dependent modules at different levels of abstractions. Collapse pass-through modules — a module that only forwards turns every signature change into an edit in three files instead of one.
+- `nesting` — Nest a child only when it shares mechanics or is a sub-system; keep independent modules flat. Put shared behavior on the parent. A child may depend on the parent, not on siblings.
+
+---

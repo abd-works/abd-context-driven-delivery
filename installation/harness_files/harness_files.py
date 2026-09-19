@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from installation.destination import Destination, Installation
+from installation.installer import Destination, Installation
 
 
 class Skill(Destination):
@@ -75,6 +75,13 @@ class AgentGuidance(Destination):
         return inst
 
 
+skill = Skill
+command = Command
+rules = Rules
+agent = Agent
+agent_guidance = AgentGuidance
+
+
 class MarkdownInstallation(Installation):
     """Write skill, command, and rules markdown files."""
 
@@ -121,6 +128,11 @@ class MarkdownInstallation(Installation):
         return names
 
     def _skill_folder(self, folder: Path, op: str, toolset: Any = None) -> Path:
+        if getattr(toolset, "practice_guidance", None) is not None:
+            slug = getattr(toolset, "slug", None)
+            if slug:
+                parent = folder.parent if folder.name else folder
+                return parent / str(slug)
         if op in {"instructions", "rules-markdown"}:
             return folder
         last = folder.name.replace("_", "-").lower()
@@ -131,6 +143,8 @@ class MarkdownInstallation(Installation):
         return folder / op
 
     def _body_for(self, kind: str, tool: Any, toolset: Any) -> str:
+        if self.mcp_mode:
+            return tool.docstring
         try:
             result = getattr(toolset, tool.name, None)
         except Exception:
@@ -142,6 +156,39 @@ class MarkdownInstallation(Installation):
             if callable(format_rules):
                 return str(format_rules()).strip()
         return tool.docstring
+
+    def _fidelity_one_liner(self, child: Any) -> str:
+        name = getattr(child, "name", "") or ""
+        overview = (getattr(child, "overview", None) or "").strip()
+        summary = ""
+        for line in overview.splitlines():
+            stripped = line.strip()
+            if stripped.lower().startswith("**goal:**"):
+                marker = "**goal:**"
+                summary = stripped[len(marker) :].strip()
+                break
+        if not summary:
+            for line in overview.splitlines():
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#") and not stripped.startswith("**"):
+                    summary = stripped
+                    break
+        return f"{name} — {summary}" if summary else name
+
+    def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:
+        member = getattr(type(toolset), "fidelityInstructions", None)
+        entries = getattr(getattr(toolset, "fidelities", None), "entries", None) or {}
+        parts: list[str] = []
+        for _name, child in entries.items():
+            invoke = (
+                f"Use MCP tool: `{getattr(child, 'slug', '')}()`"
+                if member is not None and getattr(member, "_mcp", False)
+                else ""
+            )
+            parts.append(
+                "\n\n".join(piece for piece in (self._fidelity_one_liner(child), invoke) if piece)
+            )
+        return parts
 
     def render(self, section: str, member: Any, tool: Any | None = None) -> str:
         body = section.rstrip()
@@ -160,9 +207,30 @@ class MarkdownInstallation(Installation):
         if self.mcp_mode:
             from installation.mcp.mcp_server import McpOperationDefinition
 
-            parts.append(McpOperationDefinition.from_tool(tool).invoke_line())
+            fidelity_parts = (
+                self._fidelity_invoke_parts(toolset)
+                if tool.name == "instructions"
+                else []
+            )
+            if fidelity_parts:
+                parts.extend(fidelity_parts)
+            else:
+                parts.append(McpOperationDefinition.from_tool(tool).invoke_line())
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
+        if kind == "rules":
+            text = self._rules_front_matter(text) + text
         rel = self.relative_path(kind, toolset, member, tool.deploy_name)
         dest = self.path / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(text, encoding="utf-8")
+        self.track_write(dest)
+
+    def _rules_front_matter(self, body: str) -> str:
+        description = "Practice rules."
+        for line in body.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or stripped.startswith("-"):
+                continue
+            description = stripped.replace('"', "'")
+            break
+        return f'---\nalwaysApply: true\ndescription: "{description}"\n---\n\n'
