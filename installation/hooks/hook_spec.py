@@ -1,6 +1,7 @@
 """BDD specs for installer @Hook dispatch."""
 import json
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -278,3 +279,20 @@ with description("a hook server") as self:
             expect(self.server.diagnose()["exceptions"][0]["tool"]).to(
                 contain("on_stop")
             )
+
+
+with description("the Cursor hook_server.py command"):
+
+    with it("should dispatch sessionStart over stdin without an import error"):
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-u",
+                str(_REPO_ROOT / "installation" / "hooks" / "hook_server.py"),
+            ],
+            input=b'{"hook_event_name":"sessionStart"}',
+            cwd=str(_REPO_ROOT),
+            capture_output=True,
+        )
+        expect(proc.returncode).to(equal(0))
+        expect(json.loads(proc.stdout.decode("utf-8"))["permission"]).to(equal("allow"))

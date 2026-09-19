@@ -271,6 +271,9 @@ with description("an MCP host") as self:
         with it("should name the turn operation turn.turn"):
             expect(self.host.diagnose()["tools"]).to(contain("turn.turn"))
 
+        with it("should resolve Cursor underscore aliases to enrolled names"):
+            expect(self.host._runtime.resolve_call_name("turn_turn")).to(equal("turn.turn"))
+
         with it("should advertise MCP tool names Cursor can load"):
             illegal = [
                 name
@@ -348,13 +351,31 @@ with description("an MCP host Cursor has stopped spawning") as self:
         nudge = self.tree / "mcp-host-nudge"
         if nudge.is_file():
             nudge.unlink()
+        import installation.mcp.mcp_server as mcp_mod
+
+        self._mcp_mod = mcp_mod
+        user_mcp = self.tree / "user-mcp.json"
+        user_mcp.write_text("{}", encoding="utf-8")
+        self._user_mcp = user_mcp
+        self._orig_user_mcp = mcp_mod.user_cursor_mcp_json
+        mcp_mod.user_cursor_mcp_json = lambda: user_mcp
 
     with after.each:
+        self._mcp_mod.user_cursor_mcp_json = self._orig_user_mcp
         shutil.rmtree(self._tmp, ignore_errors=True)
 
     with context("with no live host process"):
         with it("should rewrite mcp.json so Cursor respawns stdio"):
             expect(self.mcp.ensure_cursor_host()).to(equal("nudged"))
+
+        with it("should rewrite the user Cursor mcp.json that owns stdio"):
+            self._user_mcp.write_text(
+                '{"mcpServers":{"cdd":{"args":["start_host.py"],"env":{}}}}\n',
+                encoding="utf-8",
+            )
+            (self.tree / "mcp-host-nudge").unlink(missing_ok=True)
+            expect(self.mcp.ensure_cursor_host()).to(equal("nudged"))
+            expect(self._user_mcp.read_text(encoding="utf-8")).to(contain("CDD_HOST_NUDGE"))
 
     with context("with a live host process"):
         with before.each:

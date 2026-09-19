@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Union
+from typing import Any
 
 from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
 from installation.hooks.prompt_echo.prompt_echo import echo, show_ide_toast
@@ -12,8 +12,8 @@ from installation.hooks.hooks import Hook
 from installation.mcp.mcp_server import mcp
 from workspace.workspace import SessionModel, Turn, Workspace
 
-# Runtime-safe alias: a Guidance list (or toolset refs) or a string to act on directly.
-GuidanceArg = Union[str, list]
+# Host list, one host (ref or {toolset, …}), or a string to act on directly.
+GuidanceArg = str | dict[str, Any] | list[str | dict[str, Any]]
 
 
 def listed(host) -> list:
@@ -65,13 +65,39 @@ class GuidanceAction:
         return session.branch_warning()
 
     def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
-        """String: run once. Not a string: iterate the guidance list."""
+        """Host ref or dict: iterate hosts. Other strings: run once on that text."""
+        host = self._as_host_item(guidance) if guidance is not None else None
+        if host is not None and not isinstance(guidance, list):
+            self._guidance_text = None
+            self._tool_items = [host]
+            return
         if isinstance(guidance, str):
             self._guidance_text = guidance
             self._tool_items = []
             return
         self._guidance_text = None
-        self._tool_items = list(guidance or [])
+        items = []
+        for item in list(guidance or []):
+            bound = self._as_host_item(item)
+            items.append(item if bound is None else bound)
+        self._tool_items = items
+
+    def _as_host_item(self, item: Any) -> Any:
+        if isinstance(item, dict):
+            return item
+        if not isinstance(item, str):
+            return item
+        text = item.strip()
+        if text.startswith("{") and text.endswith("}"):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, dict) and parsed.get("toolset"):
+                return parsed
+        if ":" in text and "\n" not in text:
+            return text
+        return None
 
     def guidance_text(self) -> str | None:
         """The string to run this action on, when guidance was not a host list."""

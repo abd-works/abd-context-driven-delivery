@@ -50,12 +50,6 @@ class Stories(PracticeGuidance):
             stage=stage,
         )
 
-    def diagnostic(self) -> "Diagnose":
-        """Diagnose companion — common six-phase loop as a tool (not inlined)."""
-        from tools.diagnose.diagnose import Diagnose
-
-        return Diagnose()
-
     @property
     @Mcp
     @Skill

@@ -18,6 +18,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
+from installation.installer import Destination, Installation, Installer  # noqa: F401
 from installation.hooks.hooks import Hook
 
 logger = logging.getLogger(__name__)

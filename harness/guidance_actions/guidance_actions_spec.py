@@ -67,6 +67,17 @@ with description("GuidanceAction"):
         kit.run("just this text", seen.append, action="generate")
         expect(seen).to(equal(["just this text"]))
 
+    with it("should treat a module class ref as a listed host"):
+        from guidance_actions import GuidanceAction
+
+        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-ref-"))))
+        kit._bind_guidance(
+            "practices.clean_engineering.clean_engineering:CleanEngineering"
+        )
+        hosts = kit.listed()
+        expect(len(hosts)).to(equal(1))
+        expect(type(hosts[0]).__name__).to(equal("CleanEngineering"))
+
     with it("should run the passed operation on each host when guidance is a list"):
         from guidance_actions import GuidanceAction
 

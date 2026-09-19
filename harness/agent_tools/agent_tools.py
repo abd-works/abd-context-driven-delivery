@@ -389,7 +389,11 @@ class AgentToolSet:
             return cls()
         if isinstance(item, dict) and "toolset" in item:
             loaded = cls._load(str(item["toolset"]))
-            return loaded(**(item.get("context") or {}))
+            context = dict(item.get("context") or {})
+            for key, value in item.items():
+                if key not in {"toolset", "context"}:
+                    context.setdefault(key, value)
+            return loaded(**context)
         if isinstance(item, dict):
             return cls(**item)
         if isinstance(item, str):

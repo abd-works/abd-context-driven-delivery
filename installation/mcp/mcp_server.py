@@ -52,6 +52,44 @@ def host_pid_path(ide_path: Path | str) -> Path:
     return Path(ide_path) / HOST_PID_NAME
 
 
+def user_cursor_mcp_json() -> Path:
+    """User-level Cursor mcp.json — the process Cursor actually spawns in a multi-root workspace."""
+    return Path.home() / ".cursor" / "mcp.json"
+
+
+def _touch_mcp_manifest(path: Path, *, bump_env: bool = False) -> None:
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    if "start_host.py" not in text and "installation.mcp" not in text:
+        return
+    if not bump_env:
+        path.write_text(text, encoding="utf-8")
+        return
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        path.write_text(text, encoding="utf-8")
+        return
+    servers = data.get("mcpServers") or {}
+    changed = False
+    for spec in servers.values():
+        if not isinstance(spec, dict):
+            continue
+        blob = " ".join(str(item) for item in spec.get("args") or [])
+        if "start_host.py" not in blob and "installation.mcp" not in blob:
+            continue
+        env = spec.setdefault("env", {})
+        if not isinstance(env, dict):
+            continue
+        env["CDD_HOST_NUDGE"] = str(time.time())
+        changed = True
+    if changed:
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        return
+    path.write_text(text, encoding="utf-8")
+
+
 def host_pid_is_running(pid_file: Path | str) -> bool:
     path = Path(pid_file)
     if not path.is_file():
@@ -60,6 +98,16 @@ def host_pid_is_running(pid_file: Path | str) -> bool:
         pid = int(path.read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
         return False
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        if not handle:
+            return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
     try:
         os.kill(pid, 0)
     except PermissionError:
@@ -241,6 +289,7 @@ class McpInstallation(Installation):
         manifest = self.path / "mcp.json"
         if not manifest.is_file():
             return "missing"
+        _touch_mcp_manifest(user_cursor_mcp_json(), bump_env=True)
         nudge_file = self.path / NUDGE_NAME
         now = time.time()
         try:
@@ -249,8 +298,7 @@ class McpInstallation(Installation):
             last = 0.0
         if now - last < NUDGE_MIN_SECONDS:
             return "waiting"
-        text = manifest.read_text(encoding="utf-8")
-        manifest.write_text(text, encoding="utf-8")
+        _touch_mcp_manifest(manifest)
         nudge_file.write_text(str(now), encoding="utf-8")
         return "nudged"
 
@@ -415,11 +463,22 @@ class McpServer:
         installation.bind(self)
         self.mcp_installations.append(installation)
 
+    def resolve_call_name(self, name: str) -> str:
+        """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
+        if name in self._tools or name in self._prompts:
+            return name
+        if name == BUILTIN_PING_TOOL.replace(".", "_", 1):
+            return BUILTIN_PING_TOOL
+        for enrolled in (*self._tools, *self._prompts):
+            if enrolled.replace(".", "_", 1) == name:
+                return enrolled
+        return name
+
     def invoke_tool(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
-        return self._tools[mcp_name].invoke(arguments)
+        return self._tools[self.resolve_call_name(mcp_name)].invoke(arguments)
 
     def invoke_prompt(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
-        return self._prompts[mcp_name].invoke(arguments)
+        return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
 
 
 class McpHost:
@@ -523,6 +582,7 @@ class McpHost:
             name: str, arguments: dict[str, object] | None
         ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
             try:
+                name = self._runtime.resolve_call_name(name)
                 if name == BUILTIN_PING_TOOL:
                     return self._content_blocks("pong")
                 if name in self._runtime._prompts:

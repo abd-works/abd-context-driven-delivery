@@ -87,6 +87,15 @@ with description("an MCP host over stdio"):
             )
             expect(_text(result)).to(equal("pong"))
 
+        with it("should answer the Cursor underscore alias cdd_ping with pong"):
+            result = _run_async(
+                _with_session(
+                    "",
+                    lambda session: session.call_tool("cdd_ping", arguments={}),
+                )
+            )
+            expect(_text(result)).to(equal("pong"))
+
     with context("that has started with the HostingDemo toolset"):
         with it("should list HostingDemo @agent_tool operations"):
             tools = _run_async(
