@@ -1,32 +1,75 @@
-# Actions
+**Sources / context:** `harness/agent_tools/agent_tools.py`, `harness/agent_tools/__init__.py`
 
-## Purpose
+## Language
 
-Actions turns toolset classes into truly agentic classes. Annotated operations are interpreted by the AI; calls to nested `@agent_instructions` members and `@agent_tool` methods are made at the AI’s discretion — not by executing the action body as normal Python at invoke time.
+*AgentToolSet* is the root a practice decorates with `@agent_toolset`. It holds *AgentTool* members: *AgentOperation* (`@agent_tool`) and *AgentInstructions* (`@agent_instructions`).
 
-## Primary use case
+### AgentToolSet
 
-Mark a toolset method with `@agent_instructions`. Deploy walks the member via `operation_writes`; MCP enrolls it when marked `@mcp`. When the agent follows the deployed skill or MCP prompt, it receives expanded instructions plus the allowed tool list and chooses which `@agent_tool`s or nested `@agent_instructions` to invoke. Authors write `@agent_instructions` bodies; the AI decides the call sequence.
+- One decorated class — `@agent_toolset` merges *AgentToolSet* onto it; do not subclass *AgentToolSet*.
+- Class docstring is toolset **description**; **name** is the slugified class name.
+- Live instance: **operations**, **instructions**, **tools**, **mode**, **nested_toolsets**.
+- **Invariant:** Each callable member has exactly one mark — `@agent_tool` or `@agent_instructions`.
 
-## Author annotations (locked)
+### AgentTool
 
-| Annotation | Marker | Role |
-|---|---|---|
-| `@agent_instructions` | `_is_agent_instructions` | Action — body scanned and expanded, not executed as Python at invoke time |
-| `@agent_tool` | `_is_agent_tool` | Agent-invokable tool — body runs on invoke |
+- Named callable on a parent *AgentToolSet*.
+- Introspection: **kind**, **description**, **parameters**, **response**.
+- Install marks live on the callable; **install_to** and **destinations** read *InstallDestination*.
 
-Legacy `@action` / `@tool` author annotations are removed (no aliases). Manifest `kind` values and run-request keys `action:` / `tool:` stay as the published protocol.
+### AgentOperation *is a type of* AgentTool
 
-## Seam
+- `@agent_tool` — body runs as Python on **invoke**.
+- **kind** is `tool`.
 
-The seam is the path from a decorated `@agent_instructions` method to an expanded run payload: discover actions on a toolset, validate the body, expand string literals and `tools(...)` / `instructions(...)` wrappers, then return instructions plus the tool list for the AI to interpret.
+### AgentInstructions *is a type of* AgentTool
 
-When expansion makes tools available, agenda instructions must tell the AI to **display** those tools (each name and what it is for) in the user-visible reply before following the suggested flow — not only follow them silently or rediscover them by remanifesting.
+- `@agent_instructions` — **expand** walks the body; unwrapped code runs during expand; `tools(...)` defers; `instructions(...)` expands nested *AgentInstructions*.
+- **tools** (read-only) names deferred `@agent_tool` callables, including those merged from nested `instructions(...)`.
+- First parameter is **self** (the toolset).
+- **Invariant:** Nested `instructions(...)` cycles are rejected.
 
-### Never executed — `@agent_instructions` bodies are read, not run
+### ExpansionMode
 
-**`@agent_instructions` method bodies never execute as Python at invoke time.** They are parsed via `ast` and walked statically (`AgentInstructions._scan`). **By contrast, `@agent_tool` method bodies always execute as real Python** when the agent invokes that tool by name.
+- On the callee *AgentToolSet* (**mode**): `instructions` expands nested actions inline; `tool` defers them onto the tools list.
 
-## Dependencies
+### ExpansionResult
 
-Optional **primitives** for shared helpers.
+- Output of **expand**: **instructions** prose, **tools** names, **result**.
+
+### AgentToolValidationError
+
+- Raised when decorate-time **validate** rejects an `@agent_instructions` body.
+
+### InstallDestination
+
+- Where a member may enroll: `mcp`, `hook`, `skill`, `command`, `rules`.
+
+### ToolSetCollection
+
+- Named child *AgentToolSet* instances on **nested_toolsets**, iterated in entry order.
+
+## Modules
+
+Build order: `agent_tools`
+
+---
+
+# harness/agent_tools
+- **Purpose:** Register, introspect, validate, and expand one decorated *AgentToolSet* and its *AgentTool* members.
+- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, ExpansionMode, ExpansionResult, AgentToolValidationError, InstallDestination, ToolSetCollection
+- **Dependencies (one-way):** *(none)*
+
+## Public API
+
+- `@agent_toolset`, `@agent_tool`, `@agent_instructions`
+- `tools(...)`, `instructions(...)` — wrappers inside `@agent_instructions` bodies
+- `AgentToolSet` — `name`, `description`, `operations`, `instructions`, `tools`, `tools_for`, `mode`, `nested_toolsets`, `instantiate`, `validate`
+- `AgentTool` — `kind`, `description`, `parameters`, `response`, `install_to`, `destinations`
+- `AgentOperation.invoke`
+- `AgentInstructions.expand`, `AgentInstructions.tools`
+- `_is_agent_toolset`, `_is_agent_tool`, `_is_agent_instructions`
+
+## Constraint
+
+Callers must decorate with `@agent_toolset` rather than subclass *AgentToolSet*. A member must carry exactly one of `@agent_tool` or `@agent_instructions`. `@agent_instructions` bodies are expanded, not invoked as Python at call time; wrap deferred work in `tools(...)` and nested recipes in `instructions(...)`. Wire-out (MCP, hooks, skills) lives in `installation` — this module does not enroll destinations.

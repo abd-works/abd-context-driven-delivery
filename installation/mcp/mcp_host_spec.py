@@ -21,6 +21,9 @@ from installation.mcp.examples.parameter_types.parameter_types import ParameterT
 from installation.mcp.mcp_server import McpHost
 from actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
+from installation.mcp.examples.illegitimate_name.illegitimate_name import (
+    IllegitimateName,
+)
 
 
 def _sorted_any_of_types(schema: dict) -> list[str]:
@@ -274,6 +277,47 @@ with description("an MCP host") as self:
                 if re.fullmatch(r"[A-Za-z0-9_.-]+", name) is None
             ]
             expect(illegal).to(equal([]))
+
+    with context("that has stood up with a published tool whose MCP name is illegitimate"):
+        with before.each:
+            self.host = McpHost.build(
+                (IllegitimateName().registration_name,),
+                repo=str(_REPO_ROOT),
+                project=str(_REPO_ROOT),
+            )
+
+        with it("should still answer ping"):
+            expect(self.host.diagnose()["ping"]).to(equal("pong"))
+
+        with it("should omit that tool from advertised tools"):
+            expect(self.host.diagnose()["tools"]).not_to(contain("bad name.report"))
+
+        with it("should diagnose the skipped tool as an exception"):
+            expect(self.host.diagnose()["exceptions"][0]["tool"]).to(
+                equal("bad name.report")
+            )
+
+        with it("should keep a chat notice naming the skipped tool"):
+            expect(self.host.diagnose()["notice"]).to(contain("bad name.report"))
+
+    with context("that has stood up with a toolset that cannot be loaded"):
+        with before.each:
+            self.host = McpHost.build(
+                (
+                    "missing.module:Nope",
+                    "harness.guidance.fixtures.agentic_ops.agentic_ops:SampleMcpOps",
+                ),
+                repo=str(_REPO_ROOT),
+                project=str(_REPO_ROOT),
+            )
+
+        with it("should still enroll the loadable published operation"):
+            expect(self.host.diagnose()["tools"]).to(contain("sample-mcp.generate"))
+
+        with it("should diagnose the skipped toolset as an exception"):
+            expect(self.host.diagnose()["exceptions"][0]["tool"]).to(
+                equal("missing.module:Nope")
+            )
 
     with context("that has stood up from a written mcp.json"):
         with before.each:

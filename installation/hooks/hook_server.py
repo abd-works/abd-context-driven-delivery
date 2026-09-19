@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 for _category in ("harness", "tools", "practices", "actions"):
@@ -18,6 +19,8 @@ if str(_REPO_ROOT) not in sys.path:
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
 from installation.hooks.hooks import Hook
+
+logger = logging.getLogger(__name__)
 
 
 class CursorEvent:
@@ -165,15 +168,26 @@ class HandlerCatalog:
         self,
         toolsets: list[Any] | None = None,
         repo_root: Path | None = None,
+        *,
+        skip: Callable[[str, BaseException], None] | None = None,
     ) -> None:
         self.repo_root = repo_root
-        skip_errors = False
+        self._skip = skip
         if toolsets is None:
-            toolsets = self._refs_from_file()
-            if not toolsets:
-                toolsets = self._collect_refs()
-                skip_errors = True
-        self.toolsets = AgentToolSet.load_toolsets(toolsets, skip_errors=skip_errors)
+            items: list[Any] = self._refs_from_file()
+            if not items:
+                items = self._collect_refs()
+        else:
+            items = list(toolsets)
+        self.toolsets: list[Any] = []
+        for item in items:
+            try:
+                loaded = AgentToolSet.load_toolsets([item])
+            except Exception as error:
+                if self._skip is not None:
+                    self._skip(_ref_label(item), error)
+                continue
+            self.toolsets.extend(loaded)
 
     def _refs_from_file(self) -> list[str]:
         handlers_path = (self.repo_root or Path()) / ".cursor" / "hook-handlers.json"
@@ -198,7 +212,13 @@ class HandlerCatalog:
         handlers: list[HookHandler] = []
         repo_root = self.repo_root or Path()
         for toolset in self.toolsets:
-            for tool in toolset.tools_for(InstallDestination.HOOK):
+            try:
+                tools = toolset.tools_for(InstallDestination.HOOK)
+            except Exception as error:
+                if self._skip is not None:
+                    self._skip(_ref_label(toolset), error)
+                continue
+            for tool in tools:
                 if getattr(tool.callable, "_hook_name", None) != event.name:
                     continue
                 handlers.append(HookHandler(tool, event, repo_root))
@@ -221,6 +241,16 @@ class HookStandupFailed(Exception):
         self.cause = cause
 
 
+class HookIllegitimateHandler(Exception):
+    """One hook handler was skipped so the hook server could finish standup."""
+
+    def __init__(self, tool: str, reason: str, cause: BaseException | None = None) -> None:
+        super().__init__(f"{tool}: {reason}")
+        self.tool = tool
+        self.reason = reason
+        self.cause = cause
+
+
 class HookServer:
     """Cursor process for every hooked event."""
 
@@ -228,7 +258,22 @@ class HookServer:
         self, repo_root: Path, toolsets: list[Any] | None = None
     ) -> None:
         self._repo_root = repo_root
-        self._catalog = HandlerCatalog(toolsets, repo_root)
+        self.exceptions: list[HookIllegitimateHandler] = []
+        self._catalog = HandlerCatalog(toolsets, repo_root, skip=self.skip)
+
+    def skip(self, tool: str, error: BaseException) -> None:
+        skipped = (
+            error
+            if isinstance(error, HookIllegitimateHandler)
+            else HookIllegitimateHandler(tool, str(error), error)
+        )
+        self.exceptions.append(skipped)
+        logger.error(
+            "hook standup exception: skipped %s: %s",
+            skipped.tool,
+            skipped.reason,
+            exc_info=skipped.cause,
+        )
 
     def dispatch(self, payload: HookPayload) -> HookResult:
         event = CursorEvent(payload.hook_event_name)
@@ -254,7 +299,11 @@ class HookServer:
                 continue
             label = f"{handler.owner.__name__}.{handler.operation}"
             enabled.append(label)
-            result = handler.invoke(payload)
+            try:
+                result = handler.invoke(payload)
+            except Exception as error:
+                self.skip(label, error)
+                continue
             results.append(result)
             self._append_debug(f"HANDLER {label} result={json.dumps(result.as_dict())}")
         self._append_debug(f"ENABLED {enabled or ['(none)']}")
@@ -281,7 +330,12 @@ class HookServer:
     def _event_names(self) -> list[str]:
         names: list[str] = []
         for toolset in self._catalog.toolsets:
-            for tool in toolset.tools_for(InstallDestination.HOOK):
+            try:
+                tools = toolset.tools_for(InstallDestination.HOOK)
+            except Exception as error:
+                self.skip(_ref_label(toolset), error)
+                continue
+            for tool in tools:
                 event = getattr(tool.callable, "_hook_name", None)
                 if event and event not in names:
                     names.append(str(event))
@@ -292,7 +346,29 @@ class HookServer:
         if reply != "pong":
             raise HookStandupFailed("diagnose", self, "hook server ping failed")
         self.dispatch(HookPayload({}))
-        return {"ok": True, "ping": reply, "events": self._event_names()}
+        exceptions = [
+            {"tool": item.tool, "reason": item.reason} for item in self.exceptions
+        ]
+        return {
+            "ok": True,
+            "ping": reply,
+            "events": self._event_names(),
+            "exceptions": exceptions,
+            "notice": self.notice(),
+        }
+
+    def notice(self) -> str:
+        if not self.exceptions:
+            return ""
+        lines = ["hook standup skipped illegitimate handlers and continued:"]
+        for item in self.exceptions:
+            lines.append(f"- {item.tool}: {item.reason}")
+        return "\n".join(lines)
+
+    def notify_exceptions(self) -> None:
+        text = self.notice()
+        if text:
+            print(text, file=sys.stderr)
 
     @classmethod
     def refs_from_handlers(cls, handlers: Path | str) -> tuple[str, ...]:
@@ -311,28 +387,15 @@ class HookServer:
         return tuple(refs)
 
     @classmethod
-    def _loadable_refs(cls, refs: tuple[str, ...]) -> tuple[str, ...]:
-        loadable: list[str] = []
-        for ref in refs:
-            try:
-                AgentToolSet.instantiate(ref)
-            except TypeError as error:
-                if "is not a @agent_toolset class" in str(error):
-                    continue
-                raise HookStandupFailed("standup", None, str(error), error) from error
-            except Exception as error:
-                raise HookStandupFailed("standup", None, str(error), error) from error
-            loadable.append(ref)
-        return tuple(loadable)
-
-    @classmethod
     def standup(cls, handlers: Path | str, *, repo: Path | str | None = None) -> HookServer:
         resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
-        refs = cls._loadable_refs(cls.refs_from_handlers(handlers))
+        refs = cls.refs_from_handlers(handlers)
         try:
-            return cls(resolved, toolsets=list(refs))
+            server = cls(resolved, toolsets=list(refs))
         except Exception as error:
             raise HookStandupFailed("standup", None, str(error), error) from error
+        server.notify_exceptions()
+        return server
 
     def _append_debug(self, message: str) -> None:
         from installation.hooks.session_logs import session_log_path
@@ -347,6 +410,18 @@ def _text(value: Any) -> str | None:
     if not value:
         return None
     return str(value)
+
+
+def _ref_label(item: Any) -> str:
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        return str(item.get("toolset") or item)
+    registration = getattr(item, "registration_name", None)
+    if isinstance(registration, str) and registration:
+        return registration
+    typ = item if isinstance(item, type) else type(item)
+    return f"{typ.__module__}:{typ.__name__}"
 
 
 def main() -> None:

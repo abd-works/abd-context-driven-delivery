@@ -218,3 +218,63 @@ with description("a hook server") as self:
 
         with it("should list the installed hook event"):
             expect(self.server.diagnose()["events"]).to(contain("stop"))
+
+    with context("that has stood up from handlers listing a toolset that cannot be loaded"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            dest = Path(self._tmp) / "hook-handlers.json"
+            dest.write_text(
+                json.dumps(
+                    {
+                        "handlers": [
+                            {"event": "stop", "operation": "missing", "ref": "missing.module:Nope"},
+                            {
+                                "event": "stop",
+                                "operation": "auto_turn",
+                                "ref": "harness.guidance.fixtures.agentic_ops.hook_ops:SampleHookOps",
+                            },
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.server = HookServer.standup(dest, repo=self._tmp)
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should still answer ping"):
+            expect(self.server.diagnose()["ping"]).to(equal("pong"))
+
+        with it("should still list the loadable hook event"):
+            expect(self.server.diagnose()["events"]).to(contain("stop"))
+
+        with it("should diagnose the skipped toolset as an exception"):
+            expect(self.server.diagnose()["exceptions"][0]["tool"]).to(
+                equal("missing.module:Nope")
+            )
+
+        with it("should keep a chat notice naming the skipped toolset"):
+            expect(self.server.diagnose()["notice"]).to(contain("missing.module:Nope"))
+
+    with context("that dispatches to a handler that raises"):
+        with before.each:
+            @agent_toolset
+            class _RaisingFixture:
+                @Hook("stop")
+                def on_stop(self, payload: dict) -> dict:
+                    raise RuntimeError("handler misconfigured")
+
+            self.server = HookServer(_REPO_ROOT, toolsets=[_RaisingFixture])
+            self.server.dispatch(HookPayload({"hook_event_name": "stop"}))
+
+        with it("should still allow the event"):
+            expect(
+                self.server.dispatch(HookPayload({"hook_event_name": "stop"})).permission
+            ).to(equal("allow"))
+
+        with it("should diagnose the skipped handler as an exception"):
+            expect(self.server.diagnose()["exceptions"][0]["tool"]).to(
+                contain("on_stop")
+            )

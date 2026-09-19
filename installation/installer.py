@@ -370,9 +370,15 @@ class Installer:
                 self._install_toolset(child)
         self._save_state()
         self._mcp.standup()
-        self._mcp.diagnose()
+        diagnosis = self._mcp.diagnose()
+        notice = diagnosis.get("notice") or ""
+        if notice:
+            print(notice, file=sys.stderr)
         self._hook.standup()
-        self._hook.diagnose()
+        hook_diagnosis = self._hook.diagnose()
+        hook_notice = hook_diagnosis.get("notice") or ""
+        if hook_notice:
+            print(hook_notice, file=sys.stderr)
         return self._mcp
 
 

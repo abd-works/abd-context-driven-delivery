@@ -170,7 +170,9 @@ class HookInstallation(Installation):
 
     def standup(self) -> Any:
         from installation.hooks.hook_server import HookServer
+        from installation.hooks.prompt_echo.prompt_echo import install_ide_toast_extension
 
+        install_ide_toast_extension()
         self.server = HookServer.standup(self.path / "hook-handlers.json", repo=self.repo)
         return self.server
 

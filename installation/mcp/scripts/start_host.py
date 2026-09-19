@@ -50,8 +50,7 @@ def main() -> None:
         or os.environ.get("MCP_TOOLSET_REFS", "")
     )
     repo = _arg_after(argv, "--repo") or _arg_after(manifest_args, "--repo") or str(_REPO)
-    refs = McpHost._loadable_refs(_toolset_refs(toolsets))
-    McpHost.build(refs, repo=repo, project=repo).run()
+    McpHost.build(_toolset_refs(toolsets), repo=repo, project=repo).run()
 
 
 if __name__ == "__main__":

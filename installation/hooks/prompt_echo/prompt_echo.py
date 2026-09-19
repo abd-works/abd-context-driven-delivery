@@ -9,7 +9,9 @@ Off when the class is annotated ``@Hooks(disabled=True)``.
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -155,13 +157,47 @@ def detect(data: dict) -> tuple[str, str] | None:
     return None
 
 
+TOAST_NOTICE = ".cursor/prompt-echo-toast.json"
+IDE_TOAST_EXTENSION = "cdd.prompt-echo-0.0.1"
+
+
+def toast_notice(echo: str) -> dict[str, str]:
+    return {
+        "message": echo,
+        "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+
+def show_ide_toast(echo: str, repo: Path | None = None) -> Path:
+    root = Path(repo) if repo is not None else _REPO_ROOT
+    dest = root / TOAST_NOTICE
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        json.dumps(toast_notice(echo), ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return dest
+
+
+def install_ide_toast_extension() -> Path:
+    source = Path(__file__).resolve().parent / "ide_toast"
+    dest = Path.home() / ".cursor" / "extensions" / IDE_TOAST_EXTENSION
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, dest, dirs_exist_ok=True)
+    return dest
+
+
 @agent_toolset
 class PromptEcho:
     """Echo detected action, practice, fidelity, and guideline names on preToolUse."""
 
     @Hook("preToolUse")
     def on_pre_tool_use(self, payload: dict) -> dict:
-        return handle(payload)
+        result = handle(payload)
+        echo = result.get("user_message")
+        if echo:
+            show_ide_toast(str(echo))
+        return result
 
 
 def handle(data: dict) -> dict:
@@ -172,7 +208,7 @@ def handle(data: dict) -> dict:
     if not detected:
         return {"permission": "allow"}
     kind, label = detected
-    echo = f"\u2705 Got the hook!  {kind.title()} \u2192 {label}"
+    echo = f"{kind.title()} \u2192 {label}"
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     sys.stderr.write(f"{ts} [prompt-echo] tool={tool_name} {kind}={label}\n")
     return {

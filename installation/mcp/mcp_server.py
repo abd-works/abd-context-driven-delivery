@@ -23,7 +23,6 @@ from installation.installer import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
-_MCP_NAME_ILLEGAL = re.compile(r"[^A-Za-z0-9_.-]+")
 _UNION_ORIGINS = {Union, py_types.UnionType}
 _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}
@@ -59,6 +58,20 @@ class McpStandupFailed(Exception):
         self.cause = cause
 
 
+class McpIllegitimateTool(Exception):
+    """One published tool was skipped so the MCP host could finish standup."""
+
+    def __init__(self, tool: str, reason: str, cause: BaseException | None = None) -> None:
+        super().__init__(f"{tool}: {reason}")
+        self.tool = tool
+        self.reason = reason
+        self.cause = cause
+
+
+def _is_legal_mcp_name(name: str) -> bool:
+    return bool(name) and re.fullmatch(r"[A-Za-z0-9_.-]+", name) is not None
+
+
 @dataclass
 class McpOperationDefinition:
     mcp_name: str
@@ -75,7 +88,6 @@ class McpOperationDefinition:
             mcp_name = tool.slug
         else:
             mcp_name = f"{tool.slug}.{tool.name}"
-        mcp_name = _MCP_NAME_ILLEGAL.sub("-", mcp_name).strip("-.") or "tool"
         return cls(
             mcp_name=mcp_name,
             kind=kind,
@@ -130,6 +142,7 @@ class McpInstallation(Installation):
         payload = {
             "mcpServers": {
                 "cdd": {
+                    "type": "stdio",
                     "command": sys.executable,
                     "args": [
                         "-u",
@@ -243,6 +256,7 @@ class McpServer:
         self.mcp_installations: list[McpInstallation] = []
         self._tools: dict[str, McpTool] = {}
         self._prompts: dict[str, McpPrompt] = {}
+        self.exceptions: list[McpIllegitimateTool] = []
         self._started = False
 
     @property
@@ -257,7 +271,30 @@ class McpServer:
     def prompts(self) -> dict[str, McpPrompt]:
         return self._prompts
 
+    def skip(self, tool: str, error: BaseException) -> None:
+        skipped = (
+            error
+            if isinstance(error, McpIllegitimateTool)
+            else McpIllegitimateTool(tool, str(error), error)
+        )
+        self.exceptions.append(skipped)
+        logger.error(
+            "MCP standup exception: skipped %s: %s",
+            skipped.tool,
+            skipped.reason,
+            exc_info=skipped.cause,
+        )
+
     def enroll(self, op: McpOperationDefinition) -> None:
+        if not _is_legal_mcp_name(op.mcp_name):
+            self.skip(
+                op.mcp_name,
+                McpIllegitimateTool(
+                    op.mcp_name,
+                    "illegal MCP tool name",
+                ),
+            )
+            return
         if op.kind == "tool":
             self._tools[op.mcp_name] = McpTool(op)
         else:
@@ -278,11 +315,21 @@ class McpServer:
         self.mcp_installations = []
         self._tools.clear()
         self._prompts.clear()
-        for toolset in AgentToolSet.load_toolsets(list(toolset_refs), context=context):
-            self._enroll_toolset(toolset)
-            nested = getattr(toolset, "nested_toolsets", None) or ()
-            for child in nested:
-                self._enroll_toolset(child)
+        self.exceptions = []
+        for ref in toolset_refs:
+            try:
+                loaded = AgentToolSet.load_toolsets([ref], context=context)
+            except Exception as error:
+                self.skip(str(ref), error)
+                continue
+            for toolset in loaded:
+                try:
+                    self._enroll_toolset(toolset)
+                    nested = getattr(toolset, "nested_toolsets", None) or ()
+                    for child in nested:
+                        self._enroll_toolset(child)
+                except Exception as error:
+                    self.skip(toolset.registration_name, error)
         self._started = True
 
     def _enroll_toolset(self, toolset: Any) -> None:
@@ -380,9 +427,20 @@ class McpHost:
                     inputSchema={"type": "object", "properties": {}},
                 )
             ]
-            tools.extend(self._mcp_tool(tool) for tool in self._runtime._tools.values())
             tools.extend(
-                self._mcp_prompt_tool(prompt) for prompt in self._runtime._prompts.values()
+                listed
+                for listed in (
+                    self._listed_tool(tool) for tool in self._runtime._tools.values()
+                )
+                if listed is not None
+            )
+            tools.extend(
+                listed
+                for listed in (
+                    self._listed_prompt_tool(prompt)
+                    for prompt in self._runtime._prompts.values()
+                )
+                if listed is not None
             )
             return tools
 
@@ -431,12 +489,26 @@ class McpHost:
             inputSchema=self.input_schema_for_callable(tool.callable),
         )
 
+    def _listed_tool(self, tool: McpTool) -> types.Tool | None:
+        try:
+            return self._mcp_tool(tool)
+        except Exception as error:
+            self._runtime.skip(tool.mcp_name, error)
+            return None
+
     def _mcp_prompt_tool(self, prompt: McpPrompt) -> types.Tool:
         return types.Tool(
             name=prompt.mcp_name,
             description=prompt.prompt_text or None,
             inputSchema=self.input_schema_for_callable(prompt.callable),
         )
+
+    def _listed_prompt_tool(self, prompt: McpPrompt) -> types.Tool | None:
+        try:
+            return self._mcp_prompt_tool(prompt)
+        except Exception as error:
+            self._runtime.skip(prompt.mcp_name, error)
+            return None
 
     def _as_prompt(self, prompt: McpPrompt) -> types.Prompt:
         return types.Prompt(
@@ -480,7 +552,30 @@ class McpHost:
             *sorted(self._runtime.tools),
             *sorted(self._runtime.prompts),
         ]
-        return {"ok": True, "ping": reply, "tools": tools}
+        exceptions = [
+            {"tool": item.tool, "reason": item.reason}
+            for item in self._runtime.exceptions
+        ]
+        return {
+            "ok": True,
+            "ping": reply,
+            "tools": tools,
+            "exceptions": exceptions,
+            "notice": self.notice(),
+        }
+
+    def notice(self) -> str:
+        if not self._runtime.exceptions:
+            return ""
+        lines = ["MCP standup skipped illegitimate tools and continued:"]
+        for item in self._runtime.exceptions:
+            lines.append(f"- {item.tool}: {item.reason}")
+        return "\n".join(lines)
+
+    def notify_exceptions(self) -> None:
+        text = self.notice()
+        if text:
+            print(text, file=sys.stderr)
 
     @staticmethod
     def _arg_after(args: list[str], flag: str) -> str:
@@ -502,24 +597,9 @@ class McpHost:
         return tuple(ref.strip() for ref in raw.split(",") if ref.strip())
 
     @classmethod
-    def _loadable_refs(cls, refs: tuple[str, ...]) -> tuple[str, ...]:
-        loadable: list[str] = []
-        for ref in refs:
-            try:
-                AgentToolSet.instantiate(ref)
-            except TypeError as error:
-                if "is not a @agent_toolset class" in str(error):
-                    continue
-                raise McpStandupFailed("standup", None, str(error), error) from error
-            except Exception as error:
-                raise McpStandupFailed("standup", None, str(error), error) from error
-            loadable.append(ref)
-        return tuple(loadable)
-
-    @classmethod
     def standup(cls, manifest: Path | str, *, repo: Path | str | None = None) -> McpHost:
         path = Path(manifest)
-        refs = cls._loadable_refs(cls.refs_from_manifest(path))
+        refs = cls.refs_from_manifest(path)
         resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
         try:
             return cls.build(refs, repo=str(resolved), project=str(resolved))
@@ -538,4 +618,6 @@ class McpHost:
         runtime = McpServer(repo=repo, project=project)
         if toolset_refs:
             runtime.start(toolset_refs, constructor_context=constructor_context)
-        return cls(runtime)
+        host = cls(runtime)
+        host.notify_exceptions()
+        return host
