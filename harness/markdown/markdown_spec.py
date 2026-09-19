@@ -167,7 +167,7 @@ with description("a markdown section containing a yaml fence"):
             class _Host:
                 default_format = ""
                 stage = ""
-                applies_to = None
+                clean_engineering = ""
 
             self.host = _Host()
             bind_yaml(
@@ -175,9 +175,7 @@ with description("a markdown section containing a yaml fence"):
                 """```yaml
 default_format: python
 stage: specification
-appliesTo:
-  alwaysApply: false
-  globs: "**/*spec.py"
+clean_engineering: model
 ```
 prose
 """,
@@ -186,7 +184,4 @@ prose
         with it("should bind each matching key as a property"):
             expect(self.host.default_format).to(equal("python"))
             expect(self.host.stage).to(equal("specification"))
-
-        with it("should keep a nested yaml value whole on that property"):
-            expect(self.host.applies_to.always_apply).to(equal(False))
-            expect(self.host.applies_to.globs).to(equal("**/*spec.py"))
+            expect(self.host.clean_engineering).to(equal("model"))

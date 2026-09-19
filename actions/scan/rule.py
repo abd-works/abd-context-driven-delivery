@@ -26,14 +26,9 @@ class AppliesTo:
             return value
         if not isinstance(value, dict):
             return cls()
-        nested = value.get("appliesTo", value.get("applies_to"))
-        if isinstance(nested, dict):
-            value = nested
         always = value.get("alwaysApply", value.get("always_apply"))
         globs: Any = value.get("globs", "")
-        if isinstance(globs, list):
-            globs = ",".join(str(part).strip() for part in globs if str(part).strip())
-        elif not isinstance(globs, str):
+        if not isinstance(globs, str):
             globs = "" if globs is None else str(globs)
         always_apply = None
         if isinstance(always, bool):

@@ -17163,3 +17163,189 @@ actice \u2192 clean-engineering"}
 2026-09-19T20:27:49Z MERGED {"permission": "allow", "user_message": "Action \u2192 scan"}
 2026-09-19T20:27:49Z ENABLED ['PromptEcho.on_pre_tool_use']
 2026-09-19T20:27:49Z MERGED {"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:28:12Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:12Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:13Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T20:28:13Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:13Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T20:28:13Z MERGED {"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T20:28:13Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:13Z MERGED {"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T20:28:18Z EVENT 'beforeSubmitPrompt' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'composer_mode', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'model_id', 'model_params', 'prompt', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:18Z ENABLED ['(none)']
+2026-09-19T20:28:18Z MERGED {"permission": "allow"}
+2026-09-19T20:28:18Z EVENT 'beforeSubmitPrompt' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'composer_mode', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'model_id', 'model_params', 'prompt', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:18Z ENABLED ['(none)']
+2026-09-19T20:28:18Z MERGED {"permission": "allow"}
+2026-09-19T20:28:25Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:25Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:26Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:26Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:26Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:26Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:27Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:28:27Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:27Z MERGED {"permission": "allow"}
+2026-09-19T20:28:27Z MERGED {"permission": "allow"}
+2026-09-19T20:28:27Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:28:27Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:27Z MERGED {"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:28:27Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:28:27Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:27Z MERGED {"permission": "allow"}
+2026-09-19T20:28:27Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:28:27Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:27Z MERGED {"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:28:27Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:28:27Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:27Z MERGED {"permission": "allow"}
+2026-09-19T20:28:28Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:28Z ENABLED ['(none)']
+2026-09-19T20:28:28Z MERGED {"permission": "allow"}
+2026-09-19T20:28:28Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:28Z ENABLED ['(none)']
+2026-09-19T20:28:28Z MERGED {"permission": "allow"}
+2026-09-19T20:28:28Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:28Z ENABLED ['(none)']
+2026-09-19T20:28:28Z MERGED {"permission": "allow"}
+2026-09-19T20:28:28Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:28Z ENABLED ['(none)']
+2026-09-19T20:28:28Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:28Z MERGED {"permission": "allow"}
+2026-09-19T20:28:28Z ENABLED ['(none)']
+2026-09-19T20:28:28Z MERGED {"permission": "allow"}
+2026-09-19T20:28:28Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:28Z ENABLED ['(none)']
+2026-09-19T20:28:28Z MERGED {"permission": "allow"}
+2026-09-19T20:28:42Z EVENT 'beforeSubmitPrompt' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['attachments', 'composer_mode', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'model_id', 'model_params', 'prompt', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:42Z ENABLED ['(none)']
+2026-09-19T20:28:42Z MERGED {"permission": "allow"}
+2026-09-19T20:28:42Z EVENT 'beforeSubmitPrompt' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['attachments', 'composer_mode', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'model_id', 'model_params', 'prompt', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:42Z ENABLED ['(none)']
+2026-09-19T20:28:42Z MERGED {"permission": "allow"}
+2026-09-19T20:28:52Z EVENT 'preToolUse' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:52Z EVENT 'preToolUse' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:52Z EVENT 'preToolUse' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:52Z EVENT 'preToolUse' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:52Z EVENT 'preToolUse' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:52Z EVENT 'preToolUse' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:53Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Guideline \u2192 stories"}
+2026-09-19T20:28:53Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:53Z MERGED {"permission": "allow", "user_message": "Guideline \u2192 stories"}
+2026-09-19T20:28:53Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 stories"}
+2026-09-19T20:28:53Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:53Z MERGED {"permission": "allow", "user_message": "Practice \u2192 stories"}
+2026-09-19T20:28:53Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Guideline \u2192 stories"}
+2026-09-19T20:28:53Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:53Z MERGED {"permission": "allow", "user_message": "Guideline \u2192 stories"}
+2026-09-19T20:28:53Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 stories"}
+2026-09-19T20:28:53Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:53Z MERGED {"permission": "allow", "user_message": "Practice \u2192 stories"}
+2026-09-19T20:28:53Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 stories"}
+2026-09-19T20:28:53Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:53Z MERGED {"permission": "allow", "user_message": "Practice \u2192 stories"}
+2026-09-19T20:28:53Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 stories"}
+2026-09-19T20:28:53Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:53Z MERGED {"permission": "allow", "user_message": "Practice \u2192 stories"}
+2026-09-19T20:28:55Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:55Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:56Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:28:56Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:56Z MERGED {"permission": "allow"}
+2026-09-19T20:28:56Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:28:56Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:56Z MERGED {"permission": "allow"}
+2026-09-19T20:28:57Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:57Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:57Z ENABLED ['(none)']
+2026-09-19T20:28:57Z ENABLED ['(none)']
+2026-09-19T20:28:57Z MERGED {"permission": "allow"}
+2026-09-19T20:28:57Z MERGED {"permission": "allow"}
+2026-09-19T20:28:58Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:58Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:59Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:28:59Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:28:59Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:59Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:28:59Z MERGED {"permission": "allow"}
+2026-09-19T20:28:59Z MERGED {"permission": "allow"}
+2026-09-19T20:28:59Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:28:59Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:00Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:00Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:00Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:00Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:00Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:00Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:00Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:29:00Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:00Z MERGED {"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:29:00Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:29:00Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:00Z MERGED {"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:29:01Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:01Z ENABLED ['(none)']
+2026-09-19T20:29:01Z MERGED {"permission": "allow"}
+2026-09-19T20:29:01Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:01Z ENABLED ['(none)']
+2026-09-19T20:29:01Z MERGED {"permission": "allow"}
+2026-09-19T20:29:01Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:01Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:01Z MERGED {"permission": "allow"}
+2026-09-19T20:29:01Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:01Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:01Z MERGED {"permission": "allow"}
+2026-09-19T20:29:01Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:01Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:01Z MERGED {"permission": "allow"}
+2026-09-19T20:29:01Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:01Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:01Z MERGED {"permission": "allow"}
+2026-09-19T20:29:01Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:01Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:01Z MERGED {"permission": "allow"}
+2026-09-19T20:29:01Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:01Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:01Z MERGED {"permission": "allow"}
+2026-09-19T20:29:02Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:02Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:02Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:02Z ENABLED ['(none)']
+2026-09-19T20:29:02Z MERGED {"permission": "allow"}
+2026-09-19T20:29:02Z EVENT 'beforeReadFile' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:02Z ENABLED ['(none)']
+2026-09-19T20:29:02Z MERGED {"permission": "allow"}
+2026-09-19T20:29:03Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:29:03Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:03Z MERGED {"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:29:03Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:29:03Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:03Z MERGED {"permission": "allow", "user_message": "Action \u2192 scan"}
+2026-09-19T20:29:03Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:03Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:04Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:04Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:04Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:04Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:04Z MERGED {"permission": "allow"}
+2026-09-19T20:29:04Z MERGED {"permission": "allow"}
+2026-09-19T20:29:09Z EVENT 'beforeSubmitPrompt' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['attachments', 'composer_mode', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'model_id', 'model_params', 'prompt', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:09Z ENABLED ['(none)']
+2026-09-19T20:29:09Z MERGED {"permission": "allow"}
+2026-09-19T20:29:09Z EVENT 'beforeSubmitPrompt' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['attachments', 'composer_mode', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'model_id', 'model_params', 'prompt', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:09Z ENABLED ['(none)']
+2026-09-19T20:29:09Z MERGED {"permission": "allow"}
+2026-09-19T20:29:09Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:09Z EVENT 'preToolUse' conversation_id='b05baeef-9363-4a29-a468-623b0e6453e2' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:10Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:10Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T20:29:10Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:10Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T20:29:10Z MERGED {"permission": "allow"}
+2026-09-19T20:29:10Z MERGED {"permission": "allow"}
+2026-09-19T20:29:18Z EVENT 'afterAgentResponse' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:18Z EVENT 'afterAgentResponse' conversation_id='9511a91a-f60f-4467-b77a-d0c515f73f50' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T20:29:18Z ENABLED ['(none)']
+2026-09-19T20:29:18Z ENABLED ['(none)']
+2026-09-19T20:29:18Z MERGED {"permission": "allow"}
+2026-09-19T20:29:18Z MERGED {"permission": "allow"}

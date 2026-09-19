@@ -331,16 +331,15 @@ def _load_yaml_mapping(body: str) -> dict[str, Any]:
         import yaml
     except ImportError:
         yaml = None
-    loaded: Any
     if yaml is not None:
         loaded = yaml.safe_load(body)
-    else:
-        loaded = _load_yaml_pairs(body)
-    return loaded if isinstance(loaded, dict) else {}
+        if isinstance(loaded, dict):
+            return loaded
+    return _load_yaml_pairs(body)
 
 
-def _load_yaml_pairs(body: str) -> dict[str, Any]:
-    fields: dict[str, Any] = {}
+def _load_yaml_pairs(body: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
     for raw in body.splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or ":" not in line or line.startswith("- "):
@@ -397,13 +396,7 @@ def _assign_yaml_value(host: Any, attr: str, value: Any) -> None:
     descriptor = getattr(type(host), attr, None)
     if isinstance(descriptor, property) and descriptor.fset is None:
         stored = _to_snake(attr)
-    if stored in {"applies_to", "appliesTo"} or attr in {"appliesTo", "applies_to"}:
-        from actions.scan.rule import AppliesTo
-
-        if not isinstance(value, AppliesTo):
-            value = AppliesTo.from_value(value)
-        stored = "applies_to"
-    elif stored == "default_format" and isinstance(value, str):
+    if stored == "default_format" and isinstance(value, str):
         value = canonical_format(value.split()[0].strip("()`"))
     elif stored == "clean_engineering" and isinstance(value, str):
         value = value.split()[0].strip("()`").replace("-", "_")
