@@ -69,7 +69,7 @@ Use these rules when defining domain logic in code, a model, or language.
 
 #### Overview
 
-**Goal:** Draw where language changes — context boundaries, the aggregates that protect invariants inside each context, and the dependency arcs between contexts — using the experts' words. Names and boundaries are cheap to change here; they are expensive once building blocks, stories, and code hang off them.
+Draw where language changes — context boundaries, the aggregates that protect invariants inside each context, and the dependency arcs between contexts — using the experts' words. Names and boundaries are cheap to change here; they are expensive once building blocks, stories, and code hang off them.
 
 **Produce:** `bounded-context-map.md` from `templates/bounded-context-template.md`. Call clean_engineering at **modules**.
 
@@ -128,7 +128,7 @@ Whenever you create, alter, or delete bounded contexts, aggregates, or the langu
 
 #### Overview
 
-**Goal:** Classify each concept on the map — entity, value, repository, event, service — and shape the classes that carry them.
+Classify each concept on the map — entity, value, repository, event, service — and shape the classes that carry them.
 
 **Produce:** Update `bounded-context-map.md` using `templates/bounded-context-template.md`. Call clean_engineering at **model**.
 
@@ -191,7 +191,7 @@ If this change will not stay here, follow `practices/ddd/bounded_context.mdc`.
 
 #### Overview
 
-**Goal:** Decide one implementation pattern for each building block the model uses, then implement the domain against it — preserving every name and boundary from upstream.
+Decide one implementation pattern for each building block the model uses, then implement the domain against it — preserving every name and boundary from upstream.
 
 **Produce:** Implementation under the project layout; call clean_engineering at **code**.
 

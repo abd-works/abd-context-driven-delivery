@@ -86,7 +86,7 @@ Whenever you name screens, attach stories, or import domain terms on the UX surf
 
 #### Overview
 
-**Goal:** Decide what screens exist and how users move between them.
+Decide what screens exist and how users move between them.
 
 #### Guidance
 
@@ -124,7 +124,7 @@ If this change will not stay here, follow `practices/ux.mdc`.
 
 #### Overview
 
-**Goal:** Lock screens as runnable greybox — typed controls and key interactions.
+Lock screens as runnable greybox — typed controls and key interactions.
 
 #### Guidance
 
@@ -168,7 +168,7 @@ If this change will not stay here, follow `practices/ux/ia.mdc`.
 
 #### Overview
 
-**Goal:** Ship the product UI — production frontend talking to a real backend.
+Ship the product UI — production frontend talking to a real backend.
 
 #### Guidance
 

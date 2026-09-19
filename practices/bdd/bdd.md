@@ -165,7 +165,7 @@ it('should apply a percentage discount to eligible items', () => {
 
 #### Overview
 
-**Goal:** Implement BDD tests with production code.
+Implement BDD tests with production code.
 
 #### Guidance
 

@@ -163,16 +163,9 @@ class MarkdownInstallation(Installation):
         summary = ""
         for line in overview.splitlines():
             stripped = line.strip()
-            if stripped.lower().startswith("**goal:**"):
-                marker = "**goal:**"
-                summary = stripped[len(marker) :].strip()
+            if stripped and not stripped.startswith("#") and not stripped.startswith("**"):
+                summary = stripped
                 break
-        if not summary:
-            for line in overview.splitlines():
-                stripped = line.strip()
-                if stripped and not stripped.startswith("#") and not stripped.startswith("**"):
-                    summary = stripped
-                    break
         return f"{name} — {summary}" if summary else name
 
     def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:

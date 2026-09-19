@@ -35,7 +35,7 @@ Whenever you define or change user interactions and resulting system behavior, a
 
 **Produce:** Story map.
 
-**Goal:** Define a visual hierarchy of how users and systems achieve business outcomes: `Epic` -> nestable `Sub-Epic` -> `Story`. It is easier to change the map while Stories are titles than after Scenarios, screens, and tests exist.
+Define a visual hierarchy of how users and systems achieve business outcomes: `Epic` -> nestable `Sub-Epic` -> `Story`. It is easier to change the map while Stories are titles than after Scenarios, screens, and tests exist.
 
 **Actors** are people or systems that interact with the system being described. Examples include `Customer`, `Support Agent`, `Order Service`, and `Payment Provider`.
 
@@ -80,9 +80,7 @@ If this change will not stay here, follow `practices/stories.mdc`.
 
 #### Overview
 
-**Produce:** `{epic}/{sub-epic}/{story}/story-scenarios.md` (or the same path with the installment language). One scenarios file per story — not a front-end / back-end / e2e split.
-
-**Goal:** Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.
+`{epic}/{sub-epic}/{story}/story-scenarios.md` (or the same path with the installment language). One scenarios file per story. Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.
 
 #### Guidance
 
@@ -130,7 +128,7 @@ If this change will not stay here, follow `practices/stories/story_map.mdc`.
 
 **Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`. Do not name these `*spec*` — that pattern belongs to BDD.
 
-**Goal:** Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
+Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
 
 #### Guidance
 

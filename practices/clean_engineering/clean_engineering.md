@@ -101,7 +101,7 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 
 **Other formats:** markdown for a language model and `drawio` through `class_model/drawio` for a class diagram. The same classes, operations, and relationships must appear in every selected representation.
 
-**Goal:** Design the object model — the classes, what they remember and do, and how they relate.
+Design the object model — the classes, what they remember and do, and how they relate.
 
 #### Language
 
@@ -181,7 +181,7 @@ If this change will not stay here, follow `practices/clean_engineering/modules.m
 
 #### Overview
 
-**Goal:** Write working production code — real persistence, services, and UI behind the public seams.
+Write working production code — real persistence, services, and UI behind the public seams.
 
 #### Guidance
 
