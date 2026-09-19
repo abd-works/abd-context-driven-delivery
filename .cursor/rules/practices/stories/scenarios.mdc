@@ -1,7 +1,7 @@
 ---
 alwaysApply: false
 description: "Whenever you write or change Given/When/Then scenarios, or change acceptance tests or production code that those scenarios support. Follow these rules."
-globs: **/*scenario*
+globs: **/*_story.test.*,**/*story_test*,**/*story-test*
 ---
 
 #### Rules

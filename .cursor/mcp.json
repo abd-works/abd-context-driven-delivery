@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "cdd": {
+    "cdd-abd-cdd-context-tool-refactoring-71": {
       "type": "stdio",
       "command": "C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
       "args": [

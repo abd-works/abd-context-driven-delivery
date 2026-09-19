@@ -335,6 +335,8 @@ class Installer:
         removed: list[str] = []
         for rel in state.get("installed_files", []):
             dest = install_path / rel
+            if Path(rel).name == "mcp.json":
+                continue
             if not dest.is_file():
                 continue
             dest.unlink()

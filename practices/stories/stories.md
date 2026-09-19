@@ -16,7 +16,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 ```yaml
 alwaysApply: false
-globs: "**/*scenario*,**/*story-map*,**/*_story.test.*,**/*story_test*,**/*story-test*"
+globs: "**/*story-map*,**/*_story.test.*,**/*story_test*,**/*story-test*"
 ```
 
 Whenever you define or change user interactions and resulting system behavior, at any level of detail. Follow these rules.
@@ -84,7 +84,7 @@ stage: specification
 
 #### Overview
 
-`{epic}/{sub-epic}/{story}/story-scenarios.md` (or the same path with the installment language). One scenarios file per story. Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.
+`{epic}/{sub-epic}/{story}/{story_snake}_story.test.md` — same stem as the TypeScript or Python acceptance test; only the extension is `md`. One file per story. Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.
 
 #### Guidance
 
@@ -100,7 +100,7 @@ stage: specification
 
 ```yaml
 alwaysApply: false
-globs: "**/*scenario*"
+globs: "**/*_story.test.*,**/*story_test*,**/*story-test*"
 ```
 
 Whenever you write or change Given/When/Then scenarios, or change acceptance tests or production code that those scenarios support. Follow these rules.
@@ -136,7 +136,7 @@ clean_engineering: code
 
 #### Overview
 
-**Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`. Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
+**Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Markdown scenarios for the same story are `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`. Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
 
 #### Guidance
 
@@ -150,7 +150,7 @@ Refer to [`../language-tools.md`](../language-tools.md) for language-specific te
 
 ```yaml
 alwaysApply: false
-globs: "**/*_story.test.*,**/*story_test*,**/*story-test*,**/*acceptance_test*"
+globs: "**/*_story.test.*,**/*story_test*,**/*story-test*"
 ```
 
 Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.

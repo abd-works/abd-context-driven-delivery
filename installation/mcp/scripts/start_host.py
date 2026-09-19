@@ -17,8 +17,10 @@ def _manifest() -> dict:
     path = _REPO / ".cursor" / "mcp.json"
     if not path.is_file():
         return {}
+    from installation.mcp.mcp_server import McpHost
+
     servers = json.loads(path.read_text(encoding="utf-8")).get("mcpServers") or {}
-    return servers.get("cdd") or {}
+    return McpHost.server_entry_from_manifest(servers)
 
 
 def _arg_after(args: list[str], flag: str) -> str:

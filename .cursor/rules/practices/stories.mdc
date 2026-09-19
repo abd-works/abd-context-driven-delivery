@@ -1,7 +1,7 @@
 ---
 alwaysApply: false
 description: "Whenever you define or change user interactions and resulting system behavior, at any level of detail. Follow these rules."
-globs: **/*scenario*,**/*story-map*,**/*_story.test.*,**/*story_test*,**/*story-test*
+globs: **/*story-map*,**/*_story.test.*,**/*story_test*,**/*story-test*
 ---
 
 ## Shared rules

@@ -7,7 +7,7 @@ Reference layout for **`shared-example-fixtures`** and story hierarchy on disk. 
 1. **Story map** at the epic root — discovery hierarchy on disk.
 2. **Folders mirror the map** — epic → sub-epic → nested sub-epic / story.
 3. **`examples/` at the sub-epic** — named fixture files shared by every story under that sub-epic (`create-customer/examples/`).
-4. **Per story** — markdown scenarios (`story-scenarios.md`) and one acceptance test (`*_story.test.ts`); both name the same examples; code imports from the sub-epic `examples/` folder.
+4. **Per story** — markdown scenarios (`{story_snake}_story.test.md`) and one acceptance test (`{story_snake}_story.test.ts`); same stem; code imports from the sub-epic `examples/` folder.
 
 ```
 onboard-a-customer/
@@ -18,7 +18,7 @@ onboard-a-customer/
       purchasable-plans.examples.ts
       identity-provider-user.examples.ts
     create-unconfirmed-user/                # (E) Create Unconfirmed User
-      story-scenarios.md                    # scenarios fidelity — GWT + Examples tables
+      create_unconfirmed_user_story.test.md # scenarios fidelity — GWT + Examples tables
       create_unconfirmed_user_story.test.ts # acceptance_tests — imports ../../examples/
 ```
 

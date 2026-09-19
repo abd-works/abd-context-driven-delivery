@@ -161,7 +161,7 @@ class MarkdownScenario(Scenario):
         seen: set = set()
         for pattern in (
             "**/scenarios/*.md", "**/scenarios/**/*.md", "**/scenarios.md",
-            "**/md/*.md", "**/md/**/*.md", "**/story-scenarios.md", "**/stories/**/*.md",
+            "**/md/*.md", "**/md/**/*.md", "**/*_story.test.md", "**/story-scenarios.md", "**/stories/**/*.md",
         ):
             for md in root.glob(pattern):
                 rel = str(md.relative_to(root)).replace("\\", "/")

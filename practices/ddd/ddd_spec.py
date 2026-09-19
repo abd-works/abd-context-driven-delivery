@@ -95,42 +95,35 @@ with description("a Ddd toolset"):
         with it("should pass DDD's working path into CleanEngineering without changing CE's default"):
             ddd = Ddd()
             ddd.apply_document_workspace_default()
-            ce = ddd.ce()
-            expect(Path(ce.workspace.path).name).to(equal("domain"))
+            expect(Path(ddd.workspace.path).name).to(equal("domain"))
             expect(CleanEngineering.default_workspace_folder).to(equal("src"))
 
     with context("that provides a CleanEngineering companion"):
         with context("with bounded_context fidelity"):
-            with it("should return a CleanEngineering instance at modules fidelity"):
-                ce = Ddd(fidelity="bounded_context").ce()
-                expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelities.current.fidelity).to(equal("modules"))
+            with it("should treat the modules fidelity as the companion"):
+                companion = Ddd(fidelity="bounded_context").fidelities.current.clean_engineering
+                expect(companion.fidelity).to(equal("modules"))
 
         with context("with building_blocks fidelity"):
-            with it("should return a CleanEngineering instance at model fidelity"):
-                ce = Ddd(fidelity="building_blocks").ce()
-                expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelities.current.fidelity).to(equal("model"))
+            with it("should treat the model fidelity as the companion"):
+                companion = Ddd(fidelity="building_blocks").fidelities.current.clean_engineering
+                expect(companion.fidelity).to(equal("model"))
 
         with context("with tactics fidelity"):
-            with it("should return a CleanEngineering instance at code fidelity"):
-                ce = Ddd(fidelity="tactics").ce()
-                expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelities.current.fidelity).to(equal("code"))
+            with it("should treat the code fidelity as the companion"):
+                companion = Ddd(fidelity="tactics").fidelities.current.clean_engineering
+                expect(companion.fidelity).to(equal("code"))
 
         with context("with a path set"):
             with it("should carry the same path to the CE companion"):
-                ce = Ddd(fidelity="bounded_context", path="practices/ddd").ce()
-                expect(ce.path).to(equal("practices/ddd"))
+                companion = Ddd(fidelity="bounded_context", path="practices/ddd").fidelities.current.clean_engineering
+                expect(companion.practice_guidance.path).to(equal("practices/ddd"))
 
         with context("with a session set"):
             with it("should carry the same session name to the CE companion"):
-                ce = Ddd(fidelity="tactics", session="satisfy").ce()
-                expect(ce.workspace.current_work_session.name if ce.workspace.current_work_session else None).to(equal("satisfy"))
-
-        with it("should return a companion with mode set to tool"):
-            ce = Ddd().ce()
-            expect(ce.mode).to(equal("tool"))
+                companion = Ddd(fidelity="tactics", session="satisfy").fidelities.current.clean_engineering
+                session = companion.practice_guidance.workspace.current_work_session
+                expect(session.name if session else None).to(equal("satisfy"))
 
     with context("that provides a diagnostic companion"):
         with it("should return a Diagnose instance"):
@@ -189,29 +182,9 @@ with description("a Ddd toolset"):
                 expect(name in host.agent_tools).to(equal(False))
 
     with context("whose guidance action is expanded"):
-        with it("should tell the agent to call companion guidance and pass it to this action"):
+        with it("should include the Clean Engineering companion's instructions"):
             prose = _support.expanded(_support.ddd(), "guidance")
-            expect("call guidance" in prose).to(be_true)
-            expect("pass that companion to this action" in prose).to(be_true)
-            expect("already knows what to do" in prose).to(be_true)
-            expect("ce().generate()" in prose).to(equal(False))
-
-        with it("should include the RED confirmation instruction"):
-            prose = _support.expanded(_support.ddd(), "guidance")
-            expect("RED" in prose).to(be_true)
-
-        with it("should tell the agent to call diagnostic().diagnose() when a test keeps failing"):
-            prose = _support.expanded(_support.ddd(), "guidance")
-            expect("diagnostic().diagnose()" in prose).to(be_true)
-
-        with it("should instruct the agent to scan production source for coverage gaps"):
-            prose = _support.expanded(_support.ddd(), "guidance")
-            expect("coverage gap" in prose.lower()).to(be_true)
-
-        with it("should tell the caller to pass the CE companion to this action as a separate run"):
-            prose = _support.expanded(_support.ddd(), "guidance")
-            expect("separate tools run" in prose).to(be_true)
-            expect("Clean Engineering" in prose).to(be_true)
+            expect("independent modules" in prose).to(be_true)
 
         with it("should NOT inline CleanEngineering generate instructions"):
             prose = _support.expanded(_support.ddd(), "guidance")

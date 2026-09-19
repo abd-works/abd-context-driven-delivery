@@ -397,6 +397,12 @@ with description("an MCP manifest file") as self:
             expect(text).to(contain("SampleMcpOps"))
             expect(text).to(contain("PYTHONPATH"))
 
+        with it("should name the stdio server after the checkout so another folder named cdd does not hide it"):
+            from installation.mcp.mcp_server import McpHost
+
+            data = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))
+            expect(data["mcpServers"]).to(have_key(McpHost.server_key(_REPO_ROOT)))
+
     with context("that has been written by a deploy with no mcp-published members"):
         with before.each:
             self._tmp = tempfile.mkdtemp()
@@ -654,6 +660,21 @@ with description("an installer that recorded files from a prior install") as sel
 
         with it("should leave untracked orphans in place"):
             expect(self.orphan.is_file()).to(equal(True))
+
+
+with description("an installer that recorded an MCP host from a prior install") as self:
+    with before.each:
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+        Installer(ide="Cursor", path=self.tree).install([SampleMcpOps()])
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with context("whose clean operation runs directly"):
+        with it("should keep the MCP manifest so Cursor can respawn the host"):
+            Installer(ide="Cursor", path=self.tree).clean()
+            expect((self.tree / "mcp.json").is_file()).to(equal(True))
 
 
 with description("the installer toolset installing itself") as self:

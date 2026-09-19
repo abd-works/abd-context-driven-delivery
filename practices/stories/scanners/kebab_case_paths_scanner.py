@@ -12,7 +12,6 @@ RULE = "kebab-case-paths"
 _KEBAB = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _PY_EPIC_HELPER = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*_helper\.py$")
 _STORY_TEST_FILE = re.compile(r"^[a-z][a-z0-9_]*_story\.test\.[a-z0-9]+$")
-_SCENARIOS_FILE = re.compile(r"^(?:story-scenarios|[a-z0-9]+(?:-[a-z0-9]+)*-scenarios)\.md$")
 
 # Infrastructure beside the GWT tree — not subject to story slug naming.
 _SKIP_FILES = frozenset(
@@ -67,7 +66,7 @@ class KebabCasePathsScanner(StoryWorkspaceScanner):
                 )
             return
 
-        if _STORY_TEST_FILE.fullmatch(name) or _SCENARIOS_FILE.fullmatch(name):
+        if _STORY_TEST_FILE.fullmatch(name):
             return
 
         stem = path.stem

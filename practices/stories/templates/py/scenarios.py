@@ -14,7 +14,7 @@
 # {epic-verb-noun}/                         # kebab-case folder
 #   {sub-epic-verb-noun}/
 #     {story-kebab-slug}/
-#       story-scenarios.md                  # scenarios fidelity
+#       {story_snake}_story.test.md         # scenarios fidelity
 #       {story_snake}_story.test.py         # acceptance_tests — not _spec.py
 #
 # # Machinery — copy once per tests/ tree if missing (do not inline in skills):

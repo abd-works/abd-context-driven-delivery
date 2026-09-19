@@ -2,7 +2,7 @@
  * ++Account credentials++ examples — shared across Create Customer stories.
  *
  * One named export per scenario branch; story specs import these.
- * Source: create-unconfirmed-user/story-scenarios.md Examples tables.
+ * Source: create-unconfirmed-user/create_unconfirmed_user_story.test.md Examples tables.
  */
 
 export const validAccountCredentials = {

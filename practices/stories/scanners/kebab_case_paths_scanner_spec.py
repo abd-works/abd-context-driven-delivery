@@ -42,6 +42,10 @@ with description("kebab-case-paths") as self:
         ws = _workspace("manage-orders/place-order/submit-order/submit_order_story.test.py")
         expect(list(self.scanner.scan_workspace(ws))).to(equal([]))
 
+    with it("should accept the same stem with a markdown extension"):
+        ws = _workspace("manage-orders/place-order/submit-order/submit_order_story.test.md")
+        expect(list(self.scanner.scan_workspace(ws))).to(equal([]))
+
     with it("should accept a Python epic helper at epic root"):
         ws = _workspace("manage-orders/manage_orders_helper.py")
         expect(list(self.scanner.scan_workspace(ws))).to(equal([]))

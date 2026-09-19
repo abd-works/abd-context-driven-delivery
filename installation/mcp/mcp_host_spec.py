@@ -331,3 +331,8 @@ with description("an MCP host") as self:
 
         with it("should enroll a published operation from the manifest"):
             expect(self.host.diagnose()["tools"]).to(contain("sample-mcp.generate"))
+
+        with it("should read toolset refs from a checkout-scoped server key"):
+            expect(McpHost.refs_from_manifest(self.tree / "mcp.json")).to(
+                contain("harness.guidance.fixtures.agentic_ops.agentic_ops:SampleMcpOps")
+            )

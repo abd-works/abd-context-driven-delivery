@@ -112,6 +112,10 @@ with description("Stories"):
                 expect(name in host.agent_tools).to(equal(False))
 
     with context("whose instructions action is expanded"):
+        with it("should name `{story_snake}_story.test.md` at scenarios"):
+            prose = _expanded(Stories(fidelity="scenarios"), "instructions")
+            expect("_story.test.md" in prose).to(be_true)
+
         with it("should name `{story_snake}_story.test.py` at acceptance_tests"):
             prose = _expanded(Stories(fidelity="acceptance_tests"), "instructions")
             expect("_story.test.py" in prose).to(be_true)
@@ -183,7 +187,7 @@ with description("Stories"):
             expect(any(p.startswith("tests/") for p in paths)).to(be_true)
             expect("tests/story-test.ts" in paths).to(be_true)
 
-    with context("whose transform tool colocates typescript beside story-scenarios.md"):
+    with context("whose transform tool colocates typescript beside `_story.test.md`"):
         with before.each:
             import tempfile
 
@@ -191,11 +195,11 @@ with description("Stories"):
             root = Path(self.tempdir.name)
             deploy = root / "stories" / "create-customer"
             deploy.mkdir(parents=True)
-            (deploy / "story-scenarios.md").write_text(_SAMPLE_MARKDOWN, encoding="utf-8")
+            (deploy / "create_customer_story.test.md").write_text(_SAMPLE_MARKDOWN, encoding="utf-8")
             self.stories = Stories(
                 fidelity="scenarios",
                 workspace=str(root),
-                path=str(deploy / "story-scenarios.md"),
+                path=str(deploy / "create_customer_story.test.md"),
             )
             self.result = self.stories.render(
                 format="typescript",
@@ -206,7 +210,7 @@ with description("Stories"):
         with after.each:
             self.tempdir.cleanup()
 
-        with it("should emit files under the story-scenarios folder instead of tests/"):
+        with it("should emit files under the story folder instead of tests/"):
             paths = self.result["content"]
             expect(any(p.startswith("stories/create-customer/") for p in paths)).to(
                 be_true

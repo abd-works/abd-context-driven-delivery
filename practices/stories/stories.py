@@ -18,6 +18,10 @@ if TYPE_CHECKING:
     from tools.diagnose.diagnose import Diagnose
 
 _CODE_FORMATS = frozenset({"python", "typescript", "java", "javascript"})
+
+
+def _is_story_scenarios_file(name: str) -> bool:
+    return name.endswith("_story.test.md") or name == "story-scenarios.md"
 _CHANNELS: dict[str, tuple[str, str]] = {
     "markdown": ("stories.document.markdown.nodes", "MarkdownStoryMap"),
     "json": ("stories.document.json.nodes", "JsonStoryMap"),
@@ -150,10 +154,10 @@ class Stories(PracticeGuidance):
             raw = (workspace / raw).resolve()
 
         deploy: Path | None = None
-        if raw.is_file() and raw.name in ("story-scenarios.md", "story-map.md"):
+        if raw.is_file() and (raw.name == "story-map.md" or _is_story_scenarios_file(raw.name)):
             deploy = raw.parent
         elif raw.is_dir():
-            if (raw / "story-scenarios.md").is_file():
+            if any(raw.glob("*_story.test.md")) or (raw / "story-scenarios.md").is_file():
                 deploy = raw
             elif (raw / "story-map.md").is_file():
                 deploy = raw
@@ -209,7 +213,7 @@ class Stories(PracticeGuidance):
         canonical = source_cls().parse(parsed_input)
         if source_format == "markdown" and format in _CODE_FORMATS:
             from practices.stories.document.markdown.nodes import MarkdownScenario
-            scenarios = MarkdownScenario.parse_text(content, self.path or "story-scenarios.md")
+            scenarios = MarkdownScenario.parse_text(content, self.path or "_story.test.md")
             canonical.attach_scenarios(scenarios)
         return {"format": format, "content": target.render(canonical)}
 

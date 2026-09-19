@@ -141,7 +141,7 @@ class McpInstallation(Installation):
         host = repo / "installation" / "mcp" / "scripts" / "start_host.py"
         payload = {
             "mcpServers": {
-                "cdd": {
+                McpHost.server_key(repo): {
                     "type": "stdio",
                     "command": sys.executable,
                     "args": [
@@ -163,7 +163,11 @@ class McpInstallation(Installation):
         }
         dest = self.path / "mcp.json"
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        text = json.dumps(payload, indent=2) + "\n"
+        if dest.is_file() and dest.read_text(encoding="utf-8") == text:
+            self.track_write(dest)
+            return
+        dest.write_text(text, encoding="utf-8")
         self.track_write(dest)
 
     def bind(self, server: Any) -> None:
@@ -448,15 +452,19 @@ class McpHost:
         async def handle_call_tool(
             name: str, arguments: dict[str, object] | None
         ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-            if name == BUILTIN_PING_TOOL:
-                return self._content_blocks("pong")
-            if name in self._runtime._prompts:
+            try:
+                if name == BUILTIN_PING_TOOL:
+                    return self._content_blocks("pong")
+                if name in self._runtime._prompts:
+                    return self._content_blocks(
+                        self._runtime.invoke_prompt(name, dict(arguments or {}))
+                    )
                 return self._content_blocks(
-                    self._runtime.invoke_prompt(name, dict(arguments or {}))
+                    self._runtime.invoke_tool(name, dict(arguments or {}))
                 )
-            return self._content_blocks(
-                self._runtime.invoke_tool(name, dict(arguments or {}))
-            )
+            except Exception as error:
+                logger.exception("MCP tool %s failed", name)
+                return self._content_blocks(f"{type(error).__name__}: {error}")
 
         @self._server.list_prompts()
         async def handle_list_prompts() -> list[types.Prompt]:
@@ -534,11 +542,18 @@ class McpHost:
                 read_stream,
                 write_stream,
                 init_options,
-                raise_exceptions=True,
+                raise_exceptions=False,
             )
 
     def run(self) -> None:
-        anyio.run(self.run_stdio)
+        while True:
+            try:
+                anyio.run(self.run_stdio)
+                return
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception:
+                logger.exception("MCP stdio host crashed; restarting")
 
     def ping(self) -> str:
         return "pong"
@@ -586,13 +601,40 @@ class McpHost:
             return ""
         return str(args[index + 1])
 
+    @staticmethod
+    def server_key(repo: Path | str) -> str:
+        slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", Path(repo).name).strip(".-") or "repo"
+        return f"cdd-{slug}"
+
+    @staticmethod
+    def server_entry_from_manifest(servers: Mapping[str, Any] | Path | str) -> dict[str, Any]:
+        if isinstance(servers, (Path, str)):
+            path = Path(servers)
+            if not path.is_file():
+                return {}
+            raw = json.loads(path.read_text(encoding="utf-8")).get("mcpServers") or {}
+        else:
+            raw = servers
+        if not isinstance(raw, Mapping):
+            return {}
+        preferred = raw.get("cdd")
+        if isinstance(preferred, dict) and preferred:
+            return preferred
+        for name, spec in raw.items():
+            if isinstance(spec, dict) and str(name).startswith("cdd"):
+                return spec
+        for spec in raw.values():
+            if not isinstance(spec, dict):
+                continue
+            blob = " ".join(str(item) for item in spec.get("args") or [])
+            if "start_host.py" in blob or "installation.mcp" in blob:
+                return spec
+        first = next(iter(raw.values()), {})
+        return first if isinstance(first, dict) else {}
+
     @classmethod
     def refs_from_manifest(cls, manifest: Path | str) -> tuple[str, ...]:
-        path = Path(manifest)
-        if not path.is_file():
-            return ()
-        servers = json.loads(path.read_text(encoding="utf-8")).get("mcpServers") or {}
-        args = [str(item) for item in (servers.get("cdd") or {}).get("args") or []]
+        args = [str(item) for item in cls.server_entry_from_manifest(manifest).get("args") or []]
         raw = cls._arg_after(args, "--toolsets")
         return tuple(ref.strip() for ref in raw.split(",") if ref.strip())
 

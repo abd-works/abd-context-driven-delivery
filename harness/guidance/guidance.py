@@ -234,6 +234,14 @@ class PracticeGuidance(Guidance):
             return None
         return workspace.current_work_session
 
+    @property
+    @agent_instructions
+    def guidance(self) -> str:
+        text = Markdown.from_label(self, "guidance").extract()
+        companion = self._current_companion()
+        extra = companion.instructions if companion is not None else ""
+        return "\n\n".join(part for part in (text, extra) if part)
+
     @markdown
     def examples(self) -> str:
         """Examples folder content — not part of instructions."""

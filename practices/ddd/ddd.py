@@ -12,7 +12,6 @@ from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
-    from practices.clean_engineering.clean_engineering import CleanEngineering
     from tools.diagnose.diagnose import Diagnose
 
 _SUPPORTED_FORMATS = frozenset(
@@ -24,7 +23,7 @@ _SUPPORTED_FORMATS = frozenset(
 class Ddd(PracticeGuidance):
     """# Instructions
 
-    Depends on CleanEngineering (lazy import in ce() and transform to avoid circular imports at
+    Depends on CleanEngineering (lazy import in diagnostic to avoid circular imports at
     module load time).
     """
 
@@ -53,34 +52,6 @@ class Ddd(PracticeGuidance):
             fidelity=fidelity,
             stage=stage,
         )
-
-    def ce(self) -> "CleanEngineering":
-        """CleanEngineering companion at the matching fidelity — invoke as a tool, not inlined."""
-        companion = self._current_companion()
-        if companion is not None and companion.practice_guidance is not None:
-            instance = companion.practice_guidance
-            instance.fidelities.current = companion
-            if companion.default_format:
-                instance.format = companion.default_format
-            if self.format:
-                instance.format = self.format
-            instance.mode = "tool"
-            return instance
-        from practices.clean_engineering.clean_engineering import CleanEngineering
-
-        instance = CleanEngineering(
-            fidelity="modules",
-            format=self.format,
-            path=self.path,
-            session=(
-                self.workspace.current_work_session.name
-                if self.workspace.current_work_session
-                else ""
-            ),
-            workspace=self.workspace.path,
-        )
-        instance.mode = "tool"
-        return instance
 
     def diagnostic(self) -> "Diagnose":
         """Diagnose companion — common six-phase loop as a tool (not inlined)."""
@@ -127,24 +98,3 @@ class Ddd(PracticeGuidance):
     def instructions(self) -> str:
         """Build the solution around how the business actually works, in the words the business already uses. When the software mirrors the business, it holds the business's logic and knowledge where that understanding actually lives; when it mirrors a database, a framework, or a screen layout, every business conversation has to be re-translated and what the business knows ends up scattered wherever the technology happened to put it."""
         return super().instructions
-
-    @property
-    @agent_instructions
-    def guidance(self) -> str:
-        """Expand this practice's Guidance section, then the mapped Clean Engineering fidelity."""
-        text = super().guidance
-        if self._current_companion() is None:
-            return text
-        extra = self._current_companion().instructions
-        self.ce().guidance
-        return "\n\n".join(
-            part
-            for part in (
-                text,
-                extra,
-                "When this DDD work is done, call guidance on the Clean Engineering companion "
-                "and pass that companion to this action as a separate tools run. "
-                "The action already knows what to do for every tool. Do not inline.",
-            )
-            if part
-        )

@@ -47,55 +47,38 @@ with description("a Bdd toolset"):
 
     with context("that provides a CleanEngineering companion"):
         with context("with behavior fidelity"):
-            with it("should return a CleanEngineering instance at model fidelity"):
-                ce = Bdd(fidelity="behavior").ce()
-                expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelities.current.fidelity).to(equal("model"))
+            with it("should treat the model fidelity as the companion"):
+                companion = Bdd(fidelity="behavior").fidelities.current.clean_engineering
+                expect(companion.fidelity).to(equal("model"))
 
         with context("with development fidelity"):
-            with it("should return a CleanEngineering instance at code fidelity"):
-                ce = Bdd(fidelity="development").ce()
-                expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelities.current.fidelity).to(equal("code"))
+            with it("should treat the code fidelity as the companion"):
+                companion = Bdd(fidelity="development").fidelities.current.clean_engineering
+                expect(companion.fidelity).to(equal("code"))
 
         with context("with a path set"):
             with it("should carry the same path to the CE companion"):
-                ce = Bdd(fidelity="behavior", path="practices/bdd").ce()
-                expect(ce.path).to(equal("practices/bdd"))
+                companion = Bdd(fidelity="behavior", path="practices/bdd").fidelities.current.clean_engineering
+                expect(companion.practice_guidance.path).to(equal("practices/bdd"))
 
         with context("with a session set"):
             with it("should carry the same session name to the CE companion"):
-                ce = Bdd(fidelity="development", session="satisfy").ce()
-                expect(ce.workspace.current_work_session.name if ce.workspace.current_work_session else None).to(equal("satisfy"))
-
-        with it("should return a companion with mode set to tool"):
-            ce = Bdd().ce()
-            expect(ce.mode).to(equal("tool"))
+                companion = Bdd(fidelity="development", session="satisfy").fidelities.current.clean_engineering
+                session = companion.practice_guidance.workspace.current_work_session
+                expect(session.name if session else None).to(equal("satisfy"))
 
     with context("that provides a Diagnose companion"):
         with it("should return a Diagnose instance"):
             expect(_bdd().diagnostic()).to(be_a(Diagnose))
 
     with context("whose guidance action is expanded"):
-        with it("should include BDD test generation guidance"):
+        with it("should include the Clean Engineering companion's instructions"):
             prose = _expanded(_bdd(), "guidance")
-            expect("SIGNATURE" in prose).to(be_true)
-
-        with it("should tell the agent to call companion guidance and pass it to this action"):
-            prose = _expanded(_bdd(), "guidance")
-            expect("call guidance" in prose).to(be_true)
-            expect("pass that companion to this action" in prose).to(be_true)
-            expect("already knows what to do" in prose).to(be_true)
-            expect("ce().generate()" in prose).to(equal(False))
+            expect(prose).to(contain("Write working production code"))
 
         with it("should instruct the agent to scan production source for coverage gaps"):
             prose = _expanded(_bdd(), "guidance")
             expect("scan" in prose.lower()).to(be_true)
-
-        with it("should tell the caller to pass the CE companion to this action as a separate run"):
-            prose = _expanded(_bdd(), "guidance")
-            expect("separate tools run" in prose).to(be_true)
-            expect("Clean Engineering" in prose).to(be_true)
 
         with it("should NOT inline CleanEngineering generate instructions"):
             prose = _expanded(_bdd(), "guidance")
