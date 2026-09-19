@@ -35599,3 +35599,100 @@ sage": "Action \u2192 generate"}
 2026-09-19T21:47:58Z HANDLER Validate.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
 2026-09-19T21:47:58Z ENABLED ['Document.inject_rules', 'Generate.inject_rules', 'GrillContext.inject_rules', 'Improvement.inject_rules', 'Iterate.inject_rules', 'Partition.inject_rules', 'Render.inject_rules', 'Satisfy.inject_rules', 'Scan.inject_rules', 'Sketch.inject_rules', 'Validate.inject_rules']
 2026-09-19T21:47:58Z MERGED {"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.", "additional_context": "## Shared rules\n\n\n\nUse these rules whenever you name a concept, draw a dependency, or write a public seam \u2014 in prose, a diagram, or source.\n\n- **`honor-every-rule-in-the-artifact`** \u2014 Honor every rule in the artifact you are writing. One-way dependencies, named seams, and localized behavior apply to language and markdown as well as to code. Do not create a dependency in prose that violates isolation. Treat prose with the same respect you treat the model and the code.\n- **`vocabulary-traces-to-source`** \u2014 Take every term from the source. The English term and the code name are the same word: *shopping cart* is `ShoppingCart`. When the code says a different word than the domain, every reader keeps a translation in their head, and the two names drift until they mean different things.\n- **`do-not-invent-terms`** \u2014 Do not invent a second noun or a parallel vocabulary. A second noun for the same thing becomes a second class, and then the same rule has to be written and fixed in both. Keep `do-not-invent-parallel-object-models` on the model for wrappers and `*Model` / `*Entry` families.\n\n---"}
+2026-09-19T21:48:06Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:06Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:06Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:07Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T21:48:07Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T21:48:07Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:07Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:07Z MERGED {"permission": "allow"}
+2026-09-19T21:48:07Z MERGED {"permission": "allow"}
+2026-09-19T21:48:07Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-09-19T21:48:07Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:07Z MERGED {"permission": "allow"}
+2026-09-19T21:48:08Z EVENT 'beforeReadFile' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:08Z ENABLED ['(none)']
+2026-09-19T21:48:08Z MERGED {"permission": "allow"}
+2026-09-19T21:48:08Z EVENT 'beforeReadFile' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:08Z EVENT 'beforeReadFile' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['attachments', 'content', 'conversation_id', 'cursor_version', 'file_path', 'generation_id', 'hook_event_name', 'model', 'session_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:08Z ENABLED ['(none)']
+2026-09-19T21:48:08Z MERGED {"permission": "allow"}
+2026-09-19T21:48:08Z ENABLED ['(none)']
+2026-09-19T21:48:08Z MERGED {"permission": "allow"}
+2026-09-19T21:48:09Z EVENT 'postToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'duration', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_output', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:09Z HANDLER Document.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Generate.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER GrillContext.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Improvement.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Iterate.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Partition.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Render.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Satisfy.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Scan.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Sketch.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z HANDLER Validate.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:09Z ENABLED ['Document.inject_rules', 'Generate.inject_rules', 'GrillContext.inject_rules', 'Improvement.inject_rules', 'Iterate.inject_rules', 'Partition.inject_rules', 'Render.inject_rules', 'Satisfy.inject_rules', 'Scan.inject_rules', 'Sketch.inject_rules', 'Validate.inject_rules']
+2026-09-19T21:48:09Z MERGED {"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:17Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:17Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:17Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:18Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T21:48:18Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:18Z MERGED {"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T21:48:18Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T21:48:18Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:18Z MERGED {"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T21:48:18Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T21:48:18Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:18Z MERGED {"permission": "allow", "user_message": "Practice \u2192 clean-engineering"}
+2026-09-19T21:48:23Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:23Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:23Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:24Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:24Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:24Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:24Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:24Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:24Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:24Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:24Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:24Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:25Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:25Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:25Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:27Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:27Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:27Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:27Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:27Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:27Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:27Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:27Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:27Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:28Z EVENT 'postToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'duration', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_output', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:28Z HANDLER Document.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Generate.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER GrillContext.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Improvement.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Iterate.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Partition.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Render.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Satisfy.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Scan.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Sketch.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z HANDLER Validate.inject_rules result={"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:28Z ENABLED ['Document.inject_rules', 'Generate.inject_rules', 'GrillContext.inject_rules', 'Improvement.inject_rules', 'Iterate.inject_rules', 'Partition.inject_rules', 'Render.inject_rules', 'Satisfy.inject_rules', 'Scan.inject_rules', 'Sketch.inject_rules', 'Validate.inject_rules']
+2026-09-19T21:48:28Z MERGED {"permission": "allow", "agent_message": "Inject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns.\nInject listed guidance hosts' rules markdown after this action returns."}
+2026-09-19T21:48:32Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:32Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:32Z EVENT 'preToolUse' conversation_id='91ff8fd6-ecd2-478d-9e8e-84807cfc8ec7' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-19T21:48:33Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:33Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:33Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:33Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:33Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:33Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:33Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
+2026-09-19T21:48:33Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-09-19T21:48:33Z MERGED {"permission": "allow", "user_message": "Action \u2192 render"}
