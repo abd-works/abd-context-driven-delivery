@@ -15,14 +15,6 @@ from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
-_FIDELITY_FORMAT_DEFAULTS = {
-    "modules": "markdown",
-    "model": "python",
-    "specification": "python",
-    "code": "python",
-}
-
-# Each entry: channel class with .parse(text) -> CleanEngineeringModel and .render(model) -> str
 _CHANNELS: dict[str, type] = {
     "markdown": MarkdownCleanEngineeringModel,
     "json": JsonCleanEngineeringModel,
@@ -43,7 +35,7 @@ class CleanEngineering(PracticeGuidance):
     domain_slug = "clean_engineering"
     default_workspace_folder: str = "src"
     context_index_key: str = "clean_engineering"
-    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    _formats = _CHANNELS
     supported_formats = _SUPPORTED_FORMATS
 
     def __init__(

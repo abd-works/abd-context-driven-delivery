@@ -14,8 +14,17 @@ from harness.agent_tools.agent_tools import (
     tools,
 )
 from installation.harness_files.harness_files import rules, skill
+from installation.hooks.prompt_echo.prompt_echo import echo
 from installation.mcp.mcp_server import mcp
-from harness.markdown import Markdown, class_file_directory, fidelity_blocks, fidelity_stage, markdown
+from harness.markdown import (
+    Markdown,
+    class_file_directory,
+    fidelity_blocks,
+    fidelity_clean_engineering,
+    fidelity_format,
+    fidelity_stage,
+    markdown,
+)
 
 
 class Guidance:
@@ -78,6 +87,7 @@ class Guidance:
         return (self.overview or "").strip() or (self.guidance or "").strip()
 
     @property
+    @echo
     @skill
     @mcp
     @agent_instructions
@@ -163,7 +173,6 @@ class PracticeGuidance(Guidance):
         fidelity: str | None = None,
         stage: str | None = None,
     ) -> None:
-        defaults = getattr(type(self), "_fidelity_format_defaults", None) or {}
         supported = getattr(type(self), "supported_formats", None)
         super().__init__(format=format, path=path, session=session or "", workspace=workspace)
         self.fidelities = GuidanceCollection()
@@ -177,12 +186,13 @@ class PracticeGuidance(Guidance):
             child = self.fidelities.stage[stage]
             fidelity = getattr(child, "name", None) or fidelity
         if fidelity is not None:
-            if defaults and fidelity not in defaults:
-                raise ValueError(
-                    f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(defaults)}"
-                )
-            if format is None and fidelity in defaults:
-                self.format = defaults[fidelity]
+            names = sorted(self.fidelities.entries)
+            if names and fidelity not in self.fidelities.entries:
+                raise ValueError(f"Unsupported fidelity {fidelity!r}. Choose from: {names}")
+            if format is None and fidelity in self.fidelities.entries:
+                child_format = self.fidelities[fidelity].default_format
+                if child_format:
+                    self.format = child_format
             if fidelity in self.fidelities.entries:
                 self.fidelities.current = self.fidelities[fidelity]
         if supported and self.format and self.format not in supported:
@@ -228,6 +238,7 @@ class PracticeGuidance(Guidance):
         """Examples folder content — not part of instructions."""
 
     @property
+    @echo
     @mcp
     @skill
     @agent_instructions
@@ -259,16 +270,102 @@ class PracticeGuidance(Guidance):
             return
         text = md_path.read_text(encoding="utf-8")
         entries: dict[str, Guidance] = {}
-        defaults = getattr(type(self), "_fidelity_format_defaults", None) or {}
+        companions: dict[str, str] = {}
         for name, body in fidelity_blocks(text):
-            child_format = defaults.get(name) or self.format or self.default_format or ""
+            child_format = (
+                fidelity_format(body) or self.format or self.default_format or ""
+            )
             entries[name] = FidelityGuidance(
                 name=name,
                 stage=fidelity_stage(body),
                 practice_guidance=self,
                 default_format=child_format,
             )
+            ce_name = fidelity_clean_engineering(body)
+            if ce_name:
+                companions[name] = ce_name
         self.attach_fidelities(entries)
+        self._bind_clean_engineering_companions(companions)
+
+    def _bind_clean_engineering_companions(self, companions: dict[str, str]) -> None:
+        if not companions or self.domain_slug == "clean_engineering":
+            return
+        from practices.clean_engineering.clean_engineering import CleanEngineering
+
+        workspace = self.workspace
+        ce = CleanEngineering(
+            path=self.path,
+            session=self.session or "",
+            workspace=workspace if workspace is not None else None,
+        )
+        for name, ce_fidelity in companions.items():
+            child = self.fidelities.entries.get(name)
+            companion = ce.fidelities.entries.get(ce_fidelity)
+            if isinstance(child, FidelityGuidance):
+                child.clean_engineering = companion if isinstance(companion, FidelityGuidance) else None
+
+    def _current_companion(self) -> FidelityGuidance | None:
+        current = self.fidelities.current
+        if current is None:
+            return None
+        companion = getattr(current, "clean_engineering", None)
+        return companion if isinstance(companion, FidelityGuidance) else None
+
+    @property
+    def formats(self) -> dict[str, Any]:
+        return dict(getattr(type(self), "_formats", {}) or {})
+
+    def _format_adapter(self, format_name: str) -> Any:
+        adapters = self.formats
+        if format_name not in adapters:
+            raise ValueError(
+                f"Unsupported format {format_name!r}. Choose from: {sorted(adapters)}"
+            )
+        entry = adapters[format_name]
+        if isinstance(entry, tuple):
+            module_path, attr = entry
+            import importlib
+
+            return getattr(importlib.import_module(module_path), attr)
+        return entry
+
+    @agent_tool
+    def render(
+        self,
+        format: str,
+        content: str,
+        source: str | None = None,
+        previous: str = "",
+        keep_positioning: bool = False,
+    ) -> dict:
+        """Parse source format into the practice model, then render the target format."""
+        source_format = source or self.format
+        if not self.formats:
+            companion = self._current_companion()
+            owner = companion.practice_guidance if companion is not None else None
+            if owner is None or owner is self:
+                return {"format": source_format or format, "content": content}
+            return owner.render(
+                format,
+                content,
+                source=source_format,
+                previous=previous,
+                keep_positioning=keep_positioning,
+            )
+        if not source_format:
+            raise ValueError("source format is not set")
+        source_cls = self._format_adapter(source_format)
+        target_cls = self._format_adapter(format)
+        parsed = source_cls.parse(content)
+        if format == "drawio":
+            rendered = target_cls.render(
+                parsed,
+                previous=previous or None,
+                keep_positioning=keep_positioning,
+            )
+        else:
+            rendered = target_cls.render(parsed)
+        return {"format": format, "content": rendered}
 
     def scoped_markdown(self) -> str:
         """Overview, practice sections, and the active fidelity (or every fidelity)."""
@@ -295,12 +392,14 @@ class FidelityGuidance(Guidance):
         stage: str = "",
         default_format: str = "",
         practice_guidance: PracticeGuidance | None = None,
+        clean_engineering: FidelityGuidance | None = None,
     ) -> None:
         super().__init__(format=default_format)
         self.name = name
         self.stage = stage
         self.default_format = default_format
         self.practice_guidance = practice_guidance
+        self.clean_engineering = clean_engineering
         self.fidelity = name
         if practice_guidance is not None and self.domain_slug is None:
             self.domain_slug = practice_guidance.domain_slug
@@ -336,6 +435,7 @@ class FidelityGuidance(Guidance):
         """Fidelity rules section."""
 
     @property
+    @echo
     @mcp
     @skill
     @agent_instructions

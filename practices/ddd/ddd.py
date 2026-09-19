@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
@@ -15,29 +15,9 @@ if TYPE_CHECKING:
     from practices.clean_engineering.clean_engineering import CleanEngineering
     from tools.diagnose.diagnose import Diagnose
 
-_FIDELITY_FORMAT_DEFAULTS = {
-    "bounded_context": "markdown",
-    "building_blocks": "markdown",
-    "tactics": "python",
-}
-
-# DDD fidelity -> clean_engineering fidelity (CE owns OO ladder; DDD overlays domain/strategic).
-_CE_FIDELITY = {
-    "bounded_context": "modules",
-    "building_blocks": "model",
-    "tactics": "code",
-}
-
 _SUPPORTED_FORMATS = frozenset(
     {"markdown", "json", "python", "typescript", "java", "javascript", "drawio"}
 )
-
-
-class TransformResult(TypedDict):
-    """Result of a sideways format conversion."""
-
-    format: str
-    content: str
 
 
 @agent_toolset
@@ -49,7 +29,6 @@ class Ddd(PracticeGuidance):
     """
 
     domain_slug = "ddd"
-    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
     # Generate / new work: src/. /document defaults to domain/ unless path or folder is set.
@@ -77,10 +56,20 @@ class Ddd(PracticeGuidance):
 
     def ce(self) -> "CleanEngineering":
         """CleanEngineering companion at the matching fidelity — invoke as a tool, not inlined."""
+        companion = self._current_companion()
+        if companion is not None and companion.practice_guidance is not None:
+            instance = companion.practice_guidance
+            instance.fidelities.current = companion
+            if companion.default_format:
+                instance.format = companion.default_format
+            if self.format:
+                instance.format = self.format
+            instance.mode = "tool"
+            return instance
         from practices.clean_engineering.clean_engineering import CleanEngineering
 
         instance = CleanEngineering(
-            fidelity=_CE_FIDELITY[self.fidelities.current.fidelity],
+            fidelity="modules",
             format=self.format,
             path=self.path,
             session=(
@@ -144,21 +133,18 @@ class Ddd(PracticeGuidance):
     def guidance(self) -> str:
         """Expand this practice's Guidance section, then the mapped Clean Engineering fidelity."""
         text = super().guidance
-        if self.fidelities.current.fidelity not in _CE_FIDELITY:
+        if self._current_companion() is None:
             return text
+        extra = self._current_companion().instructions
         self.ce().guidance
-        return (
-            "When this DDD work is done, call guidance on the Clean Engineering companion "
-            "and pass that companion to this action as a separate tools run. "
-            "The action already knows what to do for every tool. Do not inline."
+        return "\n\n".join(
+            part
+            for part in (
+                text,
+                extra,
+                "When this DDD work is done, call guidance on the Clean Engineering companion "
+                "and pass that companion to this action as a separate tools run. "
+                "The action already knows what to do for every tool. Do not inline.",
+            )
+            if part
         )
-
-    @Mcp
-    @agent_tool
-    def render(self, format: str, content: str, source: str | None = None) -> TransformResult:
-        """Sideways format conversion at the same fidelity.
-        Delegates to clean_engineering.render — DDD adds no separate channel model."""
-        source_format = source or self.format
-        if not source_format:
-            raise ValueError("source format is not set")
-        return self.ce().render(format, content, source=source_format)

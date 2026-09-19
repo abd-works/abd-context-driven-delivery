@@ -11,13 +11,6 @@ from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
-_FIDELITY_FORMAT_DEFAULTS = {
-    "ia": "drawio",
-    "mockup": "html",
-    "front_end_code": "html",
-}
-
-# Peer channels - same CLI surface; transform moves sideways at one fidelity.
 _CHANNELS: dict[str, tuple[str, str]] = {
     "drawio": ("ux.diagram.drawio.nodes", "DrawioUxMap"),
     "html": ("ux.web.html.nodes", "HtmlUxMap"),
@@ -44,7 +37,7 @@ class Ux(PracticeGuidance):
     domain_slug = "ux"
     default_workspace_folder: str = "ux"
     context_index_key: str = "ux"
-    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    _formats = _CHANNELS
     supported_formats = _SUPPORTED_FORMATS
 
     def __init__(

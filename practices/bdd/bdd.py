@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
@@ -14,25 +14,7 @@ if TYPE_CHECKING:
     from practices.clean_engineering.clean_engineering import CleanEngineering
     from tools.diagnose.diagnose import Diagnose
 
-_FIDELITY_FORMAT_DEFAULTS = {
-    "behavior": "python",
-    "development": "python",
-}
 _SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
-
-# BDD fidelity → CleanEngineering fidelity at the same design depth.
-_CE_FIDELITY: dict[str, str] = {
-    "behavior": "model",
-    "development": "code",
-}
-
-
-class TransformResult(TypedDict):
-    """Result of a sideways format conversion."""
-
-    source_format: str
-    target_format: str
-    content: str
 
 
 @agent_toolset
@@ -46,7 +28,6 @@ class Bdd(PracticeGuidance):
     domain_slug = "bdd"
     default_workspace_folder: str = "src"
     context_index_key: str = "bdd"
-    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
     def __init__(
@@ -71,12 +52,18 @@ class Bdd(PracticeGuidance):
 
     def ce(self) -> "CleanEngineering":
         """CleanEngineering companion at the matching fidelity (tool mode — invoke separately when ready)."""
-        # lazy import: avoids circular import at module load
+        companion = self._current_companion()
+        if companion is not None and companion.practice_guidance is not None:
+            instance = companion.practice_guidance
+            instance.fidelities.current = companion
+            if companion.default_format:
+                instance.format = companion.default_format
+            instance.mode = "tool"
+            return instance
         from practices.clean_engineering.clean_engineering import CleanEngineering
 
-        ce_fidelity = _CE_FIDELITY[self.fidelities.current.fidelity]
         instance = CleanEngineering(
-            fidelity=ce_fidelity,
+            fidelity="model",
             path=self.path,
             session=(
                 self.workspace.current_work_session.name
@@ -95,8 +82,6 @@ class Bdd(PracticeGuidance):
 
         return Diagnose()
 
-    # -- Lifecycle actions: BDD first, then CE classes -----------------------
-
     @property
     @Mcp
     @Skill
@@ -109,23 +94,18 @@ class Bdd(PracticeGuidance):
     @agent_instructions
     def guidance(self) -> str:
         """Expand this practice's Guidance section, then Clean Engineering companion guidance."""
-        super().guidance
+        text = super().guidance
+        companion = self._current_companion()
+        extra = companion.instructions if companion is not None else ""
         self.ce().guidance
-        return (
-            "When this BDD work is done, call guidance on the Clean Engineering companion "
-            "and pass that companion to this action as a separate tools run. "
-            "The action already knows what to do for every tool. Do not inline."
+        return "\n\n".join(
+            part
+            for part in (
+                text,
+                extra,
+                "When this BDD work is done, call guidance on the Clean Engineering companion "
+                "and pass that companion to this action as a separate tools run. "
+                "The action already knows what to do for every tool. Do not inline.",
+            )
+            if part
         )
-
-    # -- Tool: sideways format conversion ------------------------------------
-
-    @agent_tool
-    def render(self, format: str, content: str, source: str | None = None) -> TransformResult:
-        """Sideways format conversion at the same fidelity.
-        Delegates to clean_engineering.render until BDD has its own channel model."""
-        from practices.clean_engineering.clean_engineering import CleanEngineering
-
-        source_format = source or self.format
-        if not source_format:
-            raise ValueError("source format is not set")
-        return CleanEngineering().render(format, content, source=source_format)

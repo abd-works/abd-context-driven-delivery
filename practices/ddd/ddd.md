@@ -67,6 +67,7 @@ Use these rules when defining domain logic in code, a model, or language.
 
 **Default format:** markdown
 **Stage:** discovery
+**Clean Engineering:** modules
 
 **Goal:** Draw where language changes — context boundaries, the aggregates that protect invariants inside each context, and the dependency arcs between contexts — using the experts' words. Names and boundaries are cheap to change here; they are expensive once building blocks, stories, and code hang off them.
 
@@ -125,6 +126,7 @@ Use these rules when drawing where language changes — context boxes, aggregate
 
 **Default format:** markdown
 **Stage:** specification
+**Clean Engineering:** model
 
 **Goal:** Classify each concept on the map — entity, value, repository, event, service — and shape the classes that carry them.
 
@@ -185,6 +187,7 @@ Use these rules when tagging types already on the map — entity vs value, repos
 
 **Default format:** Python
 **Stage:** implementation
+**Clean Engineering:** code
 
 **Goal:** Decide one implementation pattern for each building block the model uses, then implement the domain against it — preserving every name and boundary from upstream.
 

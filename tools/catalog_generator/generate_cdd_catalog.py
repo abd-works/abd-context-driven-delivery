@@ -31,6 +31,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--out", default="catalog", help="output root (default: catalog)")
     parser.add_argument("--repo-url", default=None, help="default: resolved from git remote get-url origin")
     parser.add_argument("--ref", default=None, help="default: current HEAD")
+    parser.add_argument(
+        "--brand",
+        default=None,
+        help="brand folder to overlay on commons/brand (default: bundled abd.works)",
+    )
     args = parser.parse_args(argv)
 
     default_repo_url, default_ref = resolve_repo_remote(_REPO_ROOT)
@@ -39,7 +44,7 @@ def main(argv: list[str] | None = None) -> None:
     out_root = _REPO_ROOT / args.out
 
     catalog = Catalog(repo_url=repo_url, ref=ref, out_root=str(out_root))
-    message = catalog.generate_catalog()
+    message = catalog.generate_catalog(brand=args.brand or "")
     print(message)
 
 

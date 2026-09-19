@@ -506,6 +506,29 @@ def fidelity_stage(body: str) -> str:
     return match.group(1) if match else ""
 
 
+def _fidelity_labeled_line(body: str, label: str) -> str:
+    match = re.search(
+        rf"(?im)^\*\*{re.escape(label)}:\*\*\s*(.+?)\s*$",
+        body,
+    )
+    return match.group(1).strip().strip("`") if match else ""
+
+
+def fidelity_format(body: str) -> str:
+    rest = _fidelity_labeled_line(body, "Default format")
+    if not rest:
+        return ""
+    token = rest.split()[0].strip("()`")
+    return canonical_format(token)
+
+
+def fidelity_clean_engineering(body: str) -> str:
+    rest = _fidelity_labeled_line(body, "Clean Engineering")
+    if not rest:
+        return ""
+    return rest.split()[0].strip("()`").replace("-", "_")
+
+
 def _read_fidelity_block(text: str, fidelity_name: str) -> str:
     wanted = fidelity_name.casefold()
     for name, body in fidelity_blocks(text):

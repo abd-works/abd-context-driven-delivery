@@ -25,7 +25,24 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from agent_tools import agent_toolset
+from installation.installer import Destination
 from installation.hooks.hooks import Hook
+
+
+class Echo(Destination):
+    """Mark an AgentOperation or AgentInstructions so PromptEcho toasts it."""
+
+    flag = "_echo"
+
+    def __new__(cls, fn=None):
+        inst = object.__new__(cls)
+        inst.name = None
+        if callable(fn):
+            return inst.annotate(fn)
+        return inst
+
+
+echo = Echo
 
 _FALLBACK_ACTIONS = (
     "create-rule",
@@ -142,6 +159,106 @@ def _yaml_action(data: dict) -> str | None:
     return None
 
 
+_SKIP_BEGIN_FALLBACK = frozenset({"open_workspace", "end", "begin"})
+_ECHO_TOOLSETS: list | None = None
+
+
+def _has_echo(fn) -> bool:
+    target = fn.fget if isinstance(fn, property) else fn
+    inner = getattr(target, "__func__", target)
+    return bool(getattr(inner, "_echo", False) or getattr(target, "_echo", False))
+
+
+def _echo_kind_label(tool) -> tuple[str, str]:
+    toolset = tool.toolset
+    if tool.name == "instructions":
+        if getattr(toolset, "practice_guidance", None) is not None:
+            return "fidelity", tool.slug
+        return "practice", getattr(toolset, "slug", tool.name)
+    if tool.name == "begin":
+        return "action", getattr(toolset, "slug", tool.name)
+    return "action", tool.name.replace("_", "-")
+
+
+def _inherited_echo(toolset, name: str) -> bool:
+    for cls in type(toolset).mro():
+        member = cls.__dict__.get(name)
+        if member is None:
+            continue
+        target = member.fget if isinstance(member, property) else member
+        if _has_echo(target):
+            return True
+    return False
+
+
+def _mcp_aliases(tool) -> set[str]:
+    toolset = tool.toolset
+    slug = str(getattr(toolset, "slug", "") or "")
+    names = {f"{slug}.{tool.name}", f"{slug}_{tool.name}", tool.name}
+    if getattr(toolset, "practice_guidance", None) is not None:
+        names.add(tool.slug)
+    if tool.name == "instructions" and slug:
+        names.add(slug)
+        names.add(f"{slug}.instructions")
+    return {item for item in names if item}
+
+
+def _name_matches(invoked: str, tool) -> bool:
+    compact_invoked = _compact(invoked)
+    return any(_compact(name) == compact_invoked for name in _mcp_aliases(tool))
+
+
+def _walk_toolsets(toolsets: list) -> list:
+    found: list = []
+    for toolset in toolsets:
+        found.append(toolset)
+        nested = getattr(toolset, "nested_toolsets", None) or []
+        for child in nested:
+            found.append(child)
+    return found
+
+
+def echo_toolsets(repo: Path | None = None) -> list:
+    global _ECHO_TOOLSETS
+    if repo is None and _ECHO_TOOLSETS is not None:
+        return _ECHO_TOOLSETS
+    from installation.installer import Installer
+    from harness.agent_tools.agent_tools import AgentToolSet
+
+    installer = Installer(repo=repo or _REPO_ROOT)
+    loaded = AgentToolSet.load_toolsets(installer.collect_toolsets(), skip_errors=True)
+    if repo is None:
+        _ECHO_TOOLSETS = loaded
+    return loaded
+
+
+def detect_echo(data: dict, toolsets: list | None = None) -> tuple[str, str] | None:
+    """Return (kind, label) from @echo on the invoked member or inherited begin."""
+    invoked = _mcp_tool_name(data)
+    if not invoked:
+        return None
+    hosts = _walk_toolsets(toolsets if toolsets is not None else echo_toolsets())
+    for toolset in hosts:
+        tools = getattr(toolset, "tools", None) or {}
+        if not isinstance(tools, dict):
+            continue
+        match = next((tool for tool in tools.values() if _name_matches(invoked, tool)), None)
+        if match is None:
+            continue
+        if _has_echo(match.callable):
+            return _echo_kind_label(match)
+        if match.name == "instructions" and _inherited_echo(toolset, "instructions"):
+            return _echo_kind_label(match)
+        begin = tools.get("begin")
+        if (
+            begin is not None
+            and match.name not in _SKIP_BEGIN_FALLBACK
+            and _has_echo(begin.callable)
+        ):
+            return "action", str(getattr(toolset, "slug", match.name)).replace("_", "-")
+    return None
+
+
 def detect(data: dict) -> tuple[str, str] | None:
     """Return (kind, label) for a CDD action, practice, fidelity, or guideline."""
     named = _yaml_action(data)
@@ -193,25 +310,27 @@ class PromptEcho:
 
     @Hook("preToolUse")
     def on_pre_tool_use(self, payload: dict) -> dict:
-        result = handle(payload)
-        echo = result.get("user_message")
-        if echo:
-            show_ide_toast(str(echo))
+        result = handle(payload, toolsets=echo_toolsets())
+        message = result.get("user_message")
+        if message:
+            show_ide_toast(str(message))
         return result
 
 
-def handle(data: dict) -> dict:
+def handle(data: dict, toolsets: list | None = None) -> dict:
     tool_name = data.get("tool_name", "")
     if not tool_name:
         return {"permission": "allow"}
-    detected = detect(data)
+    detected = detect_echo(data, toolsets=toolsets) if toolsets is not None else None
+    if not detected:
+        detected = detect(data)
     if not detected:
         return {"permission": "allow"}
     kind, label = detected
-    echo = f"{kind.title()} \u2192 {label}"
+    message = f"{kind.title()} \u2192 {label}"
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     sys.stderr.write(f"{ts} [prompt-echo] tool={tool_name} {kind}={label}\n")
     return {
         "permission": "allow",
-        "user_message": echo,
+        "user_message": message,
     }

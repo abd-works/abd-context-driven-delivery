@@ -763,3 +763,70 @@ with description("markdown skill paths for a fidelity nested under a practice"):
                 "skill", toolset, tools["instructions"].callable, "instructions"
             ).as_posix()
         ).to(equal("skills/practices/stories/stories-scenarios/SKILL.md"))
+
+
+def _write_skill_tool(name: str, overview: str):
+    def _fn(self):
+        return overview
+
+    _fn.__name__ = name
+    _fn._skill = True
+    host = type(
+        "Host",
+        (),
+        {
+            "install_folder": Path("sample-tool"),
+            "overview": overview,
+            name: overview,
+            "tools": {},
+        },
+    )()
+    return type(
+        "Tool",
+        (),
+        {
+            "kind": "instructions",
+            "name": name,
+            "deploy_name": name,
+            "callable": _fn,
+            "toolset": host,
+            "docstring": overview,
+        },
+    )()
+
+
+with description("markdown skill front matter") as self:
+    with before.each:
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with it("should put the skill folder name and overview in YAML front matter"):
+        from installation.harness_files.harness_files import MarkdownInstallation
+
+        writer = MarkdownInstallation("Cursor", self.tree, "skill")
+        writer.write(_write_skill_tool("instructions", "sample preamble"))
+        text = (self.tree / "skills" / "sample-tool" / "SKILL.md").read_text(encoding="utf-8")
+        front = text.split("---", 2)[1]
+        expect(text.startswith("---\n")).to(equal(True))
+        expect(front).to(contain("name: sample-tool"))
+        expect(front).to(contain("description:"))
+        expect(front).to(contain("sample preamble"))
+        expect(text).to(contain("sample preamble"))
+
+    with it("should keep the MCP invoke tail out of the skill description"):
+        from installation.harness_files.harness_files import MarkdownInstallation
+
+        overview = "sample preamble"
+        writer = MarkdownInstallation("Cursor", self.tree, "skill")
+        text = writer._skill_front_matter(
+            "sample-tool",
+            writer._skill_overview(
+                type("Host", (), {"overview": overview})(),
+                [overview, "Use MCP tool: `sample-tool.instructions()`"],
+            ),
+        )
+        expect(text).to(contain("sample preamble"))
+        expect(text).not_to(contain("Use MCP tool:"))

@@ -354,10 +354,11 @@ def scrape_fidelities(cls: type) -> list[FidelityGuidance]:
     A fidelity with no matching heading resolves to a "Guidance missing"
     stub instead of failing the whole scrape.
     """
+    from harness.markdown import fidelity_format
+
     fidelities: dict[str, str] | None = getattr(cls, "fidelities", None)
     if not fidelities:
         return []
-    format_defaults: dict[str, str] = getattr(cls, "_fidelity_format_defaults", {})
     module_dir = Path(importlib_module_file(cls.__module__)).resolve().parent
     guide_path = module_dir / f"{module_dir.name}.md"
     guide_text = guide_path.read_text(encoding="utf-8") if guide_path.is_file() else ""
@@ -366,10 +367,13 @@ def scrape_fidelities(cls: type) -> list[FidelityGuidance]:
     results: list[FidelityGuidance] = []
     for fidelity_key in fidelities.values():
         section = extract_heading_section(guide_text, fidelity_key) if guide_text else None
+        default_format = fidelity_format(section) if section else None
+        if not default_format:
+            default_format = getattr(cls, "_fidelity_format_defaults", {}).get(fidelity_key)
         results.append(
             FidelityGuidance(
                 key=fidelity_key,
-                default_format=format_defaults.get(fidelity_key),
+                default_format=default_format,
                 guidance=section if section is not None else _GUIDANCE_MISSING,
                 overview=overview,
             )
@@ -1296,6 +1300,7 @@ class Catalog:
         self.repo_url = repo_url or default_repo
         self.ref = ref or default_ref
         self.out_root = Path(out_root)
+        self.brand = None
         if catalog_context_tool is None or catalog_action is None or catalog_utility is None:
             wired = _wire_catalog_renderers(self.repo_url, self.ref)
             self.catalog_context_tool = catalog_context_tool or wired[0]
@@ -1353,15 +1358,18 @@ class Catalog:
         repo_url: str = "",
         ref: str = "",
         out_root: str = "",
+        brand: str = "",
     ) -> str:
         """Render the whole catalog into ``out_root`` with Foundry chrome.
-        No output is ever written outside ``out_root``."""
+        No output is ever written outside ``out_root``.
+        ``brand`` is a folder of wordmarks/assets; empty uses bundled abd.works."""
         if repo_url:
             self.repo_url = repo_url
         if ref:
             self.ref = ref
         if out_root:
             self.out_root = Path(out_root)
+        self.brand = Path(brand) if brand else None
         if repo_url or ref:
             (
                 self.catalog_context_tool,
@@ -1393,7 +1401,7 @@ class Catalog:
         )
 
         self.out_root.mkdir(parents=True, exist_ok=True)
-        copy_commons(self.out_root)
+        copy_commons(self.out_root, brand=self.brand)
 
         board_tools = self._board_tool_entries(context_tool_entries)
         action_dicts = [{"name": r.name, "href": f"actions/{r.name}.html"} for r in lifecycle_actions]

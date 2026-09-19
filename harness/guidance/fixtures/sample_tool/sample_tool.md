@@ -14,6 +14,7 @@ known prose for guidance in sample tool
 
 ### sketch
 
+**Default format:** markdown
 **Stage:** discovery
 
 #### Guidance
@@ -26,6 +27,7 @@ sketch guidance body only
 
 ### spec
 
+**Default format:** markdown
 **Stage:** specification
 
 #### Guidance

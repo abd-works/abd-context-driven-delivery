@@ -13,6 +13,7 @@ from pathlib import Path
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
 _COMMONS_SRC = _TEMPLATES / "commons"
+_DEFAULT_BRAND = _COMMONS_SRC / "brand"
 _FOUNDRY_CSS_SRC = _TEMPLATES / "foundry-catalog.css"
 
 # Stage columns — keys stay discovery/spec/engineer (code); labels are lowercase.
@@ -137,13 +138,27 @@ def family_perspective(toolset_name: str) -> str:
     return _FAM_LABEL.get(toolset_name, "other")
 
 
-def copy_commons(out_root: Path) -> Path:
+def apply_brand(commons_dest: Path, brand: Path | None = None) -> Path:
+    """Copy brand assets into ``commons_dest/brand``.
+
+    Default is the bundled abd.works folder under ``templates/commons/brand``.
+    Pass another directory to overlay a different brand (wordmarks, etc.).
+    """
+    source = Path(brand) if brand is not None else _DEFAULT_BRAND
+    dest = Path(commons_dest) / "brand"
+    dest.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, dest, dirs_exist_ok=True)
+    return dest
+
+
+def copy_commons(out_root: Path, brand: Path | None = None) -> Path:
     """Copy Foundry commons + catalog CSS into ``{out_root}/commons/``."""
     dest = out_root / "commons"
     dest.mkdir(parents=True, exist_ok=True)
     shutil.copytree(_COMMONS_SRC, dest, dirs_exist_ok=True)
     shutil.copy2(_FOUNDRY_CSS_SRC, dest / "foundry-catalog.css")
     shutil.copy2(_TEMPLATES / "cdd-board.css", dest / "cdd-board.css")
+    apply_brand(dest, brand)
     return dest
 
 

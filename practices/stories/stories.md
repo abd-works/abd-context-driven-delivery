@@ -75,7 +75,7 @@ Use these rules when naming epics, sub-epics, and stories on a story map — ver
 #### Overview
 
 
-**Default format:** project language
+**Default format:** python
 **Stage:** specification
 
 **Produce:** Scenario specifications in the requested format.
@@ -120,8 +120,9 @@ Use these rules when writing Given/When/Then steps for a story — observable ou
 #### Overview
 
 
-**Default format:** project language
+**Default format:** python
 **Stage:** implementation
+**Clean Engineering:** code
 
 **Produce:** Runnable acceptance specifications and the production code that makes them pass.
 

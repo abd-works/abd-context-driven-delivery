@@ -1,6 +1,6 @@
 fidelity: model / behavior
 scope: PracticeGuidance format, CE companion, render folders
-status: ce model agreed; bdd behavior sketched — awaiting review
+status: ce model agreed; bdd behavior signatures in practice_guidance_behavior_spec.py
 
 =========
 theme: default format

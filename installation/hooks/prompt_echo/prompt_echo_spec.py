@@ -15,10 +15,13 @@ from tempfile import TemporaryDirectory
 
 from installation.hooks.prompt_echo.prompt_echo import (
     detect,
+    detect_echo,
+    echo,
     handle,
     show_ide_toast,
     toast_notice,
 )
+from agent_tools import agent_instructions, agent_tool, agent_toolset
 
 
 def _echo(payload: dict) -> str:
@@ -148,3 +151,88 @@ with description("prompt echo detection"):
                 expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
                     contain("Action \u2192 scan")
                 )
+
+
+@agent_toolset
+class EchoKit:
+    """Kit used to pin @echo on begin and on a method."""
+
+    @echo
+    @agent_instructions
+    def begin(self, guidance=None, action: str = "") -> str:
+        return action
+
+    @agent_tool
+    def open_workspace(self, name: str = "") -> str:
+        return name
+
+    @agent_instructions
+    def enact(self) -> str:
+        return "enact"
+
+    @echo
+    @agent_instructions
+    def spotlight(self) -> str:
+        return "spotlight"
+
+
+@agent_toolset
+class EchoPractice:
+    """Practice-shaped host with echoed instructions."""
+
+    @echo
+    @agent_instructions
+    def instructions(self) -> str:
+        return "practice"
+
+
+@agent_toolset
+class EchoPracticeChild(EchoPractice):
+    @agent_instructions
+    def instructions(self) -> str:
+        return "child"
+
+
+with description("prompt echo @echo mark"):
+    with context("that inherits @echo on begin"):
+        with it("should toast the kit as an action when a recipe runs"):
+            kind, label = detect_echo(
+                {"tool_name": "echo-kit.enact", "tool_input": {}},
+                toolsets=[EchoKit()],
+            )
+            expect(kind).to(equal("action"))
+            expect(label).to(equal("echo-kit"))
+
+        with it("should not toast open_workspace from the begin mark"):
+            expect(
+                detect_echo(
+                    {"tool_name": "echo-kit.open_workspace", "tool_input": {}},
+                    toolsets=[EchoKit()],
+                )
+            ).to(equal(None))
+
+    with context("that marks a specific recipe"):
+        with it("should toast that member when it is invoked"):
+            kind, label = detect_echo(
+                {"tool_name": "echo-kit.spotlight", "tool_input": {}},
+                toolsets=[EchoKit()],
+            )
+            expect(kind).to(equal("action"))
+            expect(label).to(equal("spotlight"))
+
+    with context("that marks practice instructions"):
+        with it("should toast the practice from the instructions member"):
+            kind, label = detect_echo(
+                {"tool_name": "echo-practice.instructions", "tool_input": {}},
+                toolsets=[EchoPractice()],
+            )
+            expect(kind).to(equal("practice"))
+            expect(label).to(equal("echo-practice"))
+
+    with context("that inherits @echo on practice instructions"):
+            kind, label = detect_echo(
+                {"tool_name": "echo-practice-child.instructions", "tool_input": {}},
+                toolsets=[EchoPracticeChild()],
+            )
+            expect(kind).to(equal("practice"))
+            expect(label).to(equal("echo-practice-child"))

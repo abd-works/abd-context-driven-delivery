@@ -10,12 +10,6 @@ from agent_tools.agent_tools import agent_tool
 _TRIP_HEADER = "===== TRIP LOG (read only) ====="
 _TRIP_FOOTER = "===== END TRIP LOG ====="
 
-_FIDELITY_FORMAT_DEFAULTS = {
-    "trip_outline": "markdown",
-    "road_story": "markdown",
-    "full_journey": "markdown",
-}
-
 @agent_toolset
 class Car(PracticeGuidance):
     """# Instructions
@@ -27,7 +21,6 @@ class Car(PracticeGuidance):
     domain_slug = "car"
     default_workspace_folder: str = "."
     context_index_key: str = "car"
-    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = frozenset({"markdown"})
 
     def __init__(

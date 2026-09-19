@@ -142,6 +142,7 @@ Use these rules when nesting describe / that / with / it should — subjects and
 
 **Default format:** Python
 **Stage:** specification
+**Clean Engineering:** model
 
 **Goal:** Define BDD signatures — describe/it names for every observation, no test bodies.
 
@@ -182,6 +183,7 @@ it('should apply a percentage discount to eligible items', () => {
 
 **Default format:** Python
 **Stage:** implementation
+**Clean Engineering:** code
 
 **Goal:** Implement BDD tests with production code.
 

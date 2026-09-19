@@ -217,13 +217,36 @@ class MarkdownInstallation(Installation):
             else:
                 parts.append(McpOperationDefinition.from_tool(tool).invoke_line())
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
+        rel = self.relative_path(kind, toolset, member, tool.deploy_name)
         if kind == "rules":
             text = self._rules_front_matter(text) + text
-        rel = self.relative_path(kind, toolset, member, tool.deploy_name)
+        elif kind == "skill":
+            text = self._skill_front_matter(rel.parent.name, self._skill_overview(toolset, parts)) + text
         dest = self.path / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(text, encoding="utf-8")
         self.track_write(dest)
+
+    def _skill_overview(self, toolset: Any, parts: list[str]) -> str:
+        raw = getattr(toolset, "overview", None)
+        source = raw.strip() if isinstance(raw, str) and raw.strip() else (parts[0] if parts else "")
+        return self._without_mcp_invoke(source)
+
+    def _without_mcp_invoke(self, text: str) -> str:
+        lines = [
+            line
+            for line in text.splitlines()
+            if not line.strip().lower().startswith("use mcp tool:")
+        ]
+        return "\n".join(lines).strip()
+
+    def _skill_front_matter(self, name: str, overview: str) -> str:
+        description = overview.strip() or name
+        return f"---\nname: {name}\n{self._folded_yaml_field('description', description)}---\n\n"
+
+    def _folded_yaml_field(self, key: str, value: str) -> str:
+        indented = "\n".join(f"  {line}" if line else "  " for line in value.splitlines())
+        return f"{key}: >-\n{indented}\n"
 
     def _rules_front_matter(self, body: str) -> str:
         description = "Practice rules."

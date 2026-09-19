@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Union
 
 from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
+from installation.hooks.prompt_echo.prompt_echo import echo
 from installation.mcp.mcp_server import mcp
 from workspace.workspace import SessionModel, Turn, Workspace
 
@@ -104,6 +105,7 @@ class GuidanceAction:
             return f"{warning}\n{session_name}"
         return session_name
 
+    @echo
     @agent_instructions
     def begin(self, guidance: GuidanceArg | None = None, action: str = "") -> str:
         """Start a guidance action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one."""

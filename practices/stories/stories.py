@@ -17,13 +17,7 @@ if TYPE_CHECKING:
     from practices.clean_engineering.clean_engineering import CleanEngineering
     from tools.diagnose.diagnose import Diagnose
 
-_FIDELITY_FORMAT_DEFAULTS = {
-    "story_map": "markdown",
-    "scenarios": "typescript",
-    "acceptance_tests": "typescript",
-}
-
-# Adapter class path per format - peer channels, same CLI surface.
+_CODE_FORMATS = frozenset({"python", "typescript", "java", "javascript"})
 _CHANNELS: dict[str, tuple[str, str]] = {
     "markdown": ("stories.document.markdown.nodes", "MarkdownStoryMap"),
     "json": ("stories.document.json.nodes", "JsonStoryMap"),
@@ -36,7 +30,6 @@ _CHANNELS: dict[str, tuple[str, str]] = {
 }
 
 _SUPPORTED_FORMATS = frozenset(_CHANNELS)
-_CODE_FORMATS = frozenset({"python", "typescript", "java", "javascript"})
 
 
 def _load_channel_class(format_name: str) -> type:
@@ -80,7 +73,7 @@ class Stories(PracticeGuidance):
     domain_slug = "stories"
     default_workspace_folder: str = "tests"
     context_index_key: str = "stories"
-    _fidelity_format_defaults = _FIDELITY_FORMAT_DEFAULTS
+    _formats = _CHANNELS
     supported_formats = _SUPPORTED_FORMATS
 
     def __init__(
