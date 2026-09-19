@@ -46,6 +46,11 @@ Read `practices/bdd/bdd.md` § Overview — the underlying test discipline appli
 
 ## Shared rules
 
+```yaml
+alwaysApply: false
+globs: "**/*agent_spec*,**/.agent_bdd_sessions/**"
+```
+
 Whenever an agent-harness spec (`agent()`, `instruct`, `instruct_use_tool`) is in play, or production behavior that spec is proving. Follow these rules.
 
 If the live-agent layer is not needed, follow `practices/bdd/development.mdc`.

@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when placing typed controls in greybox HTML and wiring story steps — Story Demo shell, honest stubs."
+alwaysApply: false
+description: "Whenever you place controls and wire story steps on a greybox, or change shipping UI that those mockups support. Follow these rules."
+globs: **/*.html,**/*mockup*
 ---
 
 #### Rules
 
-Use these rules when placing typed controls in greybox HTML and wiring story steps — Story Demo shell, honest stubs.
+
+
+Whenever you place controls and wire story steps on a greybox, or change shipping UI that those mockups support. Follow these rules.
+
+If this change will not stay here, follow `practices/ux/ia.mdc`.
 
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
 - **`story-domain-js-imported`** — Import real modules; do not invent a UX-only adapter shape.

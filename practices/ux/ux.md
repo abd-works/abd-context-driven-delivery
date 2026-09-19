@@ -45,6 +45,10 @@ Before sketching ASCII, drawio regions, or brand-layer html, open the matching f
 
 ## Shared rules
 
+```yaml
+alwaysApply: false
+```
+
 Whenever you name screens, attach stories, or import domain terms on the UX surface, or change later UI work that forces that vocabulary to move. Follow these rules.
 
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
@@ -59,9 +63,10 @@ Whenever you name screens, attach stories, or import domain terms on the UX surf
 
 ### ia
 
-
-**Default format:** drawio
-**Stage:** discovery
+```yaml
+default_format: drawio
+stage: discovery
+```
 
 #### Overview
 
@@ -86,6 +91,11 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 
 #### Rules
 
+```yaml
+alwaysApply: false
+globs: "**/*.drawio,**/ux-context.md"
+```
+
 Whenever you decide which screens exist and how users move between them, or change mockups or shipping UI that forces that structure to move. Follow these rules.
 
 If this change will not stay here, follow `practices/ux.mdc`.
@@ -97,9 +107,10 @@ If this change will not stay here, follow `practices/ux.mdc`.
 
 ### mockup
 
-
-**Default format:** html
-**Stage:** specification
+```yaml
+default_format: html
+stage: specification
+```
 
 #### Overview
 
@@ -125,6 +136,11 @@ Lock screens as runnable greybox — typed controls and key interactions.
 
 #### Rules
 
+```yaml
+alwaysApply: false
+globs: "**/*.html,**/*mockup*"
+```
+
 Whenever you place controls and wire story steps on a greybox, or change shipping UI that those mockups support. Follow these rules.
 
 If this change will not stay here, follow `practices/ux/ia.mdc`.
@@ -141,9 +157,10 @@ If this change will not stay here, follow `practices/ux/ia.mdc`.
 
 ### front_end_code
 
-
-**Default format:** html (or the host app’s frontend stack)
-**Stage:** implementation
+```yaml
+default_format: html
+stage: implementation
+```
 
 #### Overview
 
@@ -157,6 +174,11 @@ Ship the product UI — production frontend talking to a real backend.
 - Carry IA vocabulary and control decisions forward; do not redecide screens under a new product name.
 
 #### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*View.tsx,**/*View.ts,**/*View.jsx,**/*View.js"
+```
 
 Whenever you create, alter, or delete shipping UI or how it talks to the backend. Follow these rules.
 

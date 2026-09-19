@@ -18,6 +18,7 @@ from installation.hooks.prompt_echo.prompt_echo import echo
 from installation.mcp.mcp_server import mcp
 from harness.markdown import (
     Markdown,
+    bind_yaml,
     class_file_directory,
     fidelity_blocks,
     fidelity_clean_engineering,
@@ -272,16 +273,23 @@ class PracticeGuidance(Guidance):
         entries: dict[str, Guidance] = {}
         companions: dict[str, str] = {}
         for name, body in fidelity_blocks(text):
-            child_format = (
-                fidelity_format(body) or self.format or self.default_format or ""
+            child = FidelityGuidance(name=name, practice_guidance=self)
+            bind_yaml(child, body)
+            if not child.default_format:
+                child.default_format = (
+                    fidelity_format(body) or self.format or self.default_format or ""
+                )
+            if not child.stage:
+                child.stage = fidelity_stage(body)
+            child.format = child.default_format
+            entries[name] = child
+            ce_name = (
+                child.clean_engineering
+                if isinstance(child.clean_engineering, str)
+                else ""
             )
-            entries[name] = FidelityGuidance(
-                name=name,
-                stage=fidelity_stage(body),
-                practice_guidance=self,
-                default_format=child_format,
-            )
-            ce_name = fidelity_clean_engineering(body)
+            if not ce_name:
+                ce_name = fidelity_clean_engineering(body)
             if ce_name:
                 companions[name] = ce_name
         self.attach_fidelities(entries)

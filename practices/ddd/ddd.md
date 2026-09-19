@@ -48,6 +48,10 @@ When documenting an existing system, tactical wraps live under the DDD working a
 
 ## Shared rules
 
+```yaml
+alwaysApply: false
+```
+
 Use these rules when defining domain logic in code, a model, or language.
 
 - **`ubiquitous-language-everywhere`** — One term per concept, taken from the business, used identically on the map, in the model, in the code, and in the tests. A technical synonym makes every reader keep a translation in their head, and the two names drift until they mean different things.
@@ -62,10 +66,11 @@ Use these rules when defining domain logic in code, a model, or language.
 
 ### bounded_context
 
-
-**Default format:** markdown
-**Stage:** discovery
-**Clean Engineering:** modules
+```yaml
+default_format: markdown
+stage: discovery
+clean_engineering: modules
+```
 
 #### Overview
 
@@ -103,6 +108,11 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 #### Rules
 
+```yaml
+alwaysApply: false
+globs: "**/*bounded-context*"
+```
+
 Whenever you create, alter, or delete bounded contexts, aggregates, or the language between them, or change a model or code that forces a language-boundary change. Follow these rules.
 
 - **`experts-words-preferred`** — Use the words domain experts use. An invented synonym becomes a second term every reader must translate.
@@ -121,10 +131,11 @@ Whenever you create, alter, or delete bounded contexts, aggregates, or the langu
 
 ### building_blocks
 
-
-**Default format:** markdown
-**Stage:** specification
-**Clean Engineering:** model
+```yaml
+default_format: markdown
+stage: specification
+clean_engineering: model
+```
 
 #### Overview
 
@@ -156,6 +167,11 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 #### Rules
 
+```yaml
+alwaysApply: false
+globs: "**/*bounded-context*,**/*-model.md"
+```
+
 Whenever you classify or reshape domain types as entity, value, repository, event, or service, or change tactics or code that those types support. Follow these rules.
 
 If this change will not stay here, follow `practices/ddd/bounded_context.mdc`.
@@ -184,10 +200,11 @@ If this change will not stay here, follow `practices/ddd/bounded_context.mdc`.
 
 ### tactics
 
-
-**Default format:** Python
-**Stage:** implementation
-**Clean Engineering:** code
+```yaml
+default_format: python
+stage: implementation
+clean_engineering: code
+```
 
 #### Overview
 
@@ -210,6 +227,11 @@ Decide one implementation pattern for each building block the model uses, then i
 **Load with the identity already in hand** when wrapping live code. Do not assume a browser session. Load once and reuse the variable. A cart has no identity outside its prospect — reach it through the owner, not `cartRepository().current()`.
 
 #### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java"
+```
 
 Whenever you persist, publish, or test repositories, events, or factories, or change production code they support. Follow these rules.
 

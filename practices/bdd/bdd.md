@@ -98,6 +98,11 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 ## Shared rules
 
+```yaml
+alwaysApply: false
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java"
+```
+
 Whenever you write or reshape describe / that / with / it-should specs, or code that is supported by these specifications. Follow these rules.
 
 - **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals. Assertions on internals break when the code is refactored and still pass when the behavior is wrong.
@@ -115,10 +120,11 @@ Whenever you write or reshape describe / that / with / it-should specs, or code 
 
 ### behavior
 
-
-**Default format:** Python
-**Stage:** specification
-**Clean Engineering:** model
+```yaml
+default_format: python
+stage: specification
+clean_engineering: model
+```
 
 #### Overview
 
@@ -134,6 +140,11 @@ Define BDD signatures — describe/it names for every observation, no test bodie
 Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 
 #### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java"
+```
 
 Whenever you name or re-nest describe/it signatures, change code that relies on those signatures, or change specifications that need this kind of rename. Follow these rules.
 
@@ -158,10 +169,11 @@ it('should apply a percentage discount to eligible items', () => {
 
 ### development
 
-
-**Default format:** Python
-**Stage:** implementation
-**Clean Engineering:** code
+```yaml
+default_format: python
+stage: implementation
+clean_engineering: code
+```
 
 #### Overview
 
@@ -202,6 +214,11 @@ When generating or satisfying against a module that already exists, check the be
 Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behavior` above). Split unrelated expects. Shared construction → `beforeEach` / factory at three sibling dupes.
 
 #### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java"
+```
 
 Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules.
 

@@ -18,7 +18,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SampleToolHost,
 )
-from harness.markdown import AssetLocator, HTML, Markdown, canonical_format
+from harness.markdown import AssetLocator, HTML, Markdown, bind_yaml, canonical_format
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "practices" / "clean_engineering"
 _STORIES_DIR = _REPO_ROOT / "practices" / "stories"
@@ -159,3 +159,34 @@ with description("an asset locator"):
 
         with it("should have a non-None folder path"):
             expect(self.location.folder).not_to(be_none)
+
+
+with description("a markdown section containing a yaml fence"):
+    with context("with keys that match properties on the host"):
+        with before.each:
+            class _Host:
+                default_format = ""
+                stage = ""
+                applies_to = None
+
+            self.host = _Host()
+            bind_yaml(
+                self.host,
+                """```yaml
+default_format: python
+stage: specification
+appliesTo:
+  alwaysApply: false
+  globs: "**/*spec.py"
+```
+prose
+""",
+            )
+
+        with it("should bind each matching key as a property"):
+            expect(self.host.default_format).to(equal("python"))
+            expect(self.host.stage).to(equal("specification"))
+
+        with it("should keep a nested yaml value whole on that property"):
+            expect(self.host.applies_to.always_apply).to(equal(False))
+            expect(self.host.applies_to.globs).to(equal("**/*spec.py"))

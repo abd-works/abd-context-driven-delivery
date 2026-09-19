@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when naming epics, sub-epics, and stories on a story map — verb-noun titles and 4–9 children, no scenarios yet."
+alwaysApply: false
+description: "Whenever you create, alter, or delete epics, sub-epics, or stories on the map, or change scenarios or acceptance work that forces a map change. Follow these rules."
+globs: **/*story-map*
 ---
 
 #### Rules
 
-Use these rules when naming epics, sub-epics, and stories on a story map — verb-noun titles and 4–9 children, no scenarios yet.
+
+
+Whenever you create, alter, or delete epics, sub-epics, or stories on the map, or change scenarios or acceptance work that forces a map change. Follow these rules.
+
+If this change will not stay here, follow `practices/stories.mdc`.
 
 - **`verb-noun-format`** - Name every Epic, Sub-Epic, and Story with a base-form verb and noun. Epics and Sub-Epics name goals rather than an actor's activity or a supporting system call, because grammar alone does not preserve the right level of abstraction.
 - **`story-name-captures-system-mechanic`** - At Story level, use a verb that names the operation and a noun that names the record or concept it acts on. Replace vague names such as `Handle Request`, `Process Data`, or `Manage Record`, because they hide what the system does.

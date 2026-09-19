@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when filling production method bodies, constructors, and call sites — real persistence and real collaborators, not a demo shell."
+alwaysApply: false
+description: "Whenever you create, alter, or delete production behavior — bodies, constructors, call sites — including code supported by a model or module map. Follow these rules."
+globs: **/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java
 ---
 
 #### Rules
 
-Use these rules when filling production method bodies, constructors, and call sites — real persistence and real collaborators, not a demo shell.
+
+
+Whenever you create, alter, or delete production behavior — bodies, constructors, call sites — including code supported by a model or module map. Follow these rules.
+
+If this change will not stay here, follow `practices/clean_engineering/model.mdc`.
 
 **Implement the model**
 - `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data — once they read the storage directly it becomes a public contract you cannot change. Private fields on the same class hide implementation; you do not need a second class for that. Read-only to callers can mean return a copy or immutable view from a property — it does not require a frozen class or a second type to hold build steps.

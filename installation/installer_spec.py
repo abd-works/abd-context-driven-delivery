@@ -830,3 +830,23 @@ with description("markdown skill front matter") as self:
         )
         expect(text).to(contain("sample preamble"))
         expect(text).not_to(contain("Use MCP tool:"))
+
+
+with description("markdown rules front matter"):
+    with it("should copy alwaysApply and globs from rules.appliesTo"):
+        from installation.harness_files.harness_files import MarkdownInstallation
+        from actions.scan.rule import AppliesTo, RulesCollection
+
+        host = type(
+            "Host",
+            (),
+            {"rules": RulesCollection(applies_to=AppliesTo(always_apply=False, globs="**/*spec.py"))},
+        )()
+        writer = MarkdownInstallation("Cursor", Path("."), "rules")
+        text = writer._rules_front_matter(
+            "Whenever you write specs. Follow these rules.\n\n- **a** — b",
+            host,
+        )
+        expect(text).to(contain("alwaysApply: false"))
+        expect(text).to(contain("globs: **/*spec.py"))
+        expect(text).to(contain("Whenever you write specs"))

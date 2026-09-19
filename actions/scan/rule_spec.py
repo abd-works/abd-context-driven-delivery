@@ -26,6 +26,10 @@ with description("a shared rules section containing scanner bullets") as self:
         with it("should parse bullets into a rules collection"):
             expect("sample-rule-one" in self.host.rules.entries).to(equal(True))
 
+        with it("should expose appliesTo from the rules yaml fence"):
+            expect(self.host.rules.appliesTo.always_apply).to(equal(False))
+            expect(self.host.rules.appliesTo.globs).to(contain("**/*sample*"))
+
         with it("should expose slug, body, optional fidelity, and zero or one scanner on each rule"):
             rule = self.host.rules.entries["sample-rule-one"]
             expect(rule.slug).to(equal("sample-rule-one"))

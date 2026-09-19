@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when writing acceptance tests and the production path that makes them pass — fixtures, seeds, and real domain entry points."
+alwaysApply: false
+description: "Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules."
+globs: **/*_story.test.*,**/*story_test*,**/*story-test*,**/*acceptance_test*
 ---
 
 #### Rules
 
-Use these rules when writing acceptance tests and the production path that makes them pass — fixtures, seeds, and real domain entry points.
+
+
+Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.
+
+If this change will not stay here, follow `practices/stories/scenarios.mdc`.
 
 - **`examples-trace-domain-model`** - Shape every fixture from the domain model and its owning system. Use the external system's record shape at that boundary and the product's aggregate shape inside the domain, because convenient mixed objects conceal mapping errors.
 - **`examples-declare-seed-vs-interaction`** - Identify each fixture as **Seed** state owned by a system or **Interaction** data entered, displayed, or validated through the product. Use both when the Story needs both, because persisted records and user-facing data often represent the same concept differently.

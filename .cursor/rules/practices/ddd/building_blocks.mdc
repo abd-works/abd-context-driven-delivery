@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when tagging types already on the map — entity vs value, repository, event, service — not inventing a parallel model."
+alwaysApply: false
+description: "Whenever you classify or reshape domain types as entity, value, repository, event, or service, or change tactics or code that those types support. Follow these rules."
+globs: **/*bounded-context*,**/*-model.md
 ---
 
 #### Rules
 
-Use these rules when tagging types already on the map — entity vs value, repository, event, service — not inventing a parallel model.
+
+
+Whenever you classify or reshape domain types as entity, value, repository, event, or service, or change tactics or code that those types support. Follow these rules.
+
+If this change will not stay here, follow `practices/ddd/bounded_context.mdc`.
 
 - **`identity-test-entity-vs-vo`** — Entity when identity transcends attributes; otherwise prefer Value Object. A type that is the access boundary for a cluster is **Aggregate Root + Entity**, not a Domain Service.
 - **`aggregate-root-identity-and-entry`** — Every aggregate states the root's identity and uses that root as its only entry point. If identity or entry is ambiguous, the root cannot protect changes across the aggregate.

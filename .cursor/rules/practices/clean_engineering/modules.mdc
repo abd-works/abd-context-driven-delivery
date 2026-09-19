@@ -1,11 +1,14 @@
 ---
-alwaysApply: true
-description: "Use these rules when partitioning a problem into independently understandable units — naming each unit, its public seam, and its one-way dependencies, including `module-context.md` and the modules diagram."
+alwaysApply: false
+description: "Whenever you create, alter, or delete object-oriented boundaries and public seams across modules. Follow these rules."
+globs: **/module-context.md,**/*modules*.drawio
 ---
 
 #### Rules
 
-Use these rules when partitioning a problem into independently understandable units — naming each unit, its public seam, and its one-way dependencies, including `module-context.md` and the modules diagram.
+
+
+Whenever you create, alter, or delete object-oriented boundaries and public seams across modules. Follow these rules.
 
 **Form the module**
 

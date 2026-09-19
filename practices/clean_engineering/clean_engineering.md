@@ -8,6 +8,10 @@ Partition first, then type the objects, then implement. Keep the same names in l
 
 ## Shared rules
 
+```yaml
+alwaysApply: false
+```
+
 Use these rules whenever you name a concept, draw a dependency, or write a public seam — in prose, a diagram, or source.
 
 - **`honor-every-rule-in-the-artifact`** — Honor every rule in the artifact you are writing. One-way dependencies, named seams, and localized behavior apply to language and markdown as well as to code. Do not create a dependency in prose that violates isolation. Treat prose with the same respect you treat the model and the code.
@@ -30,8 +34,11 @@ If the user asks for language while generating **modules** or **model**, use thi
 
 ### modules
 
-**Default format:** markdown  
-**Stage:** discovery
+```yaml
+default_format: markdown
+stage: discovery
+```
+
 **Diagram format:** `drawio` (modules view with blue boxes, public-interface bullets, and one-way dependency arrows; template `templates/modules.drawio`). Programming-language channels are for **model** and later.
 
 #### Overview
@@ -66,6 +73,11 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 #### Rules
 
+```yaml
+alwaysApply: false
+globs: "**/module-context.md,**/*modules*.drawio"
+```
+
 Whenever you create, alter, or delete object-oriented boundaries and public seams across modules. Follow these rules.
 
 **Form the module**
@@ -94,8 +106,10 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 ---
 ### model
 
-**Default format:** Python
-**Stage:** specification
+```yaml
+default_format: python
+stage: specification
+```
 
 #### Overview
 
@@ -131,6 +145,11 @@ Use an interface when the model requires more than one implementation, when a ca
 
 
 #### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*-model.md,**/*-model.py,**/*example_factory*"
+```
 
 Whenever you create, alter, or delete types and how they relate, or change production code that those types support. Follow these rules.
 
@@ -176,8 +195,10 @@ If this change will not stay here, follow `practices/clean_engineering/modules.m
 
 ### code
 
-**Default format:** Python
-**Stage:** implementation
+```yaml
+default_format: python
+stage: implementation
+```
 
 #### Overview
 
@@ -204,6 +225,11 @@ When writing out code take care to **Fill out all interactions with real code.**
 
 
 #### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java"
+```
 
 Whenever you create, alter, or delete production behavior — bodies, constructors, call sites — including code supported by a model or module map. Follow these rules.
 

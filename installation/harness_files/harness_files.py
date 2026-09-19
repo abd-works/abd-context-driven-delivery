@@ -212,7 +212,10 @@ class MarkdownInstallation(Installation):
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
         rel = self.relative_path(kind, toolset, member, tool.deploy_name)
         if kind == "rules":
-            text = self._rules_front_matter(text) + text
+            from actions.scan.rule import AppliesTo
+
+            text = AppliesTo.strip_fence(text)
+            text = self._rules_front_matter(text, toolset) + text
         elif kind == "skill":
             text = self._skill_front_matter(rel.parent.name, self._skill_overview(toolset, parts)) + text
         dest = self.path / rel
@@ -241,12 +244,32 @@ class MarkdownInstallation(Installation):
         indented = "\n".join(f"  {line}" if line else "  " for line in value.splitlines())
         return f"{key}: >-\n{indented}\n"
 
-    def _rules_front_matter(self, body: str) -> str:
+    def _rules_front_matter(self, body: str, toolset: Any = None) -> str:
         description = "Practice rules."
         for line in body.splitlines():
             stripped = line.strip()
             if not stripped or stripped.startswith("#") or stripped.startswith("-"):
                 continue
+            if stripped.startswith("```"):
+                continue
             description = stripped.replace('"', "'")
             break
-        return f'---\nalwaysApply: true\ndescription: "{description}"\n---\n\n'
+        applies = getattr(getattr(toolset, "rules", None), "appliesTo", None)
+        always_apply = True
+        globs = ""
+        if applies is not None:
+            globs = getattr(applies, "globs", "") or ""
+            flagged = getattr(applies, "always_apply", None)
+            if flagged is not None:
+                always_apply = bool(flagged)
+            elif globs:
+                always_apply = False
+        lines = [
+            "---",
+            f"alwaysApply: {'true' if always_apply else 'false'}",
+            f'description: "{description}"',
+        ]
+        if globs:
+            lines.append(f"globs: {globs}")
+        lines.append("---")
+        return "\n".join(lines) + "\n\n"

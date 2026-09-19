@@ -120,6 +120,11 @@ the touched view files (`packages/<epicSlug>/<Feature>View.tsx`, views inside
 
 ## Shared rules
 
+```yaml
+alwaysApply: false
+globs: "**/*-server.ts,**/*-client.tsx,**/*View.tsx,**/*_spec.server.ts,**/*_spec.client.ts,**/*_spec.e2e.ts"
+```
+
 Whenever you create, alter, or delete a domain-module feature package (domain / server / client / View), or tests that package supports. Follow these rules.
 
 If this change will not stay here, follow `practices/clean_engineering/code.mdc`. If the tests are Spec-by-Example, also follow `practices/stories/acceptance_tests.mdc`.

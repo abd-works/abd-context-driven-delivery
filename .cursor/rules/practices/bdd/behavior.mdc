@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when defining BDD signatures — describe/it names only, no test bodies yet."
+alwaysApply: false
+description: "Whenever you name or re-nest describe/it signatures, change code that relies on those signatures, or change specifications that need this kind of rename. Follow these rules."
+globs: **/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java
 ---
 
 #### Rules
 
-Use these rules when defining BDD signatures — describe/it names only, no test bodies yet.
+
+
+Whenever you name or re-nest describe/it signatures, change code that relies on those signatures, or change specifications that need this kind of rename. Follow these rules.
+
+If this change will not stay here, follow `practices/bdd.mdc`.
 
 - **`state-not-when`** — Nest by the state or condition that enables an observation, never by a `when` trigger.
 - **`nest-by-enabling-events`** — Sub-groupings are conditions that unlock further behavior, not implementation steps.

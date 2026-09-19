@@ -9,6 +9,51 @@ from harness.agent_tools.agent_tools import instructions, tools
 
 from .scanner import Scanner
 
+class AppliesTo:
+    """Cursor attach data for a rules section — owned in the practice markdown fence."""
+
+    def __init__(self, always_apply: bool | None = None, globs: str = "") -> None:
+        self.always_apply = always_apply
+        self.globs = globs
+
+    @property
+    def alwaysApply(self) -> bool | None:
+        return self.always_apply
+
+    @classmethod
+    def from_value(cls, value: Any) -> AppliesTo:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, dict):
+            return cls()
+        nested = value.get("appliesTo", value.get("applies_to"))
+        if isinstance(nested, dict):
+            value = nested
+        always = value.get("alwaysApply", value.get("always_apply"))
+        globs: Any = value.get("globs", "")
+        if isinstance(globs, list):
+            globs = ",".join(str(part).strip() for part in globs if str(part).strip())
+        elif not isinstance(globs, str):
+            globs = "" if globs is None else str(globs)
+        always_apply = None
+        if isinstance(always, bool):
+            always_apply = always
+        elif always not in (None, ""):
+            always_apply = str(always).casefold() in {"true", "yes", "1"}
+        return cls(always_apply=always_apply, globs=globs)
+
+    @classmethod
+    def from_markdown(cls, text: str) -> AppliesTo:
+        from harness.markdown.markdown import yaml_fields
+
+        return cls.from_value(yaml_fields(text))
+
+    @classmethod
+    def strip_fence(cls, text: str) -> str:
+        from harness.markdown.markdown import strip_yaml_fences
+
+        return strip_yaml_fences(text)
+
 
 class Rule:
     def __init__(self, slug: str, body: str, fidelity: str | None = None) -> None:
@@ -54,19 +99,29 @@ class Rule:
 
 
 class RulesCollection:
-    def __init__(self, entries: dict[str, Rule | RulesCollection] | None = None) -> None:
+    def __init__(
+        self,
+        entries: dict[str, Rule | RulesCollection] | None = None,
+        applies_to: AppliesTo | None = None,
+    ) -> None:
         self.entries: dict[str, Rule | RulesCollection] = dict(entries or {})
+        self.applies_to = applies_to if applies_to is not None else AppliesTo()
+
+    @property
+    def appliesTo(self) -> AppliesTo:
+        return self.applies_to
 
     @classmethod
     def from_markdown(cls, text: str, fidelity: str | None = None) -> RulesCollection:
+        applies_to = AppliesTo.from_markdown(text)
         entries: dict[str, Rule | RulesCollection] = {}
-        for raw in text.splitlines():
+        for raw in AppliesTo.strip_fence(text).splitlines():
             stripped = raw.strip()
             if not re.match(r"^[-*]\s+", stripped):
                 continue
             rule = Rule.from_bullet(stripped, fidelity=fidelity)
             entries[rule.slug] = rule
-        return cls(entries)
+        return cls(entries, applies_to=applies_to)
 
     def __iter__(self) -> Iterator[Rule]:
         for value in self.entries.values():

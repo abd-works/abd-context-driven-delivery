@@ -37,9 +37,10 @@ Do not skip steps. Do not reorder. Do not use generic "vehicle" without make and
 
 ### trip_outline
 
-
-**Default format:** markdown
-**Stage:** discovery
+```yaml
+default_format: markdown
+stage: discovery
+```
 
 #### Overview
 
@@ -65,9 +66,10 @@ The speak beat is one line that captures the car's personality reaction to what 
 
 ### road_story
 
-
-**Default format:** markdown
-**Stage:** specification
+```yaml
+default_format: markdown
+stage: specification
+```
 
 #### Overview
 
@@ -87,9 +89,10 @@ The story reads as a journey — what happened in order, told from the car's per
 
 ### full_journey
 
-
-**Default format:** markdown
-**Stage:** implementation
+```yaml
+default_format: markdown
+stage: implementation
+```
 
 #### Overview
 

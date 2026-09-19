@@ -1,11 +1,14 @@
 ---
-alwaysApply: true
-description: "Use these rules when drawing where language changes — context boxes, aggregates inside them, and the arcs between contexts."
+alwaysApply: false
+description: "Whenever you create, alter, or delete bounded contexts, aggregates, or the language between them, or change a model or code that forces a language-boundary change. Follow these rules."
+globs: **/*bounded-context*
 ---
 
 #### Rules
 
-Use these rules when drawing where language changes — context boxes, aggregates inside them, and the arcs between contexts.
+
+
+Whenever you create, alter, or delete bounded contexts, aggregates, or the language between them, or change a model or code that forces a language-boundary change. Follow these rules.
 
 - **`experts-words-preferred`** — Use the words domain experts use. An invented synonym becomes a second term every reader must translate.
 - **`domain-concepts-not-technical-names`** — Name contexts, aggregates, and concepts — not `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, or `*Request`. Do not invent a type for fields that already belong on a concept. A technical name carries no meaning the business would recognize, so rules parked on it cannot be found where the concept lives and get re-implemented elsewhere.

@@ -1,9 +1,11 @@
 ---
-alwaysApply: true
+alwaysApply: false
 description: "Use these rules whenever you name a concept, draw a dependency, or write a public seam — in prose, a diagram, or source."
 ---
 
 ## Shared rules
+
+
 
 Use these rules whenever you name a concept, draw a dependency, or write a public seam — in prose, a diagram, or source.
 

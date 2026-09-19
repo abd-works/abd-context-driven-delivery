@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when deciding which classes exist, what they remember and do, and how they relate — stubs only, no production bodies."
+alwaysApply: false
+description: "Whenever you create, alter, or delete types and how they relate, or change production code that those types support. Follow these rules."
+globs: **/*-model.md,**/*-model.py,**/*example_factory*
 ---
 
 #### Rules
 
-Use these rules when deciding which classes exist, what they remember and do, and how they relate — stubs only, no production bodies.
+
+
+Whenever you create, alter, or delete types and how they relate, or change production code that those types support. Follow these rules.
+
+If this change will not stay here, follow `practices/clean_engineering/modules.mdc`.
 
 **Shape classes**
 - `model-modules-follow-the-partition` — Use the module names and boundaries established by the partition artifact as the model's top-level modules. Change the partition before moving a model boundary, because otherwise the two artifacts describe different designs.

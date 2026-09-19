@@ -8,14 +8,21 @@ known prose for guidance in sample tool
 
 ## Shared rules
 
+```yaml
+alwaysApply: false
+globs: "**/*sample*"
+```
+
 - **sample-rule-one** — sample rule one
 
 ## Fidelities
 
 ### sketch
 
-**Default format:** markdown
-**Stage:** discovery
+```yaml
+default_format: markdown
+stage: discovery
+```
 
 #### Guidance
 
@@ -27,8 +34,10 @@ sketch guidance body only
 
 ### spec
 
-**Default format:** markdown
-**Stage:** specification
+```yaml
+default_format: markdown
+stage: specification
+```
 
 #### Guidance
 

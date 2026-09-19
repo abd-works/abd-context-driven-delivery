@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when a mamba spec drives a live agent through `agent()` and asserts on the run, not on chat claims."
+alwaysApply: false
+description: "Whenever an agent-harness spec (`agent()`, `instruct`, `instruct_use_tool`) is in play, or production behavior that spec is proving. Follow these rules."
+globs: **/*agent_spec*,**/.agent_bdd_sessions/**
 ---
 
 ## Shared rules
 
-Use these rules when a mamba spec drives a live agent through `agent()` and asserts on the run, not on chat claims.
+
+
+Whenever an agent-harness spec (`agent()`, `instruct`, `instruct_use_tool`) is in play, or production behavior that spec is proving. Follow these rules.
+
+If the live-agent layer is not needed, follow `practices/bdd/development.mdc`.
 
 - **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/__init__.py` routes to `cli_agent` or `chat_agent` based on `AGENT_BDD_IN_CHAT`. Specs never import either implementation directly.
 - **`free-function-api`** — Call `instruct`, `instruct_use_tool`, and `ai_judge` as free functions. Do not use a session prefix.

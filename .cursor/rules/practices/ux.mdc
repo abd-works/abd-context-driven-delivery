@@ -1,11 +1,13 @@
 ---
-alwaysApply: true
-description: "Use these rules when naming screens, attaching stories, or importing domain JS — not inventing a second vocabulary."
+alwaysApply: false
+description: "Whenever you name screens, attach stories, or import domain terms on the UX surface, or change later UI work that forces that vocabulary to move. Follow these rules."
 ---
 
 ## Shared rules
 
-Use these rules when naming screens, attaching stories, or importing domain JS — not inventing a second vocabulary.
+
+
+Whenever you name screens, attach stories, or import domain terms on the UX surface, or change later UI work that forces that vocabulary to move. Follow these rules.
 
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
 - **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.

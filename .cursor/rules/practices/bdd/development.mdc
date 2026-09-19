@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when implementing BDD tests with production code."
+alwaysApply: false
+description: "Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules."
+globs: **/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java
 ---
 
 #### Rules
 
-Use these rules when implementing BDD tests with production code.
+
+
+Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules.
+
+If this change will not stay here, follow `practices/bdd/behavior.mdc`.
 
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count. Changing the tree during implementation drops behaviors that were agreed on, or adds ones nobody specified.
 - **`red-then-green`** — Fix code by writing the test first, then watching it fail, then making production code changes.

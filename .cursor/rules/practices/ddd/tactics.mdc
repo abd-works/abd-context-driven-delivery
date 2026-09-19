@@ -1,11 +1,16 @@
 ---
-alwaysApply: true
-description: "Use these rules when choosing how a repository, event, or factory is stored, published, and tested, then writing that implementation."
+alwaysApply: false
+description: "Whenever you persist, publish, or test repositories, events, or factories, or change production code they support. Follow these rules."
+globs: **/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java
 ---
 
 #### Rules
 
-Use these rules when choosing how a repository, event, or factory is stored, published, and tested, then writing that implementation.
+
+
+Whenever you persist, publish, or test repositories, events, or factories, or change production code they support. Follow these rules.
+
+If this change will not stay here, follow `practices/ddd/building_blocks.mdc`.
 
 - **`one-pattern-per-building-block`** — Each building block in play gets one named implementation pattern — technology, extension mechanism, test approach — used by every instance of that block. Divergent implementations of the same block make the solution unreadable and untestable as a whole.
 - **`architectural-granularity-decided`** — State what a bounded context, an aggregate, and a repository are at runtime (in-process module, container, service with its own store). Left undecided, the first adapter written silently sets it for everything after.

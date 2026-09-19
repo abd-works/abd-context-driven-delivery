@@ -323,6 +323,101 @@ class AssetLocator:
         return None
 
 
+_YAML_FENCE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+
+
+def _load_yaml_mapping(body: str) -> dict[str, Any]:
+    try:
+        import yaml
+    except ImportError:
+        yaml = None
+    loaded: Any
+    if yaml is not None:
+        loaded = yaml.safe_load(body)
+    else:
+        loaded = _load_yaml_pairs(body)
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _load_yaml_pairs(body: str) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for raw in body.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or ":" not in line or line.startswith("- "):
+            continue
+        key, _, value = line.partition(":")
+        fields[key.strip()] = value.strip().strip("'\"")
+    return fields
+
+
+def yaml_fields(text: str) -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    for match in _YAML_FENCE.finditer(text):
+        merged.update(_load_yaml_mapping(match.group(1)))
+    return merged
+
+
+def strip_yaml_fences(text: str) -> str:
+    return _YAML_FENCE.sub("", text).strip()
+
+
+def _to_snake(key: str) -> str:
+    token = key.strip().replace(" ", "_").replace("-", "_")
+    chars: list[str] = []
+    for index, char in enumerate(token):
+        if char.isupper() and index and token[index - 1] != "_":
+            chars.append("_")
+        chars.append(char.lower())
+    return "".join(chars).replace("__", "_")
+
+
+def _matching_attr(host: Any, key: str) -> str | None:
+    wanted = {
+        key.casefold(),
+        _to_snake(key).casefold(),
+        key.replace(" ", "_").replace("-", "_").casefold(),
+    }
+    for name in dir(host):
+        if name.startswith("_"):
+            continue
+        if name.casefold() not in wanted:
+            continue
+        member = getattr(type(host), name, None)
+        if callable(member) and not isinstance(member, property):
+            continue
+        value = getattr(host, name, None)
+        if callable(value) and not isinstance(member, property):
+            continue
+        return name
+    return None
+
+
+def _assign_yaml_value(host: Any, attr: str, value: Any) -> None:
+    stored = attr
+    descriptor = getattr(type(host), attr, None)
+    if isinstance(descriptor, property) and descriptor.fset is None:
+        stored = _to_snake(attr)
+    if stored in {"applies_to", "appliesTo"} or attr in {"appliesTo", "applies_to"}:
+        from actions.scan.rule import AppliesTo
+
+        if not isinstance(value, AppliesTo):
+            value = AppliesTo.from_value(value)
+        stored = "applies_to"
+    elif stored == "default_format" and isinstance(value, str):
+        value = canonical_format(value.split()[0].strip("()`"))
+    elif stored == "clean_engineering" and isinstance(value, str):
+        value = value.split()[0].strip("()`").replace("-", "_")
+    setattr(host, stored, value)
+
+
+def bind_yaml(host: Any, text: str) -> None:
+    for key, value in yaml_fields(text).items():
+        attr = _matching_attr(host, key)
+        if attr is None:
+            continue
+        _assign_yaml_value(host, attr, value)
+
+
 class Markdown:
     def __init__(self, host: Any, label: str) -> None:
         self._host = host
@@ -332,9 +427,14 @@ class Markdown:
     def from_label(cls, host: Any, label: str) -> Markdown:
         return cls(host, label)
 
-    def extract(self) -> str:
+    def raw(self) -> str:
         location = AssetLocator(self._host, self._label).locate()
         return _extract_location(location)
+
+    def extract(self) -> str:
+        text = self.raw()
+        bind_yaml(self._host, text)
+        return strip_yaml_fences(text)
 
     def html(self) -> HTML:
         return HTML.from_markdown(self.extract())
@@ -499,6 +599,9 @@ def fidelity_blocks(text: str) -> list[tuple[str, str]]:
 
 
 def fidelity_stage(body: str) -> str:
+    stage = yaml_fields(body).get("stage")
+    if isinstance(stage, str) and stage.strip():
+        return stage.strip().strip("`")
     match = re.search(r"(?im)^\*\*Stage:\*\*\s*`?(\S+?)`?\s*$", body)
     if match:
         return match.group(1)
@@ -515,14 +618,21 @@ def _fidelity_labeled_line(body: str, label: str) -> str:
 
 
 def fidelity_format(body: str) -> str:
+    fields = yaml_fields(body)
+    token = fields.get("default_format") or fields.get("defaultFormat")
+    if isinstance(token, str) and token.strip():
+        return canonical_format(token.split()[0].strip("()`"))
     rest = _fidelity_labeled_line(body, "Default format")
     if not rest:
         return ""
-    token = rest.split()[0].strip("()`")
-    return canonical_format(token)
+    return canonical_format(rest.split()[0].strip("()`"))
 
 
 def fidelity_clean_engineering(body: str) -> str:
+    fields = yaml_fields(body)
+    token = fields.get("clean_engineering") or fields.get("cleanEngineering")
+    if isinstance(token, str) and token.strip():
+        return token.split()[0].strip("()`").replace("-", "_")
     rest = _fidelity_labeled_line(body, "Clean Engineering")
     if not rest:
         return ""
@@ -658,17 +768,22 @@ def _markdown_property(fn: _F, prop_label: str) -> property:
             annot = getattr(fn, "__annotations__", {}) or {}
             hints = dict(annot)
         return_type = hints.get("return", str)
-        text = md.extract()
+        raw = md.raw()
+        bind_yaml(self, raw)
+        text = strip_yaml_fences(raw)
         if return_type is HTML:
-            return md.html()
+            return HTML.from_markdown(text)
         origin = get_origin(return_type)
         if origin is not None:
             args = get_args(return_type)
             if origin is dict:
                 return md.coerce(text, return_type)
             if args and args[0] is HTML:
-                return md.html()
-        result = md.coerce(text, return_type)
+                return HTML.from_markdown(text)
+        if return_type is str or return_type is inspect.Signature.empty or return_type is None:
+            return text
+        result = md.coerce(raw, return_type)
+        bind_yaml(result, raw)
         from actions.scan.rule import RulesCollection
 
         if isinstance(result, RulesCollection):

@@ -14,6 +14,11 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 ## Shared rules
 
+```yaml
+alwaysApply: false
+globs: "**/*scenario*,**/*story-map*,**/*_story.test.*,**/*story_test*,**/*story-test*"
+```
+
 Whenever you define or change user interactions and resulting system behavior, at any level of detail. Follow these rules.
 
 - **`vocabulary-traces-to-domain-source`** - Use terms from the domain language and model when they exist, because one shared definition keeps Stories, examples, and code consistent.
@@ -27,9 +32,10 @@ Whenever you define or change user interactions and resulting system behavior, a
 
 ### story_map
 
-
-**Default format:** markdown
-**Stage:** discovery
+```yaml
+default_format: markdown
+stage: discovery
+```
 
 #### Overview
 
@@ -51,6 +57,11 @@ Define a story map as Epic → nestable Sub-Epic → Story. Change the map while
 
 #### Rules
 
+```yaml
+alwaysApply: false
+globs: "**/*story-map*"
+```
+
 Whenever you create, alter, or delete epics, sub-epics, or stories on the map, or change scenarios or acceptance work that forces a map change. Follow these rules.
 
 If this change will not stay here, follow `practices/stories.mdc`.
@@ -66,9 +77,10 @@ If this change will not stay here, follow `practices/stories.mdc`.
 
 ### scenarios
 
-
-**Default format:** python
-**Stage:** specification
+```yaml
+default_format: python
+stage: specification
+```
 
 #### Overview
 
@@ -85,6 +97,11 @@ If this change will not stay here, follow `practices/stories.mdc`.
 **Use the correct evidence mode.** For brownfield capture, inspect the running product when it exists and reconcile the Story Map and Scenarios with observed behaviour before finalizing them. For greenfield specification, agreed Scenarios define intended behaviour before production code exists.
 
 #### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*scenario*"
+```
 
 Whenever you write or change Given/When/Then scenarios, or change acceptance tests or production code that those scenarios support. Follow these rules.
 
@@ -111,10 +128,11 @@ If this change will not stay here, follow `practices/stories/story_map.mdc`.
 
 ### acceptance_tests
 
-
-**Default format:** python
-**Stage:** implementation
-**Clean Engineering:** code
+```yaml
+default_format: python
+stage: implementation
+clean_engineering: code
+```
 
 #### Overview
 
@@ -129,6 +147,11 @@ Apply `@stories` `#scenarios` § Guidance and § Rules to acceptance tests. Use 
 Refer to [`../language-tools.md`](../language-tools.md) for language-specific test tools and idioms.
 
 #### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*_story.test.*,**/*story_test*,**/*story-test*,**/*acceptance_test*"
+```
 
 Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.
 
