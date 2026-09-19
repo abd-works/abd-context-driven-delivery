@@ -110,7 +110,7 @@ clean-engineering-model (Skill)
                       -> listed
                            -> AgentToolSet.instantiate_all
                                 -> CleanEngineering fidelity="model"
-                      -> each host
+                      -> each Guidance
                            -> CleanEngineering.render format="drawio" content
                                 -> fidelities.current
                                      -> // default_format python unless constructor format was passed

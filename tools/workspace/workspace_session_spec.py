@@ -1,4 +1,4 @@
-"""BDD spec for WorkSession - kit prose + tools on PracticeGuidance hosts."""
+"""BDD spec for WorkSession - kit prose + tools on PracticeGuidance."""
 
 import shutil
 import sys
@@ -44,16 +44,16 @@ with description("WorkSession kit prose"):
         expect("context-index.md" in text).to(be_true)
 
 
-with description("WorkSession on a PracticeGuidance host"):
+with description("WorkSession on a PracticeGuidance"):
     with context("CarChronicle generate via Generate kit"):
         with before.all:
             from generate.generate import Generate
 
             cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
-            self.host = cls()
+            self.tool = cls()
             self.response = Generate().instructions["generate"].expand(
                 {},
-                {"guidance": [self.host]},
+                {"guidance": [self.tool]},
             )
 
         with it("should name CDR tools then finish_turn"):
@@ -70,24 +70,24 @@ with description("WorkSession on a PracticeGuidance host"):
 
         with it("should not expand session active resource on the generate kit"):
             expect(
-                f"Resource `active` = {self.host.active!r}."
+                f"Resource `active` = {self.tool.active!r}."
                 in self.response.instructions
             ).to(be_false)
 
-        with it("should compose a Workspace as host.workspace"):
+        with it("should compose a Workspace as guidance.workspace"):
             from workspace.workspace import Workspace
 
-            expect(isinstance(self.host.workspace, Workspace)).to(be_true)
+            expect(isinstance(self.tool.workspace, Workspace)).to(be_true)
 
     with context("ChronicleWithOutput generate via Generate kit"):
         with before.all:
             from generate.generate import Generate
 
             cls = type(AgentToolSet.instantiate(_CHRONICLE_WITH_OUTPUT_TOOLSET))
-            self.host = cls()
+            self.tool = cls()
             self.response = Generate().instructions["generate"].expand(
                 {},
-                {"guidance": [self.host]},
+                {"guidance": [self.tool]},
             )
 
         with it("should keep nested generate_output tools ahead of finish_turn"):
@@ -158,8 +158,8 @@ with description("a WorkSession with a name and path"):
         expect(d["fidelities"]).to(equal("behavior"))
         expect(d["contexts"]).to(equal("bdd"))
 
-    with it("should not bind EvalSession when a host attaches"):
-        self.session.attach_host(object())
+    with it("should not bind EvalSession when Guidance attaches"):
+        self.session.attach_tool(object())
         expect(getattr(self.session, "eval", None)).to(be_none)
 
 

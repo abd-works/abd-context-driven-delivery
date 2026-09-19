@@ -40,7 +40,7 @@ def _load_clean_engineering(
     *, format_name: str = "python", fidelity: str = "modules"
 ) -> AgentToolSet:
     toolset_cls = type(AgentToolSet.instantiate(_CLEAN_ENGINEERING_TOOLSET))
-    return toolset_cls(fidelity=fidelity, format=format_name, session=None)
+    return toolset_cls(fidelity=fidelity, format=format_name)
 
 
 def _expand_action(
@@ -70,8 +70,8 @@ def _load_examples(module_dir: Path) -> str:
 
 
 def _load_python_template(module_dir: Path) -> str:
-    host = _load_clean_engineering()
-    return Markdown.from_label(host, "templates").extract()
+    practice = _load_clean_engineering()
+    return Markdown.from_label(practice, "templates").extract()
 
 
 def _context_rule_slugs(concepts_text: str) -> list[str]:
@@ -157,7 +157,7 @@ with description("CleanEngineering action expansion"):
             with it("should inline the python template file"):
                 _assert_text_inlined(self.response.instructions, self.template)
 
-        with context("the Validate kit is expanded with this host"):
+        with context("the Validate kit is expanded with this Guidance"):
             with before.each:
                 self.response = _expand_action(
                     Validate(),
@@ -171,7 +171,7 @@ with description("CleanEngineering action expansion"):
                     _load_action_prose("validate", _VALIDATE_DIR),
                 )
 
-        with context("the Satisfy kit is expanded with this host"):
+        with context("the Satisfy kit is expanded with this Guidance"):
             with before.each:
                 self.response = _expand_action(
                     Satisfy(),
@@ -187,11 +187,11 @@ with description("CleanEngineering action expansion"):
 
     with context("a CleanEngineering generator at model markdown"):
         with before.each:
-            self.host = _load_clean_engineering(
+            self.practice = _load_clean_engineering(
                 format_name="markdown", fidelity="model"
             )
-            self.contexts = self.host.scoped_markdown()
-            self.examples = self.host.examples().expand()
+            self.contexts = self.practice.scoped_markdown()
+            self.examples = self.practice.examples().expand()
 
         with it("should keep Language and model contexts only"):
             expect("## Shared rules" in self.contexts).to(be_true)

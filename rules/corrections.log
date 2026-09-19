@@ -1,0 +1,2 @@
+mistake: durable guidance was told to live only in the module, test, skill, or .context, with no correction record
+correction: create corrections.log in the folder of the corrected work; put the mistake and the correction in there (never AGENTS.md)

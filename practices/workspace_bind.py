@@ -1,4 +1,4 @@
-"""Attach a PracticeGuidance instance to a Workspace — not a host composer."""
+"""Attach a PracticeGuidance instance to a Workspace — not a second Workspace on the practice."""
 
 from __future__ import annotations
 
@@ -59,8 +59,8 @@ def init_practice_guidance(
     PracticeGuidance.__init__(
         practice,
         format=format,
-        path=path,
-        session=session,
-        workspace=workspace,
         fidelity=fidelity,
+    )
+    attach_practice_workspace(
+        practice, path=path, session=session, workspace=workspace
     )

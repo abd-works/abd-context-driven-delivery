@@ -17,7 +17,6 @@ from mamba import context, description, it
 from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from harness.agent_tools.agent_tools import AgentInstructions
-from tools.diagnose.diagnose import Diagnose
 
 
 def _expanded(bdd, action_name):
@@ -28,7 +27,7 @@ def _expanded(bdd, action_name):
 
 
 def _bdd():
-    return Bdd(fidelity="development", path="practices/bdd")
+    return Bdd(fidelity="development")
 
 
 with description("a Bdd toolset"):
@@ -56,21 +55,6 @@ with description("a Bdd toolset"):
                 companion = Bdd(fidelity="development").fidelities.current.clean_engineering
                 expect(companion.fidelity).to(equal("code"))
 
-        with context("with a path set"):
-            with it("should carry the same path to the CE companion"):
-                companion = Bdd(fidelity="behavior", path="practices/bdd").fidelities.current.clean_engineering
-                expect(companion.practice_guidance.path).to(equal("practices/bdd"))
-
-        with context("with a session set"):
-            with it("should carry the same session name to the CE companion"):
-                companion = Bdd(fidelity="development", session="satisfy").fidelities.current.clean_engineering
-                session = companion.practice_guidance.workspace.current_work_session
-                expect(session.name if session else None).to(equal("satisfy"))
-
-    with context("that provides a Diagnose companion"):
-        with it("should return a Diagnose instance"):
-            expect(_bdd().diagnostic()).to(be_a(Diagnose))
-
     with context("whose guidance action is expanded"):
         with it("should include the Clean Engineering companion's instructions"):
             prose = _expanded(_bdd(), "guidance")
@@ -86,7 +70,7 @@ with description("a Bdd toolset"):
 
     with context("that does not own kit lifecycle actions"):
         with it("should not expose generate, validate, satisfy, repair, grill, sketch, or iterate"):
-            host = _bdd()
+            practice = _bdd()
             for name in (
                 "generate",
                 "validate",
@@ -96,7 +80,7 @@ with description("a Bdd toolset"):
                 "sketch",
                 "iterate",
             ):
-                expect(name in host.agent_tools).to(equal(False))
+                expect(name in practice.agent_tools).to(equal(False))
 
     with context("whose transform tool is called"):
         with it("should delegate to CleanEngineering and return a dict"):

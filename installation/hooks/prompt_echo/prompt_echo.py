@@ -285,12 +285,78 @@ def toast_notice(echo: str) -> dict[str, str]:
     }
 
 
+_ARROW = " \u2192 "
+
+
+def _parse_toast_time(stamp: str) -> datetime | None:
+    try:
+        return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _guidance_names_from_toast_rest(rest: str) -> list[str]:
+    text = rest.strip()
+    lowered = text.lower()
+    if lowered.startswith("rules :"):
+        text = text.split(":", 1)[1]
+    elif lowered.startswith("rules:"):
+        text = text.split(":", 1)[1]
+    names: list[str] = []
+    for chunk in text.split(","):
+        name = chunk.strip()
+        if name.endswith(" rules"):
+            name = name[: -len(" rules")].strip()
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
+def _join_arrow_toasts(previous: str, incoming: str) -> str:
+    if incoming in previous:
+        return previous
+    if _ARROW not in previous or _ARROW not in incoming:
+        return f"{previous}; {incoming}"
+    prev_src, prev_rest = previous.split(_ARROW, 1)
+    inc_src, inc_rest = incoming.split(_ARROW, 1)
+    if prev_src.strip() != inc_src.strip():
+        return f"{previous}; {incoming}"
+    names: list[str] = []
+    for name in _guidance_names_from_toast_rest(prev_rest) + _guidance_names_from_toast_rest(
+        inc_rest
+    ):
+        if name not in names:
+            names.append(name)
+    return f"{prev_src.strip()}{_ARROW}rules : {', '.join(names)}"
+
+
+def inject_rules_toast(source: str, labels: list[str]) -> str:
+    return f"{source}{_ARROW}rules : {', '.join(labels)}"
+
+
 def show_ide_toast(echo: str, repo: Path | None = None) -> Path:
     root = Path(repo) if repo is not None else _REPO_ROOT
     dest = root / TOAST_NOTICE
     dest.parent.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    message = echo
+    if dest.is_file():
+        try:
+            previous = json.loads(dest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError):
+            previous = {}
+        prev_msg = str(previous.get("message") or "")
+        prev_at = _parse_toast_time(str(previous.get("at") or ""))
+        now = _parse_toast_time(stamp)
+        if (
+            prev_msg
+            and prev_at is not None
+            and now is not None
+            and abs((now - prev_at).total_seconds()) <= 2
+        ):
+            message = _join_arrow_toasts(prev_msg, echo)
     dest.write_text(
-        json.dumps(toast_notice(echo), ensure_ascii=False) + "\n",
+        json.dumps({"message": message, "at": stamp}, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
     return dest

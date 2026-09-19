@@ -259,12 +259,12 @@ with description("a sketch action"):
             expect("review_sketch" in Sketch().tools).to(be_true)
 
 
-with description("PracticeGuidance host face for sketch"):
-    with it("should not expose sketch on practice guidance hosts"):
+with description("PracticeGuidance operations for sketch"):
+    with it("should not expose sketch on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
                 "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
-        host = cls()
-        expect("sketch" in host.agent_tools).to(equal(False))
+        practice = cls()
+        expect("sketch" in practice.agent_tools).to(equal(False))

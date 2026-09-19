@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from installation.harness_files.harness_files import Skill
-from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool
 
 _TRIP_HEADER = "===== TRIP LOG (read only) ====="
@@ -18,32 +16,15 @@ class Car(PracticeGuidance):
     plus vehicle tools agents invoke while narrating.
     """
 
-    domain_slug = "car"
-    default_workspace_folder: str = "."
-    context_index_key: str = "car"
-    supported_formats = frozenset({"markdown"})
-
     def __init__(
         self,
-        fidelity: str = "road_story",
         make: str = "Dodge",
         model: str = "Charger",
         year: int = 1969,
         personality: str = "loyal",
-        format: str | None = None,
-        path: str | None = None,
-        session: str | None = None,
-        workspace: str | None = None,
-        stage: str | None = None,
+        fidelity: str = "road_story",
     ) -> None:
-        super().__init__(
-            format=format,
-            path=path,
-            session=session,
-            workspace=workspace,
-            fidelity=fidelity,
-            stage=stage,
-        )
+        super().__init__(fidelity=fidelity)
         self._make = make
         self._model = model
         self._year = year
@@ -75,14 +56,6 @@ class Car(PracticeGuidance):
     def running(self) -> bool:
         """Whether the engine is running."""
         return self._running
-
-    @property
-    @Mcp
-    @Skill
-    @agent_instructions
-    def instructions(self) -> str:
-        """In-character road stories turn vehicle personality into a narrative the reader can follow. Every story names the car, the road, and what happens in order — start the engine before you speak, stop before you declare arrival."""
-        return super().instructions
 
     @agent_instructions
     def generate(self) -> str:

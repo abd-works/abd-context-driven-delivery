@@ -85,7 +85,7 @@ class GrillContext(GuidanceAction):
     @Skill
     @agent_instructions
     def grill(self, guidance: GuidanceArg) -> str:
-        """Interview the plan against codebase context until questions are grounded in files you have read, then generate each listed Guidance host. Ask one framed question at a time and write each resolved insight to grill-answers.md. Pass a string to grill that text once."""
+        """Interview the plan against codebase context until questions are grounded in files you have read, then generate each listed Guidance. Ask one framed question at a time and write each resolved insight to grill-answers.md. Pass a string to grill that text once."""
         self.begin(guidance, action="grill")
         self.grill_with_context()
         self.each(lambda item: self._generate().generate(item if isinstance(item, str) else [item]))

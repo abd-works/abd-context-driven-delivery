@@ -53,15 +53,15 @@ def _markdown_to_html(text: str) -> str:
     return "\n".join(chunks)
 
 
-def class_file_directory(host: Any) -> Path:
-    practice = getattr(host, "practice_guidance", None)
+def class_file_directory(instance: Any) -> Path:
+    practice = getattr(instance, "practice_guidance", None)
     if practice is not None:
-        host = practice
-    stored = getattr(host, "module_dir", None)
+        instance = practice
+    stored = getattr(instance, "module_dir", None)
     if stored is not None:
         return Path(stored)
     try:
-        return Path(inspect.getfile(type(host))).resolve().parent
+        return Path(inspect.getfile(type(instance))).resolve().parent
     except (TypeError, OSError):
         return Path(".")
 
@@ -114,12 +114,12 @@ def _active_resource(instance: Any, key: str | None) -> str | None:
     return str(value) if value else None
 
 
-def _fidelity_scope(host: Any) -> str | None:
-    """Fidelity section name on Guidance hosts only — not WorkSession.name or AgentToolSet.name."""
-    if getattr(host, "practice_guidance", None) is not None:
-        value = getattr(host, "name", None)
+def _fidelity_scope(instance: Any) -> str | None:
+    """Fidelity section name on Guidance only — not WorkSession.name or AgentToolSet.name."""
+    if getattr(instance, "practice_guidance", None) is not None:
+        value = getattr(instance, "name", None)
         return str(value) if value else None
-    for cls in type(host).__mro__:
+    for cls in type(instance).__mro__:
         if cls is object:
             continue
         declared = cls.__dict__.get("name", _MISSING)
@@ -127,7 +127,7 @@ def _fidelity_scope(host: Any) -> str | None:
             continue
         if isinstance(declared, property):
             return None
-        value = getattr(host, "name", None)
+        value = getattr(instance, "name", None)
         return str(value) if value else None
     return None
 
@@ -149,24 +149,24 @@ class AssetLocation:
 class AssetLocator:
     def __init__(
         self,
-        host: Any,
+        instance: Any,
         label: str,
         *,
         group: str | None = None,
         filter_key: str | None = None,
     ) -> None:
-        self._host = host
+        self._instance = instance
         self._label = label
         self._group = group
         self._filter_key = filter_key
 
     @property
     def fidelity(self) -> str | None:
-        return _active_resource(self._host, "fidelity")
+        return _active_resource(self._instance, "fidelity")
 
     @property
     def format(self) -> str | None:
-        return _active_resource(self._host, "format")
+        return _active_resource(self._instance, "format")
 
     def _stamp(self, location: AssetLocation) -> AssetLocation:
         return replace(
@@ -180,15 +180,15 @@ class AssetLocator:
         return self._stamp(self._locate())
 
     def _locate(self) -> AssetLocation:
-        module_dir = class_file_directory(self._host)
+        module_dir = class_file_directory(self._instance)
         domain_slug = (
-            getattr(self._host, "domain_slug", None)
-            or getattr(self._host, "toolset_name", None)
+            getattr(self._instance, "domain_slug", None)
+            or getattr(self._instance, "toolset_name", None)
             or module_dir.name
         )
-        filter_value = _active_resource(self._host, self._filter_key) if self._filter_key else None
+        filter_value = _active_resource(self._instance, self._filter_key) if self._filter_key else None
         if self._label == "templates":
-            active_format = filter_value or _active_resource(self._host, "format")
+            active_format = filter_value or _active_resource(self._instance, "format")
             located = self._locate_templates(module_dir, domain_slug, active_format)
             if located.path is not None and located.path.is_file():
                 return located
@@ -213,7 +213,7 @@ class AssetLocator:
         return root
 
     def _locate_under(self, search_root: Path, module_dir: Path, domain_slug: str) -> AssetLocation:
-        fidelity_name = _fidelity_scope(self._host)
+        fidelity_name = _fidelity_scope(self._instance)
         if fidelity_name:
             section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
             return AssetLocation(
@@ -260,7 +260,7 @@ class AssetLocator:
     def _locate_templates(
         self, module_dir: Path, domain_slug: str, active_format: str | None
     ) -> AssetLocation:
-        fidelity = _active_resource(self._host, "fidelity")
+        fidelity = _active_resource(self._instance, "fidelity")
         if fidelity:
             located = self._named_template_file(
                 module_dir, fidelity, active_format, domain_slug, practice=False
@@ -370,64 +370,73 @@ def _to_snake(key: str) -> str:
     return "".join(chars).replace("__", "_")
 
 
-def _matching_attr(host: Any, key: str) -> str | None:
+def _matching_attr(instance: Any, key: str) -> str | None:
     wanted = {
         key.casefold(),
         _to_snake(key).casefold(),
         key.replace(" ", "_").replace("-", "_").casefold(),
     }
-    for name in dir(host):
+    for name in dir(instance):
         if name.startswith("_"):
             continue
         if name.casefold() not in wanted:
             continue
-        member = getattr(type(host), name, None)
+        member = getattr(type(instance), name, None)
         if callable(member) and not isinstance(member, property):
             continue
-        value = getattr(host, name, None)
+        value = getattr(instance, name, None)
         if callable(value) and not isinstance(member, property):
             continue
         return name
     return None
 
 
-def _assign_yaml_value(host: Any, attr: str, value: Any) -> None:
+def _assign_yaml_value(instance: Any, attr: str, value: Any) -> None:
     stored = attr
-    descriptor = getattr(type(host), attr, None)
+    descriptor = getattr(type(instance), attr, None)
     if isinstance(descriptor, property) and descriptor.fset is None:
         stored = _to_snake(attr)
     if stored == "default_format" and isinstance(value, str):
         value = canonical_format(value.split()[0].strip("()`"))
     elif stored == "clean_engineering" and isinstance(value, str):
         value = value.split()[0].strip("()`").replace("-", "_")
-    setattr(host, stored, value)
+    setattr(instance, stored, value)
 
 
-def bind_yaml(host: Any, text: str) -> None:
+def bind_yaml(instance: Any, text: str) -> None:
     for key, value in yaml_fields(text).items():
-        attr = _matching_attr(host, key)
+        attr = _matching_attr(instance, key)
         if attr is None:
             continue
-        _assign_yaml_value(host, attr, value)
+        _assign_yaml_value(instance, attr, value)
 
 
 class Markdown:
-    def __init__(self, host: Any, label: str) -> None:
-        self._host = host
+    def __init__(self, instance: Any, label: str) -> None:
+        self._instance = instance
         self._label = label
 
     @classmethod
-    def from_label(cls, host: Any, label: str) -> Markdown:
-        return cls(host, label)
+    def from_label(cls, instance: Any, label: str) -> Markdown:
+        return cls(instance, label)
 
     def raw(self) -> str:
-        location = AssetLocator(self._host, self._label).locate()
+        location = AssetLocator(self._instance, self._label).locate()
         return _extract_location(location)
 
     def extract(self) -> str:
         text = self.raw()
-        bind_yaml(self._host, text)
+        bind_yaml(self._instance, text)
         return strip_yaml_fences(text)
+
+    @classmethod
+    def expand_docstring(cls, instance: Any, docstring: str | None) -> str:
+        """Plain docstring text, or the markdown section when the docstring is one word."""
+        text = (docstring or "").strip()
+        if not text or len(text.split()) != 1:
+            return text
+        extracted = cls.from_label(instance, text).extract().strip()
+        return extracted or text
 
     def html(self) -> HTML:
         return HTML.from_markdown(self.extract())
@@ -697,7 +706,7 @@ _FORMAT_ALIASES = {
 
 
 def canonical_format(name: str | None) -> str:
-    """Resolve a host format or folder alias to the output-channel key."""
+    """Resolve a format or folder alias to the output-channel key."""
     if not name:
         return ""
     folded = name.casefold()
@@ -715,7 +724,7 @@ def _format_key_for_template(path: Path, templates_folder: Path) -> str:
 
 
 def _templates_path_map(markdown: Markdown) -> dict[str, str]:
-    class_dir = class_file_directory(markdown._host)
+    class_dir = class_file_directory(markdown._instance)
     folder = class_dir / "templates"
     mapping: dict[str, str] = {}
     if not folder.is_dir():

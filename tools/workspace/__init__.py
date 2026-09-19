@@ -12,7 +12,7 @@ __all__ = [
     "ISessionLog",
     "Workspace",
     "WorkSession",
-    "ContextToolHost",
+    "ContextTool",
     "GitRepo",
     "NullGitRepo",
     "SessionLog",
@@ -30,7 +30,7 @@ def __getattr__(name: str):
     if name in (
         "WorkSession",
         "Workspace",
-        "ContextToolHost",
+        "ContextTool",
         "Turn",
         "Mistake",
         "Correction",

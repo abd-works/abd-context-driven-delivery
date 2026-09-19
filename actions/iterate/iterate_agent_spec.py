@@ -1,7 +1,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: actions/iterate/.context/.agent_bdd_sessions/iterate-owns-tools.json
-"""Agent BDD — /iterate runs Iterate.iterate(tools=...) not host iterate."""
+"""Agent BDD — /iterate runs Iterate.iterate(tools=...) not practice iterate."""
 
 from expects import contain, equal, expect
 from mamba import context, description, it
@@ -25,7 +25,7 @@ _BDD = "practices.bdd.bdd:Bdd"
 
 with description("an iterate action"):
     with context("that is given one context tool"):
-        with it("should run Iterate.iterate with that tool, not the host iterate"):
+        with it("should run Iterate.iterate with that tool, not the Guidance iterate"):
             with agent(_REPO_ROOT, _SESSIONS / "iterate-owns-tools.json"):
                 read_workspace(".cursor/commands/iterate.md")
                 read_workspace("actions/iterate/iterate.py")
@@ -43,7 +43,7 @@ with description("an iterate action"):
                 explanation = follow_instructions(
                     "The user invoked /bdd /iterate. Using the iterate command you read, "
                     "say which toolset owns the run and how the BDD tool is passed. "
-                    "Do not invoke host iterate on Bdd.",
+                    "Do not invoke practice iterate on Bdd.",
                     timeout_seconds=180,
                 ).text
                 ai_judge(

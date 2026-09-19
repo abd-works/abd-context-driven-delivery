@@ -1,4 +1,4 @@
-"""Scan kit — host-bound scanner collection over files on disk."""
+"""Scan kit — scanner collection bound to Guidance, over files on disk."""
 
 from __future__ import annotations
 
@@ -47,21 +47,21 @@ class ScanReport:
 
 @agent_toolset
 class Scan(GuidanceAction):
-    """Action kit: ``/scan`` lists context tools; composed ``self.scanner`` is bound to the host."""
+    """Action kit: ``/scan`` lists context tools; composed ``self.scanner`` is bound to Guidance."""
 
     def __init__(self, path: str = ".", session: str = "") -> None:
-        self._host = None
+        self._guidance = None
         self._bound_collection = None
         super().__init__(path=path, session=session)
 
     @classmethod
-    def bound_to(cls, host: Any, collection: ScannerCollection | None = None) -> Scan:
-        """Composed Scan — same kit, bound to a host's rule set. Does not open a workspace."""
+    def bound_to(cls, guidance: Any, collection: ScannerCollection | None = None) -> Scan:
+        """Composed Scan — same kit, bound to that Guidance rule set. Does not open a workspace."""
         inst = cls.__new__(cls)
         AgentToolSet.__init__(inst)
-        inst._host = host
+        inst._guidance = guidance
         inst._bound_collection = collection
-        inst.workspace = getattr(host, "workspace", None)
+        inst.workspace = getattr(guidance, "workspace", None)
         inst._session_name = ""
         inst._guidance_text = None
         inst._tool_items = []
@@ -70,11 +70,11 @@ class Scan(GuidanceAction):
     def _scanner_collection(self) -> ScannerCollection:
         if self._bound_collection is not None:
             return self._bound_collection
-        host = self._host
-        if host is not None:
-            return host._scanner_collection()
+        guidance = self._guidance
+        if guidance is not None:
+            return guidance._scanner_collection()
         raise ValueError(
-            "Scan requires a host (or an explicit collection bound from a host) "
+            "Scan requires Guidance (or an explicit collection bound from Guidance) "
             "to know which scanners run"
         )
 
@@ -105,7 +105,7 @@ class Scan(GuidanceAction):
         rule: str | None = None,
         guidance: GuidanceArg | None = None,
     ) -> str:
-        """Run the listed Guidance hosts' mechanical scanners on the given paths and report potential violations. Fix the source that failed the rule; do not patch the scanner to make the report green. Pass a string to scan once with the bound collection."""
+        """Run the listed Guidance mechanical scanners on the given paths and report potential violations. Fix the source that failed the rule; do not patch the scanner to make the report green. Pass a string to scan once with the bound collection."""
         if guidance is None:
             return self._run(self._scanner_collection(), paths, root, rule)
 

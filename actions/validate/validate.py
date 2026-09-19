@@ -17,7 +17,7 @@ class Validate(GuidanceAction):
     @Skill
     @agent_instructions
     def validate(self, guidance: GuidanceArg, rule: Rule | None = None) -> str:
-        """Check artifacts against rules. Pass a string to validate that text once. Pass a list of Guidance to walk each host's rules. Pass a single Rule to check only that rule."""
+        """Check artifacts against rules. Pass a string to validate that text once. Pass a list of Guidance to walk each Guidance's rules. Pass a single Rule to check only that rule."""
         def on(item) -> str:
             if rule is not None:
                 return rule.validate()
@@ -33,7 +33,7 @@ class Validate(GuidanceAction):
     @Skill
     @agent_instructions
     def createRule(self, guidance: GuidanceArg, failed: str, wanted: str) -> str:
-        """Add a named rule and matching scanner to each listed Guidance host from a failed example and the wanted behavior. Then scan the asset with that rule so the same mistake is detected. Pass a string to create the rule against that text once."""
+        """Add a named rule and matching scanner to each listed Guidance from a failed example and the wanted behavior. Then scan the asset with that rule so the same mistake is detected. Pass a string to create the rule against that text once."""
         def on(item) -> None:
             if isinstance(item, str):
                 return

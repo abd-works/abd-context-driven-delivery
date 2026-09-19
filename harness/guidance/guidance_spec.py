@@ -27,53 +27,83 @@ with description("context guidance"):
         with it(
             "should join context, guidance, formatted rules, and the template for the active format"
         ):
-            host = SampleGuidance(format="markdown")
-            text = host.instructions
+            guidance = SampleGuidance(format="markdown")
+            text = guidance.instructions
             expect(text).to(contain("sample preamble"))
             expect(text).to(contain("known prose for guidance in sample tool"))
             expect(text).to(contain("sample-rule-one"))
             expect(text).to(contain("## Shared rules"))
             expect(text).to(contain("active format template body for sample tool"))
 
-        with it("should publish the overview as the prompt message"):
-            host = SampleGuidance(format="markdown")
-            expect(host.prompt_message).to(equal(host.overview.strip()))
-            expect(host.prompt_message).not_to(contain("known prose for guidance in sample tool"))
+        with it("should use overview as the skill and MCP copy for instructions"):
+            guidance = SampleGuidance(format="markdown")
+            copy = guidance.tools["instructions"].description
+            expect(copy).to(equal(guidance.overview.strip()))
+            expect(copy).not_to(contain("known prose for guidance in sample tool"))
 
         with it(
             "should expose instructions as one compound property not as a single markdown label"
         ):
-            host = SampleGuidance(format="markdown")
-            expect(host.instructions).not_to(equal(host.overview))
-            expect(host.instructions).not_to(equal(host.guidance))
-            expect(host.instructions).to(contain(host.overview.strip()))
-            expect(host.instructions).to(contain(host.guidance.strip()))
+            guidance = SampleGuidance(format="markdown")
+            expect(guidance.instructions).not_to(equal(guidance.overview))
+            expect(guidance.instructions).not_to(equal(guidance.guidance))
+            expect(guidance.instructions).to(contain(guidance.overview.strip()))
+            expect(guidance.instructions).to(contain(guidance.guidance.strip()))
 
     with context("with the rules collection and the rules markdown read"):
         with it("should keep parsed rules on rules and the section text on rules_markdown"):
-            host = SampleGuidance(format="markdown")
-            expect("sample-rule-one" in host.rules.entries).to(equal(True))
-            expect(host.rules_markdown).to(contain("sample rule one"))
+            guidance = SampleGuidance(format="markdown")
+            expect("sample-rule-one" in guidance.rules.entries).to(equal(True))
+            expect(guidance.rules_markdown).to(contain("sample rule one"))
 
         with it("should inject rules markdown when the agent writes a matching path"):
-            host = SampleGuidance(format="markdown")
-            result = host.inject_rules(
+            guidance = SampleGuidance(format="markdown")
+            result = guidance.inject_rules(
                 {
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
                 }
             )
             expect(result.get("additional_context")).to(contain("sample rule one"))
-            expect(getattr(type(host).inject_rules, "_echo", False)).to(equal(True))
+            expect(getattr(type(guidance).inject_rules, "_echo", False)).to(equal(True))
             from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
 
             notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
-            expect(notice).to(contain("Rules"))
-            expect(notice).to(contain("sample-tool"))
+            expect(notice).to(contain("chat edit"))
+            expect(notice).to(contain("rules :"))
+            expect(notice).to(contain("sample tool"))
+
+        with it("should list inject_rules on tools so hook install can enroll it"):
+            guidance = SampleGuidance(format="markdown")
+            expect("inject_rules" in guidance.tools).to(equal(True))
+            expect(guidance.tools["inject_rules"].install_to_hook).to(equal(True))
+
+        with it("should inject the matching fidelity rules when a practice file is written"):
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+            from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
+
+            result = CleanEngineering().inject_rules(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {
+                        "path": "tools/catalog_generator/catalog_generator.py",
+                    },
+                }
+            )
+            expect(result.get("additional_context") or "").to(contain("keep-operations-small-focused"))
+            notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
+            expect(notice).to(contain("chat edit"))
+            expect(notice).to(contain("clean engineering code"))
+
+        with it("should name a fidelity on the inject toast, not only the practice"):
+            practice = SamplePracticeWithFidelities()
+            sketch = practice.fidelities.entries["sketch"]
+            expect(sketch.rules_label).to(equal("sample tool sketch"))
+            expect(SampleGuidance().rules_label).to(equal("sample tool"))
 
         with it("should not inject rules markdown when the agent writes a non-matching path"):
-            host = SampleGuidance(format="markdown")
-            result = host.inject_rules(
+            guidance = SampleGuidance(format="markdown")
+            result = guidance.inject_rules(
                 {
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/other.py"},
@@ -84,20 +114,20 @@ with description("context guidance"):
 
 with description("a context tool module with one domain markdown file named for the context tool") as self:
     with before.each:
-        self.host = SamplePracticeGuidance(format="markdown")
+        self.guidance = SamplePracticeGuidance(format="markdown")
 
     with context("with the overview property read"):
         with it("should return the Overview preamble"):
-            expect(self.host.overview).to(contain("sample preamble"))
+            expect(self.guidance.overview).to(contain("sample preamble"))
 
     with context("with the guidance property read"):
         with it("should return the Guidance section body only"):
-            expect(self.host.guidance).to(contain("known prose for guidance in sample tool"))
-            expect(self.host.guidance).not_to(contain("sample preamble"))
+            expect(self.guidance.guidance).to(contain("known prose for guidance in sample tool"))
+            expect(self.guidance.guidance).not_to(contain("sample preamble"))
 
     with context("with the instructions property read"):
         with it("should join context, guidance, formatted rules, and the template for the active format"):
-            text = self.host.instructions
+            text = self.guidance.instructions
             expect(text).to(contain("sample preamble"))
             expect(text).to(contain("known prose for guidance in sample tool"))
             expect(text).to(contain("active format template body for sample tool"))
@@ -107,29 +137,29 @@ with description("a context tool module with one domain markdown file named for 
         with context("with template files such as slug-templates and slug-sketch inside the folder"):
             with context("with the templates property read"):
                 with it("should return the active format template body"):
-                    expect(self.host.templates).to(contain("active format template body for sample tool"))
+                    expect(self.guidance.templates).to(contain("active format template body for sample tool"))
 
             with context("with one format key selected"):
                 with it("should return the file content at the mapped path"):
-                    expect(self.host.instructions).to(contain("active format template body for sample tool"))
+                    expect(self.guidance.instructions).to(contain("active format template body for sample tool"))
 
 
 with description("a context tool module with section files and subsection folders named for the context tool") as self:
     with before.each:
-        self.host = SplitPracticeGuidance(format="markdown")
+        self.guidance = SplitPracticeGuidance(format="markdown")
 
     with context("with the overview property read"):
         with it("should return the Overview preamble"):
-            expect(self.host.overview).to(contain("split preamble from contexts file"))
+            expect(self.guidance.overview).to(contain("split preamble from contexts file"))
 
     with context("with the guidance property read"):
         with it("should return the Guidance section body only"):
-            expect(self.host.guidance).to(contain("split guidance section body only"))
+            expect(self.guidance.guidance).to(contain("split guidance section body only"))
 
     with context("with a Shared rules section containing scanner bullets"):
         with context("with the rules property read"):
             with it("should parse bullets into a rules collection"):
-                expect("split-rule" in self.host.rules.entries).to(equal(True))
+                expect("split-rule" in self.guidance.rules.entries).to(equal(True))
 
 
 with description("a context tool module with one domain markdown file named for the context tool and fidelity sections") as self:
@@ -221,34 +251,34 @@ with description("a guidance collection of context guidance children") as self:
 
 with description("practice guidance with fidelities examples and templates beside the module") as self:
     with before.each:
-        self.host = SamplePracticeWithFidelities(format="markdown")
+        self.guidance = SamplePracticeWithFidelities(format="markdown")
 
     with context("with the instructions property read on practice guidance"):
         with it(
             "should join this practice's own context, guidance, rules, and template without inlining fidelity bodies"
         ):
-            text = self.host.instructions
+            text = self.guidance.instructions
             expect(text).to(contain("sample preamble"))
             expect(text).not_to(contain("sketch guidance body only"))
             expect(text).not_to(contain("spec guidance body only"))
 
         with it("should not inline examples into instructions"):
-            expect(self.host.instructions).not_to(contain("example file not inlined"))
+            expect(self.guidance.instructions).not_to(contain("example file not inlined"))
 
     with context("with the examples property read on practice guidance"):
         with it("should return examples folder content as a separate property not inside instructions"):
-            expect(self.host.examples).to(contain("example file not inlined"))
+            expect(self.guidance.examples).to(contain("example file not inlined"))
 
     with context("with a markdown-backed property read as HTML on practice guidance"):
         with it("should return HTML formatted from that property extract"):
-            rendered = Markdown.from_label(self.host, "guidance").html()
+            rendered = Markdown.from_label(self.guidance, "guidance").html()
             expect(str(rendered)).to(contain("<p>"))
 
     with context("with fidelity set at invoke on practice guidance"):
         with it("should resolve active format from the named fidelity default format"):
-            self.host.fidelities.current = self.host.fidelities["sketch"]
-            self.host.format = self.host.fidelities["sketch"].default_format or self.host.format
-            expect(self.host.fidelities.current.fidelity).to(equal("sketch"))
+            self.guidance.fidelities.current = self.guidance.fidelities["sketch"]
+            self.guidance.format = self.guidance.fidelities["sketch"].default_format or self.guidance.format
+            expect(self.guidance.fidelities.current.fidelity).to(equal("sketch"))
 
 
 with description("practice and fidelity template files"):

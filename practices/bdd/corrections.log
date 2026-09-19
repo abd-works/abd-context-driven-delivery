@@ -1,0 +1,9 @@
+mistake: describe/that/with/it-should template and Names/Never table sat in ## Overview, so they were copied into the skill description
+correction: leave Overview as the short purpose; that shape and naming already live in Shared rules and templates/bdd-sketch.md
+
+mistake: Default format, Stage, and Clean Engineering sat inside #### Overview, so they were copied into skill descriptions
+correction: put those labeled lines directly under the fidelity heading (### behavior, etc.); parsers already read them from the whole fidelity block; Overview stays the short purpose prose only
+
+mistake: fidelity overviews were prefixed with **Goal:**
+correction: drop the Goal label; the sentence is the overview
+

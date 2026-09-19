@@ -13,10 +13,10 @@ for _cat in ("practices", "harness", "tools", "actions"):
 from expects import be_none, contain, equal, expect
 from mamba import before, context, description, it
 
-from harness.guidance.fixtures.other_tool.other_tool_host import OtherToolHost
+from harness.guidance.fixtures.other_tool.other_tool_host import OtherTool
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
-    SampleToolHost,
+    SampleTool,
 )
 from harness.markdown import AssetLocator, HTML, Markdown, bind_yaml, canonical_format
 
@@ -24,59 +24,59 @@ _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "practices" / "clean_engineering"
 _STORIES_DIR = _REPO_ROOT / "practices" / "stories"
 
 
-with description("a co-located markdown file beside a host module"):
+with description("a co-located markdown file beside the module"):
     with context("with a section heading that matches a property label"):
-        with context("with a string property on the host backed by that section"):
+        with context("with a string property on Guidance backed by that section"):
             with it("should return the section body when the property is read"):
-                host = SampleToolHost()
-                text = host.guidance
+                instance = SampleTool()
+                text = instance.guidance
                 expect(text).to(contain("known prose for guidance in sample tool"))
                 expect(text).not_to(contain("sample preamble"))
 
     with context("with known prose written in the module markdown file for that label"):
-        with context("with the property read on the host in that module"):
+        with context("with the property read on Guidance in that module"):
             with it("should return that prose"):
-                host = SampleToolHost()
-                expect(host.guidance).to(contain("known prose for guidance in sample tool"))
+                instance = SampleTool()
+                expect(instance.guidance).to(contain("known prose for guidance in sample tool"))
 
         with context("with an identically named section in a different module folder"):
             with it(
-                "should not return prose from the other module file when the host belongs to this module"
+                "should not return prose from the other module file when the class belongs to this module"
             ):
-                host = SampleToolHost()
-                other = OtherToolHost()
-                expect(host.guidance).to(contain("known prose for guidance in sample tool"))
-                expect(host.guidance).not_to(contain("prose from the other module only"))
+                instance = SampleTool()
+                other = OtherTool()
+                expect(instance.guidance).to(contain("known prose for guidance in sample tool"))
+                expect(instance.guidance).not_to(contain("prose from the other module only"))
                 expect(other.guidance).to(contain("prose from the other module only"))
                 expect(other.guidance).not_to(contain("known prose for guidance in sample tool"))
 
     with context("with a markdown-backed string property"):
         with context("with that property read as HTML"):
             with it("should return HTML formatted from that section body"):
-                host = SampleToolHost()
-                rendered = Markdown.from_label(host, "guidance").html()
+                instance = SampleTool()
+                rendered = Markdown.from_label(instance, "guidance").html()
                 expect(type(rendered)).to(equal(HTML))
                 expect(str(rendered)).to(contain("known prose for guidance in sample tool"))
                 expect(str(rendered)).to(contain("<p>"))
 
 
-with description("a templates folder beside a host module"):
+with description("a templates folder beside the module"):
     with context("with a produce file named for the domain and a markdown extension"):
         with it("should map the markdown format key not the templates filename stem"):
-            host = SamplePracticeGuidance(format="markdown")
+            instance = SamplePracticeGuidance(format="markdown")
             expect(canonical_format("md")).to(equal("markdown"))
-            expect(host.templates).to(contain("active format template body for sample tool"))
+            expect(instance.templates).to(contain("active format template body for sample tool"))
 
 
 with description("an asset locator"):
-    with context("that locates shared examples on a clean-engineering host"):
+    with context("that locates shared examples on a CleanEngineering"):
         with before.each:
-            class _Host:
+            class _YamlSubject:
                 module_dir = _CLEAN_ENGINEERING_DIR
                 fidelity = "modules"
                 format = "python"
 
-            self.location = AssetLocator(_Host(), "examples").locate()
+            self.location = AssetLocator(_YamlSubject(), "examples").locate()
 
         with it("should resolve to kind folder"):
             expect(self.location.kind).to(equal("folder"))
@@ -84,14 +84,14 @@ with description("an asset locator"):
         with it("should resolve to practices/clean_engineering/examples"):
             expect(self.location.folder).to(equal((_CLEAN_ENGINEERING_DIR / "examples").resolve()))
 
-    with context("that locates overview on a clean-engineering host"):
+    with context("that locates overview on a CleanEngineering"):
         with before.each:
-            class _Host:
+            class _YamlSubject:
                 module_dir = _CLEAN_ENGINEERING_DIR
                 format = "python"
                 toolset_name = "clean_engineering"
 
-            self.location = AssetLocator(_Host(), "overview").locate()
+            self.location = AssetLocator(_YamlSubject(), "overview").locate()
 
         with it("should resolve to Overview in clean_engineering.md"):
             expect(self.location.kind).to(equal("section"))
@@ -100,14 +100,14 @@ with description("an asset locator"):
                 equal((_CLEAN_ENGINEERING_DIR / "clean_engineering.md").resolve())
             )
 
-    with context("that locates shared templates on a clean-engineering host"):
+    with context("that locates shared templates on a CleanEngineering"):
         with before.each:
-            class _Host:
+            class _YamlSubject:
                 module_dir = _CLEAN_ENGINEERING_DIR
                 format = "python"
                 toolset_name = "clean_engineering"
 
-            self.location = AssetLocator(_Host(), "templates").locate()
+            self.location = AssetLocator(_YamlSubject(), "templates").locate()
 
         with it("should resolve to the python template file when format is python"):
             expect(self.location.kind).to(equal("file"))
@@ -117,15 +117,15 @@ with description("an asset locator"):
                 )
             )
 
-    with context("that locates shared templates on a stories host with markdown format"):
+    with context("that locates shared templates on a Stories with markdown format"):
         with before.each:
-            class _Host:
+            class _YamlSubject:
                 module_dir = _STORIES_DIR
                 format = "markdown"
                 fidelity = "story_map"
                 toolset_name = "stories"
 
-            self.location = AssetLocator(_Host(), "templates").locate()
+            self.location = AssetLocator(_YamlSubject(), "templates").locate()
 
         with it("should resolve to the fidelity-named markdown file"):
             expect(self.location.kind).to(equal("file"))
@@ -133,14 +133,14 @@ with description("an asset locator"):
                 equal((_STORIES_DIR / "templates" / "md" / "story-map.md").resolve())
             )
 
-    with context("that locates shared templates on a stories host with no format"):
+    with context("that locates shared templates on a Stories with no format"):
         with before.each:
-            class _Host:
+            class _YamlSubject:
                 module_dir = _STORIES_DIR
                 format = None
                 toolset_name = "stories"
 
-            self.location = AssetLocator(_Host(), "templates").locate()
+            self.location = AssetLocator(_YamlSubject(), "templates").locate()
 
         with it("should resolve to no template when no practice-named file exists"):
             expect(self.location.kind).to(equal("file"))
@@ -148,11 +148,11 @@ with description("an asset locator"):
 
     with context("that resolves a label to a folder"):
         with before.each:
-            class _Host:
+            class _YamlSubject:
                 module_dir = _CLEAN_ENGINEERING_DIR
                 format = "python"
 
-            self.location = AssetLocator(_Host(), "scanners").locate()
+            self.location = AssetLocator(_YamlSubject(), "scanners").locate()
 
         with it("should resolve to kind folder"):
             expect(self.location.kind).to(equal("folder"))
@@ -162,16 +162,16 @@ with description("an asset locator"):
 
 
 with description("a markdown section containing a yaml fence"):
-    with context("with keys that match properties on the host"):
+    with context("with keys that match properties on Guidance"):
         with before.each:
-            class _Host:
+            class _YamlSubject:
                 default_format = ""
                 stage = ""
                 clean_engineering = ""
 
-            self.host = _Host()
+            self.instance = _YamlSubject()
             bind_yaml(
-                self.host,
+                self.instance,
                 """```yaml
 default_format: python
 stage: specification
@@ -182,6 +182,20 @@ prose
             )
 
         with it("should bind each matching key as a property"):
-            expect(self.host.default_format).to(equal("python"))
-            expect(self.host.stage).to(equal("specification"))
-            expect(self.host.clean_engineering).to(equal("model"))
+            expect(self.instance.default_format).to(equal("python"))
+            expect(self.instance.stage).to(equal("specification"))
+            expect(self.instance.clean_engineering).to(equal("model"))
+
+
+with description("a docstring used as install prose"):
+    with context("that is one word naming a markdown section"):
+        with it("should extract that section from the Guidance markdown"):
+            instance = SamplePracticeGuidance(format="markdown")
+            expect(Markdown.expand_docstring(instance, "overview")).to(contain("sample preamble"))
+
+    with context("that is ordinary prose"):
+        with it("should keep the prose"):
+            instance = SamplePracticeGuidance(format="markdown")
+            expect(Markdown.expand_docstring(instance, "plain install text")).to(
+                equal("plain install text")
+            )

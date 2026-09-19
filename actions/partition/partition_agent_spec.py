@@ -1,7 +1,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: actions/partition/.context/.agent_bdd_sessions/partition-owns-tools.json
-"""Agent BDD — /partition runs Partition.partition(tools=...) not host partition."""
+"""Agent BDD — /partition runs Partition.partition(tools=...) not practice partition."""
 
 from expects import contain, equal, expect
 from mamba import context, description, it
@@ -26,7 +26,7 @@ _CONTEXT = "practices/bdd/bdd.py"
 
 with description("a partition action"):
     with context("that is given one context tool"):
-        with it("should run Partition.partition with that tool, not the host partition"):
+        with it("should run Partition.partition with that tool, not the Guidance partition"):
             with agent(_REPO_ROOT, _SESSIONS / "partition-owns-tools.json"):
                 read_workspace(".cursor/commands/partition.md")
                 read_workspace("actions/partition/partition.py")
@@ -48,7 +48,7 @@ with description("a partition action"):
                 explanation = follow_instructions(
                     "The user invoked /bdd /partition. Using the partition command you read, "
                     "say which toolset owns the run and how the BDD tool is passed. "
-                    "Do not invoke host partition on Bdd.",
+                    "Do not invoke practice partition on Bdd.",
                     timeout_seconds=180,
                 ).text
                 ai_judge(

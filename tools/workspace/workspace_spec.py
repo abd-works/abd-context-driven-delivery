@@ -18,7 +18,7 @@ from mamba import before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from workspace.git_repo import DirtyBranchSwitchError, NullGitRepo
-from workspace.workspace import ContextToolHost, PathOverride, Turn, Workspace
+from workspace.workspace import ContextTool, PathOverride, Turn, Workspace
 from harness.agent_tools.agent_tools import AgentToolSet
 
 
@@ -30,8 +30,8 @@ with description("a context tool"):
                     self.tmp = Path(tempfile.mkdtemp(prefix="ws-new-"))
                     self.git = NullGitRepo()
                     self.workspace = Workspace(str(self.tmp))
-                    self.host = ContextToolHost(self.workspace, git=self.git)
-                    self.session = self.host.run_action("sprint-a", goal="ship")
+                    self.tool = ContextTool(self.workspace, git=self.git)
+                    self.session = self.tool.run_action("sprint-a", goal="ship")
 
                 with it("should add the opened work session to its work sessions"):
                     expect([s.name for s in self.workspace.work_sessions]).to(
@@ -49,11 +49,11 @@ with description("a context tool"):
                     self.tmp = Path(tempfile.mkdtemp(prefix="ws-exist-"))
                     self.git = NullGitRepo()
                     self.workspace = Workspace(str(self.tmp))
-                    ContextToolHost(self.workspace, git=self.git).run_action(
+                    ContextTool(self.workspace, git=self.git).run_action(
                         "sprint-a", goal="first"
                     )
-                    self.host = ContextToolHost(self.workspace, git=self.git)
-                    self.session = self.host.run_action("sprint-a", goal="resume")
+                    self.tool = ContextTool(self.workspace, git=self.git)
+                    self.session = self.tool.run_action("sprint-a", goal="resume")
 
                 with it("should load the existing work session from its sessions folder"):
                     folder = (
@@ -77,13 +77,13 @@ with description("a context tool"):
                     self.tmp = Path(tempfile.mkdtemp(prefix="ws-on-branch-"))
                     self.git = NullGitRepo()
                     self.workspace = Workspace(str(self.tmp))
-                    self.host = ContextToolHost(self.workspace, git=self.git)
-                    self.host.run_action("sprint-a")
+                    self.tool = ContextTool(self.workspace, git=self.git)
+                    self.tool.run_action("sprint-a")
                     self.git.set_dirty(True)
                     self.before_branch = self.git.current_branch
 
                 with it("should continue without switching branch"):
-                    self.host.run_action("sprint-a")
+                    self.tool.run_action("sprint-a")
                     expect(self.git.current_branch).to(equal(self.before_branch))
                     expect(self.git.current_branch).to(equal("session/sprint-a"))
 
@@ -93,14 +93,14 @@ with description("a context tool"):
                         self.tmp = Path(tempfile.mkdtemp(prefix="ws-checkout-"))
                         self.git = NullGitRepo()
                         self.workspace = Workspace(str(self.tmp))
-                        ContextToolHost(self.workspace, git=self.git).run_action(
+                        ContextTool(self.workspace, git=self.git).run_action(
                             "sprint-a"
                         )
                         self.git.branch = "main"
                         self.git.set_dirty(False)
 
                     with it("should check out that session branch"):
-                        ContextToolHost(self.workspace, git=self.git).run_action(
+                        ContextTool(self.workspace, git=self.git).run_action(
                             "sprint-a"
                         )
                         expect(self.git.current_branch).to(equal("session/sprint-a"))
@@ -112,7 +112,7 @@ with description("a context tool"):
                         self.workspace = Workspace(str(self.tmp))
 
                     with it("should create its session branch"):
-                        ContextToolHost(self.workspace, git=self.git).run_action(
+                        ContextTool(self.workspace, git=self.git).run_action(
                             "sprint-new"
                         )
                         expect(self.git.current_branch).to(equal("session/sprint-new"))
@@ -123,13 +123,13 @@ with description("a context tool"):
                     self.tmp = Path(tempfile.mkdtemp(prefix="ws-dirty-"))
                     self.git = NullGitRepo()
                     self.workspace = Workspace(str(self.tmp))
-                    ContextToolHost(self.workspace, git=self.git).run_action("sprint-a")
+                    ContextTool(self.workspace, git=self.git).run_action("sprint-a")
                     self.git.branch = "main"
                     self.git.set_dirty(True)
-                    self.host = ContextToolHost(self.workspace, git=self.git)
+                    self.tool = ContextTool(self.workspace, git=self.git)
 
                 with it("should refuse to switch branch"):
-                    expect(lambda: self.host.run_action("sprint-a")).to(
+                    expect(lambda: self.tool.run_action("sprint-a")).to(
                         raise_error(DirtyBranchSwitchError)
                     )
                     expect(self.git.current_branch).to(equal("main"))
@@ -138,8 +138,8 @@ with description("a context tool"):
                 tmp = Path(tempfile.mkdtemp(prefix="ws-turn-"))
                 git = NullGitRepo()
                 workspace = Workspace(str(tmp))
-                host = ContextToolHost(workspace, git=git)
-                session = host.run_action("sprint-a")
+                tool = ContextTool(workspace, git=git)
+                session = tool.run_action("sprint-a")
                 expect(session.open_turn is not None).to(be_true)
 
             with context("that has a turn open"):
@@ -149,18 +149,18 @@ with description("a context tool"):
                             self.tmp = Path(tempfile.mkdtemp(prefix="ws-explicit-"))
                             self.git = NullGitRepo()
                             self.workspace = Workspace(str(self.tmp))
-                            self.host = ContextToolHost(
+                            self.tool = ContextTool(
                                 self.workspace, git=self.git
                             )
                             self.explicit = str(self.tmp / "modules").replace(
                                 "\\", "/"
                             )
-                            self.session = self.host.run_action(
+                            self.session = self.tool.run_action(
                                 "sprint-a", path=self.explicit
                             )
 
                         with it("should use that path for its module artifacts"):
-                            expect(self.host.artifact_path).to(equal(self.explicit))
+                            expect(self.tool.artifact_path).to(equal(self.explicit))
                             expect(self.session.open_turn.artifact_path).to(
                                 equal(self.explicit)
                             )
@@ -175,12 +175,12 @@ with description("a context tool"):
                                 )
                                 self.git = NullGitRepo()
                                 self.workspace = Workspace(str(self.tmp))
-                                self.host = ContextToolHost(
+                                self.tool = ContextTool(
                                     self.workspace,
                                     git=self.git,
                                     default_workspace_folder="src",
                                 )
-                                self.session = self.host.run_action("sprint-a")
+                                self.session = self.tool.run_action("sprint-a")
                                 self.default = str(self.tmp / "src").replace(
                                     "\\", "/"
                                 )
@@ -188,7 +188,7 @@ with description("a context tool"):
                             with it(
                                 "should use its default workspace folder for its module artifacts"
                             ):
-                                expect(self.host.artifact_path).to(
+                                expect(self.tool.artifact_path).to(
                                     equal(self.default)
                                 )
 
@@ -209,10 +209,10 @@ with description("a context tool"):
                                     )
                                 )
                                 self.workspace.save()
-                                self.host = ContextToolHost(
+                                self.tool = ContextTool(
                                     self.workspace, git=self.git
                                 )
-                                self.session = self.host.run_action("sprint-a")
+                                self.session = self.tool.run_action("sprint-a")
                                 self.override = str(
                                     self.tmp / "practices"
                                 ).replace("\\", "/")
@@ -220,7 +220,7 @@ with description("a context tool"):
                             with it(
                                 "should use the override path for its module artifacts"
                             ):
-                                expect(self.host.artifact_path).to(
+                                expect(self.tool.artifact_path).to(
                                     equal(self.override)
                                 )
 
@@ -231,11 +231,11 @@ with description("a context tool"):
                         self.tmp = Path(tempfile.mkdtemp(prefix="ws-keep-"))
                         self.git = NullGitRepo()
                         self.workspace = Workspace(str(self.tmp))
-                        self.host = ContextToolHost(self.workspace, git=self.git)
+                        self.tool = ContextTool(self.workspace, git=self.git)
                         self.explicit = str(self.tmp / "elsewhere").replace(
                             "\\", "/"
                         )
-                        self.host.run_action("sprint-a", path=self.explicit)
+                        self.tool.run_action("sprint-a", path=self.explicit)
 
                     with it(
                         "should keep a path override for that tool and fidelity"
@@ -259,12 +259,12 @@ with description("a context tool"):
                             )
                         )
                         self.workspace.save()
-                        self.host = ContextToolHost(
+                        self.tool = ContextTool(
                             self.workspace,
                             git=self.git,
                             default_workspace_folder="src",
                         )
-                        self.host.run_action(
+                        self.tool.run_action(
                             "sprint-a",
                             path=str(self.tmp / "src").replace("\\", "/"),
                         )
@@ -281,9 +281,9 @@ with description("a context tool"):
                         self.tmp = Path(tempfile.mkdtemp(prefix="ws-instr-"))
                         self.git = NullGitRepo()
                         self.workspace = Workspace(str(self.tmp))
-                        self.host = ContextToolHost(self.workspace, git=self.git)
-                        self.session = self.host.run_action("sprint-a")
-                        self.record = self.host.ask_for_instructions()
+                        self.tool = ContextTool(self.workspace, git=self.git)
+                        self.session = self.tool.run_action("sprint-a")
+                        self.record = self.tool.ask_for_instructions()
 
                     with it("should record the expansion on the session trail"):
                         expect(self.record in self.session.trail).to(be_true)
@@ -306,8 +306,8 @@ with description("a context tool"):
                         self.tmp = Path(tempfile.mkdtemp(prefix="ws-mistake-"))
                         self.git = NullGitRepo()
                         self.workspace = Workspace(str(self.tmp))
-                        self.host = ContextToolHost(self.workspace, git=self.git)
-                        self.session = self.host.run_action("sprint-a")
+                        self.tool = ContextTool(self.workspace, git=self.git)
+                        self.session = self.tool.run_action("sprint-a")
                         self.introducing = "sha-introducing"
                         self.open_turn_commit = "sha-open-turn"
                         self.mistake = self.session.open_turn.record_mistake(
@@ -377,8 +377,8 @@ with description("a context tool"):
                         self.tmp = Path(tempfile.mkdtemp(prefix="ws-fix-"))
                         self.git = NullGitRepo()
                         self.workspace = Workspace(str(self.tmp))
-                        self.host = ContextToolHost(self.workspace, git=self.git)
-                        self.session = self.host.run_action("sprint-a")
+                        self.tool = ContextTool(self.workspace, git=self.git)
+                        self.session = self.tool.run_action("sprint-a")
                         self.introducing = "sha-introducing"
                         self.session.open_turn.record_mistake(
                             entry_id="m001",
@@ -452,10 +452,10 @@ with description("a context tool"):
                     self.tmp = Path(tempfile.mkdtemp(prefix="ws-finish-"))
                     self.git = NullGitRepo()
                     self.workspace = Workspace(str(self.tmp))
-                    self.host = ContextToolHost(self.workspace, git=self.git)
-                    self.session = self.host.run_action("sprint-a")
+                    self.tool = ContextTool(self.workspace, git=self.git)
+                    self.session = self.tool.run_action("sprint-a")
                     self.git.set_dirty(True)
-                    self.host.finish(result="agent done")
+                    self.tool.finish(result="agent done")
 
                 with it("should finish its turn for the action"):
                     expect(self.session.open_turn).to(be_none)
@@ -466,16 +466,16 @@ with description("a context tool"):
                     self.tmp = Path(tempfile.mkdtemp(prefix="ws-done-"))
                     self.git = NullGitRepo()
                     self.workspace = Workspace(str(self.tmp))
-                    self.host = ContextToolHost(
+                    self.tool = ContextTool(
                         self.workspace,
                         git=self.git,
                         fidelity="modules",
                     )
-                    self.host.format = "python"
-                    self.session = self.host.run_action("sprint-a")
+                    self.tool.format = "python"
+                    self.session = self.tool.run_action("sprint-a")
                     self.turn = self.session.open_turn
                     self.git.set_dirty(True)
-                    self.commit = self.host.finish(result="shipped")
+                    self.commit = self.tool.finish(result="shipped")
 
                 with it("should record the action run on the session trail"):
                     runs = [r for r in self.session.trail if r.role == "run"]
@@ -572,8 +572,8 @@ with description("WorkSession"):
             tmp = Path(tempfile.mkdtemp(prefix="ws-session-cli-"))
             git = NullGitRepo()
             workspace = Workspace(str(tmp))
-            host = ContextToolHost(workspace, git=git)
-            host.run_action("sprint-finish-cli", goal="close session")
+            tool = ContextTool(workspace, git=git)
+            tool.run_action("sprint-finish-cli", goal="close session")
             kit = WorkSession(workspace=str(tmp), session="sprint-finish-cli")
             kit.git = git
             path = kit.finish_work_session(outcome="cli closed")
@@ -595,7 +595,7 @@ with description("WorkSession"):
             expect(git.commits[0][1]).to(contain("finish without session"))
             expect(git.pushes).to(equal([]))
 
-        with it("should start from workspace and session context without a host"):
+        with it("should start from workspace and session context without attached Guidance"):
             from workspace.workspace import WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="ws-session-start-cli-"))
@@ -621,7 +621,7 @@ with description("WorkSession"):
 
 with description("Workspace"):
     with context("that is a toolset"):
-        with it("should open a work session from path context without a host"):
+        with it("should open a work session from path context without attached Guidance"):
             tmp = Path(tempfile.mkdtemp(prefix="ws-open-cli-"))
             kit = Workspace(workspace=str(tmp))
             opened = kit.open(name="sprint-ws-open", goal="open from path")
@@ -633,7 +633,7 @@ with description("Workspace"):
 
 
 with description("Repair"):
-    with it("should open from the session on the repair without a host"):
+    with it("should open from the session on the repair without attached Guidance"):
         tmp = Path(tempfile.mkdtemp(prefix="ws-repair-open-"))
         workspace = Workspace(str(tmp))
         session = workspace.open_work_session("sprint-repair", path=str(tmp))

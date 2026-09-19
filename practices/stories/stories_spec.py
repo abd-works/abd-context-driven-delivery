@@ -1,4 +1,4 @@
-"""BDD spec for Stories generator - fidelity defaults, transform, diagnostic, contexts."""
+"""BDD spec for Stories generator - fidelity defaults, transform, contexts."""
 
 import sys
 from pathlib import Path
@@ -11,7 +11,7 @@ for _cat in ("practices", "harness", "tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, be_true, equal, expect, raise_error
+from expects import be_true, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from practices.stories.stories import Stories
@@ -79,12 +79,6 @@ with description("Stories"):
                 raise_error(ValueError)
             )
 
-    with context("that provides a Diagnose companion"):
-        with it("should return a Diagnose instance from diagnostic"):
-            from tools.diagnose.diagnose import Diagnose
-
-            expect(Stories().diagnostic()).to(be_a(Diagnose))
-
     with context("that provides a CleanEngineering companion"):
         with it("should pass a code format through to the companion"):
             stories = Stories(fidelity="acceptance_tests", format="typescript")
@@ -103,7 +97,7 @@ with description("Stories"):
 
     with context("that does not own kit lifecycle actions"):
         with it("should not expose generate, validate, satisfy, repair, grill, sketch, or iterate"):
-            host = Stories()
+            practice = Stories()
             for name in (
                 "generate",
                 "validate",
@@ -113,7 +107,7 @@ with description("Stories"):
                 "sketch",
                 "iterate",
             ):
-                expect(name in host.agent_tools).to(equal(False))
+                expect(name in practice.agent_tools).to(equal(False))
 
     with context("whose instructions action is expanded"):
         with it("should name `{story_snake}_story.test.md` at scenarios"):
@@ -130,10 +124,6 @@ with description("Stories"):
             expect("When scaffolding only" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
             expect("Stop reading this skill when scaffolding" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
             expect("#### Scaffold" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
-
-        with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
-            prose = _expanded(Stories(), "instructions")
-            expect("diagnostic().diagnose()" in prose).to(be_true)
 
         with it("should include the Clean Engineering companion's instructions"):
             prose = _expanded(Stories(fidelity="acceptance_tests"), "instructions")
@@ -170,10 +160,8 @@ with description("Stories"):
             import tempfile
 
             self.tempdir = tempfile.TemporaryDirectory()
-            self.stories = Stories(
-                fidelity="scenarios",
-                workspace=self.tempdir.name,
-            )
+            self.stories = Stories(fidelity="scenarios")
+            self.stories._attach_workspace(workspace=self.tempdir.name)
             self.result = self.stories.render(
                 format="typescript",
                 content=_SAMPLE_MARKDOWN,
@@ -297,9 +285,7 @@ with description("Stories"):
 
     with context("whose templates slot is expanded at story_map markdown"):
         with before.each:
-            self.templates = Stories(
-                fidelity="story_map", format="markdown", session=None
-            ).templates
+            self.templates = Stories(fidelity="story_map", format="markdown").templates
 
         with it("should inline the markdown story-map template only"):
             expect("Story Map" in self.templates).to(be_true)
@@ -321,18 +307,14 @@ with description("Stories"):
 
     with context("whose templates slot is expanded at story_map markdown"):
         with it("should inline story-map template only"):
-            templates = Stories(
-                fidelity="story_map", format="markdown", session=None
-            ).templates
+            templates = Stories(fidelity="story_map", format="markdown").templates
             expect("Story Map" in templates).to(be_true)
             expect("Thin slicing" in templates).to(equal(False))
             expect("thin-slice.md" in templates).to(equal(False))
 
     with context("whose templates slot is expanded at scenarios python"):
         with before.each:
-            self.templates = Stories(
-                fidelity="scenarios", format="python", session=None
-            ).templates
+            self.templates = Stories(fidelity="scenarios", format="python").templates
 
         with it("should inline the flat scenario-template without helpers"):
             expect("Scenario template" in self.templates).to(be_true)
@@ -378,9 +360,7 @@ with description("Stories"):
 
     with context("whose templates slot is expanded at scenarios markdown"):
         with before.each:
-            self.templates = Stories(
-                fidelity="scenarios", format="markdown", session=None
-            ).templates
+            self.templates = Stories(fidelity="scenarios", format="markdown").templates
 
         with it("should inline the scenarios markdown template"):
             expect("Default — Scenario Outline" in self.templates).to(be_true)
@@ -391,9 +371,7 @@ with description("Stories"):
 
     with context("whose templates slot is expanded at scenarios typescript"):
         with it("should inline sign-up-style scenario-template.ts"):
-            text = Stories(
-                fidelity="scenarios", format="typescript", session=None
-            ).templates
+            text = Stories(fidelity="scenarios", format="typescript").templates
             expect("Scenario template" in text).to(be_true)
             expect("templates/ts/story-test.ts" in text).to(be_true)
             expect("export function story" in text).to(equal(False))

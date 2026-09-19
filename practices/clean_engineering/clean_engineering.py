@@ -11,48 +11,30 @@ from practices.clean_engineering.model.python.python_class_model import PythonCl
 from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
 from harness.guidance.guidance import PracticeGuidance
-from installation.harness_files.harness_files import Skill
-from installation.mcp.mcp_server import Mcp
-
-_FORMATS: dict[str, type] = {
-    "markdown": MarkdownCleanEngineeringModel,
-    "json": JsonCleanEngineeringModel,
-    "python": PythonCleanEngineeringModel,
-    "typescript": TypeScriptCleanEngineeringModel,
-    "java": JavaCleanEngineeringModel,
-    "javascript": JavaScriptCleanEngineeringModel,
-    "drawio": DrawIOCleanEngineeringModel,
-}
-
-_SUPPORTED_FORMATS = frozenset(_FORMATS)
 
 
 @agent_toolset
 class CleanEngineering(PracticeGuidance):
     """# Instructions"""
 
-    domain_slug = "clean_engineering"
-    default_workspace_folder: str = "src"
-    context_index_key: str = "clean_engineering"
-    _formats = _FORMATS
-    supported_formats = _SUPPORTED_FORMATS
-
     def __init__(
         self,
         fidelity: str = "modules",
         format: str | None = None,
-        path: str | None = None,
-        session: str | None = None,
-        workspace: str | None = None,
-        stage: str | None = None,
     ) -> None:
         super().__init__(
             format=format,
-            path=path,
-            session=session,
-            workspace=workspace,
             fidelity=fidelity,
-            stage=stage,
+            default_workspace_folder="src",
+            formats={
+                "markdown": MarkdownCleanEngineeringModel,
+                "json": JsonCleanEngineeringModel,
+                "python": PythonCleanEngineeringModel,
+                "typescript": TypeScriptCleanEngineeringModel,
+                "java": JavaCleanEngineeringModel,
+                "javascript": JavaScriptCleanEngineeringModel,
+                "drawio": DrawIOCleanEngineeringModel,
+            },
         )
         self.drawio = None
         if self.format == "drawio":
@@ -60,14 +42,6 @@ class CleanEngineering(PracticeGuidance):
 
             self.drawio = Drawio(workspace=self.workspace)
             self.drawio.mode = "tool"
-
-    @property
-    @Mcp
-    @Skill
-    @agent_instructions
-    def instructions(self) -> str:
-        """Structure the problem into independent modules with small public interfaces, substantial hidden functionality, and one-way dependencies. Implement those modules with rigorous object-oriented and clean-code practices. When boundaries hold, a change stays inside one module; when they blur, callers depend on internal decisions and must change with them."""
-        return super().instructions
 
     @agent_instructions
     def generate_output(self) -> str:
@@ -81,3 +55,4 @@ class CleanEngineering(PracticeGuidance):
         """
         tools(self.drawio.render())
         return "Artifact written under {session.path}/."
+    

@@ -1,4 +1,4 @@
-"""Improvement kit — repair / verify_fix for context tools (peer kit, not on host)."""
+"""Improvement kit — repair / verify_fix for context tools (peer kit, not on Guidance)."""
 from __future__ import annotations
 
 import inspect
@@ -14,7 +14,7 @@ from workspace import SessionLog
 
 @agent_toolset
 class Improvement(GuidanceAction):
-    """Slash ``/repair`` runs this kit with ``arguments.guidance``; not composed on the host."""
+    """Slash ``/repair`` runs this kit with ``arguments.guidance``; not composed on Guidance."""
 
     @property
     def module_dir(self) -> Path:
@@ -29,7 +29,7 @@ class Improvement(GuidanceAction):
     @Skill
     @agent_instructions
     def repair(self, guidance: GuidanceArg, asset: str, violation: str) -> str:
-        """Open a domain repair on each passed Guidance host and instruct the fix. Pass a string to repair that text once."""
+        """Open a domain repair on each passed Guidance and instruct the fix. Pass a string to repair that text once."""
         self.repair_loop
 
         def on(item) -> None:
@@ -63,7 +63,7 @@ class Improvement(GuidanceAction):
     @Skill
     @agent_tool
     def verify_fix(self, guidance: GuidanceArg, theme: str) -> str:
-        """Re-run the regression check for a themed repair bucket on each listed Guidance host. Open the work session first. Pass a string to verify that text once."""
+        """Re-run the regression check for a themed repair bucket on each listed Guidance. Open the work session first. Pass a string to verify that text once."""
         def on(item) -> str:
             current = self.workspace.current_work_session
             if current is None:

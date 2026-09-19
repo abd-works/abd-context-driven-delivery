@@ -1,0 +1,2 @@
+mistake: wrote a Cursor SKILL.md into practices/stories
+correction: skills are install output under the harness skills tree (.cursor/skills). Never write SKILL.md into a practice package.

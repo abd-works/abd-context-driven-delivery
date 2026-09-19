@@ -4,6 +4,7 @@ from __future__ import annotations
 import fnmatch
 import inspect
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,7 @@ from harness.agent_tools.agent_tools import (
     tools,
 )
 from installation.harness_files.harness_files import rules, skill
-from installation.hooks.prompt_echo.prompt_echo import echo, show_ide_toast
+from installation.hooks.prompt_echo.prompt_echo import echo, inject_rules_toast, show_ide_toast
 from installation.hooks.hooks import Hook
 from installation.mcp.mcp_server import mcp
 from harness.markdown import (
@@ -31,39 +32,15 @@ from harness.markdown import (
 )
 
 
-def _hook_tool_path(payload: dict[str, Any]) -> str:
-    raw = payload.get("tool_input") or {}
-    if isinstance(raw, str):
-        try:
-            raw = json.loads(raw)
-        except json.JSONDecodeError:
-            return ""
-    if not isinstance(raw, dict):
-        return ""
-    return str(
-        raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or ""
-    )
-
-
-def _path_matches_globs(path: str, globs: str) -> bool:
-    if not path or not globs:
-        return False
-    posix = Path(path).as_posix()
-    name = Path(path).name
-    for pattern in (part.strip().strip("\"'") for part in globs.split(",")):
-        if not pattern:
-            continue
-        if Path(posix).match(pattern) or fnmatch.fnmatch(posix, pattern) or fnmatch.fnmatch(
-            name, pattern.split("/")[-1]
-        ):
-            return True
-    return False
-
-
 class Guidance:
     default_format: str = ""
     name: str | None = None
     domain_slug: str | None = None
+
+    @property
+    def registration_name(self) -> str:
+        typ = type(self)
+        return f"{typ.__module__}:{typ.__name__}"
 
     @property
     def slug(self) -> str:
@@ -72,13 +49,70 @@ class Guidance:
         return type(self).__name__.replace("_", "-").lower()
 
     @property
+    def rules_label(self) -> str:
+        """Practice or context name for an inject toast — shared rules, not a fidelity."""
+        return self._words_from_slug(self.slug)
+
+    def _words_from_slug(self, slug: str) -> str:
+        return str(slug).replace("_", "-").replace("-", " ").strip()
+
+    def _hook_tool_path(self, payload: dict[str, Any]) -> str:
+        raw = payload.get("tool_input") or {}
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except json.JSONDecodeError:
+                return ""
+        if not isinstance(raw, dict):
+            return ""
+        return str(
+            raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or ""
+        )
+
+    def _path_matches_globs(self, path: str, globs: str) -> bool:
+        if not path or not globs:
+            return False
+        posix = Path(path).as_posix()
+        name = Path(path).name
+        for pattern in (part.strip().strip("\"'") for part in globs.split(",")):
+            if not pattern:
+                continue
+            if Path(posix).match(pattern) or fnmatch.fnmatch(posix, pattern) or fnmatch.fnmatch(
+                name, pattern.split("/")[-1]
+            ):
+                return True
+        return False
+
+    @property
     def install_folder(self) -> Path:
         return class_file_directory(self)
 
     @property
-    def registration_name(self) -> str:
-        typ = type(self)
-        return f"{typ.__module__}:{typ.__name__}"
+    @rules
+    def rules_markdown(self) -> str:
+        return Markdown.from_label(self, "shared rules").extract().strip()
+
+    @markdown("shared rules")
+    def rules(self) -> RulesCollection:
+        """Shared rules as a collection."""
+
+    @echo
+    @Hook("preToolUse")
+    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Inject the rules markdown from this Guidance when the agent writes a file that matches the rule file glob pattern."""
+        data = payload or {}
+        tool_name = str(data.get("tool_name") or "")
+        if tool_name not in {"Write", "StrReplace", "EditNotebook"}:
+            return {}
+        path = self._hook_tool_path(data)
+        globs = getattr(getattr(self.rules, "appliesTo", None), "globs", "") or ""
+        if not path or not self._path_matches_globs(path, globs):
+            return {}
+        body = (self.rules_markdown or "").strip()
+        if not body:
+            return {}
+        show_ide_toast(inject_rules_toast("edit injecting rules:", [self.rules_label]))
+        return {"permission": "allow", "additional_context": body, "agent_message": body}
 
     def __init__(
         self,
@@ -95,48 +129,15 @@ class Guidance:
 
     @markdown
     def overview(self) -> str:
-        """Overview section for this host."""
+        """Overview section for this Guidance."""
 
     @markdown
     def guidance(self) -> str:
         """Guidance section body."""
 
-    @property
-    @rules
-    def rules_markdown(self) -> str:
-        return Markdown.from_label(self, "shared rules").extract().strip()
-
-    @markdown("shared rules")
-    def rules(self) -> RulesCollection:
-        """Shared rules as a collection."""
-
-    @echo
-    @Hook("preToolUse")
-    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Inject this host's rules markdown when the agent writes a matching file."""
-        data = payload or {}
-        tool_name = str(data.get("tool_name") or "")
-        if tool_name not in {"Write", "StrReplace", "EditNotebook"}:
-            return {}
-        path = _hook_tool_path(data)
-        globs = getattr(getattr(self.rules, "appliesTo", None), "globs", "") or ""
-        if not path or not _path_matches_globs(path, globs):
-            return {}
-        body = (self.rules_markdown or "").strip()
-        if not body:
-            return {}
-        label = str(self.slug).replace("_", "-")
-        show_ide_toast(f"Rules \u2192 {label}")
-        return {"permission": "allow", "additional_context": body, "agent_message": body}
-
     @markdown
     def templates(self) -> str:
-        """Active template file for this host's format and fidelity."""
-
-    @property
-    def prompt_message(self) -> str:
-        """Overview for skill/MCP/prompt copy — not the instructions docstring."""
-        return (self.overview or "").strip() or (self.guidance or "").strip()
+        """Active template file for this Guidance format and fidelity."""
 
     @property
     @echo
@@ -144,6 +145,7 @@ class Guidance:
     @mcp
     @agent_instructions
     def instructions(self) -> str:
+        """overview"""
         return "\n\n".join(
             part
             for part in (
@@ -174,7 +176,8 @@ class Guidance:
             is_instructions = getattr(member, "_is_agent_instructions", False)
             is_tool = getattr(member, "_is_agent_tool", False)
             is_rules = getattr(member, "_rules", False)
-            if not (is_instructions or is_tool or is_rules):
+            is_hook = getattr(member, "_hook", False)
+            if not (is_instructions or is_tool or is_rules or is_hook):
                 continue
             found[name] = AgentTool(name=name, callable=member, toolset=self)
         return found
@@ -219,21 +222,73 @@ class PracticeGuidance(Guidance):
     def __init__(
         self,
         format: str | None = None,
-        path: str | None = None,
-        session: str | None = None,
-        workspace: Any = None,
         fidelity: str | None = None,
-        stage: str | None = None,
+        default_workspace_folder: str = ".",
+        formats: dict[str, Any] | None = None,
     ) -> None:
-        supported = getattr(type(self), "supported_formats", None)
-        super().__init__(format=format, path=path, session=session or "", workspace=workspace)
+        super().__init__(format=format)
+        self.default_workspace_folder = default_workspace_folder
+        self._formats = dict(formats or {})
         self.fidelities = GuidanceCollection()
         self.nested_toolsets = self.fidelities
         from actions.scan.scan import Scan
 
         self.scanner = Scan.bound_to(self)
-        self._attach_workspace(path=path, session=session, workspace=workspace)
+        self._attach_workspace()
         self.load_fidelities_from_markdown()
+        self._activate(fidelity=fidelity)
+
+    @echo
+    @Hook("preToolUse")
+    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Inject this practice's shared rules and any fidelity whose globs match the file."""
+        data = payload or {}
+        tool_name = str(data.get("tool_name") or "")
+        if tool_name not in {"Write", "StrReplace", "EditNotebook"}:
+            return {}
+        path = self._hook_tool_path(data)
+        if not path:
+            return {}
+        parts: list[str] = []
+        labels: list[str] = []
+        for guidance in (self, *self.fidelities.entries.values()):
+            globs = getattr(getattr(guidance.rules, "appliesTo", None), "globs", "") or ""
+            if not self._path_matches_globs(path, globs):
+                continue
+            body = (guidance.rules_markdown or "").strip()
+            if not body:
+                continue
+            parts.append(body)
+            labels.append(guidance.rules_label)
+        if not parts:
+            return {}
+        show_ide_toast(inject_rules_toast("chat edit", labels))
+        return {
+            "permission": "allow",
+            "additional_context": "\n\n".join(parts),
+            "agent_message": "\n\n".join(parts),
+        }
+
+    @property
+    def domain_slug(self) -> str:
+        return re.sub(r"(?<!^)(?=[A-Z])", "_", type(self).__name__).lower()
+
+    @property
+    def context_index_key(self) -> str:
+        return self.domain_slug
+
+    @property
+    def supported_formats(self) -> frozenset:
+        own = self.formats
+        if own:
+            return frozenset(own)
+        companion = self.clean_engineering_companion
+        owner = companion.practice_guidance if companion is not None else None
+        if owner is not None and owner is not self:
+            return frozenset(owner.formats)
+        return frozenset()
+
+    def _activate(self, fidelity: str | None = None, stage: str | None = None) -> None:
         if stage is not None:
             child = self.fidelities.stage[stage]
             fidelity = getattr(child, "name", None) or fidelity
@@ -241,12 +296,13 @@ class PracticeGuidance(Guidance):
             names = sorted(self.fidelities.entries)
             if names and fidelity not in self.fidelities.entries:
                 raise ValueError(f"Unsupported fidelity {fidelity!r}. Choose from: {names}")
-            if format is None and fidelity in self.fidelities.entries:
+            if not self.format and fidelity in self.fidelities.entries:
                 child_format = self.fidelities[fidelity].default_format
                 if child_format:
                     self.format = child_format
             if fidelity in self.fidelities.entries:
                 self.fidelities.current = self.fidelities[fidelity]
+        supported = self.supported_formats
         if supported and self.format and self.format not in supported:
             raise ValueError(
                 f"Unsupported format {self.format!r}. Choose from: {sorted(supported)}"
@@ -254,9 +310,9 @@ class PracticeGuidance(Guidance):
 
     def _attach_workspace(
         self,
-        path: str | None,
-        session: str | None,
-        workspace: Any,
+        path: str | None = None,
+        session: str | None = None,
+        workspace: Any = None,
     ) -> None:
         from tools.workspace.workspace import Workspace
 
@@ -278,31 +334,39 @@ class PracticeGuidance(Guidance):
             )
 
     @property
-    def active(self) -> Any:
+    def active_session(self) -> Any:
         """Current work session on this practice's workspace, when one is open."""
         workspace = self.workspace
         if workspace is None:
             return None
         return workspace.current_work_session
 
-    def _current_companion(self) -> FidelityGuidance | None:
-        return self._companion_for(self.fidelities.current)
-
-    def _companion_for(self, fidelity: Guidance | None) -> FidelityGuidance | None:
-        companion = getattr(fidelity, "clean_engineering", None)
+    @property
+    def clean_engineering_companion(self) -> FidelityGuidance | None:
+        companion = getattr(self.fidelities.current, "clean_engineering", None)
         return companion if isinstance(companion, FidelityGuidance) else None
 
-    def companion_instructions(self, fidelity: Guidance | None = None) -> str:
-        companion = self._companion_for(fidelity if fidelity is not None else self.fidelities.current)
-        if companion is None:
-            return ""
-        return companion.instructions
+    def _bind_clean_engineering_companions(self, companions: dict[str, str]) -> None:
+        if not companions or self.domain_slug == "clean_engineering":
+            return
+        from practices.clean_engineering.clean_engineering import CleanEngineering
+
+        ce = CleanEngineering()
+        if self.format in {"python", "typescript", "java", "javascript"}:
+            ce.format = self.format
+        for name, ce_fidelity in companions.items():
+            child = self.fidelities.entries.get(name)
+            companion = ce.fidelities.entries.get(ce_fidelity)
+            if isinstance(child, FidelityGuidance):
+                child.clean_engineering = companion if isinstance(companion, FidelityGuidance) else None
+
 
     @property
     @agent_instructions
     def guidance(self) -> str:
         text = Markdown.from_label(self, "guidance").extract()
-        extra = self.companion_instructions()
+        companion = self.clean_engineering_companion
+        extra = companion.instructions if companion is not None else ""
         return "\n\n".join(part for part in (text, extra) if part)
 
     @markdown
@@ -315,6 +379,7 @@ class PracticeGuidance(Guidance):
     @skill
     @agent_instructions
     def instructions(self) -> str:
+        """overview"""
         parts = [super().instructions]
         if self.fidelities.entries:
             for fidelity in self.fidelities.entries.values():
@@ -326,11 +391,6 @@ class PracticeGuidance(Guidance):
     def fidelityInstructions(self, fidelity: str) -> str:
         """Assembled instructions for one fidelity."""
         return self.fidelities[fidelity].instructions
-
-    def domain_markdown_path(self) -> Path:
-        class_dir = class_file_directory(self)
-        slug = self.domain_slug or class_dir.name
-        return class_dir / f"{slug}.md"
 
     def attach_fidelities(self, entries: dict[str, Guidance]) -> None:
         self.fidelities = GuidanceCollection(entries)
@@ -366,28 +426,15 @@ class PracticeGuidance(Guidance):
         self.attach_fidelities(entries)
         self._bind_clean_engineering_companions(companions)
 
-    def _bind_clean_engineering_companions(self, companions: dict[str, str]) -> None:
-        if not companions or self.domain_slug == "clean_engineering":
-            return
-        from practices.clean_engineering.clean_engineering import CleanEngineering
+    def domain_markdown_path(self) -> Path:
+        class_dir = class_file_directory(self)
+        slug = self.domain_slug or class_dir.name
+        return class_dir / f"{slug}.md"
 
-        workspace = self.workspace
-        ce = CleanEngineering(
-            path=self.path,
-            session=self.session or "",
-            workspace=workspace if workspace is not None else None,
-        )
-        if self.format in {"python", "typescript", "java", "javascript"}:
-            ce.format = self.format
-        for name, ce_fidelity in companions.items():
-            child = self.fidelities.entries.get(name)
-            companion = ce.fidelities.entries.get(ce_fidelity)
-            if isinstance(child, FidelityGuidance):
-                child.clean_engineering = companion if isinstance(companion, FidelityGuidance) else None
 
     @property
     def formats(self) -> dict[str, Any]:
-        return dict(getattr(type(self), "_formats", {}) or {})
+        return dict(self._formats)
 
     def _format_adapter(self, format_name: str) -> Any:
         adapters = self.formats
@@ -403,27 +450,6 @@ class PracticeGuidance(Guidance):
             return getattr(importlib.import_module(module_path), attr)
         return entry
 
-    def _live_adapter(self, format_name: str) -> Any:
-        adapter = self._format_adapter(format_name)
-        if not inspect.isclass(adapter):
-            return adapter
-        try:
-            return adapter(tests_root=self.default_workspace_folder)
-        except TypeError:
-            try:
-                return adapter()
-            except TypeError:
-                return adapter
-
-    def _incoming(self, format_name: str, content: Any) -> Any:
-        if format_name in {"python", "typescript", "java", "javascript"}:
-            if isinstance(content, dict):
-                return content
-            if isinstance(content, str):
-                text = content.strip()
-                if text.startswith("{") or text.startswith("["):
-                    return json.loads(content)
-        return content
 
     @agent_tool
     def render(
@@ -437,7 +463,7 @@ class PracticeGuidance(Guidance):
         """Parse source format into the practice model, then render the target format."""
         source_format = source or self.format
         if not self.formats:
-            companion = self._current_companion()
+            companion = self.clean_engineering_companion
             owner = companion.practice_guidance if companion is not None else None
             if owner is None or owner is self:
                 return {"format": source_format or format, "content": content}
@@ -467,6 +493,29 @@ class PracticeGuidance(Guidance):
         if "keep_positioning" in parameters:
             kwargs["keep_positioning"] = keep_positioning
         return target.render(parsed, **kwargs)
+
+    def _live_adapter(self, format_name: str) -> Any:
+        adapter = self._format_adapter(format_name)
+        if not inspect.isclass(adapter):
+            return adapter
+        try:
+            return adapter(tests_root=self.default_workspace_folder)
+        except TypeError:
+            try:
+                return adapter()
+            except TypeError:
+                return adapter
+
+    def _incoming(self, format_name: str, content: Any) -> Any:
+        if format_name in {"python", "typescript", "java", "javascript"}:
+            if isinstance(content, dict):
+                return content
+            if isinstance(content, str):
+                text = content.strip()
+                if text.startswith("{") or text.startswith("["):
+                    return json.loads(content)
+        return content
+    
 
     def scoped_markdown(self) -> str:
         """Overview, practice sections, and the active fidelity (or every fidelity)."""
@@ -512,6 +561,13 @@ class FidelityGuidance(Guidance):
         return f"{parent}-{leaf}" if leaf else parent
 
     @property
+    def rules_label(self) -> str:
+        practice = self.practice_guidance
+        head = self._words_from_slug(practice.slug if practice is not None else self.slug)
+        fidelity = str(self.fidelity or self.name or "").replace("_", " ").strip()
+        return f"{head} {fidelity}".strip()
+
+    @property
     def install_folder(self) -> Path:
         practice = self.practice_guidance
         base = practice.install_folder if practice is not None else class_file_directory(self)
@@ -541,6 +597,7 @@ class FidelityGuidance(Guidance):
     @skill
     @agent_instructions
     def instructions(self) -> str:
+        """overview"""
         practice = self.practice_guidance
         parent = ()
         templates = ""
@@ -551,7 +608,10 @@ class FidelityGuidance(Guidance):
                 Markdown.from_label(practice, "guidance").extract().strip(),
                 (practice.rules_markdown or "").strip(),
             )
-            companion_text = practice.companion_instructions(self)
+            companion = self.clean_engineering
+            companion_text = (
+                companion.instructions if isinstance(companion, FidelityGuidance) else ""
+            )
             previous = practice.fidelities.current
             previous_format = practice.format
             practice.fidelities.current = practice.fidelities[self.name]

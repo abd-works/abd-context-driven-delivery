@@ -12,6 +12,13 @@ from installation.mcp.mcp_server import Mcp
 class Render(GuidanceAction):
     """Render already-generated output for provided context tools."""
 
+    def __init__(self, path: str = ".", session: str = "") -> None:
+        self.path = path
+        self._session_name = session
+        self._guidance_text: str | None = None
+        self._tool_items: list = []
+        self.workspace = None
+
     @Mcp
     @Skill
     @agent_tool
@@ -22,10 +29,12 @@ class Render(GuidanceAction):
         content: str = "",
         source: str | None = None,
     ) -> list:
-        """Convert already-generated content for each listed Guidance host into the requested format. Returns one render result per host. Pass a module:Class host ref, a {toolset, fidelity} object, or a list of those. Pass source when the incoming text is not the host's current format."""
+        """Convert already-generated content for each listed Guidance into the requested format. Returns one render result per Guidance. Pass a module:Class Guidance ref, a {toolset, fidelity} object, or a list of those. Pass source when the incoming text is not the current format."""
+        self._bind_guidance(guidance)
+
         def on(item):
             if isinstance(item, str):
                 return item
             return item.render(format, content, source=source)
 
-        return self.run(guidance, on, action="render")
+        return self.each(on)

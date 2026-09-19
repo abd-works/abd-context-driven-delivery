@@ -15,7 +15,7 @@ class Generate(GuidanceAction):
     @Skill
     @agent_instructions
     def generate(self, guidance: GuidanceArg) -> str:
-        """Write artifacts for each listed Guidance host at its current fidelity. Opens the work session, generates each host's output, applies validate-driven fixes, then closes the turn. When finished, run validate. Pass a string to generate from that text once."""
+        """Write artifacts for each listed Guidance at its current fidelity. Opens the work session, generates each Guidance's output, applies validate-driven fixes, then closes the turn. When finished, run validate. Pass a string to generate from that text once."""
         self.run(guidance, self._generate_item, action="generate")
         return "When done, run validate."
 

@@ -1,0 +1,2 @@
+mistake: _fidelity_one_liner looked for a **Goal:** line
+correction: take the first overview sentence that is not a heading or **label:**; Goal is not used on fidelities

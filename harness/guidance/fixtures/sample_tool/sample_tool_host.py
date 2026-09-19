@@ -1,4 +1,4 @@
-"""Fixture hosts — co-located markdown beside this module."""
+"""Fixtures — co-located markdown beside this module."""
 from __future__ import annotations
 
 from harness.guidance.guidance import Guidance, PracticeGuidance
@@ -8,7 +8,7 @@ from installation.mcp.mcp_server import mcp
 from harness.markdown import HTML, Markdown, markdown
 
 
-class SampleToolHost:
+class SampleTool:
     domain_slug = "sample_tool"
     toolset_name = "sample_tool"
     name = None

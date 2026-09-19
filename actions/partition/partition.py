@@ -131,7 +131,7 @@ class Partition(GuidanceAction):
         mode: str = "one_go",
         out_root: str | None = None,
     ) -> str:
-        """Split the given context into an index plus verbatim segments for each listed Guidance host. Fail if any new chunk misses a named entry the index required. Pass a string to partition that text once."""
+        """Split the given context into an index plus verbatim segments for each listed Guidance. Fail if any new chunk misses a named entry the index required. Pass a string to partition that text once."""
         def on(item) -> None:
             if isinstance(item, str):
                 self.partition_corpus(context, mode, out_root)

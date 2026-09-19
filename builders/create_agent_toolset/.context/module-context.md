@@ -11,4 +11,4 @@
 ## Public API
 
 - `CreateAgentToolset(format=None, path=None, session=None, workspace=None)`
-- Inherited host face: `guidance`, `contexts`, `examples`, `templates`. Lifecycle generate / validate live on kits.
+- Inherited operations: `guidance`, `contexts`, `examples`, `templates`. Lifecycle generate / validate live on kits.

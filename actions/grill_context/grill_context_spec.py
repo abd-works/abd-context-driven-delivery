@@ -223,12 +223,12 @@ with description("a grill action"):
             expect(joined).to(contain("AskQuestion"))
 
 
-with description("PracticeGuidance host face for grill"):
-    with it("should not expose grill on practice guidance hosts"):
+with description("PracticeGuidance operations for grill"):
+    with it("should not expose grill on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
                 "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
-        host = cls()
-        expect("grill" in host.agent_tools).to(equal(False))
+        practice = cls()
+        expect("grill" in practice.agent_tools).to(equal(False))

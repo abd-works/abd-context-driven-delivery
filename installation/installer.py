@@ -132,18 +132,17 @@ class Installer:
         path: str | Path | None = None,
         repo: str | Path | None = None,
     ) -> None:
+        self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[1]
         state_file = Path(__file__).resolve().parent / self._STATE_NAME
         if ide is None and path is None and state_file.is_file():
             data = json.loads(state_file.read_text(encoding="utf-8"))
             ide = data.get("ide")
-            path = data.get("path")
+            stored = data.get("path")
+            if stored and Path(stored).exists():
+                path = stored
         self.ide = ide or "Cursor"
-        self.path = (
-            Path(path)
-            if path is not None
-            else Path(self._DEFAULT_PATHS.get(self.ide, ".cursor"))
-        )
-        self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[1]
+        default_path = self.repo / self._DEFAULT_PATHS.get(self.ide, ".cursor")
+        self.path = Path(path) if path is not None else default_path
         self._state_file = state_file
         from installation.hooks.hooks import HookInstallation
         from installation.mcp.mcp_server import McpInstallation

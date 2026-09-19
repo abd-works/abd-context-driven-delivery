@@ -175,6 +175,7 @@ class McpOperationDefinition:
     tool: Any
     operation: str
     member: Any
+    description: str = ""
 
     @classmethod
     def from_tool(cls, tool: Any) -> McpOperationDefinition:
@@ -190,6 +191,7 @@ class McpOperationDefinition:
             tool=toolset,
             operation=tool.name,
             member=tool.callable,
+            description=tool.description,
         )
 
     def invoke_line(self) -> str:
@@ -305,11 +307,6 @@ class McpInstallation(Installation):
 
 def _prompt_message(op: McpOperationDefinition) -> str:
     if op.operation == "instructions":
-        message = getattr(op.tool, "prompt_message", None)
-        if callable(message):
-            message = message()
-        if isinstance(message, str) and message.strip():
-            return message.strip()
         overview = getattr(op.tool, "overview", None)
         if isinstance(overview, str) and overview.strip():
             return overview.strip()
@@ -324,7 +321,7 @@ class McpTool:
         self.mcp_name = op.mcp_name
         self._op = op
         self.callable = op.member
-        self.description = _prompt_message(op)
+        self.description = op.description or _prompt_message(op)
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
         if callable(self.callable):
@@ -339,7 +336,7 @@ class McpPrompt:
         self.mcp_name = op.mcp_name
         self._op = op
         self.callable = op.member
-        self.prompt_text = _prompt_message(op)
+        self.prompt_text = op.description or _prompt_message(op)
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
         tool = self._op.tool

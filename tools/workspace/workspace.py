@@ -352,9 +352,9 @@ class Turn:
     def commit_subject(self) -> str:
         return self.commit_message.splitlines()[0]
 
-    def bind_from_host(self, host: Any, *, action: str = "") -> None:
-        key = getattr(host, "context_index_key", "") or getattr(
-            type(host), "context_index_key", ""
+    def bind_from_tool(self, tool: Any, *, action: str = "") -> None:
+        key = getattr(tool, "context_index_key", "") or getattr(
+            type(tool), "context_index_key", ""
         )
         if key:
             self.context_tool = key
@@ -362,7 +362,7 @@ class Turn:
                 self.tool_keys.append(key)
         if action:
             self.action = action
-        artifact = getattr(host, "artifact_path", "") or ""
+        artifact = getattr(tool, "artifact_path", "") or ""
         if artifact and not self.subject:
             self.subject = str(artifact)
 
@@ -572,8 +572,8 @@ class Turn:
     ) -> TurnCommit | None:
         """Legacy alias — prefer ``turn``."""
         if tools:
-            for host in tools:
-                self.bind_from_host(host)
+            for tool in tools:
+                self.bind_from_tool(tool)
         return self.turn(
             context_tool=context_tool or self.context_tool,
             action=action or self.action,
@@ -802,11 +802,11 @@ class Repair:
     violation: str = ""
     mistakes: list[Mistake] = field(default_factory=list)
 
-    def open(self, host: Any, asset: str, violation: str) -> Repair:
+    def open(self, tool: Any, asset: str, violation: str) -> Repair:
         self.asset = asset
         self.violation = violation
         self.status = "backlog"
-        session = getattr(getattr(host, "workspace", None), "current_work_session", None)
+        session = getattr(getattr(tool, "workspace", None), "current_work_session", None)
         if session is not None:
             session.turn
         return self
@@ -870,7 +870,7 @@ class WorkSession:
         workspace_root: str | None = None,
         context_index_key: str | None = None,
         default_workspace_folder: str | None = None,
-        host: Any | None = None,
+        tool: Any | None = None,
         isolate: bool = True,
     ) -> None:
         if isinstance(workspace, Workspace):
@@ -902,7 +902,7 @@ class WorkSession:
         self.scope_paths: list[str] = [str(self.git.root)]
         self.trail: list[ToolCall] = []
         self.format = format
-        self._host = host
+        self._tool = tool
         self._context_index: str | None = None
         if context_index_key is not None:
             self.context_index_key = context_index_key
@@ -1208,8 +1208,8 @@ class WorkSession:
 
             SessionLog.instance().bind(self)
 
-    def attach_host(self, host: Any) -> None:
-        self._host = host
+    def attach_tool(self, tool: Any) -> None:
+        self._tool = tool
 
     def _resolve_working_area(self, working_area: str | None) -> str:
         if working_area is not None:
@@ -2027,7 +2027,7 @@ class WorkSession:
         fidelities: str = "",
         contexts: str = "",
         path: str = "",
-        host: Any | None = None,
+        tool: Any | None = None,
         isolate: bool = True,
     ) -> WorkSession:
         """start_work_session — agent starts or resumes a named work session.
@@ -2052,7 +2052,7 @@ class WorkSession:
                 workspace = getattr(item, "workspace", None)
                 if workspace is not None:
                     return workspace.open(
-                        host=item,
+                        tool=item,
                         name=name,
                         goal=goal,
                         fidelities=fidelities,
@@ -2060,11 +2060,11 @@ class WorkSession:
                         path=path,
                         isolate=isolate,
                     )
-        if host is not None:
-            workspace = getattr(host, "workspace", None)
+        if tool is not None:
+            workspace = getattr(tool, "workspace", None)
             if workspace is not None:
                 return workspace.open(
-                    host=host,
+                    tool=tool,
                     name=name or self.name,
                     goal=goal,
                     fidelities=fidelities,
@@ -2426,7 +2426,7 @@ class Workspace:
     @skill
     def open(
         self,
-        host: Any | None = None,
+        tool: Any | None = None,
         name: str = "",
         goal: str = "",
         fidelities: str = "",
@@ -2437,41 +2437,41 @@ class Workspace:
         """Open the workspace if it is not already open. The work session's turn and decision records hang off it."""
         effective_name = SessionModel.session_slug(
             name
-            or (getattr(host, "_session_name", None) if host is not None else None)
+            or (getattr(tool, "_session_name", None) if tool is not None else None)
             or ""
         )
         if effective_name == SessionModel.DEFAULT_SESSION:
             isolate = False
         working = (
             path
-            or (getattr(host, "_raw_path", None) if host is not None else None)
+            or (getattr(tool, "_raw_path", None) if tool is not None else None)
             or ""
         ).strip()
         session = self.open_work_session(
             name=effective_name,
             goal=goal,
             fidelities=fidelities
-            or ((getattr(host, "fidelity", "") or "") if host is not None else "")
+            or ((getattr(tool, "fidelity", "") or "") if tool is not None else "")
             or "",
             contexts=contexts,
             path=working,
             isolate=isolate,
             context_index_key=(
-                getattr(host, "context_index_key", "") if host is not None else ""
+                getattr(tool, "context_index_key", "") if tool is not None else ""
             ),
             default_workspace_folder=(
-                getattr(host, "default_workspace_folder", ".")
-                if host is not None
+                getattr(tool, "default_workspace_folder", ".")
+                if tool is not None
                 else "."
             ),
-            format=getattr(host, "format", None) if host is not None else None,
-            host=host,
+            format=getattr(tool, "format", None) if tool is not None else None,
+            tool=tool,
         )
         session.read_context_index()
         session.record_context_root()
-        session.attach_host(host)
-        if hasattr(host, "_session_name"):
-            host._session_name = session.name
+        session.attach_tool(tool)
+        if hasattr(tool, "_session_name"):
+            tool._session_name = session.name
         return session
 
     def open_work_session(
@@ -2487,7 +2487,7 @@ class Workspace:
         context_index_key: str | None = None,
         default_workspace_folder: str | None = None,
         format: str | None = None,
-        host: Any | None = None,
+        tool: Any | None = None,
     ) -> WorkSession:
         self.load()
         existing = next((s for s in self.work_sessions if s.name == name), None)
@@ -2504,7 +2504,7 @@ class Workspace:
                 context_index_key=context_index_key,
                 default_workspace_folder=default_workspace_folder,
                 format=format,
-                host=host,
+                tool=tool,
                 isolate=isolate,
             )
             self.work_sessions.append(session)
@@ -2527,8 +2527,8 @@ class Workspace:
                 session.default_workspace_folder = default_workspace_folder
             if format is not None:
                 session.format = format
-            if host is not None:
-                session._host = host
+            if tool is not None:
+                session._tool = tool
         self.current_work_session = session
         session.open(
             name=name,
@@ -2572,8 +2572,8 @@ class Workspace:
             rows.append(PathOverride(tool=tool, fidelity=fidelity, path=row_path))
         return rows
 
-class ContextToolHost:
-    """Spec/host surface from OO — workspace direct; turn/git via currentWorkSession."""
+class ContextTool:
+    """Context tool surface from OO — workspace direct; turn/git via currentWorkSession."""
 
     def __init__(
         self,
@@ -2628,7 +2628,7 @@ class ContextToolHost:
         resolved = self.resolve_edit_path(explicit=path)
         self.artifact_path = resolved
         open_turn = Turn(root=str(self._git.root))
-        open_turn.bind_from_host(self, action=action)
+        open_turn.bind_from_tool(self, action=action)
         open_turn.artifact_path = resolved
         session.open_turn = open_turn
         self.workspace.upsert_path(
@@ -2660,7 +2660,7 @@ class ContextToolHost:
             if session is not None and session.open_turn is not None
             else Turn(root=str(self._git.root))
         )
-        turn.bind_from_host(self)
+        turn.bind_from_tool(self)
         commit = turn.turn(message=result, action=turn.action or "run")
         if session is not None:
             session.open_turn = None

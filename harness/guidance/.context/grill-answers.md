@@ -10,7 +10,7 @@ Each `FidelityGuidance` (owned by its `PracticeGuidance`) holds an optional Clea
 
 ### Who owns render
 
-Callers use the **Render action** (`actions/render`: for each host, `host.render(format, content)`). Practices must present one seam so that action can pick transformers — not a second orchestrator on BDD/DDD/Stories.
+Callers use the **Render action** (`actions/render`: for each Guidance, `host.render(format, content)`). Practices must present one seam so that action can pick transformers — not a second orchestrator on BDD/DDD/Stories.
 
 Each practice that has its own artifact keeps **`model/`** for the canonical types, and **one folder per format underneath `model/`** named after the format (`model/drawio/`, `model/miro/`, `model/markdown/`, `model/python/`, `model/html/`, …). Not siblings of `model/`. Drop the `document/` / `diagram/` / `code/` / `web/` grouping. Reorganization of existing parse/render types — not new conversion behavior.
 

@@ -644,9 +644,9 @@ class _ScanCaller:
     def check(self) -> str:
         """Guidance then scan."""
         "FOREACH_SCAN_MARKER: guidance then scan."
-        for host in self.companions():
-            instructions(host.guidance())
-            tools(host.scanner.scan())
+        for toolset in self.companions():
+            instructions(toolset.guidance())
+            tools(toolset.scanner.scan())
         return "checked"
 
 
@@ -856,11 +856,11 @@ with description("AgentToolSet destination catalog"):
     with context("tools_for a destination"):
 
         with it("should return only members marked for that destination"):
-            host = _DestinationFixture()
-            expect([tool.name for tool in host.tools_for(InstallDestination.MCP)]).to(
+            toolset = _DestinationFixture()
+            expect([tool.name for tool in toolset.tools_for(InstallDestination.MCP)]).to(
                 equal(["ping"])
             )
-            expect([tool.name for tool in host.tools_for(InstallDestination.HOOK)]).to(
+            expect([tool.name for tool in toolset.tools_for(InstallDestination.HOOK)]).to(
                 equal(["on_stop"])
             )
 

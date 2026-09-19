@@ -4,7 +4,7 @@ from __future__ import annotations
 from harness.markdown import markdown
 
 
-class OtherToolHost:
+class OtherTool:
     domain_slug = "other_tool"
     toolset_name = "other_tool"
     name = None

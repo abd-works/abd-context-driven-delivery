@@ -74,12 +74,12 @@ with description("an iterate action"):
             expect(joined).to(contain("grill_with_context"))
 
 
-with description("PracticeGuidance host face for iterate"):
-    with it("should not expose iterate on practice guidance hosts"):
+with description("PracticeGuidance operations for iterate"):
+    with it("should not expose iterate on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
                 "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
-        host = cls()
-        expect("iterate" in host.agent_tools).to(equal(False))
+        practice = cls()
+        expect("iterate" in practice.agent_tools).to(equal(False))

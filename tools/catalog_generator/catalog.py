@@ -1,4 +1,4 @@
-"""Catalog pages — HTML from each host @markdown property."""
+"""Catalog pages — HTML from each Guidance @markdown property."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,23 +13,23 @@ class Catalog(HTML):
         self.pages: dict[str, str] = {}
 
     @classmethod
-    def from_registry(cls, hosts: Iterable[Any] | None = None) -> Catalog:
+    def from_registry(cls, guidance: Iterable[Any] | None = None) -> Catalog:
         catalog = cls()
-        for host in list(hosts or ()):
-            catalog._add_host(host)
+        for item in list(guidance or ()):
+            catalog._add_guidance(item)
         return catalog
 
-    def _add_host(self, host: Any) -> None:
-        slug = getattr(host, "domain_slug", None) or type(host).__name__
+    def _add_guidance(self, guidance: Any) -> None:
+        slug = getattr(guidance, "domain_slug", None) or type(guidance).__name__
         for label in ("context", "guidance", "examples"):
             try:
-                md = Markdown.from_label(host, "overview" if label == "context" else label)
+                md = Markdown.from_label(guidance, "overview" if label == "context" else label)
                 page = md.html()
             except Exception:
                 continue
             if str(page).strip():
                 self.pages[f"{slug}-{label}"] = str(page)
-        fidelities = getattr(host, "fidelities", None)
+        fidelities = getattr(guidance, "fidelities", None)
         entries = getattr(fidelities, "entries", {}) if fidelities is not None else {}
         for name, child in entries.items():
             html = HTML.from_markdown(getattr(child, "guidance", "") or "")

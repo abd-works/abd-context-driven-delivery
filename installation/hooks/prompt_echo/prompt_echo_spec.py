@@ -18,6 +18,7 @@ from installation.hooks.prompt_echo.prompt_echo import (
     detect_echo,
     echo,
     handle,
+    inject_rules_toast,
     show_ide_toast,
     toast_notice,
 )
@@ -152,6 +153,28 @@ with description("prompt echo detection"):
                     contain("Action \u2192 scan")
                 )
 
+        with it("should keep both inject toasts from the same burst"):
+            with TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                show_ide_toast(
+                    inject_rules_toast("chat edit", ["agent bdd"]),
+                    repo=repo,
+                )
+                dest = show_ide_toast(
+                    inject_rules_toast(
+                        "chat edit",
+                        ["clean engineering code", "ddd tactics"],
+                    ),
+                    repo=repo,
+                )
+                message = json.loads(dest.read_text(encoding="utf-8"))["message"]
+                expect(message).to(
+                    equal(
+                        "chat edit \u2192 rules : agent bdd, "
+                        "clean engineering code, ddd tactics"
+                    )
+                )
+
 
 @agent_toolset
 class EchoKit:
@@ -178,7 +201,7 @@ class EchoKit:
 
 @agent_toolset
 class EchoPractice:
-    """Practice-shaped host with echoed instructions."""
+    """Practice-shaped Guidance with echoed instructions."""
 
     @echo
     @agent_instructions

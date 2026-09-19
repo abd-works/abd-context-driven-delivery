@@ -796,8 +796,8 @@ def _write_skill_tool(name: str, overview: str):
 
     _fn.__name__ = name
     _fn._skill = True
-    host = type(
-        "Host",
+    guidance = type(
+        "Guidance",
         (),
         {
             "install_folder": Path("sample-tool"),
@@ -814,7 +814,7 @@ def _write_skill_tool(name: str, overview: str):
             "name": name,
             "deploy_name": name,
             "callable": _fn,
-            "toolset": host,
+            "toolset": guidance,
             "docstring": overview,
         },
     )()
@@ -862,15 +862,15 @@ with description("markdown rules front matter"):
         from installation.harness_files.harness_files import MarkdownInstallation
         from actions.scan.rule import AppliesTo, RulesCollection
 
-        host = type(
-            "Host",
+        guidance = type(
+            "Guidance",
             (),
             {"rules": RulesCollection(applies_to=AppliesTo(always_apply=False, globs="**/*spec.py"))},
         )()
         writer = MarkdownInstallation("Cursor", Path("."), "rules")
         text = writer._rules_front_matter(
             "Whenever you write specs. Follow these rules.\n\n- **a** — b",
-            host,
+            guidance,
         )
         expect(text).to(contain("alwaysApply: false"))
         expect(text).to(contain("globs: **/*spec.py"))

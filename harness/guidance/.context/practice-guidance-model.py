@@ -125,7 +125,7 @@ class Markdown:
 
 
 class Render:
-    """Caller-facing convert: each host’s PracticeGuidance.render."""
+    """Caller-facing convert: each Guidance’s PracticeGuidance.render."""
 
     def render(self, guidance: Any, format: str, content: str = "") -> list:
         # -> PracticeGuidance.render format content

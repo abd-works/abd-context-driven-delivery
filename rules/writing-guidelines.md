@@ -40,5 +40,5 @@ do not use AI jargon in place of actual meaningfully specific domain terms. you 
 - ticks
 - slots
 - rows
-- 
+- hosts (never for Guidance, a toolset, an operation, a tool, or instructions; MCP host and hook server keep those names) ; unless specfically appropriate
 update this list whenever I say this word is banned.

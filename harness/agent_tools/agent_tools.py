@@ -582,16 +582,21 @@ class AgentTool:
     def docstring(self) -> str:
         if self._body is not None:
             return self._body
-        if self.name == "instructions":
-            message = getattr(self.toolset, "prompt_message", None)
-            if callable(message):
-                message = message()
-            if isinstance(message, str) and message.strip():
-                return message.strip()
         return (inspect.getdoc(self.callable) or "").strip()
 
     @property
     def description(self) -> str:
+        from harness.markdown.markdown import Markdown
+
+        expanded = Markdown.expand_docstring(self.toolset, self.docstring)
+        if expanded:
+            return expanded
+        if self.name == "instructions":
+            overview = getattr(self.toolset, "overview", None)
+            if callable(overview):
+                overview = overview()
+            if isinstance(overview, str) and overview.strip():
+                return overview.strip()
         return self.docstring or self.callable.__name__
 
     @property

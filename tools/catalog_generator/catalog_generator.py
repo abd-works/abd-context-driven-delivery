@@ -520,8 +520,8 @@ def _same_instance_action_calls(body: list[ast.stmt], action_names: set[str]) ->
                 calls.append(func.attr)
     return calls
 
-def _host_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
-    """``host.<method>()`` or ``Generate().generate(guidance=[host])`` kit dispatch."""
+def _guidance_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
+    """``guidance.<method>()`` or ``Generate().generate(guidance=[guidance])`` action dispatch."""
     calls: list[str] = []
     for stmt in body:
         for node in ast.walk(stmt):
@@ -533,13 +533,13 @@ def _host_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str
             if func.attr not in action_names or func.attr in calls:
                 continue
             value = func.value
-            if isinstance(value, ast.Name) and value.id == "host":
+            if isinstance(value, ast.Name) and value.id in {"guidance", "host"}:
                 calls.append(func.attr)
             elif func.attr == "generate":
                 calls.append(func.attr)
     return calls
 
-_HOST_LIFECYCLE_ACTIONS = frozenset({
+_LIFECYCLE_ACTIONS = frozenset({
     "generate",
     "document",
     "validate",
@@ -615,7 +615,7 @@ def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
             continue
         _method_name, method = methods[0]
         source_dir = _REPO_ROOT / "actions" / dir_name
-        calls = _host_action_calls(method.body, {"generate"})
+        calls = _guidance_action_calls(method.body, {"generate"})
         results.append(ActionResolution(name=name, source_dir=source_dir, calls=calls))
     return results
 
@@ -675,13 +675,13 @@ def resolve_repo_remote(repo_root: Path | None = None) -> tuple[str, str]:
     return normalize_repo_url(repo_url), ref
 
 def normalize_repo_url(repo_url: str) -> str:
-    """Strip a trailing ``.git`` and turn an SSH remote (``git@host:org/repo``)
-    into the ``https://host/org/repo`` form ``git_blob_url`` builds on."""
+    """Strip a trailing ``.git`` and turn an SSH remote (``git@hostname:org/repo``)
+    into the ``https://hostname/org/repo`` form ``git_blob_url`` builds on."""
     url = repo_url.strip()
     if url.startswith("git@"):
         host_and_path = url[len("git@"):]
-        host, _, path = host_and_path.partition(":")
-        url = f"https://{host}/{path}"
+        hostname, _, path = host_and_path.partition(":")
+        url = f"https://{hostname}/{path}"
     if url.endswith(".git"):
         url = url[: -len(".git")]
     return url
@@ -737,7 +737,7 @@ def _example_value(name: str, type_str: str) -> object:
         return []
     return f"<{name}>"
 
-_HOST_LIFECYCLE_KITS = {
+_LIFECYCLE_KITS = {
     "generate": "generate.generate:Generate",
     "validate": "validate.validate:Validate",
     "satisfy": "satisfy.satisfy:Satisfy",
@@ -758,23 +758,23 @@ def build_run_request(
 
     Context tools do not own generate / validate / satisfy / document — those
     live on the kits. A request for one of those actions on a context tool
-    is rewritten to the kit with ``arguments.guidance`` carrying the host.
+    is rewritten to the kit with ``arguments.guidance`` carrying that Guidance.
     """
-    if action in _HOST_LIFECYCLE_KITS and getattr(cls, "_is_context", False):
+    if action in _LIFECYCLE_KITS and getattr(cls, "_is_context", False):
         signature = cls.manifest.signature
         ctor_params = (signature.get("new") or {}).get("parameters") or {}
-        host_context: dict[str, object] = {}
+        guidance_context: dict[str, object] = {}
         for name, type_str in ctor_params.items():
             if name == "fidelity" and fidelity is not None:
-                host_context[name] = fidelity
+                guidance_context[name] = fidelity
             else:
-                host_context[name] = _example_value(name, str(type_str))
+                guidance_context[name] = _example_value(name, str(type_str))
         return {
-            "toolset": _HOST_LIFECYCLE_KITS[action],
+            "toolset": _LIFECYCLE_KITS[action],
             "action": action,
             "arguments": {
                 "guidance": [
-                    {"toolset": f"{cls.__module__}:{cls.__name__}", "context": host_context},
+                    {"toolset": f"{cls.__module__}:{cls.__name__}", "context": guidance_context},
                 ]
             },
         }
@@ -1366,14 +1366,17 @@ class Catalog:
     ) -> str:
         """Render the whole catalog into ``out_root`` with Foundry chrome.
         No output is ever written outside ``out_root``.
-        ``brand`` is a folder of wordmarks/assets; empty uses bundled abd.works."""
+        ``brand`` is a collection name under the brands folder, or a path to a
+        brand folder; empty uses bundled abd-works."""
         if repo_url:
             self.repo_url = repo_url
         if ref:
             self.ref = ref
         if out_root:
             self.out_root = Path(out_root)
-        self.brand = Path(brand) if brand else None
+        from catalog_generator.foundry_chrome import resolve_brand
+
+        self.brand = resolve_brand(brand, self.brands_root) if brand else None
         if repo_url or ref:
             (
                 self.catalog_context_tool,
@@ -1387,6 +1390,28 @@ class Catalog:
             context_tool_entries, utility_entries, lifecycle_actions, action_owner
         )
         return f"Catalog regenerated into {self.out_root} using {self.repo_url}@{self.ref}"
+
+    @property
+    def brands(self) -> dict[str, Path]:
+        from catalog_generator.foundry_chrome import brand_folders
+
+        return brand_folders(self.brands_root)
+
+    @mcp
+    @skill
+    @agent_tool
+    def apply_brand(self, name: str) -> str:
+        """Overlay a named brand from the catalog brands collection onto the
+        generated catalog commons without regenerating pages. ``name`` is a
+        folder name under the brands collection, or a path to a brand folder.
+        Bundled ``abd-works`` is always available."""
+        from catalog_generator.foundry_chrome import apply_named_brand
+
+        if not name:
+            return f"Known brands: {', '.join(sorted(self.brands))}"
+        dest = apply_named_brand(self.out_root, name, self.brands_root)
+        self.brand = dest
+        return f"Applied brand {name} under {dest}"
 
     def _render_catalog(
         self,

@@ -1,7 +1,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: actions/sketch/.context/.agent_bdd_sessions/sketch-owns-tools.json
-"""Agent BDD — /sketch runs Sketch.sketch(tools=...) not host sketch; review gate after save."""
+"""Agent BDD — /sketch runs Sketch.sketch(tools=...) not practice sketch; review gate after save."""
 
 from expects import contain, equal, expect
 from mamba import context, description, it
@@ -27,7 +27,7 @@ _BDD = "practices.bdd.bdd:Bdd"
 
 with description("a sketch action"):
     with context("that is given one context tool"):
-        with it("should run Sketch.sketch with that tool, not the host sketch"):
+        with it("should run Sketch.sketch with that tool, not the Guidance sketch"):
             with agent(_REPO_ROOT, _SESSIONS / "sketch-owns-tools.json"):
                 read_workspace(".cursor/commands/sketch.md")
                 read_workspace("actions/sketch/sketch.py")
@@ -45,7 +45,7 @@ with description("a sketch action"):
                 explanation = follow_instructions(
                     "The user invoked /bdd /sketch. Using the sketch command you read, "
                     "say which toolset owns the run and how the BDD tool is passed. "
-                    "Do not invoke host sketch on Bdd.",
+                    "Do not invoke practice sketch on Bdd.",
                     timeout_seconds=180,
                 ).text
                 ai_judge(

@@ -20,32 +20,32 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 
 with description("a shared rules section containing scanner bullets") as self:
     with before.each:
-        self.host = SamplePracticeGuidance(format="markdown")
+        self.guidance = SamplePracticeGuidance(format="markdown")
 
     with context("with the rules property read"):
         with it("should parse bullets into a rules collection"):
-            expect("sample-rule-one" in self.host.rules.entries).to(equal(True))
+            expect("sample-rule-one" in self.guidance.rules.entries).to(equal(True))
 
         with it("should expose appliesTo from the rules yaml fence"):
-            expect(self.host.rules.appliesTo.always_apply).to(equal(False))
-            expect(self.host.rules.appliesTo.globs).to(contain("**/*sample*"))
+            expect(self.guidance.rules.appliesTo.always_apply).to(equal(False))
+            expect(self.guidance.rules.appliesTo.globs).to(contain("**/*sample*"))
 
         with it("should expose slug, body, optional fidelity, and zero or one scanner on each rule"):
-            rule = self.host.rules.entries["sample-rule-one"]
+            rule = self.guidance.rules.entries["sample-rule-one"]
             expect(rule.slug).to(equal("sample-rule-one"))
             expect(rule.body).to(contain("sample rule one"))
             expect(rule.scanner is not None).to(equal(True))
 
     with context("with validate read on one rule"):
         with it("should return instructions to evaluate the current context against that rule"):
-            rule = self.host.rules.entries["sample-rule-one"]
+            rule = self.guidance.rules.entries["sample-rule-one"]
             expect(rule.validate()).to(contain("Evaluate the current context"))
 
         with it("should tell the agent to run the scanner when the rule has one"):
-            rule = self.host.rules.entries["sample-rule-one"]
+            rule = self.guidance.rules.entries["sample-rule-one"]
             expect(rule.validate()).to(contain("Run the scanner"))
 
     with context("with validate read on the rules collection"):
         with it("should return every child rule's validate instructions in one shot"):
-            text = self.host.rules.validate()
+            text = self.guidance.rules.validate()
             expect(text).to(contain("sample-rule-one"))

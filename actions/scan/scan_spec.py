@@ -102,11 +102,11 @@ with description("Scan"):
             # Assert
             expect(result).not_to(contain("other.py"))
 
-    with context("a Scan with no host and no collection override"):
+    with context("a Scan with no Guidance and no collection override"):
         with it("should refuse to scan because there is no rule set"):
             expect(lambda: Scan().scan([])).to(raise_error(ValueError))
 
-    with context("a Scan bound to a host whose collection flags every file"):
+    with context("a Scan bound to Guidance whose collection flags every file"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             root = Path(self.tmp.name)
@@ -118,7 +118,7 @@ with description("Scan"):
             self.fixture = root / "widget.py"
             self.fixture.write_text("value = 1\n", encoding="utf-8")
 
-            class _Host:
+            class _ScanGuidance:
                 def __init__(self, module_dir: Path) -> None:
                     self.module_dir = module_dir
 
@@ -127,10 +127,10 @@ with description("Scan"):
                         module_dir=self.module_dir, root_path=self.module_dir
                     )
 
-            self.host = _Host(scanners_dir)
-            self.scan = Scan.bound_to(self.host)
+            self.guidance = _ScanGuidance(scanners_dir)
+            self.scan = Scan.bound_to(self.guidance)
 
-        with it("should run the host collection against the named path"):
+        with it("should run the Guidance scanner collection against the named path"):
             result = self.scan.scan([str(self.fixture)])
             expect(result).to(contain("flag-every-file"))
 
@@ -142,7 +142,7 @@ with description("Scan"):
                 def end(self):
                     return ""
 
-            result = _Kit().scan(paths=[str(self.fixture)], guidance=[self.host])
+            result = _Kit().scan(paths=[str(self.fixture)], guidance=[self.guidance])
             expect(result).to(contain("flag-every-file"))
 
 

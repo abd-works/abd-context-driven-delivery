@@ -1,4 +1,4 @@
-"""BDD spec for Partition - kit prose on PracticeGuidance hosts."""
+"""BDD spec for Partition - kit prose on PracticeGuidance."""
 
 import re
 import sys
@@ -46,10 +46,10 @@ with description("Partition kit prose"):
 
 
 with description("Partition kit on hosts"):
-    with it("should not expose partition on practice guidance hosts"):
+    with it("should not expose partition on practice Guidance"):
         cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
-        host = cls()
-        expect("partition" in host.agent_tools).to(equal(False))
+        practice = cls()
+        expect("partition" in practice.agent_tools).to(equal(False))
 
 
 with description("a partition action"):

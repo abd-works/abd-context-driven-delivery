@@ -90,7 +90,7 @@ with description("AgentBdd action expansion"):
                 expect("ai_judge" in self.response.instructions).to(be_true)
                 expect(len(template) > 0).to(be_true)
 
-        with context("the Validate kit is expanded with this host"):
+        with context("the Validate kit is expanded with this Guidance"):
             with before.each:
                 self.response = _expand_action(
                     Validate(),

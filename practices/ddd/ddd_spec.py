@@ -33,7 +33,7 @@ class _DddSpecSupport:
         return body.tool_steps
 
     def ddd(self) -> Ddd:
-        return Ddd(fidelity="bounded_context", path="practices/ddd")
+        return Ddd(fidelity="bounded_context")
 
 
 _support = _DddSpecSupport()
@@ -67,7 +67,7 @@ with description("a Ddd toolset"):
 
     with context("whose generate default working folder is src"):
         with it("should keep src as the generate default"):
-            expect(Ddd.default_workspace_folder).to(equal("src"))
+            expect(Ddd().default_workspace_folder).to(equal("src"))
 
     with context("that provides a CleanEngineering companion"):
         with context("with bounded_context fidelity"):
@@ -84,23 +84,6 @@ with description("a Ddd toolset"):
             with it("should treat the code fidelity as the companion"):
                 companion = Ddd(fidelity="tactics").fidelities.current.clean_engineering
                 expect(companion.fidelity).to(equal("code"))
-
-        with context("with a path set"):
-            with it("should carry the same path to the CE companion"):
-                companion = Ddd(fidelity="bounded_context", path="practices/ddd").fidelities.current.clean_engineering
-                expect(companion.practice_guidance.path).to(equal("practices/ddd"))
-
-        with context("with a session set"):
-            with it("should carry the same session name to the CE companion"):
-                companion = Ddd(fidelity="tactics", session="satisfy").fidelities.current.clean_engineering
-                session = companion.practice_guidance.workspace.current_work_session
-                expect(session.name if session else None).to(equal("satisfy"))
-
-    with context("that provides a diagnostic companion"):
-        with it("should return a Diagnose instance"):
-            from tools.diagnose.diagnose import Diagnose
-
-            expect(Ddd().diagnostic()).to(be_a(Diagnose))
 
     with context("whose contexts instruction is expanded"):
         with it("should include the experts-words-preferred rule slug"):
@@ -141,7 +124,7 @@ with description("a Ddd toolset"):
 
     with context("that does not own kit lifecycle actions"):
         with it("should not expose generate, validate, satisfy, repair, grill, sketch, iterate, or document"):
-            host = _support.ddd()
+            practice = _support.ddd()
             for name in (
                 "generate",
                 "validate",
@@ -152,7 +135,7 @@ with description("a Ddd toolset"):
                 "iterate",
                 "document",
             ):
-                expect(name in host.agent_tools).to(equal(False))
+                expect(name in practice.agent_tools).to(equal(False))
 
     with context("whose guidance action is expanded"):
         with it("should include the Clean Engineering companion's instructions"):

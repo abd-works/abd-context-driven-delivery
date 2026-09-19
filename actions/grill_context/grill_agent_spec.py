@@ -26,7 +26,7 @@ _BDD = "practices.bdd.bdd:Bdd"
 
 with description("a grill action"):
     with context("that is given one context tool"):
-        with it("should run GrillContext.grill with that tool, not the host grill"):
+        with it("should run GrillContext.grill with that tool, not the Guidance grill"):
             with agent(_REPO_ROOT, _SESSIONS / "grill-owns-tools.json"):
                 read_workspace(".cursor/commands/grill.md")
                 read_workspace("actions/grill_context/grill_context.py")
@@ -44,7 +44,7 @@ with description("a grill action"):
                 explanation = follow_instructions(
                     "The user invoked /bdd /grill. Using the grill command you read, "
                     "say which toolset owns the run and how the BDD tool is passed. "
-                    "Do not invoke host grill on Bdd.",
+                    "Do not invoke practice grill on Bdd.",
                     timeout_seconds=180,
                 ).text
                 ai_judge(

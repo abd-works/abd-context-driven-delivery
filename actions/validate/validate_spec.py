@@ -21,14 +21,14 @@ from validate.validate import Validate
 
 with description("a validate action on practice guidance") as self:
     with before.each:
-        self.host = SamplePracticeGuidance(format="markdown")
+        self.guidance = SamplePracticeGuidance(format="markdown")
         self.action = Validate()
 
     with context("with no rule passed"):
         with it("should return validate instructions for every rule in one shot"):
-            expect(self.action.validate([self.host])).to(contain("sample-rule-one"))
+            expect(self.action.validate([self.guidance])).to(contain("sample-rule-one"))
 
     with context("with one rule passed"):
         with it("should return validate instructions for that rule only"):
-            rule = self.host.rules.entries["sample-rule-one"]
-            expect(self.action.validate([self.host], rule)).to(contain("sample-rule-one"))
+            rule = self.guidance.rules.entries["sample-rule-one"]
+            expect(self.action.validate([self.guidance], rule)).to(contain("sample-rule-one"))

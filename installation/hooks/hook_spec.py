@@ -133,6 +133,28 @@ with description("hook dispatch"):
             expect(out["user_message"]).to(equal("for user"))
             expect(out["agent_message"]).to(equal("for agent"))
 
+        with it("should keep additional_context from every handler"):
+            @agent_toolset
+            class _FirstRules:
+                @Hook("preToolUse")
+                def on_first(self, payload: dict) -> dict:
+                    return {"additional_context": "clean engineering code rules"}
+
+            @agent_toolset
+            class _SecondRules:
+                @Hook("preToolUse")
+                def on_second(self, payload: dict) -> dict:
+                    return {"additional_context": "ddd tactics rules"}
+
+            out = _dispatch(
+                {"hook_event_name": "preToolUse", "tool_name": "Write"},
+                toolsets=[_FirstRules, _SecondRules],
+            )
+            expect(out.get("additional_context") or "").to(
+                contain("clean engineering code rules")
+            )
+            expect(out.get("additional_context") or "").to(contain("ddd tactics rules"))
+
     with context("that invokes a handler whose tool has a docstring"):
 
         with it("should put that description on the hook event as agent_message"):

@@ -42,21 +42,18 @@ for _name in list(sys.modules):
     ):
         del sys.modules[_name]
 
-from expects import equal, expect
+from expects import contain, equal, expect
 from mamba import description, it
 
 
 with description("GuidanceAction"):
-    with it("should open the default work session when begin runs without a session name"):
+    with it("should skip opening a work session when begin runs"):
         from guidance_actions import GuidanceAction
 
         tmp = Path(tempfile.mkdtemp(prefix="guidance-action-default-"))
         kit = GuidanceAction(path=str(tmp))
         warning = kit.begin(action="sketch")
-        session = kit.workspace.current_work_session
-        expect(session).not_to(equal(None))
-        expect(session.name).to(equal("default"))
-        expect(session.folder).to(equal(tmp / ".sessions" / "default"))
+        expect(kit.workspace).to(equal(None))
         expect(warning).to(equal(""))
 
     with it("should run the passed operation once when guidance is a string"):
@@ -67,18 +64,18 @@ with description("GuidanceAction"):
         kit.run("just this text", seen.append, action="generate")
         expect(seen).to(equal(["just this text"]))
 
-    with it("should treat a module class ref as a listed host"):
+    with it("should treat a module class ref as a listed Guidance"):
         from guidance_actions import GuidanceAction
 
         kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-ref-"))))
         kit._bind_guidance(
             "practices.clean_engineering.clean_engineering:CleanEngineering"
         )
-        hosts = kit.listed()
-        expect(len(hosts)).to(equal(1))
-        expect(type(hosts[0]).__name__).to(equal("CleanEngineering"))
+        listed = kit.listed()
+        expect(len(listed)).to(equal(1))
+        expect(type(listed[0]).__name__).to(equal("CleanEngineering"))
 
-    with it("should run the passed operation on each host when guidance is a list"):
+    with it("should run the passed operation on each Guidance when guidance is a list"):
         from guidance_actions import GuidanceAction
 
         kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-run-"))))
@@ -87,7 +84,7 @@ with description("GuidanceAction"):
         kit.run([first, second], seen.append, action="generate")
         expect(seen).to(equal([first, second]))
 
-    with it("should inject listed hosts rules markdown after this action returns"):
+    with it("should inject listed Guidance rules markdown after this action returns"):
         from generate.generate import Generate
         from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance
 
@@ -100,6 +97,12 @@ with description("GuidanceAction"):
         )
         expect("sample rule one" in (result.get("additional_context") or "")).to(equal(True))
         expect(getattr(type(kit).inject_rules, "_echo", False)).to(equal(True))
+        from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
+
+        notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
+        expect(notice).to(contain("generate"))
+        expect(notice).to(contain("rules :"))
+        expect(notice).to(contain("sample tool"))
 
     with it("should skip inject_rules for document"):
         from document.document import Document

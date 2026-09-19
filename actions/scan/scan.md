@@ -2,7 +2,7 @@
 
 Run the listed context tool's scanner collection against files on disk.
 
-A path without a host is a walk with no rules. Pass the context tool(s) whose
+A path without attached Guidance is a walk with no rules. Pass the context tool(s) whose
 `_scanner_collection` should run.
 
 ```yaml

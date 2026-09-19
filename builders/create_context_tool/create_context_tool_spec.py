@@ -92,7 +92,7 @@ with description("CreateContextTool meta generator"):
             expect(self.generator.module_dir).to(equal(_CREATE_DIR.resolve()))
 
         with it(
-            "should not expose generate, validate, satisfy, or repair on the host"
+            "should not expose generate, validate, satisfy, or repair on Guidance"
         ):
             for name in (
                 "generate",
