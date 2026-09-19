@@ -64,6 +64,12 @@ with description("context guidance"):
                 }
             )
             expect(result.get("additional_context")).to(contain("sample rule one"))
+            expect(getattr(type(host).inject_rules, "_echo", False)).to(equal(True))
+            from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
+
+            notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
+            expect(notice).to(contain("Rules"))
+            expect(notice).to(contain("sample-tool"))
 
         with it("should not inject rules markdown when the agent writes a non-matching path"):
             host = SampleGuidance(format="markdown")

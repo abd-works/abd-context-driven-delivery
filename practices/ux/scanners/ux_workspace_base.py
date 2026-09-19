@@ -6,7 +6,7 @@ from pathlib import Path
 
 from scan import Scanner
 
-from practices.ux.ux_model.workspace import Workspace
+from practices.ux.model.workspace import Workspace
 
 
 class UxWorkspaceScanner(Scanner):

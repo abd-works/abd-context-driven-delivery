@@ -88,6 +88,7 @@ with description("GuidanceAction"):
             }
         )
         expect("sample rule one" in (result.get("additional_context") or "")).to(equal(True))
+        expect(getattr(type(kit).inject_rules, "_echo", False)).to(equal(True))
 
     with it("should skip inject_rules for document"):
         from document.document import Document

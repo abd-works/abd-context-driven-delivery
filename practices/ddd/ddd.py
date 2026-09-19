@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
     from tools.diagnose.diagnose import Diagnose
@@ -29,11 +27,8 @@ class Ddd(PracticeGuidance):
 
     domain_slug = "ddd"
     supported_formats = _SUPPORTED_FORMATS
-
-    # Generate / new work: src/. /document defaults to domain/ unless path or folder is set.
     default_workspace_folder: str = "src"
     context_index_key: str = "ddd"
-    _DOCUMENT_WORKSPACE_FOLDER: str = "domain"
 
     def __init__(
         self,
@@ -58,38 +53,6 @@ class Ddd(PracticeGuidance):
         from tools.diagnose.diagnose import Diagnose
 
         return Diagnose()
-
-    @agent_tool
-    def apply_document_workspace_default(self) -> str:
-        """Set the durable working area to `domain/` for /document.
-
-        Does not change CleanEngineering's own default folder. Skip when `path`
-        was passed or `default_workspace_folder` is already not the generate
-        default (`src`). Returns the working path in force.
-        """
-        generate_folder = type(self).default_workspace_folder
-        current = self.workspace.current_work_session
-        if current is None:
-            self.workspace.open(
-                self,
-                name=self.session,
-                path=self.path or "",
-            )
-            current = self.workspace.current_work_session
-        if current is None:
-            raise RuntimeError("DDD work session did not open")
-        if self.path is not None:
-            return current.path
-        if self.default_workspace_folder != generate_folder:
-            return current.path
-        generated_path = Path(current.workspace_root) / generate_folder
-        if Path(current.path).resolve() != generated_path.resolve():
-            return current.path
-        self.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
-        current.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
-        current.path = str(Path(current.workspace_root) / current.default_workspace_folder)
-        current.record_context_root()
-        return current.path
 
     @property
     @Mcp

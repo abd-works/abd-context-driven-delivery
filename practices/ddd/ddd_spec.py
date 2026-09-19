@@ -17,7 +17,6 @@ from mamba import context, description, it
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
 from harness.agent_tools.agent_tools import AgentInstructions
-from tools.diagnose.diagnose import Diagnose
 
 
 class _DddSpecSupport:
@@ -66,37 +65,10 @@ with description("a Ddd toolset"):
                     lambda: Ddd(fidelity="bounded_context", format="yaml")
                 ).to(raise_error(ValueError))
 
-    with context("whose document action chooses a working folder"):
+    with context("whose generate default working folder is src"):
         with it("should keep src as the generate default"):
             expect(Ddd().workspace.default_workspace_folder).to(equal("src"))
             expect(Path(Ddd().workspace.path).name).to(equal("src"))
-
-        with it("should switch the working folder to domain"):
-            ddd = Ddd()
-            ddd.apply_document_workspace_default()
-            expect(ddd.workspace.default_workspace_folder).to(equal("domain"))
-            expect(Path(ddd.workspace.path).name).to(equal("domain"))
-
-        with it("should keep an explicit path"):
-            ddd = Ddd(path="wraps")
-            ddd.apply_document_workspace_default()
-            expect(ddd.workspace.path).to(equal("wraps"))
-
-        with it("should keep an overwritten default_workspace_folder"):
-            ddd = Ddd()
-            ddd.workspace.default_workspace_folder = "packages"
-            ddd.workspace.path = str(Path(ddd.workspace.workspace_root) / "packages")
-            ddd.apply_document_workspace_default()
-            expect(Path(ddd.workspace.path).name).to(equal("packages"))
-
-        with it("should expose apply_document_workspace_default as a host tool"):
-            expect("apply_document_workspace_default" in _support.ddd().tools).to(be_true)
-
-        with it("should pass DDD's working path into CleanEngineering without changing CE's default"):
-            ddd = Ddd()
-            ddd.apply_document_workspace_default()
-            expect(Path(ddd.workspace.path).name).to(equal("domain"))
-            expect(CleanEngineering.default_workspace_folder).to(equal("src"))
 
     with context("that provides a CleanEngineering companion"):
         with context("with bounded_context fidelity"):
@@ -127,6 +99,8 @@ with description("a Ddd toolset"):
 
     with context("that provides a diagnostic companion"):
         with it("should return a Diagnose instance"):
+            from tools.diagnose.diagnose import Diagnose
+
             expect(Ddd().diagnostic()).to(be_a(Diagnose))
 
     with context("whose contexts instruction is expanded"):

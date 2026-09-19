@@ -18,10 +18,10 @@ for _cat in ("harness", "tools", "practices", "actions"):
         sys.path.insert(0, _p)
 
 from kebab_case_paths_scanner import KebabCasePathsScanner
-from practices.stories.story_model.source_location import SourceLocation
-from practices.stories.story_model.story_map import StoryMap
-from practices.stories.story_model.test_file import Language, TestSuite, Tier
-from practices.stories.story_model.workspace import Workspace
+from practices.stories.model.source_location import SourceLocation
+from practices.stories.model.story_map import StoryMap
+from practices.stories.model.test_file import Language, TestSuite, Tier
+from practices.stories.model.workspace import Workspace
 
 
 def _workspace(rel_path: str) -> Workspace:

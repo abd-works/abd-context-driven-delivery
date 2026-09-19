@@ -5,11 +5,11 @@ from pathlib import Path
 
 from scan import Scanner
 
-from practices.clean_engineering.class_model.base_class_model import OoadClass, Operation
-from practices.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
-from practices.clean_engineering.class_model.javascript_class_model import JavaScriptCleanEngineeringModel
-from practices.clean_engineering.class_model.python_class_model import ParsedPython, PythonCleanEngineeringModel
-from practices.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
+from practices.clean_engineering.model.base_class_model import OoadClass, Operation
+from practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
+from practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
+from practices.clean_engineering.model.python.python_class_model import ParsedPython, PythonCleanEngineeringModel
+from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 
 _SKIP_DIRS = {
     "node_modules",

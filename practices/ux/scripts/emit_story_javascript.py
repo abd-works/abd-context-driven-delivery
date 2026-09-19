@@ -11,9 +11,9 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from practices.stories.code.javascript.spec_file import render_story_spec_file
-from practices.stories.story_model.nodes import Story
-from practices.stories.story_model.scenario import Clause, Interaction, Phase, Scenario
+from practices.stories.model.javascript.spec_file import render_story_spec_file
+from practices.stories.model.nodes import Story
+from practices.stories.model.scenario import Clause, Interaction, Phase, Scenario
 
 
 def load_story_dict(path: Path) -> dict:
@@ -75,7 +75,7 @@ def dict_to_story(data: dict) -> Story:
 def emit_story_javascript(
     path: Path,
     *,
-    relative_types_path: str = "../../../../practices/stories/code/javascript/seeds/story-types",
+    relative_types_path: str = "../../../../practices/stories/model/javascript/seeds/story-types",
 ) -> Path:
     """Write `<stem>.js` next to a Python story-dict file using the Stories JS renderer."""
     story = dict_to_story(load_story_dict(path))

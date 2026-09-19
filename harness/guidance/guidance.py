@@ -16,8 +16,8 @@ from harness.agent_tools.agent_tools import (
     tools,
 )
 from installation.harness_files.harness_files import rules, skill
+from installation.hooks.prompt_echo.prompt_echo import echo, show_ide_toast
 from installation.hooks.hooks import Hook
-from installation.hooks.prompt_echo.prompt_echo import echo
 from installation.mcp.mcp_server import mcp
 from harness.markdown import (
     Markdown,
@@ -110,6 +110,7 @@ class Guidance:
     def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
 
+    @echo
     @Hook("preToolUse")
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """Inject this host's rules markdown when the agent writes a matching file."""
@@ -124,6 +125,8 @@ class Guidance:
         body = (self.rules_markdown or "").strip()
         if not body:
             return {}
+        label = str(self.slug).replace("_", "-")
+        show_ide_toast(f"Rules \u2192 {label}")
         return {"permission": "allow", "additional_context": body, "agent_message": body}
 
     @markdown
@@ -400,6 +403,28 @@ class PracticeGuidance(Guidance):
             return getattr(importlib.import_module(module_path), attr)
         return entry
 
+    def _live_adapter(self, format_name: str) -> Any:
+        adapter = self._format_adapter(format_name)
+        if not inspect.isclass(adapter):
+            return adapter
+        try:
+            return adapter(tests_root=self.default_workspace_folder)
+        except TypeError:
+            try:
+                return adapter()
+            except TypeError:
+                return adapter
+
+    def _incoming(self, format_name: str, content: Any) -> Any:
+        if format_name in {"python", "typescript", "java", "javascript"}:
+            if isinstance(content, dict):
+                return content
+            if isinstance(content, str):
+                text = content.strip()
+                if text.startswith("{") or text.startswith("["):
+                    return json.loads(content)
+        return content
+
     @agent_tool
     def render(
         self,
@@ -425,18 +450,23 @@ class PracticeGuidance(Guidance):
             )
         if not source_format:
             raise ValueError("source format is not set")
-        source_cls = self._format_adapter(source_format)
-        target_cls = self._format_adapter(format)
-        parsed = source_cls.parse(content)
-        if format == "drawio":
-            rendered = target_cls.render(
-                parsed,
-                previous=previous or None,
-                keep_positioning=keep_positioning,
-            )
-        else:
-            rendered = target_cls.render(parsed)
+        source = self._live_adapter(source_format)
+        target = self._live_adapter(format)
+        parsed = source.parse(self._incoming(source_format, content))
+        rendered = self._call_render(target, parsed, previous, keep_positioning)
         return {"format": format, "content": rendered}
+
+    def _call_render(self, target: Any, parsed: Any, previous: str, keep_positioning: bool) -> Any:
+        try:
+            parameters = inspect.signature(target.render).parameters
+        except (TypeError, ValueError):
+            return target.render(parsed)
+        kwargs: dict[str, Any] = {}
+        if "previous" in parameters:
+            kwargs["previous"] = previous or None
+        if "keep_positioning" in parameters:
+            kwargs["keep_positioning"] = keep_positioning
+        return target.render(parsed, **kwargs)
 
     def scoped_markdown(self) -> str:
         """Overview, practice sections, and the active fidelity (or every fidelity)."""

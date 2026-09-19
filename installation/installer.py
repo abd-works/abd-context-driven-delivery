@@ -79,6 +79,7 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
 )
 from installation.harness_files.harness_files import MarkdownInstallation, Skill
+from installation.hooks.hooks import Hook
 from installation.mcp.mcp_server import Mcp
 
 
@@ -381,7 +382,23 @@ class Installer:
         hook_notice = hook_diagnosis.get("notice") or ""
         if hook_notice:
             print(hook_notice, file=sys.stderr)
+        self.ensure_mcp_host()
         return self._mcp
+
+    def ensure_mcp_host(self, payload: dict[str, Any] | None = None) -> str:
+        from installation.mcp.mcp_server import McpInstallation
+
+        return McpInstallation(self.ide, self.path, repo=self.repo).ensure_cursor_host()
+
+    @Hook("sessionStart")
+    def ensure_mcp_host_on_session_start(self, payload: dict[str, Any] | None = None) -> str:
+        return self.ensure_mcp_host(payload)
+
+    @Hook("afterAgentResponse")
+    def ensure_mcp_host_after_agent_response(
+        self, payload: dict[str, Any] | None = None
+    ) -> str:
+        return self.ensure_mcp_host(payload)
 
 
 __all__ = ["Destination", "Installation", "Installer"]

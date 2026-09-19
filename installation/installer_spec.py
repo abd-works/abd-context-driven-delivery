@@ -397,11 +397,9 @@ with description("an MCP manifest file") as self:
             expect(text).to(contain("SampleMcpOps"))
             expect(text).to(contain("PYTHONPATH"))
 
-        with it("should name the stdio server after the checkout so another folder named cdd does not hide it"):
-            from installation.mcp.mcp_server import McpHost
-
+        with it("should publish the stdio server as cdd"):
             data = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))
-            expect(data["mcpServers"]).to(have_key(McpHost.server_key(_REPO_ROOT)))
+            expect(data["mcpServers"]).to(have_key("cdd"))
 
     with context("that has been written by a deploy with no mcp-published members"):
         with before.each:
@@ -697,6 +695,12 @@ with description("the installer toolset installing itself") as self:
         names = [op.mcp_name for op in self.mcp.mcp_operations]
         expect(names).to(contain("installer.install"))
         expect(names).to(contain("installer.clean"))
+
+    with it("should enroll a session start hook that respawns the MCP host"):
+        handlers = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
+        events = [item["event"] for item in handlers.get("handlers") or []]
+        expect(events).to(contain("sessionStart"))
+        expect(events).to(contain("afterAgentResponse"))
 
 
 with description("the installer import path") as self:

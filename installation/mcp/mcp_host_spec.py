@@ -1,4 +1,5 @@
 """BDD spec for MCP host JSON Schema binding of Python parameter types."""
+import os
 import re
 import shutil
 import sys
@@ -18,7 +19,7 @@ from mamba import after, before, context, description, it
 
 from installation.installer import Installer
 from installation.mcp.examples.parameter_types.parameter_types import ParameterTypes
-from installation.mcp.mcp_server import McpHost
+from installation.mcp.mcp_server import McpHost, McpInstallation
 from actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from installation.mcp.examples.illegitimate_name.illegitimate_name import (
@@ -332,7 +333,33 @@ with description("an MCP host") as self:
         with it("should enroll a published operation from the manifest"):
             expect(self.host.diagnose()["tools"]).to(contain("sample-mcp.generate"))
 
-        with it("should read toolset refs from a checkout-scoped server key"):
+        with it("should read toolset refs from the written mcp.json"):
             expect(McpHost.refs_from_manifest(self.tree / "mcp.json")).to(
                 contain("harness.guidance.fixtures.agentic_ops.agentic_ops:SampleMcpOps")
             )
+
+
+with description("an MCP host Cursor has stopped spawning") as self:
+    with before.each:
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
+        self.mcp = McpInstallation("Cursor", self.tree, repo=_REPO_ROOT)
+        nudge = self.tree / "mcp-host-nudge"
+        if nudge.is_file():
+            nudge.unlink()
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with context("with no live host process"):
+        with it("should rewrite mcp.json so Cursor respawns stdio"):
+            expect(self.mcp.ensure_cursor_host()).to(equal("nudged"))
+
+    with context("with a live host process"):
+        with before.each:
+            (self.tree / "mcp-host.pid").write_text(str(os.getpid()), encoding="utf-8")
+
+        with it("should leave the running host alone"):
+            expect(self.mcp.ensure_cursor_host()).to(equal("running"))
+

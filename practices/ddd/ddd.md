@@ -24,7 +24,7 @@ Build the solution around how the business actually works, in the words the busi
 
 ### Default folder
 
-`default_workspace_folder` is `src/` for **generate**. `/document` calls `apply_document_workspace_default`: working area becomes `domain/` unless `path` was passed or `default_workspace_folder` was already overwritten. Clean Engineering does not choose this folder; `ce()` follows DDD's working path.
+`default_workspace_folder` is `src/` for **generate**. Documenting an existing system uses the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. Leave production `src/` alone unless the user directs otherwise.
 
 ### Document
 

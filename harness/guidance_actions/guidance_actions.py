@@ -7,8 +7,8 @@ import re
 from typing import Any, Union
 
 from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
+from installation.hooks.prompt_echo.prompt_echo import echo, show_ide_toast
 from installation.hooks.hooks import Hook
-from installation.hooks.prompt_echo.prompt_echo import echo
 from installation.mcp.mcp_server import mcp
 from workspace.workspace import SessionModel, Turn, Workspace
 
@@ -129,6 +129,7 @@ class GuidanceAction:
                 warning = session.branch_warning()
         return warning
 
+    @echo
     @Hook("postToolUse")
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """Inject listed guidance hosts' rules markdown after this action returns."""
@@ -146,6 +147,8 @@ class GuidanceAction:
         if not parts:
             return {}
         body = "\n\n".join(parts)
+        label = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", type(self).__name__).lower()
+        show_ide_toast(f"Rules \u2192 {label}")
         return {"additional_context": body}
 
     def _payload_is_this_action(self, payload: dict[str, Any]) -> bool:

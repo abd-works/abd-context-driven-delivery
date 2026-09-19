@@ -1776,7 +1776,7 @@ instructions: "# Generate\n\n1. Call **`open`**. Confirm sprint slug with the us
   \ for composition/aggregation; open arrow for association). Cardinality and navigability\
   \ belong on the edge when the source model states them. Modules-view diagrams use\
   \ dependency arrows and containment nesting instead — see `drawio_class_model.py`\
-  \ — not these UML edge styles.\n\nSeparate tools run — toolset: `practices.clean_engineering.class_model.drawio.drawio:Drawio`\
+  \ — not these UML edge styles.\n\nSeparate tools run — toolset: `practices.clean_engineering.model.drawio.drawio:Drawio`\
   \ action: `repair`\n\nPrepend the following block verbatim as the very first lines\
   \ of the file you are writing - before any imports, before any code.\n\nRan SessionLog.append\
   \ (plain): error cannot evaluate plain-call argument type(tool).manifest_path\n\n\

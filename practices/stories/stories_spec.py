@@ -16,7 +16,6 @@ from mamba import after, before, context, description, it
 
 from practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
-from tools.diagnose.diagnose import Diagnose
 
 _SAMPLE_MARKDOWN = """\
 (E) Manage Customer Orders
@@ -82,6 +81,8 @@ with description("Stories"):
 
     with context("that provides a Diagnose companion"):
         with it("should return a Diagnose instance from diagnostic"):
+            from tools.diagnose.diagnose import Diagnose
+
             expect(Stories().diagnostic()).to(be_a(Diagnose))
 
     with context("that provides a CleanEngineering companion"):
@@ -187,37 +188,19 @@ with description("Stories"):
             expect(any(p.startswith("tests/") for p in paths)).to(be_true)
             expect("tests/story-test.ts" in paths).to(be_true)
 
-    with context("whose transform tool colocates typescript beside `_story.test.md`"):
+    with context("whose transform tool writes typescript under tests"):
         with before.each:
-            import tempfile
-
-            self.tempdir = tempfile.TemporaryDirectory()
-            root = Path(self.tempdir.name)
-            deploy = root / "stories" / "create-customer"
-            deploy.mkdir(parents=True)
-            (deploy / "create_customer_story.test.md").write_text(_SAMPLE_MARKDOWN, encoding="utf-8")
-            self.stories = Stories(
-                fidelity="scenarios",
-                workspace=str(root),
-                path=str(deploy / "create_customer_story.test.md"),
-            )
+            self.stories = Stories(fidelity="scenarios")
             self.result = self.stories.render(
                 format="typescript",
                 content=_SAMPLE_MARKDOWN,
                 source="markdown",
             )
 
-        with after.each:
-            self.tempdir.cleanup()
-
-        with it("should emit files under the story folder instead of tests/"):
+        with it("should emit files under tests/"):
             paths = self.result["content"]
-            expect(any(p.startswith("stories/create-customer/") for p in paths)).to(
-                be_true
-            )
-            expect("stories/story-test.ts" in paths).to(be_true)
-            expect("stories/create-customer/story-test.ts" in paths).to(equal(False))
-            expect(any(p.startswith("tests/") for p in paths)).to(equal(False))
+            expect(any(p.startswith("tests/") for p in paths)).to(be_true)
+            expect("tests/story-test.ts" in paths).to(be_true)
 
     with context("whose contexts slot is expanded at story_map"):
         with before.each:

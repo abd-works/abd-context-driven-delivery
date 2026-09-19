@@ -41,7 +41,7 @@ def main() -> None:
     from installation.installer import Installer
 
     Installer.ensure_import_path(_REPO)
-    from installation.mcp.mcp_server import McpHost
+    from installation.mcp.mcp_server import McpHost, claim_host_pid, host_pid_path
 
     argv = [str(item) for item in sys.argv[1:]]
     manifest = _manifest()
@@ -52,6 +52,7 @@ def main() -> None:
         or os.environ.get("MCP_TOOLSET_REFS", "")
     )
     repo = _arg_after(argv, "--repo") or _arg_after(manifest_args, "--repo") or str(_REPO)
+    claim_host_pid(host_pid_path(_REPO / ".cursor"))
     McpHost.build(_toolset_refs(toolsets), repo=repo, project=repo).run()
 
 

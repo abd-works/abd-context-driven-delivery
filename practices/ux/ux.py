@@ -4,20 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from agent_tools.agent_tools import agent_tool  # noqa: F401
 
-_CHANNELS: dict[str, tuple[str, str]] = {
-    "drawio": ("ux.diagram.drawio.nodes", "DrawioUxMap"),
-    "html": ("ux.web.html.nodes", "HtmlUxMap"),
-    "markdown": ("ux.document.markdown.nodes", "MarkdownUxMap"),
-    "json": ("ux.document.json.nodes", "JsonUxMap"),
+_FORMATS: dict[str, tuple[str, str]] = {
+    "drawio": ("ux.model.drawio.nodes", "DrawioUxMap"),
+    "html": ("ux.model.html.nodes", "HtmlUxMap"),
+    "markdown": ("ux.model.markdown.nodes", "MarkdownUxMap"),
+    "json": ("ux.model.json.nodes", "JsonUxMap"),
 }
 
-_SUPPORTED_FORMATS = frozenset(_CHANNELS)
+_SUPPORTED_FORMATS = frozenset(_FORMATS)
 
 
 @agent_toolset
@@ -27,7 +26,7 @@ class Ux(PracticeGuidance):
     domain_slug = "ux"
     default_workspace_folder: str = "ux"
     context_index_key: str = "ux"
-    _formats = _CHANNELS
+    _formats = _FORMATS
     supported_formats = _SUPPORTED_FORMATS
 
     def __init__(

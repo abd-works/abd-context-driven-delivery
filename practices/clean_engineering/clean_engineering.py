@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from practices.clean_engineering.class_model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
-from practices.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
-from practices.clean_engineering.class_model.javascript_class_model import JavaScriptCleanEngineeringModel
-from practices.clean_engineering.class_model.json_class_model import JsonCleanEngineeringModel
-from practices.clean_engineering.class_model.markdown_class_model import MarkdownCleanEngineeringModel
-from practices.clean_engineering.class_model.python_class_model import PythonCleanEngineeringModel
-from practices.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
+from practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
+from practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
+from practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
+from practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
+from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
+from practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
+from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 
-_CHANNELS: dict[str, type] = {
+_FORMATS: dict[str, type] = {
     "markdown": MarkdownCleanEngineeringModel,
     "json": JsonCleanEngineeringModel,
     "python": PythonCleanEngineeringModel,
@@ -24,7 +24,7 @@ _CHANNELS: dict[str, type] = {
     "drawio": DrawIOCleanEngineeringModel,
 }
 
-_SUPPORTED_FORMATS = frozenset(_CHANNELS)
+_SUPPORTED_FORMATS = frozenset(_FORMATS)
 
 
 @agent_toolset
@@ -34,7 +34,7 @@ class CleanEngineering(PracticeGuidance):
     domain_slug = "clean_engineering"
     default_workspace_folder: str = "src"
     context_index_key: str = "clean_engineering"
-    _formats = _CHANNELS
+    _formats = _FORMATS
     supported_formats = _SUPPORTED_FORMATS
 
     def __init__(
@@ -56,7 +56,7 @@ class CleanEngineering(PracticeGuidance):
         )
         self.drawio = None
         if self.format == "drawio":
-            from practices.clean_engineering.class_model.drawio.drawio import Drawio
+            from practices.clean_engineering.model.drawio.drawio import Drawio
 
             self.drawio = Drawio(workspace=self.workspace)
             self.drawio.mode = "tool"

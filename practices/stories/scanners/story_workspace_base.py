@@ -6,7 +6,7 @@ from pathlib import Path
 
 from scan import Scanner
 
-from practices.stories.story_model.workspace import Workspace
+from practices.stories.model.workspace import Workspace
 
 
 class StoryWorkspaceScanner(Scanner):

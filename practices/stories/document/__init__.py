@@ -1,1 +1,0 @@
-"""Document formatters (markdown, json)."""

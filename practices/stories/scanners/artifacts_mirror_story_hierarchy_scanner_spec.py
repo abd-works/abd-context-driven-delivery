@@ -18,11 +18,11 @@ for _cat in ("harness", "tools", "practices", "actions"):
         sys.path.insert(0, _p)
 
 from artifacts_mirror_story_hierarchy_scanner import ArtifactsMirrorStoryHierarchyScanner
-from practices.stories.story_model.nodes import Epic, Story, SubEpic
-from practices.stories.story_model.source_location import SourceLocation
-from practices.stories.story_model.story_map import StoryMap
-from practices.stories.story_model.test_file import Language, TestSuite, Tier
-from practices.stories.story_model.workspace import Workspace
+from practices.stories.model.nodes import Epic, Story, SubEpic
+from practices.stories.model.source_location import SourceLocation
+from practices.stories.model.story_map import StoryMap
+from practices.stories.model.test_file import Language, TestSuite, Tier
+from practices.stories.model.workspace import Workspace
 
 
 def _workspace_with_suite(rel_path: str) -> Workspace:

@@ -15,10 +15,10 @@ for _cat in ("harness", "tools", "practices", "actions"):
         sys.path.insert(0, _p)
 
 import practices  # noqa: F401
-from practices.ux.document.json.nodes import JsonUxMap
+from practices.ux.model.json.nodes import JsonUxMap
 from practices.ux.ux import Ux
-from practices.ux.ux_model.nodes import Screen
-from practices.ux.ux_model.ux_map import UxMap
+from practices.ux.model.nodes import Screen
+from practices.ux.model.ux_map import UxMap
 
 
 def _sample_json() -> str:

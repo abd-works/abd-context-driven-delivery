@@ -1,11 +1,14 @@
 """MCP mark, install, and runtime — one destination packager."""
 from __future__ import annotations
 
+import atexit
 import inspect
 import json
 import logging
+import os
 import re
 import sys
+import time
 import types as py_types
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -23,6 +26,9 @@ from installation.installer import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
+HOST_PID_NAME = "mcp-host.pid"
+NUDGE_NAME = "mcp-host-nudge"
+NUDGE_MIN_SECONDS = 5.0
 _UNION_ORIGINS = {Union, py_types.UnionType}
 _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}
@@ -40,6 +46,48 @@ class Mcp(Destination):
 
 
 mcp = Mcp
+
+
+def host_pid_path(ide_path: Path | str) -> Path:
+    return Path(ide_path) / HOST_PID_NAME
+
+
+def host_pid_is_running(pid_file: Path | str) -> bool:
+    path = Path(pid_file)
+    if not path.is_file():
+        return False
+    try:
+        pid = int(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return False
+    try:
+        os.kill(pid, 0)
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def claim_host_pid(pid_file: Path | str) -> None:
+    path = Path(pid_file)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(str(os.getpid()), encoding="utf-8")
+
+    def _release() -> None:
+        release_host_pid(path, os.getpid())
+
+    atexit.register(_release)
+
+
+def release_host_pid(pid_file: Path | str, pid: int | None = None) -> None:
+    path = Path(pid_file)
+    expected = str(pid if pid is not None else os.getpid())
+    try:
+        if path.is_file() and path.read_text(encoding="utf-8").strip() == expected:
+            path.unlink()
+    except OSError:
+        return
 
 
 class McpStandupFailed(Exception):
@@ -141,7 +189,7 @@ class McpInstallation(Installation):
         host = repo / "installation" / "mcp" / "scripts" / "start_host.py"
         payload = {
             "mcpServers": {
-                McpHost.server_key(repo): {
+                "cdd": {
                     "type": "stdio",
                     "command": sys.executable,
                     "args": [
@@ -183,6 +231,28 @@ class McpInstallation(Installation):
         host = self.host if self.host is not None else self.standup()
         self.diagnosis = host.diagnose()
         return self.diagnosis
+
+    def cursor_host_is_running(self) -> bool:
+        return host_pid_is_running(host_pid_path(self.path))
+
+    def ensure_cursor_host(self) -> str:
+        if self.cursor_host_is_running():
+            return "running"
+        manifest = self.path / "mcp.json"
+        if not manifest.is_file():
+            return "missing"
+        nudge_file = self.path / NUDGE_NAME
+        now = time.time()
+        try:
+            last = float(nudge_file.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            last = 0.0
+        if now - last < NUDGE_MIN_SECONDS:
+            return "waiting"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(text, encoding="utf-8")
+        nudge_file.write_text(str(now), encoding="utf-8")
+        return "nudged"
 
 
 def _prompt_message(op: McpOperationDefinition) -> str:
@@ -603,8 +673,7 @@ class McpHost:
 
     @staticmethod
     def server_key(repo: Path | str) -> str:
-        slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", Path(repo).name).strip(".-") or "repo"
-        return f"cdd-{slug}"
+        return "cdd"
 
     @staticmethod
     def server_entry_from_manifest(servers: Mapping[str, Any] | Path | str) -> dict[str, Any]:

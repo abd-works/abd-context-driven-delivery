@@ -10,20 +10,17 @@
 
 `Ddd` is the seam: construct at a DDD fidelity, expand lifecycle actions, and transform sideways via CE channels.
 
-Constraint: do not restate CleanEngineering class/module analysis in DDD artifacts — call `ce()` at the mapped fidelity instead. Constraint: do not invent detail from a deeper DDD fidelity than the active one. Fidelity map: bounded_context→modules, building_blocks→model, tactics→code.
+Constraint: do not restate CleanEngineering class/module analysis in DDD artifacts — use the fidelity's Clean Engineering companion instead. Constraint: do not invent detail from a deeper DDD fidelity than the active one. Fidelity map: bounded_context→modules, building_blocks→model, tactics→code.
 
 ## Public API
 
 - `Ddd(fidelity, format=None, path=None, session=None, workspace=None)`
-- `ce() -> CleanEngineering` (tool mode)
 - `diagnostic() -> Diagnose`
 - `contexts` instruction
-- `guidance` — domain generate prose + CleanEngineering companion as a separate tools run. Lifecycle generate / validate / satisfy / document / repair live on kits (`Generate().generate(tools=[ddd])`).
-- Tool: `apply_document_workspace_default` — switches the working folder to `domain/` for `/document` unless path or folder was overridden
-- Tool: `transform(source_format, target_format, content)`
-- Tool: `render(format, content)` — calls `transform` from the current format via CE channels
+- `guidance` — domain generate prose plus the current fidelity's Clean Engineering companion when one is named
+- `render(format, content)` — `PracticeGuidance.render`; DDD has no format folders, so conversion uses the companion practice
 - Scan rules discovered under `practices/ddd/scanners/` (`screen-interface-not-a-domain-object`, `private-method-naming`, `building-blocks-fidelity-requires-tactical-stereotype`, `flaccid-data-object-no-behavior`, `no-orphaned-objects`)
 
 ## Dependencies
 
-BaseContextTool; CleanEngineering (lazy via `ce()` / `transform`); Diagnose (lazy via `diagnostic()`); Scan (binds this package's `scanners/`)
+PracticeGuidance; CleanEngineering companion on each fidelity; Diagnose (lazy via `diagnostic()`); Scan (binds this package's `scanners/`)
