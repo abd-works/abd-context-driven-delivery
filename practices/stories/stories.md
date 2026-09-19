@@ -33,19 +33,11 @@ Whenever you define or change user interactions and resulting system behavior, a
 
 #### Overview
 
-**Produce:** Story map.
-
-Define a visual hierarchy of how users and systems achieve business outcomes: `Epic` -> nestable `Sub-Epic` -> `Story`. It is easier to change the map while Stories are titles than after Scenarios, screens, and tests exist.
-
-**Actors** are people or systems that interact with the system being described. Examples include `Customer`, `Support Agent`, `Order Service`, and `Payment Provider`.
-
-**Epics** name major business capabilities or end-to-end outcomes. Examples include `Manage Customer Orders` and `Process Payments`.
-
-**Sub-Epics** name one outcome within an Epic and contain the interactions that achieve it. Examples include `Place Customer Order` and `Collect Payment`.
-
-**Stories** name discrete, observable interactions that can be tested independently. Examples include `Submit Order`, `Validate Payment`, and `Authorize Card Transaction`.
+Define a story map as Epic → nestable Sub-Epic → Story. Change the map while nodes are still titles; after scenarios, screens, and tests exist, the same move is much more expensive.
 
 #### Guidance
+
+**Name the layers.** Actors are people or systems (`Customer`, `Support Agent`, `Order Service`). Epics name an end-to-end outcome (`Manage Customer Orders`). Sub-Epics name one outcome inside an Epic (`Place Customer Order`). Stories name one observable interaction that can be tested on its own (`Submit Order`).
 
 **Decompose through interactions.** Cover the business capability with Epics, then ground each Epic in Stories that demonstrate real behaviour. Find the **walking skeleton**, the smallest end-to-end path that works and delivers value, and validate it before adding later increments. Split increments by actor, data, workflow, channel, interface, non-functional requirement, or business rule when that creates a demonstrable step.
 
@@ -126,9 +118,7 @@ If this change will not stay here, follow `practices/stories/story_map.mdc`.
 
 #### Overview
 
-**Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`. Do not name these `*spec*` — that pattern belongs to BDD.
-
-Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
+**Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`. Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
 
 #### Guidance
 

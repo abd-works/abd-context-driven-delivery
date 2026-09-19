@@ -1,8 +1,12 @@
 ## Overview
 
-UX looks at the product through user navigation and information architecture, from layout and transitions to more formal screens, regions, and controls — how users see and act on the solution — mapped at increasing fidelity.
+UX maps how users see and act on the product: screens, regions, controls, and the transitions between them. Deepen from information architecture to a runnable greybox, then to the shipping frontend. Each fidelity adds artifacts; it does not invent detail from a later one.
 
-**Canonical model** (reuse, do not reinvent): `UxMap` → `Screen` → `Region` → `Control` → `Interaction`, plus `Transition`, `ContentType`, `NavComponent` on the map. Optional `UxContext` holds notes/invariants not visible on screens.
+## Guidance
+
+**Canonical model.** Reuse `UxMap` → `Screen` → `Region` → `Control` → `Interaction`, plus `Transition`, `ContentType`, and `NavComponent` on the map. Optional `UxContext` holds notes and invariants that are not visible on screens. Do not invent a second page or control model in freehand HTML.
+
+**Primary path.** Start from grill and sketch. Draw information architecture in drawio, deepen to html mockups, then ship real frontend at **front_end_code**. Markdown is optional context (thinking, invariants, interaction notes), not the main artifact. Channels are drawio, html, markdown, and json — peers at the same fidelity; `transform` moves sideways. The html channel deepens in place: interactions and optional brand at **mockup**, production UI at **front_end_code**. Templates for generate live under `templates/`. Scanners read the canonical model, never file syntax.
 
 **Layout (mirror Stories; colocated):**
 
@@ -17,52 +21,27 @@ sandbox/<epic>/
     ux-context.md                          <- optional notes/invariants
 ```
 
-Sketch/context MD stay in `.context/` (same pattern as other generators). Story / object-model JS stay where Stories / CE emit them; HTML imports those modules.
+Sketch and context markdown stay in `.context/`. Story and object-model JS stay where Stories and Clean Engineering emit them; HTML imports those modules. `UxMap.story_references` and `object_references` store **paths** to those artifacts. If they are missing, run that generator's `transform` to `javascript`.
 
-**Stories + object model:** `UxMap.story_references` / `object_references` store **paths** to Stories / Clean Engineering JS artifacts. If missing, run that generator’s `transform` to `javascript`. Mockup/spec HTML imports those paths.
+**Story Demo (mockup+).** Generated HTML uses `templates/html/mockup_shell.html` — product screens **LEFT**, story explorer **RIGHT**. `story-demo/mount-generated-mockup.js` loads `create{Story}Story` exports, runs `PlayDualRunner`, and paints the explorer. Serve from the **repo root** so `/practices/...` imports resolve. Worked example: `practices/ux/examples/manage-customer-orders/`.
 
-**Story Demo shell (mockup+):** Generated HTML uses `templates/html/mockup_shell.html` — product screens **LEFT**, story explorer **RIGHT**. `story-demo/mount-generated-mockup.js` loads `create{Story}Story` exports, runs `PlayDualRunner`, and paints the explorer. Serve from **repo root** so `/practices/...` imports resolve.
+**Controls.** `ux_model.Control` is vanilla. Controls that bind to GWT steps are `StoryDemoControl` (`bound_field` + `story_steps`); HTML emits `data-bound-field` / `data-story-steps`. Interactive extras (`set_input`, `item_story_steps`, `item_value`, `item_label`) emit `data-input-field` on number/quantity and `data-bound-list` on list hosts. Do not bake product words (catalog, cart) into the template — those are bound_field paths and story language only.
 
-**Worked example:** `practices/ux/examples/manage-customer-orders/` (Place New Order mockup + stories + shopping_cart domain) — general UX output sample that happens to run in the Story Demo shell.
+**Specifications (layouts).** `specifications/` holds ready-to-adapt screen templates, one sibling folder per style:
 
-**One control model:** `ux_model.Control` is vanilla. Controls that bind to GWT steps are `StoryDemoControl` (`bound_field` + `story_steps`) — HTML emits `data-bound-field` / `data-story-steps`. Do **not** invent a second page/control model in freehand HTML.
+- `specifications/generic/` — **default.** One `.md` ASCII reference + one `.drawio` XML fragment per layout (43 patterns). No brand.
+- `specifications/abd-works/` — the same layouts as brand-styled HTML sharing `abd-works-brand.css`. Use this folder when the screen needs the abd.works brand (`brand-is-opt-in`).
+- Add further sibling folders for other brands the same way; each folder stays self-contained.
 
-**Interactive (domain-agnostic):** `StoryDemoControl` may also carry `set_input`, `item_story_steps`, `item_value`, `item_label`. Emit:
-- `number` / `quantity` → `data-input-field`
-- `bound-list` / `list-host` → `data-bound-list` + `data-bound-field` (expose path) + optional `data-item-story-steps` / `data-set-input`  
-Do **not** bake product words (catalog, cart) into the template — those are bound_field paths / story language only.
+Before sketching ASCII, drawio regions, or brand-layer html, open the matching file in the folder that applies (`generic/` unless a brand is asked for or already established), read its slots, and adapt that file. Do not draw from scratch when a specification already covers the shape. `Screen.apply_layout(layout_id)` records the layout name; append real `Region`s from the slots you just read.
 
-**Markdown:** optional context only (thinking, invariants, interaction notes). Primary path is **drawio (IA) → html (mockup/spec)**.
-
-**Specifications (layouts):** `specifications/` holds the full IA screen-template set as ready-to-adapt reference artifacts, one sibling folder per style:
-
-- `specifications/generic/` — **default.** One `.md` ASCII reference + one `.drawio` XML fragment per layout (accordion, breadcrumb, kanban-board, sidebar, tabbed, wizard-stepper, … 43 patterns), mirrored verbatim from abd-skills. No brand.
-- `specifications/abd-works/` — the same 43 layouts as real, brand-styled HTML (`<id>.html` + `index.html`), all sharing `abd-works-brand.css` (tokens/type/components copied from the `abd-visual-branding` SKILL.md: colors, Inter/JetBrains Mono type scale, buttons, cards, dual Executive/Engineering mode). Use this folder instead of `generic/` whenever the screen needs the abd.works brand (see `brand-is-opt-in` below).
-- Add further sibling folders under `specifications/` for other brands/styles the same way; each folder's own files stay self-contained (own stylesheet, own copies).
-
-Before sketching a screen's ASCII box, drawio region cells, or brand-layer html, open the matching file(s) in the specification folder that applies — `generic/` unless a specific brand is asked for or already established for this work — read its slots, and alter that file for the real screen. Do not draw box art, drawio cells, or brand markup from scratch when one of these already covers the shape. `Screen.apply_layout(layout_id)` just records that choice as the layout name; append the real `Region`s yourself from the slots you just read.
-
-**Channels:** drawio, html, markdown, json — peer parse/render; `transform` moves sideways at the same fidelity. One `html` channel deepens by fidelity (js interactions → optional brand layer + honest stubs at **mockup** → real frontend at **front_end_code**; host FE stacks welcome at **front_end_code**).
-
----
-
-This skill operates at **multiple levels of fidelity**. Start from grill + sketch and deepen. Each level **adds** artifacts — do not invent detail from a deeper fidelity.
+**Fidelities.**
 
 | Fidelity | Default format | Output |
 |---|---|---|
 | **ia** | drawio | Site map + per-screen regions/nav (html optional via transform) |
-| **mockup** | html | Wired greybox screens (html+js); one HTML per concrete user goal (not one file per screen, not one mega-file per epic); drawio remains a peer channel; optional brand layer; honest stub catalogue |
-| **front_end_code** | html (or host FE stack) | Real frontend — production UI wired to real backend; not Story Demo / greybox alone |
-
-**Templates (AI generate):** drawio + html under `templates/`. Markdown context template optional. Other formats via channels / `transform`.
-
-**Cross-format scanners:** channels parse into the canonical model; scanners read model fields only — never file syntax.
-
----
-
-## Guidance
-
-Start from grill + sketch and deepen. Each level **adds** artifacts — do not invent detail from a deeper fidelity. Primary path is **drawio (IA) → html (mockup/spec)** then real frontend at **front_end_code**.
+| **mockup** | html | Wired greybox; one HTML per concrete user goal; drawio remains a peer channel |
+| **front_end_code** | html (or host FE stack) | Production UI wired to a real backend |
 
 ## Shared rules
 
