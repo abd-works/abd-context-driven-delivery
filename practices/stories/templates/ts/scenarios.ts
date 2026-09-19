@@ -6,10 +6,11 @@
  * Mirror Epic → SubEpic → Story on disk:
  *
  * ```
- * tests/
- *   {epic-verb-noun}/                    # kebab-case folder
- *     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
- *       {story-kebab-slug}.ts            # one GWT file per story — no {story}/ folder
+ * {epic-verb-noun}/                         # kebab-case folder
+ *   {sub-epic-verb-noun}/
+ *     {story-kebab-slug}/
+ *       story-scenarios.md                  # scenarios fidelity
+ *       {story_snake}_story.test.ts         # acceptance_tests — not .spec.
  *
  * # Machinery — copy once per tests/ tree if missing (do not inline in skills):
  *   practices/stories/templates/ts/story-test.ts → tests/story-test.ts
@@ -17,7 +18,7 @@
  *
  * ## Path naming (`kebab-case-paths`)
  *
- * Epic and SubEpic folders, story file stems, tier segments: lowercase kebab-case.
+ * Epic, sub-epic, and story **folders**: lowercase kebab-case. The test file is `{story_snake}_story.test.ts`.
  * Exception: Python epic helper only — `{epic_slug}_helper.py` at epic root.
  *
  * ## Outcome chaining (`then-and-chaining`)

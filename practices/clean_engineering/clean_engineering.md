@@ -30,14 +30,13 @@ If the user asks for language while generating **modules** or **model**, use thi
 
 ### modules
 
-#### Overview
-
-
 **Default format:** markdown  
 **Stage:** discovery
 **Diagram format:** `drawio` (modules view with blue boxes, public-interface bullets, and one-way dependency arrows; template `templates/modules.drawio`). Programming-language channels are for **model** and later.
 
-**Goal:** Partition a problem into independently understandable units — name each unit, its public seam, and its one-way dependencies.
+#### Overview
+
+Partition a problem into independently understandable units — name each unit, its public seam, and its one-way dependencies.
 
 Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
@@ -67,7 +66,7 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 #### Rules
 
-Use these rules when partitioning a problem into independently understandable units — naming each unit, its public seam, and its one-way dependencies, including `module-context.md` and the modules diagram.
+Whenever you create, alter, or delete object-oriented boundaries and public seams across modules. Follow these rules.
 
 **Form the module**
 
@@ -95,11 +94,10 @@ Use these rules when partitioning a problem into independently understandable un
 ---
 ### model
 
-#### Overview
-
-
 **Default format:** Python
 **Stage:** specification
+
+#### Overview
 
 **Other formats:** markdown for a language model and `drawio` through `class_model/drawio` for a class diagram. The same classes, operations, and relationships must appear in every selected representation.
 
@@ -134,7 +132,9 @@ Use an interface when the model requires more than one implementation, when a ca
 
 #### Rules
 
-Use these rules when deciding which classes exist, what they remember and do, and how they relate — stubs only, no production bodies.
+Whenever you create, alter, or delete types and how they relate, or change production code that those types support. Follow these rules.
+
+If this change will not stay here, follow `practices/clean_engineering/modules.mdc`.
 
 **Shape classes**
 - `model-modules-follow-the-partition` — Use the module names and boundaries established by the partition artifact as the model's top-level modules. Change the partition before moving a model boundary, because otherwise the two artifacts describe different designs.
@@ -176,11 +176,10 @@ Use these rules when deciding which classes exist, what they remember and do, an
 
 ### code
 
-#### Overview
-
-
 **Default format:** Python
 **Stage:** implementation
+
+#### Overview
 
 **Goal:** Write working production code — real persistence, services, and UI behind the public seams.
 
@@ -206,7 +205,9 @@ When writing out code take care to **Fill out all interactions with real code.**
 
 #### Rules
 
-Use these rules when filling production method bodies, constructors, and call sites — real persistence and real collaborators, not a demo shell.
+Whenever you create, alter, or delete production behavior — bodies, constructors, call sites — including code supported by a model or module map. Follow these rules.
+
+If this change will not stay here, follow `practices/clean_engineering/model.mdc`.
 
 **Implement the model**
 - `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data — once they read the storage directly it becomes a public contract you cannot change. Private fields on the same class hide implementation; you do not need a second class for that. Read-only to callers can mean return a copy or immutable view from a property — it does not require a frozen class or a second type to hold build steps.

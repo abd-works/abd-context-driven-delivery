@@ -62,12 +62,12 @@ Use these rules when defining domain logic in code, a model, or language.
 
 ### bounded_context
 
-#### Overview
-
 
 **Default format:** markdown
 **Stage:** discovery
 **Clean Engineering:** modules
+
+#### Overview
 
 **Goal:** Draw where language changes — context boundaries, the aggregates that protect invariants inside each context, and the dependency arcs between contexts — using the experts' words. Names and boundaries are cheap to change here; they are expensive once building blocks, stories, and code hang off them.
 
@@ -103,7 +103,7 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 #### Rules
 
-Use these rules when drawing where language changes — context boxes, aggregates inside them, and the arcs between contexts.
+Whenever you create, alter, or delete bounded contexts, aggregates, or the language between them, or change a model or code that forces a language-boundary change. Follow these rules.
 
 - **`experts-words-preferred`** — Use the words domain experts use. An invented synonym becomes a second term every reader must translate.
 - **`domain-concepts-not-technical-names`** — Name contexts, aggregates, and concepts — not `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, or `*Request`. Do not invent a type for fields that already belong on a concept. A technical name carries no meaning the business would recognize, so rules parked on it cannot be found where the concept lives and get re-implemented elsewhere.
@@ -121,12 +121,12 @@ Use these rules when drawing where language changes — context boxes, aggregate
 
 ### building_blocks
 
-#### Overview
-
 
 **Default format:** markdown
 **Stage:** specification
 **Clean Engineering:** model
+
+#### Overview
 
 **Goal:** Classify each concept on the map — entity, value, repository, event, service — and shape the classes that carry them.
 
@@ -156,7 +156,9 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 #### Rules
 
-Use these rules when tagging types already on the map — entity vs value, repository, event, service — not inventing a parallel model.
+Whenever you classify or reshape domain types as entity, value, repository, event, or service, or change tactics or code that those types support. Follow these rules.
+
+If this change will not stay here, follow `practices/ddd/bounded_context.mdc`.
 
 - **`identity-test-entity-vs-vo`** — Entity when identity transcends attributes; otherwise prefer Value Object. A type that is the access boundary for a cluster is **Aggregate Root + Entity**, not a Domain Service.
 - **`aggregate-root-identity-and-entry`** — Every aggregate states the root's identity and uses that root as its only entry point. If identity or entry is ambiguous, the root cannot protect changes across the aggregate.
@@ -182,12 +184,12 @@ Use these rules when tagging types already on the map — entity vs value, repos
 
 ### tactics
 
-#### Overview
-
 
 **Default format:** Python
 **Stage:** implementation
 **Clean Engineering:** code
+
+#### Overview
 
 **Goal:** Decide one implementation pattern for each building block the model uses, then implement the domain against it — preserving every name and boundary from upstream.
 
@@ -209,7 +211,9 @@ Use these rules when tagging types already on the map — entity vs value, repos
 
 #### Rules
 
-Use these rules when choosing how a repository, event, or factory is stored, published, and tested, then writing that implementation.
+Whenever you persist, publish, or test repositories, events, or factories, or change production code they support. Follow these rules.
+
+If this change will not stay here, follow `practices/ddd/building_blocks.mdc`.
 
 - **`one-pattern-per-building-block`** — Each building block in play gets one named implementation pattern — technology, extension mechanism, test approach — used by every instance of that block. Divergent implementations of the same block make the solution unreadable and untestable as a whole.
 - **`architectural-granularity-decided`** — State what a bounded context, an aggregate, and a repository are at runtime (in-process module, container, service with its own store). Left undecided, the first adapter written silently sets it for everything after.

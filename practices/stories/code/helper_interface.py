@@ -1,12 +1,9 @@
 """Shared helper-interface seam for the story / test_helper file pair.
 
-Every language backend's `{story}_story.<ext>` file (scenario fidelity, no tier
-suffix - GWT + step text only) declares one interface/protocol method per
+Every language backend's `{story}_story.test.<ext>` file declares one interface/protocol method per
 distinct Given/When/Then clause across a Story's scenarios, and calls those
-methods instead of inlining assertions. Every tier's
-`{story}_test_helper.{tier}.<ext>` file (acceptance_tests fidelity) implements
-that interface with the tier's real mechanism (domain class call, Supertest
-route, Testing Library render, Playwright page, ...).
+methods instead of inlining assertions. Do not emit a front-end / back-end / e2e
+file per story.
 
 This module derives the one deterministic method name every backend agrees on
 from clause phase + text, so the interface declared in the story file, the

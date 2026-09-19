@@ -112,9 +112,9 @@ with description("Stories"):
                 expect(name in host.agent_tools).to(equal(False))
 
     with context("whose instructions action is expanded"):
-        with it("should name `{story}.{tier}.py` at acceptance_tests"):
+        with it("should name `{story_snake}_story.test.py` at acceptance_tests"):
             prose = _expanded(Stories(fidelity="acceptance_tests"), "instructions")
-            expect("{story}.{tier}.py" in prose).to(be_true)
+            expect("_story.test.py" in prose).to(be_true)
 
         with it("should tell the agent to use Scaffold under story_map for names only"):
             prose = _expanded(Stories(fidelity="story_map"), "instructions")

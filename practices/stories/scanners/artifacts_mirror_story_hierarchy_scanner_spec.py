@@ -1,4 +1,4 @@
-"""BDD spec - artifacts-mirror-story-hierarchy accepts `{story}.{tier}.ts`."""
+"""BDD spec - artifacts-mirror-story-hierarchy accepts `{story}_story.test.ts`."""
 
 import sys
 from pathlib import Path
@@ -33,7 +33,7 @@ def _workspace_with_suite(rel_path: str) -> Workspace:
     epic.sub_epics.append(sub)
     story_map.append_epic(epic)
     suite = TestSuite(
-        tier=Tier("front-end"),
+        tier=Tier(""),
         language=Language("ts"),
         name="Submit Order",
         source=SourceLocation(file=rel_path),
@@ -51,10 +51,10 @@ with description("artifacts-mirror-story-hierarchy") as self:
             "artifacts-mirror-story-hierarchy"
         )
 
-    with context("a GWT file named `{story}.{tier}.ts` under epic/sub-epic"):
-        with it("should accept the file without requiring a story folder"):
+    with context("a GWT file named `{story}_story.test.ts` under epic/sub-epic/story"):
+        with it("should accept the file in the story folder"):
             workspace = _workspace_with_suite(
-                "tests/manage-orders/place-order/submit-order.front-end.ts"
+                "tests/manage-orders/place-order/submit-order/submit_order_story.test.ts"
             )
             violations = list(self.scanner.scan_workspace(workspace))
             expect(violations).to(equal([]))

@@ -14,7 +14,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 ## Shared rules
 
-Use these rules when defining user interactions and resulting system behavior, regardless of level of detail.
+Whenever you define or change user interactions and resulting system behavior, at any level of detail. Follow these rules.
 
 - **`vocabulary-traces-to-domain-source`** - Use terms from the domain language and model when they exist, because one shared definition keeps Stories, examples, and code consistent.
 - **`read-all-source-context-in-full`** - Before fixing the hierarchy or asking a question about an interaction between systems, read every referenced source that informs the decision, including the owning segment, module context, session records, related Story context, build order, code, recorded observations, and relevant run logs. Name the source and location that supports each important interaction, because titles and search results do not explain behaviour.
@@ -27,11 +27,11 @@ Use these rules when defining user interactions and resulting system behavior, r
 
 ### story_map
 
-#### Overview
-
 
 **Default format:** markdown
 **Stage:** discovery
+
+#### Overview
 
 **Produce:** Story map.
 
@@ -59,7 +59,9 @@ Use these rules when defining user interactions and resulting system behavior, r
 
 #### Rules
 
-Use these rules when naming epics, sub-epics, and stories on a story map — verb-noun titles and 4–9 children, no scenarios yet.
+Whenever you create, alter, or delete epics, sub-epics, or stories on the map, or change scenarios or acceptance work that forces a map change. Follow these rules.
+
+If this change will not stay here, follow `practices/stories.mdc`.
 
 - **`verb-noun-format`** - Name every Epic, Sub-Epic, and Story with a base-form verb and noun. Epics and Sub-Epics name goals rather than an actor's activity or a supporting system call, because grammar alone does not preserve the right level of abstraction.
 - **`story-name-captures-system-mechanic`** - At Story level, use a verb that names the operation and a noun that names the record or concept it acts on. Replace vague names such as `Handle Request`, `Process Data`, or `Manage Record`, because they hide what the system does.
@@ -72,13 +74,13 @@ Use these rules when naming epics, sub-epics, and stories on a story map — ver
 
 ### scenarios
 
-#### Overview
-
 
 **Default format:** python
 **Stage:** specification
 
-**Produce:** Scenario specifications in the requested format.
+#### Overview
+
+**Produce:** `{epic}/{sub-epic}/{story}/story-scenarios.md` (or the same path with the installment language). One scenarios file per story — not a front-end / back-end / e2e split.
 
 **Goal:** Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.
 
@@ -94,7 +96,9 @@ Use these rules when naming epics, sub-epics, and stories on a story map — ver
 
 #### Rules
 
-Use these rules when writing Given/When/Then steps for a story — observable outcomes, not UI gestures or internal flags.
+Whenever you write or change Given/When/Then scenarios, or change acceptance tests or production code that those scenarios support. Follow these rules.
+
+If this change will not stay here, follow `practices/stories/story_map.mdc`.
 
 - **`gwt-steps-trace-to-domain-operations`** - Map every Given, When, and Then to a named domain operation or property. Express continuation as an operation on the aggregate that receives control, because routes, waits, and framework calls do not describe domain behaviour.
 - **`behavioral-and-system-observable-outcomes`** - Write each Then as a result a person or another system can observe, such as changed information, a returned response, or a changed interface state. Keep internal flags and function-local state out of Then, because they do not prove delivered behaviour.
@@ -117,14 +121,14 @@ Use these rules when writing Given/When/Then steps for a story — observable ou
 
 ### acceptance_tests
 
-#### Overview
-
 
 **Default format:** python
 **Stage:** implementation
 **Clean Engineering:** code
 
-**Produce:** Runnable acceptance specifications and the production code that makes them pass.
+#### Overview
+
+**Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`. Do not name these `*spec*` — that pattern belongs to BDD.
 
 **Goal:** Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
 
@@ -138,7 +142,9 @@ Refer to [`../language-tools.md`](../language-tools.md) for language-specific te
 
 #### Rules
 
-Use these rules when writing acceptance tests and the production path that makes them pass — fixtures, seeds, and real domain entry points.
+Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.
+
+If this change will not stay here, follow `practices/stories/scenarios.mdc`.
 
 - **`examples-trace-domain-model`** - Shape every fixture from the domain model and its owning system. Use the external system's record shape at that boundary and the product's aggregate shape inside the domain, because convenient mixed objects conceal mapping errors.
 - **`examples-declare-seed-vs-interaction`** - Identify each fixture as **Seed** state owned by a system or **Interaction** data entered, displayed, or validated through the product. Use both when the Story needs both, because persisted records and user-facing data often represent the same concept differently.

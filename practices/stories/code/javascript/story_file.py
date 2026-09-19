@@ -97,7 +97,7 @@ def render_test_helper_file(story: Story, *, tier: str) -> str:
         " */",
         "",
         'import { describe } from "node:test";',
-        f'import {{ {fn} }} from "./{_snake(story.name)}_story.js";',
+        f'import {{ {fn} }} from "./{_snake(story.name)}_story.test.js";',
         "",
         f"class {tier_class} {{",
     ]

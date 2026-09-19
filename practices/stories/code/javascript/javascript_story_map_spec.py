@@ -64,9 +64,9 @@ with description("a JavaScript story-spec Story Map") as self:
             self.leaf_contents = [self.tree[p] for p in self.leaf_paths]
 
         with context("every leaf file"):
-            with it("should be named `<story_snake>_story.js` under a story folder"):
+            with it("should be named `<story_snake>_story.test.js` under a story folder"):
                 for path in self.leaf_paths:
-                    expect(path.endswith("_story.js")).to(be_true)
+                    expect(path.endswith("_story.test.js")).to(be_true)
                     expect("/redeem-a-voucher/" in path).to(be_true)
 
             with it("should import story-test GWT helpers"):
@@ -143,7 +143,7 @@ with description("a JavaScript story-spec Story Map") as self:
         with before.each:
             story_map = _story_map_with_stories()
             self.tree = self.js.render(story_map)
-            leaf = [c for p, c in self.tree.items() if p.endswith("_story.js")]
+            leaf = [c for p, c in self.tree.items() if p.endswith("_story.test.js")]
             self.spec = leaf[0]
 
         with it("should instruct assertions against the public interface"):

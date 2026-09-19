@@ -26,7 +26,7 @@ from practices.stories.story_model.workspace import Workspace
 
 def _workspace(rel_path: str) -> Workspace:
     suite = TestSuite(
-        tier=Tier("front-end"),
+        tier=Tier(""),
         language=Language("py"),
         name="Submit Order",
         source=SourceLocation(file=rel_path),
@@ -38,8 +38,8 @@ with description("kebab-case-paths") as self:
     with before.each:
         self.scanner = KebabCasePathsScanner("kebab-case-paths")
 
-    with it("should accept kebab epic/sub-epic/story.tier paths"):
-        ws = _workspace("manage-orders/place-order/submit-order.front-end.py")
+    with it("should accept kebab folders and a snake_story.test file"):
+        ws = _workspace("manage-orders/place-order/submit-order/submit_order_story.test.py")
         expect(list(self.scanner.scan_workspace(ws))).to(equal([]))
 
     with it("should accept a Python epic helper at epic root"):
@@ -48,7 +48,7 @@ with description("kebab-case-paths") as self:
 
     with context("with snake_case folder names"):
         with it("should report a violation"):
-            ws = _workspace("Manage_Orders/place-order/submit-order.front-end.py")
+            ws = _workspace("Manage_Orders/place-order/submit-order/submit_order_story.test.py")
             violations = list(self.scanner.scan_workspace(ws))
             expect(len(violations)).to(equal(1))
             expect(violations[0].rule).to(equal("kebab-case-paths"))

@@ -37,11 +37,11 @@ Do not skip steps. Do not reorder. Do not use generic "vehicle" without make and
 
 ### trip_outline
 
-#### Overview
-
 
 **Default format:** markdown
 **Stage:** discovery
+
+#### Overview
 
 **Goal:** Name the beats of a trip — destination, conditions, start, drive, speak, stop.
 
@@ -65,11 +65,11 @@ The speak beat is one line that captures the car's personality reaction to what 
 
 ### road_story
 
-#### Overview
-
 
 **Default format:** markdown
 **Stage:** specification
+
+#### Overview
 
 **Goal:** Tell the road story in character — what the car does and says, in order.
 
@@ -87,11 +87,11 @@ The story reads as a journey — what happened in order, told from the car's per
 
 ### full_journey
 
-#### Overview
-
 
 **Default format:** markdown
 **Stage:** implementation
+
+#### Overview
 
 **Goal:** Tell the full journey with an inspectable trip log.
 

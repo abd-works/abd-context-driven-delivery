@@ -120,7 +120,9 @@ the touched view files (`packages/<epicSlug>/<Feature>View.tsx`, views inside
 
 ## Shared rules
 
-Use these rules when adding or changing a feature package under `packages/<epic>` — domain.ts, server, client, and View files.
+Whenever you create, alter, or delete a domain-module feature package (domain / server / client / View), or tests that package supports. Follow these rules.
+
+If this change will not stay here, follow `practices/clean_engineering/code.mdc`. If the tests are Spec-by-Example, also follow `practices/stories/acceptance_tests.mdc`.
 
 - **`organize-by-domain-module`** — feature package present with process boot (`app.ts`, `serve.ts`, `main.tsx`) and nested domain dirs each having `{domain}.ts`, `{domain}-server.ts`, `{domain}-client.tsx`.
 - **`share-domain-logic`** — entities, value objects, Zod schemas, and business rules defined once in `<domain>.ts`; `<domain>-server.ts` and `<domain>-client.tsx` import from there, never re-derive.

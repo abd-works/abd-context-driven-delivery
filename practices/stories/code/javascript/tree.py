@@ -2,7 +2,7 @@
 
 Story folder layout (explore / specification):
 
-    {epic}/{sub-epic}/{story}/{story_snake}_story.js
+  {epic}/{sub-epic}/{story}/{story_snake}_story.test.js
 
 Shared: story-types.js (legacy), story-test.js (GWT helpers).
 """
@@ -114,7 +114,7 @@ def _render_story(
     story_snake = to_snake(story.name)
     story_folder = f"{parent}/{story_slug}"
     relative_story_test = "../" * depth + "story-test.js"
-    tree[f"{story_folder}/{story_snake}_story.js"] = render_story_file(
+    tree[f"{story_folder}/{story_snake}_story.test.js"] = render_story_file(
         story,
         relative_story_test_path=relative_story_test,
     )

@@ -1,6 +1,4 @@
-"""PythonStoryMap - runnable `*_story.py` per Story (explore/spec).
-
-Engineering: ``*_test_helper.{tier}.py`` per tier - every tier named explicitly, including ``domain``.
+"""PythonStoryMap - runnable `*_story.test.py` per Story.
 """
 
 from __future__ import annotations
@@ -21,7 +19,7 @@ from practices.stories.story_model.story_map import StoryMap
 
 
 class PythonStoryMap(CodeStoryMap):
-    LEAF_EXTENSION = "_story.py"
+    LEAF_EXTENSION = "_story.test.py"
     LANGUAGE_LINE_COMMENT = "#"
 
     def _make_story_map(self) -> _PythonStoryMap:

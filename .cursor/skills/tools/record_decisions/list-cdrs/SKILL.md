@@ -1,3 +1,10 @@
+---
+name: list-cdrs
+description: >-
+  List CDR files under {root}/.context/cdr/.
+  Returns newline-separated paths sorted by filename; empty string if missing or empty.
+---
+
 List CDR files under {root}/.context/cdr/.
 Returns newline-separated paths sorted by filename; empty string if missing or empty.
 

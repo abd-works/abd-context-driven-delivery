@@ -26,25 +26,10 @@ _SCENARIO = re.compile(r"\bscenario\s*\(\s*[\"'`](?P<title>[^\"'`]+)[\"'`]")
 _TIER_TEST = re.compile(r"-(?P<tier>[a-z][a-z0-9-]{0,20})\.(?:test|spec)\.(?:ts|tsx)$")
 _TIER_SEAM = re.compile(r"\.(?P<tier>[a-z][a-z0-9-]{0,20})\.(?:ts|tsx)$")
 _GLOBS = (
-    "**/tests/**/*_story.ts",
-    "tests/**/*_story.ts",
-    "**/tests/**/*.test.ts",
-    "**/tests/**/*.test.tsx",
-    "**/tests/**/*.spec.ts",
-    "**/tests/**/*.front-end.ts",
-    "**/tests/**/*.back-end.ts",
-    "**/tests/**/*.domain.ts",
-    "**/tests/**/*.server.ts",
-    "**/tests/**/*.client.ts",
-    "tests/**/*.test.ts",
-    "tests/**/*.test.tsx",
-    "tests/**/*.spec.ts",
-    "tests/**/*.front-end.ts",
-    "tests/**/*.back-end.ts",
-    "tests/**/*.domain.ts",
-    "tests/**/*.server.ts",
-    "tests/**/*.client.ts",
-    "*.test.ts",
+    "**/tests/**/*_story.test.ts",
+    "**/tests/**/*_story.test.tsx",
+    "tests/**/*_story.test.ts",
+    "tests/**/*_story.test.tsx",
 )
 
 
@@ -142,7 +127,7 @@ class TypeScriptStoryMap(StoryMap):
         m = _TIER_TEST.search(name)
         if m:
             return Tier(m.group("tier"))
-        # Acceptance layout: `{story}.{tier}.ts` (no .test / .spec infix).
+        # Acceptance layout: `{story_snake}_story.test.ts`.
         if name in {"story-test.ts", "givens.ts"} or name.startswith("story-test."):
             return Tier("")
         m = _TIER_SEAM.search(name)

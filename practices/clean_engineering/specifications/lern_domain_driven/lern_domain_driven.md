@@ -232,7 +232,9 @@ recorded before scenarios are written.
 
 ## Shared rules
 
-Use these rules when adding or changing a feature package with one JSON store per aggregate — domain.ts, server, client, and View files.
+Whenever you create, alter, or delete a domain-module feature package (domain / server / client / View), or tests that package supports. Follow these rules.
+
+If this change will not stay here, follow `practices/clean_engineering/code.mdc`. If the tests are Spec-by-Example, also follow `practices/stories/acceptance_tests.mdc`.
 
 - **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON
 - **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository`

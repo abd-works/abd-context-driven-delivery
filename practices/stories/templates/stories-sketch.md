@@ -12,7 +12,7 @@ When detailing stories, start with the main-flow scenario (including domain obje
 
 **Unmapped areas** live here as `* approx N–M stories…` lines — not in a separate outline map. Discovery materializes named stories; drop approx lines once those stories are named on the real map.
 
-**Order:** epics → sub-epics → confirming stories + approx gaps → thin-slice order → main-flow scenario → variations / shared setup (`specification`) → tier notes (`engineering` only).
+**Order:** epics → sub-epics → confirming stories + approx gaps → thin-slice order → main-flow scenario → variations / shared setup (`specification`) → the one story test file (`engineering`).
 
 Do **not** tag lines with fidelity markers. Depth is what you fill:
 
@@ -21,7 +21,7 @@ Do **not** tag lines with fidelity markers. Depth is what you fill:
 | **discovery** | Epic / SubEpic / named stories + thin-slice; clear approx gaps as you name stories |
 | **exploration** | Main-flow Given / When / Then under each confirming story; objects from ExampleFactory fakes; assert public interface. No shared background yet. |
 | **specification** | Extra scenarios, shared setup / background; still fake + public interface; values from factories |
-| **engineering** | Which tier(s) (`domain` / `client` / `server` / `e2e` / project-specific); not full impl in the sketch |
+| **engineering** | One `{story}_story.test.{lang}` per story (same GWT as `story-scenarios.md`); not full impl in the sketch |
 
 **Notation:** indent = nesting · `{Actor} --> {Verb Noun}` story · `* approx N–M …` unmapped · `~>` increment · `//` note.
 

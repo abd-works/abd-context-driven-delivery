@@ -1,3 +1,11 @@
+---
+name: capture-from-documents
+description: >-
+  Capture documents from folder_path, partition through selected context tools, embed into one FAISS index.
+  folder_path={folder_path}, indexers={indexers}, first={first}.
+  Collaborators (compile-time references): Stories, CleanEngineering, Ddd, Ux, Partition.
+---
+
 Capture documents from folder_path, partition through selected context tools, embed into one FAISS index.
 folder_path={folder_path}, indexers={indexers}, first={first}.
 Collaborators (compile-time references): Stories, CleanEngineering, Ddd, Ux, Partition.

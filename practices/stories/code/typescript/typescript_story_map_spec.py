@@ -53,10 +53,10 @@ with description("a TypeScript runnable-story Story Map") as self:
             self.tree = self.ts.render(_story_map_with_stories())
             self.leaf_paths = self.ts.leaf_files_of(self.tree)
 
-        with it("should emit `{story_snake}_story.ts` under epic/sub-epic/story-folder"):
+        with it("should emit `{story_snake}_story.test.ts` under epic/sub-epic/story-folder"):
             for path in self.leaf_paths:
-                expect(path.endswith("_story.ts")).to(be_true)
-                expect("/redeem-a-voucher/redeem_a_voucher_story.ts" in path).to(be_true)
+                expect(path.endswith("_story.test.ts")).to(be_true)
+                expect("/redeem-a-voucher/redeem_a_voucher_story.test.ts" in path).to(be_true)
 
         with it("should include givens.ts at epic and sub-epic"):
             expect(any(p.endswith("/givens.ts") for p in self.tree)).to(be_true)
@@ -92,14 +92,14 @@ with description("a TypeScript runnable-story Story Map") as self:
             expect(
                 any(
                     p.startswith(f"{self.custom_root}/")
-                    and p.endswith("_story.ts")
+                    and p.endswith("_story.test.ts")
                     for p in self.tree
                 )
             ).to(be_true)
 
         with it("should import story-test from the stories workspace root"):
             leaf = next(
-                p for p in self.tree if p.endswith("redeem_a_voucher_story.ts")
+                p for p in self.tree if p.endswith("redeem_a_voucher_story.test.ts")
             )
             expect(self.tree[leaf]).to(contain('from "stories/story-test"'))
 

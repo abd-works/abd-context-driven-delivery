@@ -11,6 +11,8 @@ RULE = "kebab-case-paths"
 
 _KEBAB = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _PY_EPIC_HELPER = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*_helper\.py$")
+_STORY_TEST_FILE = re.compile(r"^[a-z][a-z0-9_]*_story\.test\.[a-z0-9]+$")
+_SCENARIOS_FILE = re.compile(r"^(?:story-scenarios|[a-z0-9]+(?:-[a-z0-9]+)*-scenarios)\.md$")
 
 # Infrastructure beside the GWT tree — not subject to story slug naming.
 _SKIP_FILES = frozenset(
@@ -19,6 +21,8 @@ _SKIP_FILES = frozenset(
         "story_runner.py",
         "story_types.py",
         "story_test.py",
+        "story-test.ts",
+        "story-test.js",
         "givens.py",
         "__init__.py",
         "story-context.md",
@@ -63,26 +67,13 @@ class KebabCasePathsScanner(StoryWorkspaceScanner):
                 )
             return
 
-        stem = path.stem
-        if "." in stem:
-            story_slug, tier = stem.rsplit(".", 1)
-            if not _is_kebab(story_slug):
-                yield self.violation(
-                    f"Story file stem {story_slug!r} in {rel!r} must be kebab-case",
-                    location=location,
-                    severity="error",
-                )
-            if not _is_kebab(tier):
-                yield self.violation(
-                    f"Tier segment {tier!r} in {rel!r} must be kebab-case",
-                    location=location,
-                    severity="error",
-                )
+        if _STORY_TEST_FILE.fullmatch(name) or _SCENARIOS_FILE.fullmatch(name):
             return
 
+        stem = path.stem
         if "_" in stem and stem.endswith("_stories"):
             yield self.violation(
-                f"Legacy snake_case story file {name!r} — use {{story}}.{{tier}}.{path.suffix.lstrip('.')} kebab paths",
+                f"Legacy snake_case story file {name!r} — use {{story_snake}}_story.test.{path.suffix.lstrip('.')}",
                 location=location,
                 severity="warning",
             )

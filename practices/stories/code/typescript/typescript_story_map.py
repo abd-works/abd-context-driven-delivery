@@ -1,4 +1,4 @@
-"""TypeScriptStoryMap - runnable `{story}.{tier}.ts` under epic / sub-epic."""
+"""TypeScriptStoryMap - runnable `{story_snake}_story.test.ts` under epic / sub-epic / story."""
 
 from __future__ import annotations
 
@@ -24,19 +24,22 @@ from practices.stories.story_model.story_map import StoryMap
 _SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
 
 
+_STORY_TEST_SUFFIX = "_story.test.ts"
+
+
 def _is_gwt_leaf(path: str) -> bool:
     name = path.replace("\\", "/").rsplit("/", 1)[-1]
     if name in _SKIP_NAMES or name.endswith("-helper.ts"):
         return False
     if "/examples/" in path.replace("\\", "/"):
         return False
-    return name.endswith("_story.ts")
+    return name.endswith(_STORY_TEST_SUFFIX)
 
 
 def _story_slug_from_filename(name: str) -> str | None:
-    if not name.endswith("_story.ts"):
+    if not name.endswith(_STORY_TEST_SUFFIX):
         return None
-    stem = name[:-9]  # strip "_story.ts"
+    stem = name[: -len(_STORY_TEST_SUFFIX)]
     return stem.replace("_", "-")
 
 

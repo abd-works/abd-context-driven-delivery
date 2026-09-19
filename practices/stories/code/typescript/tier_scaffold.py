@@ -1,10 +1,10 @@
-"""TypeScript tier scaffolder - write-once `{story}.{tier}.ts` under the sub-epic."""
+"""TypeScript scaffolder - write-once `{story_snake}_story.test.ts` under the sub-epic."""
 
 from __future__ import annotations
 
 from typing import Dict, Sequence
 
-from practices.stories.code.code_story_map import to_kebab
+from practices.stories.code.code_story_map import to_kebab, to_snake
 from practices.stories.code.typescript.story_file import (
     render_story_file,
     render_test_helper_file,
@@ -54,10 +54,8 @@ def _scaffold_sub(
     for story in getattr(sub, "stories", []) or []:
         if not story.scenarios:
             continue
-        slug = to_kebab(story.name)
         gwt = render_story_file(
             story, story_test_import_path=story_test_import_path(deploy_root)
         )
-        for tier in tiers:
-            path = f"{folder}/{slug}.{tier}.ts"
-            tree[path] = gwt + render_test_helper_file(story, tier=tier, same_file=True)
+        path = f"{folder}/{to_snake(story.name)}_story.test.ts"
+        tree[path] = gwt + render_test_helper_file(story, tier="", same_file=True)

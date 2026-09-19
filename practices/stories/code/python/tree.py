@@ -1,4 +1,4 @@
-"""Python tree renderer - runnable `*_story.py` per Story folder."""
+"""Python tree renderer - runnable `*_story.test.py` per Story folder."""
 
 from __future__ import annotations
 
@@ -75,4 +75,4 @@ def _render_story(
     story_slug = to_kebab(story.name)
     story_snake = to_snake(story.name)
     story_folder = f"{parent}/{story_slug}"
-    tree[f"{story_folder}/{story_snake}_story.py"] = render_story_file(story)
+    tree[f"{story_folder}/{story_snake}_story.test.py"] = render_story_file(story)

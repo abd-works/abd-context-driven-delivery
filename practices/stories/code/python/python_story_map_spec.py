@@ -53,9 +53,9 @@ with description("a Python runnable-story Story Map") as self:
             self.leaf_contents = [self.tree[p] for p in self.leaf_paths]
 
         with context("every leaf file"):
-            with it("should be named `<story_snake>_story.py` under a story folder"):
+            with it("should be named `<story_snake>_story.test.py` under a story folder"):
                 for path in self.leaf_paths:
-                    expect(path.endswith("_story.py")).to(be_true)
+                    expect(path.endswith("_story.test.py")).to(be_true)
                     expect("/book-a-room/" in path).to(be_true)
 
             with it("should parse as a valid Python module"):

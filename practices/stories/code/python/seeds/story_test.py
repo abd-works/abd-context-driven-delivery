@@ -322,9 +322,10 @@ class StoryExampleCollector(ExampleCollector):
         return found
 
     def _is_story_file(self, path: str) -> bool:
-        return path.endswith("_spec.py") or any(
-            path.endswith(suffix) for suffix in self.STORY_SUFFIXES
-        )
+        name = os.path.basename(path)
+        if name.endswith("_story.test.py"):
+            return True
+        return any(path.endswith(suffix) for suffix in self.STORY_SUFFIXES)
 
 
 def load_story_module(path: str) -> types.ModuleType:

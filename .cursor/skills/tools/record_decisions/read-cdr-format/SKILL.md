@@ -1,3 +1,10 @@
+---
+name: read-cdr-format
+description: >-
+  Return CDR-FORMAT.md - when to offer a CDR, template, numbering, and optional sections.
+  Read this before offering or writing a CDR.
+---
+
 Return CDR-FORMAT.md - when to offer a CDR, template, numbering, and optional sections.
 Read this before offering or writing a CDR.
 

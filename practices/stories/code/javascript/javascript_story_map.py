@@ -30,7 +30,7 @@ from practices.stories.story_model.story_map import StoryMap
 
 
 class JavaScriptStoryMap(CodeStoryMap):
-    LEAF_EXTENSION = "_story.js"
+    LEAF_EXTENSION = "_story.test.js"
     LANGUAGE_LINE_COMMENT = "//"
 
     def _make_story_map(self) -> _JavaScriptStoryMap:

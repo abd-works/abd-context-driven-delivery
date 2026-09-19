@@ -4,28 +4,6 @@ Behavior-driven development turns domain vocabulary into passing tests. Every BD
 
 **Tooling & Idioms:** Refer to [`practices/language-tools.md`](/practices/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
 
-```
-describe {subject — domain thing, state, or observable condition}
-  that {event or condition that sets the subject up}
-    with {narrower condition}
-      it should {observable outcome}
-```
-
-| Line | Names | Never names |
-| --- | --- | --- |
-| **describe** | Subject under observation in plain English (thing, state, condition) | Manager / hub / runner / service / internal class; decorator symbol (`@log`); marker name |
-| **that …** | Past or present event/condition on that subject (`that has been logged`, `that is invoked`) | `when …` |
-| **with …** | Narrower standing condition (`with no session name given`, `with verbose off`) | `when …`; implementation knobs phrased as API flags |
-| **it should …** | One stakeholder-visible outcome | Internals, private fields, call counts on mocks of the subject |
-
-**Fail:**
-```
-@log marker                          ← mechanism / symbol, not a subject
-ToolsetRunner                        ← manager / internal
-a logged tool                        ← splits the same subject; use one action story
-when no session name is given        ← never "when" for state — use "with …"
-```
-
 ## Guidance
 
 Design the tree hierarchy by building a flowing sentence. Build every hierarchy so that reading from the outermost `describe` through every nested `that`/`with` down to the `it should` produces a clean, flowing English sentence — spoken aloud, it describes the behavior naturally. When it does not read as a sentence, the nesting is grouping tests for convenience instead of following the conditions the behavior depends on — and you can no longer reason about all the possible behaviors and alternate behaviors that require coverage.
@@ -120,7 +98,7 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 ## Shared rules
 
-Use these rules when nesting describe / that / with / it should — subjects and states, never internals.
+Whenever you write or reshape describe / that / with / it-should specs, or code that is supported by these specifications. Follow these rules.
 
 - **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals. Assertions on internals break when the code is refactored and still pass when the behavior is wrong.
 - **`domain-practice-alignment`** — Describe names must match domain language / model exactly, so the business, the spec, and the code all use the same words.
@@ -137,14 +115,14 @@ Use these rules when nesting describe / that / with / it should — subjects and
 
 ### behavior
 
-#### Overview
-
 
 **Default format:** Python
 **Stage:** specification
 **Clean Engineering:** model
 
-**Goal:** Define BDD signatures — describe/it names for every observation, no test bodies.
+#### Overview
+
+Define BDD signatures — describe/it names for every observation, no test bodies.
 
 #### Guidance
 
@@ -157,7 +135,9 @@ Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.
 
 #### Rules
 
-Use these rules when defining BDD signatures — describe/it names only, no test bodies yet.
+Whenever you name or re-nest describe/it signatures, change code that relies on those signatures, or change specifications that need this kind of rename. Follow these rules.
+
+If this change will not stay here, follow `practices/bdd.mdc`.
 
 - **`state-not-when`** — Nest by the state or condition that enables an observation, never by a `when` trigger.
 - **`nest-by-enabling-events`** — Sub-groupings are conditions that unlock further behavior, not implementation steps.
@@ -178,12 +158,12 @@ it('should apply a percentage discount to eligible items', () => {
 
 ### development
 
-#### Overview
-
 
 **Default format:** Python
 **Stage:** implementation
 **Clean Engineering:** code
+
+#### Overview
 
 **Goal:** Implement BDD tests with production code.
 
@@ -223,7 +203,9 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 #### Rules
 
-Use these rules when implementing BDD tests with production code.
+Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules.
+
+If this change will not stay here, follow `practices/bdd/behavior.mdc`.
 
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count. Changing the tree during implementation drops behaviors that were agreed on, or adds ones nobody specified.
 - **`red-then-green`** — Fix code by writing the test first, then watching it fail, then making production code changes.

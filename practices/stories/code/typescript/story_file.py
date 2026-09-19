@@ -110,7 +110,7 @@ def _render_scenario(scenario) -> List[str]:
 def render_test_helper_file(
     story: Story, *, tier: str, same_file: bool = False
 ) -> str:
-    """Seam helper for `{story}.{tier}.ts`."""
+    """Seam helper appended to `{story_snake}_story.test.ts`."""
     fn = f"create{to_pascal(story.name)}Story"
     helper_iface = f"{to_pascal(story.name)}Helper"
     tier_class = f"{to_pascal(tier)}Helper"

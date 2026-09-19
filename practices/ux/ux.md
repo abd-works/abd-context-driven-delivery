@@ -66,7 +66,7 @@ Start from grill + sketch and deepen. Each level **adds** artifacts — do not i
 
 ## Shared rules
 
-Use these rules when naming screens, attaching stories, or importing domain JS — not inventing a second vocabulary.
+Whenever you name screens, attach stories, or import domain terms on the UX surface, or change later UI work that forces that vocabulary to move. Follow these rules.
 
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
 - **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.
@@ -80,11 +80,11 @@ Use these rules when naming screens, attaching stories, or importing domain JS �
 
 ### ia
 
-#### Overview
-
 
 **Default format:** drawio
 **Stage:** discovery
+
+#### Overview
 
 **Goal:** Decide what screens exist and how users move between them.
 
@@ -107,7 +107,9 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 
 #### Rules
 
-Use these rules when listing screens and how users move between them — named regions, no control types yet.
+Whenever you decide which screens exist and how users move between them, or change mockups or shipping UI that forces that structure to move. Follow these rules.
+
+If this change will not stay here, follow `practices/ux.mdc`.
 
 - **`tab-states-are-separate-screens`** / **`screen-story-budget`** / **`ia-named-regions-only`** — as above.
 - **`system-stories-group-with-visible-trigger`** — System stories group with the closest user-visible screen.
@@ -116,11 +118,11 @@ Use these rules when listing screens and how users move between them — named r
 
 ### mockup
 
-#### Overview
-
 
 **Default format:** html
 **Stage:** specification
+
+#### Overview
 
 **Goal:** Lock screens as runnable greybox — typed controls and key interactions.
 
@@ -144,7 +146,9 @@ Use these rules when listing screens and how users move between them — named r
 
 #### Rules
 
-Use these rules when placing typed controls in greybox HTML and wiring story steps — Story Demo shell, honest stubs.
+Whenever you place controls and wire story steps on a greybox, or change shipping UI that those mockups support. Follow these rules.
+
+If this change will not stay here, follow `practices/ux/ia.mdc`.
 
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
 - **`story-domain-js-imported`** — Import real modules; do not invent a UX-only adapter shape.
@@ -158,11 +162,11 @@ Use these rules when placing typed controls in greybox HTML and wiring story ste
 
 ### front_end_code
 
-#### Overview
-
 
 **Default format:** html (or the host app’s frontend stack)
 **Stage:** implementation
+
+#### Overview
 
 **Goal:** Ship the product UI — production frontend talking to a real backend.
 
@@ -175,7 +179,9 @@ Use these rules when placing typed controls in greybox HTML and wiring story ste
 
 #### Rules
 
-Use these rules when replacing greybox with shipping UI and real API calls.
+Whenever you create, alter, or delete shipping UI or how it talks to the backend. Follow these rules.
+
+If this change will not stay here, follow `practices/ux/mockup.mdc`.
 
 - **`real-frontend-not-mockup`** — Shipping UI is production frontend code, not the greybox Story Demo frame.
 - **`real-backend-wired`** — Client talks to real services/persistence (CE **code**); no silent Fake path as the only path.

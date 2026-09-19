@@ -1,4 +1,4 @@
-"""TypeScript tree - `{story}.{tier}.ts` under epic / sub-epic (no story folder)."""
+"""TypeScript tree - `{story_snake}_story.test.ts` under epic / sub-epic / story."""
 
 from __future__ import annotations
 
@@ -186,7 +186,7 @@ def _render_story(
     story_folder = _path_join(folder, slug)
     import_path = story_test_import_path(deploy_root)
     gwt = render_story_file(story, story_test_import_path=import_path)
-    tree[f"{story_folder}/{story_snake}_story.ts"] = gwt
+    tree[f"{story_folder}/{story_snake}_story.test.ts"] = gwt
 
 def _default_story_test() -> str:
     return (

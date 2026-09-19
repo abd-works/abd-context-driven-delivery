@@ -8,8 +8,9 @@ section: body
 <!-- Default: Scenario Outline + Examples table. Alternate: inline sibling scenarios below.
 
      Disk layout (`artifacts-mirror-story-hierarchy` + `kebab-case-paths`):
-     tests/{epic-verb-noun}/{sub-epic-verb-noun}/{story-kebab-slug}.py|md
-     — kebab-case folders and file stems; one file per story; no {story}/ folder.
+     {epic}/{sub-epic}/{story}/story-scenarios.md
+     {epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}
+     — kebab-case folders; one scenarios file and one story test per story.
      Exception: Python epic helper only — {epic_slug}_helper.py at epic root.
 
      Outcome chaining: first *Then* on a step; further outcomes on the same *When* use *And*
