@@ -578,6 +578,12 @@ class AgentTool:
     def docstring(self) -> str:
         if self._body is not None:
             return self._body
+        if self.name == "instructions":
+            message = getattr(self.toolset, "prompt_message", None)
+            if callable(message):
+                message = message()
+            if isinstance(message, str) and message.strip():
+                return message.strip()
         return (inspect.getdoc(self.callable) or "").strip()
 
     @property

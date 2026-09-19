@@ -10,7 +10,8 @@ import yaml
 from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
-from installation.harness_files.harness_files import Skill
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from agent_tools import agent_instructions, agent_toolset
 from sub_agent.sub_agent import sub_agent
 from agent_tools.agent_tools import agent_tool
@@ -136,6 +137,8 @@ class Workflow:
         return repo.attach_project(config.project_owner, config.project_number)
 
     @agent_tool
+    @mcp
+    @skill
     def backlog(
         self,
         focus: str,
@@ -143,13 +146,13 @@ class Workflow:
         workspace: str = "",
         theme: str = "",
         category: str = "",
-    ) -> dict[str, str]:
+        body: str = "",
+    ) -> dict[str, str | int]:
         """Capture an idea on the backlog — GitHub issue + Project Backlog.
 
-        Commits the current turn to capture state, then returns a ready-to-launch
-        sub-agent task. After this tool returns, launch a non-blocking sub-agent
-        (via /sub-agent with workflow.workflow:Workflow) using the returned
-        ``sub_agent_task`` as the prompt. Do not call capture_backlog inline.
+        With no ``body``, commits the current turn, builds the handoff, and returns
+        a ``sub_agent_task``. Launch a non-blocking sub-agent with that prompt; it
+        calls this same tool again with the enriched ``body`` to file the issue.
 
         Infer `category` and `theme` unless the user sets them. Types:
 
@@ -158,6 +161,15 @@ class Workflow:
         - Refactor: changing code and where things are without changing functionality.
         - Feature: standing up a new module (a new folder). Example: creating the CLI agent. A small change to an existing feature is not a Feature.
         """
+        if body.strip():
+            return self._create_backlog_issue(
+                focus=focus,
+                body=body,
+                workspace=workspace,
+                theme=theme,
+                category=category,
+                infer_from=f"{focus}\n{body}",
+            )
         destination = str(self._repo_root(workspace))
 
         self._commit_if_dirty(workspace, focus)
@@ -260,21 +272,19 @@ class Workflow:
                 "",
             ]
         lines += [
-            "Then call capture_backlog with:",
+            "Then call backlog with:",
             f"  focus: {focus!r}",
             f"  body: (the body below, updated with transcript findings)",
             f"  workspace: {workspace!r}",
             f"  theme: {theme!r}",
             f"  category: {category!r}",
-            f"  infer_from: {infer_from!r}",
             "",
             "--- body ---",
             body.rstrip(),
         ]
         return "\n".join(lines)
 
-    @agent_tool
-    def capture_backlog(
+    def _create_backlog_issue(
         self,
         focus: str,
         body: str,
@@ -283,7 +293,6 @@ class Workflow:
         category: str = "",
         infer_from: str = "",
     ) -> dict[str, str | int]:
-        """Create a GitHub issue whose body is the handoff text, Project Backlog."""
         issue_body = self._handoff_issue_body(body)
         return self.create_ticket(
             title=focus.strip() or "backlog",
@@ -302,8 +311,10 @@ class Workflow:
             text = path.read_text(encoding="utf-8")
         return text
 
-    @sub_agent
+
     @agent_tool
+    @mcp
+    @skill
     def start(
         self,
         ticket: str,
@@ -346,6 +357,8 @@ class Workflow:
         return {**viewed, **opened}
 
     @agent_tool
+    @mcp
+    @skill
     def finish(
         self,
         outcome: str = "",
@@ -410,6 +423,8 @@ class Workflow:
         return {"rules": self._load_workflow_rules(workspace)}
 
     @agent_tool
+    @mcp
+    @skill
     def update_ticket_labels(
         self,
         ticket: str,
@@ -429,7 +444,8 @@ class Workflow:
             "labels": ", ".join(sorted(set(issue.labels))),
         }
 
-    @Skill(name="tickets")
+    @skill(name="tickets")
+    @mcp
     @agent_instructions
     def manage_tickets(self, request: str, workspace: str = "") -> str:
         """Manage project tickets from {{request}}.
@@ -488,6 +504,7 @@ class Workflow:
         }
 
     @agent_tool
+    @mcp
     def list_project_statuses(self, workspace: str = "") -> dict[str, object]:
         """List GitHub Project Status columns left-to-right for move_ticket destinations."""
         repo_root = self._repo_root(workspace)
@@ -501,6 +518,8 @@ class Workflow:
         }
 
     @agent_tool
+    @mcp
+    @skill
     def move_ticket(
         self,
         ticket: str,

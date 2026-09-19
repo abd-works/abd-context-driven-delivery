@@ -21,7 +21,9 @@ from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
 from agent_tools.agent_tools import agent_tool, agent_toolset
-from installation.hooks.hooks import Hook, Hooks
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
+from installation.hooks.hooks import hook, hooks
 from installation.hooks.session_logs import (
     clear_active_session,
     consolidate_logs_for_close,
@@ -256,7 +258,7 @@ class TurnCommit:
         """Legacy alias — branch name at commit time."""
         return self.branch
 
-@Hooks(disabled=True)
+@hooks(disabled=True)
 @agent_toolset
 class Turn:
     """Self-sufficient turn commit — no WorkSession or Workspace required."""
@@ -391,6 +393,8 @@ class Turn:
             )
         git.note(sha, payload, ref=self.TURN_NOTES_REF)
 
+    @mcp
+    @skill
     @agent_tool
     def turn(
         self,
@@ -500,7 +504,7 @@ class Turn:
             encoding="utf-8",
         )
 
-    @Hook("afterAgentResponse")
+    @hook("afterAgentResponse")
     def auto_turn(self, payload: dict) -> dict:
         """Commit dirty checkout after each agent response when enabled."""
         git = self._git()
@@ -2397,6 +2401,8 @@ class Workspace:
         """List available Cursor/IDE model ids for AskQuestion choices."""
         return SessionModel.list_available()
 
+    @mcp
+    @skill
     @agent_instructions
     def model(self, model: str = "", session: str = "", workspace: str = "") -> str:
         """Set the preferred IDE/CLI model for this work session (slash ``/model``).
@@ -2417,6 +2423,8 @@ class Workspace:
         return "Session model set."
 
     @agent_tool
+    @mcp
+    @skill
     def open(
         self,
         host: Any | None = None,

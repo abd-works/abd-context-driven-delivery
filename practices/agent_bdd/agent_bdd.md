@@ -46,6 +46,8 @@ Read `practices/bdd/bdd.md` § Overview — the underlying test discipline appli
 
 ## Shared rules
 
+Use these rules when a mamba spec drives a live agent through `agent()` and asserts on the run, not on chat claims.
+
 - **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/__init__.py` routes to `cli_agent` or `chat_agent` based on `AGENT_BDD_IN_CHAT`. Specs never import either implementation directly.
 - **`free-function-api`** — Call `instruct`, `instruct_use_tool`, and `ai_judge` as free functions. Do not use a session prefix.
 - **`instruct-for-setup`** — Use `instruct(prompt)` for file reads, priming, and natural-language steps.

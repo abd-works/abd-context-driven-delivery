@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from installation.destination import Destination, Installation
+from installation.installer import Destination, Installation
 
 
 class Hooks:
@@ -70,6 +70,9 @@ class Hook(Destination):
         return stepped.replace("-", "_").lower()
 
 
+hook = Hook
+hooks = Hooks
+
 class HookInstallation(Installation):
     """Write hook skill files and Cursor ``hooks.json`` dispatch entries."""
 
@@ -106,6 +109,7 @@ class HookInstallation(Installation):
         dest = self.path / "skills" / f"hook-{tool.name}" / "SKILL.md"
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(tool.description or tool.name, encoding="utf-8")
+        self.track_write(dest)
         self._handlers.append(
             {
                 "event": str(event),
@@ -124,6 +128,7 @@ class HookInstallation(Installation):
             json.dumps({"handlers": self._handlers}, indent=2) + "\n",
             encoding="utf-8",
         )
+        self.track_write(dest)
 
     def write_hooks_manifest(self) -> None:
         if not self._handlers:
@@ -165,3 +170,4 @@ class HookInstallation(Installation):
             json.dumps({"version": 1, "hooks": hooks}, indent=2) + "\n",
             encoding="utf-8",
         )
+        self.track_write(dest)

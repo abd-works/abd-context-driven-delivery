@@ -14,6 +14,8 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 ## Shared rules
 
+Use these rules when defining user interactions and resulting system behavior, regardless of level of detail.
+
 - **`vocabulary-traces-to-domain-source`** - Use terms from the domain language and model when they exist, because one shared definition keeps Stories, examples, and code consistent.
 - **`read-all-source-context-in-full`** - Before fixing the hierarchy or asking a question about an interaction between systems, read every referenced source that informs the decision, including the owning segment, module context, session records, related Story context, build order, code, recorded observations, and relevant run logs. Name the source and location that supports each important interaction, because titles and search results do not explain behaviour.
 - **`do-not-invent-requirements`** - Write only behaviour described by a source or explicitly requested by the user. Add a system-to-system interaction only when a named caller invokes it or a source requires it, because an assumed interaction becomes unrequested architecture, Scenarios, and tests.
@@ -29,6 +31,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 
 **Default format:** markdown
+**Stage:** discovery
 
 **Produce:** Story map.
 
@@ -56,6 +59,8 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 #### Rules
 
+Use these rules when naming epics, sub-epics, and stories on a story map — verb-noun titles and 4–9 children, no scenarios yet.
+
 - **`verb-noun-format`** - Name every Epic, Sub-Epic, and Story with a base-form verb and noun. Epics and Sub-Epics name goals rather than an actor's activity or a supporting system call, because grammar alone does not preserve the right level of abstraction.
 - **`story-name-captures-system-mechanic`** - At Story level, use a verb that names the operation and a noun that names the record or concept it acts on. Replace vague names such as `Handle Request`, `Process Data`, or `Manage Record`, because they hide what the system does.
 - **`four-to-nine-children`** - Keep 4-9 direct children, warn at 3 or 10, and restructure at 2 or fewer or 11 or more, because readers cannot reason easily about shallow chains or crowded nodes.
@@ -71,6 +76,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 
 **Default format:** project language
+**Stage:** specification
 
 **Produce:** Scenario specifications in the requested format.
 
@@ -88,6 +94,8 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 #### Rules
 
+Use these rules when writing Given/When/Then steps for a story — observable outcomes, not UI gestures or internal flags.
+
 - **`gwt-steps-trace-to-domain-operations`** - Map every Given, When, and Then to a named domain operation or property. Express continuation as an operation on the aggregate that receives control, because routes, waits, and framework calls do not describe domain behaviour.
 - **`behavioral-and-system-observable-outcomes`** - Write each Then as a result a person or another system can observe, such as changed information, a returned response, or a changed interface state. Keep internal flags and function-local state out of Then, because they do not prove delivered behaviour.
 - **`explore-full-interaction-surface`** - Before finalizing Scenarios and again before generating acceptance tests, inspect every distinct visible behaviour required by the source or running product. Add Scenarios for distinct mechanics, because a happy path cannot protect validation and failure behaviour.
@@ -103,7 +111,6 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 - **`and-chaining`** - Start each state, interaction, and result block with Given, When, and Then, then continue later steps of the same kind with And. Keep Given conditions in root-first order, start a new When for a new interaction, and keep one interaction's observable results in one Then/And block. Use Background only when more than one Scenario shares the state, because repeated keywords hide which conditions, actions, and results belong together.
 - **`outline-requires-many-permutations`** - Use a Scenario Outline when many data combinations follow the same steps. Use separate steps or Scenarios for two alternatives or a changed flow, and keep only example fields that affect behaviour, because examples should show variation rather than conceal structure.
 - **`plain-english-gwt-steps`** - Write each step as a readable sentence with a named actor and observable behaviour. Use the plain-English example name rather than a code identifier, because test reports must make sense without source code.
-- **`explain-deep-link-arrival`** - When a Scenario starts at a parameterized route or equivalent application state, name the real arrival path: product navigation, an external deep link, or a preceding flow state. A route is not a user action.
 - **`seed-prior-story-as-given`** - Seed a later Story from examples produced by prior Stories instead of replaying their When steps. Reuse fixtures from the owning domain concept and keep the boundary under test real, because each Story must run independently while proving its own behaviour.
 
 ---
@@ -114,6 +121,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 
 **Default format:** project language
+**Stage:** implementation
 
 **Produce:** Runnable acceptance specifications and the production code that makes them pass.
 
@@ -128,6 +136,8 @@ Apply `@stories` `#scenarios` § Guidance and § Rules to acceptance tests. Use 
 Refer to [`../language-tools.md`](../language-tools.md) for language-specific test tools and idioms.
 
 #### Rules
+
+Use these rules when writing acceptance tests and the production path that makes them pass — fixtures, seeds, and real domain entry points.
 
 - **`examples-trace-domain-model`** - Shape every fixture from the domain model and its owning system. Use the external system's record shape at that boundary and the product's aggregate shape inside the domain, because convenient mixed objects conceal mapping errors.
 - **`examples-declare-seed-vs-interaction`** - Identify each fixture as **Seed** state owned by a system or **Interaction** data entered, displayed, or validated through the product. Use both when the Story needs both, because persisted records and user-facing data often represent the same concept differently.

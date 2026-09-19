@@ -5,10 +5,10 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
-from practices.workspace_bind import init_practice_guidance
-from harness.agent_tools.agent_tools import agent_toolset
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+from installation.harness_files.harness_files import Skill
+from installation.mcp.mcp_server import Mcp
 from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -47,16 +47,6 @@ class Ux(PracticeGuidance):
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
-    STAGE_TO_FIDELITY = {
-        DISCOVERY: "ia",
-        SPEC: "mockup",
-        ENGINEER: "front_end_code",
-    }
-
-    @classmethod
-    def resolve_fidelity(cls, fidelity: str) -> str:
-        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
-
     def __init__(
         self,
         fidelity: str = "ia",
@@ -64,46 +54,35 @@ class Ux(PracticeGuidance):
         path: str | None = None,
         session: str | None = None,
         workspace: str | None = None,
+        stage: str | None = None,
     ) -> None:
-        fidelity = type(self).resolve_fidelity(fidelity)
-        if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
-            raise ValueError(
-                f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
-            )
-        resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        if resolved_format not in _SUPPORTED_FORMATS:
-            raise ValueError(
-                f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
-            )
-        init_practice_guidance(
-            self,
-            format=resolved_format,
+        super().__init__(
+            format=format,
             path=path,
             session=session,
             workspace=workspace,
             fidelity=fidelity,
-            stage_to_fidelity=self.STAGE_TO_FIDELITY,
+            stage=stage,
         )
 
-    @agent_tool
-    def transform(self, source_format: str, target_format: str, content: str) -> dict:
-        """Parse content from source_format into the canonical UxMap, then render into target_format.
-        Peer channels: drawio, html, markdown, json. Sideways move at the same fidelity."""
-        source_cls = _load_channel_class(source_format)
-        target_cls = _load_channel_class(target_format)
-        canonical = source_cls.parse(content)
-        rendered = target_cls.render(canonical)
-        return {"format": target_format, "content": rendered}
+    @property
+    @Mcp
+    @Skill
+    @agent_instructions
+    def instructions(self) -> str:
+        """UX looks at the product through user navigation and information architecture, from layout and transitions to more formal screens, regions, and controls — how users see and act on the solution — mapped at increasing fidelity."""
+        return super().instructions
 
     @agent_tool
-    def render(self, format: str, content: str = "") -> dict:
-        """Render already-generated UX output into ``format`` via channel parse/render."""
-        if not content:
-            raise ValueError("content is required — pass the already-generated artifact")
-        source = self.format
-        if not source:
+    def render(self, format: str, content: str, source: str | None = None) -> dict:
+        """Parse content into the canonical UxMap, then render into format.
+        source defaults to this instance's format. Peer channels at the same fidelity."""
+        source_format = source or self.format
+        if not source_format:
             raise ValueError("source format is not set")
-        return self.transform(source, format, content)
+        source_cls = _load_channel_class(source_format)
+        target_cls = _load_channel_class(format)
+        return {"format": format, "content": target_cls.render(source_cls.parse(content))}
 
     @agent_tool
     def ensure_javascript(self, generator: str, source_format: str, content: Any) -> dict:
@@ -112,11 +91,11 @@ class Ux(PracticeGuidance):
         if generator == "stories":
             from practices.stories.stories import Stories
 
-            return Stories().transform(source_format, "javascript", content)
+            return Stories().render("javascript", content, source=source_format)
         if generator == "clean_engineering":
             from practices.clean_engineering.clean_engineering import CleanEngineering
 
-            return CleanEngineering().transform(source_format, "javascript", content)
+            return CleanEngineering().render("javascript", content, source=source_format)
         raise ValueError(
             f"Unsupported generator {generator!r}. Choose from: stories, clean_engineering"
         )

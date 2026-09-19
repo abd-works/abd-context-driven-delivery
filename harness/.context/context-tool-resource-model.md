@@ -95,7 +95,7 @@ def examples(self) -> str: ...                # Guidance only — not in instruc
 
 **Label paths:** `context` → `# Contexts` section for this host's scope; `guidance` / `rules` → practice `## …` before `## Fidelities`; fidelity `### …` under `## Fidelities` → `## {name}`; `examples` → `examples/` folder; `templates` → `templates/` folder scan → path map.
 
-**Host requirement:** `context_guidance` on every *ContextSection* — `@markdown` uses `context_guidance.module_dir`. `name` scopes extract (`None` practice-wide; fidelity name under `## Fidelities` → `## {name}` in `{slug}.md`; #68 prior `##` stack in `context`). `fidelity: str | None` on the base — equals `name` on *FidelityGuidance*; active domain key on *Guidance* at invoke.
+**Host requirement:** `context_guidance` on every *ContextSection* — `@markdown` uses `context_guidance.module_dir`. `name` scopes extract (`None` practice-wide; fidelity name under `## Fidelities` → `## {name}` in `{slug}.md`). Later fidelities do not inherit earlier fidelity bodies. `fidelity: str | None` on the base — equals `name` on *FidelityGuidance*; active domain key on *Guidance* at invoke.
 
 ---
 
@@ -193,12 +193,12 @@ Override `**instructions**` on *Guidance* only — *FidelityGuidance* uses *Cont
 | --------------------------------------------- | ----------------------------------------------------- |
 | Assembly in `BaseContextTool.guidance()` body | `Guidance.instructions` @property override     |
 | Merged `templates/` + `filter_template_lines` | `@markdown templates` → `dict[str, str]` path map; `templates[format]` reads content + fidelity filter |
-| Prior-depth stack (#68)                       | `FidelityGuidance.context` — prior `## {name}` blocks in declaration order |
+| Prior-depth stack (#68)                       | Retired — `FidelityGuidance.context` is this fidelity's overview only |
 | `compound_guidance` subprocess                | Harness reads `fidelity.instructions`                 |
 | `ContextToolBody` assembly                    | *Deployment* on `instructions` / `rules` — `@skill`, `@command`, `@rules` |
 
 
-**Practice vs fidelity `.instructions`:** *Guidance* — `super.instructions` (practice-wide extract) + `fidelities.instructions` (each *FidelityGuidance* joined in declaration order). Each *FidelityGuidance* — same *ContextSection* `instructions` property; `name` scopes `@markdown` extract (`context` includes #68 prior `##` stack). **`examples`** — read via `.examples` when an action recipe asks; never merged into `.instructions`.
+**Practice vs fidelity `.instructions`:** *Guidance* — `super.instructions` (practice-wide extract) + `fidelities.instructions` (each *FidelityGuidance* joined in declaration order). Each *FidelityGuidance* — practice overview/guidance/shared rules plus this fidelity's own overview, guidance, rules, and template. Later fidelities do not inherit earlier fidelity bodies. **`examples`** — read via `.examples` when an action recipe asks; never merged into `.instructions`.
 
 Assembly interactions — **Behavior sketch (BDD)** object flows.
 
@@ -236,7 +236,6 @@ preamble before first ##     → Guidance.context
 ## modules                     → FidelityGuidance("modules").context
   ### Guidance / ### Rules     → same pattern per name
 ## behavior                    → FidelityGuidance("behavior").context
-  (body + prior ## stack #68)  → included in behavior.context
   ### Guidance                 → FidelityGuidance("behavior").guidance
   ### Rules                    → FidelityGuidance("behavior").rules
 ## development                 → FidelityGuidance("development") …
@@ -428,7 +427,7 @@ Do **not** invent `{domain}-{fidelity}-{format}.md` unless a domain already uses
 
 | Property | Resolves to | In `fidelity.instructions` |
 | -------- | ----------- | ------------------------------ |
-| `context` | `## {name}` body + #68 prior `##` stack | yes — via `super.instructions` |
+| `context` | `## {name}` overview only | yes — via `super.instructions` |
 | `guidance` | `### Guidance` | yes |
 | `rules` | `### Rules` | yes — `format_rules(rules)` |
 | `templates[format]` | path map entry → file content (see naming table) | yes — active format at invoke; all declared formats at deploy per policy |
@@ -762,7 +761,7 @@ Harness.install(mcp=False)
 | satisfy hook    | `generate_fixes_from_validate` on CT                    | Satisfy action recipe + validate report                                                     |
 | setup           | # Open prelude on `base_context_tool.md`                | Workspace + `GuidanceAction.begin`                                                         |
 | render iterate  | implied on CT / base md                                 | `actions/render/` + channel action md                                                  |
-| #68             | hyperlinks to other fidelities                          | prior `## {name}` blocks in `FidelityGuidance.context` per `GuidanceCollection` order       |
+| #68             | hyperlinks to other fidelities                          | Retired — later fidelities do not inherit earlier fidelity bodies       |
 | #21             | catalog scrape + Harness overlap                        | `.instructions` on *Guidance*; `Catalog : HTML`; *Deployment* subtypes only write files |
 | deploy          | `ContextToolBody`, `compound_guidance` in Harness       | `Deployment.installPracticeGuidance` / `deployAgenticToolset` + `MarkdownInstallation` implements abstract section methods |
 | harness prose   | scattered Deployment model section                      | deploy rules on each class intro under Modules                                              |

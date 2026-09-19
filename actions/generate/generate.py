@@ -24,7 +24,7 @@ class Generate(GuidanceAction):
             instructions(item)
             self.generate_output()
         else:
-            item.guidance
+            item.instructions
             item.generate_output()
         self.generate_fixes_from_validate()
         self.add_generate_header_to_generated()

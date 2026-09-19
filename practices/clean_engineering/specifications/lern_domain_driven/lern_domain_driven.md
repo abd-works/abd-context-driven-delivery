@@ -232,6 +232,8 @@ recorded before scenarios are written.
 
 ## Shared rules
 
+Use these rules when adding or changing a feature package with one JSON store per aggregate — domain.ts, server, client, and View files.
+
 - **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON
 - **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository`
 - **`organize-by-domain-module`** — feature package present with process boot (`app.ts`, `serve.ts`, `main.tsx`) and nested domain dirs each having `{domain}.ts`, `{domain}-server.ts`, `{domain}-client.tsx`.

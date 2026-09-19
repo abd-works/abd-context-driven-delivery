@@ -47,7 +47,7 @@ a context tool
         it should read the staging metadata and body
         it should analyze the transcript to identify which turn introduced the issue
         it should determine whether the change is in the current turn or a previous one
-        it should call capture_backlog with the enriched body
+        it should call backlog with the enriched body
       the created issue
         it should carry the handoff in the body of the issue
         it should carry the Turn Context section identifying branch and commit

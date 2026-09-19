@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
-from practices.stages import DISCOVERY, ENGINEER, SPEC, resolve_stage_fidelity
-from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
@@ -17,7 +15,6 @@ if TYPE_CHECKING:
     from tools.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
-    "modules": "markdown",   # delegates to CE; no BDD-specific spec file written
     "behavior": "python",
     "development": "python",
 }
@@ -25,7 +22,6 @@ _SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
 
 # BDD fidelity → CleanEngineering fidelity at the same design depth.
 _CE_FIDELITY: dict[str, str] = {
-    "modules": "modules",
     "behavior": "model",
     "development": "code",
 }
@@ -37,20 +33,6 @@ class TransformResult(TypedDict):
     source_format: str
     target_format: str
     content: str
-
-
-def _resolve_format(fidelity: str, format: str | None) -> str:
-    """Validate fidelity, resolve format to its default when None, validate format, and return it."""
-    if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
-        raise ValueError(
-            f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
-        )
-    resolved = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-    if resolved not in _SUPPORTED_FORMATS:
-        raise ValueError(
-            f"Unsupported format {resolved!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
-        )
-    return resolved
 
 
 @agent_toolset
@@ -67,16 +49,6 @@ class Bdd(PracticeGuidance):
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
-    STAGE_TO_FIDELITY = {
-        DISCOVERY: "modules",
-        SPEC: "behavior",
-        ENGINEER: "development",
-    }
-
-    @classmethod
-    def resolve_fidelity(cls, fidelity: str) -> str:
-        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
-
     def __init__(
         self,
         fidelity: str = "behavior",
@@ -84,17 +56,15 @@ class Bdd(PracticeGuidance):
         path: str | None = None,
         session: str | None = None,
         workspace: str | None = None,
+        stage: str | None = None,
     ) -> None:
-        fidelity = type(self).resolve_fidelity(fidelity)
-        resolved_format = _resolve_format(fidelity, format)
-        init_practice_guidance(
-            self,
-            format=resolved_format,
+        super().__init__(
+            format=format,
             path=path,
             session=session,
             workspace=workspace,
             fidelity=fidelity,
-            stage_to_fidelity=self.STAGE_TO_FIDELITY,
+            stage=stage,
         )
 
     # -- CleanEngineering companion ------------------------------------------
@@ -104,7 +74,7 @@ class Bdd(PracticeGuidance):
         # lazy import: avoids circular import at module load
         from practices.clean_engineering.clean_engineering import CleanEngineering
 
-        ce_fidelity = _CE_FIDELITY[self.fidelity]
+        ce_fidelity = _CE_FIDELITY[self.fidelities.current.fidelity]
         instance = CleanEngineering(
             fidelity=ce_fidelity,
             path=self.path,
@@ -132,13 +102,7 @@ class Bdd(PracticeGuidance):
     @Skill
     @agent_instructions
     def instructions(self) -> str:
-        """Provide guidance for creating behavior skeletons and development tests.
-        At modules fidelity: no BDD spec file is written — bootstrap CE class structure via the companion.
-        At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
-        At development fidelity: write full test bodies and production code.
-        When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
-        BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
-        When this BDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        """Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`)."""
         return super().instructions
 
     @property
@@ -156,20 +120,12 @@ class Bdd(PracticeGuidance):
     # -- Tool: sideways format conversion ------------------------------------
 
     @agent_tool
-    def transform(self, source_format: str, target_format: str, content: str) -> TransformResult:
+    def render(self, format: str, content: str, source: str | None = None) -> TransformResult:
         """Sideways format conversion at the same fidelity.
-        Delegates to clean_engineering.transform until BDD has its own channel model."""
-        # lazy import: avoids circular import at module load
+        Delegates to clean_engineering.render until BDD has its own channel model."""
         from practices.clean_engineering.clean_engineering import CleanEngineering
 
-        return CleanEngineering().transform(source_format, target_format, content)
-
-    @agent_tool
-    def render(self, format: str, content: str = "") -> dict:
-        """Render already-generated BDD output into ``format`` via CleanEngineering channels."""
-        if not content:
-            raise ValueError("content is required — pass the already-generated artifact")
-        source = self.format
-        if not source:
+        source_format = source or self.format
+        if not source_format:
             raise ValueError("source format is not set")
-        return self.transform(source, format, content)
+        return CleanEngineering().render(format, content, source=source_format)

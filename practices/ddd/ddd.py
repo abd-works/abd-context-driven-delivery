@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
-from practices.stages import DISCOVERY, ENGINEER, SHAPING, SPEC, resolve_stage_fidelity
-from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
@@ -54,17 +52,6 @@ class Ddd(PracticeGuidance):
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
     supported_formats = _SUPPORTED_FORMATS
 
-    STAGE_TO_FIDELITY = {
-        SHAPING: "bounded_context",
-        DISCOVERY: "bounded_context",
-        SPEC: "building_blocks",
-        ENGINEER: "tactics",
-    }
-
-    @classmethod
-    def resolve_fidelity(cls, fidelity: str) -> str:
-        return resolve_stage_fidelity(fidelity, cls.STAGE_TO_FIDELITY)
-
     # Generate / new work: src/. /document defaults to domain/ unless path or folder is set.
     default_workspace_folder: str = "src"
     context_index_key: str = "ddd"
@@ -77,50 +64,31 @@ class Ddd(PracticeGuidance):
         path: str | None = None,
         session: str | None = None,
         workspace: str | None = None,
+        stage: str | None = None,
     ) -> None:
-        fidelity = type(self).resolve_fidelity(fidelity)
-        resolved_format = self._resolve_format(fidelity, format)
-        init_practice_guidance(
-            self,
-            format=resolved_format,
+        super().__init__(
+            format=format,
             path=path,
             session=session,
             workspace=workspace,
             fidelity=fidelity,
-            stage_to_fidelity=self.STAGE_TO_FIDELITY,
+            stage=stage,
         )
-        self._fidelity = fidelity
-
-    @property
-    def fidelity(self) -> str:
-        return self._fidelity
-
-    def _resolve_format(self, fidelity: str, format: str | None) -> str:
-        if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
-            raise ValueError(
-                f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
-            )
-        resolved = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        if resolved not in _SUPPORTED_FORMATS:
-            raise ValueError(
-                f"Unsupported format {resolved!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
-            )
-        return resolved
 
     def ce(self) -> "CleanEngineering":
-        """CleanEngineering companion at the matching fidelity (tool mode — invoke separately when ready)."""
+        """CleanEngineering companion at the matching fidelity — invoke as a tool, not inlined."""
         from practices.clean_engineering.clean_engineering import CleanEngineering
 
-        current = self.workspace.current_work_session
-        working_path = current.path if current is not None else self.path
-        workspace_root = current.workspace_root if current is not None else self.workspace.path
-        ce_fidelity = _CE_FIDELITY[self.fidelity]
         instance = CleanEngineering(
-            fidelity=ce_fidelity,
+            fidelity=_CE_FIDELITY[self.fidelities.current.fidelity],
             format=self.format,
-            path=working_path,
-            session=current.name if current is not None else "",
-            workspace=workspace_root,
+            path=self.path,
+            session=(
+                self.workspace.current_work_session.name
+                if self.workspace.current_work_session
+                else ""
+            ),
+            workspace=self.workspace.path,
         )
         instance.mode = "tool"
         return instance
@@ -168,15 +136,16 @@ class Ddd(PracticeGuidance):
     @Skill
     @agent_instructions
     def instructions(self) -> str:
-        """Provide guidance for creating bounded contexts, building blocks, and tactics.
-        When this DDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        """Build the solution around how the business actually works, in the words the business already uses. When the software mirrors the business, it holds the business's logic and knowledge where that understanding actually lives; when it mirrors a database, a framework, or a screen layout, every business conversation has to be re-translated and what the business knows ends up scattered wherever the technology happened to put it."""
         return super().instructions
 
     @property
     @agent_instructions
     def guidance(self) -> str:
-        """Expand this practice's Guidance section, then Clean Engineering companion guidance."""
-        super().guidance
+        """Expand this practice's Guidance section, then the mapped Clean Engineering fidelity."""
+        text = super().guidance
+        if self.fidelities.current.fidelity not in _CE_FIDELITY:
+            return text
         self.ce().guidance
         return (
             "When this DDD work is done, call guidance on the Clean Engineering companion "
@@ -184,18 +153,12 @@ class Ddd(PracticeGuidance):
             "The action already knows what to do for every tool. Do not inline."
         )
 
+    @Mcp
     @agent_tool
-    def transform(self, source_format: str, target_format: str, content: str) -> TransformResult:
+    def render(self, format: str, content: str, source: str | None = None) -> TransformResult:
         """Sideways format conversion at the same fidelity.
-        Delegates to clean_engineering.transform - DDD adds no separate channel model."""
-        return self.ce().transform(source_format, target_format, content)
-
-    @agent_tool
-    def render(self, format: str, content: str = "") -> dict:
-        """Render already-generated DDD output into ``format`` via CleanEngineering channels."""
-        if not content:
-            raise ValueError("content is required — pass the already-generated artifact")
-        source = self.format
-        if not source:
+        Delegates to clean_engineering.render — DDD adds no separate channel model."""
+        source_format = source or self.format
+        if not source_format:
             raise ValueError("source format is not set")
-        return self.transform(source, format, content)
+        return self.ce().render(format, content, source=source_format)

@@ -6,4 +6,4 @@ Lessons from correcting `bdd.md` and the BDD tool itself. Record each in the sam
 
 2. **Do not add a scanner unless asked.** When adding a validate rule, update `bdd.md` only.
 
-3. **New shared rules go in three places in `bdd.md`:** Shared Rules, modules scaffold key rules (if applicable), and development Rules.
+3. **New shared rules go in `bdd.md` Shared Rules and the fidelity Rules they apply to.**

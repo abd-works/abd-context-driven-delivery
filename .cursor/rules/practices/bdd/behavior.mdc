@@ -1,5 +1,15 @@
+---
+alwaysApply: true
+description: "Use these rules when defining BDD signatures — describe/it names only, no test bodies yet."
+---
+
 #### Rules
 
+Use these rules when defining BDD signatures — describe/it names only, no test bodies yet.
+
+- **`state-not-when`** — Nest by the state or condition that enables an observation, never by a `when` trigger.
+- **`nest-by-enabling-events`** — Sub-groupings are conditions that unlock further behavior, not implementation steps.
+- **`context-setup-expresses-state`** — Setup under a label must establish that label's state, not unrelated host boot.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
 - **`framework-syntax`** — Refer to [`practices/language-tools.md`](/practices/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 

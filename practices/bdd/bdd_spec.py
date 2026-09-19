@@ -41,32 +41,22 @@ with description("a Bdd toolset"):
             with it("should default to python format"):
                 expect(Bdd(fidelity="development").format).to(equal("python"))
 
-        with context("with modules fidelity"):
-            with it("should default to markdown format"):
-                expect(Bdd(fidelity="modules").format).to(equal("markdown"))
-
         with context("with an unsupported format"):
             with it("should raise ValueError"):
                 expect(lambda: Bdd(fidelity="behavior", format="drawio")).to(raise_error(ValueError))
 
     with context("that provides a CleanEngineering companion"):
-        with context("with modules fidelity"):
-            with it("should return a CleanEngineering instance at modules fidelity"):
-                ce = Bdd(fidelity="modules").ce()
-                expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelity).to(equal("modules"))
-
         with context("with behavior fidelity"):
             with it("should return a CleanEngineering instance at model fidelity"):
                 ce = Bdd(fidelity="behavior").ce()
                 expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelity).to(equal("model"))
+                expect(ce.fidelities.current.fidelity).to(equal("model"))
 
         with context("with development fidelity"):
             with it("should return a CleanEngineering instance at code fidelity"):
                 ce = Bdd(fidelity="development").ce()
                 expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelity).to(equal("code"))
+                expect(ce.fidelities.current.fidelity).to(equal("code"))
 
         with context("with a path set"):
             with it("should carry the same path to the CE companion"):
@@ -127,5 +117,5 @@ with description("a Bdd toolset"):
 
     with context("whose transform tool is called"):
         with it("should delegate to CleanEngineering and return a dict"):
-            result = Bdd().transform("python", "markdown", "class Foo:\n    pass\n")
+            result = Bdd().render("markdown", "class Foo:\n    pass\n", source="python")
             expect(result).to(be_a(dict))

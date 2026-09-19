@@ -72,7 +72,7 @@ with description("a MernDomainDriven generator"):
             expect(isinstance(self.stories, Stories)).to(be_true)
 
         with it("should pin fidelity to acceptance_tests"):
-            expect(self.stories.fidelity).to(equal("acceptance_tests"))
+            expect(self.stories.fidelities.current.fidelity).to(equal("acceptance_tests"))
 
         with it("should pin format to typescript"):
             expect(self.stories.format).to(equal("typescript"))

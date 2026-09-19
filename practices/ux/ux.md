@@ -66,6 +66,8 @@ Start from grill + sketch and deepen. Each level **adds** artifacts — do not i
 
 ## Shared rules
 
+Use these rules when naming screens, attaching stories, or importing domain JS — not inventing a second vocabulary.
+
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
 - **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.
 - **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists.
@@ -82,8 +84,9 @@ Start from grill + sketch and deepen. Each level **adds** artifacts — do not i
 
 
 **Default format:** drawio
+**Stage:** discovery
 
-**Goal:** What screens exist and how users move between them — missing coverage shows as absent nodes.
+**Goal:** Decide what screens exist and how users move between them.
 
 #### Guidance
 
@@ -104,6 +107,8 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 
 #### Rules
 
+Use these rules when listing screens and how users move between them — named regions, no control types yet.
+
 - **`tab-states-are-separate-screens`** / **`screen-story-budget`** / **`ia-named-regions-only`** — as above.
 - **`system-stories-group-with-visible-trigger`** — System stories group with the closest user-visible screen.
 
@@ -115,8 +120,9 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 
 
 **Default format:** html
+**Stage:** specification
 
-**Goal:** Lock controls and key interactions as runnable html+js (greybox) inside the **Story Demo shell**. Drawio peer channel still available.
+**Goal:** Lock screens as runnable greybox — typed controls and key interactions.
 
 #### Guidance
 
@@ -138,6 +144,8 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 
 #### Rules
 
+Use these rules when placing typed controls in greybox HTML and wiring story steps — Story Demo shell, honest stubs.
+
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
 - **`story-domain-js-imported`** — Import real modules; do not invent a UX-only adapter shape.
 - **`key-interactions-wired`** — Nav/tabs via `data-goto` / interactions; story tracing via Story Demo mount (not bespoke product stubs).
@@ -154,8 +162,9 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 
 
 **Default format:** html (or the host app’s frontend stack)
+**Stage:** implementation
 
-**Goal:** Real frontend for the product — production UI and client wiring to a real backend. Not greybox, not Story Demo as the shipping surface, not stub-only services.
+**Goal:** Ship the product UI — production frontend talking to a real backend.
 
 #### Guidance
 
@@ -165,6 +174,8 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 - Carry IA vocabulary and control decisions forward; do not redecide screens under a new product name.
 
 #### Rules
+
+Use these rules when replacing greybox with shipping UI and real API calls.
 
 - **`real-frontend-not-mockup`** — Shipping UI is production frontend code, not the greybox Story Demo frame.
 - **`real-backend-wired`** — Client talks to real services/persistence (CE **code**); no silent Fake path as the only path.

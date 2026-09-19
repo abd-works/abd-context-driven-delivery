@@ -1,4 +1,11 @@
+---
+alwaysApply: true
+description: "Use these rules when naming screens, attaching stories, or importing domain JS — not inventing a second vocabulary."
+---
+
 ## Shared rules
+
+Use these rules when naming screens, attaching stories, or importing domain JS — not inventing a second vocabulary.
 
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
 - **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.

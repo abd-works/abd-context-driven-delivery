@@ -39,7 +39,7 @@ with description("Ux fidelity and format defaults"):
             expect(self.ux.format).to(equal("drawio"))
 
         with it("should retain fidelity ia"):
-            expect(self.ux.fidelity).to(equal("ia"))
+            expect(self.ux.fidelities.current.fidelity).to(equal("ia"))
 
     with context("Ux constructed with fidelity mockup"):
         with before.each:
@@ -49,7 +49,7 @@ with description("Ux fidelity and format defaults"):
             expect(self.ux.format).to(equal("html"))
 
         with it("should retain fidelity mockup"):
-            expect(self.ux.fidelity).to(equal("mockup"))
+            expect(self.ux.fidelities.current.fidelity).to(equal("mockup"))
 
     with context("Ux constructed with fidelity front_end_code"):
         with it("should default format to html"):
@@ -68,10 +68,10 @@ with description("Ux transform tool"):
     with context("transform from json to markdown"):
         with before.each:
             self.ux = Ux(fidelity="ia")
-            self.result = self.ux.transform(
-                source_format="json",
-                target_format="markdown",
+            self.result = self.ux.render(
+                format="markdown",
                 content=_sample_json(),
+                source="json",
             )
 
         with it("should return a dict"):
@@ -86,7 +86,7 @@ with description("Ux transform tool"):
     with context("transform with an unsupported source format"):
         with it("should raise ValueError"):
             expect(
-                lambda: Ux().transform("yaml", "json", "{}")
+                lambda: Ux().render("json", "{}", source="yaml")
             ).to(raise_error(ValueError))
 
 

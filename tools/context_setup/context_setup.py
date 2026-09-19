@@ -8,6 +8,8 @@ from typing import Optional
 
 from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 from partition.partition import Partition
 
 from practices.clean_engineering.clean_engineering import CleanEngineering
@@ -121,6 +123,8 @@ class ContextSetup:
 
     # ── @tools — deterministic Python ────────────────────────────────────────
 
+    @mcp
+    @skill
     @agent_tool
     def convert(self, folder_path: str) -> ConversionResult:
         """Convert every supported document in folder_path to a Markdown file.
@@ -159,6 +163,8 @@ class ContextSetup:
             structure_notes=structure_notes,
         )
 
+    @mcp
+    @skill
     @agent_tool
     def smoke_test(
         self,
@@ -197,6 +203,8 @@ class ContextSetup:
             inventory_path=inventory_path,
         )
 
+    @mcp
+    @skill
     @agent_tool
     def scout_app(
         self,
@@ -239,6 +247,8 @@ class ContextSetup:
             page_captures=captures,
         )
 
+    @mcp
+    @skill
     @agent_tool
     def complete_capture(
         self,
@@ -280,6 +290,8 @@ class ContextSetup:
 
     # ── @agent_instructions — AI reads recipe; owns judgment; calls @tools + collaborators ─
 
+    @mcp
+    @skill
     @agent_instructions
     def capture_from_live_app(self,
         repo_path: str,
@@ -353,6 +365,8 @@ class ContextSetup:
         self.context_index.embed()
         return "Live app captured and indexed."
 
+    @mcp
+    @skill
     @agent_instructions
     def capture_from_documents(self,
         folder_path: str,

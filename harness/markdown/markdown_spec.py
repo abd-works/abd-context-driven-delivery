@@ -65,7 +65,7 @@ with description("a templates folder beside a host module"):
         with it("should map the markdown format key not the templates filename stem"):
             host = SamplePracticeGuidance(format="markdown")
             expect(canonical_format("md")).to(equal("markdown"))
-            expect(host.templates.get("markdown")).to(contain("templates/"))
+            expect(host.templates).to(contain("active format template body for sample tool"))
 
 
 with description("an asset locator"):
@@ -113,9 +113,7 @@ with description("an asset locator"):
             expect(self.location.kind).to(equal("file"))
             expect(self.location.path).to(
                 equal(
-                    (
-                        _CLEAN_ENGINEERING_DIR / "templates" / "clean_engineering-templates.py"
-                    ).resolve()
+                    (_CLEAN_ENGINEERING_DIR / "templates" / "clean_engineering.py").resolve()
                 )
             )
 
@@ -129,14 +127,11 @@ with description("an asset locator"):
 
             self.location = AssetLocator(_Host(), "templates").locate()
 
-        with it("should resolve to the md format folder not the whole templates pack"):
-            expect(self.location.kind).to(equal("folder"))
-            expect(self.location.folder).to(
-                equal((_STORIES_DIR / "templates" / "md").resolve())
+        with it("should resolve to the fidelity-named markdown file"):
+            expect(self.location.kind).to(equal("file"))
+            expect(self.location.path).to(
+                equal((_STORIES_DIR / "templates" / "md" / "story-map.md").resolve())
             )
-
-        with it("should carry story_map fidelity for filename filtering"):
-            expect(self.location.fidelity).to(equal("story_map"))
 
     with context("that locates shared templates on a stories host with no format"):
         with before.each:
@@ -147,12 +142,9 @@ with description("an asset locator"):
 
             self.location = AssetLocator(_Host(), "templates").locate()
 
-        with it("should resolve to the whole templates folder"):
-            expect(self.location.kind).to(equal("folder"))
-            expect(self.location.folder).to(equal((_STORIES_DIR / "templates").resolve()))
-
-        with it("should not filter by fidelity"):
-            expect(self.location.fidelity).to(be_none)
+        with it("should resolve to no template when no practice-named file exists"):
+            expect(self.location.kind).to(equal("file"))
+            expect(self.location.path.is_file()).to(equal(False))
 
     with context("that resolves a label to a folder"):
         with before.each:

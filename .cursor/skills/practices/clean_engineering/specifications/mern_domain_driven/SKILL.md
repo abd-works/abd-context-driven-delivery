@@ -1,14 +1,15 @@
-1. Follow session_guidance (handled by the inherited body below). Fill
-templates/ for the feature package this slice touches ({epicSlug}/ with
-nested domain module + process boot) if not already present.
-2. Call guidance on the Stories companion - *_spec.{tier} for tier in
-(server, client, e2e), applying the testing-architecture rules below.
-Specs first — small RED cycles before production. Pass that companion
-to this action as a separate tools run; the action already knows what
-to do for every tool, including the Stories CE companion.
-3. Cite the ux screen/navigation artifact for this slice under Sources /
-context on the touched view files - this tool does not call ux itself.
-4. Run validate. If it fails, fix and validate again until it passes.
-When this MERN work is done, call guidance on the Stories companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline.
+## Overview
+
+Implementation fidelity for a **domain-module-organized MERN stack** (MongoDB /
+Express / React / Node, TypeScript everywhere) on an already-designed vertical
+slice — story map, module boundaries, and screens all exist before this tool
+runs. `generate` calls `self._stories()` at `acceptance_tests` /
+`typescript` — specs first, then Stories' own `ce()` wires matching
+production TypeScript. The rules below are additive on top of what Stories
+and CleanEngineering already enforce, not a restatement of them.
+
+**No fidelity progression of its own.** Every run pins `stories` at
+`acceptance_tests` with `format="typescript"`; production code arrives via
+Stories' `ce()` companion at `code` / `typescript`.
 
 Use MCP tool: `mern-domain-driven.instructions()`

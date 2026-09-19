@@ -6,6 +6,8 @@ from pathlib import Path
 
 from agent_tools import agent_instructions, agent_toolset, instructions, tools
 from agent_tools.agent_tools import agent_tool
+from installation.harness_files.harness_files import skill
+from installation.mcp.mcp_server import mcp
 
 _FORMAT_PATH = Path(__file__).parent / "CDR-FORMAT.md"
 _CDR_NAME_RE = re.compile(r"^(\d{4})-")
@@ -37,12 +39,16 @@ class RecordDecisions:
         n = number if number is not None else self._next_cdr_number(cdr_dir)
         return cdr_dir / f"{n:04d}-{slug}.md"
 
+    @mcp
+    @skill
     @agent_tool
     def read_cdr_format(self) -> str:
         """Return CDR-FORMAT.md - when to offer a CDR, template, numbering, and optional sections.
         Read this before offering or writing a CDR."""
         return _FORMAT_PATH.read_text(encoding="utf-8")
 
+    @mcp
+    @skill
     @agent_tool
     def list_cdrs(self, root: str) -> str:
         """List CDR files under {root}/.context/cdr/.
@@ -52,6 +58,8 @@ class RecordDecisions:
             return ""
         return "\n".join(str(path) for path in sorted(cdr_dir.glob("*.md")))
 
+    @mcp
+    @skill
     @agent_tool
     def write_cdr(self, root: str, slug: str, content: str) -> str:
         """Write one Context Decision Record to {root}/.context/cdr/{NNNN}-{slug}.md.
@@ -64,6 +72,8 @@ class RecordDecisions:
         target.write_text(content.strip() + "\n", encoding="utf-8")
         return str(target)
 
+    @mcp
+    @skill
     @agent_instructions
     def record_decisions_session(self, root: str = ".") -> str:
         """Offer and write Context Decision Records (CDRs) sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions."""

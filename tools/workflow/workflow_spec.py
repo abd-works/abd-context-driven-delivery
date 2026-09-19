@@ -90,7 +90,6 @@ with description("Workflow manifest"):
         sig = Workflow.manifest.signature
         expect(sig["backlog"]["kind"]).to(equal("tool"))
         expect(sig["finish"]["kind"]).to(equal("tool"))
-        expect(sig["capture_backlog"]["kind"]).to(equal("tool"))
         expect(sig["start"]["kind"]).to(equal("sub_agent"))
         expect(sig["start"]["launch"]).to(equal("non_blocking"))
         exposed = sorted(
@@ -104,7 +103,6 @@ with description("Workflow manifest"):
                     "add_child_ticket",
                     "align_child_tickets_to_parent",
                     "backlog",
-                    "capture_backlog",
                     "finish",
                     "merge_child_into_parent",
                     "move_ticket",
@@ -190,8 +188,8 @@ with description("a Workflow backlog path"):
             )
             expect(result["sub_agent_task"]).to(contain("defect"))
 
-        with it("should create a github issue with the handoff body via capture_backlog"):
-            created = self.workflow.capture_backlog(
+        with it("should create a github issue with the handoff body when backlog is given a body"):
+            created = self.workflow.backlog(
                 focus="Workflow package",
                 body="forward requirements",
                 workspace=str(self.tmp),
@@ -203,7 +201,7 @@ with description("a Workflow backlog path"):
         with it("should put handoff file contents in the issue body not a path"):
             handoff = self.tmp / "handoff.md"
             handoff.write_text("# Handoff\n\nResume here.\n", encoding="utf-8")
-            created = self.workflow.capture_backlog(
+            created = self.workflow.backlog(
                 focus="Workflow package",
                 body=str(handoff),
                 workspace=str(self.tmp),
@@ -213,7 +211,7 @@ with description("a Workflow backlog path"):
             expect(created["body"]).not_to(contain(str(handoff)))
 
         with it("should not open a work session"):
-            self.workflow.capture_backlog(
+            self.workflow.backlog(
                 focus="Workflow package",
                 body="forward requirements",
                 workspace=str(self.tmp),
@@ -221,12 +219,11 @@ with description("a Workflow backlog path"):
             ws = self.workflow.workspace_tool(path=str(self.tmp))
             expect(ws.current_work_session is None).to(be_true)
 
-        with it("should infer type and theme for capture_backlog when the user does not override"):
-            created = self.workflow.capture_backlog(
+        with it("should infer type and theme for backlog when the user does not override"):
+            created = self.workflow.backlog(
                 focus="Sketch is stuffing prior grill answers",
                 body="context: mistakes after the sketch refactor",
                 workspace=str(self.tmp),
-                infer_from="Sketch is stuffing prior grill answers\nmistakes after the sketch refactor",
             )
             expect(created["type"]).to(equal("Defect"))
             expect(created["theme"]).to(equal("theme:sketch"))
@@ -234,8 +231,8 @@ with description("a Workflow backlog path"):
                 equal(["Defect", "Small change", "Refactor", "Feature"])
             )
 
-        with it("should keep user type and theme for capture_backlog instead of inferred ones"):
-            created = self.workflow.capture_backlog(
+        with it("should keep user type and theme for backlog instead of inferred ones"):
+            created = self.workflow.backlog(
                 focus="Sketch is stuffing prior grill answers",
                 body="details",
                 workspace=str(self.tmp),
@@ -248,7 +245,7 @@ with description("a Workflow backlog path"):
 
 with description("a Workflow backlog helper"):
     with context("_backlog_task_prompt"):
-        with it("should include focus, capture_backlog instruction, and body inline"):
+        with it("should include focus, a second backlog call with body, and the body inline"):
             w = Workflow()
             prompt = w._backlog_task_prompt(
                 focus="Fix the scanner bug",
@@ -260,7 +257,7 @@ with description("a Workflow backlog helper"):
                 transcript_path="",
             )
             expect(prompt).to(contain("Fix the scanner bug"))
-            expect(prompt).to(contain("capture_backlog"))
+            expect(prompt).to(contain("Then call backlog with:"))
             expect(prompt).to(contain("## Turn Context"))
 
         with it("should include transcript path and analysis instruction when given"):

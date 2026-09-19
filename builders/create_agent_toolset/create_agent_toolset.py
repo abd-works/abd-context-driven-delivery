@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from practices.base.base_context_tool import BaseContextTool
-from harness.agent_tools.agent_tools import agent_instructions
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
+from harness.guidance.guidance import PracticeGuidance
 
 
-class CreateAgentToolset(BaseContextTool):
+@agent_toolset
+class CreateAgentToolset(PracticeGuidance):
     """# Instructions"""
 
     default_workspace_folder: str = "."
@@ -19,7 +20,12 @@ class CreateAgentToolset(BaseContextTool):
         session: str | None = None,
         workspace: str | None = None,
     ) -> None:
-        super().__init__(format=format, path=path, session=session, workspace=workspace)
+        super().__init__(
+            format=format,
+            path=path,
+            session=session,
+            workspace=workspace,
+        )
 
     @agent_instructions
     def guidance(recipe) -> str:

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from practices.workspace_bind import init_practice_guidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from installation.harness_files.harness_files import Skill
@@ -31,8 +30,7 @@ class LernDomainDriven(PracticeGuidance):
         session: str | None = None,
         workspace: str | None = None,
     ) -> None:
-        init_practice_guidance(
-            self,
+        super().__init__(
             format="typescript",
             path=path,
             session=session,
@@ -64,23 +62,7 @@ class LernDomainDriven(PracticeGuidance):
     @Skill
     @agent_instructions
     def instructions(self) -> str:
-        """1. Follow session_guidance (handled by the inherited body below). Fill
-        templates/ for the feature package this slice touches ({epicSlug}/ with
-        nested domain module + process boot + one lowdb JSON file per aggregate)
-        if not already present.
-        2. ask-cross-aggregate-sync — if this slice involves more than one
-        aggregate, AskQuestion (event-based orchestration vs direct repository
-        calls by the client) and record the answer in grill-answers.md before
-        writing stories. Single-aggregate slices record single-aggregate.
-        3. Call guidance on the Stories companion - *_spec.{tier} for tier in
-        (server, client, e2e), applying the testing-architecture rules below.
-        Specs first — small RED cycles before production. Pass that companion
-        to this action as a separate tools run; the action already knows what
-        to do for every tool, including the Stories CE companion.
-        4. Cite the ux screen/navigation artifact for this slice under Sources /
-        context on the touched view files - this tool does not call ux itself.
-        5. Run validate. If it fails, fix and validate again until it passes.
-        When this LERN work is done, call guidance on the Stories companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        """Implementation fidelity for a domain-module-organized LERN stack (lowdb JSON files / Express / React / Node, TypeScript everywhere) on an already-designed vertical slice — story map, module boundaries, and screens all exist before this tool runs."""
         return super().instructions
 
     @property
