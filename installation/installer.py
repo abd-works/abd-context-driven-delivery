@@ -5,6 +5,7 @@ import ast
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -73,17 +74,20 @@ class Installer:
         repo: str | Path | None = None,
     ) -> None:
         self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[1]
-        state_file = Path(__file__).resolve().parent / self._STATE_NAME
-        if ide is None and path is None and state_file.is_file():
-            data = json.loads(state_file.read_text(encoding="utf-8"))
+        shared_state = Path(__file__).resolve().parent / self._STATE_NAME
+        if ide is None and path is None and shared_state.is_file():
+            data = json.loads(shared_state.read_text(encoding="utf-8"))
             ide = data.get("ide")
             stored = data.get("path")
-            if stored and Path(stored).exists():
+            if stored and Path(stored).exists() and not self._is_ephemeral_install_path(stored):
                 path = stored
         self.ide = ide or "Cursor"
         default_path = self.repo / self._DEFAULT_PATHS.get(self.ide, ".cursor")
         self.path = Path(path) if path is not None else default_path
-        self._state_file = state_file
+        if self._is_ephemeral_install_path(self.path):
+            self._state_file = self.path / self._STATE_NAME
+        else:
+            self._state_file = shared_state
         from installation.hooks.hooks import HookInstallation
         from installation.mcp.mcp_server import McpInstallation
 
@@ -91,6 +95,15 @@ class Installer:
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
         self._installed_paths: list[str] = []
+
+    @classmethod
+    def _is_ephemeral_install_path(cls, path: Path | str) -> bool:
+        try:
+            resolved = Path(path).resolve()
+            temp = Path(tempfile.gettempdir()).resolve()
+            return resolved == temp or temp in resolved.parents
+        except OSError:
+            return False
 
     @classmethod
     def import_path_entries(cls, repo: Path | str) -> list[str]:
