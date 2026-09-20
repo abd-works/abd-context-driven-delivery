@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from installation.installer import Destination, Installation
+from installation.destination import Destination, Installation
 
 
 class Hooks:
@@ -103,6 +103,10 @@ class HookInstallation(Installation):
     def write(self, tool: Any) -> None:
         if not tool.install_to_hook:
             return
+        if tool.name == "inject_rules":
+            host = type(getattr(tool, "toolset", None)).__name__
+            if host in {"RulesCollection", "FidelityGuidance"}:
+                return
         event = getattr(tool.callable, "_hook_name", None)
         if not event:
             return
@@ -170,9 +174,9 @@ class HookInstallation(Installation):
 
     def standup(self) -> Any:
         from installation.hooks.hook_server import HookServer
-        from installation.hooks.prompt_echo.prompt_echo import install_ide_toast_extension
+        from installation.hooks.prompt_echo.prompt_echo import PromptEcho
 
-        install_ide_toast_extension()
+        PromptEcho().install_ide_toast_extension()
         self.server = HookServer.standup(self.path / "hook-handlers.json", repo=self.repo)
         return self.server
 

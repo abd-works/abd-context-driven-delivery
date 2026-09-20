@@ -43,9 +43,7 @@ class SamplePracticeGuidance(PracticeGuidance):
 
 
 class SamplePracticeWithFidelities(SamplePracticeGuidance):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.load_fidelities_from_markdown()
+    pass
 
 
 class SampleMcpPractice(SamplePracticeWithFidelities):

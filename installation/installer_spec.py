@@ -46,7 +46,6 @@ CAR_INSPECT = ".cursor/skills/actions/car-inspect/SKILL.md"
 
 def stage_invoke_commands(repo_root: Path) -> None:
     car = AgentToolSet.instantiate(CAR)
-    car.load_fidelities_from_markdown()
     car_story = AgentToolSet.instantiate("actions.examples.car_story.car_story:CarStory")
     Installer("Cursor", path=repo_root / ".cursor").install([car, car_story])
 

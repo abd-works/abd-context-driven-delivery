@@ -9,7 +9,7 @@ import sys
 import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Mapping, cast, get_args, get_origin
+from typing import Any, Callable, Mapping, cast, get_args, get_origin, get_type_hints
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
@@ -68,10 +68,11 @@ _EXEC_LOCAL_MISSING = object()
 
 
 class ToolSetCollection:
-    """Named child toolsets, iterated in entry order."""
+    """Named child toolsets, iterated in entry order. The collection itself may have tools."""
 
-    def __init__(self, entries: dict[str, Any] | None = None) -> None:
+    def __init__(self, entries: dict[str, Any] | None = None, parent: Any = None) -> None:
         self.entries: dict[str, Any] = dict(entries or {})
+        self.parent = parent
 
     def __iter__(self):
         return iter(self.entries.values())
@@ -82,15 +83,153 @@ class ToolSetCollection:
     def __bool__(self) -> bool:
         return bool(self.entries)
 
+    @property
+    def name(self) -> str:
+        return AgentToolSet._slugify_class_name(type(self).__name__)
+
+    @property
+    def slug(self) -> str:
+        return self.name.replace("_", "-")
+
+    @property
+    def registration_name(self) -> str:
+        typ = type(self)
+        return f"{typ.__module__}:{typ.__name__}"
+
+    def bind(self, instance: Any, name: str | None = None) -> None:
+        from harness.markdown.markdown import bind_collection
+
+        bind_collection(self, instance, name)
+
+    @property
+    def tools(self) -> dict[str, AgentTool]:
+        """Tools declared on this collection, not on its entries."""
+        found: dict[str, AgentTool] = {}
+        for name, member in AgentToolSet._marked_members(type(self)):
+            found[name] = AgentTool(
+                name=name,
+                callable=AgentToolSet._bound_callable(self, name, member),
+                toolset=self,
+            )
+        return found
+
+
+_COLLECT_MARKS = (
+    "_skill",
+    "_command",
+    "_rules",
+    "_mcp",
+    "_hook",
+    "_echo",
+    "_is_agent_instructions",
+    "_is_agent_tool",
+    "_is_toolset_collection",
+    "_skill_name",
+    "_command_name",
+    "_hook_name",
+)
+
+
+class Collect:
+    """Aggregate the same-named property across a collection's children."""
+
+    def __new__(cls, fn: Callable[..., Any]) -> property:
+        return cls._property(fn)
+
+    @classmethod
+    def _property(cls, fn: Callable[..., Any]) -> property:
+        name = fn.__name__
+        return_type = cls._return_type(fn)
+
+        def getter(self: Any) -> Any:
+            return cls.of(self, name, return_type)
+
+        getter.__doc__ = fn.__doc__
+        getter.__name__ = name
+        getter.__annotations__ = dict(getattr(fn, "__annotations__", {}))
+        cls._copy_marks(fn, getter)
+        return property(getter)
+
+    @classmethod
+    def of(cls, collection: Any, name: str, return_type: Any) -> Any:
+        if cls._joins_text(return_type):
+            return cls._join(collection, name)
+        return cls._wrap(collection, name, return_type)
+
+    @classmethod
+    def _joins_text(cls, return_type: Any) -> bool:
+        return return_type is str or return_type in (inspect.Signature.empty, None)
+
+    @classmethod
+    def _value(cls, child: Any, name: str) -> Any:
+        value = getattr(child, name, None)
+        if callable(value):
+            return value()
+        return value
+
+    @classmethod
+    def _join(cls, collection: Any, name: str) -> str:
+        return "\n\n".join(
+            value for child in collection if (value := cls._value(child, name))
+        )
+
+    @classmethod
+    def _wrap(cls, collection: Any, name: str, return_type: Any) -> Any:
+        entries = getattr(collection, "entries", None)
+        if not isinstance(entries, dict):
+            entries = {
+                getattr(child, "name", str(index)): child
+                for index, child in enumerate(collection)
+            }
+        bundled = {key: cls._value(child, name) for key, child in entries.items()}
+        try:
+            return return_type(bundled, parent=collection)
+        except TypeError:
+            return return_type(bundled)
+
+    @classmethod
+    def _return_type(cls, fn: Callable[..., Any]) -> Any:
+        try:
+            hints = get_type_hints(fn, globalns=getattr(fn, "__globals__", None))
+        except (NameError, TypeError, AttributeError):
+            hints = dict(getattr(fn, "__annotations__", {}) or {})
+        return hints.get("return", str)
+
+    @classmethod
+    def _copy_marks(cls, src: Any, dest: Any) -> None:
+        for attr in _COLLECT_MARKS:
+            if hasattr(src, attr):
+                setattr(dest, attr, getattr(src, attr))
+
+
+collect = Collect
+
 
 class AgentToolSet:
     """Injected by @agent_toolset — operations and @agent_instructions on one toolset."""
 
     _mode: str = "instructions"
     domain_slug: str | None = None
+    _MEMBER_MARKS = ("_is_agent_tool", "_is_agent_instructions", "_hook")
+    _COLLECTION_SKIP = frozenset({"tools", "operations", "instructions", "mode"})
 
-    def __init__(self) -> None:
-        self.nested_toolsets = ToolSetCollection()
+    @property
+    def toolset_collections(self) -> list[Any]:
+        found: list[Any] = []
+        for name, member in self._annotated_members(type(self)):
+            if name in self._COLLECTION_SKIP:
+                continue
+            if not getattr(member, "_is_toolset_collection", False):
+                continue
+            value = getattr(self, name, None)
+            if value is None or value is self:
+                continue
+            found.append(value)
+        return found
+
+    def child_toolsets(self):
+        for collection in self.toolset_collections:
+            yield from collection
 
     @property
     def name(self) -> str:
@@ -133,6 +272,7 @@ class AgentToolSet:
         merged.update(self._discover_instruction_members())
         for name, tool in self._discover_hook_members().items():
             merged.setdefault(name, tool)
+        merged.update(self._discover_collection_tools())
         return merged
 
     def tools_for(self, destination: str) -> list[AgentTool]:
@@ -153,36 +293,147 @@ class AgentToolSet:
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
         discovered: dict[str, AgentOperation] = {}
-        for name, member in inspect.getmembers(self.__class__, predicate=inspect.isfunction):
+        for name, member in self._marked_members(type(self)):
             if getattr(member, "_is_agent_tool", False):
                 discovered[name] = AgentOperation(
                     name=name,
-                    callable=getattr(self, name),
+                    callable=self._bound_callable(self, name, member),
                     toolset=self,
                 )
         return discovered
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
         discovered: dict[str, AgentInstructions] = {}
-        for name, member in inspect.getmembers(type(self), predicate=inspect.isfunction):
+        for name, member in self._marked_members(type(self)):
             if getattr(member, "_is_agent_instructions", False):
                 discovered[name] = AgentInstructions(
                     name=name,
-                    callable=getattr(self, name),
+                    callable=self._bound_callable(self, name, member),
                     toolset=self,
                 )
         return discovered
 
     def _discover_hook_members(self) -> dict[str, AgentTool]:
         discovered: dict[str, AgentTool] = {}
-        for name, member in inspect.getmembers(type(self), predicate=inspect.isfunction):
+        for name, member in self._marked_members(type(self)):
             if getattr(member, "_hook", False):
                 discovered[name] = AgentTool(
                     name=name,
-                    callable=getattr(self, name),
+                    callable=self._bound_callable(self, name, member),
                     toolset=self,
                 )
         return discovered
+
+    def _discover_collection_tools(self) -> dict[str, AgentTool]:
+        found: dict[str, AgentTool] = {}
+        for _key, collection in self._own_tool_collections():
+            found.update(self._rehost_collection_tools(collection, prefix=""))
+        for key, collection in self._nested_tool_collections():
+            found.update(self._rehost_collection_tools(collection, prefix=f"{key}."))
+        return found
+
+    def _own_tool_collections(self) -> list[tuple[str, Any]]:
+        return self._collections_on(self)
+
+    def _nested_tool_collections(self) -> list[tuple[str, Any]]:
+        items: list[tuple[str, Any]] = []
+        for collection in self.toolset_collections:
+            for key, child in getattr(collection, "entries", {}).items():
+                items.extend(
+                    (key, bag) for _name, bag in self._collections_on(child)
+                )
+        return items
+
+    def _rehost_collection_tools(self, collection: Any, prefix: str) -> dict[str, AgentTool]:
+        found: dict[str, AgentTool] = {}
+        for name, tool in (getattr(collection, "tools", None) or {}).items():
+            found[f"{prefix}{name}"] = AgentTool(
+                name=name,
+                callable=getattr(tool, "callable", None) or getattr(collection, name),
+                toolset=self,
+            )
+        return found
+
+    def _collections_on(self, instance: Any) -> list[tuple[str, Any]]:
+        if instance is None:
+            return []
+        found: list[tuple[str, Any]] = []
+        owner = type(instance)
+        for name, member in self._annotated_members(owner):
+            if name in self._COLLECTION_SKIP:
+                continue
+            annotation = self._return_type(member, owner)
+            marked = any(getattr(member, mark, False) for mark in (*self._MEMBER_MARKS, "_rules"))
+            if not self._is_collection_type(annotation) and not marked:
+                continue
+            value = getattr(instance, name, None)
+            if value is instance or not self._is_tool_collection(value):
+                continue
+            found.append((name, value))
+        return found
+
+    @classmethod
+    def _return_type(cls, member: Any, owner: type) -> Any:
+        annot = getattr(member, "__annotations__", {}).get("return")
+        if isinstance(annot, type):
+            return annot
+        if isinstance(annot, str):
+            resolved = getattr(member, "__globals__", {}).get(annot)
+            module = sys.modules.get(owner.__module__)
+            if resolved is None and module is not None:
+                resolved = getattr(module, annot, None)
+            return resolved
+        return annot
+
+    @classmethod
+    def _is_collection_type(cls, annotation: Any) -> bool:
+        if not isinstance(annotation, type):
+            return False
+        if issubclass(annotation, ToolSetCollection):
+            return True
+        return bool(
+            getattr(annotation, "_is_toolset_collection", False)
+            or getattr(annotation, "_is_agent_toolset", False)
+        )
+
+    @classmethod
+    def _is_tool_collection(cls, value: Any) -> bool:
+        if value is None:
+            return False
+        if isinstance(value, ToolSetCollection):
+            return True
+        return bool(
+            getattr(type(value), "_is_toolset_collection", False)
+            or getattr(type(value), "_is_agent_toolset", False)
+        )
+
+    @classmethod
+    def _annotated_members(cls, owner: type) -> list[tuple[str, Any]]:
+        seen: set[str] = set()
+        members: list[tuple[str, Any]] = []
+        for name, member in inspect.getmembers(owner, predicate=inspect.isfunction):
+            seen.add(name)
+            members.append((name, member))
+        for name, member in inspect.getmembers(owner, predicate=inspect.isdatadescriptor):
+            getter = getattr(member, "fget", None)
+            if getter is not None and name not in seen:
+                members.append((name, getter))
+        return members
+
+    @classmethod
+    def _marked_members(cls, owner: type) -> list[tuple[str, Any]]:
+        return [
+            (name, member)
+            for name, member in cls._annotated_members(owner)
+            if any(getattr(member, mark, False) for mark in cls._MEMBER_MARKS)
+        ]
+
+    @classmethod
+    def _bound_callable(cls, instance: Any, name: str, member: Any) -> Any:
+        attr = getattr(type(instance), name, None)
+        if inspect.isfunction(member) and attr is member:
+            return getattr(instance, name)
+        return member
 
     @classmethod
     def _slugify_class_name(cls, name: str) -> str:
@@ -191,19 +442,19 @@ class AgentToolSet:
 
     @classmethod
     def _marked_tool_names(cls, toolset_cls: type) -> set[str]:
-        names: set[str] = set()
-        for name, member in inspect.getmembers(toolset_cls, predicate=inspect.isfunction):
-            if getattr(member, "_is_agent_tool", False):
-                names.add(name)
-        return names
+        return {
+            name
+            for name, member in cls._marked_members(toolset_cls)
+            if getattr(member, "_is_agent_tool", False)
+        }
 
     @classmethod
     def _instruction_names(cls, toolset_cls: type) -> frozenset[str]:
-        names: set[str] = set()
-        for name, member in inspect.getmembers(toolset_cls, predicate=inspect.isfunction):
-            if getattr(member, "_is_agent_instructions", False):
-                names.add(name)
-        return frozenset(names)
+        return frozenset(
+            name
+            for name, member in cls._marked_members(toolset_cls)
+            if getattr(member, "_is_agent_instructions", False)
+        )
 
 
     class _InstructionBodyValidator(ast.NodeVisitor):
@@ -1390,6 +1641,39 @@ def agent_toolset(cls: type) -> type:
     merged._is_agent_toolset = True  # type: ignore[attr-defined]
     AgentToolSet._validate_toolset(merged)
     return merged
+
+
+def toolset_collection(target: Any) -> Any:
+    """Mark a class as a ToolSetCollection, or a property as one of this toolset's collections."""
+    if not inspect.isclass(target):
+        fn = getattr(target, "fget", target)
+        fn._is_toolset_collection = True
+        return target
+    if "_is_toolset_collection" in target.__dict__:
+        return target
+    if getattr(target, "_is_toolset_collection", False):
+        return target
+    if issubclass(target, ToolSetCollection):
+        raise TypeError(
+            f"{target.__name__} must use @toolset_collection — do not subclass ToolSetCollection directly"
+        )
+    merged = type(
+        target.__name__,
+        (target, ToolSetCollection),
+        {
+            attribute_name: attribute_value
+            for attribute_name, attribute_value in vars(target).items()
+            if attribute_name not in ("__dict__", "__weakref__")
+        },
+    )
+    merged.__doc__ = target.__doc__
+    merged.__module__ = target.__module__
+    merged.__qualname__ = target.__qualname__
+    merged._is_toolset_collection = True  # type: ignore[attr-defined]
+    return merged
+
+
+toolsetCollection = toolset_collection
 
 
 def tools(*calls: Callable[..., Any]) -> list[Any]:

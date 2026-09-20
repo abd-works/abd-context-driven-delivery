@@ -155,6 +155,26 @@ with description("hook dispatch"):
             )
             expect(out.get("additional_context") or "").to(contain("ddd tactics rules"))
 
+        with it("should keep a repeated additional_context body once"):
+            @agent_toolset
+            class _Once:
+                @Hook("postToolUse")
+                def on_first(self, payload: dict) -> dict:
+                    return {"additional_context": "keep-operations-small-focused"}
+
+            @agent_toolset
+            class _Again:
+                @Hook("postToolUse")
+                def on_second(self, payload: dict) -> dict:
+                    return {"additional_context": "keep-operations-small-focused"}
+
+            out = _dispatch(
+                {"hook_event_name": "postToolUse", "tool_name": "Write"},
+                toolsets=[_Once, _Again],
+            )
+            text = out.get("additional_context") or ""
+            expect(text.count("keep-operations-small-focused")).to(equal(1))
+
     with context("that invokes a handler whose tool has a docstring"):
 
         with it("should put that description on the hook event as agent_message"):

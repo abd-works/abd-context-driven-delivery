@@ -1,7 +1,6 @@
 """Assemble agent instructions from @markdown properties."""
 from __future__ import annotations
 
-import fnmatch
 import inspect
 import json
 import re
@@ -10,28 +9,26 @@ from typing import Any
 
 from actions.scan.rule import RulesCollection
 from harness.agent_tools.agent_tools import (
-    ToolSetCollection,
+    collect,
     agent_instructions,
     agent_tool,
     agent_toolset,
-    tools,
+    toolsetCollection,
 )
 from installation.harness_files.harness_files import rules, skill
-from installation.hooks.prompt_echo.prompt_echo import echo, inject_rules_toast, show_ide_toast
-from installation.hooks.hooks import Hook
+from installation.hooks.prompt_echo.prompt_echo import echo
 from installation.mcp.mcp_server import mcp
 from harness.markdown import (
     Markdown,
-    bind_yaml,
+    MarkdownCollection,
     class_file_directory,
     fidelity_blocks,
-    fidelity_clean_engineering,
-    fidelity_format,
-    fidelity_stage,
     markdown,
+    markdownCollection,
 )
 
 
+@agent_toolset
 class Guidance:
     default_format: str = ""
     name: str | None = None
@@ -46,73 +43,17 @@ class Guidance:
     def slug(self) -> str:
         if self.domain_slug:
             return str(self.domain_slug).replace("_", "-")
-        return type(self).__name__.replace("_", "-").lower()
-
-    @property
-    def rules_label(self) -> str:
-        """Practice or context name for an inject toast — shared rules, not a fidelity."""
-        return self._words_from_slug(self.slug)
-
-    def _words_from_slug(self, slug: str) -> str:
-        return str(slug).replace("_", "-").replace("-", " ").strip()
-
-    def _hook_tool_path(self, payload: dict[str, Any]) -> str:
-        raw = payload.get("tool_input") or {}
-        if isinstance(raw, str):
-            try:
-                raw = json.loads(raw)
-            except json.JSONDecodeError:
-                return ""
-        if not isinstance(raw, dict):
-            return ""
-        return str(
-            raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or ""
-        )
-
-    def _path_matches_globs(self, path: str, globs: str) -> bool:
-        if not path or not globs:
-            return False
-        posix = Path(path).as_posix()
-        name = Path(path).name
-        for pattern in (part.strip().strip("\"'") for part in globs.split(",")):
-            if not pattern:
-                continue
-            if Path(posix).match(pattern) or fnmatch.fnmatch(posix, pattern) or fnmatch.fnmatch(
-                name, pattern.split("/")[-1]
-            ):
-                return True
-        return False
+        return re.sub(r"(?<!^)(?=[A-Z])", "-", type(self).__name__).lower()
 
     @property
     def install_folder(self) -> Path:
         return class_file_directory(self)
 
-    @property
+    @markdownCollection("shared rules")
     @rules
-    def rules_markdown(self) -> str:
-        return Markdown.from_label(self, "shared rules").extract().strip()
-
-    @markdown("shared rules")
+    @agent_tool
     def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
-
-    @echo
-    @Hook("preToolUse")
-    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Inject the rules markdown from this Guidance when the agent writes a file that matches the rule file glob pattern."""
-        data = payload or {}
-        tool_name = str(data.get("tool_name") or "")
-        if tool_name not in {"Write", "StrReplace", "EditNotebook"}:
-            return {}
-        path = self._hook_tool_path(data)
-        globs = getattr(getattr(self.rules, "appliesTo", None), "globs", "") or ""
-        if not path or not self._path_matches_globs(path, globs):
-            return {}
-        body = (self.rules_markdown or "").strip()
-        if not body:
-            return {}
-        show_ide_toast(inject_rules_toast("edit injecting rules:", [self.rules_label]))
-        return {"permission": "allow", "additional_context": body, "agent_message": body}
 
     def __init__(
         self,
@@ -125,7 +66,6 @@ class Guidance:
         self.path = path
         self.session = session
         self.workspace = workspace
-        self.nested_toolsets = ToolSetCollection()
 
     @markdown
     def overview(self) -> str:
@@ -151,41 +91,17 @@ class Guidance:
             for part in (
                 (self.overview or "").strip(),
                 (self.guidance or "").strip(),
-                (self.rules_markdown or "").strip(),
+                (self.rules.markdown or "").strip(),
                 (self.templates or "").strip(),
             )
             if part
         )
 
-    @property
-    def tools(self) -> dict[str, Any]:
-        from harness.agent_tools.agent_tools import AgentTool
 
-        found: dict[str, Any] = {}
-        cls = type(self)
-        seen: set[str] = set()
-        members: list[tuple[str, Any]] = []
-        for name, member in inspect.getmembers(cls, predicate=inspect.isfunction):
-            seen.add(name)
-            members.append((name, member))
-        for name, member in inspect.getmembers(cls, predicate=inspect.isdatadescriptor):
-            getter = getattr(member, "fget", None)
-            if getter is not None and name not in seen:
-                members.append((name, getter))
-        for name, member in members:
-            is_instructions = getattr(member, "_is_agent_instructions", False)
-            is_tool = getattr(member, "_is_agent_tool", False)
-            is_rules = getattr(member, "_rules", False)
-            is_hook = getattr(member, "_hook", False)
-            if not (is_instructions or is_tool or is_rules or is_hook):
-                continue
-            found[name] = AgentTool(name=name, callable=member, toolset=self)
-        return found
-
-
-class GuidanceCollection(ToolSetCollection, Guidance):
-    def __init__(self, entries: dict[str, Guidance] | None = None) -> None:
-        ToolSetCollection.__init__(self, entries)
+@toolsetCollection
+class GuidanceCollection(MarkdownCollection, Guidance):
+    def __init__(self, entries: dict[str, Guidance] | None = None, parent: Any = None) -> None:
+        MarkdownCollection.__init__(self, entries, parent=parent)
         Guidance.__init__(self)
         self.current: Guidance | None = None
         self.stage: dict[str, Guidance] = {
@@ -194,28 +110,28 @@ class GuidanceCollection(ToolSetCollection, Guidance):
             if (key := getattr(child, "stage", "") or "")
         }
 
-    def __getitem__(self, name: str) -> Guidance:
-        return self.entries[name]
+    @classmethod
+    def child(cls, name: str, body: str = "") -> FidelityGuidance:
+        return FidelityGuidance(name=name)
 
-    @property
-    def overview(self) -> str:  # type: ignore[override]
-        return "\n\n".join(child.overview for child in self if child.overview)
+    @collect
+    def overview(self) -> str: ...
 
-    @property
-    def guidance(self) -> str:  # type: ignore[override]
-        return "\n\n".join(child.guidance for child in self if child.guidance)
+    @collect
+    def guidance(self) -> str: ...
 
-    @property
-    def rules(self) -> RulesCollection:  # type: ignore[override]
-        return RulesCollection({key: child.rules for key, child in self.entries.items()})
+    @collect
+    def rules(self) -> RulesCollection: ...
 
-    @property
-    def templates(self) -> str:  # type: ignore[override]
-        return "\n\n".join(child.templates for child in self if child.templates)
+    @collect
+    def templates(self) -> str: ...
 
-    @property
-    def instructions(self) -> str:
-        return "\n\n".join(child.instructions for child in self if child.instructions)
+    @collect
+    @echo
+    @mcp
+    @skill
+    @agent_instructions
+    def instructions(self) -> str: ...
 
 
 class PracticeGuidance(Guidance):
@@ -229,53 +145,15 @@ class PracticeGuidance(Guidance):
         super().__init__(format=format)
         self.default_workspace_folder = default_workspace_folder
         self._formats = dict(formats or {})
-        self.fidelities = GuidanceCollection()
-        self.nested_toolsets = self.fidelities
         from actions.scan.scan import Scan
 
         self.scanner = Scan.bound_to(self)
         self._attach_workspace()
-        self.load_fidelities_from_markdown()
         self._activate(fidelity=fidelity)
-
-    @echo
-    @Hook("preToolUse")
-    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Inject this practice's shared rules and any fidelity whose globs match the file."""
-        data = payload or {}
-        tool_name = str(data.get("tool_name") or "")
-        if tool_name not in {"Write", "StrReplace", "EditNotebook"}:
-            return {}
-        path = self._hook_tool_path(data)
-        if not path:
-            return {}
-        parts: list[str] = []
-        labels: list[str] = []
-        for guidance in (self, *self.fidelities.entries.values()):
-            globs = getattr(getattr(guidance.rules, "appliesTo", None), "globs", "") or ""
-            if not self._path_matches_globs(path, globs):
-                continue
-            body = (guidance.rules_markdown or "").strip()
-            if not body:
-                continue
-            parts.append(body)
-            labels.append(guidance.rules_label)
-        if not parts:
-            return {}
-        show_ide_toast(inject_rules_toast("chat edit", labels))
-        return {
-            "permission": "allow",
-            "additional_context": "\n\n".join(parts),
-            "agent_message": "\n\n".join(parts),
-        }
-
-    @property
-    def domain_slug(self) -> str:
-        return re.sub(r"(?<!^)(?=[A-Z])", "_", type(self).__name__).lower()
 
     @property
     def context_index_key(self) -> str:
-        return self.domain_slug
+        return class_file_directory(self).name
 
     @property
     def supported_formats(self) -> frozenset:
@@ -287,6 +165,8 @@ class PracticeGuidance(Guidance):
         if owner is not None and owner is not self:
             return frozenset(owner.formats)
         return frozenset()
+    
+    ## workspace integration to move
 
     def _activate(self, fidelity: str | None = None, stage: str | None = None) -> None:
         if stage is not None:
@@ -341,25 +221,11 @@ class PracticeGuidance(Guidance):
             return None
         return workspace.current_work_session
 
+
     @property
     def clean_engineering_companion(self) -> FidelityGuidance | None:
         companion = getattr(self.fidelities.current, "clean_engineering", None)
         return companion if isinstance(companion, FidelityGuidance) else None
-
-    def _bind_clean_engineering_companions(self, companions: dict[str, str]) -> None:
-        if not companions or self.domain_slug == "clean_engineering":
-            return
-        from practices.clean_engineering.clean_engineering import CleanEngineering
-
-        ce = CleanEngineering()
-        if self.format in {"python", "typescript", "java", "javascript"}:
-            ce.format = self.format
-        for name, ce_fidelity in companions.items():
-            child = self.fidelities.entries.get(name)
-            companion = ce.fidelities.entries.get(ce_fidelity)
-            if isinstance(child, FidelityGuidance):
-                child.clean_engineering = companion if isinstance(companion, FidelityGuidance) else None
-
 
     @property
     @agent_instructions
@@ -369,9 +235,6 @@ class PracticeGuidance(Guidance):
         extra = companion.instructions if companion is not None else ""
         return "\n\n".join(part for part in (text, extra) if part)
 
-    @markdown
-    def examples(self) -> str:
-        """Examples folder content — not part of instructions."""
 
     @property
     @echo
@@ -382,54 +245,24 @@ class PracticeGuidance(Guidance):
         """overview"""
         parts = [super().instructions]
         if self.fidelities.entries:
-            for fidelity in self.fidelities.entries.values():
-                tools(fidelity.instructions)
+            parts.append(self.fidelities.instructions)
         return "\n\n".join(part for part in parts if part)
 
-    @mcp
-    @agent_tool
-    def fidelityInstructions(self, fidelity: str) -> str:
-        """Assembled instructions for one fidelity."""
-        return self.fidelities[fidelity].instructions
 
-    def attach_fidelities(self, entries: dict[str, Guidance]) -> None:
-        self.fidelities = GuidanceCollection(entries)
-        self.nested_toolsets = self.fidelities
-
-    def load_fidelities_from_markdown(self) -> None:
-        md_path = self.domain_markdown_path()
-        if not md_path.is_file():
-            return
-        text = md_path.read_text(encoding="utf-8")
-        entries: dict[str, Guidance] = {}
-        companions: dict[str, str] = {}
-        for name, body in fidelity_blocks(text):
-            child = FidelityGuidance(name=name, practice_guidance=self)
-            bind_yaml(child, body)
-            if not child.default_format:
-                child.default_format = (
-                    fidelity_format(body) or self.format or self.default_format or ""
-                )
-            if not child.stage:
-                child.stage = fidelity_stage(body)
-            child.format = child.default_format
-            entries[name] = child
-            ce_name = (
-                child.clean_engineering
-                if isinstance(child.clean_engineering, str)
-                else ""
-            )
-            if not ce_name:
-                ce_name = fidelity_clean_engineering(body)
-            if ce_name:
-                companions[name] = ce_name
-        self.attach_fidelities(entries)
-        self._bind_clean_engineering_companions(companions)
+    @toolsetCollection
+    @markdownCollection
+    def fidelities(self) -> GuidanceCollection:
+        """Fidelity children from the Fidelities section."""
 
     def domain_markdown_path(self) -> Path:
         class_dir = class_file_directory(self)
-        slug = self.domain_slug or class_dir.name
-        return class_dir / f"{slug}.md"
+        return class_dir / f"{class_dir.name}.md"
+
+    @markdown
+    def examples(self) -> str:
+        """Examples folder content — not part of instructions."""
+
+    ## format integration 
 
 
     @property
@@ -548,24 +381,58 @@ class FidelityGuidance(Guidance):
         self.name = name
         self.stage = stage
         self.default_format = default_format
-        self.practice_guidance = practice_guidance
-        self.clean_engineering = clean_engineering
+        self.parent = practice_guidance
         self.fidelity = name
-        if practice_guidance is not None and self.domain_slug is None:
-            self.domain_slug = practice_guidance.domain_slug
+        if clean_engineering is not None:
+            self.clean_engineering = clean_engineering
+
+    @property
+    def practice_guidance(self) -> PracticeGuidance | None:
+        parent = getattr(self, "parent", None)
+        if parent is None:
+            return None
+        owner = getattr(parent, "parent", None)
+        return owner if owner is not None else parent
+
+    @property
+    def context_index_key(self) -> str:
+        practice = self.practice_guidance
+        if practice is not None:
+            return practice.context_index_key
+        return class_file_directory(self).name
+
+    @property
+    def default_format(self) -> str:
+        return getattr(self, "_default_format", "")
+
+    @default_format.setter
+    def default_format(self, value: str) -> None:
+        self._default_format = value or ""
+        if self._default_format:
+            self.format = self._default_format
+
+    @property
+    def clean_engineering(self) -> FidelityGuidance | None:
+        stored = getattr(self, "_clean_engineering", None)
+        if isinstance(stored, FidelityGuidance):
+            return stored
+        if not isinstance(stored, str) or not stored:
+            return None
+        from practices.clean_engineering.clean_engineering import CleanEngineering
+
+        companion = CleanEngineering().fidelities[stored]
+        self._clean_engineering = companion
+        return companion
+
+    @clean_engineering.setter
+    def clean_engineering(self, value: Any) -> None:
+        self._clean_engineering = value
 
     @property
     def slug(self) -> str:
         parent = self.practice_guidance.slug if self.practice_guidance is not None else super().slug
         leaf = (self.name or "").replace("_", "-")
         return f"{parent}-{leaf}" if leaf else parent
-
-    @property
-    def rules_label(self) -> str:
-        practice = self.practice_guidance
-        head = self._words_from_slug(practice.slug if practice is not None else self.slug)
-        fidelity = str(self.fidelity or self.name or "").replace("_", " ").strip()
-        return f"{head} {fidelity}".strip()
 
     @property
     def install_folder(self) -> Path:
@@ -582,12 +449,9 @@ class FidelityGuidance(Guidance):
     def guidance(self) -> str:
         """Fidelity guidance section."""
 
-    @property
+    @markdownCollection
     @rules
-    def rules_markdown(self) -> str:
-        return Markdown.from_label(self, "rules").extract().strip()
-
-    @markdown("rules")
+    @agent_tool
     def rules(self) -> RulesCollection:
         """Fidelity rules section."""
 
@@ -606,7 +470,7 @@ class FidelityGuidance(Guidance):
             parent = (
                 (practice.overview or "").strip(),
                 Markdown.from_label(practice, "guidance").extract().strip(),
-                (practice.rules_markdown or "").strip(),
+                (practice.rules.markdown or "").strip(),
             )
             companion = self.clean_engineering
             companion_text = (
@@ -629,7 +493,7 @@ class FidelityGuidance(Guidance):
                 *parent,
                 (self.overview or "").strip(),
                 (self.guidance or "").strip(),
-                (self.rules_markdown or "").strip(),
+                (self.rules.markdown or "").strip(),
                 templates,
                 companion_text,
             )

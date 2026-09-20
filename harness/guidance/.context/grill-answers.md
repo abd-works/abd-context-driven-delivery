@@ -18,3 +18,15 @@ BDD and DDD keep no format folders; their fidelities’ Clean Engineering compan
 
 `PracticeGuidance.render` is the shared loop: source format `parse` → model → target format `render`. Empty format folders and a companion → that companion’s practice `render`. Format-specific extras (Stories Miro upload, CE drawio positioning) stay in the format folder.
 
+### Fidelities is an annotated GuidanceCollection
+
+PracticeGuidance.fidelities is @markdownCollection("fidelities") -> GuidanceCollection. MarkdownCollection.coerce locates the Fidelities section (harness/markdown/markdown.py AssetLocator / fidelity_blocks) and GuidanceCollection.from_markdown builds FidelityGuidance children. The collection binds itself to the practice (`bind`) so later reads are that same bag; attach_fidelities is gone.
+
+### Selected lives on the collection
+
+GuidanceCollection already has current (and stage). Collection `instructions` is the enrolled tool; `fidelities[name].instructions` is one child. The collection is the nested toolset — PracticeGuidance.nested_toolsets is that same object.
+
+### Practice instructions vs fidelities.markdown
+
+User wants practice.instructions = own instructions + fidelities.markdown. Today PracticeGuidance.instructions returns only super().instructions and calls tools(fidelity.instructions) per child — that is expand deferral of each assembled FidelityGuidance.instructions, not a join of the Fidelities extract. Read guidance.py:272-278 vs FidelityGuidance.instructions at 480.
+

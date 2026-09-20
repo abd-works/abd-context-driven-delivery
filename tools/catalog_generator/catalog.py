@@ -20,7 +20,7 @@ class Catalog(HTML):
         return catalog
 
     def _add_guidance(self, guidance: Any) -> None:
-        slug = getattr(guidance, "domain_slug", None) or type(guidance).__name__
+        slug = getattr(guidance, "context_index_key", None) or type(guidance).__name__
         for label in ("context", "guidance", "examples"):
             try:
                 md = Markdown.from_label(guidance, "overview" if label == "context" else label)

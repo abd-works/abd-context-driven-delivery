@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
-from installation.hooks.prompt_echo.prompt_echo import echo, inject_rules_toast, show_ide_toast
+from installation.hooks.prompt_echo.prompt_echo import PromptEcho, echo
 from installation.hooks.hooks import Hook
 from installation.mcp.mcp_server import mcp
 from workspace.workspace import SessionModel, Turn, Workspace
@@ -22,16 +22,6 @@ def listed(action) -> list:
         return []
     raw = getattr(action, "_tool_items", None) or []
     return AgentToolSet.instantiate_all(raw)
-
-
-def _guidance_rules_label(guidance) -> str:
-    label = getattr(guidance, "rules_label", None)
-    if isinstance(label, str) and label.strip():
-        return label.strip()
-    slug = getattr(guidance, "slug", None) or type(guidance).__name__
-    stepped = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", str(slug))
-    words = re.sub(r"[-_]+", " ", stepped).strip().lower()
-    return f"{words}"
 
 
 @agent_toolset
@@ -184,15 +174,15 @@ class GuidanceAction:
         parts = []
         labels = []
         for guidance in self.listed():
-            text = (getattr(guidance, "rules_markdown", None) or "").strip()
+            text = (getattr(getattr(guidance, "rules", None), "markdown", None) or "").strip()
             if text:
                 parts.append(text)
-                labels.append(_guidance_rules_label(guidance))
+                labels.append(type(guidance).__name__)
         if not parts:
             return {}
         body = "\n\n".join(parts)
         action = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", type(self).__name__).lower()
-        show_ide_toast(inject_rules_toast(action, labels))
+        PromptEcho().show_ide_toast(PromptEcho().inject_rules_toast(action, labels))
         return {"additional_context": body}
 
     def _payload_is_this_action(self, payload: dict[str, Any]) -> bool:

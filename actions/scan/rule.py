@@ -1,11 +1,16 @@
 """Honor each rule against the current context."""
 from __future__ import annotations
 
+import fnmatch
+import json
 import re
 from pathlib import Path
 from typing import Any, Iterator
 
-from harness.agent_tools.agent_tools import instructions, tools
+from harness.agent_tools.agent_tools import collect, agent_toolset, instructions, tools
+from harness.markdown.markdown import MarkdownCollection
+from installation.hooks.hooks import Hook
+from installation.hooks.prompt_echo.prompt_echo import echo
 
 from .scanner import Scanner
 
@@ -93,21 +98,167 @@ class Rule:
         return cls(slug=slug, body=body, fidelity=fidelity)
 
 
-class RulesCollection:
+@agent_toolset
+class RulesCollection(MarkdownCollection):
     def __init__(
         self,
         entries: dict[str, Rule | RulesCollection] | None = None,
         applies_to: AppliesTo | None = None,
+        parent: Any = None,
     ) -> None:
-        self.entries: dict[str, Rule | RulesCollection] = dict(entries or {})
-        self.applies_to = applies_to if applies_to is not None else AppliesTo()
+        super().__init__(dict(entries or {}), parent=parent)
+        applies = applies_to if applies_to is not None else AppliesTo()
+        self.always_apply = applies.always_apply
+        self.glob = applies.globs
 
     @property
     def appliesTo(self) -> AppliesTo:
-        return self.applies_to
+        return AppliesTo(always_apply=self.always_apply, globs=self.glob)
+
+    _INJECT_TOOLS = frozenset({"Write", "StrReplace", "EditNotebook", "Read"})
+
+    @echo
+    @Hook("postToolUse")
+    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        from installation.hooks.prompt_echo.prompt_echo import PromptEcho
+
+        data = payload or {}
+        if str(data.get("tool_name") or "") not in self._INJECT_TOOLS:
+            return {}
+        path = self._payload_path(data)
+        bags = self._bags_for_path(path) if path else []
+        parts, labels = self._bodies(bags)
+        if not parts:
+            return {}
+        body = "\n\n".join(parts)
+        PromptEcho().show_ide_toast(PromptEcho().inject_rules_toast("chat edit", labels))
+        return {"additional_context": body}
+
+    def _payload_path(self, data: dict[str, Any]) -> str:
+        raw = data.get("tool_input") or {}
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except json.JSONDecodeError:
+                return ""
+        if not isinstance(raw, dict):
+            return ""
+        return str(raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or "")
+
+    def _owner_practice(self) -> Any:
+        node = self.parent
+        if node is None:
+            return None
+        return self._practice_on(node) or self._practice_on(getattr(node, "parent", None))
+
+    def _practice_on(self, node: Any) -> Any:
+        if node is None:
+            return None
+        practice = getattr(node, "practice_guidance", None)
+        if practice is not None:
+            return practice
+        if getattr(node, "fidelities", None) is not None:
+            return node
+        return None
+
+    def _rule_bags(self) -> list[RulesCollection]:
+        practice = self._owner_practice()
+        if practice is None:
+            return [self]
+        bags: list[RulesCollection] = []
+        shared = getattr(practice, "rules", None)
+        if isinstance(shared, RulesCollection):
+            bags.append(shared)
+        fidelities = getattr(practice, "fidelities", None)
+        if fidelities is None:
+            return bags or [self]
+        for child in fidelities:
+            child_rules = getattr(child, "rules", None)
+            if isinstance(child_rules, RulesCollection):
+                bags.append(child_rules)
+        return bags
+
+    def _bags_for_path(self, path: str) -> list[RulesCollection]:
+        bags = self._rule_bags()
+        matched = [bag for bag in bags if bag.matches(path)]
+        if not matched:
+            return []
+        return self._unique_bags(self._matched_and_shared(bags, matched) + self._upstream_of(matched))
+
+    def _matched_and_shared(
+        self, bags: list[RulesCollection], matched: list[RulesCollection]
+    ) -> list[RulesCollection]:
+        return [bag for bag in bags if bag in matched or not str(bag.glob or "").strip()]
+
+    def _unique_bags(self, bags: list[RulesCollection]) -> list[RulesCollection]:
+        included: list[RulesCollection] = []
+        seen: set[int] = set()
+        for bag in bags:
+            key = id(bag)
+            if key in seen:
+                continue
+            seen.add(key)
+            included.append(bag)
+        return included
+
+    def _upstream_of(self, matched: list[RulesCollection]) -> list[RulesCollection]:
+        practice = self._owner_practice()
+        fidelities = getattr(practice, "fidelities", None) if practice is not None else None
+        names = list(getattr(fidelities, "entries", {}) or {})
+        if not names:
+            return []
+        indexes = []
+        for bag in matched:
+            name = getattr(bag.parent, "name", None) or getattr(bag.parent, "fidelity", None)
+            if name in getattr(fidelities, "entries", {}):
+                indexes.append(names.index(name))
+        if not indexes:
+            return []
+        last = max(indexes)
+        return [fidelities[name].rules for name in names[:last]]
+
+    def _bodies(self, bags: list[RulesCollection]) -> tuple[list[str], list[str]]:
+        parts: list[str] = []
+        labels: list[str] = []
+        for bag in bags:
+            body = (bag.markdown or "").strip()
+            if not body:
+                continue
+            parts.append(body)
+            parent = bag.parent
+            if parent is None:
+                labels.append(type(bag).__name__)
+            else:
+                labels.append(getattr(parent, "name", None) or type(parent).__name__)
+        return parts, labels
+
+    def matches(self, path: str) -> bool:
+        if not path or not self.glob:
+            return False
+        posix = Path(path).as_posix()
+        name = Path(path).name
+        for pattern in (part.strip().strip("\"'") for part in self.glob.split(",")):
+            if self._pattern_matches(posix, name, pattern):
+                return True
+        return False
+
+    def _pattern_matches(self, posix: str, name: str, pattern: str) -> bool:
+        if not pattern:
+            return False
+        if Path(posix).match(pattern) or fnmatch.fnmatch(posix, pattern):
+            return True
+        leaf = pattern.rsplit("/", 1)[-1]
+        if leaf in {"", "*", "**"}:
+            return False
+        return fnmatch.fnmatch(name, leaf)
 
     @classmethod
-    def from_markdown(cls, text: str, fidelity: str | None = None) -> RulesCollection:
+    def from_markdown(
+        cls,
+        text: str,
+        fidelity: str | None = None,
+        parent: Any = None,
+    ) -> RulesCollection:
         applies_to = AppliesTo.from_markdown(text)
         entries: dict[str, Rule | RulesCollection] = {}
         for raw in AppliesTo.strip_fence(text).splitlines():
@@ -116,7 +267,9 @@ class RulesCollection:
                 continue
             rule = Rule.from_bullet(stripped, fidelity=fidelity)
             entries[rule.slug] = rule
-        return cls(entries, applies_to=applies_to)
+        collection = cls(entries, applies_to=applies_to, parent=parent)
+        collection.markdown = text
+        return collection
 
     def __iter__(self) -> Iterator[Rule]:
         for value in self.entries.values():
@@ -137,9 +290,8 @@ class RulesCollection:
     def format_rules(self) -> str:
         return self.formatted()
 
-    def validate(self) -> str:
-        parts = [child.validate() for child in self.entries.values()]
-        return "\n\n".join(part for part in parts if part)
+    @collect
+    def validate(self) -> str: ...
 
     def scan(self, paths: Any) -> Any:
         return None

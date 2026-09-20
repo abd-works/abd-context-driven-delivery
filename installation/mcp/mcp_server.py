@@ -22,7 +22,7 @@ from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from installation.installer import Destination, Installation
+from installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
@@ -444,8 +444,7 @@ class McpServer:
             for toolset in loaded:
                 try:
                     self._enroll_toolset(toolset)
-                    nested = getattr(toolset, "nested_toolsets", None) or ()
-                    for child in nested:
+                    for child in toolset.child_toolsets():
                         self._enroll_toolset(child)
                 except Exception as error:
                     self.skip(toolset.registration_name, error)

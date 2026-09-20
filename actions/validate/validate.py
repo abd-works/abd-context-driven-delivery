@@ -23,7 +23,7 @@ class Validate(GuidanceAction):
                 return rule.validate()
             if isinstance(item, str):
                 return item
-            return item.rules.validate()
+            return item.rules.validate
 
         parts = [part for part in self.run(guidance, on, action="validate") if part]
         report = "Validation report for artifacts under {session.path}/."

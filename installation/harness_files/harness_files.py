@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from installation.installer import Destination, Installation
+from installation.destination import Destination, Installation
 
 
 class Skill(Destination):
@@ -152,6 +152,9 @@ class MarkdownInstallation(Installation):
         if isinstance(result, str) and result.strip():
             return result.strip()
         if kind == "rules":
+            markdown = getattr(result, "markdown", None)
+            if isinstance(markdown, str) and markdown.strip():
+                return markdown.strip()
             format_rules = getattr(result, "format_rules", None)
             if callable(format_rules):
                 return str(format_rules()).strip()
@@ -169,13 +172,14 @@ class MarkdownInstallation(Installation):
         return f"{name} — {summary}" if summary else name
 
     def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:
-        member = getattr(type(toolset), "fidelityInstructions", None)
         entries = getattr(getattr(toolset, "fidelities", None), "entries", None) or {}
         parts: list[str] = []
         for _name, child in entries.items():
+            member = getattr(type(child), "instructions", None)
+            getter = getattr(member, "fget", member)
             invoke = (
                 f"Use MCP tool: `{getattr(child, 'slug', '')}()`"
-                if member is not None and getattr(member, "_mcp", False)
+                if getattr(getter, "_mcp", False)
                 else ""
             )
             parts.append(

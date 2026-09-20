@@ -102,7 +102,7 @@ with description("GuidanceAction"):
         notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
         expect(notice).to(contain("generate"))
         expect(notice).to(contain("rules :"))
-        expect(notice).to(contain("sample tool"))
+        expect(notice).to(contain("SampleGuidance"))
 
     with it("should skip inject_rules for document"):
         from document.document import Document

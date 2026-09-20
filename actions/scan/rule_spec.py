@@ -30,6 +30,61 @@ with description("a shared rules section containing scanner bullets") as self:
             expect(self.guidance.rules.appliesTo.always_apply).to(equal(False))
             expect(self.guidance.rules.appliesTo.globs).to(contain("**/*sample*"))
 
+        with it("should bind globs from the yaml fence onto glob"):
+            expect(self.guidance.rules.glob).to(contain("**/*sample*"))
+
+        with it("should match a path against glob"):
+            expect(self.guidance.rules.matches("pkg/foo_sample_bar.py")).to(equal(True))
+            expect(self.guidance.rules.matches("pkg/other.py")).to(equal(False))
+
+        with it("should not treat a trailing directory ** as every filename"):
+            from actions.scan.rule import AppliesTo, RulesCollection
+
+            bag = RulesCollection(
+                applies_to=AppliesTo(globs="**/*agent_spec*,**/.agent_bdd_sessions/**")
+            )
+            expect(bag.matches("actions/scan/rule.py")).to(equal(False))
+            expect(bag.matches("foo/bar_agent_spec.py")).to(equal(True))
+
+        with it("should not inject AgentBdd rules for a production python file"):
+            from practices.agent_bdd.agent_bdd import AgentBdd
+
+            result = AgentBdd().rules.inject_rules(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"path": "actions/scan/rule.py"},
+                }
+            )
+            expect(result).to(equal({}))
+
+        with it("should inject rules markdown when the written path matches"):
+            result = self.guidance.rules.inject_rules(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"path": "pkg/foo_sample_bar.py"},
+                }
+            )
+            expect(result.get("additional_context")).to(contain("sample rule one"))
+
+        with it("should inject nothing from a rules collection that has no parent"):
+            from actions.scan.rule import RulesCollection
+
+            result = RulesCollection().inject_rules(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"path": "actions/validate/validate.py"},
+                }
+            )
+            expect(result).to(equal({}))
+
+        with it("should list inject_rules on the collection tools"):
+            expect("inject_rules" in self.guidance.rules.tools).to(equal(True))
+
+        with it("should keep the guidance as parent and each rule's parent as the collection"):
+            expect(self.guidance.rules.parent).to(equal(self.guidance))
+            for rule in self.guidance.rules:
+                expect(rule.parent).to(equal(self.guidance.rules))
+
         with it("should expose slug, body, optional fidelity, and zero or one scanner on each rule"):
             rule = self.guidance.rules.entries["sample-rule-one"]
             expect(rule.slug).to(equal("sample-rule-one"))
@@ -47,5 +102,5 @@ with description("a shared rules section containing scanner bullets") as self:
 
     with context("with validate read on the rules collection"):
         with it("should return every child rule's validate instructions in one shot"):
-            text = self.guidance.rules.validate()
+            text = self.guidance.rules.validate
             expect(text).to(contain("sample-rule-one"))

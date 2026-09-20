@@ -1,6 +1,7 @@
 """Hook server — run enabled Cursor hooks and return one merged result."""
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -18,7 +19,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from installation.installer import Destination, Installation, Installer  # noqa: F401
+from installation.installer import Installer  # noqa: F401
 from installation.hooks.hooks import Hook
 
 logger = logging.getLogger(__name__)
@@ -127,7 +128,7 @@ class HookResult:
                 user_parts.append(item.user_message)
             if item.agent_message:
                 agent_parts.append(item.agent_message)
-            if item.additional_context:
+            if item.additional_context and item.additional_context not in context_parts:
                 context_parts.append(item.additional_context)
             if item.followup_message:
                 followup = item.followup_message
@@ -168,8 +169,21 @@ class HookHandler:
         return not bool(getattr(self.owner, "_hooks_disabled", False))
 
     def invoke(self, payload: HookPayload) -> HookResult:
-        raw = getattr(self.tool.toolset, self.operation)(payload.as_dict())
-        return HookResult.from_handler(raw).with_description(self.tool.docstring)
+        toolset = self.tool.toolset
+        operation = self._bound_operation(toolset)
+        raw = operation(payload.as_dict())
+        result = HookResult.from_handler(raw)
+        if result.additional_context or not raw:
+            return result
+        return result.with_description(self.tool.docstring)
+
+    def _bound_operation(self, toolset: Any) -> Any:
+        if self.operation == "inject_rules":
+            rules = getattr(toolset, "rules", None)
+            bound = getattr(rules, "inject_rules", None)
+            if bound is not None:
+                return bound
+        return getattr(toolset, self.operation, None) or self.tool.callable
 
 
 class HandlerCatalog:
@@ -198,7 +212,10 @@ class HandlerCatalog:
                 if self._skip is not None:
                     self._skip(_ref_label(item), error)
                 continue
-            self.toolsets.extend(loaded)
+            for instance in loaded:
+                if type(instance).__name__ in {"RulesCollection", "FidelityGuidance"}:
+                    continue
+                self.toolsets.append(instance)
 
     def _refs_from_file(self) -> list[str]:
         handlers_path = (self.repo_root or Path()) / ".cursor" / "hook-handlers.json"
@@ -208,11 +225,15 @@ class HandlerCatalog:
             payload = json.loads(handlers_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return []
-        return [
-            str(item["ref"])
-            for item in payload.get("handlers") or []
-            if item.get("ref")
-        ]
+        refs: list[str] = []
+        seen: set[str] = set()
+        for item in payload.get("handlers") or []:
+            ref = item.get("ref")
+            if not ref or ref in seen:
+                continue
+            seen.add(str(ref))
+            refs.append(str(ref))
+        return refs
 
     def _collect_refs(self) -> list[str]:
         from installation.installer import Installer
@@ -221,6 +242,7 @@ class HandlerCatalog:
 
     def for_event(self, event: CursorEvent) -> list[HookHandler]:
         handlers: list[HookHandler] = []
+        seen: set[tuple[str, str]] = set()
         repo_root = self.repo_root or Path()
         for toolset in self.toolsets:
             try:
@@ -232,6 +254,10 @@ class HandlerCatalog:
             for tool in tools:
                 if getattr(tool.callable, "_hook_name", None) != event.name:
                     continue
+                key = (type(toolset).__name__, tool.name)
+                if key in seen:
+                    continue
+                seen.add(key)
                 handlers.append(HookHandler(tool, event, repo_root))
         return handlers
 
@@ -333,7 +359,44 @@ class HookServer:
         except (json.JSONDecodeError, UnicodeDecodeError):
             print(json.dumps(HookResult().as_dict()))
             return
-        print(json.dumps(self.dispatch(payload).as_dict()))
+        result = self.dispatch(payload)
+        self._publish_context(result)
+        if payload.hook_event_name == "stop":
+            followup = self._consume_followup()
+            if followup:
+                result.followup_message = followup
+        print(json.dumps(result.as_dict()))
+
+    def _inject_path(self) -> Path:
+        return self._repo_root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
+
+    def _publish_context(self, result: HookResult) -> None:
+        body = (result.additional_context or "").strip()
+        if not body:
+            return
+        dest = self._inject_path()
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(f"---\nalwaysApply: true\n---\n\n{body}\n", encoding="utf-8")
+
+    def _consume_followup(self) -> str | None:
+        dest = self._inject_path()
+        if not dest.is_file():
+            return None
+        body = dest.read_text(encoding="utf-8")
+        if self._already_sent(dest, body):
+            return None
+        self._mark_sent(dest, body)
+        return "Injected rules for the edit you just made. Honor them on the next change.\n\n" + body
+
+    def _already_sent(self, dest: Path, body: str) -> bool:
+        stamp = dest.with_suffix(".sent")
+        return stamp.is_file() and stamp.read_text(encoding="utf-8").strip() == self._digest(body)
+
+    def _mark_sent(self, dest: Path, body: str) -> None:
+        dest.with_suffix(".sent").write_text(self._digest(body), encoding="utf-8")
+
+    def _digest(self, body: str) -> str:
+        return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
     def ping(self) -> str:
         return "pong"

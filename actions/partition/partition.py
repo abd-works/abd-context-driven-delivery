@@ -141,7 +141,7 @@ class Partition(GuidanceAction):
                 context,
                 mode,
                 out_root,
-                slug=item.domain_slug,
+                slug=getattr(item, "context_index_key", None),
                 scaffold=item.scaffold,
             )
 

@@ -181,11 +181,7 @@ class AssetLocator:
 
     def _locate(self) -> AssetLocation:
         module_dir = class_file_directory(self._instance)
-        domain_slug = (
-            getattr(self._instance, "domain_slug", None)
-            or getattr(self._instance, "toolset_name", None)
-            or module_dir.name
-        )
+        domain_slug = module_dir.name
         filter_value = _active_resource(self._instance, self._filter_key) if self._filter_key else None
         if self._label == "templates":
             active_format = filter_value or _active_resource(self._instance, "format")
@@ -371,11 +367,19 @@ def _to_snake(key: str) -> str:
 
 
 def _matching_attr(instance: Any, key: str) -> str | None:
+    folded = key.casefold()
+    snake = _to_snake(key).casefold()
     wanted = {
-        key.casefold(),
-        _to_snake(key).casefold(),
+        folded,
+        snake,
         key.replace(" ", "_").replace("-", "_").casefold(),
     }
+    if folded.endswith("s") and len(folded) > 1:
+        wanted.add(folded[:-1])
+        wanted.add(snake[:-1] if snake.endswith("s") else snake)
+    else:
+        wanted.add(f"{folded}s")
+        wanted.add(f"{snake}s")
     for name in dir(instance):
         if name.startswith("_"):
             continue
@@ -403,12 +407,140 @@ def _assign_yaml_value(instance: Any, attr: str, value: Any) -> None:
     setattr(instance, stored, value)
 
 
-def bind_yaml(instance: Any, text: str) -> None:
-    for key, value in yaml_fields(text).items():
+def _yaml_string(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        return ",".join(f"{k}={_yaml_string(v)}" for k, v in value.items())
+    return str(value)
+
+
+def _is_bindable(current: Any) -> bool:
+    return current is not None and not isinstance(
+        current, (str, int, float, bool, list, tuple, bytes, dict)
+    )
+
+
+def _merge_yaml_map(instance: Any, leftovers: dict[str, str]) -> None:
+    if not leftovers:
+        return
+    current = getattr(instance, "yaml", None)
+    if isinstance(current, dict):
+        current.update(leftovers)
+
+
+def bind_yaml_mapping(instance: Any, fields: dict[str, Any]) -> None:
+    leftovers: dict[str, str] = {}
+    for key, value in fields.items():
         attr = _matching_attr(instance, key)
         if attr is None:
+            leftovers[_to_snake(key)] = _yaml_string(value)
+            continue
+        current = getattr(instance, attr, None)
+        if isinstance(value, dict) and _is_bindable(current):
+            bind_yaml_mapping(current, value)
             continue
         _assign_yaml_value(instance, attr, value)
+    _merge_yaml_map(instance, leftovers)
+
+
+def bind_yaml(instance: Any, text: str) -> None:
+    bind_yaml_mapping(instance, yaml_fields(text))
+
+
+def bind_collection(collection: Any, instance: Any, name: str | None = None) -> None:
+    collection.parent = instance
+    previous = vars(instance).get(name) if name else None
+    if name is not None:
+        vars(instance)[name] = collection
+    for attr, value in list(vars(instance).items()):
+        if value is collection:
+            continue
+        if value is previous or (name is None and type(value) is type(collection)):
+            vars(instance)[attr] = collection
+
+
+class MarkdownCollection:
+    """Listed or keyed extracts that keep the original markdown."""
+
+    def __init__(
+        self,
+        entries: dict[str, Any] | list[Any] | None = None,
+        parent: Any = None,
+    ) -> None:
+        self.entries: dict[str, Any] | list[Any] = entries if entries is not None else {}
+        self.parent = parent
+        self._markdown = ""
+        self.yaml: dict[str, str] = {}
+        for child in self:
+            child.parent = self
+
+    @property
+    def markdown(self) -> str:
+        return self._markdown
+
+    @markdown.setter
+    def markdown(self, text: str) -> None:
+        self._markdown = text
+
+    def __iter__(self):
+        values = self.entries.values() if isinstance(self.entries, dict) else self.entries
+        return iter(values)
+
+    def __getitem__(self, name: str) -> Any:
+        return self.entries[name]
+
+    @classmethod
+    def child(cls, name: str, body: str = "") -> Any:
+        return None
+
+    @classmethod
+    def from_markdown(cls, text: str, parent: Any = None) -> MarkdownCollection:
+        entries: dict[str, Any] = {}
+        for name, body in _section_child_blocks(text):
+            entry = cls.child(name, body)
+            if entry is None:
+                continue
+            bind_yaml(entry, body)
+            entries[name] = entry
+        collection = cls(entries, parent=parent)
+        collection.markdown = text
+        return collection
+
+    @classmethod
+    def coerce(cls, markdown: Markdown, return_type: Any, parent: Any = None) -> Any:
+        text = markdown.raw()
+        origin = get_origin(return_type) or return_type
+        if origin is list:
+            return cls.from_list(markdown)
+        builder = getattr(return_type, "from_markdown", None)
+        if callable(builder) and return_type is not cls:
+            try:
+                result = builder(text, parent=parent)
+            except TypeError:
+                result = builder(text)
+            cls.keep_extract(result, text)
+            return result
+        return cls.from_markdown(text, parent=parent)
+
+    @classmethod
+    def from_list(cls, markdown: Markdown) -> MarkdownCollection:
+        collection = cls.from_markdown(markdown.extract())
+        # EXTEND: one entry per section bullet or folder file
+        return collection
+
+    def bind(self, instance: Any, name: str | None = None) -> None:
+        bind_collection(self, instance, name)
+
+    @classmethod
+    def keep_extract(cls, result: Any, text: str) -> None:
+        if result is None:
+            return
+        result.markdown = text
 
 
 class Markdown:
@@ -452,7 +584,7 @@ class Markdown:
         from actions.scan.rule import RulesCollection
 
         if return_type is RulesCollection:
-            return RulesCollection.from_markdown(text)
+            return RulesCollection.from_markdown(text, parent=self._instance)
         from_markdown = getattr(return_type, "from_markdown", None)
         if callable(from_markdown):
             return from_markdown(text)
@@ -590,6 +722,13 @@ def _child_blocks(text: str, parent_heading: str) -> list[tuple[str, str]]:
         body = text[heading_end:end].lstrip("\r\n").strip()
         blocks.append((name, body))
     return blocks
+
+
+def _section_child_blocks(text: str) -> list[tuple[str, str]]:
+    headings = _markdown_headings(text)
+    if not headings:
+        return []
+    return _child_blocks(text, headings[0][3])
 
 
 def fidelity_blocks(text: str) -> list[tuple[str, str]]:
@@ -748,6 +887,7 @@ _MARK_ATTRS = (
     "_hook",
     "_is_agent_instructions",
     "_is_agent_tool",
+    "_is_toolset_collection",
     "_skill_name",
     "_command_name",
     "_hook_name",
@@ -796,6 +936,7 @@ def _markdown_property(fn: _F, prop_label: str) -> property:
 
     getter.__doc__ = fn.__doc__
     getter.__name__ = fn.__name__
+    getter.__annotations__ = dict(getattr(fn, "__annotations__", {}))
     _copy_marks(fn, getter)
     return property(getter)
 
@@ -811,3 +952,57 @@ def markdown(
         return _markdown_property(inner, str(prop_label))
 
     return decorator
+
+
+def _markdown_collection_property(fn: _F, prop_label: str) -> property:
+    def getter(self: Any) -> Any:
+        name = fn.__name__
+        bound = vars(self).get(name)
+        if bound is not None:
+            return bound
+        md = Markdown.from_label(self, prop_label)
+        hints = {}
+        try:
+            hints = get_type_hints(fn, globalns=getattr(fn, "__globals__", None))
+        except Exception:
+            annot = getattr(fn, "__annotations__", {}) or {}
+            hints = dict(annot)
+        return_type = hints.get("return", MarkdownCollection)
+        raw = md.raw()
+        bind_yaml(self, raw)
+        result = MarkdownCollection.coerce(md, return_type, parent=self)
+        bind_yaml(result, raw)
+        bind = getattr(result, "bind", None)
+        if callable(bind):
+            bind(self, name)
+        else:
+            vars(self)[name] = result
+        class_dir = class_file_directory(self)
+        for entry in result or ():
+            bind_scanner = getattr(entry, "bind_scanner", None)
+            if callable(bind_scanner):
+                bind_scanner(class_dir)
+        return result
+
+    getter.__doc__ = fn.__doc__
+    getter.__name__ = fn.__name__
+    getter.__annotations__ = dict(getattr(fn, "__annotations__", {}))
+    _copy_marks(fn, getter)
+    return property(getter)
+
+
+def markdown_collection(
+    fn: _F | str | None = None, *, label: str | None = None
+) -> property | Callable[[_F], property]:
+    """Locate like @markdown; MarkdownCollection.coerce owns list and map."""
+    if callable(fn):
+        return _markdown_collection_property(fn, fn.__name__)
+
+    def decorator(inner: _F) -> property:
+        prop_label = label or fn or inner.__name__
+        return _markdown_collection_property(inner, str(prop_label))
+
+    return decorator
+
+
+markdownCollection = markdown_collection

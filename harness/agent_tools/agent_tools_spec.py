@@ -19,13 +19,16 @@ from mamba import before, context, description, it
 from agent_tools.examples.car import Car
 from harness.agent_tools.agent_tools import (
     AgentInstructions,
+    collect,
     tools,
     instructions,
     AgentToolValidationError,
     AgentToolSet,
     InstallDestination,
+    ToolSetCollection,
     agent_instructions,
     agent_toolset,
+    toolsetCollection,
 )
 from installation.hooks.hooks import hook
 from installation.mcp.mcp_server import mcp
@@ -870,4 +873,150 @@ with description("AgentToolSet destination catalog"):
             loaded = AgentToolSet.load_toolsets([_DestinationFixture, _DestinationFixture()])
             expect(len(loaded)).to(equal(1))
             expect(type(loaded[0])).to(equal(_DestinationFixture))
+
+
+@agent_toolset
+class _BundleTools:
+    def ping(self) -> str:
+        return "pong"
+
+    ping._hook = True
+    ping._hook_name = "stop"
+
+
+@agent_toolset
+class _PropertyHost:
+    @property
+    @agent_instructions
+    def instructions(self) -> str:
+        return "hello"
+
+    @property
+    def bundle(self) -> _BundleTools:
+        return _BundleTools()
+
+
+@agent_toolset
+class _NestedChild:
+    @property
+    def bundle(self) -> _BundleTools:
+        return _BundleTools()
+
+
+@toolsetCollection
+class _MarkedBag:
+    pass
+
+
+@agent_toolset
+class _NestedParent:
+    def __init__(self) -> None:
+        self._kids = _MarkedBag()
+        self._kids.entries["code"] = _NestedChild()
+
+    @toolsetCollection
+    @property
+    def kids(self) -> _MarkedBag:
+        return self._kids
+
+
+@agent_toolset
+class _TwoCollections:
+    def __init__(self) -> None:
+        self._alpha = _MarkedBag()
+        self._alpha.entries["code"] = _NestedChild()
+        self._beta = _MarkedBag()
+        self._beta.entries["extra"] = _NestedChild()
+
+    @toolsetCollection
+    @property
+    def alpha(self) -> _MarkedBag:
+        return self._alpha
+
+    @toolsetCollection
+    @property
+    def beta(self) -> _MarkedBag:
+        return self._beta
+
+
+class _CollectChild:
+    def __init__(self, name: str, overview: str, bag: dict | None = None) -> None:
+        self.name = name
+        self.overview = overview
+        self.bag = bag or {}
+
+
+class _WrappedBag:
+    def __init__(self, entries: dict, parent=None) -> None:
+        self.entries = entries
+        self.parent = parent
+
+
+@toolsetCollection
+class _CollectBag:
+    @collect
+    @agent_instructions
+    def overview(self) -> str: ...
+
+    @collect
+    def bag(self) -> _WrappedBag: ...
+
+
+with description("a class annotated as a toolset collection"):
+    with it("should be a ToolSetCollection without subclassing it"):
+        bag = _MarkedBag()
+        bag.entries["code"] = object()
+        expect(isinstance(bag, ToolSetCollection)).to(equal(True))
+        expect(getattr(type(bag), "_is_toolset_collection", False)).to(equal(True))
+
+    with it("should bind the collection onto the instance"):
+        host = type("Host", (), {})()
+        host.bag = _MarkedBag()
+        replacement = _MarkedBag()
+        replacement.bind(host)
+        expect(host.bag is replacement).to(equal(True))
+        expect(replacement.parent).to(equal(host))
+
+
+with description("a toolset collection with collected child properties"):
+    with before.each:
+        self.bag = _CollectBag()
+        self.bag.entries["one"] = _CollectChild("one", "first overview", {"a": 1})
+        self.bag.entries["two"] = _CollectChild("two", "second overview", {"b": 2})
+
+    with it("should join each child's string property"):
+        expect(self.bag.overview).to(equal("first overview\n\nsecond overview"))
+
+    with it("should wrap each child's collection-typed property under the child key"):
+        expect(self.bag.bag.entries["one"]).to(equal({"a": 1}))
+        expect(self.bag.bag.parent).to(equal(self.bag))
+
+    with it("should keep other marks on the collected property"):
+        expect("overview" in self.bag.tools).to(equal(True))
+
+
+with description("a toolset that exposes annotated properties and child collections"):
+    with context("with an @agent_instructions property"):
+        with it("should enroll the property getter on tools"):
+            expect("instructions" in _PropertyHost().tools).to(equal(True))
+
+    with context("with a property whose type is a toolset"):
+        with it("should re-host the collection tools on the parent"):
+            host = _PropertyHost()
+            expect("ping" in host.tools).to(equal(True))
+            expect(host.tools["ping"].toolset).to(equal(host))
+
+    with context("with a nested toolset that holds a collection"):
+        with it("should prefix the nested collection tools with the nest key"):
+            expect("code.ping" in _NestedParent().tools).to(equal(True))
+
+    with context("with properties marked as toolset collections"):
+        with it("should treat each marked property as its own collection"):
+            host = _TwoCollections()
+            expect(host.toolset_collections).to(equal([host.alpha, host.beta]))
+            expect(list(host.child_toolsets())).to(
+                equal([host.alpha.entries["code"], host.beta.entries["extra"]])
+            )
+            expect("code.ping" in host.tools).to(equal(True))
+            expect("extra.ping" in host.tools).to(equal(True))
 

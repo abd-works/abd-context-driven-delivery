@@ -187,6 +187,17 @@ prose
             expect(self.instance.clean_engineering).to(equal("model"))
 
 
+with description("a markdown collection bound to a guidance"):
+    with context("with the member annotated as a markdown collection"):
+        with it("should return the same collection when the member is read again"):
+            guidance = SamplePracticeGuidance(format="markdown")
+            first = guidance.rules
+            first.glob = "bound-once"
+            expect(guidance.rules is first).to(equal(True))
+            expect(guidance.rules.glob).to(equal("bound-once"))
+            expect(guidance.rules.parent).to(equal(guidance))
+
+
 with description("a docstring used as install prose"):
     with context("that is one word naming a markdown section"):
         with it("should extract that section from the Guidance markdown"):

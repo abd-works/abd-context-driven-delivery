@@ -8,73 +8,10 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-InstallTracker = Callable[[Path], None]
-
-
-class Destination:
-    """Base annotation to define the installation destination of a tool. Subclasses annotate the member."""
-
-    flag = ""
-
-    def annotate(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        setattr(fn, self.flag, True)
-        name = getattr(self, "name", None)
-        if name is not None:
-            setattr(fn, f"{self.flag}_name", name)
-        return fn
-
-    def __call__(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        return self.annotate(fn)
-
-
-class Installation:
-    """``install(tool)`` writes the channel; subclass ``write``."""
-
-    channel = ""
-
-    def __init__(
-        self,
-        ide: str,
-        path: Path | str,
-        toolset_ref: str = "",
-        repo: Path | str | None = None,
-    ) -> None:
-        self.ide = ide
-        self.path = Path(path)
-        self.toolset_ref = toolset_ref
-        self.repo = Path(repo).resolve() if repo is not None else None
-        self._install_tracker: InstallTracker | None = None
-
-    def track_write(self, dest: Path) -> None:
-        if self._install_tracker is not None:
-            self._install_tracker(dest)
-
-    def folder_for(self, toolset: Any) -> Path:
-        """Repo-relative package folder the toolset already knows (practice dir, fidelity leaf)."""
-        raw = getattr(toolset, "install_folder", None)
-        if raw is None:
-            slug = getattr(toolset, "slug", None) or "toolset"
-            return Path(str(slug))
-        folder = Path(raw)
-        repo = self.repo
-        if repo is None:
-            return folder
-        try:
-            return folder.resolve().relative_to(repo)
-        except ValueError:
-            return Path(folder.name)
-
-    def install(self, tool: Any) -> None:
-        self.write(tool)
-
-    def write(self, tool: Any) -> None:
-        raise NotImplementedError
-
-
+from installation.destination import Installation
 from harness.agent_tools.agent_tools import (
     AgentToolSet,
     InstallDestination,
-    ToolSetCollection,
     agent_tool,
     agent_toolset,
 )
@@ -111,6 +48,9 @@ class Installer:
     _CATALOG_DIRS = ("harness", "tools", "practices", "actions")
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
+    _SKIP_ROOT_TOOLSET_NAMES = frozenset(
+        {"RulesCollection", "MarkdownCollection", "GuidanceCollection"}
+    )
     _ANNOTATIONS = frozenset(
         {
             "Skill",
@@ -150,7 +90,6 @@ class Installer:
         self.ensure_import_path(self.repo)
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
-        self.nested_toolsets = ToolSetCollection()
         self._installed_paths: list[str] = []
 
     @classmethod
@@ -196,6 +135,8 @@ class Installer:
                 continue
             for node in tree_ast.body:
                 if not isinstance(node, ast.ClassDef):
+                    continue
+                if node.name in self._SKIP_ROOT_TOOLSET_NAMES:
                     continue
                 if not self._class_is_installable(node):
                     continue
@@ -365,10 +306,7 @@ class Installer:
             except Exception:  # noqa: BLE001
                 continue
             self._install_toolset(toolset)
-            nested = getattr(toolset, "nested_toolsets", None)
-            if not nested:
-                continue
-            for child in nested:
+            for child in toolset.child_toolsets():
                 self._install_toolset(child)
         self._save_state()
         self._mcp.standup()
@@ -400,4 +338,4 @@ class Installer:
         return self.ensure_mcp_host(payload)
 
 
-__all__ = ["Destination", "Installation", "Installer"]
+__all__ = ["Installation", "Installer"]

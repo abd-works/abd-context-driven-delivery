@@ -51,59 +51,73 @@ with description("context guidance"):
             expect(guidance.instructions).to(contain(guidance.guidance.strip()))
 
     with context("with the rules collection and the rules markdown read"):
-        with it("should keep parsed rules on rules and the section text on rules_markdown"):
+        with it("should keep parsed rules on rules and the section text on rules.markdown"):
             guidance = SampleGuidance(format="markdown")
             expect("sample-rule-one" in guidance.rules.entries).to(equal(True))
-            expect(guidance.rules_markdown).to(contain("sample rule one"))
+            expect(guidance.rules.markdown).to(contain("sample rule one"))
 
         with it("should inject rules markdown when the agent writes a matching path"):
             guidance = SampleGuidance(format="markdown")
-            result = guidance.inject_rules(
+            result = guidance.rules.inject_rules(
                 {
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
                 }
             )
             expect(result.get("additional_context")).to(contain("sample rule one"))
-            expect(getattr(type(guidance).inject_rules, "_echo", False)).to(equal(True))
+            inject = type(guidance.rules).inject_rules
+            expect(getattr(inject, "_echo", False)).to(equal(True))
+            expect(getattr(inject, "_hook", False)).to(equal(True))
+            expect(getattr(inject, "_hook_name", "")).to(equal("postToolUse"))
             from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
 
             notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
             expect(notice).to(contain("chat edit"))
             expect(notice).to(contain("rules :"))
-            expect(notice).to(contain("sample tool"))
+            expect(notice).to(contain("SampleGuidance"))
 
         with it("should list inject_rules on tools so hook install can enroll it"):
             guidance = SampleGuidance(format="markdown")
             expect("inject_rules" in guidance.tools).to(equal(True))
             expect(guidance.tools["inject_rules"].install_to_hook).to(equal(True))
+            expect("inject_rules" in guidance.rules.tools).to(equal(True))
 
         with it("should inject the matching fidelity rules when a practice file is written"):
             from practices.clean_engineering.clean_engineering import CleanEngineering
             from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
 
-            result = CleanEngineering().inject_rules(
+            result = CleanEngineering().rules.inject_rules(
                 {
                     "tool_name": "Write",
                     "tool_input": {
-                        "path": "tools/catalog_generator/catalog_generator.py",
+                        "path": "actions/validate/validate.py",
                     },
                 }
             )
-            expect(result.get("additional_context") or "").to(contain("keep-operations-small-focused"))
+            text = result.get("additional_context") or ""
+            expect(text).to(contain("keep-operations-small-focused"))
+            expect(text).to(contain("hide-inner-details"))
             notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
             expect(notice).to(contain("chat edit"))
-            expect(notice).to(contain("clean engineering code"))
+            expect(notice).to(contain("code"))
+            expect(notice).to(contain("model"))
 
-        with it("should name a fidelity on the inject toast, not only the practice"):
-            practice = SamplePracticeWithFidelities()
-            sketch = practice.fidelities.entries["sketch"]
-            expect(sketch.rules_label).to(equal("sample tool sketch"))
-            expect(SampleGuidance().rules_label).to(equal("sample tool"))
+        with it("should inject after Read using the parented practice rules collection"):
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+
+            result = CleanEngineering().rules.inject_rules(
+                {
+                    "tool_name": "Read",
+                    "tool_input": {"path": "actions/validate/validate.py"},
+                }
+            )
+            expect(result.get("additional_context") or "").to(
+                contain("keep-operations-small-focused")
+            )
 
         with it("should not inject rules markdown when the agent writes a non-matching path"):
             guidance = SampleGuidance(format="markdown")
-            result = guidance.inject_rules(
+            result = guidance.rules.inject_rules(
                 {
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/other.py"},
@@ -131,7 +145,7 @@ with description("a context tool module with one domain markdown file named for 
             expect(text).to(contain("sample preamble"))
             expect(text).to(contain("known prose for guidance in sample tool"))
             expect(text).to(contain("active format template body for sample tool"))
-            expect(text).not_to(contain("sketch guidance body only"))
+            expect(text).to(contain("sketch guidance body only"))
 
     with context("with a templates folder beside the module"):
         with context("with template files such as slug-templates and slug-sketch inside the folder"):
@@ -230,12 +244,30 @@ with description("a guidance collection of context guidance children") as self:
         self.practice = SamplePracticeWithFidelities(format="markdown")
         self.collection = self.practice.fidelities
 
+    with context("with the class marked as a toolset collection"):
+        with it("should be a ToolSetCollection without subclassing it in the source"):
+            from harness.agent_tools.agent_tools import ToolSetCollection
+
+            expect(isinstance(self.collection, ToolSetCollection)).to(equal(True))
+            expect(getattr(type(self.collection), "_is_toolset_collection", False)).to(equal(True))
+            from harness.markdown import MarkdownCollection
+
+            expect(isinstance(self.collection, MarkdownCollection)).to(equal(True))
+
     with context("with the instructions property read on the collection"):
-        with it("should join each child instructions string in declaration order"):
+        with it("should list instructions on the collection tools"):
+            expect("instructions" in self.collection.tools).to(equal(True))
+            expect(self.collection.tools["instructions"].install_to_mcp).to(equal(True))
+
+        with it("should join each child instructions string"):
             text = self.collection.instructions
-            expect(text.index("sketch guidance")).to(equal(text.find("sketch guidance")))
             expect(text).to(contain("sketch guidance body only"))
             expect(text).to(contain("spec guidance body only"))
+
+        with it("should return one child's instructions from that child"):
+            text = self.collection["sketch"].instructions
+            expect(text).to(contain("sketch guidance body only"))
+            expect(text).not_to(contain("spec guidance body only"))
 
     with context("with the rules property read on the collection"):
         with it("should return a rules collection keyed by each child key"):
@@ -246,7 +278,7 @@ with description("a guidance collection of context guidance children") as self:
             expect("sketch-rule" in child_rules.entries).to(equal(True))
 
         with it("should return every child rule's validate instructions in one shot"):
-            expect(self.collection.rules.validate()).to(contain("sketch-rule"))
+            expect(self.collection.rules.validate).to(contain("sketch-rule"))
 
 
 with description("practice guidance with fidelities examples and templates beside the module") as self:
@@ -255,12 +287,12 @@ with description("practice guidance with fidelities examples and templates besid
 
     with context("with the instructions property read on practice guidance"):
         with it(
-            "should join this practice's own context, guidance, rules, and template without inlining fidelity bodies"
+            "should join this practice's own instructions with the fidelities collection instructions"
         ):
             text = self.guidance.instructions
             expect(text).to(contain("sample preamble"))
-            expect(text).not_to(contain("sketch guidance body only"))
-            expect(text).not_to(contain("spec guidance body only"))
+            expect(text).to(contain("sketch guidance body only"))
+            expect(text).to(contain("spec guidance body only"))
 
         with it("should not inline examples into instructions"):
             expect(self.guidance.instructions).not_to(contain("example file not inlined"))
@@ -276,8 +308,11 @@ with description("practice guidance with fidelities examples and templates besid
 
     with context("with fidelity set at invoke on practice guidance"):
         with it("should resolve active format from the named fidelity default format"):
-            self.guidance.fidelities.current = self.guidance.fidelities["sketch"]
-            self.guidance.format = self.guidance.fidelities["sketch"].default_format or self.guidance.format
+            first = self.guidance.fidelities
+            first.current = first["sketch"]
+            self.guidance.format = first["sketch"].default_format or self.guidance.format
+            expect(self.guidance.fidelities is first).to(equal(True))
+            expect(self.guidance.toolset_collections).to(equal([first]))
             expect(self.guidance.fidelities.current.fidelity).to(equal("sketch"))
 
 

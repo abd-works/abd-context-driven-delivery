@@ -13,41 +13,35 @@ from mamba import context, description, it
 from installation.installer import Installer  # noqa: F401 — load Destination before hooks
 from tempfile import TemporaryDirectory
 
-from installation.hooks.prompt_echo.prompt_echo import (
-    detect,
-    detect_echo,
-    echo,
-    handle,
-    inject_rules_toast,
-    show_ide_toast,
-    toast_notice,
-)
+from installation.hooks.prompt_echo.prompt_echo import PromptEcho, echo
 from agent_tools import agent_instructions, agent_tool, agent_toolset
 
+_prompt_echo = PromptEcho()
 
-def _echo(payload: dict) -> str:
-    return str(handle(payload).get("user_message") or "")
+
+def _echo(hook_payload: dict) -> str:
+    return str(_prompt_echo.handle(hook_payload).get("user_message") or "")
 
 
 with description("prompt echo detection"):
     with context("that receives an action MCP tool name"):
         with it("should name the action from sketch.sketch"):
-            kind, label = detect({"tool_name": "sketch.sketch", "tool_input": {}})
+            kind, label = _prompt_echo.detect({"tool_name": "sketch.sketch", "tool_input": {}})
             expect(kind).to(equal("action"))
             expect(label).to(equal("sketch"))
 
         with it("should name the action from generate_generate"):
-            kind, label = detect({"tool_name": "generate_generate", "tool_input": {}})
+            kind, label = _prompt_echo.detect({"tool_name": "generate_generate", "tool_input": {}})
             expect(kind).to(equal("action"))
             expect(label).to(equal("generate"))
 
         with it("should name create-rule from validate.createRule"):
-            kind, label = detect({"tool_name": "validate.createRule", "tool_input": {}})
+            kind, label = _prompt_echo.detect({"tool_name": "validate.createRule", "tool_input": {}})
             expect(label).to(equal("create-rule"))
 
     with context("that receives a CallMcpTool wrapper"):
         with it("should read the nested MCP tool name"):
-            kind, label = detect(
+            kind, label = _prompt_echo.detect(
                 {
                     "tool_name": "CallMcpTool",
                     "tool_input": {"toolName": "bdd-behavior", "arguments": {}},
@@ -58,23 +52,23 @@ with description("prompt echo detection"):
 
     with context("that receives a practice MCP tool name"):
         with it("should name the practice from bdd.instructions"):
-            kind, label = detect({"tool_name": "bdd.instructions", "tool_input": {}})
+            kind, label = _prompt_echo.detect({"tool_name": "bdd.instructions", "tool_input": {}})
             expect(kind).to(equal("practice"))
             expect(label).to(equal("bdd"))
 
     with context("that receives a fidelity MCP tool name"):
         with it("should name the fidelity from ddd-bounded-context"):
-            kind, label = detect({"tool_name": "ddd-bounded-context", "tool_input": {}})
+            kind, label = _prompt_echo.detect({"tool_name": "ddd-bounded-context", "tool_input": {}})
             expect(kind).to(equal("fidelity"))
             expect(label).to(equal("ddd-bounded-context"))
 
         with it("should name the fidelity from stories-story-map"):
-            kind, label = detect({"tool_name": "stories-story-map", "tool_input": {}})
+            kind, label = _prompt_echo.detect({"tool_name": "stories-story-map", "tool_input": {}})
             expect(label).to(equal("stories-story-map"))
 
     with context("that receives a skill path Read"):
         with it("should name the fidelity from a practice skill folder"):
-            kind, label = detect(
+            kind, label = _prompt_echo.detect(
                 {
                     "tool_name": "Read",
                     "tool_input": {
@@ -95,7 +89,7 @@ with description("prompt echo detection"):
 
     with context("that receives a practice rules file"):
         with it("should name the guideline from the rules path"):
-            kind, label = detect(
+            kind, label = _prompt_echo.detect(
                 {
                     "tool_name": "Read",
                     "tool_input": {
@@ -110,7 +104,7 @@ with description("prompt echo detection"):
 
     with context("that receives a legacy YAML action fence"):
         with it("should name the action from the command text"):
-            kind, label = detect(
+            kind, label = _prompt_echo.detect(
                 {
                     "tool_name": "Shell",
                     "tool_input": {"command": "echo action: scan"},
@@ -122,12 +116,29 @@ with description("prompt echo detection"):
     with context("that receives an ordinary source file Read"):
         with it("should not echo"):
             expect(
-                handle(
+                _prompt_echo.handle(
                     {
                         "tool_name": "Read",
                         "tool_input": {
                             "path": str(_REPO_ROOT / "harness" / "agent_tools" / "agent_tools.py")
                         },
+                    }
+                ).get("user_message")
+            ).to(equal(None))
+
+    with context("that receives a scan kit source file Read or edit"):
+        with it("should not toast the scan action"):
+            path = str(_REPO_ROOT / "actions" / "scan" / "rule.py")
+            expect(
+                _prompt_echo.handle({"tool_name": "Read", "tool_input": {"path": path}}).get(
+                    "user_message"
+                )
+            ).to(equal(None))
+            expect(
+                _prompt_echo.handle(
+                    {
+                        "tool_name": "StrReplace",
+                        "tool_input": {"path": path, "old_string": "a", "new_string": "b"},
                     }
                 ).get("user_message")
             ).to(equal(None))
@@ -140,12 +151,12 @@ with description("prompt echo detection"):
 
         with it("should put that echo in the IDE toast notice"):
             expect(
-                toast_notice(_echo({"tool_name": "scan.scan", "tool_input": {}}))["message"]
+                _prompt_echo.toast_notice(_echo({"tool_name": "scan.scan", "tool_input": {}}))["message"]
             ).to(contain("Action \u2192 scan"))
 
         with it("should write that echo to the workspace toast notice"):
             with TemporaryDirectory() as tmp:
-                dest = show_ide_toast(
+                dest = _prompt_echo.show_ide_toast(
                     _echo({"tool_name": "scan.scan", "tool_input": {}}),
                     repo=Path(tmp),
                 )
@@ -156,12 +167,12 @@ with description("prompt echo detection"):
         with it("should keep both inject toasts from the same burst"):
             with TemporaryDirectory() as tmp:
                 repo = Path(tmp)
-                show_ide_toast(
-                    inject_rules_toast("chat edit", ["agent bdd"]),
+                _prompt_echo.show_ide_toast(
+                    _prompt_echo.inject_rules_toast("chat edit", ["agent bdd"]),
                     repo=repo,
                 )
-                dest = show_ide_toast(
-                    inject_rules_toast(
+                dest = _prompt_echo.show_ide_toast(
+                    _prompt_echo.inject_rules_toast(
                         "chat edit",
                         ["clean engineering code", "ddd tactics"],
                     ),
@@ -219,7 +230,7 @@ class EchoPracticeChild(EchoPractice):
 with description("prompt echo @echo mark"):
     with context("that inherits @echo on begin"):
         with it("should toast the kit as an action when a recipe runs"):
-            kind, label = detect_echo(
+            kind, label = _prompt_echo.detect_echo(
                 {"tool_name": "echo-kit.enact", "tool_input": {}},
                 toolsets=[EchoKit()],
             )
@@ -228,7 +239,7 @@ with description("prompt echo @echo mark"):
 
         with it("should not toast open_workspace from the begin mark"):
             expect(
-                detect_echo(
+                _prompt_echo.detect_echo(
                     {"tool_name": "echo-kit.open_workspace", "tool_input": {}},
                     toolsets=[EchoKit()],
                 )
@@ -236,7 +247,7 @@ with description("prompt echo @echo mark"):
 
     with context("that marks a specific recipe"):
         with it("should toast that member when it is invoked"):
-            kind, label = detect_echo(
+            kind, label = _prompt_echo.detect_echo(
                 {"tool_name": "echo-kit.spotlight", "tool_input": {}},
                 toolsets=[EchoKit()],
             )
@@ -245,7 +256,7 @@ with description("prompt echo @echo mark"):
 
     with context("that marks practice instructions"):
         with it("should toast the practice from the instructions member"):
-            kind, label = detect_echo(
+            kind, label = _prompt_echo.detect_echo(
                 {"tool_name": "echo-practice.instructions", "tool_input": {}},
                 toolsets=[EchoPractice()],
             )
@@ -253,7 +264,7 @@ with description("prompt echo @echo mark"):
             expect(label).to(equal("echo-practice"))
 
     with context("that inherits @echo on practice instructions"):
-            kind, label = detect_echo(
+            kind, label = _prompt_echo.detect_echo(
                 {"tool_name": "echo-practice-child.instructions", "tool_input": {}},
                 toolsets=[EchoPracticeChild()],
             )
