@@ -1,21 +1,4 @@
-"""Scenario - phase-grouped Given -> When -> Then walk-through.
-
-Canonical shape derives from the reference testing architecture:
-
-  Scenario = { name, given: Clause[], interactions: [{ when: Clause[], then: Clause[] }] }
-
-`Scenario` is a `StoryNode` leaf: `child_collections` returns `[]` and all
-fields are copied through `update_self`, not reconciled as tree children.
-
-The first clause of each phase is unprefixed (`Given a User...`, `When they ...`,
-`Then it ...`). Continuation clauses carry their own `And ` / `But ` prefix in
-the text - that string is the same key used later by the tier-class runner
-to dispatch step implementations, so preserving it verbatim matters.
-
-Phase membership is IMPLICIT in which list a clause lives in - no more
-`kind` enum. Scanners that used to check `step.kind == WHEN` now iterate
-`scenario.when_clauses` (or filter via a helper property).
-"""
+"""Scenario - phase-grouped Given -> When -> Then walk-through."""
 
 from __future__ import annotations
 
@@ -23,13 +6,16 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional
 
+from .background import Background
+from .example import Example
 from .source_location import SourceLocation
+from .step import Step
 from .story_node import StoryNode
 from .update_report import ChildCollectionPair
 
 
 class Phase(str, Enum):
-    """Which phase a clause belongs to (implicit from its list; useful for reporting)."""
+    """Which phase a step belongs to (implicit from its list; useful for reporting)."""
 
     GIVEN = "given"
     WHEN = "when"
@@ -38,17 +24,7 @@ class Phase(str, Enum):
 
 @dataclass
 class Clause:
-    """One step string in a scenario.
-
-    - `text` - the verbatim step string (with any `And ` / `But ` continuation
-       prefix intact; empty first-of-phase clauses have no prefix)
-    - `is_continuation` - true when `text` starts with `And ` / `But `
-    - `phase` - cached membership (given/when/then) so `all_clauses` can be
-       walked without losing phase context
-    - `concepts` - bold-marked concept names (**X**) extracted from `text`
-    - `values` - italic-marked values (*v*) extracted from `text`
-    - `actor` - first bold concept treated as an actor (heuristic; empty if unclear)
-    """
+    """Legacy value type — use Step nodes in the scenario tree; kept for format channels."""
 
     text: str
     phase: Phase
@@ -61,35 +37,18 @@ class Clause:
 
 @dataclass
 class Interaction:
-    """A when-then block - one action, one observed set of outcomes.
-
-    A scenario usually has exactly one interaction; multi-interaction scenarios
-    model chains where a follow-up when only makes sense after the previous
-    then has been observed. Most rules treat multiple interactions as a smell
-    to flag for review.
-    """
+    """Legacy when-then grouping — reconstructed from Step nodes when needed."""
 
     when: List[Clause] = field(default_factory=list)
     then: List[Clause] = field(default_factory=list)
 
 
 class Scenario(StoryNode):
-    """A behaviour walk-through under a story - promoted to StoryNode leaf.
+    """Behaviour walk-through under a story.
 
-    `child_collections` returns `[]`; all fields are copied through
-    `update_self`. The reconciliation loop never recurses into scenario
-    children - scenarios are always value-copied, not reconciled.
-
-    Fields:
-    - `name` - the scenario title (verb-noun, outcome-oriented)
-    - `sequential_order` - position within the parent story (1-indexed)
-    - `story_name` - parent story name (empty if not resolvable)
-    - `given` - setup clauses
-    - `interactions` - one or more when-then blocks
-    - `is_outline` - true when this is a Scenario Outline backed by example rows
-    - `example_rows` - rows of the outline's examples table
-    - `background` - clauses applied before the scenario runs
-    - `evidence` - free-text lines tying the scenario back to sources
+    Tree children: Background, Step, Example.
+    Legacy ``given`` / ``interactions`` / ``background`` / ``example_rows`` remain
+    for markdown and code format channels until those backends render from the tree.
     """
 
     _semantic_type_name = "Scenario"
@@ -102,6 +61,10 @@ class Scenario(StoryNode):
     ) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
         self.story_name: str = story_name
+        self.backgrounds: List[Background] = []
+        self.steps: List[Step] = []
+        self.examples: List[Example] = []
+        # Legacy fields — synced with the tree via sync helpers.
         self.given: List[Clause] = []
         self.interactions: List[Interaction] = []
         self.is_outline: bool = False
@@ -110,11 +73,10 @@ class Scenario(StoryNode):
         self.evidence: List[str] = []
         self.source: Optional[SourceLocation] = None
 
-    def update_self(self, source: "Scenario") -> None:  # type: ignore[override]
+    def update_self(self, source: "Scenario") -> None:
         self.name = source.name
         self.sequential_order = source.sequential_order
         self.story_name = source.story_name
-        # Deep-copy lists so mutations to the source do not affect the target.
         self.given = list(source.given)
         self.interactions = [
             Interaction(when=list(i.when), then=list(i.then))
@@ -125,11 +87,101 @@ class Scenario(StoryNode):
         self.background = list(source.background)
         self.evidence = list(source.evidence)
         self.source = source.source
+        if not source.backgrounds and not source.steps and not source.examples:
+            self.sync_tree_from_legacy()
 
-    def child_collections(self, source: "Scenario") -> List[ChildCollectionPair]:  # type: ignore[override]
-        # WHY: Scenario is a leaf - clauses and interactions are value-copied
-        # through update_self, not reconciled as tree children.
-        return []
+    def create_child_background(self, source: Background) -> Background:
+        return Background(source.name, source.sequential_order)
+
+    def create_child_step(self, source: Step) -> Step:
+        return Step(
+            text=source.text,
+            phase=source.phase,
+            sequential_order=source.sequential_order,
+            is_continuation=source.is_continuation,
+            concepts=list(source.concepts),
+            values=list(source.values),
+            actor=source.actor,
+            source=source.source,
+            name=source.name,
+        )
+
+    def create_child_example(self, source: Example) -> Example:
+        return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
+
+    def child_collections(self, source: "Scenario") -> List[ChildCollectionPair]:
+        return [
+            ChildCollectionPair(
+                self_children=self.backgrounds,
+                source_children=source.backgrounds,
+                create_child=self.create_child_background,
+            ),
+            ChildCollectionPair(
+                self_children=self.steps,
+                source_children=source.steps,
+                create_child=self.create_child_step,
+            ),
+            ChildCollectionPair(
+                self_children=self.examples,
+                source_children=source.examples,
+                create_child=self.create_child_example,
+            ),
+        ]
+
+    def sync_tree_from_legacy(self) -> None:
+        """Build Background / Step / Example children from legacy clause and row fields."""
+        self.backgrounds = []
+        self.steps = []
+        self.examples = []
+
+        if self.background:
+            bg = Background("background", 1)
+            for index, clause in enumerate(self.background, start=1):
+                bg.steps.append(Step.from_clause(clause, index))
+            self.backgrounds = [bg]
+
+        order = 0
+        for clause in self.given:
+            order += 1
+            self.steps.append(Step.from_clause(clause, order))
+        for interaction in self.interactions:
+            for clause in interaction.when:
+                order += 1
+                self.steps.append(Step.from_clause(clause, order))
+            for clause in interaction.then:
+                order += 1
+                self.steps.append(Step.from_clause(clause, order))
+
+        for index, row in enumerate(self.example_rows, start=1):
+            label = str(row.get("example") or row.get("name") or f"example-{index}")
+            self.examples.append(Example(label, index, dict(row)))
+
+    def sync_legacy_from_tree(self) -> None:
+        """Rebuild legacy clause fields from tree children (for format renderers)."""
+        self.background = []
+        self.given = []
+        self.interactions = []
+        self.example_rows = []
+
+        if self.backgrounds:
+            self.background = [step.to_clause() for step in self.backgrounds[0].steps]
+
+        interaction: Interaction | None = None
+        for step in self.steps:
+            clause = step.to_clause()
+            if step.phase == Phase.GIVEN:
+                self.given.append(clause)
+            elif step.phase == Phase.WHEN:
+                interaction = Interaction()
+                self.interactions.append(interaction)
+                interaction.when.append(clause)
+            elif step.phase == Phase.THEN:
+                if interaction is None:
+                    interaction = Interaction()
+                    self.interactions.append(interaction)
+                interaction.then.append(clause)
+
+        self.example_rows = [dict(example.fields) for example in self.examples]
 
     def snapshot_fields(self) -> dict:
         return {
@@ -142,24 +194,18 @@ class Scenario(StoryNode):
             "evidence": list(self.evidence),
         }
 
-    # -- convenience properties ----------------------------------------------
-
     @property
     def when_clauses(self) -> List[Clause]:
-        return [c for i in self.interactions for c in i.when]
+        return [step.to_clause() for step in self.steps if step.phase == Phase.WHEN]
 
     @property
     def then_clauses(self) -> List[Clause]:
-        return [c for i in self.interactions for c in i.then]
+        return [step.to_clause() for step in self.steps if step.phase == Phase.THEN]
 
     @property
     def all_clauses(self) -> List[Clause]:
-        clauses: List[Clause] = list(self.given)
-        for interaction in self.interactions:
-            clauses.extend(interaction.when)
-            clauses.extend(interaction.then)
-        return clauses
+        return [step.to_clause() for step in self.steps]
 
     @property
     def clause_count(self) -> int:
-        return len(self.given) + sum(len(i.when) + len(i.then) for i in self.interactions)
+        return len(self.background) + len(self.steps)

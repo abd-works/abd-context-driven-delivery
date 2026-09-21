@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Iterable, List, Optional
+from typing import TYPE_CHECKING, Iterable, List, Optional
 
+from practices.clean_engineering.model.field_types import OperationField, PropertyField, Relationship
 from practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
+
+if TYPE_CHECKING:
+    from practices.clean_engineering.model.operation import Operation
+    from practices.clean_engineering.model.property import Property
+
+# Legacy aliases — format channels still emit field rows, not tree nodes.
+Property = PropertyField
+Operation = OperationField
 
 
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
@@ -108,7 +116,7 @@ def ensure_example_factory_family(module: "Module", type_name: str) -> list["Ooa
         oclass.intent = intent
         if name == factory:
             oclass.operations = [
-                Operation(name="load_example_key", parameters=[], return_type=iface)
+                OperationField(name="load_example_key", parameters=[], return_type=iface)
             ]
         module.classes.append(oclass)
         added.append(oclass)
@@ -182,49 +190,6 @@ class OoadNode:
         return None
 
 
-@dataclass
-class Property:
-    name: str
-    type_hint: str = ""
-    description: str = ""
-
-
-@dataclass
-class Operation:
-    name: str
-    parameters: List[str] = field(default_factory=list)
-    return_type: str = ""
-    description: str = ""
-    # Code facts - filled by language channel parse; formats may omit on render.
-    line: int | None = None
-    line_count: int = 0
-    nesting_depth: int = 0
-    callees: List[str] = field(default_factory=list)
-    literals: List[str] = field(default_factory=list)
-    param_count: int = 0
-    has_calculation: bool = False
-    has_validation: bool = False
-    bare_except_lines: List[int] = field(default_factory=list)
-    swallowed_except_lines: List[int] = field(default_factory=list)
-    assigned_names: List[tuple[str, int]] = field(default_factory=list)
-    loop_target_names: List[tuple[str, int]] = field(default_factory=list)
-    body_fingerprint: str = ""
-    constructed_types: List[tuple[str, int]] = field(default_factory=list)
-    public_attr_assigns: List[tuple[str, int]] = field(default_factory=list)
-    is_property: bool = False
-    returns_private_attr: bool = False
-    magic_numbers: List[tuple[float, int]] = field(default_factory=list)
-    docstring_parrots_name: bool = False
-
-
-@dataclass
-class Relationship:
-    target: str
-    kind: str = ""
-    cardinality: str = ""
-    description: str = ""
-
-
 class OoadClass(OoadNode):
     _semantic_type_name = "OoadClass"
 
@@ -233,8 +198,8 @@ class OoadClass(OoadNode):
         name: str,
         sequential_order: int,
         intent: str = "",
-        properties: List[Property] | None = None,
-        operations: List[Operation] | None = None,
+        properties: List[PropertyField] | None = None,
+        operations: List[OperationField] | None = None,
         relationships: List[Relationship] | None = None,
         collaborators: List[str] | None = None,
         line: int | None = None,
@@ -245,10 +210,12 @@ class OoadClass(OoadNode):
         self.docstring_parrots_name: bool = False
         self.narration_comment_lines: List[int] = []
         self.commented_code_lines: List[int] = []
-        self.properties: List[Property] = properties if properties is not None else []
-        self.operations: List[Operation] = operations if operations is not None else []
+        self.properties: List[PropertyField] = properties if properties is not None else []
+        self.operations: List[OperationField] = operations if operations is not None else []
         self.relationships: List[Relationship] = relationships if relationships is not None else []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
+        self.property_nodes: List["Property"] = []
+        self.operation_nodes: List["Operation"] = []
 
     def update_self(self, source: "OoadNode") -> None:
         assert isinstance(source, OoadClass)
@@ -257,9 +224,65 @@ class OoadClass(OoadNode):
         self.operations = list(source.operations)
         self.relationships = list(source.relationships)
         self.collaborators = list(source.collaborators)
+        if not source.property_nodes and not source.operation_nodes:
+            self.sync_tree_from_legacy()
+        elif not source.properties and not source.operations:
+            self.sync_legacy_from_tree()
+
+    def create_child_property(self, source: "Property") -> "Property":
+        from practices.clean_engineering.model.property import Property as PropertyNode
+
+        return PropertyNode(
+            source.name,
+            source.sequential_order,
+            type_hint=source.type_hint,
+            description=source.description,
+        )
+
+    def create_child_operation(self, source: "Operation") -> "Operation":
+        from practices.clean_engineering.model.operation import Operation as OperationNode
+
+        node = OperationNode(
+            source.name,
+            source.sequential_order,
+            return_type=source.return_type,
+            description=source.description,
+            callees=list(source.callees),
+        )
+        node._legacy_parameters = list(source._legacy_parameters)
+        return node
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
-        return []
+        assert isinstance(source, OoadClass)
+        return [
+            ChildCollectionPair(
+                self_children=self.property_nodes,
+                source_children=source.property_nodes,
+                create_child=self.create_child_property,
+            ),
+            ChildCollectionPair(
+                self_children=self.operation_nodes,
+                source_children=source.operation_nodes,
+                create_child=self.create_child_operation,
+            ),
+        ]
+
+    def sync_tree_from_legacy(self) -> None:
+        from practices.clean_engineering.model.operation import Operation as OperationNode
+        from practices.clean_engineering.model.property import Property as PropertyNode
+
+        self.property_nodes = [
+            PropertyNode.from_field(field, index)
+            for index, field in enumerate(self.properties, start=1)
+        ]
+        self.operation_nodes = [
+            OperationNode.from_field(field, index)
+            for index, field in enumerate(self.operations, start=1)
+        ]
+
+    def sync_legacy_from_tree(self) -> None:
+        self.properties = [node.to_field() for node in self.property_nodes]
+        self.operations = [node.to_field() for node in self.operation_nodes]
 
 
 class Module(OoadNode):

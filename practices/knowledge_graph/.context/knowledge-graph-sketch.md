@@ -1,8 +1,13 @@
 # knowledge_graph sketch — increment 1 (Create Customer + Get Number)
 
-One file: object model + BDD. Extends existing practice nodes. CodeQL populate is a later increment behind the same `load`.
+One file: object model + BDD + guidance rule binding. Extends existing practice nodes. CodeQL populate and rule evaluation are later increments behind the same `load`.
 
-The graph is one object model. Practices are **stereotypes and extra edges** on that model, not four parallel trees.
+This is a **practice graph** — one navigable object model. Each node is **both**:
+
+- a **graph node** (participates in the unified practice graph), and
+- a **practice instance** (a typed node from Clean Engineering, DDD, Stories, or BDD).
+
+Practices are **stereotypes and extra edges** on that model, not four parallel trees.
 
 ```
 practices/knowledge_graph/
@@ -11,129 +16,387 @@ practices/knowledge_graph/
 
 ---
 
-## Across practices (the graph)
-
-Clean Engineering is the base. DDD specialises Module and Class. Stories and BDD hang off Class, Operation, Property, and Example.
+## Practice graph (root)
 
 ```
-Knowledge
-  load path
-    -> StoryMap
-    -> CleanEngineeringModel
-  stories                           <-- keyed Epics
-  modules                           <-- keyed Modules (includes BoundedContext and Aggregate)
-  descriptions                      <-- keyed BDD Descriptions
-
-# --- Clean Engineering (base) ---
- Module
-      classes
-      // never repository — that is a Class inside an Aggregate
- Class
-      properties
-      operations
-      usedBy
- Property
- Operation
-      // usedBy is the reverse of every edge below
-
-# --- DDD specialises Module and Class ---
- BoundedContext : Module
-      aggregates                    <-- Aggregate modules in this language
-      // one meaning per term inside this context
- Aggregate : Module
-      root                          <-- EntityRoot; must be present
-      // Repository, when it exists, is a Class in this module — not a field on Module
-      // must have a known root Entity
- Entity : Class
-      // identity outlives attributes
- EntityRoot : Entity
-      identity                      <-- identification operation or property; must be present
-      // associated with exactly one Aggregate; that Aggregate’s only entry
- ValueObject : Class
- Repository : Class
-      // collection lifecycle of the Aggregate’s root only
-      // lives in the same Aggregate as the root
- DomainEvent : Class
- DomainService : Class
-
-# --- Stories ---
- Epic
-      epics                         <-- child Epics / SubEpics
-      stories
-      examples                      <-- Example scope = Epic
- SubEpic : Epic
- Story
-      scenarios
-      examples                      <-- Example scope = Story
- Scenario
-      background                    <-- shared Given Steps (existing Scenario.background)
-      steps                         <-- Given / When / Then (existing Clause)
-      examples                      <-- Example scope = Scenario (existing example_rows)
- Background
-      steps
- Step                               <-- existing Clause
-      // When invokes Operation; Then observes Property or Operation result
- Example
-      // expresses a Class (usually an Entity or Value Object)
-
-# --- BDD ---
- Description
-      // describe {subject} — the subject is a Class (or its observable state)
-      contexts
- Context
-      // that {event} / with {condition} — standing state; same job as Given / Background
-      observations
-      contexts
- Observation
-      // it should {outcome} — one observable; same Operation or Property a Step uses
+PracticeGraph
+  load(path)
+    StoryMap — loadedFrom — path
+    CleanEngineeringModel — loadedFrom — path
+  stories                           # keyed Epic roots (Stories practice view)
+  modules                           # keyed Module roots (CE / DDD practice view)
+  descriptions                      # keyed Description roots (BDD practice view)
+  nodes                             # all GraphNodes keyed by stable id (optional flat index)
+  relationships                     # all GraphRelationships (from, kind, to)
+  evaluate_rules()                  # bind guidance rules; fill node.rules.*.violations (runs in load)
 ```
 
-### Edges that join the practices
+Every typed node below **is a GraphNode** unless noted.
 
-Write these as real calls / associations — this is the product.
+---
+
+## GraphNode (common)
 
 ```
-BoundedContext
-  contains Aggregate
-
-Aggregate
-  root EntityRoot
-  // Repository class in the same Aggregate, when the root has a collection lifecycle
-  -> Repository manages EntityRoot
-
-EntityRoot
-  associated with Aggregate
-  // must identify itself
-
-Step
-  -> Operation.invoke                 <-- When
-  -> Property.observe                 <-- Then
-  -> Example.use
-
-Example
-  -> Class.express                    <-- Customer, AccountCredentials, Portability, …
-  // scope is Scenario, Story, or Epic
-
-Description
-  -> Class.describe                   <-- same Class the Example expresses
-
-Context
-  -> Example / Given state            <-- same prior state a Background or Given Step names
-
-Observation
-  -> Operation.observe
-  -> Property.observe
-  // same Operation a Story Step invokes — acceptance vs unit of one behaviour
-
-UsedBy                                <-- reverse of every edge above
-  stories
-  scenarios
-  steps
-  descriptions
-  observations
+GraphNode
+  graph                             # PracticeGraph — memberOf — GraphNode
+  practice                          # clean_engineering | ddd | stories | bdd
+  usedBy                            # reverse index: GraphNode — usedBy — GraphNode
 ```
 
-So `CustomerRepository.usedBy.stories` is not a field we invented on Module. It is the reverse of `Step -> CustomerRepository.load`.
+`usedBy` is populated from `GraphRelationship.to` — e.g. `CustomerRepository.usedBy` includes the Step that has `Step — invokes — CustomerRepository.load`.
+
+---
+
+## Guidance rules on nodes
+
+Every node is subject to one or more **guidance rules** — **directly** (the rule names that node type at that fidelity) or **through a parent** (rules scoped to ancestors or containers also apply to descendants in scope).
+
+Guidance is organised per practice (`stories`, `clean_engineering`, `ddd`, `bdd`). Each practice publishes:
+
+- **Shared rules** — apply across fidelities when the node (or an ancestor in scope) matches the practice and the rule’s node filter.
+- **Fidelity-specific rules** — apply only when the active fidelity narrows which node types are in scope.
+
+**Fidelity narrows the node set**, not a separate tree. Examples:
+
+| Practice | Fidelity | Node types in scope (typical) | Cross-practice edges rules may use |
+|----------|----------|--------------------------------|-------------------------------------|
+| Stories | `story_map` | Epic, SubEpic, Story | — |
+| Stories | `scenarios` | Scenario, Background, Step, Example | — |
+| Stories | `acceptance_tests` | Step (runnable), Example | Step — invokes — Operation; Step — uses — Example |
+| Clean Engineering | `modules` | Module | Module — dependsOn — Module |
+| Clean Engineering | `model` | Module, Class, Property, Operation | Class — associates — Class; hasType / returns |
+| Clean Engineering | `code` | Class, Property, Operation (from source) | Operation — invokes — Operation |
+| DDD | `bounded_context` | BoundedContext, Aggregate (concept names) | BoundedContext — owns — Aggregate |
+| DDD | `building_blocks` | Entity, EntityRoot, Repository, ValueObject, … | Repository — accesses — EntityRoot |
+| BDD | `behavior` | Description, Context, Observation | Observation — observes — Property/Operation |
+
+A **Scenario** node at scenarios fidelity is directly subject to scenarios rules. It may also inherit story-map rules when the rule scope includes Story-owned descendants. An **acceptance_tests** Step is subject to acceptance-test rules that can require `Step — invokes — Operation` and trace examples to classes.
+
+### Rule binding (sketch)
+
+```
+GuidanceRule
+  slug: string                        # e.g. scenarios-must-have-examples
+  practice: string                    # stories | clean_engineering | ddd | bdd
+  fidelity: string | null             # null = shared; else fidelity name
+  applies_to: string[]                # semantic types: Scenario, Step, Class, Repository, …
+  inherits_to_children: bool          # when true, owned descendants are also in scope
+  predicate                          # graph constraint (see below)
+```
+
+Rules are **not** stored as parallel trees. They attach to **GraphNodes** already in the practice graph. Evaluation uses the same `relationships` index as navigation (plus CodeQL populate facts when loaded).
+
+### Node.rules — violation queries
+
+Each graph node exposes a **rules view** for violations already evaluated on the loaded graph (increment 2+; sketch API first):
+
+```
+GraphNode
+  rules
+    violations                       # all violations for every rule that applies
+                                     # (direct + inherited from ancestors in scope)
+
+    direct
+      violations                     # rules whose practice + closest fidelity match
+                                     # this node’s type — e.g. Scenario → scenarios fidelity
+
+    practice(name)                   # optional filter — only that practice’s rules
+      .shared
+        violations
+      .fidelity(name)                # optional — only that fidelity’s rules
+        violations
+```
+
+**Examples**
+
+```python
+scenario.rules.violations
+# every rule that applies to this scenario (scenarios + inherited story_map if in scope)
+
+scenario.rules.direct.violations
+# only rules that target Scenario at the closest matching fidelity (typically scenarios)
+
+scenario.rules.practice("stories").fidelity("acceptance_tests").violations
+# only acceptance-test rules that apply to this node (empty on a Scenario unless
+# the rule scope includes Scenario or a owned Step/Example)
+```
+
+**Closest fidelity:** the finest-grained fidelity whose `applies_to` includes the node’s `_semantic_type_name` and whose practice matches `node.practice` (or the practice that owns the rule for cross-practice rules). Direct violations exclude rules that only apply because a **parent** was in scope unless `inherits_to_children` propagates them to this node.
+
+### Rule evaluation — graph + CodeQL, not per-file scanners
+
+Today, scanners reopen files, re-parse AST, and look for one local shape per rule. The practice graph + CodeQL populate path replaces that with **constraints over the shared model**:
+
+1. **Load** — prose skeleton + CodeQL facts (`PracticeGraph.load`).
+2. **Bind rules** — for each node, compute applicable rule set from practice, fidelity, type, and ancestor scope.
+3. **Evaluate** — run each rule’s predicate against graph edges (and CodeQL export where needed).
+4. **Attach** — materialise violations on `node.rules.*.violations`.
+
+A rule predicate is a **graph query** (CodeQL or declarative filter over `relationships`), not a file walk. Examples:
+
+```
+# scenarios-must-have-examples
+Scenario scenario
+where not exists(Example e | scenario — scopes — e)
+select scenario, "Scenario has no examples."
+
+# step-invokes-domain-operation (acceptance_tests)
+Step step
+where step.phase = "when"
+  and not exists(Operation op | step — invokes — op)
+select step, "When step does not invoke a domain operation."
+
+# example-demonstrates-class
+Example example
+where not exists(Class c | example — demonstrates — c)
+select example, "Example is not linked to a domain class."
+
+# repository-owns-lifecycle-not-domain-behaviour (building_blocks)
+Operation op, Repository repo
+where repo — owns — op
+  and op mutates aggregate state internally on Class owned by repo
+  and not op.isCollectionLifecycle()
+select op, "Repository exposes business behaviour instead of collection lifecycle."
+
+# entity-owns-its-mutations (building_blocks / code)
+Operation op, Class cls
+where cls — owns — op
+  and op writes fields on cls
+  and exists(Operation other | other — invokes — op | other on sibling Class)
+select op, "Object with the data does not own the operation."
+```
+
+CodeQL is the reliable source for **calls, mutations, and type resolution**; the graph holds **practice identity** (Scenario, Repository, Step — invokes — Operation). A rule may combine both: graph edge must exist **and** CodeQL confirms the callee mutates state.
+
+Existing file scanners remain useful during migration; new rules should target the graph query surface first.
+
+### Violation shape
+
+```
+RuleViolation
+  rule_slug: string
+  node: GraphNode                     # the node in scope (may be parent if inherited)
+  message: string
+  practice: string
+  fidelity: string | null
+  source                             # optional SourceLocation from node or CodeQL site
+```
+
+---
+
+## GraphRelationship (every edge)
+
+Every relationship names **left**, **kind**, and **right**. No one-sided fields.
+
+```
+GraphRelationship
+  from: GraphNode
+  kind: string
+  to: GraphNode
+```
+
+---
+
+## Clean Engineering (base practice)
+
+```
+Module : GraphNode
+  practice = clean_engineering
+  Module — owns — Class
+
+Class : GraphNode
+  practice = clean_engineering
+  Class — belongsTo — Module
+  Class — owns — Property
+  Class — owns — Operation
+  Class — associates — Class              # same-module composition / reference
+  Example — demonstrates — Class        # cross-practice: fixture data shows the Class
+  Description — describes — Class       # cross-practice: BDD subject under test
+  Repository — accesses — EntityRoot    # cross-practice: DDD collection lifecycle entry
+
+Property : GraphNode
+  practice = clean_engineering
+  Property — belongsTo — Class
+  Property — hasType — Class              # field, getter, or observable state type
+  Step — observes — Property              # cross-practice: Stories Then step
+  Observation — observes — Property       # cross-practice: BDD outcome
+  Entity — hasIdentity — Property         # cross-practice: DDD identification
+
+Parameter : GraphNode
+  practice = clean_engineering
+  Parameter — belongsTo — Operation
+  Parameter — hasType — Class
+
+Operation : GraphNode
+  practice = clean_engineering
+  Operation — belongsTo — Class           # declaring class
+  Operation — hasParameter — Parameter
+  Operation — returns — Class             # void / absent when no return type
+  Operation — invokes — Operation         # callee on same class or another class
+  Step — invokes — Operation              # cross-practice: Stories When step
+  Step — observes — Operation             # cross-practice: Stories Then step
+  Observation — observes — Operation      # cross-practice: BDD outcome
+  Entity — hasIdentity — Operation        # cross-practice: DDD identification
+```
+
+**Type resolution:** `hasType` and `returns` resolve to `Class` nodes (domain types, interfaces, generics instantiated to a class). Builtins and primitives (`string`, `number`, `boolean`, …) are not graph nodes — they terminate the type edge.
+
+**Invocation:** `Operation — invokes — Operation` is a direct call from the body of one operation to another. The callee’s declaring class may be the same as the caller’s or different. CodeQL (or the language channel) resolves call targets to `Operation` nodes; unresolved dynamic calls are omitted until resolved.
+
+**Cross-module dependencies** are derived from type and invoke edges that cross a module boundary:
+
+```
+Class — dependsOn — Class                 # when any owned Property, Parameter, or Operation
+                                          # hasType / returns / invokes reaches a Class in another Module
+Module — dependsOn — Class                # rollup from owned classes
+Module — dependsOn — Module               # derived from external Class home modules
+```
+
+Same-module `Class — associates — Class` covers references that do not cross the module boundary. Cross-module references always go through `Class — dependsOn — Class` (never only through `associates`).
+
+---
+
+## DDD (specialises Module and Class)
+
+```
+BoundedContext : Module
+  practice = ddd
+  BoundedContext — owns — Aggregate
+
+Aggregate : Module
+  practice = ddd
+  Aggregate — root — EntityRoot
+
+Entity : Class
+  practice = ddd
+
+EntityRoot : Entity
+  EntityRoot — belongsTo — Aggregate
+  Repository — accesses — EntityRoot
+
+ValueObject : Class
+  practice = ddd
+
+Repository : Class
+  practice = ddd
+
+DomainEvent : Class
+  practice = ddd
+
+DomainService : Class
+  practice = ddd
+```
+
+---
+
+## Stories (practice)
+
+```
+Epic : GraphNode
+  practice = stories
+  Epic — owns — Epic                     # child epics / sub-epics
+  Epic — owns — Story
+  Epic — scopes — Example
+
+SubEpic : Epic
+
+Story : GraphNode
+  practice = stories
+  Story — owns — Scenario
+  Story — scopes — Example
+
+Scenario : GraphNode
+  practice = stories
+  Scenario — owns — Background
+  Scenario — owns — Step
+  Scenario — scopes — Example
+
+Background : GraphNode
+  practice = stories
+  Background — owns — Step
+  Context — namesState — Background       # BDD standing state
+
+Step : GraphNode                         # existing Clause; Given / When / Then
+  practice = stories
+  Step — invokes — Operation              # When → CE
+  Step — observes — Property              # Then → CE
+  Step — observes — Operation             # Then → CE
+  Step — uses — Example
+  Context — namesState — Step             # BDD Given / standing state
+
+Example : GraphNode
+  practice = stories
+  Example — scopedBy — Epic | Story | Scenario
+  Example — demonstrates — Class            # → CE
+  Step — uses — Example
+  Context — namesState — Example          # BDD standing state
+```
+
+---
+
+## BDD (practice)
+
+```
+Description : GraphNode
+  practice = bdd
+  Description — owns — Context
+  Description — describes — Class         # → CE subject under test
+
+Context : GraphNode
+  practice = bdd
+  Context — owns — Observation
+  Context — owns — Context                  # nested
+  Context — namesState — Example            # → Stories standing state
+  Context — namesState — Background         # → Stories shared Given
+  Context — namesState — Step               # → Stories Given step
+
+Observation : GraphNode
+  practice = bdd
+  Observation — observes — Property         # → CE (same observables as Step Then)
+  Observation — observes — Operation        # → CE
+```
+
+---
+
+## Cross-practice relationship index
+
+Every row below is already declared on the node types above. This index groups them by join — not a separate edge vocabulary.
+
+```
+# Stories ↔ CE
+Step — invokes — Operation
+Step — observes — Property
+Step — observes — Operation
+Example — demonstrates — Class
+
+# BDD ↔ CE
+Description — describes — Class
+Observation — observes — Property
+Observation — observes — Operation
+
+# BDD ↔ Stories
+Context — namesState — Example
+Context — namesState — Background
+Context — namesState — Step
+Step — uses — Example
+
+# DDD ↔ CE (specialisation + edges on shared Class / Module nodes)
+BoundedContext — owns — Aggregate
+Aggregate — root — EntityRoot
+EntityRoot — belongsTo — Aggregate
+Repository — accesses — EntityRoot
+Entity — hasIdentity — Property
+Entity — hasIdentity — Operation
+
+# CE cross-module (derived from type + invoke edges)
+Class — dependsOn — Class
+Module — dependsOn — Class
+Module — dependsOn — Module
+
+# reverse (materialized on every GraphNode)
+GraphNode — usedBy — GraphNode
+```
 
 ---
 
@@ -160,53 +423,68 @@ DDD / CE (from `domain/bounded-context-map.md` and `domain/domain-model.md`):
 
 ```
 modules["Customer"] : BoundedContext
-  aggregates["Customer"] : Aggregate
-    root Customer : EntityRoot
-      identity id
+  BoundedContext["Customer"] — owns — aggregates["Customer"] : Aggregate
+    Aggregate["Customer"] — root — Customer : EntityRoot
+      EntityRoot Customer — belongsTo — Aggregate["Customer"]
+      Entity Customer — hasIdentity — id
     CustomerRepository : Repository
-      // Class in this Aggregate; manages Customer
+      Repository CustomerRepository — accesses — Customer
+      Operation load — returns — Customer
+      Operation load — invokes — IMavenirClient.fetchCustomer   # example cross-class invoke
     Identity
+      Property id — hasType — string                          # primitive; no Class node
     Address
-  aggregates["Cart"] : Aggregate
-    root Cart : EntityRoot
+      Property street — hasType — string
+      Property city — hasType — string
+    Customer
+      Property identity — hasType — Identity
+      Property address — hasType — Address
+  BoundedContext["Customer"] — owns — aggregates["Cart"] : Aggregate
+    Aggregate["Cart"] — root — Cart : EntityRoot
     CartRepository : Repository
-  aggregates["AccountCredentials"] : Aggregate          <-- Authentication · Account
-    root AccountCredentials : EntityRoot
+      Repository CartRepository — accesses — Cart
+  BoundedContext["Customer"] — owns — aggregates["AccountCredentials"] : Aggregate
+    Aggregate["AccountCredentials"] — root — AccountCredentials : EntityRoot
     AccountRepository : Repository
+      Repository AccountRepository — accesses — AccountCredentials
 
 modules["Inventory"] : BoundedContext
-  aggregates["Porting"] : Aggregate
-    root Portability : EntityRoot
+  BoundedContext["Inventory"] — owns — aggregates["Porting"] : Aggregate
+    Aggregate["Porting"] — root — Portability : EntityRoot
+  Module["Inventory"] — dependsOn — Customer              # cross-module rollup
+    Class Portability — dependsOn — Customer              # when get-number crosses BC
 ```
 
 One fully wired story — Load Customer (`load_customer_story.test.md`):
 
 ```
 Story load_customer
-  Scenario "Load My Paradise customer and store in session"
+  Story load_customer — owns — Scenario "Load My Paradise customer and store in session"
     Step When "My Paradise loads the customer from Mavenir"
-      -> CustomerRepository.load
+      Step — invokes — CustomerRepository.load
     Step Then "the result is a Paradise customer with identity and address"
-      -> Customer.identity
-      -> Customer.address
+      Step — observes — Customer.identity
+      Step — observes — Customer.address
     Example stored customer
-      -> Customer.express
-      -> AccountCredentials.express
+      Example stored customer — demonstrates — Customer
+      Example stored customer — demonstrates — AccountCredentials
 
 Description "a Customer"
-  Context "that has been loaded"
-    Observation "should have identity and address from Mavenir"
-      -> Customer.identity
-      -> Customer.address
+  Description "a Customer" — describes — Customer
+  Description "a Customer" — owns — Context "that has been loaded"
+    Context "that has been loaded" — namesState — Example stored customer
+    Context "that has been loaded" — owns — Observation "should have identity and address from Mavenir"
+      Observation — observes — Customer.identity
+      Observation — observes — Customer.address
 ```
 
-Create Customer wires the same Aggregate through `CustomerRepository.create`. Get Number wires `Portability` (and Cart when the number is stored). `CustomerRepository.usedBy.stories` therefore includes `load_customer_story` and `create_customer_story` because those Stories’ When steps invoke its operations.
+Create Customer wires the same Aggregate through `CustomerRepository.create`. Get Number wires `Portability` (and Cart when the number is stored). `CustomerRepository.usedBy` includes load and create customer stories because those Steps have `Step — invokes — CustomerRepository.load` and `Step — invokes — CustomerRepository.create`.
 
 ---
 
 Fidelity: behavior
 
-a Paradise knowledge graph
+a Paradise practice graph
   that has been loaded from the pml-domainmodel workspace
     with only the create-customer and get-number onboard slice
       it should include the onboard-a-customer epic
@@ -223,15 +501,39 @@ a Paradise knowledge graph
       it should include the verify ported number story
       it should include the load-customer scenarios
       it should include the when step that loads the customer
-      it should include the example that expresses Customer
+      it should include the example that demonstrates Customer
       it should include the Customer bounded context
       it should include the Customer aggregate
       it should include Customer as the Customer aggregate root
       it should include CustomerRepository as a class in the Customer aggregate
+      it should include Operation — returns — Class for domain operations
+      it should include Property — hasType — Class for typed fields
+      it should include Operation — invokes — Operation for resolved call edges
       it should include the Inventory bounded context
       it should include the Porting aggregate
       it should include Portability as the Porting aggregate root
-      it should include the load customer story among the stories that use CustomerRepository
-      it should include the create customer story among the stories that use CustomerRepository
+      it should include Class — dependsOn — Class when stories cross bounded contexts
+      it should include the load customer story among the usedBy of CustomerRepository
+      it should include the create customer story among the usedBy of CustomerRepository
       it should include a description of Customer
       it should include an observation that Customer has been loaded
+
+---
+
+Fidelity: rules (increment 2+)
+
+a Scenario under load_customer_story
+  that has been loaded and evaluated
+    scenario.rules.direct.violations should include no missing-example violation when it scopes an Example
+    scenario.rules.direct.violations should include a missing-example violation when it scopes no Example
+
+a When Step under load_customer_story
+  that has been loaded with CodeQL populate and evaluated
+    step.rules.practice("stories").fidelity("acceptance_tests").violations
+      should be empty when Step — invokes — CustomerRepository.load is present
+      should include step-invokes-domain-operation when no Operation is linked
+
+a CustomerRepository class
+  that has been loaded with CodeQL and evaluated at building_blocks fidelity
+    repository.rules.direct.violations should flag operations that mutate aggregate state
+      when they are not collection-lifecycle operations
