@@ -12,6 +12,10 @@ class BoundedContext(Module):
 class Aggregate(Module):
     _semantic_type_name = "Aggregate"
 
+    def __init__(self, name: str, sequential_order: int, **kwargs) -> None:
+        super().__init__(name, sequential_order, **kwargs)
+        self.root: EntityRoot | None = None
+
 
 class Entity(OoadClass):
     _semantic_type_name = "Entity"
