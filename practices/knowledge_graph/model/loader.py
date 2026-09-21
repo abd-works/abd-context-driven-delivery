@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import List, Optional
 
 from practices.clean_engineering.model.base_class_model import OoadClass
+from practices.clean_engineering.model.operation import Operation as CeOperation
+from practices.clean_engineering.model.property import Property as CeProperty
+from practices.clean_engineering.model.type_refs import pascal_type_names
 from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
 from practices.stories.model.nodes import Epic, Story, SubEpic
 from practices.stories.model.background import Background
@@ -36,8 +39,6 @@ from .nodes import (
     GraphStory,
     GraphStoryMap,
     GraphSubEpic,
-    parse_parameter,
-    pascal_type_names,
     slug,
 )
 from .practice_graph import PracticeGraph
@@ -197,41 +198,53 @@ def _wire_class(graph: PracticeGraph, module: GraphModule, oclass: OoadClass, in
     graph.relate(module, Kind.OWNS, oclass)
     graph.relate(oclass, Kind.BELONGS_TO, module)
 
-    for prop_index, prop in enumerate(oclass.properties, start=1):
-        gprop = GraphProperty(prop, prop_index)
-        graph.register(gprop)
-        graph.relate(oclass, Kind.OWNS, gprop)
-        graph.relate(gprop, Kind.BELONGS_TO, oclass)
-        for type_name in pascal_type_names(prop.type_hint):
-            target = graph.find_class(type_name)
-            if target is not None:
-                graph.relate(gprop, Kind.HAS_TYPE, target)
+    if not oclass.property_nodes and not oclass.operation_nodes:
+        oclass.sync_tree_from_legacy()
+
+    for prop in oclass.property_nodes:
+        _register_property(graph, oclass, prop)
 
     for rel in oclass.relationships:
         target = graph.find_class(rel.target)
         if target is not None:
             graph.relate(oclass, Kind.ASSOCIATES, target)
 
-    for op_index, op in enumerate(oclass.operations, start=1):
-        gop = GraphOperation(op, op_index)
-        graph.register(gop)
-        graph.relate(oclass, Kind.OWNS, gop)
-        graph.relate(gop, Kind.BELONGS_TO, oclass)
-        for type_name in pascal_type_names(op.return_type):
-            target = graph.find_class(type_name)
-            if target is not None:
-                graph.relate(gop, Kind.RETURNS, target)
-        for param_index, param in enumerate(op.parameters, start=1):
-            pname, ptype = parse_parameter(param)
-            gparam = GraphParameter(pname or f"arg{param_index}", ptype, param_index)
-            graph.register(gparam)
-            graph.relate(gop, Kind.HAS_PARAMETER, gparam)
-            graph.relate(gparam, Kind.BELONGS_TO, gop)
-            for type_name in pascal_type_names(ptype):
+    for op in oclass.operation_nodes:
+        _register_operation(graph, oclass, op)
+
+
+def _register_property(graph: PracticeGraph, oclass, prop: CeProperty) -> None:
+    if not isinstance(prop, GraphProperty):
+        return
+    graph.register(prop)
+    graph.relate(oclass, Kind.OWNS, prop)
+    graph.relate(prop, Kind.BELONGS_TO, oclass)
+    for type_name in pascal_type_names(prop.type_hint):
+        target = graph.find_class(type_name)
+        if target is not None:
+            graph.relate(prop, Kind.HAS_TYPE, target)
+
+
+def _register_operation(graph: PracticeGraph, oclass, op: CeOperation) -> None:
+    if not isinstance(op, GraphOperation):
+        return
+    graph.register(op)
+    graph.relate(oclass, Kind.OWNS, op)
+    graph.relate(op, Kind.BELONGS_TO, oclass)
+    for type_name in pascal_type_names(op.return_type):
+        target = graph.find_class(type_name)
+        if target is not None:
+            graph.relate(op, Kind.RETURNS, target)
+    for param in op.parameters:
+        if isinstance(param, GraphParameter):
+            graph.register(param)
+            graph.relate(op, Kind.HAS_PARAMETER, param)
+            graph.relate(param, Kind.BELONGS_TO, op)
+            for type_name in pascal_type_names(param.type_hint):
                 target = graph.find_class(type_name)
                 if target is not None:
-                    graph.relate(gparam, Kind.HAS_TYPE, target)
-        _wire_operation_invocations(graph, gop, oclass.name)
+                    graph.relate(param, Kind.HAS_TYPE, target)
+    _wire_operation_invocations(graph, op, oclass.name)
 
 
 def _wire_operation_invocations(graph: PracticeGraph, operation: GraphOperation, owner_class: str) -> None:

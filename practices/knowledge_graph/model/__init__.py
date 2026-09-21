@@ -1,15 +1,23 @@
 """Knowledge graph model — one practice graph across Stories, CE, DDD, and BDD."""
 
-from .graph_node import GraphNodeMixin, GraphRelationship, Kind
-from .nodes import (
+from practices.bdd.model import Context, Description, Observation
+from practices.clean_engineering.model.operation import Operation, Parameter
+from practices.clean_engineering.model.property import Property
+from practices.ddd.model import (
     Aggregate,
     BoundedContext,
     DomainEvent,
     DomainService,
     Entity,
     EntityRoot,
-    GraphClass,
+    Repository,
+    ValueObject,
+)
+
+from .graph_node import GraphNodeMixin, GraphRelationship, Kind
+from .nodes import (
     GraphBackground,
+    GraphClass,
     GraphDescription,
     GraphEpic,
     GraphExample,
@@ -22,20 +30,20 @@ from .nodes import (
     GraphStep,
     GraphStory,
     GraphSubEpic,
-    Repository,
-    ValueObject,
 )
 from .practice_graph import PracticeGraph
 
 __all__ = [
     "Aggregate",
     "BoundedContext",
+    "Context",
+    "Description",
     "DomainEvent",
     "DomainService",
     "Entity",
     "EntityRoot",
-    "GraphClass",
     "GraphBackground",
+    "GraphClass",
     "GraphDescription",
     "GraphEpic",
     "GraphExample",
@@ -51,7 +59,11 @@ __all__ = [
     "GraphStory",
     "GraphSubEpic",
     "Kind",
+    "Observation",
+    "Operation",
+    "Parameter",
     "PracticeGraph",
+    "Property",
     "Repository",
     "ValueObject",
 ]
