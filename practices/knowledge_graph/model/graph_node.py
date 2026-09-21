@@ -26,7 +26,7 @@ class Kind:
     SCOPES = "scopes"
     SCOPED_BY = "scopedBy"
     USES = "uses"
-    EXPRESSES = "expresses"
+    DEMONSTRATES = "demonstrates"
     DESCRIBES = "describes"
     NAMES_STATE = "namesState"
     OBSERVES = "observes"

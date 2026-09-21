@@ -73,7 +73,7 @@ Class : GraphNode
   Class — owns — Property
   Class — owns — Operation
   Class — associates — Class              # same-module composition / reference
-  Example — expresses — Class           # cross-practice: Stories fixture data
+  Example — demonstrates — Class        # cross-practice: fixture data shows the Class
   Description — describes — Class       # cross-practice: BDD subject under test
   Repository — manages — EntityRoot     # cross-practice: DDD (EntityRoot is a Class)
 
@@ -190,7 +190,7 @@ Step : GraphNode                         # existing Clause; Given / When / Then
 Example : GraphNode
   practice = stories
   Example — scopedBy — Epic | Story | Scenario
-  Example — expresses — Class               # → CE
+  Example — demonstrates — Class            # → CE
   Step — uses — Example
   Context — namesState — Example          # BDD standing state
 ```
@@ -230,7 +230,7 @@ Every row below is already declared on the node types above. This index groups t
 Step — invokes — Operation
 Step — observes — Property
 Step — observes — Operation
-Example — expresses — Class
+Example — demonstrates — Class
 
 # BDD ↔ CE
 Description — describes — Class
@@ -328,8 +328,8 @@ Story load_customer
       Step — observes — Customer.identity
       Step — observes — Customer.address
     Example stored customer
-      Example stored customer — expresses — Customer
-      Example stored customer — expresses — AccountCredentials
+      Example stored customer — demonstrates — Customer
+      Example stored customer — demonstrates — AccountCredentials
 
 Description "a Customer"
   Description "a Customer" — describes — Customer
@@ -363,7 +363,7 @@ a Paradise practice graph
       it should include the verify ported number story
       it should include the load-customer scenarios
       it should include the when step that loads the customer
-      it should include the example that expresses Customer
+      it should include the example that demonstrates Customer
       it should include the Customer bounded context
       it should include the Customer aggregate
       it should include Customer as the Customer aggregate root
