@@ -91,6 +91,13 @@ class GraphNodeMixin:
 
         return NodeRulesView(self)
 
+    @property
+    def dot_graph(self) -> str:
+        """Graphviz DOT for this node and every owned/scoped descendant."""
+        from .dot_graph import dot_graph_from_node
+
+        return dot_graph_from_node(self)
+
 
 def bind_graph_registry(graph: "PracticeGraph") -> None:
     global _GRAPH

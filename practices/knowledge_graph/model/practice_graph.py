@@ -183,6 +183,47 @@ class PracticeGraph:
 
         _evaluate(self, self.root, codeql_results=Path(codeql_results) if codeql_results else None)
 
+    @property
+    def dot_graph(self) -> str:
+        """DOT digraph for every practice root in this graph."""
+        from .dot_graph import dot_graph_from_roots
+
+        roots = []
+        if self.story_map is not None:
+            roots.append(self.story_map)
+        if self.ce_model is not None:
+            roots.append(self.ce_model)
+        roots.extend(self.descriptions.values())
+        if not roots:
+            return 'digraph practice_graph {}\n'
+        return dot_graph_from_roots(roots, graph_name="practice_graph")
+
+    @property
+    def stories_dot_graph(self) -> str:
+        """DOT digraph rooted at the loaded StoryMap."""
+        if self.story_map is None:
+            return 'digraph stories {}\n'
+        return self.story_map.dot_graph
+
+    @property
+    def ce_dot_graph(self) -> str:
+        """DOT digraph rooted at the loaded CleanEngineeringModel."""
+        if self.ce_model is None:
+            return 'digraph clean_engineering {}\n'
+        return self.ce_model.dot_graph
+
+    @property
+    def bdd_dot_graph(self) -> str:
+        """DOT digraph for all loaded BDD descriptions."""
+        from .dot_graph import dot_graph_from_roots
+
+        if not self.descriptions:
+            return 'digraph bdd {}\n'
+        return dot_graph_from_roots(
+            self.descriptions.values(),
+            graph_name="bdd",
+        )
+
 
 def _dedupe_nodes(nodes: Iterable[GraphNodeMixin]) -> List[GraphNodeMixin]:
     seen: set[str] = set()
