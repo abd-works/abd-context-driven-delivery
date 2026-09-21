@@ -75,7 +75,7 @@ Class : GraphNode
   Class — associates — Class              # same-module composition / reference
   Example — demonstrates — Class        # cross-practice: fixture data shows the Class
   Description — describes — Class       # cross-practice: BDD subject under test
-  Repository — manages — EntityRoot     # cross-practice: DDD (EntityRoot is a Class)
+  Repository — accesses — EntityRoot    # cross-practice: DDD collection lifecycle entry
 
 Property : GraphNode
   practice = clean_engineering
@@ -135,7 +135,7 @@ Entity : Class
 
 EntityRoot : Entity
   EntityRoot — belongsTo — Aggregate
-  Repository — manages — EntityRoot
+  Repository — accesses — EntityRoot
 
 ValueObject : Class
   practice = ddd
@@ -247,7 +247,7 @@ Step — uses — Example
 BoundedContext — owns — Aggregate
 Aggregate — root — EntityRoot
 EntityRoot — belongsTo — Aggregate
-Repository — manages — EntityRoot
+Repository — accesses — EntityRoot
 Entity — hasIdentity — Property
 Entity — hasIdentity — Operation
 
@@ -290,7 +290,7 @@ modules["Customer"] : BoundedContext
       EntityRoot Customer — belongsTo — Aggregate["Customer"]
       Entity Customer — hasIdentity — id
     CustomerRepository : Repository
-      Repository CustomerRepository — manages — Customer
+      Repository CustomerRepository — accesses — Customer
       Operation load — returns — Customer
       Operation load — invokes — IMavenirClient.fetchCustomer   # example cross-class invoke
     Identity
@@ -304,11 +304,11 @@ modules["Customer"] : BoundedContext
   BoundedContext["Customer"] — owns — aggregates["Cart"] : Aggregate
     Aggregate["Cart"] — root — Cart : EntityRoot
     CartRepository : Repository
-      Repository CartRepository — manages — Cart
+      Repository CartRepository — accesses — Cart
   BoundedContext["Customer"] — owns — aggregates["AccountCredentials"] : Aggregate
     Aggregate["AccountCredentials"] — root — AccountCredentials : EntityRoot
     AccountRepository : Repository
-      Repository AccountRepository — manages — AccountCredentials
+      Repository AccountRepository — accesses — AccountCredentials
 
 modules["Inventory"] : BoundedContext
   BoundedContext["Inventory"] — owns — aggregates["Porting"] : Aggregate

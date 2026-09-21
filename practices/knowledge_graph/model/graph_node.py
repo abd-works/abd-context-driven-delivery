@@ -22,7 +22,7 @@ class Kind:
     INVOKES = "invokes"
     HAS_IDENTITY = "hasIdentity"
     ROOT = "root"
-    MANAGES = "manages"
+    ACCESSES = "accesses"
     SCOPES = "scopes"
     SCOPED_BY = "scopedBy"
     USES = "uses"

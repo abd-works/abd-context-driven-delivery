@@ -32,6 +32,10 @@ class ValueObject(OoadClass):
 class Repository(OoadClass):
     _semantic_type_name = "Repository"
 
+    def __init__(self, name: str, sequential_order: int, **kwargs) -> None:
+        super().__init__(name, sequential_order, **kwargs)
+        self.accesses: EntityRoot | None = None
+
 
 class DomainEvent(OoadClass):
     _semantic_type_name = "DomainEvent"
