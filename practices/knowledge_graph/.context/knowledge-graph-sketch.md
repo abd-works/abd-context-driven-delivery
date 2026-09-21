@@ -73,11 +73,17 @@ Class : GraphNode
   Class — owns — Property
   Class — owns — Operation
   Class — associates — Class              # same-module composition / reference
+  Example — expresses — Class           # cross-practice: Stories fixture data
+  Description — describes — Class       # cross-practice: BDD subject under test
+  Repository — manages — EntityRoot     # cross-practice: DDD (EntityRoot is a Class)
 
 Property : GraphNode
   practice = clean_engineering
   Property — belongsTo — Class
   Property — hasType — Class              # field, getter, or observable state type
+  Step — observes — Property              # cross-practice: Stories Then step
+  Observation — observes — Property       # cross-practice: BDD outcome
+  Entity — hasIdentity — Property         # cross-practice: DDD identification
 
 Parameter : GraphNode
   practice = clean_engineering
@@ -90,6 +96,10 @@ Operation : GraphNode
   Operation — hasParameter — Parameter
   Operation — returns — Class             # void / absent when no return type
   Operation — invokes — Operation         # callee on same class or another class
+  Step — invokes — Operation              # cross-practice: Stories When step
+  Step — observes — Operation             # cross-practice: Stories Then step
+  Observation — observes — Operation      # cross-practice: BDD outcome
+  Entity — hasIdentity — Operation        # cross-practice: DDD identification
 ```
 
 **Type resolution:** `hasType` and `returns` resolve to `Class` nodes (domain types, interfaces, generics instantiated to a class). Builtins and primitives (`string`, `number`, `boolean`, …) are not graph nodes — they terminate the type edge.
@@ -122,17 +132,16 @@ Aggregate : Module
 
 Entity : Class
   practice = ddd
-  Entity — hasIdentity — Property | Operation   # identification field or operation
 
 EntityRoot : Entity
   EntityRoot — belongsTo — Aggregate
+  Repository — manages — EntityRoot
 
 ValueObject : Class
   practice = ddd
 
 Repository : Class
   practice = ddd
-  Repository — manages — EntityRoot
 
 DomainEvent : Class
   practice = ddd
@@ -168,13 +177,22 @@ Scenario : GraphNode
 Background : GraphNode
   practice = stories
   Background — owns — Step
+  Context — namesState — Background       # BDD standing state
 
 Step : GraphNode                         # existing Clause; Given / When / Then
   practice = stories
+  Step — invokes — Operation              # When → CE
+  Step — observes — Property              # Then → CE
+  Step — observes — Operation             # Then → CE
+  Step — uses — Example
+  Context — namesState — Step             # BDD Given / standing state
 
 Example : GraphNode
   practice = stories
   Example — scopedBy — Epic | Story | Scenario
+  Example — expresses — Class               # → CE
+  Step — uses — Example
+  Context — namesState — Example          # BDD standing state
 ```
 
 ---
@@ -185,43 +203,61 @@ Example : GraphNode
 Description : GraphNode
   practice = bdd
   Description — owns — Context
+  Description — describes — Class         # → CE subject under test
 
 Context : GraphNode
   practice = bdd
   Context — owns — Observation
-  Context — owns — Context               # nested
+  Context — owns — Context                  # nested
+  Context — namesState — Example            # → Stories standing state
+  Context — namesState — Background         # → Stories shared Given
+  Context — namesState — Step               # → Stories Given step
 
 Observation : GraphNode
   practice = bdd
+  Observation — observes — Property         # → CE (same observables as Step Then)
+  Observation — observes — Operation        # → CE
 ```
 
 ---
 
-## Cross-practice graph relationships
+## Cross-practice relationship index
 
-All cross-practice joins are `GraphRelationship` rows with explicit left and right.
+Every row below is already declared on the node types above. This index groups them by join — not a separate edge vocabulary.
 
 ```
-# --- Stories → CE ---
-Step — invokes — Operation               # When
-Step — observes — Property               # Then
-Step — observes — Operation              # Then
-Step — uses — Example
-
+# Stories ↔ CE
+Step — invokes — Operation
+Step — observes — Property
+Step — observes — Operation
 Example — expresses — Class
 
-# --- BDD → CE / Stories ---
+# BDD ↔ CE
 Description — describes — Class
+Observation — observes — Property
+Observation — observes — Operation
 
+# BDD ↔ Stories
 Context — namesState — Example
 Context — namesState — Background
-Context — namesState — Step              # Given / standing state
+Context — namesState — Step
+Step — uses — Example
 
-Observation — observes — Property
-Observation — observes — Operation       # same observables a Step uses
+# DDD ↔ CE (specialisation + edges on shared Class / Module nodes)
+BoundedContext — owns — Aggregate
+Aggregate — hasRoot — EntityRoot
+EntityRoot — belongsTo — Aggregate
+Repository — manages — EntityRoot
+Entity — hasIdentity — Property
+Entity — hasIdentity — Operation
 
-# --- reverse (materialized on GraphNode) ---
-GraphNode — usedBy — GraphNode           # to.usedBy includes from for every row above
+# CE cross-module (derived from type + invoke edges)
+Class — dependsOn — Class
+Module — dependsOn — Class
+Module — dependsOn — Module
+
+# reverse (materialized on every GraphNode)
+GraphNode — usedBy — GraphNode
 ```
 
 ---
