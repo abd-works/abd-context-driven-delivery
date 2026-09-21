@@ -21,7 +21,7 @@ class Kind:
     RETURNS = "returns"
     INVOKES = "invokes"
     HAS_IDENTITY = "hasIdentity"
-    HAS_ROOT = "hasRoot"
+    ROOT = "root"
     MANAGES = "manages"
     SCOPES = "scopes"
     SCOPED_BY = "scopedBy"

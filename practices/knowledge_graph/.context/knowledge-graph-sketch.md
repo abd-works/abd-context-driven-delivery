@@ -128,7 +128,7 @@ BoundedContext : Module
 
 Aggregate : Module
   practice = ddd
-  Aggregate — hasRoot — EntityRoot
+  Aggregate — root — EntityRoot
 
 Entity : Class
   practice = ddd
@@ -245,7 +245,7 @@ Step — uses — Example
 
 # DDD ↔ CE (specialisation + edges on shared Class / Module nodes)
 BoundedContext — owns — Aggregate
-Aggregate — hasRoot — EntityRoot
+Aggregate — root — EntityRoot
 EntityRoot — belongsTo — Aggregate
 Repository — manages — EntityRoot
 Entity — hasIdentity — Property
@@ -286,7 +286,7 @@ DDD / CE (from `domain/bounded-context-map.md` and `domain/domain-model.md`):
 ```
 modules["Customer"] : BoundedContext
   BoundedContext["Customer"] — owns — aggregates["Customer"] : Aggregate
-    Aggregate["Customer"] — hasRoot — Customer : EntityRoot
+    Aggregate["Customer"] — root — Customer : EntityRoot
       EntityRoot Customer — belongsTo — Aggregate["Customer"]
       Entity Customer — hasIdentity — id
     CustomerRepository : Repository
@@ -302,17 +302,17 @@ modules["Customer"] : BoundedContext
       Property identity — hasType — Identity
       Property address — hasType — Address
   BoundedContext["Customer"] — owns — aggregates["Cart"] : Aggregate
-    Aggregate["Cart"] — hasRoot — Cart : EntityRoot
+    Aggregate["Cart"] — root — Cart : EntityRoot
     CartRepository : Repository
       Repository CartRepository — manages — Cart
   BoundedContext["Customer"] — owns — aggregates["AccountCredentials"] : Aggregate
-    Aggregate["AccountCredentials"] — hasRoot — AccountCredentials : EntityRoot
+    Aggregate["AccountCredentials"] — root — AccountCredentials : EntityRoot
     AccountRepository : Repository
       Repository AccountRepository — manages — AccountCredentials
 
 modules["Inventory"] : BoundedContext
   BoundedContext["Inventory"] — owns — aggregates["Porting"] : Aggregate
-    Aggregate["Porting"] — hasRoot — Portability : EntityRoot
+    Aggregate["Porting"] — root — Portability : EntityRoot
   Module["Inventory"] — dependsOn — Customer              # cross-module rollup
     Class Portability — dependsOn — Customer              # when get-number crosses BC
 ```
