@@ -12,8 +12,11 @@ from practices.clean_engineering.model.base_class_model import (
     Operation,
     Property,
 )
+from practices.stories.model.background import Background
+from practices.stories.model.example import Example
 from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
-from practices.stories.model.scenario import Clause, Interaction, Phase, Scenario
+from practices.stories.model.scenario import Scenario
+from practices.stories.model.step import Step
 from practices.stories.model.story_map import StoryMap
 from practices.stories.model.story_node import StoryNode
 
@@ -195,6 +198,9 @@ class GraphEpic(Epic, GraphNodeMixin):
     def create_child_sub_epic(self, source: SubEpic) -> "GraphSubEpic":
         return GraphSubEpic(source.name, source.sequential_order)
 
+    def create_child_example(self, source: Example) -> "GraphExample":
+        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
+
 
 class GraphSubEpic(SubEpic, GraphNodeMixin):
     practice = "stories"
@@ -206,6 +212,9 @@ class GraphSubEpic(SubEpic, GraphNodeMixin):
     def create_child_story(self, source: Story) -> "GraphStory":
         return GraphStory(source.name, source.sequential_order, source.story_type)
 
+    def create_child_example(self, source: Example) -> "GraphExample":
+        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
+
 
 class GraphStory(Story, GraphNodeMixin):
     practice = "stories"
@@ -214,61 +223,60 @@ class GraphStory(Story, GraphNodeMixin):
     def create_child_scenario(self, source: Scenario) -> "GraphScenario":
         return GraphScenario(source.name, source.sequential_order, source.story_name)
 
+    def create_child_example(self, source: Example) -> "GraphExample":
+        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
+
 
 class GraphScenario(Scenario, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Scenario"
 
-    @property
-    def steps(self) -> List["GraphStep"]:
-        return [s for s in self.related(Kind.OWNS) if isinstance(s, GraphStep)]
+    def create_child_background(self, source: Background) -> "GraphBackground":
+        return GraphBackground(source.name, source.sequential_order)
+
+    def create_child_step(self, source: Step) -> "GraphStep":
+        return GraphStep(
+            text=source.text,
+            phase=source.phase,
+            sequential_order=source.sequential_order,
+            is_continuation=source.is_continuation,
+            concepts=list(source.concepts),
+            values=list(source.values),
+            actor=source.actor,
+            source=source.source,
+            name=source.name,
+        )
+
+    def create_child_example(self, source: Example) -> "GraphExample":
+        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
 
 
-class GraphStep(StoryNode, GraphNodeMixin):
-    """Step — existing Clause promoted to a graph node."""
+class GraphBackground(Background, GraphNodeMixin):
+    practice = "stories"
+    _semantic_type_name = "Background"
 
+    def create_child_step(self, source: Step) -> "GraphStep":
+        return GraphStep(
+            text=source.text,
+            phase=source.phase,
+            sequential_order=source.sequential_order,
+            is_continuation=source.is_continuation,
+            concepts=list(source.concepts),
+            values=list(source.values),
+            actor=source.actor,
+            source=source.source,
+            name=source.name,
+        )
+
+
+class GraphStep(Step, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Step"
 
-    def __init__(self, clause: Clause, sequential_order: int) -> None:
-        label = clause.text.strip()[:80] or f"step-{sequential_order}"
-        super().__init__(name=label, sequential_order=sequential_order)
-        self.text = clause.text
-        self.phase = clause.phase
-        self.is_continuation = clause.is_continuation
-        self.concepts = list(clause.concepts)
-        self.values = list(clause.values)
-        self.actor = clause.actor
 
-    def update_self(self, source: StoryNode) -> None:
-        assert isinstance(source, GraphStep)
-        self.name = source.name
-        self.text = source.text
-        self.phase = source.phase
-        self.is_continuation = source.is_continuation
-        self.concepts = list(source.concepts)
-        self.values = list(source.values)
-        self.actor = source.actor
-
-    def child_collections(self, source: StoryNode) -> list:
-        return []
-
-
-class GraphExample(StoryNode, GraphNodeMixin):
+class GraphExample(Example, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Example"
-
-    def __init__(self, name: str, sequential_order: int, scope: str = "") -> None:
-        super().__init__(name=name, sequential_order=sequential_order)
-        self.scope = scope
-
-    def update_self(self, source: StoryNode) -> None:
-        assert isinstance(source, GraphExample)
-        self.name = source.name
-        self.scope = source.scope
-
-    def child_collections(self, source: StoryNode) -> list:
-        return []
 
 
 # ---------------------------------------------------------------------------

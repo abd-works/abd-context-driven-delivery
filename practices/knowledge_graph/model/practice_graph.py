@@ -5,8 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple, Type, TypeVar
 
+from practices.stories.model.nodes import Epic
+
 from .graph_node import GraphNodeMixin, GraphRelationship, Kind, bind_graph_registry
-from .nodes import GraphDescription, GraphEpic, GraphModule, slug
+from .nodes import GraphDescription, GraphModule, slug
 
 T = TypeVar("T", bound=GraphNodeMixin)
 

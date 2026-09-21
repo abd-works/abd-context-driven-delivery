@@ -352,6 +352,7 @@ class _ScenarioBuilder:
 
     def build(self, background: List[Clause]) -> "MarkdownScenario":
         self._scenario.background = list(background)
+        self._scenario.sync_tree_from_legacy()
         return self._scenario
 
 

@@ -16,6 +16,7 @@ from .story_node import StoryNode
 from .update_report import ChildCollectionPair
 
 if TYPE_CHECKING:
+    from .example import Example
     from .scenario import Scenario
     from .test_file import TestCase, TestSuite
 
@@ -32,6 +33,7 @@ class Epic(StoryNode):
     def __init__(self, name: str, sequential_order: int):
         super().__init__(name, sequential_order)
         self.sub_epics: List[SubEpic] = []
+        self.examples: List["Example"] = []
         self.domain_concepts: List[str] = []
         # Clean Engineering {Type}ExampleFactory names this epic's helpers import.
         self.example_factories: List[str] = []
@@ -49,11 +51,21 @@ class Epic(StoryNode):
                 self_children=self.sub_epics,
                 source_children=source.sub_epics,
                 create_child=self.create_child_sub_epic,
-            )
+            ),
+            ChildCollectionPair(
+                self_children=self.examples,
+                source_children=getattr(source, "examples", []),
+                create_child=self.create_child_example,
+            ),
         ]
 
     def create_child_sub_epic(self, source: "SubEpic") -> "SubEpic":
         return SubEpic(source.name, source.sequential_order)
+
+    def create_child_example(self, source: "Example") -> "Example":
+        from .example import Example
+
+        return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
 
     def snapshot_fields(self) -> dict:
         return {
@@ -70,6 +82,7 @@ class SubEpic(StoryNode):
         super().__init__(name, sequential_order)
         self.sub_epics: List[SubEpic] = []
         self.stories: List[Story] = []
+        self.examples: List["Example"] = []
         self.domain_concepts: List[str] = []
         # Local CE factories in addition to the owning epic's list.
         self.example_factories: List[str] = []
@@ -106,6 +119,11 @@ class SubEpic(StoryNode):
                 source_children=source.stories,
                 create_child=self.create_child_story,
             ),
+            ChildCollectionPair(
+                self_children=self.examples,
+                source_children=getattr(source, "examples", []),
+                create_child=self.create_child_example,
+            ),
         ]
 
     def create_child_sub_epic(self, source: "SubEpic") -> "SubEpic":
@@ -113,6 +131,11 @@ class SubEpic(StoryNode):
 
     def create_child_story(self, source: "Story") -> "Story":
         return Story(source.name, source.sequential_order, source.story_type)
+
+    def create_child_example(self, source: "Example") -> "Example":
+        from .example import Example
+
+        return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
 
     def all_stories_recursive(self) -> List["Story"]:
         result: List[Story] = []
@@ -170,8 +193,9 @@ class Story(StoryNode):
         self.users: List[str] = []
         self.domain_terms: List[str] = []
         self.evidence: List[str] = []
-        # Scenario children - reconciled as tree children via child_collections.
+        # Scenario and example children - reconciled as tree children.
         self.scenarios: List["Scenario"] = []
+        self.examples: List["Example"] = []
         # Populated by the workspace loader after load; never reconciled as
         # tree children - copied through update_self as a value list.
         self.test_cases: List["TestCase"] = []
@@ -195,12 +219,22 @@ class Story(StoryNode):
                 self_children=self.scenarios,
                 source_children=source.scenarios,
                 create_child=self.create_child_scenario,
-            )
+            ),
+            ChildCollectionPair(
+                self_children=self.examples,
+                source_children=getattr(source, "examples", []),
+                create_child=self.create_child_example,
+            ),
         ]
 
     def create_child_scenario(self, source: "Scenario") -> "Scenario":
         from .scenario import Scenario  # lazy import to avoid cycle
         return Scenario(source.name, source.sequential_order, source.story_name)
+
+    def create_child_example(self, source: "Example") -> "Example":
+        from .example import Example
+
+        return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
 
     def snapshot_fields(self) -> dict:
         return {"story_type": self.story_type, "users": list(self.users)}

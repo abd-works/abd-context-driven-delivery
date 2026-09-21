@@ -9,8 +9,11 @@ from typing import List, Optional
 from practices.clean_engineering.model.base_class_model import OoadClass
 from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
 from practices.stories.model.nodes import Epic, Story, SubEpic
+from practices.stories.model.background import Background
+from practices.stories.model.example import Example
 from practices.stories.model.markdown.nodes import MarkdownScenario
-from practices.stories.model.scenario import Clause, Scenario
+from practices.stories.model.scenario import Scenario
+from practices.stories.model.step import Step
 from practices.stories.model.story_map import StoryMap
 from practices.stories.model.workspace import Workspace
 
@@ -18,9 +21,11 @@ from .graph_node import Kind
 from .nodes import (
     GraphClass,
     GraphCleanEngineeringModel,
+    GraphBackground,
     GraphContext,
     GraphDescription,
     GraphEpic,
+    GraphExample,
     GraphModule,
     GraphObservation,
     GraphOperation,
@@ -51,7 +56,6 @@ def load_practice_graph(path: str | Path) -> PracticeGraph:
     if graph.ce_model is not None:
         _wire_ce_model(graph, graph.ce_model)
 
-    _wire_scenario_steps(graph)
     _derive_cross_module_dependencies(graph)
     _load_bdd_descriptions(graph, root)
 
@@ -105,6 +109,8 @@ def _index_story_epics(graph: PracticeGraph) -> None:
 
 
 def _register_sub_epic_tree(graph: PracticeGraph, epic: Epic) -> None:
+    for example in getattr(epic, "examples", []):
+        _register_example(graph, epic, example, scope="epic")
     for sub in epic.sub_epics:
         if not isinstance(sub, GraphSubEpic):
             continue
@@ -124,6 +130,8 @@ def _register_story(graph: PracticeGraph, parent: SubEpic, story: Story) -> None
         return
     graph.register(story)
     graph.relate(parent, Kind.OWNS, story)
+    for example in getattr(story, "examples", []):
+        _register_example(graph, story, example, scope="story")
     for scenario in story.scenarios:
         _register_scenario(graph, story, scenario)
 
@@ -131,32 +139,41 @@ def _register_story(graph: PracticeGraph, parent: SubEpic, story: Story) -> None
 def _register_scenario(graph: PracticeGraph, story: GraphStory, scenario: Scenario) -> None:
     if not isinstance(scenario, GraphScenario):
         return
+    if not scenario.steps and (scenario.given or scenario.interactions or scenario.background):
+        scenario.sync_tree_from_legacy()
     graph.register(scenario)
     graph.relate(story, Kind.OWNS, scenario)
+    _wire_scenario_tree(graph, scenario)
 
 
-def _wire_scenario_steps(graph: PracticeGraph) -> None:
-    order = 0
-    for scenario in graph.nodes_of_type(GraphScenario):
-        order = _wire_clauses(graph, scenario, scenario.given, order)
-        order = _wire_clauses(graph, scenario, scenario.background, order)
-        for interaction in scenario.interactions:
-            order = _wire_clauses(graph, scenario, interaction.when, order)
-            order = _wire_clauses(graph, scenario, interaction.then, order)
+def _wire_scenario_tree(graph: PracticeGraph, scenario: GraphScenario) -> None:
+    for background in scenario.backgrounds:
+        _register_background(graph, scenario, background)
+    for step in scenario.steps:
+        _register_step(graph, scenario, step)
+    for example in scenario.examples:
+        _register_example(graph, scenario, example, scope="scenario")
 
 
-def _wire_clauses(
-    graph: PracticeGraph,
-    scenario: GraphScenario,
-    clauses: List[Clause],
-    order: int,
-) -> int:
-    for clause in clauses:
-        order += 1
-        step = GraphStep(clause, order)
+def _register_background(graph: PracticeGraph, parent: GraphScenario, background: Background) -> None:
+    if isinstance(background, GraphBackground):
+        graph.register(background)
+        graph.relate(parent, Kind.OWNS, background)
+        for step in background.steps:
+            _register_step(graph, background, step)
+
+
+def _register_step(graph: PracticeGraph, parent, step: Step) -> None:
+    if isinstance(step, GraphStep):
         graph.register(step)
-        graph.relate(scenario, Kind.OWNS, step)
-    return order
+        graph.relate(parent, Kind.OWNS, step)
+
+
+def _register_example(graph: PracticeGraph, parent, example: Example, *, scope: str) -> None:
+    if isinstance(example, GraphExample):
+        graph.register(example)
+        graph.relate(parent, Kind.SCOPES, example)
+        example.scope = scope
 
 
 def _wire_ce_model(graph: PracticeGraph, model: GraphCleanEngineeringModel) -> None:

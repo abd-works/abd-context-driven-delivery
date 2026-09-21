@@ -47,9 +47,10 @@ with description("a Scenario") as self:
         scenario = Scenario("Submit transfer before cutoff", 1)
         expect(scenario.semantic_type()).to(equal("Scenario"))
 
-    with it("should return an empty list from childCollections"):
+    with it("should reconcile backgrounds, steps, and examples as tree children"):
         scenario = Scenario("Submit transfer before cutoff", 1)
-        expect(scenario.child_collections(scenario)).to(equal([]))
+        pairs = scenario.child_collections(scenario)
+        expect(pairs).to(have_len(3))
 
     with context(
         "that has been translated from another Scenario of the same semantic type"
@@ -90,6 +91,14 @@ with description("a Scenario") as self:
             expect(self.target.example_rows).to(equal([{"amount": "10000 USD"}]))
             expect(self.target.background[0].text).to(equal("the system is available"))
             expect(self.target.evidence).to(equal(["ref #3"]))
+
+        with it("should materialize Step and Background nodes from legacy clause fields"):
+            expect(self.target.steps).not_to(be_empty)
+            expect(self.target.backgrounds).to(have_len(1))
+            expect(self.target.backgrounds[0].steps[0].text).to(
+                equal("the system is available")
+            )
+            expect(self.target.examples).to(have_len(1))
 
         with context("its interactions"):
             with it(
