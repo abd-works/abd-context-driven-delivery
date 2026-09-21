@@ -22,7 +22,7 @@ When determining scope, use this table to guide lens and agent selection:
 | **Specification** | Concrete scenarios, invariants, mockups, signatures | `stories-scenarios` | `ddd-building_blocks` | `ux-mockup` | `clean_engineering-model` | `bdd-behavior` |
 | **Implementation** | Production code, tests, integrations | `stories-acceptance_tests` | `ddd-tactics` | `ux-front_end_code` | `clean_engineering-code` | `bdd-development` |
 
-**Fidelity progression:** Each fidelity deepens in place. Do not create new sketch files—update the same `{slug}-sketch.md` and deepen lens blocks as you move through fidelities.
+**Fidelity progression:** Each fidelity deepens in place. One `{slug}-sketch.md` holds every active practice and guidance for the engagement (clean-engineering-model and bdd-behavior live in the same file). Do not create `{slug}-bdd-sketch.md` or a new file per fidelity — update that one file and deepen lens blocks as you move.
 
 ## Mandatory Workflow
 
@@ -52,7 +52,7 @@ When determining scope, use this table to guide lens and agent selection:
    - Draft rough shapes for each theme branch.
    - Save to `.context/{slug}-sketch.md` immediately after each draft.
    - Pause for review; incorporate every named mistake from prior reviews into the next revision.
-   - Overwrite the same file; do not create new files per fidelity level.
+   - Overwrite the same `{slug}-sketch.md`; do not create a new file per fidelity, practice, or guidance.
 
 6. **Confirm correctness**
    - After every sketch revision, ask the user to confirm before proceeding to the next branch or theme.
@@ -65,7 +65,7 @@ When determining scope, use this table to guide lens and agent selection:
 - **Grill before theme detail** — Before writing non-scaffold content for any theme, grill that theme's open questions.
 - **Save immediately** — Call `save_sketch` after the first interim draft and every refinement. Do not defer persistence.
 - **Review gate** — Pause for review after every `save_sketch`. Do not proceed until the user confirms the sketch is correct.
-- **One sketch per engagement** — One `.context/{slug}-sketch.md` file per engagement. Deepen fidelity by updating blocks in place.
+- **One sketch per engagement** — One `.context/{slug}-sketch.md` file per engagement. Put every active practice and guidance in that file (object model and BDD together). Deepen fidelity by updating blocks in place.
 - **Carry-forward mistakes** — Incorporate every named mistake from reviews into the next revision. Do not regenerate as if mistakes never happened.
 - **Lens notation only** — Keep lens block bodies in child sketch notation (`stories`, `ddd`, `ux`, `ce`, `bdd`). No free prose.
 - **No generation, validation, or spec** — Your output is rough artifacts and grill answers. Production code, formal specs, and validation belong to other agents.

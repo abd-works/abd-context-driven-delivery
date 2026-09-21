@@ -18,6 +18,8 @@ Sketch the behavior outline first, then layer on test/implementation detail. Con
 
 **Do not annotate sketch lines** with `# b` / `# d` (or any margin fidelity tags). Declare fidelity once at the top of the file.
 
+This template is the BDD notation for a section of the engagement sketch. When sketched with another practice in the same session (clean-engineering-model / object model), keep that notation in `{slug}-sketch.md` so the model and behaviors stay paired; do not write `{slug}-bdd-sketch.md`.
+
 ---
 
 ## Template
