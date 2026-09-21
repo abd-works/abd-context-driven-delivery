@@ -89,6 +89,10 @@ def load_practice_graph(
     _derive_cross_module_dependencies(graph)
     _load_bdd_descriptions(graph, root)
 
+    from .evaluate_rules import evaluate_rules
+
+    evaluate_rules(graph, root, codeql_results=codeql_path)
+
     return graph
 
 

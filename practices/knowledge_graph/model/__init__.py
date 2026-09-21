@@ -16,7 +16,10 @@ from practices.ddd.model import (
 
 from .codeql_export import CodeQLPracticeGraphExport, load_codeql_export, resolve_codeql_results_path
 from .codeql_populate import populate_from_codeql
+from .evaluate_rules import evaluate_rules
 from .graph_node import GraphNodeMixin, GraphRelationship, Kind
+from .graph_rules import GraphRule, RuleRegistry, RuleViolation, get_rule_registry
+from .node_rules import NodeRulesView
 from .nodes import (
     GraphAggregate,
     GraphBackground,
@@ -54,6 +57,7 @@ __all__ = [
     "EntityRoot",
     "GraphAggregate",
     "CodeQLPracticeGraphExport",
+    "GraphRule",
     "GraphBackground",
     "GraphBoundedContext",
     "GraphClass",
@@ -78,6 +82,11 @@ __all__ = [
     "GraphStory",
     "GraphSubEpic",
     "Kind",
+    "NodeRulesView",
+    "RuleRegistry",
+    "RuleViolation",
+    "evaluate_rules",
+    "get_rule_registry",
     "load_codeql_export",
     "Observation",
     "populate_from_codeql",

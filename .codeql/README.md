@@ -29,6 +29,21 @@ See `practices/knowledge_graph/model/codeql_export.py` for dataclasses. Summary:
 | `story_calls` | `Step — invokes — Operation` (join on story file + line) |
 | `story_observations` | `Step — observes — Property/Operation` |
 | `example_exports` | `Example — demonstrates — Class` |
+| `rule_violations` | Attached to matching graph nodes → `node.rules.*.violations` |
+
+After populate, `PracticeGraph.load` runs **`evaluate_rules()`** which:
+
+1. Loads guidance rule slugs from practice markdown (`stories.md`, `ddd.md`, …)
+2. Evaluates graph predicates (scenario has examples, step invokes operation, …)
+3. Merges `rule_violations` from CodeQL export
+
+Access on any node:
+
+```python
+step.rules.violations
+step.rules.direct.violations
+step.rules.practice("stories").fidelity("acceptance_tests").violations
+```
 
 ## Workflow (pml-domainmodel / TypeScript)
 

@@ -71,6 +71,21 @@ class CodeQLExampleExport:
 
 
 @dataclass
+class CodeQLRuleViolation:
+    """Rule violation from a CodeQL query — joined to a graph node on load."""
+
+    rule_slug: str
+    message: str
+    practice: str
+    semantic_type: str
+    node_name: str
+    fidelity: str = ""
+    file: str = ""
+    line: int = 0
+    node_id: str = ""
+
+
+@dataclass
 class CodeQLStoryObservation:
     """Property or operation read/assert in a story test — join to GraphStep."""
 
@@ -94,6 +109,7 @@ class CodeQLPracticeGraphExport:
     story_calls: List[CodeQLStoryCall] = field(default_factory=list)
     story_observations: List[CodeQLStoryObservation] = field(default_factory=list)
     example_exports: List[CodeQLExampleExport] = field(default_factory=list)
+    rule_violations: List[CodeQLRuleViolation] = field(default_factory=list)
 
 
 def load_codeql_export(path: Path) -> CodeQLPracticeGraphExport:
@@ -109,6 +125,7 @@ def load_codeql_export(path: Path) -> CodeQLPracticeGraphExport:
             CodeQLStoryObservation(**o) for o in raw.get("story_observations", [])
         ],
         example_exports=[CodeQLExampleExport(**e) for e in raw.get("example_exports", [])],
+        rule_violations=[CodeQLRuleViolation(**v) for v in raw.get("rule_violations", [])],
     )
 
 

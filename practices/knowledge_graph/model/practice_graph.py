@@ -8,6 +8,7 @@ from typing import Dict, Iterable, List, Optional, Tuple, Type, TypeVar
 from practices.stories.model.nodes import Epic
 
 from .graph_node import GraphNodeMixin, GraphRelationship, Kind, bind_graph_registry
+from .graph_rules import RuleViolation
 from .nodes import GraphDescription, GraphModule, slug
 
 T = TypeVar("T", bound=GraphNodeMixin)
@@ -26,6 +27,8 @@ class PracticeGraph:
         self.nodes: Dict[str, GraphNodeMixin] = {}
         self.relationships: List[GraphRelationship] = []
         self._used_by: Dict[str, List[str]] = {}
+        self._violations_by_node: Dict[str, List[RuleViolation]] = {}
+        self.rule_registry = None
         bind_graph_registry(self)
 
     @classmethod
@@ -156,6 +159,29 @@ class PracticeGraph:
 
     def nodes_of_type(self, cls: Type[T]) -> List[T]:
         return [n for n in self.nodes.values() if isinstance(n, cls)]
+
+    def violations_for_node(
+        self,
+        node: GraphNodeMixin,
+        *,
+        practice: str | None = None,
+        fidelity: str | None = None,
+        direct_only: bool = False,
+    ) -> List[RuleViolation]:
+        from .evaluate_rules import filter_violations
+
+        return filter_violations(
+            self,
+            node,
+            practice=practice,
+            fidelity=fidelity,
+            direct_only=direct_only,
+        )
+
+    def evaluate_rules(self, *, codeql_results: str | Path | None = None) -> None:
+        from .evaluate_rules import evaluate_rules as _evaluate
+
+        _evaluate(self, self.root, codeql_results=Path(codeql_results) if codeql_results else None)
 
 
 def _dedupe_nodes(nodes: Iterable[GraphNodeMixin]) -> List[GraphNodeMixin]:

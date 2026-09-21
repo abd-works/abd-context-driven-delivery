@@ -85,6 +85,12 @@ class GraphNodeMixin:
     def relate(self, kind: str, to: "GraphNodeMixin") -> GraphRelationship:
         return self.graph.relate(self, kind, to)
 
+    @property
+    def rules(self) -> "NodeRulesView":
+        from .node_rules import NodeRulesView
+
+        return NodeRulesView(self)
+
 
 def bind_graph_registry(graph: "PracticeGraph") -> None:
     global _GRAPH

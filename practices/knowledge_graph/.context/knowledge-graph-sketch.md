@@ -28,7 +28,7 @@ PracticeGraph
   descriptions                      # keyed Description roots (BDD practice view)
   nodes                             # all GraphNodes keyed by stable id (optional flat index)
   relationships                     # all GraphRelationships (from, kind, to)
-  evaluate_rules()                  # bind guidance rules; fill node.rules.*.violations (increment 2+)
+  evaluate_rules()                  # bind guidance rules; fill node.rules.*.violations (runs in load)
 ```
 
 Every typed node below **is a GraphNode** unless noted.
