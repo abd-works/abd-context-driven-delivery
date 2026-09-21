@@ -1,6 +1,6 @@
 # knowledge_graph sketch — increment 1 (Create Customer + Get Number)
 
-One file: object model + BDD. Extends existing practice nodes. CodeQL populate is a later increment behind the same `load`.
+One file: object model + BDD + guidance rule binding. Extends existing practice nodes. CodeQL populate and rule evaluation are later increments behind the same `load`.
 
 This is a **practice graph** — one navigable object model. Each node is **both**:
 
@@ -28,6 +28,7 @@ PracticeGraph
   descriptions                      # keyed Description roots (BDD practice view)
   nodes                             # all GraphNodes keyed by stable id (optional flat index)
   relationships                     # all GraphRelationships (from, kind, to)
+  evaluate_rules()                  # bind guidance rules; fill node.rules.*.violations (increment 2+)
 ```
 
 Every typed node below **is a GraphNode** unless noted.
@@ -44,6 +45,143 @@ GraphNode
 ```
 
 `usedBy` is populated from `GraphRelationship.to` — e.g. `CustomerRepository.usedBy` includes the Step that has `Step — invokes — CustomerRepository.load`.
+
+---
+
+## Guidance rules on nodes
+
+Every node is subject to one or more **guidance rules** — **directly** (the rule names that node type at that fidelity) or **through a parent** (rules scoped to ancestors or containers also apply to descendants in scope).
+
+Guidance is organised per practice (`stories`, `clean_engineering`, `ddd`, `bdd`). Each practice publishes:
+
+- **Shared rules** — apply across fidelities when the node (or an ancestor in scope) matches the practice and the rule’s node filter.
+- **Fidelity-specific rules** — apply only when the active fidelity narrows which node types are in scope.
+
+**Fidelity narrows the node set**, not a separate tree. Examples:
+
+| Practice | Fidelity | Node types in scope (typical) | Cross-practice edges rules may use |
+|----------|----------|--------------------------------|-------------------------------------|
+| Stories | `story_map` | Epic, SubEpic, Story | — |
+| Stories | `scenarios` | Scenario, Background, Step, Example | — |
+| Stories | `acceptance_tests` | Step (runnable), Example | Step — invokes — Operation; Step — uses — Example |
+| Clean Engineering | `modules` | Module | Module — dependsOn — Module |
+| Clean Engineering | `model` | Module, Class, Property, Operation | Class — associates — Class; hasType / returns |
+| Clean Engineering | `code` | Class, Property, Operation (from source) | Operation — invokes — Operation |
+| DDD | `bounded_context` | BoundedContext, Aggregate (concept names) | BoundedContext — owns — Aggregate |
+| DDD | `building_blocks` | Entity, EntityRoot, Repository, ValueObject, … | Repository — accesses — EntityRoot |
+| BDD | `behavior` | Description, Context, Observation | Observation — observes — Property/Operation |
+
+A **Scenario** node at scenarios fidelity is directly subject to scenarios rules. It may also inherit story-map rules when the rule scope includes Story-owned descendants. An **acceptance_tests** Step is subject to acceptance-test rules that can require `Step — invokes — Operation` and trace examples to classes.
+
+### Rule binding (sketch)
+
+```
+GuidanceRule
+  slug: string                        # e.g. scenarios-must-have-examples
+  practice: string                    # stories | clean_engineering | ddd | bdd
+  fidelity: string | null             # null = shared; else fidelity name
+  applies_to: string[]                # semantic types: Scenario, Step, Class, Repository, …
+  inherits_to_children: bool          # when true, owned descendants are also in scope
+  predicate                          # graph constraint (see below)
+```
+
+Rules are **not** stored as parallel trees. They attach to **GraphNodes** already in the practice graph. Evaluation uses the same `relationships` index as navigation (plus CodeQL populate facts when loaded).
+
+### Node.rules — violation queries
+
+Each graph node exposes a **rules view** for violations already evaluated on the loaded graph (increment 2+; sketch API first):
+
+```
+GraphNode
+  rules
+    violations                       # all violations for every rule that applies
+                                     # (direct + inherited from ancestors in scope)
+
+    direct
+      violations                     # rules whose practice + closest fidelity match
+                                     # this node’s type — e.g. Scenario → scenarios fidelity
+
+    practice(name)                   # optional filter — only that practice’s rules
+      .shared
+        violations
+      .fidelity(name)                # optional — only that fidelity’s rules
+        violations
+```
+
+**Examples**
+
+```python
+scenario.rules.violations
+# every rule that applies to this scenario (scenarios + inherited story_map if in scope)
+
+scenario.rules.direct.violations
+# only rules that target Scenario at the closest matching fidelity (typically scenarios)
+
+scenario.rules.practice("stories").fidelity("acceptance_tests").violations
+# only acceptance-test rules that apply to this node (empty on a Scenario unless
+# the rule scope includes Scenario or a owned Step/Example)
+```
+
+**Closest fidelity:** the finest-grained fidelity whose `applies_to` includes the node’s `_semantic_type_name` and whose practice matches `node.practice` (or the practice that owns the rule for cross-practice rules). Direct violations exclude rules that only apply because a **parent** was in scope unless `inherits_to_children` propagates them to this node.
+
+### Rule evaluation — graph + CodeQL, not per-file scanners
+
+Today, scanners reopen files, re-parse AST, and look for one local shape per rule. The practice graph + CodeQL populate path replaces that with **constraints over the shared model**:
+
+1. **Load** — prose skeleton + CodeQL facts (`PracticeGraph.load`).
+2. **Bind rules** — for each node, compute applicable rule set from practice, fidelity, type, and ancestor scope.
+3. **Evaluate** — run each rule’s predicate against graph edges (and CodeQL export where needed).
+4. **Attach** — materialise violations on `node.rules.*.violations`.
+
+A rule predicate is a **graph query** (CodeQL or declarative filter over `relationships`), not a file walk. Examples:
+
+```
+# scenarios-must-have-examples
+Scenario scenario
+where not exists(Example e | scenario — scopes — e)
+select scenario, "Scenario has no examples."
+
+# step-invokes-domain-operation (acceptance_tests)
+Step step
+where step.phase = "when"
+  and not exists(Operation op | step — invokes — op)
+select step, "When step does not invoke a domain operation."
+
+# example-demonstrates-class
+Example example
+where not exists(Class c | example — demonstrates — c)
+select example, "Example is not linked to a domain class."
+
+# repository-owns-lifecycle-not-domain-behaviour (building_blocks)
+Operation op, Repository repo
+where repo — owns — op
+  and op mutates aggregate state internally on Class owned by repo
+  and not op.isCollectionLifecycle()
+select op, "Repository exposes business behaviour instead of collection lifecycle."
+
+# entity-owns-its-mutations (building_blocks / code)
+Operation op, Class cls
+where cls — owns — op
+  and op writes fields on cls
+  and exists(Operation other | other — invokes — op | other on sibling Class)
+select op, "Object with the data does not own the operation."
+```
+
+CodeQL is the reliable source for **calls, mutations, and type resolution**; the graph holds **practice identity** (Scenario, Repository, Step — invokes — Operation). A rule may combine both: graph edge must exist **and** CodeQL confirms the callee mutates state.
+
+Existing file scanners remain useful during migration; new rules should target the graph query surface first.
+
+### Violation shape
+
+```
+RuleViolation
+  rule_slug: string
+  node: GraphNode                     # the node in scope (may be parent if inherited)
+  message: string
+  practice: string
+  fidelity: string | null
+  source                             # optional SourceLocation from node or CodeQL site
+```
 
 ---
 
