@@ -22,7 +22,15 @@ Grounded in `stories/onboard-a-customer/create-customer/`, `stories/onboard-a-cu
 
 **Correction:** `Module` does not have a `repository`. DDD adds two **Module** subtypes: **Bounded Context** (language boundary) and **Aggregate** (consistency cluster). An Aggregate must have a known **root** Entity. **Repository** is a **Class** that lives in the Aggregate when that root has an independent collection lifecycle — not a field on Module.
 
-**Class subtypes:** Entity (identity that outlives attributes), Entity Root (Entity that is the Aggregate’s only entry; must have identification), Value Object, Repository, Domain Event, Domain Service.
+**Class subtypes:** Entity (identity that outlives attributes), Entity Root (Entity that is the Aggregate’s only entry — same identity rule; `aggregate` link is the only difference), Value Object, Repository, Domain Event, Domain Service.
+
+## Cross-module class dependencies
+
+**A:** `Class.externalClasses` lists every class dependency whose home module is another module. `Module.externalClasses` is the deduped rollup from owned classes. Same-module refs stay on `relationships`. CodeQL populates both from imports, types, and call graph.
+
+## Practice graph, not parallel guidelines
+
+**A:** One `PracticeGraph`; every node is a `GraphNode` (graph membership + `usedBy`) and a practice instance (`practice = clean_engineering | ddd | stories | bdd`). Cross-practice edges (`Step.invokes → Operation`, `Example.expresses → Class`, etc.) are first-class fields, not prose.
 
 Grounded in `practices/ddd/guidance/building_blocks.md`, `practices/ddd/templates/ddd-sketch.md`, `domain/bounded-context-map.md` (`Customer` BC holds Customer, Cart, …; `Inventory` holds Porting).
 
