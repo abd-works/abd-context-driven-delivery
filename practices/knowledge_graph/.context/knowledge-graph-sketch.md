@@ -4,7 +4,7 @@ One file: object model + BDD. Extends existing practice nodes. CodeQL populate i
 
 This is a **practice graph** — one navigable object model. Each node is **both**:
 
-- a **graph node** (participates in the unified practice graph with cross-practice edges), and
+- a **graph node** (participates in the unified practice graph), and
 - a **practice instance** (a typed node from Clean Engineering, DDD, Stories, or BDD).
 
 Practices are **stereotypes and extra edges** on that model, not four parallel trees.
@@ -21,12 +21,13 @@ practices/knowledge_graph/
 ```
 PracticeGraph
   load(path)
-    -> StoryMap
-    -> CleanEngineeringModel
+    StoryMap — loadedFrom — path
+    CleanEngineeringModel — loadedFrom — path
   stories                           # keyed Epic roots (Stories practice view)
   modules                           # keyed Module roots (CE / DDD practice view)
   descriptions                      # keyed Description roots (BDD practice view)
   nodes                             # all GraphNodes keyed by stable id (optional flat index)
+  relationships                     # all GraphRelationships (from, kind, to)
 ```
 
 Every typed node below **is a GraphNode** unless noted.
@@ -35,43 +36,61 @@ Every typed node below **is a GraphNode** unless noted.
 
 ## GraphNode (common)
 
-Every node in the practice graph carries graph membership and cross-practice edges.
-
 ```
 GraphNode
-  graph                             # back-ref to owning PracticeGraph
+  graph                             # PracticeGraph — memberOf — GraphNode
   practice                          # clean_engineering | ddd | stories | bdd
-  usedBy                            # reverse of every cross-practice edge below
+  usedBy                            # reverse index: GraphNode — usedBy — GraphNode
 ```
 
-`usedBy` is not a separate invention per type — it is the reverse index of graph edges (`CustomerRepository.usedBy.stories` because a Step invokes `CustomerRepository.load`).
+`usedBy` is populated from `GraphRelationship.to` — e.g. `CustomerRepository.usedBy` includes the Step that has `Step — invokes — CustomerRepository.load`.
+
+---
+
+## GraphRelationship (every edge)
+
+Every relationship names **left**, **kind**, and **right**. No one-sided fields.
+
+```
+GraphRelationship
+  from: GraphNode
+  kind: string
+  to: GraphNode
+```
 
 ---
 
 ## Clean Engineering (base practice)
 
+Tree structure (parent owns children):
+
 ```
 Module : GraphNode
   practice = clean_engineering
-  classes                           # classes owned in this module
-  externalClasses                   # all Class nodes used from other modules (deduped rollup)
-  dependencies                      # derived: home Module of each externalClass (module names)
+  Module — owns — Class
 
 Class : GraphNode
   practice = clean_engineering
-  module                            # home module
-  properties
-  operations
-  relationships                     # same-module class associations
-  externalClasses                   # classes in another module this class depends on
-  usedBy
-
-Property
-Operation
-  usedBy
+  Class — belongsTo — Module
+  Class — owns — Property
+  Class — owns — Operation
+  Class — associates — Class              # same module only
 ```
 
-**Cross-module rule:** a class dependency whose home module ≠ this class’s module goes on `Class.externalClasses`. Same-module refs stay on `relationships`. `Module.externalClasses` is the union of `externalClasses` from all classes in the module. CodeQL resolves imports, types, params, returns, fields, and collaborators to Class nodes, then applies the filter.
+Cross-module dependencies are **relationships**, not a field on the left alone:
+
+```
+Class — dependsOn — Class                 # only when to.homeModule ≠ from.homeModule
+Module — dependsOn — Class                # rollup: Module — dependsOn — each external Class
+Module — dependsOn — Module               # derived: home modules of external Classes
+```
+
+CodeQL resolves imports, types, params, returns, fields, and collaborators to Class nodes, then emits `Class — dependsOn — Class` when modules differ.
+
+```
+Property
+Operation
+```
 
 ---
 
@@ -80,26 +99,25 @@ Operation
 ```
 BoundedContext : Module
   practice = ddd
-  aggregates                        # Aggregate modules in this language
+  BoundedContext — owns — Aggregate
 
 Aggregate : Module
   practice = ddd
-  root                              # EntityRoot; required
-  # Repository, when it exists, is a Class in this module — not a field on Module
+  Aggregate — hasRoot — EntityRoot
 
 Entity : Class
   practice = ddd
-  identity                          # any Entity has identity
+  Entity — hasIdentity — Property | Operation
 
 EntityRoot : Entity
-  aggregate                         # the one Aggregate this root belongs to; only difference from Entity
+  EntityRoot — belongsTo — Aggregate
 
 ValueObject : Class
   practice = ddd
 
 Repository : Class
   practice = ddd
-  manages                           # EntityRoot this repository’s collection lifecycle serves
+  Repository — manages — EntityRoot
 
 DomainEvent : Class
   practice = ddd
@@ -115,37 +133,33 @@ DomainService : Class
 ```
 Epic : GraphNode
   practice = stories
-  epics                             # child Epics / SubEpics
-  stories
-  examples                          # Example scope = Epic
+  Epic — owns — Epic                     # child epics / sub-epics
+  Epic — owns — Story
+  Epic — scopes — Example
 
 SubEpic : Epic
 
 Story : GraphNode
   practice = stories
-  scenarios
-  examples                          # Example scope = Story
+  Story — owns — Scenario
+  Story — scopes — Example
 
 Scenario : GraphNode
   practice = stories
-  background
-  steps
-  examples                          # Example scope = Scenario
+  Scenario — owns — Background
+  Scenario — owns — Step
+  Scenario — scopes — Example
 
 Background : GraphNode
   practice = stories
-  steps
+  Background — owns — Step
 
-Step : GraphNode                    # existing Clause; Given / When / Then
+Step : GraphNode                         # existing Clause; Given / When / Then
   practice = stories
-  invokes                           # Operation (When)
-  observes                          # Property and/or Operation (Then)
-  uses                              # Example
 
 Example : GraphNode
   practice = stories
-  expresses                         # Class (usually Entity or Value Object)
-  scope                             # Epic | Story | Scenario
+  Example — scopedBy — Epic | Story | Scenario
 ```
 
 ---
@@ -155,68 +169,44 @@ Example : GraphNode
 ```
 Description : GraphNode
   practice = bdd
-  describes                         # Class (subject)
-  contexts
+  Description — owns — Context
 
 Context : GraphNode
   practice = bdd
-  state                             # Example / Given state (same prior state as Background)
-  observations
-  contexts                          # nested
+  Context — owns — Observation
+  Context — owns — Context               # nested
 
 Observation : GraphNode
   practice = bdd
-  observes                          # Operation and/or Property (same as a Step’s Then)
 ```
 
 ---
 
-## Cross-practice graph edges
+## Cross-practice graph relationships
 
-These are **first-class fields** on graph nodes — the product, not commentary.
+All cross-practice joins are `GraphRelationship` rows with explicit left and right.
 
 ```
-# --- DDD within CE ---
-BoundedContext
-  contains → Aggregate
-
-Aggregate
-  root → EntityRoot
-
-EntityRoot
-  aggregate → Aggregate
-
-Repository
-  manages → EntityRoot
-
-Class
-  externalClasses → Class              # target Class in another Module only
-
-Module
-  externalClasses → Class              # rollup from owned classes
-
 # --- Stories → CE ---
-Step
-  invokes → Operation                    # When
-  observes → Property | Operation      # Then
-  uses → Example
+Step — invokes — Operation               # When
+Step — observes — Property               # Then
+Step — observes — Operation              # Then
+Step — uses — Example
 
-Example
-  expresses → Class
+Example — expresses — Class
 
 # --- BDD → CE / Stories ---
-Description
-  describes → Class
+Description — describes — Class
 
-Context
-  state → Example | Background | Step  # Given / standing state
+Context — namesState — Example
+Context — namesState — Background
+Context — namesState — Step              # Given / standing state
 
-Observation
-  observes → Property | Operation      # same observables a Step uses
+Observation — observes — Property
+Observation — observes — Operation       # same observables a Step uses
 
-# --- reverse index (on GraphNode) ---
-GraphNode
-  usedBy → GraphNode[]                 # stories, scenarios, steps, descriptions, observations, …
+# --- reverse (materialized on GraphNode) ---
+GraphNode — usedBy — GraphNode           # to.usedBy includes from for every row above
 ```
 
 ---
@@ -244,51 +234,54 @@ DDD / CE (from `domain/bounded-context-map.md` and `domain/domain-model.md`):
 
 ```
 modules["Customer"] : BoundedContext
-  aggregates["Customer"] : Aggregate
-    root Customer : EntityRoot
-      aggregate → aggregates["Customer"]
-      identity id
+  BoundedContext["Customer"] — owns — aggregates["Customer"] : Aggregate
+    Aggregate["Customer"] — hasRoot — Customer : EntityRoot
+      EntityRoot Customer — belongsTo — Aggregate["Customer"]
+      Entity Customer — hasIdentity — id
     CustomerRepository : Repository
-      manages → Customer
+      Repository CustomerRepository — manages — Customer
     Identity
     Address
-  aggregates["Cart"] : Aggregate
-    root Cart : EntityRoot
+  BoundedContext["Customer"] — owns — aggregates["Cart"] : Aggregate
+    Aggregate["Cart"] — hasRoot — Cart : EntityRoot
     CartRepository : Repository
-  aggregates["AccountCredentials"] : Aggregate
-    root AccountCredentials : EntityRoot
+      Repository CartRepository — manages — Cart
+  BoundedContext["Customer"] — owns — aggregates["AccountCredentials"] : Aggregate
+    Aggregate["AccountCredentials"] — hasRoot — AccountCredentials : EntityRoot
     AccountRepository : Repository
+      Repository AccountRepository — manages — AccountCredentials
 
 modules["Inventory"] : BoundedContext
-  aggregates["Porting"] : Aggregate
-    root Portability : EntityRoot
-  externalClasses: Customer             # when get-number crosses BC into Customer types
+  BoundedContext["Inventory"] — owns — aggregates["Porting"] : Aggregate
+    Aggregate["Porting"] — hasRoot — Portability : EntityRoot
+  Module["Inventory"] — dependsOn — Customer              # cross-module rollup
+    Class Portability — dependsOn — Customer              # when get-number crosses BC
 ```
 
 One fully wired story — Load Customer (`load_customer_story.test.md`):
 
 ```
 Story load_customer
-  Scenario "Load My Paradise customer and store in session"
+  Story load_customer — owns — Scenario "Load My Paradise customer and store in session"
     Step When "My Paradise loads the customer from Mavenir"
-      invokes → CustomerRepository.load
+      Step — invokes — CustomerRepository.load
     Step Then "the result is a Paradise customer with identity and address"
-      observes → Customer.identity
-      observes → Customer.address
+      Step — observes — Customer.identity
+      Step — observes — Customer.address
     Example stored customer
-      expresses → Customer
-      expresses → AccountCredentials
+      Example stored customer — expresses — Customer
+      Example stored customer — expresses — AccountCredentials
 
 Description "a Customer"
-  describes → Customer
-  Context "that has been loaded"
-    state → Example stored customer
-    Observation "should have identity and address from Mavenir"
-      observes → Customer.identity
-      observes → Customer.address
+  Description "a Customer" — describes — Customer
+  Description "a Customer" — owns — Context "that has been loaded"
+    Context "that has been loaded" — namesState — Example stored customer
+    Context "that has been loaded" — owns — Observation "should have identity and address from Mavenir"
+      Observation — observes — Customer.identity
+      Observation — observes — Customer.address
 ```
 
-Create Customer wires the same Aggregate through `CustomerRepository.create`. Get Number wires `Portability` (and Cart when the number is stored). `CustomerRepository.usedBy` therefore includes the load and create customer stories because those Steps invoke its operations.
+Create Customer wires the same Aggregate through `CustomerRepository.create`. Get Number wires `Portability` (and Cart when the number is stored). `CustomerRepository.usedBy` includes load and create customer stories because those Steps have `Step — invokes — CustomerRepository.load` and `Step — invokes — CustomerRepository.create`.
 
 ---
 
@@ -319,7 +312,7 @@ a Paradise practice graph
       it should include the Inventory bounded context
       it should include the Porting aggregate
       it should include Portability as the Porting aggregate root
-      it should include cross-module externalClasses when stories cross bounded contexts
+      it should include Class — dependsOn — Class when stories cross bounded contexts
       it should include the load customer story among the usedBy of CustomerRepository
       it should include the create customer story among the usedBy of CustomerRepository
       it should include a description of Customer

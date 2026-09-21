@@ -26,11 +26,11 @@ Grounded in `stories/onboard-a-customer/create-customer/`, `stories/onboard-a-cu
 
 ## Cross-module class dependencies
 
-**A:** `Class.externalClasses` lists every class dependency whose home module is another module. `Module.externalClasses` is the deduped rollup from owned classes. Same-module refs stay on `relationships`. CodeQL populates both from imports, types, and call graph.
+**A:** Emit `Class — dependsOn — Class` when the target’s home module differs. Roll up with `Module — dependsOn — Class` and derived `Module — dependsOn — Module`. Same-module refs use `Class — associates — Class`. CodeQL populates from imports, types, and call graph.
 
 ## Practice graph, not parallel guidelines
 
-**A:** One `PracticeGraph`; every node is a `GraphNode` (graph membership + `usedBy`) and a practice instance (`practice = clean_engineering | ddd | stories | bdd`). Cross-practice edges (`Step.invokes → Operation`, `Example.expresses → Class`, etc.) are first-class fields, not prose.
+**A:** One `PracticeGraph`; every node is a `GraphNode` and a practice instance. Every edge is a `GraphRelationship` with explicit **from**, **kind**, and **to** — e.g. `Step — invokes — Operation`, not a one-sided field on Step alone. `usedBy` is the reverse index on `GraphNode`.
 
 Grounded in `practices/ddd/guidance/building_blocks.md`, `practices/ddd/templates/ddd-sketch.md`, `domain/bounded-context-map.md` (`Customer` BC holds Customer, Cart, …; `Inventory` holds Porting).
 
