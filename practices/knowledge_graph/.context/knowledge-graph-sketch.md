@@ -517,3 +517,23 @@ a Paradise practice graph
       it should include the create customer story among the usedBy of CustomerRepository
       it should include a description of Customer
       it should include an observation that Customer has been loaded
+
+---
+
+Fidelity: rules (increment 2+)
+
+a Scenario under load_customer_story
+  that has been loaded and evaluated
+    scenario.rules.direct.violations should include no missing-example violation when it scopes an Example
+    scenario.rules.direct.violations should include a missing-example violation when it scopes no Example
+
+a When Step under load_customer_story
+  that has been loaded with CodeQL populate and evaluated
+    step.rules.practice("stories").fidelity("acceptance_tests").violations
+      should be empty when Step — invokes — CustomerRepository.load is present
+      should include step-invokes-domain-operation when no Operation is linked
+
+a CustomerRepository class
+  that has been loaded with CodeQL and evaluated at building_blocks fidelity
+    repository.rules.direct.violations should flag operations that mutate aggregate state
+      when they are not collection-lifecycle operations

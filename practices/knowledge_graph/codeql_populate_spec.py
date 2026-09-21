@@ -29,7 +29,7 @@ with description("CodeQL practice-graph export"):
     with it("should parse the fixture JSON schema"):
         export = load_codeql_export(_EXPORT)
         expect(export.version).to(equal(1))
-        expect(export.classes).to(have_length(3))
+        expect(export.classes).to(have_length(4))
         expect(export.story_calls).to(have_length(1))
 
 

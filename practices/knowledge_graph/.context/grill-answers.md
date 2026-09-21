@@ -39,3 +39,13 @@ Grounded in `practices/ddd/guidance/building_blocks.md`, `practices/ddd/template
 **Correction:** The graph includes the Stories tree below Story: **Scenario**, **Background**, **Step** (existing `Clause`), **Example**. BDD has its own tree: **Description** (`describe`), **Context** (`that` / `with`), **Observation** (`it should`). The important work is the edges that join Stories, CE, DDD, and BDD — not four disconnected trees.
 
 Grounded in `practices/stories/model/scenario.py`, `practices/bdd/bdd.md`, `gwt-steps-trace-to-domain-operations`.
+
+## Guidance rules on graph nodes
+
+**Q:** How do practice guidance rules attach to the unified graph?
+
+**A:** Every node is subject to rules **directly** (rule `applies_to` matches the node type at a fidelity) or **through a parent** (inherited scope). Each practice has **shared rules** plus **fidelity-specific rules**; fidelity narrows which node types are in scope — e.g. `scenarios` → Scenario/Step/Example; `acceptance_tests` → Step with `Step — invokes — Operation`; `building_blocks` → Repository/Entity with DDD edges.
+
+**Query surface (sketch):** `node.rules.violations` (all applicable); `node.rules.direct.violations` (closest practice+fidelity match); `node.rules.practice(p).fidelity(f).violations` (filtered).
+
+**Evaluation:** Rules are graph/CodeQL predicates over the loaded practice graph — not per-file scanner re-parses. CodeQL supplies calls/mutations; the graph supplies practice identity and cross-practice edges. See `knowledge-graph-sketch.md` § Guidance rules on nodes.
