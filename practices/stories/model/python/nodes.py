@@ -33,27 +33,27 @@ class PythonScenario(Scenario):
 
 
 class PythonStory(Story):
-    def create_child_scenario(self, source: Scenario) -> PythonScenario:
+    def load_scenario(self, source: Scenario) -> PythonScenario:
         return PythonScenario(source.name, source.sequential_order, source.story_name)
 
 
 class PythonSubEpic(SubEpic):
-    def create_child_sub_epic(self, source: SubEpic) -> "PythonSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "PythonSubEpic":
         return PythonSubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: Story) -> PythonStory:
+    def load_story(self, source: Story) -> PythonStory:
         return PythonStory(source.name, source.sequential_order, source.story_type)
 
 
 class PythonEpic(Epic):
-    def create_child_sub_epic(self, source: SubEpic) -> PythonSubEpic:
+    def load_sub_epic(self, source: SubEpic) -> PythonSubEpic:
         return PythonSubEpic(source.name, source.sequential_order)
 
 
 class PythonStoryMap(StoryMap):
     """Format-typed root for the Python code format. Parses test_*.py / *_test.py files."""
 
-    def create_child_epic(self, source: PythonEpic) -> PythonEpic:
+    def load_epic(self, source: PythonEpic) -> PythonEpic:
         return PythonEpic(source.name, source.sequential_order)
 
     @classmethod

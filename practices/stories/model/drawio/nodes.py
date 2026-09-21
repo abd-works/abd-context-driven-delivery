@@ -178,25 +178,25 @@ class DrawIOIncrement(Increment):
 
 
 class DrawIOScenario(Scenario):
-    def create_child_scenario(self, source: Scenario) -> "DrawIOScenario":
+    def load_scenario(self, source: Scenario) -> "DrawIOScenario":
         return DrawIOScenario(source.name, source.sequential_order, source.story_name)
 
 
 class DrawIOStory(Story):
-    def create_child_scenario(self, source: Scenario) -> DrawIOScenario:
+    def load_scenario(self, source: Scenario) -> DrawIOScenario:
         return DrawIOScenario(source.name, source.sequential_order, source.story_name)
 
 
 class DrawIOSubEpic(SubEpic):
-    def create_child_sub_epic(self, source: SubEpic) -> "DrawIOSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "DrawIOSubEpic":
         return DrawIOSubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: Story) -> DrawIOStory:
+    def load_story(self, source: Story) -> DrawIOStory:
         return DrawIOStory(source.name, source.sequential_order, source.story_type)
 
 
 class DrawIOEpic(Epic):
-    def create_child_sub_epic(self, source: SubEpic) -> DrawIOSubEpic:
+    def load_sub_epic(self, source: SubEpic) -> DrawIOSubEpic:
         return DrawIOSubEpic(source.name, source.sequential_order)
 
 
@@ -213,10 +213,10 @@ class DrawIOStoryMap(StoryMap):
     render_thin_slice and render_scenario are render-only views.
     """
 
-    def create_child_epic(self, source: DrawIOEpic) -> DrawIOEpic:
+    def load_epic(self, source: DrawIOEpic) -> DrawIOEpic:
         return DrawIOEpic(source.name, source.sequential_order)
 
-    def create_child_increment(self, source: Increment) -> DrawIOIncrement:
+    def load_increment(self, source: Increment) -> DrawIOIncrement:
         return DrawIOIncrement(source.name, source.sequential_order)
 
     # -- Uniform Callable Surface ----------------------------------------------

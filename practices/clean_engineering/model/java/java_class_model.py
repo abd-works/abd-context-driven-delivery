@@ -56,7 +56,7 @@ class JavaOoadClass(OoadClass):
 
 class JavaCleanEngineeringModel(CleanEngineeringModel):
 
-    def create_child_class(self, source: OoadClass) -> JavaOoadClass:
+    def load_class(self, source: OoadClass) -> JavaOoadClass:
         return JavaOoadClass(name=source.name, sequential_order=source.sequential_order)
 
     # ------------------------------------------------------------------

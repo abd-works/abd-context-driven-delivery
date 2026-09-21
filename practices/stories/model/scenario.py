@@ -90,10 +90,10 @@ class Scenario(StoryNode):
         if not source.backgrounds and not source.steps and not source.examples:
             self.sync_tree_from_legacy()
 
-    def create_child_background(self, source: Background) -> Background:
+    def load_background(self, source: Background) -> Background:
         return Background(source.name, source.sequential_order)
 
-    def create_child_step(self, source: Step) -> Step:
+    def load_step(self, source: Step) -> Step:
         return Step(
             text=source.text,
             phase=source.phase,
@@ -106,7 +106,7 @@ class Scenario(StoryNode):
             name=source.name,
         )
 
-    def create_child_example(self, source: Example) -> Example:
+    def load_example(self, source: Example) -> Example:
         return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
 
     def child_collections(self, source: "Scenario") -> List[ChildCollectionPair]:
@@ -114,17 +114,17 @@ class Scenario(StoryNode):
             ChildCollectionPair(
                 self_children=self.backgrounds,
                 source_children=source.backgrounds,
-                create_child=self.create_child_background,
+                load=self.load_background,
             ),
             ChildCollectionPair(
                 self_children=self.steps,
                 source_children=source.steps,
-                create_child=self.create_child_step,
+                load=self.load_step,
             ),
             ChildCollectionPair(
                 self_children=self.examples,
                 source_children=source.examples,
-                create_child=self.create_child_example,
+                load=self.load_example,
             ),
         ]
 

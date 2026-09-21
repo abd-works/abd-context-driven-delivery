@@ -52,7 +52,7 @@ class TypeScriptOoadClass(OoadClass):
 
 class TypeScriptCleanEngineeringModel(CleanEngineeringModel):
 
-    def create_child_class(self, source: OoadClass) -> TypeScriptOoadClass:
+    def load_class(self, source: OoadClass) -> TypeScriptOoadClass:
         return TypeScriptOoadClass(name=source.name, sequential_order=source.sequential_order)
 
     # ------------------------------------------------------------------

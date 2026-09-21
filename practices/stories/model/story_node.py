@@ -1,7 +1,7 @@
 """StoryNode - abstract base for every node in every format.
 
 Defines the FINAL translate_from algorithm and reconcileCollection helper. Subclasses
-override update_self, child_collections, and one create_child_xxx per child type.
+override update_self, child_collections, and one load_xxx per child type.
 """
 
 from __future__ import annotations
@@ -96,7 +96,7 @@ class StoryNode:
                 else:
                     report.add_rename(old_name, source_child.name, confidence=1.0)
             else:
-                new_child = pair.create_child(source_child)
+                new_child = pair.load(source_child)
                 new_child.translate_from(source_child)
                 reconciled.append(new_child)
                 report.add_new(new_child, parent_name=self.name)

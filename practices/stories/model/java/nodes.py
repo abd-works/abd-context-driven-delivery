@@ -33,27 +33,27 @@ class JavaScenario(Scenario):
 
 
 class JavaStory(Story):
-    def create_child_scenario(self, source: Scenario) -> JavaScenario:
+    def load_scenario(self, source: Scenario) -> JavaScenario:
         return JavaScenario(source.name, source.sequential_order, source.story_name)
 
 
 class JavaSubEpic(SubEpic):
-    def create_child_sub_epic(self, source: SubEpic) -> "JavaSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "JavaSubEpic":
         return JavaSubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: Story) -> JavaStory:
+    def load_story(self, source: Story) -> JavaStory:
         return JavaStory(source.name, source.sequential_order, source.story_type)
 
 
 class JavaEpic(Epic):
-    def create_child_sub_epic(self, source: SubEpic) -> JavaSubEpic:
+    def load_sub_epic(self, source: SubEpic) -> JavaSubEpic:
         return JavaSubEpic(source.name, source.sequential_order)
 
 
 class JavaStoryMap(StoryMap):
     """Format-typed root for the Java code format. Parses *Test.java files."""
 
-    def create_child_epic(self, source: JavaEpic) -> JavaEpic:
+    def load_epic(self, source: JavaEpic) -> JavaEpic:
         return JavaEpic(source.name, source.sequential_order)
 
     @classmethod

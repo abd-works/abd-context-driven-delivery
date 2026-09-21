@@ -45,7 +45,7 @@ class ChildCollectionPair:
 
     self_children: List["StoryNode"]
     source_children: List["StoryNode"]
-    create_child: Callable[["StoryNode"], "StoryNode"]
+    load: Callable[["StoryNode"], "StoryNode"]
 
 
 @dataclass

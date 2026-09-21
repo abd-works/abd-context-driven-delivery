@@ -110,7 +110,7 @@ def ensure_example_factory_family(module: "Module", type_name: str) -> list["Ooa
     for name, intent in wanted:
         if name in existing:
             continue
-        oclass = module.create_child_class(
+        oclass = module.load_class(
             OoadClass(name=name, sequential_order=order, intent=intent)
         )
         oclass.intent = intent
@@ -164,7 +164,7 @@ class OoadNode:
                 reconciled.append(match)
                 report.add_exact_match(match.name)
             else:
-                new_child = pair.create_child(source_child)
+                new_child = pair.load(source_child)
                 new_child.translate_from(source_child)
                 reconciled.append(new_child)
                 report.add_new(new_child, parent_name=self.name)
@@ -229,7 +229,7 @@ class OoadClass(OoadNode):
         elif not source.properties and not source.operations:
             self.sync_legacy_from_tree()
 
-    def create_child_property(self, source: "Property") -> "Property":
+    def load_property(self, source: "Property") -> "Property":
         from practices.clean_engineering.model.property import Property as PropertyNode
 
         return PropertyNode(
@@ -239,7 +239,7 @@ class OoadClass(OoadNode):
             description=source.description,
         )
 
-    def create_child_operation(self, source: "Operation") -> "Operation":
+    def load_operation(self, source: "Operation") -> "Operation":
         from practices.clean_engineering.model.operation import Operation as OperationNode
 
         node = OperationNode(
@@ -258,12 +258,12 @@ class OoadClass(OoadNode):
             ChildCollectionPair(
                 self_children=self.property_nodes,
                 source_children=source.property_nodes,
-                create_child=self.create_child_property,
+                load=self.load_property,
             ),
             ChildCollectionPair(
                 self_children=self.operation_nodes,
                 source_children=source.operation_nodes,
-                create_child=self.create_child_operation,
+                load=self.load_operation,
             ),
         ]
 
@@ -326,7 +326,7 @@ class Module(OoadNode):
         self.seam_terms = list(source.seam_terms)
         self.dependencies = list(source.dependencies)
 
-    def create_child_class(self, source: OoadClass) -> OoadClass:
+    def load_class(self, source: OoadClass) -> OoadClass:
         return OoadClass(name=source.name, sequential_order=source.sequential_order)
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
@@ -335,7 +335,7 @@ class Module(OoadNode):
             ChildCollectionPair(
                 self_children=self.classes,
                 source_children=source.classes,
-                create_child=self.create_child_class,
+                load=self.load_class,
             )
         ]
 
@@ -356,7 +356,7 @@ class CleanEngineeringModel(OoadNode):
         assert isinstance(source, CleanEngineeringModel)
         self.name = source.name
 
-    def create_child_module(self, source: Module) -> Module:
+    def load_module(self, source: Module) -> Module:
         return Module(name=source.name, sequential_order=source.sequential_order)
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
@@ -365,6 +365,6 @@ class CleanEngineeringModel(OoadNode):
             ChildCollectionPair(
                 self_children=self.modules,
                 source_children=source.modules,
-                create_child=self.create_child_module,
+                load=self.load_module,
             )
         ]

@@ -81,11 +81,11 @@ removes(): list[Change]
 
 # ChildCollectionPair
 
-ChildCollectionPair(self_children: list[OoadNode], source_children: list[OoadNode], create_child: Callable)
+ChildCollectionPair(self_children: list[OoadNode], source_children: list[OoadNode], load: Callable)
 ------
 self_children: list[OoadNode]
 source_children: list[OoadNode]
-create_child: Callable[[OoadNode], OoadNode]
+load: Callable[[OoadNode], OoadNode]
 ----
 
 # Change

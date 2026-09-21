@@ -38,27 +38,27 @@ class TypeScriptScenario(Scenario):
 
 
 class TypeScriptStory(Story):
-    def create_child_scenario(self, source: Scenario) -> TypeScriptScenario:
+    def load_scenario(self, source: Scenario) -> TypeScriptScenario:
         return TypeScriptScenario(source.name, source.sequential_order, source.story_name)
 
 
 class TypeScriptSubEpic(SubEpic):
-    def create_child_sub_epic(self, source: SubEpic) -> "TypeScriptSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "TypeScriptSubEpic":
         return TypeScriptSubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: Story) -> TypeScriptStory:
+    def load_story(self, source: Story) -> TypeScriptStory:
         return TypeScriptStory(source.name, source.sequential_order, source.story_type)
 
 
 class TypeScriptEpic(Epic):
-    def create_child_sub_epic(self, source: SubEpic) -> TypeScriptSubEpic:
+    def load_sub_epic(self, source: SubEpic) -> TypeScriptSubEpic:
         return TypeScriptSubEpic(source.name, source.sequential_order)
 
 
 class TypeScriptStoryMap(StoryMap):
     """Format-typed root for the TypeScript code format. Parses *.test.ts files."""
 
-    def create_child_epic(self, source: TypeScriptEpic) -> TypeScriptEpic:
+    def load_epic(self, source: TypeScriptEpic) -> TypeScriptEpic:
         return TypeScriptEpic(source.name, source.sequential_order)
 
     @classmethod

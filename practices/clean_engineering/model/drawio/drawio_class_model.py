@@ -148,16 +148,16 @@ class DrawIOOoadClass(OoadClass):
 
 
 class DrawIOModule(Module):
-    def create_child_class(self, source: OoadClass) -> DrawIOOoadClass:
+    def load_class(self, source: OoadClass) -> DrawIOOoadClass:
         return DrawIOOoadClass(name=source.name, sequential_order=source.sequential_order)
 
 
 class DrawIOCleanEngineeringModel(CleanEngineeringModel):
 
-    def create_child_module(self, source: Module) -> DrawIOModule:
+    def load_module(self, source: Module) -> DrawIOModule:
         return DrawIOModule(name=source.name, sequential_order=source.sequential_order)
 
-    def create_child_class(self, source: OoadClass) -> DrawIOOoadClass:
+    def load_class(self, source: OoadClass) -> DrawIOOoadClass:
         return DrawIOOoadClass(name=source.name, sequential_order=source.sequential_order)
 
     # ------------------------------------------------------------------

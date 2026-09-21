@@ -58,13 +58,13 @@ class MarkdownOoadClass(OoadClass):
 
 
 class MarkdownModule(Module):
-    def create_child_class(self, source: OoadClass) -> MarkdownOoadClass:
+    def load_class(self, source: OoadClass) -> MarkdownOoadClass:
         return MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
 
 
 class MarkdownCleanEngineeringModel(CleanEngineeringModel):
 
-    def create_child_module(self, source: Module) -> MarkdownModule:
+    def load_module(self, source: Module) -> MarkdownModule:
         return MarkdownModule(name=source.name, sequential_order=source.sequential_order)
 
     # ------------------------------------------------------------------

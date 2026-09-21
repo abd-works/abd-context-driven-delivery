@@ -55,11 +55,11 @@ class UxComponentCollection(UxNode):
             ChildCollectionPair(
                 self_children=self.items,
                 source_children=source.items,
-                create_child=self.create_child_component,
+                load=self.load_component,
             )
         ]
 
-    def create_child_component(self, source: UxComponent) -> UxComponent:
+    def load_component(self, source: UxComponent) -> UxComponent:
         raise NotImplementedError
 
     def __iter__(self) -> Iterator[UxComponent]:
@@ -91,7 +91,7 @@ class Transitions(UxComponentCollection):
     def append(self, transition: Transition) -> None:  # type: ignore[override]
         super().append(transition)
 
-    def create_child_component(self, source: UxComponent) -> Transition:
+    def load_component(self, source: UxComponent) -> Transition:
         assert isinstance(source, Transition)
         return Transition(
             source.name,
@@ -113,7 +113,7 @@ class ContentTypes(UxComponentCollection):
     def append(self, content_type: ContentType) -> None:  # type: ignore[override]
         super().append(content_type)
 
-    def create_child_component(self, source: UxComponent) -> ContentType:
+    def load_component(self, source: UxComponent) -> ContentType:
         assert isinstance(source, ContentType)
         return ContentType(source.name, source.sequential_order, source.hierarchy)
 
@@ -128,6 +128,6 @@ class NavComponents(UxComponentCollection):
     def append(self, nav_component: NavComponent) -> None:  # type: ignore[override]
         super().append(nav_component)
 
-    def create_child_component(self, source: UxComponent) -> NavComponent:
+    def load_component(self, source: UxComponent) -> NavComponent:
         assert isinstance(source, NavComponent)
         return NavComponent(source.name, source.sequential_order, source.ux_type)

@@ -4,7 +4,7 @@
 through `child_collections`, mirroring how `SubEpic` owns stories.
 
 Format backends (Markdown, JSON, DrawIO, Miro, TypeScript, ...) subclass these
-and override `create_child_xxx` to return their concrete backend types.
+and override `load_xxx` to return their concrete backend types.
 """
 
 from __future__ import annotations
@@ -50,19 +50,19 @@ class Epic(StoryNode):
             ChildCollectionPair(
                 self_children=self.sub_epics,
                 source_children=source.sub_epics,
-                create_child=self.create_child_sub_epic,
+                load=self.load_sub_epic,
             ),
             ChildCollectionPair(
                 self_children=self.examples,
                 source_children=getattr(source, "examples", []),
-                create_child=self.create_child_example,
+                load=self.load_example,
             ),
         ]
 
-    def create_child_sub_epic(self, source: "SubEpic") -> "SubEpic":
+    def load_sub_epic(self, source: "SubEpic") -> "SubEpic":
         return SubEpic(source.name, source.sequential_order)
 
-    def create_child_example(self, source: "Example") -> "Example":
+    def load_example(self, source: "Example") -> "Example":
         from .example import Example
 
         return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
@@ -112,27 +112,27 @@ class SubEpic(StoryNode):
             ChildCollectionPair(
                 self_children=self.sub_epics,
                 source_children=source.sub_epics,
-                create_child=self.create_child_sub_epic,
+                load=self.load_sub_epic,
             ),
             ChildCollectionPair(
                 self_children=self.stories,
                 source_children=source.stories,
-                create_child=self.create_child_story,
+                load=self.load_story,
             ),
             ChildCollectionPair(
                 self_children=self.examples,
                 source_children=getattr(source, "examples", []),
-                create_child=self.create_child_example,
+                load=self.load_example,
             ),
         ]
 
-    def create_child_sub_epic(self, source: "SubEpic") -> "SubEpic":
+    def load_sub_epic(self, source: "SubEpic") -> "SubEpic":
         return SubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: "Story") -> "Story":
+    def load_story(self, source: "Story") -> "Story":
         return Story(source.name, source.sequential_order, source.story_type)
 
-    def create_child_example(self, source: "Example") -> "Example":
+    def load_example(self, source: "Example") -> "Example":
         from .example import Example
 
         return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
@@ -218,20 +218,20 @@ class Story(StoryNode):
             ChildCollectionPair(
                 self_children=self.scenarios,
                 source_children=source.scenarios,
-                create_child=self.create_child_scenario,
+                load=self.load_scenario,
             ),
             ChildCollectionPair(
                 self_children=self.examples,
                 source_children=getattr(source, "examples", []),
-                create_child=self.create_child_example,
+                load=self.load_example,
             ),
         ]
 
-    def create_child_scenario(self, source: "Scenario") -> "Scenario":
+    def load_scenario(self, source: "Scenario") -> "Scenario":
         from .scenario import Scenario  # lazy import to avoid cycle
         return Scenario(source.name, source.sequential_order, source.story_name)
 
-    def create_child_example(self, source: "Example") -> "Example":
+    def load_example(self, source: "Example") -> "Example":
         from .example import Example
 
         return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
