@@ -62,8 +62,6 @@ GraphRelationship
 
 ## Clean Engineering (base practice)
 
-Tree structure (parent owns children):
-
 ```
 Module : GraphNode
   practice = clean_engineering
@@ -74,23 +72,40 @@ Class : GraphNode
   Class — belongsTo — Module
   Class — owns — Property
   Class — owns — Operation
-  Class — associates — Class              # same module only
+  Class — associates — Class              # same-module composition / reference
+
+Property : GraphNode
+  practice = clean_engineering
+  Property — belongsTo — Class
+  Property — hasType — Class              # field, getter, or observable state type
+
+Parameter : GraphNode
+  practice = clean_engineering
+  Parameter — belongsTo — Operation
+  Parameter — hasType — Class
+
+Operation : GraphNode
+  practice = clean_engineering
+  Operation — belongsTo — Class           # declaring class
+  Operation — hasParameter — Parameter
+  Operation — returns — Class             # void / absent when no return type
+  Operation — invokes — Operation         # callee on same class or another class
 ```
 
-Cross-module dependencies are **relationships**, not a field on the left alone:
+**Type resolution:** `hasType` and `returns` resolve to `Class` nodes (domain types, interfaces, generics instantiated to a class). Builtins and primitives (`string`, `number`, `boolean`, …) are not graph nodes — they terminate the type edge.
+
+**Invocation:** `Operation — invokes — Operation` is a direct call from the body of one operation to another. The callee’s declaring class may be the same as the caller’s or different. CodeQL (or the language channel) resolves call targets to `Operation` nodes; unresolved dynamic calls are omitted until resolved.
+
+**Cross-module dependencies** are derived from type and invoke edges that cross a module boundary:
 
 ```
-Class — dependsOn — Class                 # only when to.homeModule ≠ from.homeModule
-Module — dependsOn — Class                # rollup: Module — dependsOn — each external Class
-Module — dependsOn — Module               # derived: home modules of external Classes
+Class — dependsOn — Class                 # when any owned Property, Parameter, or Operation
+                                          # hasType / returns / invokes reaches a Class in another Module
+Module — dependsOn — Class                # rollup from owned classes
+Module — dependsOn — Module               # derived from external Class home modules
 ```
 
-CodeQL resolves imports, types, params, returns, fields, and collaborators to Class nodes, then emits `Class — dependsOn — Class` when modules differ.
-
-```
-Property
-Operation
-```
+Same-module `Class — associates — Class` covers references that do not cross the module boundary. Cross-module references always go through `Class — dependsOn — Class` (never only through `associates`).
 
 ---
 
@@ -107,7 +122,7 @@ Aggregate : Module
 
 Entity : Class
   practice = ddd
-  Entity — hasIdentity — Property | Operation
+  Entity — hasIdentity — Property | Operation   # identification field or operation
 
 EntityRoot : Entity
   EntityRoot — belongsTo — Aggregate
@@ -240,8 +255,16 @@ modules["Customer"] : BoundedContext
       Entity Customer — hasIdentity — id
     CustomerRepository : Repository
       Repository CustomerRepository — manages — Customer
+      Operation load — returns — Customer
+      Operation load — invokes — IMavenirClient.fetchCustomer   # example cross-class invoke
     Identity
+      Property id — hasType — string                          # primitive; no Class node
     Address
+      Property street — hasType — string
+      Property city — hasType — string
+    Customer
+      Property identity — hasType — Identity
+      Property address — hasType — Address
   BoundedContext["Customer"] — owns — aggregates["Cart"] : Aggregate
     Aggregate["Cart"] — hasRoot — Cart : EntityRoot
     CartRepository : Repository
@@ -309,6 +332,9 @@ a Paradise practice graph
       it should include the Customer aggregate
       it should include Customer as the Customer aggregate root
       it should include CustomerRepository as a class in the Customer aggregate
+      it should include Operation — returns — Class for domain operations
+      it should include Property — hasType — Class for typed fields
+      it should include Operation — invokes — Operation for resolved call edges
       it should include the Inventory bounded context
       it should include the Porting aggregate
       it should include Portability as the Porting aggregate root

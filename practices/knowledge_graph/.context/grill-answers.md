@@ -26,7 +26,7 @@ Grounded in `stories/onboard-a-customer/create-customer/`, `stories/onboard-a-cu
 
 ## Cross-module class dependencies
 
-**A:** Emit `Class — dependsOn — Class` when the target’s home module differs. Roll up with `Module — dependsOn — Class` and derived `Module — dependsOn — Module`. Same-module refs use `Class — associates — Class`. CodeQL populates from imports, types, and call graph.
+**A:** `Property — hasType — Class`, `Parameter — hasType — Class`, `Operation — returns — Class`, and `Operation — invokes — Operation` are first-class edges. Emit `Class — dependsOn — Class` when any of those reach a Class in another Module; roll up to Module. Same-module refs use `Class — associates — Class`. CodeQL populates types, params, returns, and call graph.
 
 ## Practice graph, not parallel guidelines
 
