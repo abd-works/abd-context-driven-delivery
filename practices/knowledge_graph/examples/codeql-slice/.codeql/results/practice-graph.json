@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "classes": [
+    {
+      "module": "Customer",
+      "name": "CustomerRepository",
+      "file": "domain/customer/Customer.ts",
+      "line": 120,
+      "stereotypes": ["Repository"]
+    },
+    {
+      "module": "Customer",
+      "name": "Customer",
+      "file": "domain/customer/Customer.ts",
+      "line": 10,
+      "stereotypes": ["Aggregate Root", "Entity"]
+    },
+    {
+      "module": "Customer",
+      "name": "Identity",
+      "file": "domain/customer/Customer.ts",
+      "line": 40,
+      "stereotypes": ["Value Object"]
+    },
+    {
+      "module": "Customer",
+      "name": "IMavenirClient",
+      "file": "domain/customer/Customer.ts",
+      "line": 200,
+      "stereotypes": []
+    }
+  ],
+  "properties": [
+    {
+      "class_name": "Customer",
+      "name": "identity",
+      "type_hint": "Identity",
+      "file": "domain/customer/Customer.ts",
+      "line": 15
+    },
+    {
+      "class_name": "Identity",
+      "name": "id",
+      "type_hint": "string",
+      "file": "domain/customer/Customer.ts",
+      "line": 42
+    }
+  ],
+  "operations": [
+    {
+      "class_name": "IMavenirClient",
+      "name": "fetchCustomer",
+      "return_type": "Customer",
+      "file": "domain/customer/Customer.ts",
+      "line": 205,
+      "parameters": ["customerId: string"]
+    },
+    {
+      "class_name": "CustomerRepository",
+      "name": "load",
+      "return_type": "Customer",
+      "file": "domain/customer/Customer.ts",
+      "line": 130,
+      "parameters": ["customerId: string"]
+    },
+    {
+      "class_name": "CustomerRepository",
+      "name": "create",
+      "return_type": "Customer",
+      "file": "domain/customer/Customer.ts",
+      "line": 140,
+      "parameters": []
+    }
+  ],
+  "calls": [
+    {
+      "caller_class": "CustomerRepository",
+      "caller_operation": "load",
+      "callee_class": "IMavenirClient",
+      "callee_operation": "fetchCustomer",
+      "caller_file": "domain/customer/Customer.ts",
+      "caller_line": 132
+    }
+  ],
+  "story_calls": [
+    {
+      "story_file": "stories/onboard-a-customer/create-customer/load-customer/load_customer_story.test.ts",
+      "line": 24,
+      "callee_class": "CustomerRepository",
+      "callee_operation": "load",
+      "phase": "when",
+      "step_text": "My Paradise loads the customer from Mavenir"
+    }
+  ],
+  "story_observations": [
+    {
+      "story_file": "stories/onboard-a-customer/create-customer/load-customer/load_customer_story.test.ts",
+      "line": 28,
+      "target_class": "Customer",
+      "target_member": "identity",
+      "member_kind": "property",
+      "phase": "then"
+    }
+  ],
+  "example_exports": [
+    {
+      "export_name": "stored customer",
+      "file": "stories/onboard-a-customer/create-customer/examples/customer.examples.ts",
+      "demonstrates": ["Customer"],
+      "line": 5
+    }
+  ]
+}

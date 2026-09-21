@@ -28,5 +28,10 @@ class KnowledgeGraph(PracticeGuidance):
         if path is not None or session is not None:
             self._attach_workspace(path=path, session=session)
 
-    def load(self, workspace_path: str) -> PracticeGraph:
-        return PracticeGraph.load(workspace_path)
+    def load(
+        self,
+        workspace_path: str,
+        *,
+        codeql_results: str | None = None,
+    ) -> PracticeGraph:
+        return PracticeGraph.load(workspace_path, codeql_results=codeql_results)

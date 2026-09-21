@@ -29,10 +29,15 @@ class PracticeGraph:
         bind_graph_registry(self)
 
     @classmethod
-    def load(cls, path: str | Path) -> "PracticeGraph":
+    def load(
+        cls,
+        path: str | Path,
+        *,
+        codeql_results: str | Path | None = None,
+    ) -> "PracticeGraph":
         from .loader import load_practice_graph
 
-        return load_practice_graph(path)
+        return load_practice_graph(path, codeql_results=codeql_results)
 
     # -- registration --------------------------------------------------------
 

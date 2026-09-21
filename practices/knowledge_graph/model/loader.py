@@ -62,8 +62,13 @@ from .nodes import (
 from .practice_graph import PracticeGraph
 
 
-def load_practice_graph(path: str | Path) -> PracticeGraph:
+def load_practice_graph(
+    path: str | Path,
+    *,
+    codeql_results: str | Path | None = None,
+) -> PracticeGraph:
     root = Path(path).resolve()
+    codeql_path = Path(codeql_results).resolve() if codeql_results else None
     graph = PracticeGraph(root)
 
     workspace = Workspace.load(root)
@@ -78,6 +83,9 @@ def load_practice_graph(path: str | Path) -> PracticeGraph:
     else:
         _load_ddd_structure_from_map(graph, root)
 
+    from .codeql_populate import populate_from_codeql
+
+    populate_from_codeql(graph, root, results_path=codeql_path)
     _derive_cross_module_dependencies(graph)
     _load_bdd_descriptions(graph, root)
 
