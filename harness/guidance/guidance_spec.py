@@ -115,6 +115,20 @@ with description("context guidance"):
                 contain("keep-operations-small-focused")
             )
 
+        with it("should inject matching code rules for an absolute path in any folder"):
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+
+            result = CleanEngineering().rules.inject_rules(
+                {
+                    "tool_input": {
+                        "path": r"C:\dev\other-repo\src\cart.py",
+                    }
+                }
+            )
+            expect(result.get("additional_context") or "").to(
+                contain("keep-operations-small-focused")
+            )
+
         with it("should not inject rules markdown when the agent writes a non-matching path"):
             guidance = SampleGuidance(format="markdown")
             result = guidance.rules.inject_rules(

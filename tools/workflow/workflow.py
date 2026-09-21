@@ -7,7 +7,7 @@ import re
 
 import yaml
 
-from git import Ticket, TicketNotFoundError
+from git import NullGitRepo, Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
 from installation.harness_files.harness_files import skill
@@ -17,7 +17,6 @@ from sub_agent.sub_agent import sub_agent
 from agent_tools.agent_tools import agent_tool
 from workflow.work_ticket import WorkTicket
 from workspace import Workspace
-from workspace.git_repo import NullGitRepo
 from workspace.workspace import Turn
 
 @dataclass(frozen=True)

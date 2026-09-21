@@ -314,23 +314,31 @@ class HookServer:
 
     def dispatch(self, payload: HookPayload) -> HookResult:
         event = CursorEvent(payload.hook_event_name)
+        fields = payload.as_dict()
+        raw = fields.get("tool_input") or {}
+        path = ""
+        if isinstance(raw, dict):
+            path = str(raw.get("path") or raw.get("file_path") or "")
         self._append_debug(
-            f"EVENT {event.name!r} conversation_id={payload.conversation_id!r} "
-            f"payload_keys={sorted(payload.as_dict().keys())}"
+            f"EVENT {event.name!r} tool={fields.get('tool_name')!r} path={path!r} "
+            f"conversation_id={payload.conversation_id!r} "
+            f"payload_keys={sorted(fields.keys())}"
         )
         if not event.name:
             self._append_debug("NO_EVENT merged={}")
             return HookResult()
-        results = self._invoke_enabled(event, payload)
+        results, injected = self._invoke_enabled(event, payload)
         merged = HookResult.merged(results)
+        merged = self._merge_work_session(merged, payload, injected)
         self._append_debug(f"MERGED {json.dumps(merged.as_dict())}")
         return merged
 
     def _invoke_enabled(
         self, event: CursorEvent, payload: HookPayload
-    ) -> list[HookResult]:
+    ) -> tuple[list[HookResult], dict[str, list[str]]]:
         enabled: list[str] = []
         results: list[HookResult] = []
+        injected: dict[str, list[str]] = {"practices": [], "fidelities": []}
         for handler in self._catalog.for_event(event):
             if not handler.is_enabled():
                 continue
@@ -342,9 +350,10 @@ class HookServer:
                 self.skip(label, error)
                 continue
             results.append(result)
+            self._record_injected(handler, payload, result, injected)
             self._append_debug(f"HANDLER {label} result={json.dumps(result.as_dict())}")
         self._append_debug(f"ENABLED {enabled or ['(none)']}")
-        return results
+        return results, injected
 
     def run(self) -> None:
         from installation.hooks.session_logs import ensure_default_session
@@ -361,11 +370,107 @@ class HookServer:
             return
         result = self.dispatch(payload)
         self._publish_context(result)
+        self._write_last_chat_injected(result)
         if payload.hook_event_name == "stop":
             followup = self._consume_followup()
             if followup:
                 result.followup_message = followup
         print(json.dumps(result.as_dict()))
+
+    def _record_injected(
+        self,
+        handler: HookHandler,
+        payload: HookPayload,
+        result: HookResult,
+        injected: dict[str, list[str]],
+    ) -> None:
+        if not result.additional_context:
+            return
+        practice, fidelities = self._injected_tags(handler, payload)
+        if practice and practice not in injected["practices"]:
+            injected["practices"].append(practice)
+        for name in fidelities:
+            if name not in injected["fidelities"]:
+                injected["fidelities"].append(name)
+
+    def _injected_tags(
+        self, handler: HookHandler, payload: HookPayload
+    ) -> tuple[str, list[str]]:
+        practice = handler.owner.__module__.rsplit(".", 1)[-1]
+        rules = getattr(handler.tool.toolset, "rules", None)
+        path = self._tool_path(payload)
+        if rules is None or not path or not hasattr(rules, "_bags_for_path"):
+            return practice, []
+        fidelities: list[str] = []
+        for bag in rules._bags_for_path(path):
+            name = self._bag_fidelity(bag)
+            if name:
+                fidelities.append(name)
+        return practice, fidelities
+
+    def _bag_fidelity(self, bag: Any) -> str | None:
+        parent = getattr(bag, "parent", None)
+        if parent is None or getattr(parent, "fidelities", None) is not None:
+            return None
+        return getattr(parent, "name", None) or getattr(parent, "fidelity", None)
+
+    def _tool_path(self, payload: HookPayload) -> str:
+        raw = payload.as_dict().get("tool_input") or {}
+        if not isinstance(raw, dict):
+            return ""
+        return str(raw.get("path") or raw.get("file_path") or "")
+
+    def _merge_work_session(
+        self,
+        merged: HookResult,
+        payload: HookPayload,
+        injected: dict[str, list[str]],
+    ) -> HookResult:
+        if not merged.additional_context:
+            return merged
+        rules = self._work_session_rules()
+        if rules is None:
+            return merged
+        data = payload.as_dict()
+        data["additional_context"] = merged.additional_context
+        data["injected_practices"] = injected.get("practices") or []
+        data["injected_fidelities"] = injected.get("fidelities") or []
+        body = (rules.inject_rules(data).get("additional_context") or "").strip()
+        if not body:
+            return merged
+        return HookResult(
+            merged.permission,
+            merged.continue_flag,
+            merged.user_message,
+            merged.agent_message,
+            merged.followup_message,
+            body,
+        )
+
+    def _work_session_rules(self) -> Any:
+        from types import SimpleNamespace
+
+        from installation.hooks.session_logs import active_session_name, session_folder
+        from workspace.workspace import WorkSessionRulesCollection
+
+        name = active_session_name(self._repo_root)
+        path = session_folder(self._repo_root, name) / "work-guidelines.md"
+        if not path.is_file():
+            return None
+        return WorkSessionRulesCollection.from_markdown(
+            path.read_text(encoding="utf-8"),
+            parent=SimpleNamespace(path=path),
+        )
+
+    def _write_last_chat_injected(self, result: HookResult) -> None:
+        from installation.hooks.session_logs import active_session_name, session_folder
+
+        folder = session_folder(
+            self._repo_root, active_session_name(self._repo_root)
+        )
+        folder.mkdir(parents=True, exist_ok=True)
+        dest = folder / "last-chat-injected-rules.md"
+        dest.write_text(result.additional_context or "", encoding="utf-8")
 
     def _inject_path(self) -> Path:
         return self._repo_root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"

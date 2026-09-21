@@ -16,16 +16,13 @@ async function showNotice(uri) {
 }
 
 function activate(context) {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  if (!folder) {
-    return;
-  }
-  const pattern = new vscode.RelativePattern(folder, NOTICE);
-  const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+  const watcher = vscode.workspace.createFileSystemWatcher(`**/${NOTICE}`);
   watcher.onDidCreate(showNotice);
   watcher.onDidChange(showNotice);
   context.subscriptions.push(watcher);
-  showNotice(vscode.Uri.joinPath(folder.uri, NOTICE));
+  for (const folder of vscode.workspace.workspaceFolders || []) {
+    showNotice(vscode.Uri.joinPath(folder.uri, NOTICE));
+  }
 }
 
 function deactivate() {}

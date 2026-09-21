@@ -4,6 +4,7 @@ Hierarchy 1:1 with harness/guidance/.context/practice-guidance-sketch.md
 theme: behaviors.
 """
 import sys
+import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +23,7 @@ from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
 from practices.examples.car.car import Car
+from practices.stories.model.markdown.nodes import MarkdownStoryMap
 from practices.stories.stories import Stories
 
 _CLASS_MARKDOWN = """\
@@ -162,6 +164,43 @@ with description("a practice"):
 
                 with it("should skip conversion"):
                     expect(self.result["content"]).to(equal(self.source))
+
+        with context("with an object model"):
+            with before.each:
+                self.model = MarkdownStoryMap().parse(_STORY_MAP)
+                self.result = Stories(fidelity="story_map").render(
+                    "drawio", self.model
+                )
+
+            with it("should render that model into the requested format"):
+                expect(self.result["content"]).to(contain("mxGraphModel"))
+
+        with context("with a tool whose context lives in the code layer"):
+            with before.each:
+                self.root = Path(tempfile.mkdtemp(prefix="story-code-"))
+                leaf = (
+                    self.root
+                    / "tests"
+                    / "manage-customer-orders"
+                    / "place-new-order"
+                    / "browse-product-catalog"
+                    / "browse_product_catalog_story.test.py"
+                )
+                leaf.parent.mkdir(parents=True)
+                leaf.write_text(
+                    "Story: Browse Product Catalog\nActor: Customer\n",
+                    encoding="utf-8",
+                )
+                self.tool = Stories(fidelity="story_map", format="python")
+                self.tool.path = str(self.root)
+                self.tool.workspace = type("WorkspacePath", (), {"path": str(self.root)})()
+                self.result = self.tool.render("markdown", self.tool)
+
+            with it("should instantiate the object model from that code"):
+                expect(str(self.result["content"])).to(contain("Browse Product Catalog"))
+
+            with it("should render that object model into the requested format"):
+                expect(str(self.result["content"])).to(contain("Manage Customer Orders"))
 
 
 with description("a class model"):

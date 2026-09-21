@@ -1,5 +1,3 @@
-**Sources / context:** `harness/agent_tools/agent_tools.py`, `harness/agent_tools/__init__.py`
-
 ## Language
 
 *AgentToolSet* is the root a practice decorates with `@agent_toolset`. It holds *AgentTool* members: *AgentOperation* (`@agent_tool`) and *AgentInstructions* (`@agent_instructions`).
@@ -8,7 +6,6 @@
 
 - One decorated class — `@agent_toolset` merges *AgentToolSet* onto it; do not subclass *AgentToolSet*.
 - Class docstring is toolset **description**; **name** is the slugified class name.
-- Live instance: **operations**, **instructions**, **tools**, **mode**, **nested_toolsets**.
 - **Invariant:** Each callable member has exactly one mark — `@agent_tool` or `@agent_instructions`.
 
 ### AgentTool
@@ -17,12 +14,12 @@
 - Introspection: **kind**, **description**, **parameters**, **response**.
 - Install marks live on the callable; **install_to** and **destinations** read *InstallDestination*.
 
-### AgentOperation *is a type of* AgentTool
+### AgentOperation
 
 - `@agent_tool` — body runs as Python on **invoke**.
 - **kind** is `tool`.
 
-### AgentInstructions *is a type of* AgentTool
+### AgentInstructions
 
 - `@agent_instructions` — **expand** walks the body; unwrapped code runs during expand; `tools(...)` defers; `instructions(...)` expands nested *AgentInstructions*.
 - **tools** (read-only) names deferred `@agent_tool` callables, including those merged from nested `instructions(...)`.
@@ -65,11 +62,9 @@ Build order: `agent_tools`
 - `@agent_toolset`, `@agent_tool`, `@agent_instructions`
 - `tools(...)`, `instructions(...)` — wrappers inside `@agent_instructions` bodies
 - `AgentToolSet` — `name`, `description`, `operations`, `instructions`, `tools`, `tools_for`, `mode`, `nested_toolsets`, `instantiate`, `validate`
-- `AgentTool` — `kind`, `description`, `parameters`, `response`, `install_to`, `destinations`
-- `AgentOperation.invoke`
-- `AgentInstructions.expand`, `AgentInstructions.tools`
-- `_is_agent_toolset`, `_is_agent_tool`, `_is_agent_instructions`
+- `AgentTool` — `kind`, `description`, `parameters`, `response`
+- `@agent_instructions` — the member’s **instructions**; `tools(...)` / `instructions(...)` in the body
 
 ## Constraint
 
-Callers must decorate with `@agent_toolset` rather than subclass *AgentToolSet*. A member must carry exactly one of `@agent_tool` or `@agent_instructions`. `@agent_instructions` bodies are expanded, not invoked as Python at call time; wrap deferred work in `tools(...)` and nested recipes in `instructions(...)`. Wire-out (MCP, hooks, skills) lives in `installation` — this module does not enroll destinations.
+Callers must decorate with `@agent_toolset` rather than subclass *AgentToolSet*. A member must carry exactly one of `@agent_tool` or `@agent_instructions`. `@agent_instructions` is the **instructions** the agent follows, not a Python call; wrap deferred work in `tools(...)` and nested recipes in `instructions(...)`. Wire-out (MCP, hooks, skills) lives in `installation` — this module does not enroll destinations.

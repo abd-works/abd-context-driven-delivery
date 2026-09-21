@@ -164,6 +164,24 @@ with description("prompt echo detection"):
                     contain("Action \u2192 scan")
                 )
 
+        with it("should write the toast notice into every workspace root"):
+            with TemporaryDirectory() as tmp:
+                repo = Path(tmp) / "cdd"
+                other = Path(tmp) / "app"
+                repo.mkdir()
+                other.mkdir()
+                dest = _prompt_echo.show_ide_toast(
+                    "chat edit \u2192 rules : code",
+                    repo=repo,
+                    roots=[str(other)],
+                )
+                copied = other / ".cursor" / "prompt-echo-toast.json"
+                expect(dest.is_file()).to(equal(True))
+                expect(copied.is_file()).to(equal(True))
+                expect(json.loads(copied.read_text(encoding="utf-8"))["message"]).to(
+                    contain("rules : code")
+                )
+
         with it("should keep both inject toasts from the same burst"):
             with TemporaryDirectory() as tmp:
                 repo = Path(tmp)

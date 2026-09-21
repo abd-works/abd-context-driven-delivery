@@ -182,6 +182,8 @@ class PracticeGuidance(Guidance):
                     self.format = child_format
             if fidelity in self.fidelities.entries:
                 self.fidelities.current = self.fidelities[fidelity]
+        if self.format:
+            self.format = self._canonical_format(self.format)
         supported = self.supported_formats
         if supported and self.format and self.format not in supported:
             raise ValueError(
@@ -194,24 +196,12 @@ class PracticeGuidance(Guidance):
         session: str | None = None,
         workspace: Any = None,
     ) -> None:
-        from tools.workspace.workspace import Workspace
-
         if path is not None:
             self.path = path
         if session is not None:
             self.session = session
-        if isinstance(workspace, Workspace):
+        if workspace is not None:
             self.workspace = workspace
-            return
-        root = workspace or self.path or "."
-        self.workspace = Workspace(str(root))
-        self.workspace.load()
-        if self.session:
-            self.workspace.open(
-                self,
-                name=self.session,
-                path=self.path or "",
-            )
 
     @property
     def active_session(self) -> Any:
@@ -269,13 +259,19 @@ class PracticeGuidance(Guidance):
     def formats(self) -> dict[str, Any]:
         return dict(self._formats)
 
+    _format_aliases = {"md": "markdown"}
+
+    def _canonical_format(self, format_name: str) -> str:
+        return self._format_aliases.get(format_name, format_name)
+
     def _format_adapter(self, format_name: str) -> Any:
         adapters = self.formats
-        if format_name not in adapters:
+        resolved = self._canonical_format(format_name)
+        if resolved not in adapters:
             raise ValueError(
                 f"Unsupported format {format_name!r}. Choose from: {sorted(adapters)}"
             )
-        entry = adapters[format_name]
+        entry = adapters[resolved]
         if isinstance(entry, tuple):
             module_path, attr = entry
             import importlib
@@ -284,36 +280,84 @@ class PracticeGuidance(Guidance):
         return entry
 
 
+    _code_formats = frozenset({"python", "typescript", "java", "javascript"})
+
     @agent_tool
     def render(
         self,
         format: str,
-        content: str,
+        content: Any = "",
         source: str | None = None,
         previous: str = "",
         keep_positioning: bool = False,
     ) -> dict:
-        """Parse source format into the practice model, then render the target format."""
-        source_format = source or self.format
+        """Turn content into the practice object model, then render the target format."""
         if not self.formats:
             companion = self.clean_engineering_companion
             owner = companion.practice_guidance if companion is not None else None
             if owner is None or owner is self:
-                return {"format": source_format or format, "content": content}
+                return {"format": source or self.format or format, "content": content}
             return owner.render(
                 format,
                 content,
-                source=source_format,
+                source=source,
                 previous=previous,
                 keep_positioning=keep_positioning,
             )
+        model = self._to_object_model(content, source)
+        target = self._live_adapter(format)
+        rendered = self._call_render(target, model, previous, keep_positioning)
+        return {"format": format, "content": rendered}
+
+    def _to_object_model(self, content: Any, source: str | None) -> Any:
+        if self._is_object_model(content):
+            return content
+        if self._is_tool(content):
+            return self._instantiate_from_tool(content, source)
+        source_format = self._canonical_format(source or self.format or "")
         if not source_format:
             raise ValueError("source format is not set")
-        source = self._live_adapter(source_format)
-        target = self._live_adapter(format)
-        parsed = source.parse(self._incoming(source_format, content))
-        rendered = self._call_render(target, parsed, previous, keep_positioning)
-        return {"format": format, "content": rendered}
+        if source_format in self._code_formats and content in ("", None):
+            return self._instantiate_from_tool(self, source_format)
+        return self._parse_content(source_format, content)
+
+    def _is_object_model(self, content: Any) -> bool:
+        if isinstance(content, (str, bytes, dict, list)) or content is None:
+            return False
+        return callable(getattr(content, "semantic_type", None))
+
+    def _is_tool(self, content: Any) -> bool:
+        if self._is_object_model(content):
+            return False
+        return bool(getattr(type(content), "_is_agent_toolset", False))
+
+    def _instantiate_from_tool(self, tool: Any, source: str | None) -> Any:
+        source_format = self._canonical_format(
+            source or getattr(tool, "format", None) or self.format or ""
+        )
+        if source_format in self._code_formats:
+            adapter = self._live_adapter(source_format)
+            return adapter.parse(self._code_tree(self._context_root(tool), adapter))
+        return self._parse_content(source_format, "")
+
+    def _context_root(self, tool: Any) -> Path:
+        workspace = getattr(tool, "workspace", None)
+        path = getattr(workspace, "path", None) or getattr(tool, "path", None) or "."
+        return Path(path)
+
+    def _code_tree(self, root: Path, adapter: Any) -> dict[str, str]:
+        extension = getattr(adapter, "LEAF_EXTENSION", "") or ""
+        tree: dict[str, str] = {}
+        if not extension:
+            return tree
+        for path in root.rglob(f"*{extension}"):
+            if path.is_file():
+                tree[path.relative_to(root).as_posix()] = path.read_text(encoding="utf-8")
+        return tree
+
+    def _parse_content(self, source_format: str, content: Any) -> Any:
+        adapter = self._live_adapter(source_format)
+        return adapter.parse(self._incoming(source_format, content))
 
     def _call_render(self, target: Any, parsed: Any, previous: str, keep_positioning: bool) -> Any:
         try:

@@ -9,15 +9,13 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "harness", "tools", "actions"):
-    _p = str(_REPO_ROOT / _cat)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+
+from installation.installer import Installer
+
+Installer.ensure_import_path(_REPO_ROOT)
 
 from expects import be_true, contain, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
-
-from installation.installer import Installer
 from harness.guidance.fixtures.agentic_ops.agentic_ops import (
     SampleAgenticOps,
     SampleMcpOps,
@@ -720,6 +718,18 @@ with description("the installer import path") as self:
         refs = Installer(ide="Cursor", path=self.repo / ".cursor", repo=self.repo).collect_toolsets()
         expect(any("examples" in ref.replace("\\", "/") for ref in refs)).to(equal(False))
         expect(any("car_story" in ref for ref in refs)).to(equal(False))
+
+    with it("should not record a temp install path in the shared install state"):
+        shared = Path(__file__).resolve().parent / ".install-state.json"
+        before = shared.read_text(encoding="utf-8") if shared.is_file() else ""
+        tmp = tempfile.mkdtemp()
+        try:
+            Installer(ide="Cursor", path=tmp, repo=self.repo).install([])
+            after = shared.read_text(encoding="utf-8") if shared.is_file() else ""
+            expect(after).to(equal(before))
+            expect(Installer._is_ephemeral_install_path(tmp)).to(equal(True))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _skill_tool(name: str):

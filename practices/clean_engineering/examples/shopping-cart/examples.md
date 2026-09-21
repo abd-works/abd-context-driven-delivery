@@ -7,10 +7,10 @@
   clean_engineering markdown examples — ShoppingCart domain — unified across all fidelities.
   Structure: H1 = module, H2 = class.
   Interface (I{Type}) and implementation ({Type}) sit together under the same module H1.
-  Language companion and modules overview go as prose before the first H1.
+  Language and modules are one section before the first H1. Do not emit ## Modules.
 -->
 
-## Language companion                                             <!-- L -->
+## Language                                                       <!-- L, Mu -->
 
 *ShoppingCart* is a running tally of what a customer intends to buy in a single shopping session.
 
@@ -25,9 +25,7 @@
 
 - **Invariant:** A discount may not reduce the total below zero.  <!-- L -->
 
-## Modules                                                        <!-- Mu -->
-
-Build order: `inventory` → `cart`
+Build order: `inventory` → `cart`                                 <!-- Mu -->
 
 ---
 
