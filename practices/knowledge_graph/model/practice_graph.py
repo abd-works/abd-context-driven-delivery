@@ -128,10 +128,13 @@ class PracticeGraph:
         return _dedupe_nodes(result)
 
     def find_class(self, name: str) -> Optional[GraphNodeMixin]:
+        from practices.clean_engineering.model.base_class_model import OoadClass
+
         from .nodes import GraphClass
 
+        plain = name.strip()
         for node in self.nodes.values():
-            if isinstance(node, GraphClass) and node.name == name:
+            if isinstance(node, (GraphClass, OoadClass)) and node.name == plain:
                 return node
         return None
 

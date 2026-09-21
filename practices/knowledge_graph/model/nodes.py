@@ -27,7 +27,9 @@ from practices.ddd.model.nodes import (
     EntityRoot,
     Repository,
     ValueObject,
+    ddd_class_for,
 )
+from practices.ddd.model.stereotypes import plain_class_name
 from practices.stories.model.background import Background
 from practices.stories.model.example import Example
 from practices.stories.model.nodes import Epic, Story, SubEpic
@@ -52,6 +54,10 @@ class GraphCleanEngineeringModel(CleanEngineeringModel, GraphNodeMixin):
     _semantic_type_name = "CleanEngineeringModel"
 
     def create_child_module(self, source: Module) -> "GraphModule":
+        if isinstance(source, BoundedContext):
+            return GraphBoundedContext(source.name, source.sequential_order)
+        if isinstance(source, Aggregate):
+            return GraphAggregate(source.name, source.sequential_order)
         return GraphModule(source.name, source.sequential_order)
 
 
@@ -142,40 +148,213 @@ class GraphBoundedContext(BoundedContext, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "BoundedContext"
 
+    def create_child_aggregate(self, source: Aggregate) -> "GraphAggregate":
+        return GraphAggregate(source.name, source.sequential_order)
+
 
 class GraphAggregate(Aggregate, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "Aggregate"
+
+    def create_child_class(self, source: OoadClass) -> OoadClass:
+        return graph_ddd_class_for(source)
 
 
 class GraphEntity(Entity, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "Entity"
 
+    def create_child_property(self, source: Property) -> "GraphProperty":
+        return GraphProperty(
+            source.name,
+            source.sequential_order,
+            type_hint=source.type_hint,
+            description=source.description,
+        )
+
+    def create_child_operation(self, source: Operation) -> "GraphOperation":
+        node = GraphOperation(
+            source.name,
+            source.sequential_order,
+            return_type=source.return_type,
+            description=source.description,
+            callees=list(source.callees),
+        )
+        node._legacy_parameters = list(source._legacy_parameters)
+        node.parameters = [
+            GraphParameter(p.name, p.sequential_order, p.type_hint) for p in source.parameters
+        ]
+        return node
+
 
 class GraphEntityRoot(EntityRoot, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "EntityRoot"
+
+    def create_child_property(self, source: Property) -> "GraphProperty":
+        return GraphProperty(
+            source.name,
+            source.sequential_order,
+            type_hint=source.type_hint,
+            description=source.description,
+        )
+
+    def create_child_operation(self, source: Operation) -> "GraphOperation":
+        node = GraphOperation(
+            source.name,
+            source.sequential_order,
+            return_type=source.return_type,
+            description=source.description,
+            callees=list(source.callees),
+        )
+        node._legacy_parameters = list(source._legacy_parameters)
+        node.parameters = [
+            GraphParameter(p.name, p.sequential_order, p.type_hint) for p in source.parameters
+        ]
+        return node
 
 
 class GraphValueObject(ValueObject, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "ValueObject"
 
+    def create_child_property(self, source: Property) -> "GraphProperty":
+        return GraphProperty(
+            source.name,
+            source.sequential_order,
+            type_hint=source.type_hint,
+            description=source.description,
+        )
+
+    def create_child_operation(self, source: Operation) -> "GraphOperation":
+        node = GraphOperation(
+            source.name,
+            source.sequential_order,
+            return_type=source.return_type,
+            description=source.description,
+            callees=list(source.callees),
+        )
+        node._legacy_parameters = list(source._legacy_parameters)
+        node.parameters = [
+            GraphParameter(p.name, p.sequential_order, p.type_hint) for p in source.parameters
+        ]
+        return node
+
 
 class GraphRepository(Repository, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "Repository"
+
+    def create_child_property(self, source: Property) -> "GraphProperty":
+        return GraphProperty(
+            source.name,
+            source.sequential_order,
+            type_hint=source.type_hint,
+            description=source.description,
+        )
+
+    def create_child_operation(self, source: Operation) -> "GraphOperation":
+        node = GraphOperation(
+            source.name,
+            source.sequential_order,
+            return_type=source.return_type,
+            description=source.description,
+            callees=list(source.callees),
+        )
+        node._legacy_parameters = list(source._legacy_parameters)
+        node.parameters = [
+            GraphParameter(p.name, p.sequential_order, p.type_hint) for p in source.parameters
+        ]
+        return node
 
 
 class GraphDomainEvent(DomainEvent, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "DomainEvent"
 
+    def create_child_property(self, source: Property) -> "GraphProperty":
+        return GraphProperty(
+            source.name,
+            source.sequential_order,
+            type_hint=source.type_hint,
+            description=source.description,
+        )
+
+    def create_child_operation(self, source: Operation) -> "GraphOperation":
+        node = GraphOperation(
+            source.name,
+            source.sequential_order,
+            return_type=source.return_type,
+            description=source.description,
+            callees=list(source.callees),
+        )
+        node._legacy_parameters = list(source._legacy_parameters)
+        node.parameters = [
+            GraphParameter(p.name, p.sequential_order, p.type_hint) for p in source.parameters
+        ]
+        return node
+
 
 class GraphDomainService(DomainService, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "DomainService"
+
+    def create_child_property(self, source: Property) -> "GraphProperty":
+        return GraphProperty(
+            source.name,
+            source.sequential_order,
+            type_hint=source.type_hint,
+            description=source.description,
+        )
+
+    def create_child_operation(self, source: Operation) -> "GraphOperation":
+        node = GraphOperation(
+            source.name,
+            source.sequential_order,
+            return_type=source.return_type,
+            description=source.description,
+            callees=list(source.callees),
+        )
+        node._legacy_parameters = list(source._legacy_parameters)
+        node.parameters = [
+            GraphParameter(p.name, p.sequential_order, p.type_hint) for p in source.parameters
+        ]
+        return node
+
+
+_GRAPH_DDD_BY_KIND = {
+    "EntityRoot": GraphEntityRoot,
+    "Entity": GraphEntity,
+    "ValueObject": GraphValueObject,
+    "Repository": GraphRepository,
+    "DomainEvent": GraphDomainEvent,
+    "DomainService": GraphDomainService,
+}
+
+
+def graph_ddd_class_for(source: OoadClass) -> OoadClass:
+    """Promote a CE class to the matching graph DDD stereotype."""
+    base = ddd_class_for(source)
+    kind = base._semantic_type_name
+    if kind == "OoadClass":
+        return GraphClass(
+            plain_class_name(source.name),
+            source.sequential_order,
+            intent=source.intent,
+        )
+    graph_cls = _GRAPH_DDD_BY_KIND[kind]
+    node = graph_cls(
+        plain_class_name(source.name),
+        source.sequential_order,
+        intent=source.intent,
+    )
+    if isinstance(base, Repository) and base.accesses is not None:
+        node.accesses = base.accesses
+    if isinstance(base, EntityRoot) and base.aggregate is not None:
+        node.aggregate = base.aggregate
+    if isinstance(base, Entity) and base.identity:
+        node.identity = list(base.identity)
+    return node
 
 
 # ---------------------------------------------------------------------------

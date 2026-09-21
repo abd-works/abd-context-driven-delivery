@@ -16,9 +16,15 @@ from practices.ddd.model import (
 
 from .graph_node import GraphNodeMixin, GraphRelationship, Kind
 from .nodes import (
+    GraphAggregate,
     GraphBackground,
+    GraphBoundedContext,
     GraphClass,
     GraphDescription,
+    GraphDomainEvent,
+    GraphDomainService,
+    GraphEntity,
+    GraphEntityRoot,
     GraphEpic,
     GraphExample,
     GraphModule,
@@ -26,10 +32,12 @@ from .nodes import (
     GraphOperation,
     GraphParameter,
     GraphProperty,
+    GraphRepository,
     GraphScenario,
     GraphStep,
     GraphStory,
     GraphSubEpic,
+    GraphValueObject,
 )
 from .practice_graph import PracticeGraph
 
@@ -42,8 +50,14 @@ __all__ = [
     "DomainService",
     "Entity",
     "EntityRoot",
+    "GraphAggregate",
     "GraphBackground",
+    "GraphBoundedContext",
     "GraphClass",
+    "GraphDomainEvent",
+    "GraphDomainService",
+    "GraphEntity",
+    "GraphEntityRoot",
     "GraphDescription",
     "GraphEpic",
     "GraphExample",
@@ -53,7 +67,9 @@ __all__ = [
     "GraphOperation",
     "GraphParameter",
     "GraphProperty",
+    "GraphRepository",
     "GraphRelationship",
+    "GraphValueObject",
     "GraphScenario",
     "GraphStep",
     "GraphStory",
