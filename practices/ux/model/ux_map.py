@@ -95,11 +95,11 @@ class UxMap(UxNode):
             ChildCollectionPair(
                 self_children=self.screens,
                 source_children=source.screens,
-                create_child=self.create_child_screen,
+                load=self.load_screen,
             ),
         ]
 
-    def create_child_screen(self, source: Screen) -> Screen:
+    def load_screen(self, source: Screen) -> Screen:
         return Screen(source.name, source.sequential_order, source.slug, source.layout)
 
     def snapshot_fields(self) -> dict:

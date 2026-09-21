@@ -389,20 +389,20 @@ def _consume_background(keyword: str, text: str, source: SourceLocation,
 # -- Leaf node types -----------------------------------------------------------
 
 class MarkdownStory(Story):
-    def create_child_scenario(self, source: Scenario) -> MarkdownScenario:
+    def load_scenario(self, source: Scenario) -> MarkdownScenario:
         return MarkdownScenario(source.name, source.sequential_order, source.story_name)
 
 
 class MarkdownSubEpic(SubEpic):
-    def create_child_sub_epic(self, source: SubEpic) -> "MarkdownSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "MarkdownSubEpic":
         return MarkdownSubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: Story) -> MarkdownStory:
+    def load_story(self, source: Story) -> MarkdownStory:
         return MarkdownStory(source.name, source.sequential_order, source.story_type)
 
 
 class MarkdownEpic(Epic):
-    def create_child_sub_epic(self, source: SubEpic) -> MarkdownSubEpic:
+    def load_sub_epic(self, source: SubEpic) -> MarkdownSubEpic:
         return MarkdownSubEpic(source.name, source.sequential_order)
 
 
@@ -427,10 +427,10 @@ class MarkdownStoryMap(StoryMap):
     attach_source_locations stamps SourceLocation onto nodes after parsing.
     """
 
-    def create_child_epic(self, source: MarkdownEpic) -> MarkdownEpic:
+    def load_epic(self, source: MarkdownEpic) -> MarkdownEpic:
         return MarkdownEpic(source.name, source.sequential_order)
 
-    def create_child_increment(self, source: Increment) -> MarkdownIncrement:
+    def load_increment(self, source: Increment) -> MarkdownIncrement:
         return MarkdownIncrement(source.name, source.sequential_order)
 
     @classmethod

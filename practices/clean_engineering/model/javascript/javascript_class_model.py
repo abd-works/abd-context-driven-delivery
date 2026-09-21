@@ -57,7 +57,7 @@ class JavaScriptOoadClass(OoadClass):
 
 class JavaScriptCleanEngineeringModel(CleanEngineeringModel):
 
-    def create_child_class(self, source: OoadClass) -> JavaScriptOoadClass:
+    def load_class(self, source: OoadClass) -> JavaScriptOoadClass:
         return JavaScriptOoadClass(name=source.name, sequential_order=source.sequential_order)
 
     # ------------------------------------------------------------------

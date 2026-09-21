@@ -84,19 +84,19 @@ class StoryMap(StoryNode):
             ChildCollectionPair(
                 self_children=self.epics,
                 source_children=source.epics,
-                create_child=self.create_child_epic,
+                load=self.load_epic,
             ),
             ChildCollectionPair(
                 self_children=self.increments,
                 source_children=source.increments,
-                create_child=self.create_child_increment,
+                load=self.load_increment,
             ),
         ]
 
-    def create_child_epic(self, source: Epic) -> Epic:
+    def load_epic(self, source: Epic) -> Epic:
         return Epic(source.name, source.sequential_order)
 
-    def create_child_increment(self, source: Increment) -> Increment:
+    def load_increment(self, source: Increment) -> Increment:
         return Increment(source.name, source.sequential_order)
 
     def snapshot_fields(self) -> dict:

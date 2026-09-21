@@ -60,7 +60,7 @@ class UxNode:
                 reconciled.append(match)
                 report.add_exact_match(match.name)
             else:
-                new_child = pair.create_child(source_child)
+                new_child = pair.load(source_child)
                 new_child.translate_from(source_child)
                 reconciled.append(new_child)
                 report.add_new(new_child, parent_name=self.name)

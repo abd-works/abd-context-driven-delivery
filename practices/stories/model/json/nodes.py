@@ -50,25 +50,25 @@ class JsonIncrement(Increment):
 
 
 class JsonScenario(Scenario):
-    def create_child_scenario(self, source: Scenario) -> "JsonScenario":
+    def load_scenario(self, source: Scenario) -> "JsonScenario":
         return JsonScenario(source.name, source.sequential_order, source.story_name)
 
 
 class JsonStory(Story):
-    def create_child_scenario(self, source: Scenario) -> JsonScenario:
+    def load_scenario(self, source: Scenario) -> JsonScenario:
         return JsonScenario(source.name, source.sequential_order, source.story_name)
 
 
 class JsonSubEpic(SubEpic):
-    def create_child_sub_epic(self, source: SubEpic) -> "JsonSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "JsonSubEpic":
         return JsonSubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: Story) -> JsonStory:
+    def load_story(self, source: Story) -> JsonStory:
         return JsonStory(source.name, source.sequential_order, source.story_type)
 
 
 class JsonEpic(Epic):
-    def create_child_sub_epic(self, source: SubEpic) -> JsonSubEpic:
+    def load_sub_epic(self, source: SubEpic) -> JsonSubEpic:
         return JsonSubEpic(source.name, source.sequential_order)
 
 
@@ -85,10 +85,10 @@ class JsonStoryMap(StoryMap):
     Factory overrides ensure every child is Json-typed throughout the tree.
     """
 
-    def create_child_epic(self, source: JsonEpic) -> JsonEpic:
+    def load_epic(self, source: JsonEpic) -> JsonEpic:
         return JsonEpic(source.name, source.sequential_order)
 
-    def create_child_increment(self, source: Increment) -> JsonIncrement:
+    def load_increment(self, source: Increment) -> JsonIncrement:
         return JsonIncrement(source.name, source.sequential_order)
 
     # -- Uniform Callable Surface ----------------------------------------------

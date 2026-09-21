@@ -33,7 +33,7 @@ class Change:
 class ChildCollectionPair:
     self_children: List["UxNode"]
     source_children: List["UxNode"]
-    create_child: Callable[["UxNode"], "UxNode"]
+    load: Callable[["UxNode"], "UxNode"]
 
 
 @dataclass

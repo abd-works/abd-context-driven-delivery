@@ -122,25 +122,25 @@ class MiroIncrement(Increment):
 
 
 class MiroScenario(Scenario):
-    def create_child_scenario(self, source: Scenario) -> "MiroScenario":
+    def load_scenario(self, source: Scenario) -> "MiroScenario":
         return MiroScenario(source.name, source.sequential_order, source.story_name)
 
 
 class MiroStory(Story):
-    def create_child_scenario(self, source: Scenario) -> MiroScenario:
+    def load_scenario(self, source: Scenario) -> MiroScenario:
         return MiroScenario(source.name, source.sequential_order, source.story_name)
 
 
 class MiroSubEpic(SubEpic):
-    def create_child_sub_epic(self, source: SubEpic) -> "MiroSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "MiroSubEpic":
         return MiroSubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: Story) -> MiroStory:
+    def load_story(self, source: Story) -> MiroStory:
         return MiroStory(source.name, source.sequential_order, source.story_type)
 
 
 class MiroEpic(Epic):
-    def create_child_sub_epic(self, source: SubEpic) -> MiroSubEpic:
+    def load_sub_epic(self, source: SubEpic) -> MiroSubEpic:
         return MiroSubEpic(source.name, source.sequential_order)
 
 
@@ -157,10 +157,10 @@ class MiroStoryMap(StoryMap):
     render_thin_slice and render_scenario are render-only views.
     """
 
-    def create_child_epic(self, source: MiroEpic) -> MiroEpic:
+    def load_epic(self, source: MiroEpic) -> MiroEpic:
         return MiroEpic(source.name, source.sequential_order)
 
-    def create_child_increment(self, source: Increment) -> MiroIncrement:
+    def load_increment(self, source: Increment) -> MiroIncrement:
         return MiroIncrement(source.name, source.sequential_order)
 
     # -- Uniform Callable Surface ----------------------------------------------

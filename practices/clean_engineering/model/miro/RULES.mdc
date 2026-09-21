@@ -8,7 +8,7 @@ alwaysApply: true
 
 ## Architecture contract (never break)
 
-1. **Same base classes, different output.** `MiroCleanEngineeringModel` extends `CleanEngineeringModel`. `MiroModule` extends `Module`. `MiroOoadClass` extends `OoadClass`. Mirror the DrawIO equivalents exactly — same factory chain, same `create_child_*` pattern.
+1. **Same base classes, different output.** `MiroCleanEngineeringModel` extends `CleanEngineeringModel`. `MiroModule` extends `Module`. `MiroOoadClass` extends `OoadClass`. Mirror the DrawIO equivalents exactly — same factory chain, same `load_*` pattern.
 2. **Do not touch `base_class_model.py`.** That is shared by all backends. Never replicate its node types or graph semantics.
 3. **Do not copy layout logic from `drawio_class_model.py`.** The layout for the Miro class diagram is expressed as Mermaid; positioning coordinates are implicit in Mermaid's auto-layout.
 4. **`UpdateReport` is imported from `practices.clean_engineering.model.update_report`, never redefined.**

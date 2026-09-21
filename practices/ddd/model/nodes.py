@@ -29,7 +29,7 @@ class BoundedContext(Module):
         assert isinstance(source, Module)
         super().update_self(source)
 
-    def create_child_aggregate(self, source: "Aggregate") -> "Aggregate":
+    def load_aggregate(self, source: "Aggregate") -> "Aggregate":
         return Aggregate(source.name, source.sequential_order)
 
     def child_collections(self, source) -> List[ChildCollectionPair]:
@@ -39,7 +39,7 @@ class BoundedContext(Module):
                 ChildCollectionPair(
                     self_children=self.aggregates,
                     source_children=source.aggregates,
-                    create_child=self.create_child_aggregate,
+                    load=self.load_aggregate,
                 )
             ]
         return super().child_collections(source)
@@ -54,7 +54,7 @@ class Aggregate(Module):
         super().__init__(name, sequential_order, **kwargs)
         self.root: EntityRoot | None = None
 
-    def create_child_class(self, source: OoadClass) -> OoadClass:
+    def load_class(self, source: OoadClass) -> OoadClass:
         return ddd_class_for(source)
 
     def child_collections(self, source) -> List[ChildCollectionPair]:

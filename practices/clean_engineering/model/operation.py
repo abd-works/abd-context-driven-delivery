@@ -88,7 +88,7 @@ class Operation(OoadNode):
         self.callees = list(source.callees)
         self._legacy_parameters = list(source._legacy_parameters)
 
-    def create_child_parameter(self, source: Parameter) -> Parameter:
+    def load_parameter(self, source: Parameter) -> Parameter:
         return Parameter(source.name, source.sequential_order, source.type_hint)
 
     def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
@@ -98,7 +98,7 @@ class Operation(OoadNode):
                 ChildCollectionPair(
                     self_children=self.parameters,
                     source_children=source.parameters,
-                    create_child=self.create_child_parameter,
+                    load=self.load_parameter,
                 )
             ]
         return []

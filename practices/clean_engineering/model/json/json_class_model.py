@@ -61,13 +61,13 @@ class JsonOoadClass(OoadClass):
 
 
 class JsonModule(Module):
-    def create_child_class(self, source: OoadClass) -> JsonOoadClass:
+    def load_class(self, source: OoadClass) -> JsonOoadClass:
         return JsonOoadClass(name=source.name, sequential_order=source.sequential_order)
 
 
 class JsonCleanEngineeringModel(CleanEngineeringModel):
 
-    def create_child_module(self, source: Module) -> JsonModule:
+    def load_module(self, source: Module) -> JsonModule:
         return JsonModule(name=source.name, sequential_order=source.sequential_order)
 
     # ------------------------------------------------------------------

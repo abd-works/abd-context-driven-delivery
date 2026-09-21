@@ -8,7 +8,7 @@ alwaysApply: true
 
 ## Architecture contract (never break)
 
-1. **Same base classes, different output.** `MiroStoryMap` extends `StoryMap`. `MiroEpic`, `MiroSubEpic`, `MiroStory`, `MiroScenario`, `MiroIncrement` mirror the DrawIO equivalents — same factory chain, same `create_child_*` pattern.
+1. **Same base classes, different output.** `MiroStoryMap` extends `StoryMap`. `MiroEpic`, `MiroSubEpic`, `MiroStory`, `MiroScenario`, `MiroIncrement` mirror the DrawIO equivalents — same factory chain, same `load_*` pattern.
 2. **Layout comes from `DiagramStoryMap`.** No pixel coordinate is ever hard-coded. All x/y/width/height values flow from `DiagramStoryMap(canonical)` methods (`epic_x`, `epic_row_y`, `sub_epic_x`, etc.). Scale up uniformly if needed.
 3. **Do not touch `DiagramStoryMap` or `diagram_story_map.py`.** That file is shared with the DrawIO backend. Any change there affects both.
 4. **`UpdateReport` is imported from `practices.stories.model.update_report`, never redefined.**

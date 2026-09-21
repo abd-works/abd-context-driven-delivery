@@ -35,7 +35,7 @@ class Change:
 class ChildCollectionPair:
     self_children: List["OoadNode"]
     source_children: List["OoadNode"]
-    create_child: Callable[["OoadNode"], "OoadNode"]
+    load: Callable[["OoadNode"], "OoadNode"]
 
 
 @dataclass

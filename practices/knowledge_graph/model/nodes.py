@@ -53,7 +53,7 @@ class GraphCleanEngineeringModel(CleanEngineeringModel, GraphNodeMixin):
     practice = "clean_engineering"
     _semantic_type_name = "CleanEngineeringModel"
 
-    def create_child_module(self, source: Module) -> "GraphModule":
+    def load_module(self, source: Module) -> "GraphModule":
         if isinstance(source, BoundedContext):
             return GraphBoundedContext(source.name, source.sequential_order)
         if isinstance(source, Aggregate):
@@ -65,7 +65,7 @@ class GraphModule(Module, GraphNodeMixin):
     practice = "clean_engineering"
     _semantic_type_name = "Module"
 
-    def create_child_class(self, source: OoadClass) -> "GraphClass":
+    def load_class(self, source: OoadClass) -> "GraphClass":
         return GraphClass(source.name, source.sequential_order)
 
     @property
@@ -77,7 +77,7 @@ class GraphClass(OoadClass, GraphNodeMixin):
     practice = "clean_engineering"
     _semantic_type_name = "OoadClass"
 
-    def create_child_property(self, source: Property) -> "GraphProperty":
+    def load_property(self, source: Property) -> "GraphProperty":
         return GraphProperty(
             source.name,
             source.sequential_order,
@@ -85,7 +85,7 @@ class GraphClass(OoadClass, GraphNodeMixin):
             description=source.description,
         )
 
-    def create_child_operation(self, source: Operation) -> "GraphOperation":
+    def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
             source.name,
             source.sequential_order,
@@ -135,7 +135,7 @@ class GraphOperation(Operation, GraphNodeMixin):
     practice = "clean_engineering"
     _semantic_type_name = "Operation"
 
-    def create_child_parameter(self, source: Parameter) -> GraphParameter:
+    def load_parameter(self, source: Parameter) -> GraphParameter:
         return GraphParameter(source.name, source.sequential_order, source.type_hint)
 
 
@@ -148,7 +148,7 @@ class GraphBoundedContext(BoundedContext, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "BoundedContext"
 
-    def create_child_aggregate(self, source: Aggregate) -> "GraphAggregate":
+    def load_aggregate(self, source: Aggregate) -> "GraphAggregate":
         return GraphAggregate(source.name, source.sequential_order)
 
 
@@ -156,7 +156,7 @@ class GraphAggregate(Aggregate, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "Aggregate"
 
-    def create_child_class(self, source: OoadClass) -> OoadClass:
+    def load_class(self, source: OoadClass) -> OoadClass:
         return graph_ddd_class_for(source)
 
 
@@ -164,7 +164,7 @@ class GraphEntity(Entity, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "Entity"
 
-    def create_child_property(self, source: Property) -> "GraphProperty":
+    def load_property(self, source: Property) -> "GraphProperty":
         return GraphProperty(
             source.name,
             source.sequential_order,
@@ -172,7 +172,7 @@ class GraphEntity(Entity, GraphNodeMixin):
             description=source.description,
         )
 
-    def create_child_operation(self, source: Operation) -> "GraphOperation":
+    def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
             source.name,
             source.sequential_order,
@@ -191,7 +191,7 @@ class GraphEntityRoot(EntityRoot, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "EntityRoot"
 
-    def create_child_property(self, source: Property) -> "GraphProperty":
+    def load_property(self, source: Property) -> "GraphProperty":
         return GraphProperty(
             source.name,
             source.sequential_order,
@@ -199,7 +199,7 @@ class GraphEntityRoot(EntityRoot, GraphNodeMixin):
             description=source.description,
         )
 
-    def create_child_operation(self, source: Operation) -> "GraphOperation":
+    def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
             source.name,
             source.sequential_order,
@@ -218,7 +218,7 @@ class GraphValueObject(ValueObject, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "ValueObject"
 
-    def create_child_property(self, source: Property) -> "GraphProperty":
+    def load_property(self, source: Property) -> "GraphProperty":
         return GraphProperty(
             source.name,
             source.sequential_order,
@@ -226,7 +226,7 @@ class GraphValueObject(ValueObject, GraphNodeMixin):
             description=source.description,
         )
 
-    def create_child_operation(self, source: Operation) -> "GraphOperation":
+    def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
             source.name,
             source.sequential_order,
@@ -245,7 +245,7 @@ class GraphRepository(Repository, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "Repository"
 
-    def create_child_property(self, source: Property) -> "GraphProperty":
+    def load_property(self, source: Property) -> "GraphProperty":
         return GraphProperty(
             source.name,
             source.sequential_order,
@@ -253,7 +253,7 @@ class GraphRepository(Repository, GraphNodeMixin):
             description=source.description,
         )
 
-    def create_child_operation(self, source: Operation) -> "GraphOperation":
+    def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
             source.name,
             source.sequential_order,
@@ -272,7 +272,7 @@ class GraphDomainEvent(DomainEvent, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "DomainEvent"
 
-    def create_child_property(self, source: Property) -> "GraphProperty":
+    def load_property(self, source: Property) -> "GraphProperty":
         return GraphProperty(
             source.name,
             source.sequential_order,
@@ -280,7 +280,7 @@ class GraphDomainEvent(DomainEvent, GraphNodeMixin):
             description=source.description,
         )
 
-    def create_child_operation(self, source: Operation) -> "GraphOperation":
+    def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
             source.name,
             source.sequential_order,
@@ -299,7 +299,7 @@ class GraphDomainService(DomainService, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "DomainService"
 
-    def create_child_property(self, source: Property) -> "GraphProperty":
+    def load_property(self, source: Property) -> "GraphProperty":
         return GraphProperty(
             source.name,
             source.sequential_order,
@@ -307,7 +307,7 @@ class GraphDomainService(DomainService, GraphNodeMixin):
             description=source.description,
         )
 
-    def create_child_operation(self, source: Operation) -> "GraphOperation":
+    def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
             source.name,
             source.sequential_order,
@@ -366,7 +366,7 @@ class GraphStoryMap(StoryMap, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "StoryMap"
 
-    def create_child_epic(self, source: Epic) -> "GraphEpic":
+    def load_epic(self, source: Epic) -> "GraphEpic":
         return GraphEpic(source.name, source.sequential_order)
 
 
@@ -374,10 +374,10 @@ class GraphEpic(Epic, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Epic"
 
-    def create_child_sub_epic(self, source: SubEpic) -> "GraphSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "GraphSubEpic":
         return GraphSubEpic(source.name, source.sequential_order)
 
-    def create_child_example(self, source: Example) -> "GraphExample":
+    def load_example(self, source: Example) -> "GraphExample":
         return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
 
 
@@ -385,13 +385,13 @@ class GraphSubEpic(SubEpic, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "SubEpic"
 
-    def create_child_sub_epic(self, source: SubEpic) -> "GraphSubEpic":
+    def load_sub_epic(self, source: SubEpic) -> "GraphSubEpic":
         return GraphSubEpic(source.name, source.sequential_order)
 
-    def create_child_story(self, source: Story) -> "GraphStory":
+    def load_story(self, source: Story) -> "GraphStory":
         return GraphStory(source.name, source.sequential_order, source.story_type)
 
-    def create_child_example(self, source: Example) -> "GraphExample":
+    def load_example(self, source: Example) -> "GraphExample":
         return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
 
 
@@ -399,10 +399,10 @@ class GraphStory(Story, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Story"
 
-    def create_child_scenario(self, source: Scenario) -> "GraphScenario":
+    def load_scenario(self, source: Scenario) -> "GraphScenario":
         return GraphScenario(source.name, source.sequential_order, source.story_name)
 
-    def create_child_example(self, source: Example) -> "GraphExample":
+    def load_example(self, source: Example) -> "GraphExample":
         return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
 
 
@@ -410,10 +410,10 @@ class GraphScenario(Scenario, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Scenario"
 
-    def create_child_background(self, source: Background) -> "GraphBackground":
+    def load_background(self, source: Background) -> "GraphBackground":
         return GraphBackground(source.name, source.sequential_order)
 
-    def create_child_step(self, source: Step) -> "GraphStep":
+    def load_step(self, source: Step) -> "GraphStep":
         return GraphStep(
             text=source.text,
             phase=source.phase,
@@ -426,7 +426,7 @@ class GraphScenario(Scenario, GraphNodeMixin):
             name=source.name,
         )
 
-    def create_child_example(self, source: Example) -> "GraphExample":
+    def load_example(self, source: Example) -> "GraphExample":
         return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
 
 
@@ -434,7 +434,7 @@ class GraphBackground(Background, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Background"
 
-    def create_child_step(self, source: Step) -> "GraphStep":
+    def load_step(self, source: Step) -> "GraphStep":
         return GraphStep(
             text=source.text,
             phase=source.phase,
@@ -467,7 +467,7 @@ class GraphDescription(Description, GraphNodeMixin):
     practice = "bdd"
     _semantic_type_name = "Description"
 
-    def create_child_context(self, source: Context) -> "GraphContext":
+    def load_context(self, source: Context) -> "GraphContext":
         return GraphContext(source.name, source.sequential_order)
 
 
@@ -475,10 +475,10 @@ class GraphContext(Context, GraphNodeMixin):
     practice = "bdd"
     _semantic_type_name = "Context"
 
-    def create_child_observation(self, source: Observation) -> "GraphObservation":
+    def load_observation(self, source: Observation) -> "GraphObservation":
         return GraphObservation(source.name, source.sequential_order)
 
-    def create_child_context(self, source: Context) -> "GraphContext":
+    def load_context(self, source: Context) -> "GraphContext":
         return GraphContext(source.name, source.sequential_order)
 
 

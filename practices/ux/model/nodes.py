@@ -73,11 +73,11 @@ class Control(UxNode):
             ChildCollectionPair(
                 self_children=self.interactions,
                 source_children=source.interactions,
-                create_child=self.create_child_interaction,
+                load=self.load_interaction,
             )
         ]
 
-    def create_child_interaction(self, source: Interaction) -> Interaction:
+    def load_interaction(self, source: Interaction) -> Interaction:
         return Interaction(
             source.name,
             source.sequential_order,
@@ -187,11 +187,11 @@ class Region(UxNode):
             ChildCollectionPair(
                 self_children=self.controls,
                 source_children=source.controls,
-                create_child=self.create_child_control,
+                load=self.load_control,
             )
         ]
 
-    def create_child_control(self, source: Control) -> Control:
+    def load_control(self, source: Control) -> Control:
         if isinstance(source, StoryDemoControl):
             child = StoryDemoControl(
                 source.name,
@@ -274,11 +274,11 @@ class Screen(UxNode):
             ChildCollectionPair(
                 self_children=self.regions,
                 source_children=source.regions,
-                create_child=self.create_child_region,
+                load=self.load_region,
             )
         ]
 
-    def create_child_region(self, source: Region) -> Region:
+    def load_region(self, source: Region) -> Region:
         return Region(source.name, source.sequential_order, source.slot)
 
     def append_region(self, region: Region) -> None:

@@ -58,13 +58,13 @@ class PythonOoadClass(OoadClass):
 
 
 class PythonModule(Module):
-    def create_child_class(self, source: OoadClass) -> PythonOoadClass:
+    def load_class(self, source: OoadClass) -> PythonOoadClass:
         return PythonOoadClass(name=source.name, sequential_order=source.sequential_order)
 
 
 class PythonCleanEngineeringModel(CleanEngineeringModel):
 
-    def create_child_module(self, source: Module) -> PythonModule:
+    def load_module(self, source: Module) -> PythonModule:
         return PythonModule(name=source.name, sequential_order=source.sequential_order)
 
     @classmethod

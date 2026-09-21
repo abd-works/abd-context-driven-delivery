@@ -22,7 +22,7 @@ class Background(StoryNode):
         self.name = source.name
         self.sequential_order = source.sequential_order
 
-    def create_child_step(self, source: "Step") -> "Step":
+    def load_step(self, source: "Step") -> "Step":
         from .step import Step
 
         return Step(
@@ -42,6 +42,6 @@ class Background(StoryNode):
             ChildCollectionPair(
                 self_children=self.steps,
                 source_children=source.steps,
-                create_child=self.create_child_step,
+                load=self.load_step,
             )
         ]

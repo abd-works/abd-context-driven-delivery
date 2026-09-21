@@ -20,7 +20,7 @@ class Description(StoryNode):
         self.name = source.name
         self.sequential_order = source.sequential_order
 
-    def create_child_context(self, source: "Context") -> "Context":
+    def load_context(self, source: "Context") -> "Context":
         return Context(source.name, source.sequential_order)
 
     def child_collections(self, source: StoryNode) -> List[ChildCollectionPair]:
@@ -29,7 +29,7 @@ class Description(StoryNode):
             ChildCollectionPair(
                 self_children=self.contexts,
                 source_children=source.contexts,
-                create_child=self.create_child_context,
+                load=self.load_context,
             )
         ]
 
@@ -47,10 +47,10 @@ class Context(StoryNode):
         self.name = source.name
         self.sequential_order = source.sequential_order
 
-    def create_child_observation(self, source: "Observation") -> "Observation":
+    def load_observation(self, source: "Observation") -> "Observation":
         return Observation(source.name, source.sequential_order)
 
-    def create_child_context(self, source: "Context") -> "Context":
+    def load_context(self, source: "Context") -> "Context":
         return Context(source.name, source.sequential_order)
 
     def child_collections(self, source: StoryNode) -> List[ChildCollectionPair]:
@@ -59,12 +59,12 @@ class Context(StoryNode):
             ChildCollectionPair(
                 self_children=self.observations,
                 source_children=source.observations,
-                create_child=self.create_child_observation,
+                load=self.load_observation,
             ),
             ChildCollectionPair(
                 self_children=self.contexts,
                 source_children=source.contexts,
-                create_child=self.create_child_context,
+                load=self.load_context,
             ),
         ]
 

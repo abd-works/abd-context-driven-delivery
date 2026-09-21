@@ -118,16 +118,16 @@ class MiroOoadClass(OoadClass):
 
 
 class MiroModule(Module):
-    def create_child_class(self, source: OoadClass) -> MiroOoadClass:
+    def load_class(self, source: OoadClass) -> MiroOoadClass:
         return MiroOoadClass(name=source.name, sequential_order=source.sequential_order)
 
 
 class MiroCleanEngineeringModel(CleanEngineeringModel):
 
-    def create_child_module(self, source: Module) -> MiroModule:
+    def load_module(self, source: Module) -> MiroModule:
         return MiroModule(name=source.name, sequential_order=source.sequential_order)
 
-    def create_child_class(self, source: OoadClass) -> MiroOoadClass:
+    def load_class(self, source: OoadClass) -> MiroOoadClass:
         return MiroOoadClass(name=source.name, sequential_order=source.sequential_order)
 
     # ------------------------------------------------------------------
