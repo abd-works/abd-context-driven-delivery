@@ -35,6 +35,7 @@ class Render(GuidanceAction):
         def on(item):
             if isinstance(item, str):
                 return item
-            return item.render(format, content, source=source)
+            payload = item if content in ("", None) else content
+            return item.render(format, payload, source=source)
 
         return self.each(on)

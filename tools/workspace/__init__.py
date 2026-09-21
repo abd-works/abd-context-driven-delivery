@@ -1,49 +1,35 @@
-"""Workspace aggregate, WorkSession, GitRepo, SessionLog."""
-
-from workspace.session_log import (
-    ISessionLog,
-    SessionLog,
-    inherit_annotations,
-    inherit_annotations_from_bases,
-    summarize_mapping,
-)
+"""Workspace aggregate, WorkSession, GitRepo."""
 
 __all__ = [
-    "ISessionLog",
-    "Workspace",
     "WorkSession",
-    "ContextTool",
+    "WorkSessionGuidance",
+    "WorkSessionRulesCollection",
+    "WorkSessionRule",
+    "Example",
+    "Examples",
+    "Turn",
+    "TurnCommit",
     "GitRepo",
     "NullGitRepo",
-    "SessionLog",
-    "SessionPaths",
-    "SessionModel",
-    "docs_dir",
-    "session_dir",
-    "inherit_annotations",
-    "inherit_annotations_from_bases",
-    "summarize_mapping",
 ]
 
 
 def __getattr__(name: str):
     if name in (
         "WorkSession",
-        "Workspace",
-        "ContextTool",
+        "WorkSessionGuidance",
+        "WorkSessionRulesCollection",
+        "WorkSessionRule",
+        "Example",
+        "Examples",
         "Turn",
-        "Mistake",
-        "Correction",
-        "SessionPaths",
-        "SessionModel",
-        "docs_dir",
-        "session_dir",
+        "TurnCommit",
     ):
         from workspace import workspace as _w
 
         return getattr(_w, name)
     if name in ("GitRepo", "NullGitRepo", "Repo"):
-        from workspace.git_repo import GitRepo, NullGitRepo, Repo
+        from git import GitRepo, NullGitRepo, Repo
 
         return {
             "GitRepo": GitRepo,

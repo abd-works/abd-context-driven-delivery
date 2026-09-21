@@ -24,6 +24,11 @@ from information_hiding_scanner import InformationHidingScanner  # noqa: E402
 from low_coupling_scanner import LowCouplingScanner  # noqa: E402
 from module_scanner import collect_module_files  # noqa: E402
 from named_seam_and_constraint_scanner import NamedSeamAndConstraintScanner  # noqa: E402
+from no_subtype_at_modules_scanner import NoSubtypeAtModulesScanner  # noqa: E402
+from modules_not_model_blocks_scanner import ModulesNotModelBlocksScanner  # noqa: E402
+from language_modules_one_section_scanner import (  # noqa: E402
+    LanguageModulesOneSectionScanner,
+)
 from physical_folder_scanner import PhysicalFolderScanner  # noqa: E402
 from public_seam_only_scanner import PublicSeamOnlyScanner  # noqa: E402
 from scan import Scan, ScannerCollection  # noqa: E402
@@ -148,11 +153,11 @@ with description("named-seam-and-constraint scanner"):
                 {"cart.py": "class Cart:\n    pass\n"},
             )
 
-        with it("should flag all three missing elements"):
+        with it("should flag seam and constraint when both are missing"):
             violations = _run(
                 NamedSeamAndConstraintScanner, "named-seam-and-constraint", self.root
             )
-            expect(len(violations)).to(equal(3))
+            expect(len(violations)).to(equal(2))
 
 
 with description("deep-module scanner"):
@@ -404,3 +409,76 @@ with description("public-seam-only scanner"):
         with it("should allow _is_* markers under Extend"):
             violations = _run(PublicSeamOnlyScanner, "public-seam-only", self.root)
             expect(violations).to(equal([]))
+
+
+with description("no-subtype-at-modules scanner"):
+    with context("a module-context with is-a headings"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.root = Path(self.tmp.name)
+            body = (
+                _GOOD_CONTEXT
+                + "\n\n### AgentOperation *is a type of* AgentTool\n\n## Child : Parent\n"
+            )
+            _make_module(self.root, "cart", body, {"cart.py": "class Cart:\n    pass\n"})
+
+        with it("should flag is-a and Child : Parent"):
+            violations = _run(
+                NoSubtypeAtModulesScanner, "no-subtype-at-modules", self.root
+            )
+            expect(len(violations) >= 2).to(be_true)
+
+
+with description("modules-not-model-blocks scanner"):
+    with context("a module-context with a typed dump and Sources"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.root = Path(self.tmp.name)
+            body = (
+                _GOOD_CONTEXT
+                + "\n\n**Sources / context:** `cart.py`\n\n"
+                + "+ Cart()\n------\nLive instance: items\n"
+            )
+            _make_module(self.root, "cart", body, {"cart.py": "class Cart:\n    pass\n"})
+
+        with it("should flag model dump, Sources, and Live instance"):
+            violations = _run(
+                ModulesNotModelBlocksScanner, "modules-not-model-blocks", self.root
+            )
+            expect(len(violations) >= 3).to(be_true)
+
+
+with description("language-modules-one-section scanner"):
+    with context("a module-context that splits ## Language and ## Modules"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.root = Path(self.tmp.name)
+            body = (
+                "## Language\n\n*Cart* is the tally.\n\n"
+                "## Modules\n\nBuild order: `cart`\n\n# cart\n"
+            )
+            _make_module(self.root, "cart", body, {"cart.py": "class Cart:\n    pass\n"})
+
+        with it("should flag the Modules heading"):
+            violations = _run(
+                LanguageModulesOneSectionScanner,
+                "language-modules-one-section",
+                self.root,
+            )
+            expect(len(violations) >= 1).to(be_true)
+
+    with context("a module-context that is one Language section"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.root = Path(self.tmp.name)
+            body = "## Language\n\n*Cart* is the tally.\n\nBuild order: `cart`\n\n# cart\n"
+            _make_module(self.root, "cart", body, {"cart.py": "class Cart:\n    pass\n"})
+
+        with it("should produce no violations"):
+            violations = _run(
+                LanguageModulesOneSectionScanner,
+                "language-modules-one-section",
+                self.root,
+            )
+            expect(violations).to(equal([]))
+

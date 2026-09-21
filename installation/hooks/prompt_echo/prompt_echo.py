@@ -140,15 +140,19 @@ class PromptEcho:
             type(self)._echo_toolsets = loaded
         return loaded
 
-    def show_ide_toast(self, echo: str, repo: Path | None = None) -> Path:
+    def show_ide_toast(
+        self,
+        echo: str,
+        repo: Path | None = None,
+        roots: list | None = None,
+    ) -> Path:
         dest = self._toast_path(repo)
-        dest.parent.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         message = self._burst_message(dest, echo, stamp)
-        dest.write_text(
-            json.dumps({"message": message, "at": stamp}, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        notice = json.dumps({"message": message, "at": stamp}, ensure_ascii=False) + "\n"
+        self._write_notice(dest, notice)
+        for path in self._toast_destinations(dest, roots):
+            self._write_notice(path, notice)
         return dest
 
     def inject_rules_toast(self, source: str, labels: list[str]) -> str:
@@ -226,6 +230,25 @@ class PromptEcho:
     def _toast_path(self, repo: Path | None) -> Path:
         root = Path(repo) if repo is not None else _REPO_ROOT
         return root / TOAST_NOTICE
+
+    def _write_notice(self, dest: Path, notice: str) -> None:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(notice, encoding="utf-8")
+
+    def _toast_destinations(self, primary: Path, roots: list | None) -> list[Path]:
+        seen = {primary.resolve()}
+        extra: list[Path] = []
+        for root in roots or []:
+            dest = Path(str(root)) / TOAST_NOTICE
+            try:
+                resolved = dest.resolve()
+            except OSError:
+                continue
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            extra.append(dest)
+        return extra
 
     def _burst_message(self, dest: Path, echo: str, stamp: str) -> str:
         if not dest.is_file():

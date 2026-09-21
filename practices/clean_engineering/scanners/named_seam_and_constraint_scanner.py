@@ -1,27 +1,19 @@
-"""Scanner: `named-seam-and-constraint` - module-context.md declares seam and constraint.
+"""Scanner: `named-seam-and-constraint` — module-context names Seam and Constraint.
 
-The Seam section should be natural-language prose (not labeled sub-slots). This
-scanner only checks that the ideas are named in the file (case-insensitive):
-- The word "seam" appears (public surface callers depend on)
-- The word "constraint" appears (what callers must / must not do)
-- A public API section is present (heading like `## Public API` or `## Public surface`)
-
-FP profile: LOW. Textual presence of well-defined vocabulary.
+At modules the seam is **Seam (terms)** plus **Constraint**. A Public API
+member dump is model — do not require that heading.
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from module_scanner import Module, ModuleScanner
 
-_HEADING_PATTERN = re.compile(
-    r"^\s*#{1,6}\s+(public\s+api|public\s+surface)\b",
-    re.IGNORECASE | re.MULTILINE,
-)
+RULE = "named-seam-and-constraint"
 
 
 class NamedSeamAndConstraintScanner(ModuleScanner):
+    RULE = RULE
 
     def scan_module(self, root: Path, module: Module) -> list:
         violations: list = []
@@ -48,15 +40,6 @@ class NamedSeamAndConstraintScanner(ModuleScanner):
                     line=1,
                 )
             )
-        if not _HEADING_PATTERN.search(content):
-            violations.append(
-                self.violation(
-                    f"Module '{module.folder.name}' context file lacks a 'Public API' or "
-                    f"'Public surface' heading listing the seam's classes and operations.",
-                    location=str(module.context_file),
-                    line=1,
-                )
-            )
         return violations
 
 
@@ -67,7 +50,7 @@ if __name__ == "__main__":
     raise SystemExit(
         run_scanner_main(
             NamedSeamAndConstraintScanner,
-            "named-seam-and-constraint",
+            RULE,
             collect_module_files,
         )
     )

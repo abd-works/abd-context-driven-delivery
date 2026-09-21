@@ -17,6 +17,7 @@ from mamba import description, it
 from actions.render.render import Render
 
 _REF = "practices.clean_engineering.clean_engineering:CleanEngineering"
+_STORIES = "practices.stories.stories:Stories"
 _PYTHON = '''\
 class Cart:
     """Cart holds line items and places orders."""
@@ -24,6 +25,11 @@ class Cart:
     def __init__(self, owner: str) -> None:
         self.owner = owner
 '''
+_STORY_MAP = """\
+(E) Manage Customer Orders
+    (E) Place New Order
+        (S) Customer --> Browse Product Catalog
+"""
 
 
 with description("Render"):
@@ -44,3 +50,12 @@ with description("Render"):
             content=_PYTHON,
         )
         expect(str(results[0]["content"])).to(contain("Cart"))
+
+    with it("should convert a story map when source is md"):
+        results = Render().render(
+            _STORIES,
+            format="drawio",
+            content=_STORY_MAP,
+            source="md",
+        )
+        expect(str(results[0]["content"])).to(contain("mxGraphModel"))

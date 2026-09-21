@@ -29,6 +29,41 @@ def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
     return HookServer(_REPO_ROOT, toolsets).dispatch(HookPayload(payload)).as_dict()
 
 
+def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
+    root = Path(tmp.name)
+    session = root / ".sessions" / "work-session"
+    session.mkdir(parents=True)
+    (root / ".sessions" / "_active").write_text("work-session", encoding="utf-8")
+    (session / "work-guidelines.md").write_text(
+        "#### Rules\n\n"
+        "- `put-logic-on-the-owning-resource` - session body of put-logic\n"
+        "  star: 2\n"
+        "  last-fail: 1\n"
+        "  mistake: parked the check on the client\n"
+        "  correction: call validate on the transaction\n",
+        encoding="utf-8",
+    )
+
+    @agent_toolset
+    class _PracticeInject:
+        @Hook("postToolUse")
+        def on_inject(self, payload: dict) -> dict:
+            return {
+                "additional_context": (
+                    "- `put-logic-on-the-owning-resource` - practice body of put-logic\n"
+                    "- `hide-inner-details` - Expose behavior through named operations."
+                )
+            }
+
+    server = HookServer(root, [_PracticeInject])
+    result = server.dispatch(
+        HookPayload({"hook_event_name": "postToolUse", "tool_name": "Write"})
+    )
+    server._publish_context(result)
+    server._write_last_chat_injected(result)
+    return root, result
+
+
 @Hooks(disabled=True)
 @agent_toolset
 class _DisabledFixture:
@@ -174,6 +209,36 @@ with description("hook dispatch"):
             )
             text = out.get("additional_context") or ""
             expect(text.count("keep-operations-small-focused")).to(equal(1))
+
+        with it("should overwrite an injected rule of the same name from the work session"):
+            tmp = tempfile.TemporaryDirectory()
+            try:
+                root, result = _dispatch_work_session_inject(tmp)
+                text = result.additional_context or ""
+                expect(text).to(contain("session body of put-logic"))
+                expect(text).to(contain("parked the check on the client"))
+                expect(text).not_to(contain("practice body of put-logic"))
+                expect(text).to(contain("hide-inner-details"))
+                expect(
+                    text.find("session body of put-logic")
+                    < text.find("hide-inner-details")
+                ).to(equal(True))
+            finally:
+                tmp.cleanup()
+
+        with it("should write last-chat-injected-rules after sending additional context"):
+            tmp = tempfile.TemporaryDirectory()
+            try:
+                root, result = _dispatch_work_session_inject(tmp)
+                dumped = (
+                    root
+                    / ".sessions"
+                    / "work-session"
+                    / "last-chat-injected-rules.md"
+                ).read_text(encoding="utf-8")
+                expect(dumped.strip()).to(equal((result.additional_context or "").strip()))
+            finally:
+                tmp.cleanup()
 
     with context("that invokes a handler whose tool has a docstring"):
 

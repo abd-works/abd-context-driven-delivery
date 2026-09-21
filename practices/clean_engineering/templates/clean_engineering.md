@@ -55,7 +55,14 @@ fidelity: all
   Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
   same module H1 — interface first, then implementation. No fidelity section
   headers (## Model fidelity / ## Code fidelity) in the output.
-  Language and modules overview go as prose BEFORE the first H1.
+  Language and modules are one section: concept prose, build order, and
+  `# {path}` cards. Do not emit `## Language` then `## Modules`.
+  That one section goes BEFORE the first H1 module card (or the H1s sit in it).
+  At modules fidelity, stop after Purpose / Seam / Dependencies / Constraint.
+  Do not emit ## {ClassName} typed compact blocks, *is a type of*,
+  Child : Parent, Sources/context of this folder's own files, scan dumps,
+  or runtime names nobody types (expand, invoke, install_to).
+  Those wait for model, or they are internals — omit them.
 
   Write human-readable markdown only. Strip template markup (`<!-- Mu -->`,
   `<!-- Mv -->`, `<!-- L -->`, `<!-- Md -->`, `<!-- C -->`, and similar)
@@ -66,36 +73,38 @@ fidelity: all
   Substitute {ClassName} / {owned_property} / {param} / {Type} / ... when generating.
 -->
 
-**Sources / context:** {source_files}                             <!-- L -->
+## Language                                                       <!-- L, Mu — one section; do not add ## Modules -->
 
-## Language                                                       <!-- L -->
+*{ClassName}* is {the job a caller hires it for — then what it holds and does.
+This paragraph IS the class definition. Identity and purpose. Not a decorator or merge.} <!-- L -->
 
-*{ClassName}* is {intent — what role it plays, what it holds, what it does.
-This paragraph IS the class definition. Identity only.}           <!-- L -->
+### {class_name_as_a_concept}                                     <!-- L, Mu -->
 
-### {class_name_as_a_concept}                                     <!-- L -->
-
-- {bullet: what it holds, what it does, how it relates to *another class*} <!-- L -->
+- {bullet: why a caller uses this (the outcome), then the mechanic if needed, then how it relates to *another class*} <!-- L -->
 - {as many bullets as the concept warrants}                       <!-- L -->
 - **Invariant:** {rule that must always hold — only when one exists} <!-- L -->
 
-### {ChildClass} *is a type of* {ClassName}                       <!-- L -->
+### {ChildClass}                                                  <!-- L, Mu — own heading; no *is a type of* at modules -->
 
-- {delta behavior only — what this subtype adds or overrides}     <!-- L -->
+- {why a caller uses this — same shape as any other concept}      <!-- L, Mu -->
 
-## Modules                                                        <!-- Mu -->
+<!-- omit from module-context.md: *is a type of* is model language -->
 
-# FILE: {module}/.context/module-context.md
-
-Build order: `{first}` → `{second}` → `{third}`
+Build order: `{first}` → `{second}` → `{third}`                   <!-- Mu -->
 
 ---
 
 # {module_path}                                                   <!-- Mu -->
 
-- **Purpose:** {one paragraph}                                    <!-- Mu -->
+- **Purpose:** {the job a caller hires this module for — not how it is wired} <!-- Mu -->
 - **Seam (terms):** {ClassName}, {ChildClass}, ...                <!-- Mu -->
 - **Dependencies (one-way):** {other_module}, ...                 <!-- Mu -->
+
+## Constraint                                                    <!-- Mu -->
+
+{what callers must or must not do at this seam — the marks they type, not runtime names they never write}
+
+<!-- MODULES STOPS HERE. Do not copy the typed blocks below into module-context.md. -->
 
 ## I{ClassName}                                                   <!-- Md, optional -->
 <!-- Omit this section entirely by default — see note at top of file.
@@ -145,9 +154,15 @@ I{ChildClass}({param}: {Type})
 
 # {next_module_path}                                              <!-- Mu -->
 
-- **Purpose:** {one paragraph}
+- **Purpose:** {the job a caller hires this module for}
 - **Seam (terms):** {ClassName}, ...
 - **Dependencies (one-way):** *(none)*
+
+## Constraint                                                    <!-- Mu -->
+
+{what callers must or must not do}
+
+<!-- MODULES STOPS HERE. -->
 
 ## I{NextClassName}                                               <!-- Md, optional -->
 

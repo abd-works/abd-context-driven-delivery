@@ -10,7 +10,6 @@ from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_tool
 from installation.hooks.prompt_echo.prompt_echo import PromptEcho, echo
 from installation.hooks.hooks import Hook
 from installation.mcp.mcp_server import mcp
-from workspace.workspace import SessionModel, Turn, Workspace
 
 # Guidance list, one Guidance (ref or {toolset, …}), or a string to act on directly.
 GuidanceArg = str | dict[str, Any] | list[str | dict[str, Any]]
@@ -52,19 +51,15 @@ class GuidanceAction:
         return RecordDecisions()
 
     def _turn(self):
+        from workspace.workspace import Turn
+
         session = self._session()
         if session is not None:
-            return session.turn
-        return Turn(root=str(self.workspace.path))
+            return session.turn()
+        return Turn()
 
     def _open_session(self, name: str = "", *, path: str = "") -> str:
-        session_name = SessionModel.session_slug(name or self._session_name)
-        session = self.workspace.open(
-            name=session_name,
-            path=path or self.workspace.path,
-            isolate=session_name != SessionModel.DEFAULT_SESSION,
-        )
-        return session.branch_warning()
+        return ""
 
     def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
         """Guidance ref or dict: iterate Guidance. Other strings: run once on that text."""
@@ -182,7 +177,10 @@ class GuidanceAction:
             return {}
         body = "\n\n".join(parts)
         action = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", type(self).__name__).lower()
-        PromptEcho().show_ide_toast(PromptEcho().inject_rules_toast(action, labels))
+        PromptEcho().show_ide_toast(
+            PromptEcho().inject_rules_toast(action, labels),
+            roots=data.get("workspace_roots"),
+        )
         return {"additional_context": body}
 
     def _payload_is_this_action(self, payload: dict[str, Any]) -> bool:

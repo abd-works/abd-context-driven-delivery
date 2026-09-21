@@ -115,23 +115,22 @@ class RulesCollection(MarkdownCollection):
     def appliesTo(self) -> AppliesTo:
         return AppliesTo(always_apply=self.always_apply, globs=self.glob)
 
-    _INJECT_TOOLS = frozenset({"Write", "StrReplace", "EditNotebook", "Read"})
-
     @echo
     @Hook("postToolUse")
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         from installation.hooks.prompt_echo.prompt_echo import PromptEcho
 
         data = payload or {}
-        if str(data.get("tool_name") or "") not in self._INJECT_TOOLS:
-            return {}
         path = self._payload_path(data)
         bags = self._bags_for_path(path) if path else []
         parts, labels = self._bodies(bags)
         if not parts:
             return {}
         body = "\n\n".join(parts)
-        PromptEcho().show_ide_toast(PromptEcho().inject_rules_toast("chat edit", labels))
+        PromptEcho().show_ide_toast(
+            PromptEcho().inject_rules_toast("chat edit", labels),
+            roots=data.get("workspace_roots"),
+        )
         return {"additional_context": body}
 
     def _payload_path(self, data: dict[str, Any]) -> str:
@@ -233,7 +232,11 @@ class RulesCollection(MarkdownCollection):
         return parts, labels
 
     def matches(self, path: str) -> bool:
-        if not path or not self.glob:
+        if not path:
+            return False
+        if self.always_apply and not str(self.glob or "").strip():
+            return True
+        if not self.glob:
             return False
         posix = Path(path).as_posix()
         name = Path(path).name

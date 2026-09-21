@@ -1,48 +1,74 @@
-# Contexts
+## Language
 
-## Purpose
+*Practices* are fields of expertise — Clean Engineering, BDD, Stories, UX, DDD, agent BDD — each a *PracticeGuidance* plus co-located markdown. Lifecycle generate / validate / document live on *actions*, not on the practice class.
 
-Contexts provides functionality to manage knowledge for a field of expertise, and include tools to generate, validate, test, and otherwise work content according to that field’s guidelines and practices.
+### Stage
 
-## Primary use case
+- A named deepen step written on a fidelity as **Stage:** — discovery, specification, or implementation — so modules / model / code line up across practices.
 
-Capture a field’s guidelines and examples as a context, then use its tools to generate and check content against those guidelines. Examples include `clean_engineering`, `bdd`, `stories`, `ux`, `ddd`, `agent_bdd`.
+Build order: `practices` → `practices/clean_engineering` → `practices/bdd` → `practices/stories` → `practices/ux` → `practices/ddd` → `practices/agent_bdd`
 
-## Rationale
+---
 
-1. Knowledge and code regarding using AI for a context stay together — the same context holds the guidelines and the tools that apply them.
-2. One shape per field of expertise — each context reuses the same generate / validate / document / satisfy / repair surface instead of inventing a custom harness.
-3. Built on Tools/Actions — ordinary Python classes become expertise toolsets; authors focus on the field, not chat wiring.
+# practices
+- **Purpose:** Hold one *PracticeGuidance* per field so the same kits can generate and check work against that field’s words.
+- **Seam (terms):** PracticeGuidance, Stage, attach_practice_workspace
+- **Dependencies (one-way):** `harness/guidance`, `tools/workspace`
 
-## Seam
+## Constraint
 
-Annotate a class with `@context`, then create markdown for the named instruction properties: `contexts`, `examples`, `templates` (action prose comes from the action docstring / `# Generate` / `# Document` sections). Optionally extend any of the actions or tools to customize — `generate`, `validate`, `document`, `satisfy`, `repair`, `generate_output`, `add_generate_header_to_generated`, `scan`, `render`. Constraint: do not subclass `Context` directly; use `@context`. Constraint: AI consumers follow the manifest and `response.instructions`, not the context `.py` as the instruction document.
+Do not put `/generate` on the practice. Pass the practice into the kit: `Generate().generate(guidance=[ce])`. `attach_practice_workspace` binds a *Workspace* onto the practice — it is not a second workspace type.
 
-## Public API
+---
 
-`Context` — base generator toolset: `format`, `module_dir`, instruction slots, actions (`generate`, `validate`, `document`, `satisfy`, `repair`, `generate_output`, `add_generate_header_to_generated`), and tools `scan`, `render`. Authors do not subclass it in source.
+# practices/clean_engineering
+- **Purpose:** Partition, type, and implement objects — modules, then model, then code — in the caller’s language.
+- **Seam (terms):** CleanEngineering, `@clean-engineering-modules`, `@clean-engineering-model`, `@clean-engineering-code`
+- **Dependencies (one-way):** `harness/guidance`
 
-`context` — class annotation that merges a context class with `Context` and registers it as a context toolset.
+## Constraint
 
-`instruction` — re-exported slot decorator for contexts that need an extra instruction slot (unusual; defaults cover the common slots).
+Modules file is Purpose / Seam / Dependencies / Constraint. Typed class dumps wait for model. A mistake in `module-context.md` is named here in the same turn.
 
-## Dependencies
+---
 
-**tools** — `Toolset`, `tool` (and manifest/`run` via the toolset surface).
+# practices/bdd
+- **Purpose:** Lock describe/it observations first, then fill tests red-green, then hand class code to Clean Engineering.
+- **Seam (terms):** Bdd
+- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
 
-**actions** — `@action` validation on merge.
+---
 
-**primitives** — `Instruction`, `@instruction` expansion and asset location under `module_dir`.
+# practices/stories
+- **Purpose:** Map stakeholder behaviour as Epic → Story so later fidelities share one hierarchy.
+- **Seam (terms):** Stories
+- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
 
-**scan** — `ScannerCollection` used by the host `scan` tool.
+---
 
-Does not own practice context prose; each practice folder owns its `{context-slug}.md`, examples, and templates.
+# practices/ux
+- **Purpose:** Decide screens, then greybox, then production UI, in domain words.
+- **Seam (terms):** Ux
+- **Dependencies (one-way):** `harness/guidance`, `practices/stories`, `practices/clean_engineering`
 
-## Mechanism stereotype
+---
 
-**Key mechanism** — structural pattern instantiated once per practice context generator (`CleanEngineering`, `Bdd`, `Stories`, `Ux`, `Ddd`, `AgentBdd`, `CarChronicle`, …).
+# practices/ddd
+- **Purpose:** Draw where language changes — bounded context, then building blocks, then tactics — and reuse Clean Engineering for the OO ladder.
+- **Seam (terms):** Ddd
+- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
 
-| | |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Variation points** | Context folder contents (`{context-slug}.md`, examples, templates/formats); optional `format` (and context-specific constructor args such as `fidelity`); optional `@action` body overrides / composition with other toolsets; optional context scanners behind the host scanner collection. |
-| **Fixed parts** | `@context` merge (not direct subclass); instruction slots for contexts / generate & document instructions / examples / templates; standard actions `generate` → `validate`, plus `document`, `satisfy`, `repair`; `scan` tool; `module_dir` = folder of the class module; toolset manifest + `run` as the AI surface. |
+## Constraint
+
+Do not restate Clean Engineering class analysis in DDD artifacts. Use the fidelity’s Clean Engineering companion.
+
+---
+
+# practices/agent_bdd
+- **Purpose:** Drive a real agent through `agent(...)` and assert on the parsed run — not a mocked transcript.
+- **Seam (terms):** AgentBdd, agent, instruct, instruct_use_tool, ai_judge
+- **Dependencies (one-way):** `practices/bdd`
+
+## Constraint
+
+Specs call the harness only inside `with agent(...)`. Do not import CLI backends from specs.

@@ -1,0 +1,109 @@
+/**
+ * Paradise Mobile chrome for the CDD catalog copy.
+ *
+ * Tokens from pml-website/src/themes/tokens/colors.ts.
+ * Titles/separators: Montserrat (public stand-in for Proxima Nova).
+ * Body, tickets, code: Inter + JetBrains Mono from site.css.
+ */
+
+html.paradise-brand {
+  --bg: #fffbf5;
+  --surface: #ffffff;
+  --raised: #fff5ef;
+  --faint: #fceae4;
+  --border: #e9dace;
+  --border-sub: #f6e4de;
+  --text: #003743;
+  --muted: #695c52;
+  --accent: #ec778f;
+  --accent-deep: #d4617a;
+  --accent-soft: #ffa2b9;
+  --accent-glow: #ff8ca4;
+  --accent-dim: rgba(236, 119, 143, 0.1);
+  --accent-dim2: rgba(236, 119, 143, 0.2);
+  --ai-accent: #a7d9e8;
+  --nav-active-bg: var(--accent);
+  --nav-active-text: #ffffff;
+  --nav-active-ring: rgba(236, 119, 143, 0.36);
+  --font-display: 'Montserrat', 'ProximaNova', system-ui, sans-serif;
+}
+
+html.paradise-brand[data-theme='engineering'] {
+  --bg: #003743;
+  --surface: #123038;
+  --raised: #093e4a;
+  --faint: #12252a;
+  --border: #2b5a67;
+  --border-sub: #00232f;
+  --text: #f8e6e0;
+  --muted: #a7d9e8;
+  --nav-active-bg: rgba(167, 217, 232, 0.28);
+  --nav-active-text: #f8e6e0;
+  --nav-active-ring: rgba(167, 217, 232, 0.5);
+}
+
+html.paradise-brand .page-headline,
+html.paradise-brand .section-headline,
+html.paradise-brand .hero-headline,
+html.paradise-brand .catalog-body h2,
+html.paradise-brand .aad-delivery-crosscut-section-title,
+html.paradise-brand .kb-col-head-title,
+html.paradise-brand .foundry-cdd-panel__tag,
+html.paradise-brand .foundry-cdd-btn,
+html.paradise-brand .site-nav .nav-links,
+html.paradise-brand .site-footer .footer-tagline,
+html.paradise-brand .mode-text {
+  font-family: var(--font-display);
+}
+
+html.paradise-brand .kb-ticket,
+html.paradise-brand .kb-skill-tooltip-wrap,
+html.paradise-brand code,
+html.paradise-brand .nav-talk-trigger,
+html.paradise-brand .foundry-cdd-intro,
+html.paradise-brand .body-lead,
+html.paradise-brand .catalog-body p,
+html.paradise-brand .catalog-body li {
+  font-family: var(--font-sans);
+}
+
+html.paradise-brand .kb-ticket,
+html.paradise-brand code {
+  font-family: var(--font-mono);
+}
+
+html.paradise-brand .nav-logo img,
+html.paradise-brand .footer-logo img {
+  height: 28px;
+  width: auto;
+}
+
+html.paradise-brand .site-nav.is-scrolled .nav-logo img {
+  height: 24px;
+}
+
+html.paradise-brand .page-hero {
+  border-bottom: 1px solid var(--border);
+}
+
+html.paradise-brand .page-headline .accent {
+  color: var(--accent);
+}
+
+html.paradise-brand .foundry-cdd-btn {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+html.paradise-brand[data-theme='engineering'] .foundry-cdd-btn {
+  color: #003743;
+  background: var(--ai-accent);
+}
+
+html.paradise-brand .kanban-stage-questions__cell {
+  border-color: var(--accent);
+}
+
+html.paradise-brand .nav-talk-trigger {
+  color: #ffffff;
+}

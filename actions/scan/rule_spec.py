@@ -37,6 +37,13 @@ with description("a shared rules section containing scanner bullets") as self:
             expect(self.guidance.rules.matches("pkg/foo_sample_bar.py")).to(equal(True))
             expect(self.guidance.rules.matches("pkg/other.py")).to(equal(False))
 
+        with it("should match any file when always_apply and the bag has no glob"):
+            from actions.scan.rule import AppliesTo, RulesCollection
+
+            bag = RulesCollection(applies_to=AppliesTo(always_apply=True))
+            expect(bag.matches("pkg/notes.md")).to(equal(True))
+            expect(bag.matches("C:/dev/repo/src/app.py")).to(equal(True))
+
         with it("should not treat a trailing directory ** as every filename"):
             from actions.scan.rule import AppliesTo, RulesCollection
 
@@ -63,6 +70,12 @@ with description("a shared rules section containing scanner bullets") as self:
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
                 }
+            )
+            expect(result.get("additional_context")).to(contain("sample rule one"))
+
+        with it("should inject when the path matches regardless of tool name"):
+            result = self.guidance.rules.inject_rules(
+                {"tool_input": {"path": "pkg/foo_sample_bar.py"}}
             )
             expect(result.get("additional_context")).to(contain("sample rule one"))
 

@@ -24,7 +24,9 @@ Use these rules whenever you name a concept, draw a dependency, or write a publi
 
 When asked to express output using language, write the same names, definitions, and rules in a conversational format that we do in modules, model, and code. Shared rules `vocabulary-traces-to-source` and `do-not-invent-terms` apply here.
 
-**Follow the object-oriented thinking in modules and model, then write it in English.** Use the same ideas: a **root** to group terms, then **concept**, **subtype**, **property**, **instance**, and **invariant**. Express them as short definitions, verb-led behaviour bullets, and italicized domain terms rather than typed class blocks. Keep identity on the concept and move member details onto the members as the model and code deepen. Update the existing prose under `{session}/{module}/` rather than creating a parallel description.
+**Follow the object-oriented thinking in modules and model, then write it in English.** Use a **root** to group terms, then **concept**, **property**, **instance**, and **invariant**. At **model**, add **subtype** (`*is a type of*` / `Child : Parent`). At **modules**, every concept is `### {Name}` with no is-a heading. Express them as short definitions, verb-led behaviour bullets, and italicized domain terms rather than typed class blocks. Keep identity on the concept and move member details onto the members as the model and code deepen. Update the existing prose under `{session}/{module}/` rather than creating a parallel description.
+
+**Lead with why a caller would use it.** The opening sentence of a concept, Purpose, or seam term is the job it does for someone — what they get that they did not have before. A decorator, merge, mark, flag, or storage choice is *how*; it never opens the definition. `@agent_toolset` is not the definition of *AgentToolSet*; the definition is that an ordinary class becomes a set of operations an agent can list, run as Python, or follow as **instructions**. If the first line only says “decorate / merge / mark,” the reader still does not know why they would.
 
 If the user asks for language while generating **modules** or **model**, use this Language section and stop before the fidelity Guidance and Rules.
 
@@ -49,7 +51,20 @@ Each **module** is a named structural boundary that groups closely related class
 
 #### Language
 
-**When the user asks for language** rather than full generation at this fidelity, apply the top-level Language section. Do not use Guidance, Scaffold, or Module rules. **Stop reading this skill when writing language.**
+When language sits in `module-context.md`, use the top-level Language section **and** these writing rules. Do not skip this subsection.
+
+Each concept is `### {Name}` — no `*is a type of*`, no `Child : Parent`. Lead with the job a caller hires it for; then the mark they type (`@markdown`, `@agent_toolset`). Name the cases they hit (file vs section), not an internal verb (`extract`, `expand`, `invoke`). Concept prose, build order, and `# {path}` cards sit in **one** `## Language` section — do not add `## Modules`.
+
+**Pass**
+
+- `@markdown` on a property loads prose from a matching document: **file** `{name}.md` beside the class, or **section** `## Name` in `{slug}.md`.
+
+**Fail**
+
+- Keep the prose next to the class; **extract** by label (folder, file, or section).
+- `@agent_toolset` merges *AgentToolSet* onto the class.
+- Live instance: **operations**, **instructions**, **tools**.
+- `## Language` then `## Modules` as two headings.
 
 #### Guidance
 
@@ -59,7 +74,17 @@ Each **module** is a named structural boundary that groups closely related class
 
 **Make every dependency explicit.** Use direct, visible references rather than globals, configuration magic, side effects, shared mutable state, or convention-based wiring. An implicit dependency is difficult to identify, replace in a test, or change safely.
 
-Document only the **public seam** — how to use the module, how to extend it, and what it depends on. One name per concept on the seam (prefer the type name — `Ability`, not `Ability, Abilities`). Write language for the terms you name. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
+Document only the **public seam** — why a caller would use it, how to use it, what they must honor, how to extend it, and what it depends on. Write like you are introducing a new concept: succinct, explanatory, job first. **Purpose** is the outcome a caller hires the module for, not that the folder has an empty `__init__.py` or that a decorator merges a class. One name per concept on the seam (prefer the type name — `Ability`, not `Ability, Abilities`). Write language for the terms you name. Each concept in `module-context.md` is its own heading — no `*is a type of*` or `Child : Parent`; generalisation is **model**.
+
+At **modules**, the file is **one section**: concept language, build order, and each `# {path}` with **Purpose**, **Seam (terms)**, **Dependencies**, **Constraint**. Do not emit `## Language` then `## Modules`. Do not emit typed `+ ClassName()` / `------` member dumps — those are **model**. Do not emit scan reports, session notes, or `_private` names.
+
+The seam is what a caller **types** (`@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@mcp`, `@markdown`, `tools(...)`). A runtime name nobody writes (`expand`, `invoke`, `install_to`, `destinations`, `extract`) is an internal — leave it out. Destination is the annotation (`@mcp`, `@skill`, `@hook`), not a property list. `@agent_instructions` *is* the **instructions** the agent follows at the end, not an `expand` call. `@markdown` is a **file** named after the property or a **section** titled after the property — say those two cases; do not say “extract by label.”
+
+Do not inventory names with no job (“Live instance: operations, instructions…”). If you cannot say what a term *is* for a caller, omit it. Do not put **Sources / context** that only lists files inside this module folder — those are the subject, not a source. Cite **Sources / context** only for upstream evidence outside the folder (stories, grill, another module).
+
+Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
+
+**When you correct `module-context.md`.** Every mistake found in that file — this pass or a later one — is a gap in this fidelity. Name the prohibition in modules Guidance or Rules in the **same turn** as the file fix. Do not patch only the artifact.
 
 #### Scaffold
 
@@ -83,7 +108,7 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 **Form the module**
 
 - `domain-nouns-only` — Name modules after domain concepts or paths, never action verbs or generic `*Model` and `*Runtime` suffixes. A technical container name does not tell callers which business knowledge it owns.
-- `named-seam-and-constraint` — Name the seam (public classes and operations) and the constraint (what callers must or must not do). A constraint you do not name is one callers find by breaking it at runtime.
+- `named-seam-and-constraint` — Name **Seam (terms)** and **Constraint** (what callers must or must not do). At modules do not require a Public API heading — that member dump is **model**.
 - `high-cohesion` — Group classes that share one purpose and the same domain concept, or else unrelated work will keep landing in the same module and every feature ends up editing it.
 - `single-boundary` — Do not let another module hold, mutate, or duplicate this module’s concept. The two modules will drift, and every rule change has to be found and made in both.
 
@@ -91,7 +116,12 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 
 - `deep-module` — Keep most top-level symbols private (at most **40%** public). Substantial work stays behind a short seam. Every public symbol is a signature you cannot change without editing every caller, so public parts are much harder to refactor than private ones.
 - `abstraction-focus` — Name *what* the module does for callers, not internal steps or storage. A seam named after its implementation has to be renamed, with every caller updated, whenever the implementation changes.
-- `public-seam-only` — Document only the public seam and dependencies on other modules. Do not document internals or tests. Documented internals are misunderstood as public promises, and callers start writing code against them.
+- `purpose-before-mechanism` — Open each concept, Purpose, and seam term with the job a caller hires it for. A decorator, merge, mark, or storage choice is how — it never leads. A reader who only knows “`@agent_toolset` merges *AgentToolSet*” still does not know why they would decorate. Do not inventory names with no job (“Live instance: operations, instructions…”). Either say what the caller uses each for, or omit them. Destination is `@mcp` / `@skill` / `@hook` on the member, not `install_to` / `destinations`. `@markdown` is the file named after the property or the section titled after it — not “extract by label.”
+- `no-subtype-at-modules` — In `module-context.md`, every concept is its own heading. Do not write `*is a type of*` or `Child : Parent`. Generalisation waits for **model** (`## ChildClass : ClassName`).
+- `modules-not-model-blocks` — At modules, do not write typed `+ ClassName()` / `------` / `+ operation()` dumps. Those wait for **model**. Modules stop at Purpose, Seam, Dependencies, Constraint.
+- `language-modules-one-section` — `module-context.md` is one `## Language` section: opening prose, `###` concepts, build order, then `# {path}` cards. Do not add `## Modules`. A second heading splits the same document into two fidelities.
+- `public-seam-only` — Document only the public seam and dependencies on other modules. The seam is what a caller types (`@agent_instructions`, `tools(...)`). A runtime name nobody writes (`expand`, `invoke`, `install_to`) is an internal — leave it out. Do not document tests, scan reports, or session dumps. Do not put **Sources / context** that only lists files inside the module folder — those are the subject, not a source. Documented internals are misunderstood as public promises, and callers start writing code against them.
+- `module-mistakes-feed-ce` — A mistake found in `module-context.md` is a gap in this fidelity. Write the prohibition into modules Guidance or Rules in the same pass as the file fix. Do not patch only the artifact.
 - `use-typed-signatures` — Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists on them — an untyped bag moves every shape error to runtime and leaves the caller guessing which keys are required.
 - `general-purpose-surface` — Do not shape the seam for one caller’s UI or workflow. The second caller then either needs a near-duplicate operation or has to reshape its data to look like the first caller’s.
 - `temporal-independence` — Leave the module valid after every public operation. Do not require a call order unless you document it, because an undocumented order fails on the first untested path.
