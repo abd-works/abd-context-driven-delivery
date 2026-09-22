@@ -198,6 +198,8 @@ class MarkdownInstallation(Installation):
                 return
         if not kind:
             return
+        if kind == "skill" and getattr(tool.toolset, "practice_guidance", None) is not None:
+            return
         member = tool.callable
         toolset = tool.toolset
         parts = [self._body_for(kind, tool, toolset)]

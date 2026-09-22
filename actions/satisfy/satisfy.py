@@ -6,7 +6,6 @@ from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from workspace import SessionLog
 
 @agent_toolset
 class Satisfy(GuidanceAction):
@@ -25,13 +24,6 @@ class Satisfy(GuidanceAction):
                 return
             Validate().validate(guidance=[item])
             item.generate_fixes_from_validate()
-            SessionLog.instance().append(
-                toolset=item.registration_name,
-                name="satisfy",
-                summary="satisfy",
-                ok=True,
-                role="run",
-            )
 
         self.run(guidance, on, action="satisfy")
         return "When done, run validate on artifacts under {session.path}/."

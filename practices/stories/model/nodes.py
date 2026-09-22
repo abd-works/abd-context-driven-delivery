@@ -16,6 +16,7 @@ from .story_node import StoryNode
 from .update_report import ChildCollectionPair
 
 if TYPE_CHECKING:
+    from .background import Background
     from .example import Example
     from .scenario import Scenario
     from .test_file import TestCase, TestSuite
@@ -193,7 +194,10 @@ class Story(StoryNode):
         self.users: List[str] = []
         self.domain_terms: List[str] = []
         self.evidence: List[str] = []
-        # Scenario and example children - reconciled as tree children.
+        # Background, scenario, and example children — reconciled as tree children.
+        # Background belongs to the Story (same as Scenario). Nesting scenarios
+        # inside background() in TypeScript is only an execution convenience.
+        self.backgrounds: List["Background"] = []
         self.scenarios: List["Scenario"] = []
         self.examples: List["Example"] = []
         # Populated by the workspace loader after load; never reconciled as
@@ -216,6 +220,11 @@ class Story(StoryNode):
     def child_collections(self, source: "Story") -> List[ChildCollectionPair]:
         return [
             ChildCollectionPair(
+                self_children=self.backgrounds,
+                source_children=getattr(source, "backgrounds", []),
+                load=self.load_background,
+            ),
+            ChildCollectionPair(
                 self_children=self.scenarios,
                 source_children=source.scenarios,
                 load=self.load_scenario,
@@ -226,6 +235,11 @@ class Story(StoryNode):
                 load=self.load_example,
             ),
         ]
+
+    def load_background(self, source: "Background") -> "Background":
+        from .background import Background
+
+        return Background(source.name, source.sequential_order)
 
     def load_scenario(self, source: "Scenario") -> "Scenario":
         from .scenario import Scenario  # lazy import to avoid cycle

@@ -1,4 +1,0 @@
-@"
-toolset: generator.example.car_chronicle:CarChronicle
-action: generate
-"@ | python -m tools run -

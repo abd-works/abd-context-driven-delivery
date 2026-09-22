@@ -1,0 +1,133 @@
+rule use-property-not-accessor: CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\use-property-not-accessor.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 245, in evaluate
+    for pack in packs:
+                   ^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 173, in evaluate
+    return RuleViolation.for_rows(self, graph, CodeQL(graph.root).run(path))
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 174, in run
+    return Rows(self._select_rows(self.run_query_tuples(query, db)))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 196, in run_query_tuples
+    raise CodeQLRunError(
+practices.knowledge_graph.model.codeql.CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\use-property-not-accessor.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+
+rule use-typed-signatures: CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\use-typed-signatures.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 245, in evaluate
+    for pack in packs:
+                   ^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 173, in evaluate
+    return RuleViolation.for_rows(self, graph, CodeQL(graph.root).run(path))
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 174, in run
+    return Rows(self._select_rows(self.run_query_tuples(query, db)))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 196, in run_query_tuples
+    raise CodeQLRunError(
+practices.knowledge_graph.model.codeql.CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\use-typed-signatures.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+
+rule keep-classes-single-responsibility: CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\keep-classes-single-responsibility.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 245, in evaluate
+    for pack in packs:
+                   ^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 173, in evaluate
+    return RuleViolation.for_rows(self, graph, CodeQL(graph.root).run(path))
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 174, in run
+    return Rows(self._select_rows(self.run_query_tuples(query, db)))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 196, in run_query_tuples
+    raise CodeQLRunError(
+practices.knowledge_graph.model.codeql.CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\keep-classes-single-responsibility.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+
+rule avoid-vague-parameter-names: CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\avoid-vague-parameter-names.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 245, in evaluate
+    for pack in packs:
+                   ^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 173, in evaluate
+    return RuleViolation.for_rows(self, graph, CodeQL(graph.root).run(path))
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 174, in run
+    return Rows(self._select_rows(self.run_query_tuples(query, db)))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 196, in run_query_tuples
+    raise CodeQLRunError(
+practices.knowledge_graph.model.codeql.CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\avoid-vague-parameter-names.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+
+rule deep-module: CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\deep-module.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 245, in evaluate
+    for pack in packs:
+                   ^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 173, in evaluate
+    return RuleViolation.for_rows(self, graph, CodeQL(graph.root).run(path))
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 174, in run
+    return Rows(self._select_rows(self.run_query_tuples(query, db)))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 196, in run_query_tuples
+    raise CodeQLRunError(
+practices.knowledge_graph.model.codeql.CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\deep-module.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+
+rule do-not-invent-parallel-object-models: CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\do-not-invent-parallel-object-models.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 245, in evaluate
+    for pack in packs:
+                   ^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 173, in evaluate
+    return RuleViolation.for_rows(self, graph, CodeQL(graph.root).run(path))
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 174, in run
+    return Rows(self._select_rows(self.run_query_tuples(query, db)))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 196, in run_query_tuples
+    raise CodeQLRunError(
+practices.knowledge_graph.model.codeql.CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\do-not-invent-parallel-object-models.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+
+rule hide-inner-details: CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\hide-inner-details.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 245, in evaluate
+    for pack in packs:
+                   ^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\graph_rules.py", line 173, in evaluate
+    return RuleViolation.for_rows(self, graph, CodeQL(graph.root).run(path))
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 174, in run
+    return Rows(self._select_rows(self.run_query_tuples(query, db)))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\practices\knowledge_graph\model\codeql.py", line 196, in run_query_tuples
+    raise CodeQLRunError(
+practices.knowledge_graph.model.codeql.CodeQLRunError: codeql query run failed for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\graphQuery\hide-inner-details.ql: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+

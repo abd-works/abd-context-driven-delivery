@@ -7,7 +7,6 @@ from agent_tools import agent_instructions, agent_toolset
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
 from scan.rule import Rule
-from workspace import SessionLog
 
 @agent_toolset
 class Validate(GuidanceAction):
@@ -40,13 +39,6 @@ class Validate(GuidanceAction):
             item.contexts
             item.examples
             item.templates
-            SessionLog.instance().append(
-                toolset=item.registration_name,
-                name="createRule",
-                summary="createRule",
-                ok=True,
-                role="run",
-            )
 
         self.run(guidance, on, action="createRule")
         return (

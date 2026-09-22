@@ -9,7 +9,6 @@ from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from workspace import docs_dir
 
 @agent_toolset
 class GrillContext(GuidanceAction):
@@ -22,7 +21,7 @@ class GrillContext(GuidanceAction):
         ``root`` may be ``session.path``, ``session.docs_dir``, or ``session.folder``
         — all resolve to the same ``.context`` file.
         """
-        return docs_dir(root) / "grill-answers.md"
+        return Path(root) / ".context" / "grill-answers.md"
 
     def _appended_answers_content(self, existing: str | None, heading: str, body: str) -> str:
         """Compose the full grill-answers document after appending one entry (pure).

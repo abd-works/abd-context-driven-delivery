@@ -29,6 +29,7 @@ class Clause:
     text: str
     phase: Phase
     is_continuation: bool = False
+    keyword: str = ""
     concepts: List[str] = field(default_factory=list)
     values: List[str] = field(default_factory=list)
     actor: str = ""

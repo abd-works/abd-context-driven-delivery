@@ -18,24 +18,12 @@ from practices.clean_engineering.model.base_class_model import OoadClass
 from practices.ddd.model import (
     Aggregate,
     BoundedContext,
-    Entity,
-    EntityRoot,
-    Repository,
     ddd_class_for,
     ddd_class_kind,
     parse_bounded_context_map,
 )
-from practices.knowledge_graph.model import Kind, PracticeGraph
-from practices.knowledge_graph.model.loader import _wire_ddd_relationships
-from practices.knowledge_graph.model.nodes import (
-    GraphAggregate,
-    GraphBoundedContext,
-    GraphEntityRoot,
-    GraphProperty,
-    GraphRepository,
-    GraphValueObject,
-)
-from practices.knowledge_graph.model.practice_graph import PracticeGraph
+from harness.knowledge_graph import model as kg
+from harness.knowledge_graph.model import Kind, PracticeGraph
 
 
 with description("DDD model nodes"):
@@ -89,7 +77,7 @@ with description("DDD model nodes"):
 with description("PracticeGraph DDD wiring"):
     with it("should load bounded contexts and aggregates from examples map"):
         graph = PracticeGraph.load(_REPO_ROOT / "practices" / "ddd" / "examples")
-        bc_nodes = graph.nodes_of_type(GraphBoundedContext)
+        bc_nodes = graph.nodes_of_type(kg.BoundedContext)
         expect(bc_nodes).to(have_length(2))
         sales = next(bc for bc in bc_nodes if bc.name == "Sales")
         expect(sales.aggregates[0].name).to(equal("ShoppingCart"))
@@ -107,35 +95,34 @@ with description("PracticeGraph DDD wiring"):
 
     with it("should wire root, belongsTo, accesses, and hasIdentity edges"):
         graph = PracticeGraph(_REPO_ROOT)
-        agg = GraphAggregate("Customer", 1)
+        agg = kg.Aggregate("Customer", 1)
         graph.register(agg)
-        graph.index_module(agg)
 
-        identity_vo = GraphValueObject("Identity", 1)
-        id_prop = GraphProperty("id", 1, type_hint="string")
+        identity_vo = kg.ValueObject("Identity", 1)
+        id_prop = kg.Property("id", 1, type_hint="string")
         identity_vo.property_nodes = [id_prop]
         graph.register(identity_vo)
         graph.register(id_prop)
-        graph.relate(identity_vo, Kind.OWNS, id_prop)
-        graph.relate(id_prop, Kind.BELONGS_TO, identity_vo)
+        identity_vo.relate(Kind.OWNS, id_prop)
+        id_prop.relate(Kind.BELONGS_TO, identity_vo)
 
-        root = GraphEntityRoot("Customer", 1)
-        ident_prop = GraphProperty("identity", 1, type_hint="Identity")
+        root = kg.EntityRoot("Customer", 1)
+        ident_prop = kg.Property("identity", 1, type_hint="Identity")
         root.property_nodes = [ident_prop]
         graph.register(root)
         graph.register(ident_prop)
-        graph.relate(root, Kind.OWNS, ident_prop)
-        graph.relate(ident_prop, Kind.BELONGS_TO, root)
+        root.relate(Kind.OWNS, ident_prop)
+        ident_prop.relate(Kind.BELONGS_TO, root)
 
-        repo = GraphRepository("CustomerRepository", 2)
+        repo = kg.Repository("CustomerRepository", 2)
         graph.register(repo)
 
         agg.classes = [identity_vo, root, repo]
         for oclass in agg.classes:
-            graph.relate(agg, Kind.OWNS, oclass)
-            graph.relate(oclass, Kind.BELONGS_TO, agg)
+            agg.relate(Kind.OWNS, oclass)
+            oclass.relate(Kind.BELONGS_TO, agg)
 
-        _wire_ddd_relationships(graph)
+        graph.wire_ddd()
 
         kinds = {r.kind for r in graph.relationships}
         expect(Kind.ROOT in kinds).to(equal(True))

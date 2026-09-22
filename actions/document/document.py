@@ -6,7 +6,6 @@ from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from workspace import SessionLog
 
 @agent_toolset
 class Document(GuidanceAction):
@@ -24,13 +23,6 @@ class Document(GuidanceAction):
             item.templates
             item.scanner.scan(paths)
             item.generate_output()
-            SessionLog.instance().append(
-                toolset=item.registration_name,
-                name="document",
-                summary="document",
-                ok=True,
-                role="run",
-            )
 
         self.run(guidance, on, action="document")
         return "Document existing state under {session.path}/ - violations flagged, none corrected."

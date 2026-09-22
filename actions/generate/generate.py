@@ -6,7 +6,7 @@ from guidance_actions import GuidanceArg, GuidanceAction
 from agent_tools import agent_instructions, agent_toolset, instructions
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from workspace import SessionLog
+
 @agent_toolset
 class Generate(GuidanceAction):
     """Generate artifacts for provided context tools."""
@@ -28,14 +28,6 @@ class Generate(GuidanceAction):
             item.generate_output()
         self.generate_fixes_from_validate()
         self.add_generate_header_to_generated()
-        if not isinstance(item, str):
-            SessionLog.instance().append(
-                toolset=item.registration_name,
-                name="generate",
-                summary="generate",
-                ok=True,
-                role="run",
-            )
 
     @agent_instructions
     def add_generate_header_to_generated(self) -> str:

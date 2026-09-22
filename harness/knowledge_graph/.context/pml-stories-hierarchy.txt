@@ -1,0 +1,1023 @@
+StoryMap: StoryMap
+  Epic: Onboard A Customer
+    Example: incompleteEmailExample
+    Example: validEmailExample
+    Example: weakPasswordExample
+    Example: validPasswordExample
+    Example: mismatchedConfirmPasswordExample
+    Example: wrongPasswordExample
+    Example: unknownEmailExample
+    Example: alreadyRegisteredEmailExample
+    Example: signInHeadingExample
+    Example: unsignedPortabilityHeadingExample
+    Example: forgotPasswordHeadingExample
+    Example: continueToLoginExample
+    Example: federatedGoogleExample
+    Example: federatedAppleExample
+    Example: validOtpExample
+    Example: mismatchOtpExample
+    Example: expiredOtpExample
+    Example: attemptsExceededOtpExample
+    Example: inventoryMsisdnExamples
+    Example: portingInfoExample
+    Example: portabilitySmsCodeExample
+    Example: prospectWithMsisdnExample
+    Example: prospectWithVerifiedEmail
+    Example: prospectWithNumberNoPlan
+    Example: prospectWithNumber
+    Example: prospectWithSim
+    Example: prospectPersonaWillSucceed
+    Example: prospectPersonaWillFail
+    Example: prospectReadyToConfirmProfile
+    Example: prospectWithVerifiedIdentity
+    Example: prospectPayOnInvoice
+    Example: prospectPayUpFront
+    Example: prospectOrderWillFail
+    Example: prospectPaymentWillFail
+    Example: validIccidExample
+    Example: invalidIccidExample
+    Example: enteredValidAccountCredentials
+    Example: expectedValidAccountCredentials
+    Example: enteredAlreadyRegisteredAccountCredentials
+    Example: expectedAlreadyRegisteredAccountCredentials
+    Example: enteredInvalidPasswordLetters
+    Example: enteredInvalidPasswordNumber
+    Example: enteredInvalidPasswordSymbol
+    Example: enteredInvalidPasswordLength
+    Example: enteredInvalidConfirmRequired
+    Example: enteredInvalidConfirmMismatch
+    Example: enteredInvalidEmailRequired
+    Example: enteredInvalidEmailFormat
+    Example: enteredNonExistentAccountCredentials
+    Example: enteredWrongPasswordAccountCredentials
+    Example: enteredUnknownEmailAccountCredentials
+    Example: enteredInvalidPasswordRequired
+    Example: invalidCredentialOutlines
+    Example: incorrectCredentialOutlines
+    Example: essentials
+    Example: internalTestPlan
+    SubEpic: Create Customer
+      Example: storedUnconfirmedCognitoUser
+      Example: storedConfirmedCognitoUser
+      Example: storedAlreadyRegisteredUnconfirmedCognitoUser
+      Example: storedCognitoUserWithAccountToken
+      Example: newMavenirShoppingCart
+      Example: enteredValidValidationCode
+      Example: expectedValidValidationCode
+      Example: mismatchValidationCode
+      Example: expiredValidationCode
+      Example: attemptsExceededValidationCode
+      Example: unusableValidationCodeExamples
+      Example: unusableCognitoValidationCodeExamples
+      Story: Create Customer
+        Background: each
+          Step: Given the User has a verified account with an account token
+            Example: enteredValidAccountCredentials
+        Scenario: Create customer
+          Step: When the User creates their Paradise account
+          Step: Then My Paradise sends the correct create request to Mavenir
+            Example: enteredValidAccountCredentials
+          Step: When Mavenir creates the customer
+          Step: Then the customer has a Mavenir customer id
+        Scenario: Mavenir customer already exists
+          Step: Given Mavenir already has a customer for that email
+            Example: enteredValidAccountCredentials
+          Step: When the User creates their Paradise account
+          Step: Then My Paradise shows Could not create customer
+      Story: Ensure Cart on Customer
+        Scenario: Create Cart
+          Step: Given the Customer enters the onboarding journey with a valid account token and no car
+          Step: When My Paradise creates a cart for the customer
+          Step: Then My Paradise sends the create shopping-cart request to Mavenir
+          Step: When Mavenir creates the shopping cart
+          Step: Then My Paradise stores the cart on the customer
+          Step: And the Customer proceeds to Get Number
+        Scenario: customer already has a Mavenir shopping cart
+          Step: Given the Customer enters the onboarding journey with a valid account token
+          Step: And the customer has a Mavenir shopping cart
+            Example: newMavenirShoppingCart
+          Step: When My Paradise loads the cart for the customer
+          Step: Then My Paradise finds the cart on the customer
+          Step: And the Customer proceeds to Get Number
+            Example: newMavenirShoppingCart
+        Scenario: cart already exists
+          Step: Given the Customer enters the onboarding journey and already has a cart loaded
+            Example: newMavenirShoppingCart
+          Step: When My Paradise creates a cart for the customer
+          Step: Then My Paradise reports a cart creation error
+      Story: Create Unconfirmed User
+        Background: background
+        Scenario: Display Create Account
+          Step: When the User proceeds to create an account from the Paradise Mobile website
+          Step: Then the User can enter account credentials
+          Step: And the email and password rules are unmet
+          Step: And the customer cannot save the customer account
+        Scenario: Enter Valid account credentials
+          Step: When the User enters valid account credentials
+            Example: enteredValidAccountCredentials
+          Step: Then account credentials are validated continuously
+          Step: And the customer can save the customer account
+        Scenario: Enter Invalid account credentials: ${example}
+          Step: When the User validates ${example}
+          Step: Then the ${unmet} requirement is unmet
+          Step: And the customer cannot save the customer account
+        Scenario: Email already registered
+          Step: Given already-registered account credentials are already registered
+            Example: storedAlreadyRegisteredUnconfirmedCognitoUser
+          Step: When the User registers already-registered account credentials
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: Then Email shows the already-registered error
+        Scenario: Create Unconfirmed User
+          Step: Given the amplifyService.signUp spy is set up
+          Step: When the User creates their account
+            Example: enteredValidAccountCredentials
+          Step: Then the system creates an unconfirmed Cognito user and emails a validation code
+            Example: expectedValidAccountCredentials
+      Story: Load Customer
+        Background: each
+          Step: Given Mavenir has a customer and the Cognito user holds its id
+            Example: enteredValidAccountCredentials
+        Scenario: Load My Paradise customer and store in session
+          Step: When My Paradise loads the customer from Mavenir
+          Step: Then My Paradise calls Mavenir with the customer id
+          Step: And the result is a Paradise customer with identity and address from Mavenir
+            Example: enteredValidAccountCredentials
+        Scenario: Load customer fails
+          Step: Given Mavenir no longer has that customer
+          Step: When My Paradise loads the customer
+          Step: Then My Paradise signs the User out
+          Step: And My Paradise shows Something went wrong when loading your account
+        Scenario: Terminated account
+          Step: Given the Customer has an account token
+            Example: enteredValidAccountCredentials
+          Step: And the Mavenir customer billing state is terminated
+          Step: When My Paradise loads the customer
+          Step: Then My Paradise signs the Customer out
+          Step: And the Customer account is terminated
+      Story: Enter Validation Code
+        Background: each
+          Step: Given the User has submitted valid account credentials
+          Step: And Cognito has an unconfirmed Cognito user
+            Example: storedUnconfirmedCognitoUser
+            Example: enteredValidAccountCredentials
+          Step: And Cognito has sent a validation code to the User
+            Example: enteredValidValidationCode
+            Example: enteredValidAccountCredentials
+          Step: And the User has account credentials with valid email and password
+            Example: enteredValidAccountCredentials
+        Scenario: Enter validation code
+          Step: When the User activates the account with the emailed validation code
+          Step: Then My Paradise sends the correct confirmation request to Cognito
+            Example: enteredValidAccountCredentials
+          Step: And the account is verified
+          Step: And Cognito issues an account token for the browser session
+            Example: enteredValidAccountCredentials
+          Step: But no Mavenir customer exists for those account credentials
+        Scenario: Activate with unusable validation code: ${example}
+          Step: When the User activates with ${example}
+          Step: Then Enter Validation Code shows ${helper}
+        Scenario: Resend validation code
+          Step: When more than 60 seconds has passed
+          Step: And the User resends the validation code
+          Step: Then Cognito sends a new validation code
+          Step: And My Paradise shows the resend confirmation
+          Step: When less than 60 seconds has passed
+          Step: And the User resends the validation code
+          Step: Then Resend waits 60 seconds before it can be used again
+          Step: And Cognito does not send another validation code during the wait
+          Step: When more than 60 seconds has passed
+          Step: And the User resends the validation code
+          Step: Then Cognito sends another validation code
+    SubEpic: Get Number
+      Example: storedHeldAvailableNumber
+      Example: enteredChosenAvailableNumber
+      Example: expectedChosenAvailableNumber
+      Example: storedAvailableNumbers
+      Example: enteredJamesSearch
+      Example: storedJamesMatchingNumbers
+      Example: expectedJamesMatchingNumbers
+      Example: storedNumbersLockedByOtherCustomer
+      Example: stubBundle
+      Example: enteredValidPortability
+      Example: expectedValidPortability
+      Example: validPortingSmscode
+      Example: mismatchPortingSmscode
+      Story: Determine Number
+        Scenario: View available numbers
+          Step: Given a My Paradise customer with a Mavenir shopping cart and no MSISDN
+            Example: storedAvailableNumbers
+          Step: When the Customer loads available numbers
+          Step: Then My Paradise sends the list resources request to Mavenir
+          Step: When Mavenir locks 20 MSISDN resources and returns the available number values
+          Step: Then My Paradise returns the available numbers
+            Example: storedAvailableNumbers
+          Step: And ${storedHeldAvailableNumber} and ${enteredChosenAvailableNumber} are in the Avai
+            Example: storedHeldAvailableNumber
+            Example: enteredChosenAvailableNumber
+        Scenario: View available numbers — MSISDN in cart
+          Step: Given MSISDN ${storedHeldAvailableNumber} is in the Mavenir shopping cart
+            Example: storedHeldAvailableNumber
+            Example: storedAvailableNumbers
+            Example: stubBundle
+          Step: When the Customer loads available numbers
+          Step: Then My Paradise sends the list resources request to Mavenir
+          Step: When Mavenir locks 20 MSISDN resources and returns the available number values
+          Step: Then the Customer sees their number is ${storedHeldAvailableNumber}
+            Example: storedHeldAvailableNumber
+          Step: And My Paradise returns the available numbers
+            Example: storedAvailableNumbers
+        Scenario: Refresh available numbers
+          Step: Given a My Paradise customer with a Mavenir shopping cart
+            Example: storedAvailableNumbers
+          Step: When the Customer refreshes the number list
+          Step: Then My Paradise sends the list resources request to Mavenir
+          Step: When Mavenir locks 20 MSISDN resources and returns the available numbers
+          Step: Then My Paradise returns a fresh set of available numbers
+            Example: storedAvailableNumbers
+        Scenario: Search for a number
+          Step: Given a My Paradise customer with a Mavenir shopping cart
+          Step: When the Customer searches for numbers matching ${enteredJamesSearch}
+            Example: enteredJamesSearch
+          Step: Then My Paradise sends the search request to Mavenir with pattern ${enteredJamesSearc
+            Example: enteredJamesSearch
+          Step: When Mavenir locks MSISDN resources matching 52637 and returns matching values
+          Step: Then My Paradise returns Available Numbers matching 52637
+          Step: And the matching numbers are stored on the line for selection
+        Scenario: Numbers locked by another customer are excluded from results
+          Step: Given another customer has already locked the standard available numbers in Mavenir
+          Step: When the Customer loads available numbers
+          Step: Then My Paradise sends the list resources request to Mavenir
+          Step: When Mavenir returns only available numbers, excluding the locked ones
+          Step: Then the locked numbers are not in the available numbers list
+            Example: storedHeldAvailableNumber
+            Example: enteredChosenAvailableNumber
+          Step: And only the currently available numbers are returned
+      Story: Enter Porting Number
+        Scenario: Port the number
+          Step: Given a My Paradise customer with a Mavenir shopping cart
+            Example: stubBundle
+          Step: And ${storedHeldAvailableNumber} is available as a temporary port-in MSISDN
+            Example: storedHeldAvailableNumber
+          Step: When the Customer enters valid portability and ports their number
+            Example: enteredValidPortability
+          Step: Then My Paradise submits the portability request to Mavenir with the customer's porta
+            Example: enteredValidPortability
+          Step: And Mavenir reserves the temporary MSISDN and Twilio sends an SMS verification to th
+            Example: enteredValidPortability
+          Step: When Mavenir assigns ${storedHeldAvailableNumber} as a temporary port-in MSISDN and p
+            Example: storedHeldAvailableNumber
+          Step: Then the Customer is forwarded to Verify Ported Number
+            Example: storedHeldAvailableNumber
+            Example: enteredValidPortability
+        Scenario: Port the number — SMS verification skipped
+          Step: Given a My Paradise customer with a Mavenir shopping cart
+            Example: stubBundle
+          Step: And Mavenir returns the temporary MSISDN and Twilio rate-limits the SMS send
+            Example: storedHeldAvailableNumber
+          Step: When the Customer enters valid portability and ports their number
+            Example: enteredValidPortability
+          Step: When Mavenir processes the portability request and Twilio rate-limits the SMS send
+          Step: Then portability is stored on the line with verification skipped
+            Example: storedHeldAvailableNumber
+          Step: And the Customer is forwarded to Select Sim — no verification step required
+        Scenario: Port the number: ${example}
+          Step: Given a My Paradise customer with a Mavenir shopping cart
+            Example: stubBundle
+          Step: When the Customer submits portability and ports their number
+          Step: Then submit returns error: ${expectedMessage}
+      Story: Pick Number
+        Scenario: Pick number
+          Step: Given Mavenir has locked ${enteredChosenAvailableNumber} in the available numbers list
+            Example: enteredChosenAvailableNumber
+            Example: storedAvailableNumbers
+            Example: stubBundle
+          Step: When My Paradise reserves ${enteredChosenAvailableNumber} in Mavenir and patches the 
+            Example: enteredChosenAvailableNumber
+          Step: Then My Paradise sends the reserve request to Mavenir with ${enteredChosenAvailableNu
+            Example: enteredChosenAvailableNumber
+          Step: And My Paradise patches the Mavenir shopping cart with ${enteredChosenAvailableNumbe
+            Example: enteredChosenAvailableNumber
+          Step: When Mavenir confirms the reservation and patches the cart
+          Step: Then My Paradise stores ${expectedChosenAvailableNumber} on the line
+            Example: expectedChosenAvailableNumber
+          Step: And the Customer is forwarded to Select Sim
+        Scenario: Pick number — replace existing
+          Step: Given MSISDN ${storedHeldAvailableNumber} is in the cart and Mavenir has locked ${ente
+            Example: storedHeldAvailableNumber
+            Example: enteredChosenAvailableNumber
+            Example: storedAvailableNumbers
+            Example: stubBundle
+          Step: When My Paradise reserves ${enteredChosenAvailableNumber} releasing ${storedHeldAvail
+            Example: storedHeldAvailableNumber
+            Example: enteredChosenAvailableNumber
+          Step: Then My Paradise sends the reserve request to Mavenir with ${enteredChosenAvailableNu
+            Example: storedHeldAvailableNumber
+            Example: enteredChosenAvailableNumber
+          Step: When Mavenir releases ${storedHeldAvailableNumber} and reserves ${enteredChosenAvaila
+            Example: storedHeldAvailableNumber
+            Example: enteredChosenAvailableNumber
+          Step: Then My Paradise stores ${expectedChosenAvailableNumber} on the line
+            Example: expectedChosenAvailableNumber
+        Scenario: Reserve number request fails
+          Step: Given Mavenir has locked ${enteredChosenAvailableNumber} in the available numbers list
+            Example: enteredChosenAvailableNumber
+            Example: storedAvailableNumbers
+          Step: When My Paradise attempts to reserve ${enteredChosenAvailableNumber} but Mavenir retu
+            Example: enteredChosenAvailableNumber
+          Step: Then My Paradise shows Failed to reserve your number.
+        Scenario: Patch cart with number fails
+          Step: Given Mavenir has reserved ${enteredChosenAvailableNumber} but patching the cart retur
+            Example: enteredChosenAvailableNumber
+            Example: storedAvailableNumbers
+          Step: When My Paradise patches the Mavenir shopping cart with ${enteredChosenAvailableNumbe
+            Example: enteredChosenAvailableNumber
+          Step: Then My Paradise shows Failed to update your cart.
+      Story: Verify Ported Number
+        Scenario: Enter porting SMS code
+          Step: Given the Customer submitted portability and Twilio sent an SMS to the port number
+          Step: And Twilio is ready to confirm the SMS code as valid
+          Step: When the Customer enters verification code ${validPortingSmscode}
+            Example: validPortingSmscode
+          Step: Then My Paradise sends the verification check to Twilio with the port number and code
+            Example: enteredValidPortability
+            Example: validPortingSmscode
+          Step: When Twilio creates the verification check
+          Step: Then Twilio returns approved and the Customer is on the Select Sim step
+        Scenario: Verify with unusable porting SMS code
+          Step: Given the Customer submitted portability and has an incorrect verification code
+          Step: When the Customer enters verification code ${mismatchPortingSmscode}
+            Example: mismatchPortingSmscode
+          Step: Then My Paradise sends the verification check to Twilio
+            Example: enteredValidPortability
+            Example: mismatchPortingSmscode
+          Step: When Twilio creates a verification check and returns a non-approved status
+          Step: Then the verification is rejected
+        Scenario: Resend porting SMS code
+          Step: Given the Customer submitted portability and Twilio sent an SMS to the port number
+          Step: When the Customer requests a new verification code
+          Step: Then My Paradise SMSes a porting verification code via Twilio
+            Example: enteredValidPortability
+          Step: When Twilio sends the SMS verification
+          Step: Then the resend is confirmed
+    SubEpic: Get Onboarding Plan
+      Story: Choose Onboarding Plan
+        Scenario: Load plan catalog
+          Step: Given the plan catalog is available
+            Example: internalTestPlan
+          Step: When My Paradise loads the plan catalog
+          Step: Then the catalog includes Essentials, Data Freedom, Ace, and Atlas
+          Step: And Internal Test Plan PROMO is excluded from the catalog
+        Scenario: Select a plan
+          Step: Given no plan is in the Mavenir shopping cart
+          Step: When the Customer selects Essentials
+            Example: essentials
+          Step: Then My Paradise patches the Mavenir cart with the Essentials planId
+            Example: essentials
+          Step: And the Customer is forwarded to Pick Number
+          Step: When Mavenir confirms the cart is patched with Essentials
+          Step: Then the cart bundle is a snapshot of Essentials loaded from the gateway
+            Example: essentials
+        Scenario: Change an existing plan
+          Step: Given Essentials is in the Mavenir shopping cart
+            Example: essentials
+          Step: When the Customer selects Data Freedom
+          Step: Then My Paradise patches the Mavenir cart with the Data Freedom planId
+          Step: When Mavenir confirms the cart is patched with Data Freedom
+          Step: Then the cart bundle is updated to a snapshot of Data Freedom loaded from the gateway
+        Scenario: Failed to update plan
+          Step: Given the Mavenir cart patch returns an error
+          Step: When the Customer selects Essentials
+            Example: essentials
+          Step: Then the plan selection fails
+          Step: When My Paradise reloads the shopping cart
+          Step: Then the cart bundle remains empty
+    SubEpic: Get Order Review
+      Story: Check The Order
+        Scenario: Check the order for a new number
+          Step: Given the Customer has completed account setup, number, SIM, and profile
+          Step: When My Paradise loads the order state from the Mavenir shopping cart
+          Step: Then the Customer is forwarded to Checkout
+          Step: And the order summary shows the plan
+            Example: stubBundle
+          Step: And the order summary shows the number and SIM
+          Step: And the order summary shows the profile
+        Scenario: Check the order for a port-in number
+          Step: Given the Customer has completed account setup, port-in number, SIM, and profile
+          Step: When My Paradise loads the order state from the Mavenir shopping cart
+          Step: Then the Customer is forwarded to Checkout
+          Step: And the order summary shows the plan
+            Example: stubBundle
+          Step: And the order summary shows the port-in number and SIM
+          Step: And the order summary shows the profile
+      Story: Change Plan From Review
+        Scenario: Upgrade plan from review: ${example}
+          Step: Given ${currentPlan.name} is in the Mavenir shopping cart
+          Step: When My Paradise patches the Mavenir shopping cart with ${newPlan.name}
+          Step: Then My Paradise sends the patch cart request to Mavenir with ${newPlan.name} bundleI
+          Step: When Mavenir returns the updated Mavenir shopping cart with ${newPlan.name}
+          Step: Then My Paradise stores ${newPlan.name} as the cart bundle
+        Scenario: Keep current plan from review
+          Step: Given the Customer has opened plan selection from review with Essentials in the cart
+            Example: enteredChosenAvailableNumber
+            Example: essentials
+          Step: When the Customer keeps their current plan
+          Step: Then the cart bundle remains Essentials
+            Example: essentials
+          Step: And the Customer is forwarded to Checkout
+        Scenario: Plan update fails from review
+          Step: Given the Customer has opened plan selection from review with Essentials in the cart
+            Example: essentials
+          Step: When My Paradise patches the Mavenir shopping cart with Data Freedom but Mavenir retu
+          Step: Then My Paradise shows Failed to update new plan choice.
+          Step: When My Paradise reloads the shopping cart
+          Step: Then the cart bundle remains Essentials
+            Example: essentials
+    SubEpic: Get Payment
+      Example: bermudaApplePayCert
+      Example: bermudaApplePayCertificate
+      Example: stubAuth
+      Example: maxPaymentAttempts
+      Example: completedAuth
+      Example: failedAuth
+      Story: Enter Payment
+        Scenario: Enter Payment
+          Step: Given the Customer is at Checkout with Essentials
+            Example: maxPaymentAttempts
+          Step: And Mavenir CCS authorizes stub auth
+            Example: stubAuth
+          Step: When the Customer proceeds to adding their payment
+          Step: Then My Paradise sends the card authorization request to Mavenir with TotalAmount $1 
+            Example: stubAuth
+          Step: When Mavenir authorizes the card and returns the hosted payment page
+          Step: Then the payment has stub auth transaction id, amount $1, and sales channel ON-BOARDI
+            Example: stubAuth
+        Scenario: Payment authorization fails to load
+          Step: Given the Customer is at Checkout with Essentials
+            Example: maxPaymentAttempts
+          Step: But Mavenir CCS does not return a payment authorization
+          Step: When the Customer proceeds to adding their payment
+          Step: Then My Paradise sends the card authorization request to Mavenir
+          Step: When Mavenir does not return a payment authorization
+          Step: Then the payment authorization cannot be loaded
+        Scenario: FAC authorization timeout
+          Step: Given the Customer is at Checkout with Essentials
+            Example: maxPaymentAttempts
+          Step: But Mavenir does not return a transaction id
+          Step: When the Customer proceeds to adding their payment
+          Step: Then My Paradise sends the card authorization request to Mavenir
+          Step: When Mavenir does not return a transaction id
+          Step: Then the payment authorization cannot be loaded
+      Story: Authorize Card
+        Scenario: Payment completed
+          Step: Given the Customer has stub auth
+          Step: And Mavenir CCS has completed auth
+            Example: completedAuth
+          Step: When the Customer authorizes their card
+          Step: Then My Paradise sends the tokenized card request to Mavenir for stub auth
+            Example: stubAuth
+          Step: When Mavenir returns completed auth
+          Step: Then the payment is authorized
+          Step: And the payment step does not place the order
+        Scenario: Card not verified
+          Step: Given the Customer has stub auth
+            Example: maxPaymentAttempts
+          Step: And Mavenir CCS has failed auth
+            Example: stubAuth
+            Example: failedAuth
+          Step: And payment attempts are under the maximum
+            Example: maxPaymentAttempts
+          Step: When the Customer authorizes their card
+          Step: Then My Paradise sends the tokenized card request to Mavenir
+            Example: stubAuth
+          Step: When Mavenir returns failed auth
+          Step: Then the card is not verified
+          Step: And My Paradise requests a fresh payment authorization from Mavenir
+            Example: stubAuth
+        Scenario: Maximum payment attempts
+          Step: Given the Customer has stub auth
+            Example: maxPaymentAttempts
+          Step: And Mavenir CCS has failed auth
+            Example: failedAuth
+          Step: And payment attempts equal the maximum
+            Example: maxPaymentAttempts
+          Step: When the Customer authorizes their card
+          Step: Then My Paradise sends the tokenized card request to Mavenir for stub auth
+            Example: stubAuth
+          Step: When Mavenir returns failed auth
+          Step: Then My Paradise records the failed card addition with Zendesk
+          Step: And the payment step does not place the order
+      Story: Provide Apple Pay Certificate
+        Scenario: Provide Apple Pay certificate
+          Step: Given the Apple Pay merchant certificate is available
+            Example: bermudaApplePayCert
+          Step: When My Paradise provides the Apple Pay certificate
+          Step: Then My Paradise sends the certificate request to Apple
+          Step: When Apple returns Bermuda Apple Pay cert
+          Step: Then My Paradise returns Bermuda Apple Pay cert
+            Example: bermudaApplePayCertificate
+    SubEpic: Get Sign Up Plan
+      Example: enteredValidCatalogVoucherCode
+      Example: expectedValidCatalogVoucherCode
+      Example: enteredInvalidCatalogVoucherCode
+      Example: expiredCatalogVoucherCode
+      Example: redeemedCatalogVoucherCode
+      Example: shortCatalogVoucherCode
+      Example: unknownPlanDeepLinkId
+      Example: purchasablePlanIds
+      Example: unusableCatalogVoucherOutlines
+      Story: Open Plan Deep Link
+        Scenario: Open plan deep link: ${plan.name}
+          Step: Given the plan catalog contains purchasable plans and the Customer arrived at sign-up 
+          Step: When the Customer opens a plan deep link for ${plan.name}
+          Step: Then ${plan.name} is selected
+          Step: And the Customer continues to Enter Account Credentials
+        Scenario: Unknown plan deep link
+          Step: Given the plan catalog contains purchasable plans
+          Step: But the deep-link plan id is not in the catalog
+          Step: When the Customer opens a plan deep link
+            Example: unknownPlanDeepLinkId
+          Step: Then the plan is not found
+      Story: Apply Catalog Voucher
+        Scenario: Apply Catalog Voucher via deep link
+          Step: Given the plan catalog contains purchasable plans
+          Step: And Vouchera has valid catalog voucher
+          Step: When the Customer applies valid catalog voucher from a promotional voucher link
+            Example: enteredValidCatalogVoucherCode
+          Step: Then My Paradise sends the voucher code to Vouchera
+            Example: enteredValidCatalogVoucherCode
+          Step: When Vouchera returns the voucher view
+          Step: Then the catalog voucher is applied
+            Example: expectedValidCatalogVoucherCode
+          Step: And the voucher discounts Essentials, Data Freedom, Ace, and Atlas by 10 percent
+            Example: purchasablePlanIds
+        Scenario: Apply Catalog Voucher manually
+          Step: Given the Customer is selecting a plan
+          Step: And Vouchera has valid catalog voucher
+          Step: When the Customer applies valid catalog voucher
+            Example: enteredValidCatalogVoucherCode
+          Step: Then My Paradise sends the voucher code to Vouchera
+            Example: enteredValidCatalogVoucherCode
+          Step: When Vouchera returns the voucher view
+          Step: Then the catalog voucher is applied
+          Step: And the voucher discounts Essentials, Data Freedom, Ace, and Atlas by 10 percent
+            Example: purchasablePlanIds
+        Scenario: Short catalog voucher code is rejected
+          Step: Given the Customer is selecting a plan
+          Step: When the Customer applies a catalog voucher shorter than ${VoucherCodeRule.MinLength}
+            Example: shortCatalogVoucherCode
+          Step: Then the catalog voucher is rejected
+          Step: And Vouchera is not asked for the voucher
+        Scenario: Remove Catalog Voucher
+          Step: Given the Customer is selecting a plan with valid catalog voucher applied
+          Step: When the Customer removes valid catalog voucher
+          Step: Then the catalog has no catalog voucher
+        Scenario: Apply unusable catalog voucher: ${example}
+          Step: Given the Customer is selecting a plan
+          Step: And Vouchera has ${example}
+          Step: When the Customer applies ${example}
+          Step: Then My Paradise sends the voucher code to Vouchera
+          Step: Then the catalog voucher is rejected
+    SubEpic: Get Sim
+      Example: enteredValidIccid
+      Example: expectedValidIccid
+      Example: enteredIccidWithSpaces
+      Example: enteredInvalidIccid
+      Example: simChoiceOutlines
+      Story: Select Sim
+        Scenario: Choose ${example}
+          Step: Given no SIM type is on the line
+          Step: When the Customer selects ${example}
+          Step: Then My Paradise sends the patch cart request to Mavenir with SIM type ${label}
+          Step: When Mavenir returns the updated Mavenir shopping cart with SIM type ${label}
+          Step: Then My Paradise stores ${label} on the line
+          Step: But the line has no ICCID
+          Step: And the Customer is forwarded to Verify ID
+        Scenario: Choose ${example} — already on the line
+          Step: Given the line already has SIM type ${label}
+          Step: When the Customer selects ${example}
+          Step: Then My Paradise skips the cart patch
+        Scenario: Choose ${example} — cart patch fails
+          Step: Given Mavenir returns an error on cart patch
+          Step: When the Customer selects ${example}
+          Step: Then the SIM selection fails
+          Step: When My Paradise reloads the shopping cart
+          Step: Then the line has no SIM type
+          Step: And the line has no ICCID
+      Story: Enter Existing Sim
+        Scenario: Enter existing SIM
+          Step: Given Mavenir has valid ICCID available in inventory
+            Example: enteredValidIccid
+          Step: When the Customer attaches valid ICCID
+            Example: enteredValidIccid
+          Step: Then My Paradise sends the ICCID inventory request to Mavenir with valid ICCID
+            Example: enteredValidIccid
+          Step: And My Paradise sends the patch cart request to Mavenir with SIM type pSIM and valid
+            Example: enteredValidIccid
+          Step: When Mavenir returns the updated Mavenir shopping cart with SIM type pSIM and valid I
+          Step: Then My Paradise stores pSIM and valid ICCID on the line
+          Step: And the line has valid ICCID
+            Example: expectedValidIccid
+          Step: And the Customer is forwarded to Verify ID
+        Scenario: ICCID contains spaces
+          Step: Given the Customer has ICCID with spaces
+          Step: When the Customer attaches ICCID with spaces
+            Example: enteredIccidWithSpaces
+          Step: Then the ICCID format is rejected
+          Step: And My Paradise does not query inventory or patch the cart
+        Scenario: Inventory rejects ICCID
+          Step: Given Mavenir does not have invalid ICCID available in inventory
+          Step: When the Customer attaches invalid ICCID
+            Example: enteredInvalidIccid
+          Step: Then My Paradise sends the ICCID inventory request to Mavenir with invalid ICCID
+            Example: enteredInvalidIccid
+          Step: And My Paradise does not patch the cart
+          Step: And the ICCID is rejected
+      Story: Activate Sim
+        Scenario: Activate Sim
+          Step: Given Mavenir has valid ICCID available in inventory
+            Example: enteredValidIccid
+          Step: When the Customer activates the SIM with valid ICCID
+            Example: enteredValidIccid
+          Step: Then My Paradise sends the ICCID inventory request to Mavenir with valid ICCID
+            Example: enteredValidIccid
+          Step: And My Paradise sends the patch cart request to Mavenir with SIM type pSIM and valid
+            Example: enteredValidIccid
+          Step: And My Paradise sends the pSIM delivered order to Mavenir
+          Step: When Mavenir creates the product order and clears waiting pSIM
+          Step: Then My Paradise stores valid ICCID on the line
+            Example: expectedValidIccid
+        Scenario: waiting pSIM is absent
+          Step: Given Mavenir has valid ICCID available in inventory but the Mavenir customer has no w
+            Example: enteredValidIccid
+          Step: When the Customer activates the SIM with valid ICCID
+            Example: enteredValidIccid
+          Step: Then the pSIM delivered order is rejected
+        Scenario: waiting pSIM already completed
+          Step: Given Mavenir has valid ICCID available in inventory and the Mavenir customer has wait
+            Example: enteredValidIccid
+          Step: When the Customer activates the SIM with valid ICCID
+            Example: enteredValidIccid
+          Step: Then the pSIM delivered order is rejected
+    SubEpic: Get Verified Profile
+      Example: completedInquiryId
+      Example: failedInquiryId
+      Example: validDocumentId
+      Example: validPersonaDocument
+      Example: completedInquiryFields
+      Example: completedPersonaInquiryResult
+      Example: failedPersonaInquiryResult
+      Example: completedInquiryWithoutDocument
+      Example: expectedValidIdentity
+      Example: enteredValidIdentity
+      Example: expectedValidAddress
+      Example: enteredValidAddress
+      Story: Customer Complete Persona Kyc
+        Scenario: Persona verification required
+          Step: Given the Customer has a cart with a plan, number, and SIM and no idNumber
+          Step: When the Customer validates whether a Persona inquiry is required
+          Step: Then a Persona inquiry is required
+          Step: And the Customer is on the Profile KYC step
+        Scenario: Persona verification already complete
+          Step: Given the Customer has identity with an idNumber
+            Example: expectedValidIdentity
+          Step: When the Customer validates whether a Persona inquiry is required
+          Step: Then the Persona inquiry is already complete
+          Step: And the Customer is forwarded to Checkout
+        Scenario: Create a completed Persona inquiry
+          Step: Given the Customer has no idNumber on identity
+            Example: validPersonaDocument
+            Example: completedPersonaInquiryResult
+          Step: When the Customer creates a Persona inquiry
+          Step: Then My Paradise sends the inquiry request to Persona with the Customer email
+          Step: And My Paradise retrieves the Persona document
+            Example: validDocumentId
+          Step: When Persona returns the completed inquiry
+          Step: Then the Customer has a verified Persona inquiry
+            Example: completedInquiryId
+          Step: And My Paradise maps the inquiry onto identity and address
+            Example: expectedValidIdentity
+            Example: expectedValidAddress
+          Step: And Customer verified stays false until the Customer confirms their identity
+          Step: When Persona returns the valid Persona document
+          Step: Then identity expiry date is the Persona document expiration date
+            Example: validPersonaDocument
+        Scenario: Persona inquiry not completed
+          Step: Given the Customer has no idNumber on identity
+            Example: failedPersonaInquiryResult
+          Step: When the Customer creates a Persona inquiry
+          Step: Then My Paradise sends the inquiry request to Persona with the Customer email
+          Step: When Persona returns the failed Persona inquiry
+          Step: Then the Customer has an unverified Persona inquiry
+            Example: failedPersonaInquiryResult
+          Step: And identity and address stay empty
+        Scenario: No government ID document on inquiry
+          Step: Given the completed Persona inquiry has no government ID document
+            Example: completedInquiryWithoutDocument
+          Step: When the Customer creates a Persona inquiry
+          Step: Then My Paradise sends the inquiry request to Persona
+          Step: And My Paradise does not retrieve a Persona document
+          Step: When Persona returns the completed inquiry without a government ID
+          Step: Then identity expiry date is empty
+        Scenario: Persona errors on inquiry load
+          Step: Given the Customer has no idNumber on identity
+          Step: When the Customer creates a Persona inquiry
+          Step: Then My Paradise sends the inquiry request to Persona
+          Step: When Persona returns an error
+          Step: Then the Customer has an unverified Persona inquiry
+          Step: And identity stays empty
+        Scenario: Document not found
+          Step: Given Persona has no Persona document for that document ID
+            Example: validDocumentId
+            Example: completedPersonaInquiryResult
+          Step: When the Customer creates a Persona inquiry
+          Step: Then My Paradise retrieves the Persona document
+            Example: validDocumentId
+          Step: When Persona returns that the document is not found
+          Step: Then identity expiry date is empty
+        Scenario: Document email mismatch
+          Step: Given the Persona document email does not match the Customer email
+            Example: validDocumentId
+            Example: completedPersonaInquiryResult
+          Step: When the Customer creates a Persona inquiry
+          Step: Then My Paradise retrieves the Persona document
+            Example: validDocumentId
+          Step: When Persona returns unauthorized
+          Step: Then identity expiry date is empty
+        Scenario: Verify later
+          Step: Given the Customer has no idNumber on identity
+          Step: When the Customer proceeds without a Persona inquiry
+          Step: Then My Paradise does not send an inquiry request to Persona
+          Step: And no Persona inquiry is stored
+          Step: And the Customer is still on the Profile KYC step
+        Scenario: Enter valid identity and address
+          Step: Given the Customer has a My Paradise customer in session
+          Step: When the Customer enters valid identity and address
+            Example: enteredValidIdentity
+            Example: enteredValidAddress
+          Step: Then all profile requirements are met
+          Step: And the Customer can confirm their identity
+            Example: expectedValidIdentity
+            Example: expectedValidAddress
+        Scenario: Enter identity after a verified Persona inquiry
+          Step: Given the Customer has a verified Persona inquiry mapped onto valid identity
+            Example: completedInquiryId
+          Step: When the Customer enters the mapped identity and address
+            Example: enteredValidIdentity
+            Example: enteredValidAddress
+          Step: Then all profile requirements are met
+          Step: And the ID fields are present on identity
+            Example: expectedValidIdentity
+        Scenario: Re-enter a verified identity
+          Step: Given the Customer has valid identity already verified
+            Example: completedInquiryId
+          Step: When the Customer re-enters valid identity
+            Example: enteredValidIdentity
+            Example: enteredValidAddress
+          Step: Then the identity is no longer verified
+          Step: And the Customer can confirm their identity again
+            Example: expectedValidIdentity
+        Scenario: Enter incomplete identity or address: ${example}
+          Step: Given the Customer has a My Paradise customer in session
+          Step: When the Customer enters identity and address with ${field} empty
+          Step: Then ${field} is missing
+          Step: And the Customer cannot confirm their identity
+        Scenario: Confirm identity with a verified Persona inquiry
+          Step: Given the Customer has entered valid identity and address and has a verified Persona i
+            Example: completedInquiryId
+          Step: When the Customer confirms their identity
+          Step: Then My Paradise maps identity and address onto the Mavenir engaged party and contact
+            Example: completedInquiryId
+            Example: expectedValidIdentity
+            Example: expectedValidAddress
+          Step: And My Paradise sends the profile patch to Mavenir
+          Step: When Mavenir patches the customer
+          Step: Then the Customer identity is persisted
+            Example: expectedValidIdentity
+          Step: And the Customer is verified
+        Scenario: Customer already exists
+          Step: Given another Mavenir customer already has identity idNumber I1234562
+            Example: completedInquiryId
+            Example: expectedValidIdentity
+          Step: When the Customer confirms their identity
+          Step: Then My Paradise sends the profile patch to Mavenir
+          Step: And the identity cannot be confirmed because a customer with that information alread
+        Scenario: Profile requirements unmet
+          Step: Given the Customer has not entered identity or address
+          Step: When the Customer confirms their identity
+          Step: Then the identity cannot be confirmed
+          Step: And My Paradise does not send a profile patch to Mavenir
+        Scenario: Mavenir profile patch error
+          Step: Given Mavenir returns a profile patch error
+            Example: completedInquiryId
+          Step: When the Customer confirms their identity
+          Step: Then My Paradise sends the profile patch to Mavenir
+          Step: And the identity cannot be confirmed
+      Story: Collect Identity With Brand Amassador
+    SubEpic: Get Voucher Credit
+      Example: billingAccountId
+      Example: amountRedemption
+      Example: percentRedemption
+      Example: zeroRedemption
+      Example: amountOffVoucherCode
+      Example: percentOffVoucherCode
+      Example: anyPlanVoucherCode
+      Example: ace
+      Example: amountOffVoucheraSeed
+      Example: percentOffVoucheraSeed
+      Example: anyPlanVoucheraSeed
+      Story: Redeem Voucher and Apply Credit
+        Scenario: Redeem a plan-restricted voucher that matches the cart bundle: ${example}
+          Step: Given the Customer is in Order Creation with ${example} applied
+            Example: essentials
+          Step: When the Customer redeems the voucher
+          Step: Then My Paradise sends the redeem request to Vouchera with ${example} orderAmount ${o
+          Step: When Vouchera records the voucher redemption
+          Step: Then My Paradise stores the ${example} redemption
+          Step: When the Customer applies the voucher credit
+          Step: Then My Paradise sends the ${creditExample} to Mavenir
+            Example: billingAccountId
+          Step: When Mavenir records the credit adjustment on the billing account
+          Step: Then My Paradise stores the credit on the Customer billing account
+            Example: billingAccountId
+        Scenario: Redeem an any-plan voucher
+          Step: Given the Customer is in Order Creation with any-plan voucher applied
+            Example: anyPlanVoucheraSeed
+            Example: essentials
+          Step: When the Customer redeems the voucher
+          Step: Then My Paradise sends the redeem request to Vouchera with zero redemption orderAmoun
+            Example: anyPlanVoucherCode
+          Step: When Vouchera records the voucher redemption
+          Step: Then My Paradise stores the zero redemption
+            Example: zeroRedemption
+          Step: And My Paradise skips the apply credit request to Mavenir
+        Scenario: Skip redeem when the cart bundle is not in the voucher plan list
+          Step: Given the Customer is in Order Creation with amount-off voucher applied and Ace in the
+            Example: ace
+          Step: When the Customer redeems the voucher
+          Step: Then My Paradise skips the redeem request to Vouchera
+          Step: And My Paradise skips the apply credit request to Mavenir
+        Scenario: Failed voucher redemption
+          Step: Given the Customer is in Order Creation with amount-off voucher applied
+            Example: amountOffVoucheraSeed
+            Example: essentials
+          Step: When the Customer redeems the voucher
+          Step: Then My Paradise sends the redeem request to Vouchera
+            Example: amountOffVoucherCode
+          Step: When Vouchera returns an error
+          Step: Then the voucher redemption is unsuccessful
+          Step: When the Customer applies the voucher credit
+          Step: Then My Paradise skips the apply credit request to Mavenir
+    SubEpic: Place Order
+      Example: existingIccid
+      Example: requesterName
+      Example: trialVoucher
+      Example: roamingPlan
+      Example: ticketOutlines
+      Example: orderResultOutlines
+      Story: Create Billing Account
+        Scenario: Create billing account
+          Step: Given the Customer has a configured cart and no billing account
+          Step: When the Customer creates a billing account
+          Step: Then My Paradise sends the billing account request to Mavenir
+          Step: When Mavenir creates the billing account
+          Step: Then the Customer has a billing account
+          Step: And the Customer is on the Done step
+        Scenario: Billing account already exists
+          Step: Given the Customer already has a billing account
+          Step: When the Customer creates a billing account
+          Step: Then the billing account is rejected
+          Step: And Mavenir does not receive a billing account request
+        Scenario: Billing account creation fails
+          Step: Given Mavenir returns an error for the billing account request
+          Step: When the Customer creates a billing account
+          Step: Then the billing account cannot be created
+          Step: When My Paradise reloads the customer
+          Step: Then the Customer has no billing account
+      Story: Create Product Order
+        Scenario: Create product order
+          Step: Given the Customer is verified and has a billing account, plan, number, and eSIM
+          Step: When the Customer places the product order
+          Step: Then My Paradise sends the product order request to Mavenir
+          Step: When Mavenir creates the product order
+          Step: Then the order succeeded with pay-up-front
+          Step: And the Customer onboarding is done
+        Scenario: Pay-up-front charge fails
+          Step: Given the pay-up-front charge fails
+          Step: When the Customer places the product order
+          Step: Then My Paradise does not send a product order to Mavenir
+          Step: When My Paradise reloads the cart
+          Step: Then the order succeeded without pay-up-front
+        Scenario: Product order fails
+          Step: Given Mavenir returns an error for the product order
+          Step: When the Customer places the product order
+          Step: Then My Paradise sends the product order request to Mavenir
+          Step: When My Paradise reloads the cart
+          Step: Then the order did not succeed
+        Scenario: Onboarding is already done
+          Step: Given the Customer onboarding is already done
+          Step: When the Customer places the product order
+          Step: Then the product order is rejected
+          Step: And Mavenir does not receive a product order request
+        Scenario: Unverified with no bypass and no portability
+          Step: Given the Customer is not verified and the plan does not bypass verification
+          Step: When the Customer places the product order
+          Step: Then My Paradise does not send a product order to Mavenir
+          Step: And the cart is marked to submit the order later
+          Step: When My Paradise reloads the cart
+          Step: Then the Customer onboarding is done
+      Story: View Order Result
+        Scenario: View order result: ${example}
+          Step: Given the order result is ${example}
+          Step: When the Customer views their order result
+      Story: Create Order Ticket
+        Scenario: Create order ticket: ${example}
+          Step: Given the Customer ${example}
+          Step: When the Customer creates the order ticket
+          Step: Then My Paradise sends the ${subject} ticket to Zendesk
+          Step: When Zendesk creates the ticket
+          Step: Then the ticket is created for the Customer
+            Example: requesterName
+    SubEpic: Sign In With Existing Account
+      Example: storedAlreadyRegisteredCognitoUser
+      Story: Sign In With Existing Account
+        Scenario: Sign in with already-registered account credentials
+          Step: Given Cognito has an already-registered Cognito user
+            Example: storedAlreadyRegisteredCognitoUser
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: And the Customer is not signed in
+          Step: And the Customer has already-registered account credentials
+            Example: storedAlreadyRegisteredCognitoUser
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: When the Customer authenticates already-registered account credentials
+          Step: Then My Paradise sends the sign-in request to Cognito
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: When Cognito authenticates the account and issues an account token
+          Step: Then My Paradise stores the signed-in Cognito user
+            Example: storedAlreadyRegisteredCognitoUser
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: And the Cognito user has the Mavenir customer id
+            Example: storedAlreadyRegisteredCognitoUser
+        Scenario: Email format is unmet
+          Step: Given the Customer has invalid email format account credentials
+            Example: enteredInvalidEmailFormat
+          Step: When the Customer authenticates invalid email format
+          Step: Then My Paradise does not send a sign-in request to Cognito
+          Step: And the authentication is rejected
+          Step: And Cognito does not issue an account token
+        Scenario: Authenticate with incorrect account credentials: ${example}
+          Step: Given Cognito has an already-registered Cognito user
+            Example: storedAlreadyRegisteredCognitoUser
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: And the Customer is not signed in
+          Step: And the Customer has ${example}
+          Step: When the Customer authenticates ${example}
+          Step: Then My Paradise sends the sign-in request to Cognito
+          Step: When Cognito returns NotAuthorizedException
+          Step: Then the authentication is rejected
+          Step: And Cognito does not issue an account token
+        Scenario: Authenticate with unconfirmed account
+          Step: Given Cognito has an unconfirmed Cognito user
+            Example: storedUnconfirmedCognitoUser
+            Example: enteredValidAccountCredentials
+          Step: And the Customer is not signed in
+          Step: And the Customer has unconfirmed sign-in account credentials
+            Example: storedUnconfirmedCognitoUser
+            Example: enteredValidAccountCredentials
+          Step: When the Customer authenticates unconfirmed sign-in
+          Step: Then My Paradise sends the sign-in request to Cognito
+            Example: enteredValidAccountCredentials
+          Step: When Cognito returns CONFIRM_SIGN_UP
+          Step: Then the authentication is rejected as unconfirmed
+          Step: And Cognito does not issue an account token
+        Scenario: Password reset required
+          Step: Given Cognito has an already-registered Cognito user
+            Example: storedAlreadyRegisteredCognitoUser
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: And Cognito requires a password reset for already-registered account credentials
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: And the Customer is not signed in
+          Step: And the Customer has already-registered account credentials
+            Example: storedAlreadyRegisteredCognitoUser
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: When the Customer authenticates already-registered account credentials
+          Step: Then My Paradise sends the sign-in request to Cognito
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: When Cognito returns PasswordResetRequiredException
+          Step: Then the authentication requires a password reset
+          Step: And Cognito does not issue an account token
+        Scenario: New password required
+          Step: Given Cognito has an already-registered Cognito user
+            Example: storedAlreadyRegisteredCognitoUser
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: And Cognito requires a new password for already-registered account credentials
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: And the Customer is not signed in
+          Step: And the Customer has already-registered account credentials
+            Example: storedAlreadyRegisteredCognitoUser
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: When the Customer authenticates already-registered account credentials
+          Step: Then My Paradise sends the sign-in request to Cognito
+            Example: enteredAlreadyRegisteredAccountCredentials
+          Step: When Cognito returns CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED
+          Step: Then the authentication requires a new password
+          Step: And Cognito does not issue an account token

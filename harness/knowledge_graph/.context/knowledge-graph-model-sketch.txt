@@ -1,0 +1,162 @@
+CleanEngineeringModel: KnowledgeGraph
+  Module: knowledge_graph
+    Class: KnowledgeGraph
+      Property: graph: PracticeGraph
+      Operation: load(workspace: Path): PracticeGraph
+        # always a PracticeGraph bound to that workspace
+        # -> PracticeGraph.load
+  Module: knowledge_graph.model.practice_graph
+    Class: PracticeGraph
+      # one registry for every practice node; not a second object model
+      Property: root: Path
+      Property: story_map: StoryMap
+      Property: ce_model: CleanEngineeringModel
+      Property: partial_failures: list[str]
+      Operation: load(path: Path): PracticeGraph
+        # class operation — constructs, populates from CodeQL, evaluates rules
+        # -> CodeQL.populate
+        # -> evaluate_rules
+      Operation: register(node: Node): Node
+        # -> node.join
+      Operation: relate(edge: Relationship): Relationship
+      Operation: evaluate_rules(slugs: RuleSlugs): Failures
+        # slugs omitted means every graphQuery rule
+        # a failed slug is recorded and the rest still run
+        # -> RuleRegistry.evaluate
+      Operation: record_partial_failure(part: str, error: Exception)
+    Class: RuleSlugs
+      # the set of rule slugs to run this pass; empty means all
+      Property: names: list[str]
+    Class: Failures
+      Property: parts: list[str]
+  Module: knowledge_graph.model.graph_node
+    Class: Node
+      # mixed into live Epic, Module, OoadClass, … — wrap or extend, do not scrape
+      Property: graph: PracticeGraph
+      Property: node_id: str
+      Property: name: str
+      Property: practice: str
+      Property: rules: NodeRules
+      Property: used_by: list[Node]
+      Property: home_module: Module
+      Property: hierarchy_text: str
+      Property: dot_graph: str
+      Operation: join(graph: PracticeGraph): Node
+      Operation: relate(kind: Kind, to: Node): Relationship
+      Operation: related(kind: Kind): list[Node]
+      Operation: invoked_operations(): list[Operation]
+        # walk INVOKES at most 3 hops; stop on a cycle or a node with no source path
+    Class: Relationship
+      Property: kind: Kind
+      Property: from_node: Node
+      Property: to_node: Node
+    Class: Kind
+      # owns, belongsTo, dependsOn, hasType, hasParameter, returns, invokes, usedBy
+  Module: knowledge_graph.model.graph_rules
+    Class: GraphRule
+      # wraps the live scan Rule; does not copy slug or body
+      Property: rule: Rule
+      Property: practice: str
+      Property: graphQuery: Path
+      Operation: evaluate(graph: PracticeGraph): list[RuleViolation]
+        # -> CodeQL.run
+        # -> RuleViolation.for_rows
+    Class: RuleRegistry
+      Property: rules: list[GraphRule]
+      Operation: load(): RuleRegistry
+      Operation: evaluate(graph: PracticeGraph, slugs: RuleSlugs): list[RuleViolation]
+        # keep-classes-single-responsibility first; skip and record a failed slug
+    Class: RuleViolation
+      Property: rule_slug: str
+      Property: message: str
+      Property: practice: str
+      Property: fidelity: str
+      Property: node: Node
+      Property: contributors: list[Node]
+      Property: direct: bool
+      Operation: for_rows(rule: GraphRule, graph: PracticeGraph, rows: Rows): list[RuleViolation]
+        # class operation
+  Module: knowledge_graph.model.node_rules
+    Class: NodeRules
+      # one query object on the node — not a view class per filter
+      Property: violations: list[RuleViolation]
+      Property: direct: NodeRules
+      Operation: practice(name: str): NodeRules
+      Operation: fidelity(name: str): NodeRules
+      Operation: slug(name: str): NodeRules
+  Module: knowledge_graph.model.stories
+    Class: StoryMap : stories.StoryMap, Node
+      Operation: load_epic(source: Epic): Epic
+        # wrap the live Epic; name stays Epic
+    Class: Epic : stories.Epic, Node
+      Operation: load_sub_epic(source: SubEpic): SubEpic
+      Operation: load_example(source: Example): Example
+    Class: SubEpic : stories.SubEpic, Node
+      Operation: load_story(source: Story): Story
+      Operation: load_sub_epic(source: SubEpic): SubEpic
+      Operation: load_example(source: Example): Example
+    Class: Story : stories.Story, Node
+      Operation: load_scenario(source: Scenario): Scenario
+      Operation: load_background(source: Background): Background
+      Operation: load_example(source: Example): Example
+    Class: Scenario : stories.Scenario, Node
+      Operation: load_step(source: Step): Step
+      Operation: load_background(source: Background): Background
+      Operation: load_example(source: Example): Example
+    Class: Background : stories.Background, Node
+      Operation: load_step(source: Step): Step
+    Class: Step : stories.Step, Node
+    Class: Example : stories.Example, Node
+  Module: knowledge_graph.model.clean_engineering
+    Class: CleanEngineeringModel : ce.CleanEngineeringModel, Node
+      Operation: load_module(source: Module): Module
+        # a BoundedContext or Aggregate source still loads as that live type on the graph
+    Class: Module : ce.Module, Node
+      Property: dependency_modules: list[Module]
+      Property: callers: list[Module]
+      Property: external_classes: list[OoadClass]
+      Operation: load_class(source: OoadClass): OoadClass
+    Class: OoadClass : ce.OoadClass, Node
+      Property: home_module: Module
+      Property: external_classes: list[OoadClass]
+      Operation: load_property(source: Property): Property
+      Operation: load_operation(source: Operation): Operation
+    Class: Property : ce.Property, Node
+    Class: Operation : ce.Operation, Node
+      Property: called_by: list[Operation]
+      Operation: load_parameter(source: Parameter): Parameter
+      Operation: invoked_operations(): list[Operation]
+    Class: Parameter : ce.Parameter, Node
+  Module: knowledge_graph.model.ddd
+    Class: BoundedContext : ddd.BoundedContext, Node
+      Operation: load_aggregate(source: Aggregate): Aggregate
+    Class: Aggregate : ddd.Aggregate, Node
+      Operation: load_class(source: OoadClass): OoadClass
+    Class: Entity : ddd.Entity, OoadClass
+    Class: EntityRoot : ddd.EntityRoot, OoadClass
+    Class: ValueObject : ddd.ValueObject, OoadClass
+    Class: Repository : ddd.Repository, OoadClass
+    Class: DomainEvent : ddd.DomainEvent, OoadClass
+    Class: DomainService : ddd.DomainService, OoadClass
+  Module: knowledge_graph.model.bdd
+    Class: Description : bdd.Description, Node
+      Operation: load_context(source: Context): Context
+    Class: Context : bdd.Context, Node
+      Operation: load_observation(source: Observation): Observation
+    Class: Observation : bdd.Observation, Node
+  Module: knowledge_graph.model.codeql
+    Class: CodeQL
+      # collaborator passed into load; never a global
+      Property: root: Path
+      Property: database: Path
+      Operation: populate(graph: PracticeGraph)
+        # -> class_rows, operation_rows, property_rows, parameter_rows, call_rows
+        # -> graph.register, graph.relate
+      Operation: run(query: Path): Rows
+      Operation: class_rows(): Rows
+      Operation: operation_rows(): Rows
+      Operation: property_rows(): Rows
+      Operation: parameter_rows(): Rows
+      Operation: call_rows(): Rows
+    Class: CodeQLRunError
+    Class: Rows

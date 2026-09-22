@@ -37,9 +37,11 @@ primitives/hooks/prompt_echo/prompt_echo.debug
 
 # CodeQL extracted databases and local scan output (regenerate with .codeql/README.md)
 .codeql/**-db/
+**/.codeql/**-db/
 .codeql/**-db.zip
 .codeql/results/
 .codeql/logs/
+**/graphQuery/subject_filter.qll
 
 # Virtualenv & Secrets
 .venv/

@@ -10,7 +10,6 @@ from harness.markdown import markdown
 from agent_tools.agent_tools import agent_tool
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from workspace import SessionLog
 
 @agent_toolset
 class Improvement(GuidanceAction):
@@ -43,13 +42,6 @@ class Improvement(GuidanceAction):
             item.contexts
             item.examples
             item.templates
-            SessionLog.instance().append(
-                toolset=self.registration_name,
-                name="repair",
-                summary=f"repair {asset}",
-                ok=True,
-                role="run",
-            )
 
         self.run(guidance, on, action="repair")
         return (

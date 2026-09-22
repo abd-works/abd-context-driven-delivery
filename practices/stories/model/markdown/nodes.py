@@ -21,6 +21,7 @@ from practices.stories.model.markdown.example_factories import (
     parse_md_factory_line,
     render_md_factory_line,
 )
+from practices.stories.model.example import Example
 from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
 from practices.stories.model.scenario import Clause, Interaction, Phase, Scenario
 from practices.stories.model.source_location import SourceLocation
@@ -189,7 +190,18 @@ class MarkdownScenario(Scenario):
         in_background = False
         in_examples = False
         example_headers: List[str] = []
+        example_group = ""
+        story_examples: List[Example] = []
         background_phase: Optional[Phase] = None
+
+        def attach_story_examples() -> None:
+            if not story_examples:
+                return
+            for scenario in scenarios:
+                if (scenario.story_name or "").strip() == (story_name or "").strip():
+                    existing = list(getattr(scenario, "story_examples", []) or [])
+                    scenario.story_examples = existing + list(story_examples)
+                    return
 
         def flush():
             nonlocal builder
@@ -203,8 +215,11 @@ class MarkdownScenario(Scenario):
             m_story = _STORY_H2.match(raw)
             if m_story:
                 flush()
+                attach_story_examples()
                 story_name = _strip_markup(m_story.group(1))
                 background = []  # Clear background for the new story
+                story_examples = []
+                example_group = ""
                 in_background = False
                 in_examples = False
                 continue
@@ -228,8 +243,18 @@ class MarkdownScenario(Scenario):
                 in_examples = True
                 in_background = False
                 example_headers = []
+                example_group = ""
                 continue
             if re.match(r"^#+\s+", raw):
+                if in_examples and not (
+                    _SCENARIO_H3.match(raw)
+                    or _STORY_H2.match(raw)
+                    or _BACKGROUND_H3.match(raw)
+                ):
+                    heading = _HEADING_PATTERN.match(raw)
+                    example_group = _strip_markup(heading.group(2)) if heading else ""
+                    example_headers = []
+                    continue
                 in_background = False
                 in_examples = False
             parsed_step = _parse_step(raw)
@@ -243,7 +268,7 @@ class MarkdownScenario(Scenario):
                 elif builder:
                     builder.accept(keyword, step_text, src)
                 continue
-            if in_examples and builder:
+            if in_examples:
                 row_match = _TABLE_ROW.match(raw)
                 if row_match:
                     cells = [c.strip() for c in row_match.group(1).split("|")]
@@ -254,9 +279,19 @@ class MarkdownScenario(Scenario):
                     if all(set(c.strip(":")) <= {"-"} for c in cells):
                         continue
                     row = dict(zip(example_headers, (_strip_markup(c) for c in cells)))
-                    builder._scenario.example_rows.append(row)
+                    if example_group:
+                        row.setdefault("group", example_group)
+                    if builder:
+                        builder._scenario.example_rows.append(row)
+                    else:
+                        index = len(story_examples) + 1
+                        label = str(
+                            row.get("example") or row.get("name") or example_group or f"example-{index}"
+                        )
+                        story_examples.append(Example(label, index, row, scope="story"))
 
         flush()
+        attach_story_examples()
         return scenarios
 
     @classmethod
@@ -324,31 +359,32 @@ class _ScenarioBuilder:
     def accept(self, keyword: str, text: str, source: SourceLocation) -> None:
         kw = keyword.lower()
         if kw == "given":
-            self._scenario.given.append(_make_clause(text, Phase.GIVEN, source, False))
+            self._scenario.given.append(_make_clause(text, Phase.GIVEN, source, False, "Given"))
             self._active_phase = Phase.GIVEN
             self._active_interaction = None
         elif kw == "when":
             self._active_interaction = Interaction()
             self._scenario.interactions.append(self._active_interaction)
-            self._active_interaction.when.append(_make_clause(text, Phase.WHEN, source, False))
+            self._active_interaction.when.append(_make_clause(text, Phase.WHEN, source, False, "When"))
             self._active_phase = Phase.WHEN
         elif kw == "then":
             if self._active_interaction is None:
                 self._active_interaction = Interaction()
                 self._scenario.interactions.append(self._active_interaction)
-            self._active_interaction.then.append(_make_clause(text, Phase.THEN, source, False))
+            self._active_interaction.then.append(_make_clause(text, Phase.THEN, source, False, "Then"))
             self._active_phase = Phase.THEN
         elif kw in ("and", "but"):
             self._accept_continuation(kw, text, source)
 
     def _accept_continuation(self, kw: str, text: str, source: SourceLocation) -> None:
-        prefixed = f"{kw.capitalize()} {text}"
+        keyword = kw.capitalize()
+        prefixed = f"{keyword} {text}"
         if self._active_phase is Phase.GIVEN:
-            self._scenario.given.append(_make_clause(prefixed, Phase.GIVEN, source, True))
+            self._scenario.given.append(_make_clause(prefixed, Phase.GIVEN, source, True, keyword))
         elif self._active_phase is Phase.WHEN and self._active_interaction:
-            self._active_interaction.when.append(_make_clause(prefixed, Phase.WHEN, source, True))
+            self._active_interaction.when.append(_make_clause(prefixed, Phase.WHEN, source, True, keyword))
         elif self._active_phase is Phase.THEN and self._active_interaction:
-            self._active_interaction.then.append(_make_clause(prefixed, Phase.THEN, source, True))
+            self._active_interaction.then.append(_make_clause(prefixed, Phase.THEN, source, True, keyword))
 
     def build(self, background: List[Clause]) -> "MarkdownScenario":
         self._scenario.background = list(background)
@@ -356,9 +392,16 @@ class _ScenarioBuilder:
         return self._scenario
 
 
-def _make_clause(text: str, phase: Phase, source: SourceLocation, is_continuation: bool) -> Clause:
+def _make_clause(
+    text: str,
+    phase: Phase,
+    source: SourceLocation,
+    is_continuation: bool,
+    keyword: str = "",
+) -> Clause:
     return Clause(
         text=text, phase=phase, is_continuation=is_continuation,
+        keyword=keyword,
         concepts=_BOLD_TERM.findall(text),
         values=[v.strip("`").strip() for v in _ITALIC_VALUE.findall(text) if v],
         actor=(_BOLD_TERM.search(text) or type("", (), {"group": lambda s, n: ""})()).group(1).strip() if _BOLD_TERM.search(text) else "",
@@ -375,14 +418,16 @@ def _consume_background(keyword: str, text: str, source: SourceLocation,
                         background: List[Clause], current_phase: Optional[Phase]) -> Optional[Phase]:
     kw = keyword.lower()
     if kw == "given":
-        background.append(_make_clause(text, Phase.GIVEN, source, False))
+        background.append(_make_clause(text, Phase.GIVEN, source, False, "Given"))
         return Phase.GIVEN
     if kw in ("and", "but"):
         phase = current_phase or Phase.GIVEN
-        background.append(_make_clause(f"{kw.capitalize()} {text}", phase, source, True))
+        keyword = kw.capitalize()
+        background.append(_make_clause(f"{keyword} {text}", phase, source, True, keyword))
         return phase
     phase = Phase.WHEN if kw == "when" else Phase.THEN
-    background.append(_make_clause(text, phase, source, False))
+    keyword = "When" if kw == "when" else "Then"
+    background.append(_make_clause(text, phase, source, False, keyword))
     return phase
 
 

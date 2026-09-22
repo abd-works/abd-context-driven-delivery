@@ -7,12 +7,15 @@ increment-level changes in one call.
 
 from __future__ import annotations
 
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from .nodes import Epic
 from .story_node import StoryNode
 from .thin_slice import Increment
 from .update_report import ChildCollectionPair, UpdateReport
+
+if TYPE_CHECKING:
+    from .example import Example
 
 
 class StoryMap(StoryNode):
@@ -22,6 +25,7 @@ class StoryMap(StoryNode):
         super().__init__(name="StoryMap", sequential_order=0)
         self.epics: List[Epic] = []
         self.increments: List[Increment] = []
+        self.examples: List["Example"] = []
 
     # -- Epic mutations -------------------------------------------------------
 
@@ -91,6 +95,11 @@ class StoryMap(StoryNode):
                 source_children=source.increments,
                 load=self.load_increment,
             ),
+            ChildCollectionPair(
+                self_children=self.examples,
+                source_children=getattr(source, "examples", []),
+                load=self.load_example,
+            ),
         ]
 
     def load_epic(self, source: Epic) -> Epic:
@@ -98,6 +107,11 @@ class StoryMap(StoryNode):
 
     def load_increment(self, source: Increment) -> Increment:
         return Increment(source.name, source.sequential_order)
+
+    def load_example(self, source: "Example") -> "Example":
+        from .example import Example
+
+        return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
 
     def snapshot_fields(self) -> dict:
         return {}
@@ -109,12 +123,17 @@ class StoryMap(StoryNode):
         stories_by_name: dict = {}
         for story in self.all_stories():
             stories_by_name.setdefault(story.name.strip(), []).append(story)
+        attached_story_examples: set = set()
         for scenario in scenarios:
             target = (getattr(scenario, "story_name", None) or "").strip()
             if not target:
                 continue
+            extras = list(getattr(scenario, "story_examples", None) or [])
             for story in stories_by_name.get(target, []):
                 story.scenarios.append(scenario)
+                if extras and id(story) not in attached_story_examples:
+                    story.examples.extend(extras)
+                    attached_story_examples.add(id(story))
 
     def attach_test_suites(self, suites) -> None:
         """Attach each TestSuite to the SubEpic whose name slug appears in the suite's file path."""

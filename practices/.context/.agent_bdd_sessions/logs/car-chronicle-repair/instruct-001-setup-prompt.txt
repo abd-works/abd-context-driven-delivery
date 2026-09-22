@@ -1,1 +1,0 @@
-Read context_tools/base/create_context_tool/examples/car_chronicle/car_chronicle.py from the workspace.

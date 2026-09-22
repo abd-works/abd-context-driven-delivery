@@ -387,11 +387,11 @@ with description("an MCP manifest file") as self:
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
 
-        with it("should list stdio server command and comma-separated toolset refs for walked classes"):
+        with it("should list a stdio host that discovers toolsets from the workspace"):
             text = (self.tree / "mcp.json").read_text(encoding="utf-8")
             expect(text).to(contain("python"))
-            expect(text).to(contain("--toolsets"))
-            expect(text).to(contain("SampleMcpOps"))
+            expect(text).to(contain("start_host.py"))
+            expect(text).not_to(contain("--toolsets"))
             expect(text).to(contain("PYTHONPATH"))
 
         with it("should publish the stdio server as cdd"):

@@ -333,13 +333,11 @@ with description("an MCP host") as self:
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
 
-        with it("should enroll a published operation from the manifest"):
-            expect(self.host.diagnose()["tools"]).to(contain("sample-mcp.generate"))
+        with it("should enroll published operations by collecting the repo"):
+            expect(self.host.diagnose()["tools"]).to(contain("generate.generate"))
 
-        with it("should read toolset refs from the written mcp.json"):
-            expect(McpHost.refs_from_manifest(self.tree / "mcp.json")).to(
-                contain("harness.guidance.fixtures.agentic_ops.agentic_ops:SampleMcpOps")
-            )
+        with it("should not bake toolset refs into mcp.json"):
+            expect(McpHost.refs_from_manifest(self.tree / "mcp.json")).to(equal(()))
 
 
 with description("an MCP host Cursor has stopped spawning") as self:
@@ -383,4 +381,77 @@ with description("an MCP host Cursor has stopped spawning") as self:
 
         with it("should leave the running host alone"):
             expect(self.mcp.ensure_cursor_host()).to(equal("running"))
+
+    with context("with a user mcp.json pointed at another checkout"):
+        with it("should retarget the user cdd host and keep other servers"):
+            import json
+
+            self._user_mcp.write_text(
+                json.dumps(
+                    {
+                        "mcpServers": {
+                            "miro-mcp": {"url": "https://mcp.miro.com/"},
+                            "cdd-old-worktree": {
+                                "type": "stdio",
+                                "command": "C:/old/.venv/Scripts/python.exe",
+                                "args": [
+                                    "-u",
+                                    "C:/old/installation/mcp/scripts/start_host.py",
+                                ],
+                                "cwd": "C:/old",
+                                "env": {"CDD_REPO": "C:/old"},
+                            },
+                        }
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            expect(self.mcp.ensure_cursor_host()).to(equal("nudged"))
+            servers = json.loads(self._user_mcp.read_text(encoding="utf-8"))["mcpServers"]
+            expect("cdd-old-worktree" in servers).to(equal(False))
+            expect("miro-mcp" in servers).to(equal(True))
+            expect(servers["cdd"]["args"][1]).to(contain("start_host.py"))
+            expect(servers["cdd"]["args"][1]).to(contain(str(_REPO_ROOT)))
+
+        with it("should not replace a same-repo host from a temp SampleMcpOps install"):
+            import json
+
+            full = (
+                "actions.document.document:Document,installation.installer:Installer"
+            )
+            self._user_mcp.write_text(
+                json.dumps(
+                    {
+                        "mcpServers": {
+                            "cdd": {
+                                "type": "stdio",
+                                "args": [
+                                    "-u",
+                                    str(
+                                        _REPO_ROOT
+                                        / "installation"
+                                        / "mcp"
+                                        / "scripts"
+                                        / "start_host.py"
+                                    ),
+                                    "--toolsets",
+                                    full,
+                                    "--repo",
+                                    str(_REPO_ROOT),
+                                ],
+                                "cwd": str(_REPO_ROOT),
+                                "env": {"CDD_REPO": str(_REPO_ROOT)},
+                            }
+                        }
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.mcp.ensure_cursor_host()
+            args = json.loads(self._user_mcp.read_text(encoding="utf-8"))["mcpServers"][
+                "cdd"
+            ]["args"]
+            expect(",".join(str(item) for item in args)).to(contain(full))
 

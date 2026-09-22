@@ -1,0 +1,23 @@
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+ERROR: getASuperType() cannot be resolved for type Class::Class (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:82,59-72)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\graph_rules.py", line 273, in evaluate
+    batch = codeql.run_queries(queries)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 218, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+ERROR: getASuperType() cannot be resolved for type Class::Class (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:82,59-72)
+
+

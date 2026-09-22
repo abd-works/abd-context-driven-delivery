@@ -1,1 +1,0 @@
-Read generator/.sessions/logs/car-chronicle/judge-prompt.txt and follow it exactly. Reply with only one JSON line as specified in that file.

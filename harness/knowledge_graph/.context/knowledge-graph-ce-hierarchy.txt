@@ -1,0 +1,240 @@
+CleanEngineeringModel: CleanEngineering
+  Module: harness.knowledge_graph.model.codeql
+    Class: CodeQL  [keep-classes-single-responsibility] Class 'CodeQL' has 14 public methods.
+      Operation: __init__()  [limit-operation-parameters] Operation '__init__' takes 3 parameters (prefer 0-2).
+        Parameter: root
+      Operation: executable(): path
+      Operation: populate()
+        Parameter: graph
+      Operation: run(): Rows
+        Parameter: database
+        Parameter: query
+      Operation: repo_root(): candidate
+      Operation: ensure_database(): database
+        Parameter: language
+      Operation: class_rows(): Rows
+        Parameter: tuples
+      Operation: _cell(): str
+        Parameter: index
+        Parameter: row
+      Operation: _int_cell(): int
+        Parameter: index
+        Parameter: row
+      Operation: operation_rows(): Rows
+        Parameter: tuples
+      Operation: parameter_rows(): Rows
+        Parameter: tuples
+      Operation: property_rows(): Rows
+        Parameter: tuples
+      Operation: call_rows(): Rows
+        Parameter: tuples
+      Operation: results_path(): None
+        Parameter: override
+      Operation: _write_subject_filter()
+        Parameter: pack_dir
+      Operation: _select_rows(): rows
+        Parameter: tuples
+      Operation: _bqrs_for(): max
+        Parameter: database
+        Parameter: query
+      Operation: _entity_name(): text
+        Parameter: item
+      Operation: _optional_json(): None
+        Parameter: results_path
+      Operation: _ensure_ce_nodes()  [hide-inner-details] Operation '_ensure_ce_nodes' reads private attribute '_legacy_parameters'. | [limit-operation-parameters] Operation '_ensure_ce_nodes' takes 5 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation '_ensure_ce_nodes' works through parameter 'graph' instead of that object.
+        Parameter: graph
+        Parameter: class_rows
+        Parameter: operation_rows
+        Parameter: parameter_rows
+        Parameter: property_rows
+      Operation: _wire_calls()  [put-logic-on-the-owning-resource] Operation '_wire_calls' works through parameter 'graph' instead of that object.
+        Parameter: graph
+        Parameter: calls
+      Operation: _calls_within_depth(): out
+        Parameter: limit
+        Parameter: rows
+      Operation: _ensure_story_nodes()  [put-logic-on-the-owning-resource] Operation '_ensure_story_nodes' works through parameter 'graph' instead of that object.
+        Parameter: graph
+        Parameter: raw
+      Operation: _wire_story_calls()
+        Parameter: graph
+        Parameter: story_calls
+      Operation: _wire_story_observations()
+        Parameter: graph
+        Parameter: observations
+      Operation: _wire_example_demonstrates()
+        Parameter: graph
+        Parameter: entries
+      Operation: _attach_parameters()  [limit-operation-parameters] Operation '_attach_parameters' takes 3 parameters (prefer 0-2).
+        Parameter: graph
+        Parameter: classes
+        Parameter: rows
+      Operation: _display(): name
+        Parameter: name
+      Operation: _step_owner(): None  [limit-operation-parameters] Operation '_step_owner' takes 3 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation '_step_owner' works through parameter 'entry' instead of that object.
+        Parameter: scenarios
+        Parameter: entry
+        Parameter: backgrounds
+      Operation: _ensure_examples()  [limit-operation-parameters] Operation '_ensure_examples' takes 5 parameters (prefer 0-2).
+        Parameter: stories
+        Parameter: graph
+        Parameter: entries
+        Parameter: epics
+        Parameter: subs
+      Operation: _wire_step_demonstrated_through()
+        Parameter: graph
+        Parameter: created_steps
+      Operation: _example_owner(): None  [limit-operation-parameters] Operation '_example_owner' takes 5 parameters (prefer 0-2).
+        Parameter: stories
+        Parameter: graph
+        Parameter: entry
+        Parameter: epics
+        Parameter: subs
+      Operation: _home_module(): None
+        Parameter: graph
+        Parameter: cls
+      Operation: _find_step(): None  [limit-operation-parameters] Operation '_find_step' takes 4 parameters (prefer 0-2).
+        Parameter: graph
+        Parameter: line
+        Parameter: story_file
+        Parameter: step_text
+      Operation: _match_examples(): out  [limit-operation-parameters] Operation '_match_examples' takes 3 parameters (prefer 0-2).
+        Parameter: index
+        Parameter: file_path
+        Parameter: export_name
+    Class: CodeQLRunError
+    Class: Rows
+  Module: harness.knowledge_graph.model.graph_node
+    Class: Kind
+    Class: Node  [keep-classes-single-responsibility] Class 'Node' has 14 public methods.
+      Property: practice
+      Operation: join(): self  [hide-inner-details] Operation 'join' reads private attribute '_make_id'.
+        Parameter: graph
+        Parameter: node_id
+      Operation: rules(): NodeRules
+      Operation: related(): _dedupe_nodes
+        Parameter: kind
+      Operation: invoked_operations(): found
+      Operation: hierarchy(): list
+      Operation: hierarchy_text(): render_hierarchy
+      Operation: dot_graph(): dot_graph_from_node
+      Operation: home_module(): None
+    Class: Relationship
+      Operation: __init__()  [limit-operation-parameters] Operation '__init__' takes 3 parameters (prefer 0-2).
+        Parameter: kind
+        Parameter: from_node
+        Parameter: to_node
+  Module: harness.knowledge_graph.model.graph_rules  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+    Class: GraphRule  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Operation: __init__()  [deep-module] Module exposes 4 of 5 top-level symbols publicly. | [limit-operation-parameters] Operation '__init__' takes 3 parameters (prefer 0-2).
+        Parameter: rule
+      Operation: __getattr__(): getattr  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+        Parameter: name
+      Operation: _is_subject(): True  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+        Parameter: node
+      Operation: _violation(): RuleViolation  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+        Parameter: message
+        Parameter: node
+      Operation: applies_to(): set  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+    Class: RuleRegistry  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Operation: __init__()  [deep-module] Module exposes 4 of 5 top-level symbols publicly. | [limit-operation-parameters] Operation '__init__' takes 3 parameters (prefer 0-2).
+      Operation: __iter__(): iter  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Operation: load(): registry  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+        Parameter: cls
+      Operation: evaluate(): by_node  [deep-module] Module exposes 4 of 5 top-level symbols publicly. | [hide-inner-details] Operation 'evaluate' reads private attribute '_write_subject_filter'. | [put-logic-on-the-owning-resource] Operation 'evaluate' works through parameter 'graph' instead of that object.
+        Parameter: graph
+      Operation: load_from_practices()  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Operation: rules_for_node(): matched  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+    Class: RuleViolation  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: message  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: fidelity  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: location  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: line  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: practice  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: source  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: direct  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: node_id  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: rule_slug  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Property: contributors  [deep-module] Module exposes 4 of 5 top-level symbols publicly.
+      Operation: for_rows(): violations  [deep-module] Module exposes 4 of 5 top-level symbols publicly. | [hide-inner-details] Operation 'for_rows' reads private attribute '_violation'. | [limit-operation-parameters] Operation 'for_rows' takes 3 parameters (prefer 0-2).
+        Parameter: rule
+        Parameter: graph
+        Parameter: cls
+        Parameter: rows
+  Module: harness.knowledge_graph.model.node_rules
+    Class: NodeRules  [do-not-invent-parallel-object-models] Class 'NodeRules' mixes types the rest of the graph keeps in separate shapes.
+      Operation: __init__()  [do-not-invent-parallel-object-models] Class 'NodeRules' mixes types the rest of the graph keeps in separate shapes. | [limit-operation-parameters] Operation '__init__' takes 3 parameters (prefer 0-2).
+        Parameter: node
+      Operation: fidelity(): NodeRules  [do-not-invent-parallel-object-models] Class 'NodeRules' mixes types the rest of the graph keeps in separate shapes.
+        Parameter: name
+      Operation: violations(): hits  [do-not-invent-parallel-object-models] Class 'NodeRules' mixes types the rest of the graph keeps in separate shapes.
+      Operation: practice(): NodeRules  [do-not-invent-parallel-object-models] Class 'NodeRules' mixes types the rest of the graph keeps in separate shapes.
+        Parameter: name
+      Operation: slug(): NodeRules  [do-not-invent-parallel-object-models] Class 'NodeRules' mixes types the rest of the graph keeps in separate shapes.
+        Parameter: name
+      Operation: direct(): NodeRules  [do-not-invent-parallel-object-models] Class 'NodeRules' mixes types the rest of the graph keeps in separate shapes.
+      Operation: closest_fidelity(): closest_fidelity  [do-not-invent-parallel-object-models] Class 'NodeRules' mixes types the rest of the graph keeps in separate shapes.
+  Module: harness.knowledge_graph.model.practice_graph
+    Class: Failures
+      Property: parts
+    Class: PracticeGraph  [keep-classes-single-responsibility] Class 'PracticeGraph' has 13 public methods.
+      Operation: __init__()  [limit-operation-parameters] Operation '__init__' takes 3 parameters (prefer 0-2).
+        Parameter: root
+        Parameter: rule_registry
+      Operation: record_partial_failure()
+        Parameter: part
+        Parameter: error
+      Operation: working_context(): folder
+      Operation: evaluate_rules(): Failures
+        Parameter: skip
+        Parameter: slugs
+      Operation: zero_hit_slugs(): RuleSlugs
+      Operation: load(): graph
+        Parameter: path
+        Parameter: cls
+      Operation: register(): node
+        Parameter: node
+        Parameter: node_id
+      Operation: record_rule_timing()  [limit-operation-parameters] Operation 'record_rule_timing' takes 4 parameters (prefer 0-2).
+        Parameter: error
+        Parameter: slug
+        Parameter: seconds
+        Parameter: hits
+      Operation: relate(): edge
+        Parameter: edge
+      Operation: class_named(): None
+        Parameter: name
+      Operation: operation_named(): None
+        Parameter: class_name
+        Parameter: operation_name
+      Operation: dot_graph(): dot_graph_from_roots
+      Operation: wire_ddd()
+      Operation: _merge_rule_hits()
+        Parameter: slugs
+        Parameter: by_node
+      Operation: _merge_codeql_violations()
+        Parameter: codeql_results
+        Parameter: by_node
+      Operation: _resolve_violation_node(): None  [hide-inner-details] Operation '_resolve_violation_node' reads private attribute '_semantic_type_name'. | [put-logic-on-the-owning-resource] Operation '_resolve_violation_node' works through parameter 'entry' instead of that object.
+        Parameter: entry
+      Operation: _wire_entity_identity()  [put-logic-on-the-owning-resource] Operation '_wire_entity_identity' works through parameter 'entity' instead of that object.
+        Parameter: entity
+    Class: RuleSlugs
+      Property: names
+      Operation: read(): cls
+        Parameter: path
+        Parameter: cls
+      Operation: write()
+        Parameter: path
+    Class: RuleTiming
+      Property: error
+      Property: slug
+      Property: seconds
+      Property: hits
+  Module: harness.knowledge_graph.knowledge_graph
+    Class: KnowledgeGraph
+      Operation: __init__()  [limit-operation-parameters] Operation '__init__' takes 3 parameters (prefer 0-2).
+        Parameter: format
+        Parameter: path
+        Parameter: fidelity
+        Parameter: session

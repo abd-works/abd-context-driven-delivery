@@ -13,7 +13,6 @@ from agent_tools import agent_instructions, agent_toolset
 from agent_tools.agent_tools import agent_tool
 from installation.harness_files.harness_files import Skill
 from installation.mcp.mcp_server import Mcp
-from workspace import docs_dir
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
@@ -27,7 +26,7 @@ class Sketch(GuidanceAction):
 
     def _sketch_path(self, destination: str, slug: str) -> Path:
         """Resolve sketch path under the destination docs dir (pure)."""
-        return docs_dir(destination) / f"{slug}-sketch.md"
+        return Path(destination) / ".context" / f"{slug}-sketch.md"
 
     @property
     def sketch_template(self) -> str:
@@ -85,7 +84,7 @@ class Sketch(GuidanceAction):
         """List sketch files under the destination docs dir.
         If slug is provided, filters to sketches matching that slug prefix.
         Returns newline-separated paths; empty string if the folder is missing or empty."""
-        context_dir = docs_dir(destination)
+        context_dir = Path(destination) / ".context"
         if not context_dir.is_dir():
             return ""
         pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"

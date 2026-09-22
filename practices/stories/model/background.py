@@ -30,6 +30,7 @@ class Background(StoryNode):
             phase=source.phase,
             sequential_order=source.sequential_order,
             is_continuation=source.is_continuation,
+            keyword=getattr(source, "keyword", "") or "",
             concepts=list(source.concepts),
             values=list(source.values),
             actor=source.actor,

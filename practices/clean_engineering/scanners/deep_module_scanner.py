@@ -1,9 +1,10 @@
 """Scanner: `deep-module` - small public seam, substantial functionality behind it.
 
-Heuristic: count public top-level symbols (classes and functions whose names do
-not begin with underscore) across all module files, and count total top-level
-symbols. Flag when the public-to-total ratio exceeds a threshold - the module
-exports too much of its internals for the seam to be meaningful.
+Heuristic: count public classes (names that do not begin with underscore) across
+all module files, and count every class in the first-class module folder. Flag
+when the public-to-total class ratio exceeds a threshold - the module exports
+too much of its internals for the seam to be meaningful. Nested folders are
+part of this module. Do not count operations.
 
 Threshold rationale: Ousterhout's deep modules (A Philosophy of Software Design)
 ask for a *small* interface relative to hidden functionality (iceberg / tall-narrow
@@ -37,8 +38,8 @@ class DeepModuleScanner(ModuleScanner):
             tree = self.parse_python(file_path)
             if tree is None:
                 continue
-            for node in tree.body:
-                if not isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ClassDef):
                     continue
                 total += 1
                 if not node.name.startswith("_"):
@@ -50,8 +51,8 @@ class DeepModuleScanner(ModuleScanner):
             percent_public = int(round(ratio * 100))
             return [
                 self.violation(
-                    f"Module '{module.folder.name}' exposes {public} of {total} top-level "
-                    f"symbols publicly ({percent_public}%). A deep module keeps a short "
+                    f"Module '{module.folder.name}' exposes {public} of {total} "
+                    f"classes publicly ({percent_public}%). A deep module keeps a short "
                     f"named seam; push internals private (leading underscore) or split the module.",
                     location=str(module.folder),
                 )

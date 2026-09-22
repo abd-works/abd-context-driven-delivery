@@ -1,0 +1,14 @@
+avoid-vague-parameter-names
+keep-operations-small-focused
+layer-separation
+low-coupling
+never-swallow-exceptions
+one-way-deps
+prefer-class-operations
+provide-meaningful-context
+shape-classes-around-resources
+simplify-control-flow
+use-exceptions-properly
+use-explicit-dependencies
+use-property-not-accessor
+use-typed-signatures

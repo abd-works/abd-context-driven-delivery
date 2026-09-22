@@ -57,6 +57,77 @@ def user_cursor_mcp_json() -> Path:
     return Path.home() / ".cursor" / "mcp.json"
 
 
+def _cdd_stdio_names(servers: Mapping[str, Any]) -> list[str]:
+    names: list[str] = []
+    for name, spec in servers.items():
+        if not isinstance(spec, dict):
+            continue
+        blob = " ".join(str(item) for item in spec.get("args") or [])
+        if "start_host.py" not in blob and "installation.mcp" not in blob:
+            continue
+        if name == "cdd" or str(name).startswith("cdd"):
+            names.append(str(name))
+    return names
+
+
+def _server_identity(spec: Mapping[str, Any]) -> tuple:
+    env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
+    return (
+        spec.get("command"),
+        tuple(str(item) for item in spec.get("args") or []),
+        spec.get("cwd"),
+        tuple(sorted((key, env[key]) for key in env if key != "CDD_HOST_NUDGE")),
+    )
+
+
+def _host_repo(spec: Mapping[str, Any]) -> str:
+    env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
+    for item in spec.get("args") or []:
+        text = str(item)
+        if text.endswith("start_host.py"):
+            try:
+                return str(Path(text).resolve().parents[3])
+            except (IndexError, OSError):
+                break
+    return str(env.get("CDD_REPO") or spec.get("cwd") or "")
+
+
+def sync_user_cursor_server(server: Mapping[str, Any], *, canonical: bool = False) -> bool:
+    """Point user-level Cursor mcp.json at this checkout. Returns True if rewritten.
+
+    A temp-path install must not replace a same-repo host (that is how SampleMcpOps
+    wiped the real tool list). Same-repo toolset updates require the repo ``.cursor``.
+    """
+    path = user_cursor_mcp_json()
+    if not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    servers = data.get("mcpServers")
+    if not isinstance(servers, dict):
+        return False
+    stale = _cdd_stdio_names(servers)
+    if not stale:
+        return False
+    this_repo = _host_repo(server)
+    if not canonical and any(_host_repo(servers[name]) == this_repo for name in stale):
+        return False
+    if all(_server_identity(servers[name]) == _server_identity(server) for name in stale):
+        return False
+    for name in stale:
+        servers.pop(name, None)
+    spec = dict(server)
+    env = dict(spec.get("env") or {})
+    env["CDD_HOST_NUDGE"] = str(time.time())
+    spec["env"] = env
+    servers["cdd"] = spec
+    data["mcpServers"] = servers
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return True
+
+
 def _touch_mcp_manifest(path: Path, *, bump_env: bool = False) -> None:
     if not path.is_file():
         return
@@ -234,7 +305,6 @@ class McpInstallation(Installation):
             return
         from installation.installer import Installer
 
-        refs = sorted({op.tool.registration_name for op in self.mcp_operations})
         repo = self.repo or Path(__file__).resolve().parents[2]
         host = repo / "installation" / "mcp" / "scripts" / "start_host.py"
         payload = {
@@ -242,19 +312,10 @@ class McpInstallation(Installation):
                 "cdd": {
                     "type": "stdio",
                     "command": sys.executable,
-                    "args": [
-                        "-u",
-                        str(host),
-                        "--toolsets",
-                        ",".join(refs),
-                        "--repo",
-                        str(repo),
-                    ],
-                    "cwd": str(repo),
+                    "args": ["-u", str(host)],
                     "env": {
                         "PYTHONPATH": Installer.pythonpath(repo),
                         "PYTHONIOENCODING": "utf-8",
-                        "CDD_REPO": str(repo),
                     },
                 }
             }
@@ -286,9 +347,15 @@ class McpInstallation(Installation):
         return host_pid_is_running(host_pid_path(self.path))
 
     def ensure_cursor_host(self) -> str:
+        manifest = self.path / "mcp.json"
+        spec = McpHost.server_entry_from_manifest(manifest)
+        repo_cursor = (Path(self.repo) / ".cursor").resolve() if self.repo is not None else None
+        canonical = repo_cursor is not None and Path(self.path).resolve() == repo_cursor
+        if spec and sync_user_cursor_server(spec, canonical=canonical):
+            _touch_mcp_manifest(manifest)
+            return "nudged"
         if self.cursor_host_is_running():
             return "running"
-        manifest = self.path / "mcp.json"
         if not manifest.is_file():
             return "missing"
         _touch_mcp_manifest(user_cursor_mcp_json(), bump_env=True)
@@ -594,7 +661,7 @@ class McpHost:
 
         @self._server.list_prompts()
         async def handle_list_prompts() -> list[types.Prompt]:
-            return [self._as_prompt(prompt) for prompt in self._runtime._prompts.values()]
+            return []
 
         @self._server.get_prompt()
         async def handle_get_prompt(
@@ -768,6 +835,10 @@ class McpHost:
         path = Path(manifest)
         refs = cls.refs_from_manifest(path)
         resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
+        if not refs:
+            from installation.installer import Installer
+
+            refs = tuple(Installer(repo=resolved).collect_toolsets())
         try:
             return cls.build(refs, repo=str(resolved), project=str(resolved))
         except Exception as error:
