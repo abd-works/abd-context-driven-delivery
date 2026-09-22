@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from actions.scan.rule import RulesCollection
+from actions.validate.rule import RulesCollection
 from harness.agent_tools.agent_tools import (
     collect,
     agent_instructions,
@@ -15,9 +15,9 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
     toolsetCollection,
 )
-from installation.harness_files.harness_files import rules, skill
-from installation.hooks.prompt_echo.prompt_echo import echo
-from installation.mcp.mcp_server import mcp
+from installation.files import rules, skill
+from prompt_echo.prompt_echo import echo
+from harness.mcp.mcp_server import mcp
 from harness.markdown import (
     Markdown,
     MarkdownCollection,

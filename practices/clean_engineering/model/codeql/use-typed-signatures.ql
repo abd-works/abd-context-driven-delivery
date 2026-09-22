@@ -7,9 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f, Parameter p
-where inSubject(f) and untypedPublicParameter(f, p)
-select f,
-  "Operation '" + f.getName() + "' leaves parameter '" + p.getName() + "' untyped.", p
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "use-typed-signatures")
+select subject, message, contributor

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from _drawio_base import DrawioScanner, collect_drawio_files
+from _drawio_base import DrawioScanner
 from practices.clean_engineering.model.drawio import drawio_tools
 
 
@@ -23,12 +23,4 @@ class DistinctAnchorPointsScanner(DrawioScanner):
 
 
 if __name__ == "__main__":
-    from scan import ScannerRunner
-
-    raise SystemExit(
-        ScannerRunner.run_scanner_main(
-            DistinctAnchorPointsScanner,
-            DistinctAnchorPointsScanner.RULE,
-            collect_drawio_files,
-        )
-    )
+    raise SystemExit(DistinctAnchorPointsScanner.run_main())

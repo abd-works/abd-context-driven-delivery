@@ -4,7 +4,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from agent_tools import agent_instructions, agent_tool, agent_toolset
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.markdown import markdown
 
 

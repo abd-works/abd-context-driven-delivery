@@ -82,7 +82,7 @@ agent = Agent
 agent_guidance = AgentGuidance
 
 
-class MarkdownInstallation(Installation):
+class FileInstallation(Installation):
     """Write skill, command, and rules markdown files."""
 
     channel = "markdown"
@@ -204,7 +204,7 @@ class MarkdownInstallation(Installation):
         toolset = tool.toolset
         parts = [self._body_for(kind, tool, toolset)]
         if self.mcp_mode:
-            from installation.mcp.mcp_server import McpOperationDefinition
+            from harness.mcp.mcp_server import McpOperationDefinition
 
             fidelity_parts = (
                 self._fidelity_invoke_parts(toolset)
@@ -218,7 +218,7 @@ class MarkdownInstallation(Installation):
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
         rel = self.relative_path(kind, toolset, member, tool.deploy_name)
         if kind == "rules":
-            from actions.scan.rule import AppliesTo
+            from actions.validate.rule import AppliesTo
 
             text = AppliesTo.strip_fence(text)
             text = self._rules_front_matter(text, toolset) + text

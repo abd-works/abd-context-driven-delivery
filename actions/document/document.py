@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from guidance_actions import GuidanceArg, GuidanceAction
-from agent_tools import agent_instructions, agent_toolset
-from installation.harness_files.harness_files import Skill
-from installation.mcp.mcp_server import Mcp
+from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.agent_tools import agent_instructions, agent_toolset
+from installation.files import Skill
+from harness.mcp.mcp_server import Mcp
 
 @agent_toolset
 class Document(GuidanceAction):

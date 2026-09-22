@@ -7,10 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f, Parameter p
-where inSubject(f) and envies(f, p)
-select f,
-  "Operation '" + f.getName() + "' works through parameter '" + p.getName() +
-    "' instead of that object.", p
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "put-logic-on-the-owning-resource")
+select subject, message, contributor

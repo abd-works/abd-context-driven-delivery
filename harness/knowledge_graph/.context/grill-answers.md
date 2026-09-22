@@ -49,3 +49,27 @@ Grounded in `practices/stories/model/scenario.py`, `practices/bdd/bdd.md`, `gwt-
 **Query surface (sketch):** `node.rules.violations` (all applicable); `node.rules.direct.violations` (closest practice+fidelity match); `node.rules.practice(p).fidelity(f).violations` (filtered).
 
 **Evaluation:** Rules are graph/CodeQL predicates over the loaded practice graph — not per-file scanner re-parses. CodeQL supplies calls/mutations; the graph supplies practice identity and cross-practice edges. See `knowledge-graph-sketch.md` § Guidance rules on nodes.
+### Explorer shape from backlog
+
+The explorer shows one KnowledgeGraph that contains several PracticeGraphs. Each PracticeGraph is a tree of root Node → sub Node with property:value on the node and Relationship (connector) lines to other nodes, including across PracticeGraphs. Filters are connector kind, practice, and node. Grounded in backlog.txt lines 9–35, module-context.md (PracticeGraph seam, node.rules.violations), and graph_node.py Kind / Relationship.
+
+## Rules are a Node property, not a second tree
+
+Do not use two trees or a Nodes vs Rules overlay. There is one KnowledgeGraph tree of PracticeGraphs and Nodes. For every Node that can have rules, rules is a property on that Node. Selecting rules shows the complete list appropriate to that Node; each rule is passing or violating.
+
+## Explorer layout: filters top-left, tree left, source right
+
+Filters sit in a thin strip at the top left — they do not own a column. The left body is the PracticeGraph tree. The right pane is the Node's source file. Selecting a file Node opens that file and highlights the Node's range. Selecting a folder Node leaves the right pane unchanged. Grounded in RuleViolation.location / line (graph_rules.py) and CodeQL populate file facts.
+
+## Filters include violations and a specific rule
+
+The filter strip includes practice, connector kind, node, violations, and rule. Violations shows only Nodes whose rules are failing. Rule shows only Nodes that have that named rule. Same Filter Graph mechanic as the other knobs — not a second tree. The story map and main scenarios live in knowledge-graph-explorer-sketch.md with the screen sketch.
+
+## Cross-aggregate sync
+
+single-aggregate. KnowledgeGraph is the aggregate root. PracticeGraph, Node, Relationship, and rules live inside that root's snapshot. One lowdb file `data/knowledge-graphs.json`.
+
+## Given seeds passing and failing source
+
+A KnowledgeGraph is loaded from source that passes a named rule and source that fails that rule. Given names those two Nodes. Then names the passing listing and the violating listing. Do not write "each rule is passing or violating" — that restates the property without seeding the code.
+

@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from installation.mcp.mcp_server import Mcp
+from harness.mcp.mcp_server import Mcp
 
 
 @agent_toolset

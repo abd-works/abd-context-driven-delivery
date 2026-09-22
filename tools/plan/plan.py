@@ -9,7 +9,7 @@ from typing import Any
 
 from git.git import Repo, TicketState
 from harness.agent_tools.agent_tools import agent_toolset
-from agent_tools.agent_tools import agent_tool
+from harness.agent_tools.agent_tools import agent_tool
 from workspace.workspace import Turn, WorkSession, Workspace
 from workflow.workflow import Workflow
 

@@ -174,7 +174,7 @@ validate(): None
 
 | Concern | Owner | Reads from domain |
 | ------- | ----- | ----------------- |
-| Skill/command markdown | `MarkdownInstallation` | live toolset: `description`, `tools`; `toolset.instructions[name].expand(context, arguments)` |
+| Skill/command markdown | `FileInstallation` | live toolset: `description`, `tools`; `toolset.instructions[name].expand(context, arguments)` |
 | MCP enrollment | `McpInstallation` | live toolset; reads each member's `kind`, `description`, `parameters`, `response` |
 | Runtime call | `McpServer` | `toolset.<operation>(**arguments)` |
 | Server state between calls | `McpServer` | toolset instance lifetime — not domain `@resource` entries |

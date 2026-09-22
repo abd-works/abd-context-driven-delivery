@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from harness.guidance.guidance import Guidance, PracticeGuidance
 from harness.agent_tools.agent_tools import agent_instructions
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from installation.files import skill
+from harness.mcp.mcp_server import mcp
 from harness.markdown import HTML, Markdown, markdown
 
 

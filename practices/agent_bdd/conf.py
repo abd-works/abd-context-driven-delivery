@@ -11,8 +11,6 @@ _PKG_ROOT = Path(__file__).resolve().parent
 _REPO_ROOT = _PKG_ROOT.parent.parent
 _SECRETS_FILE = _PKG_ROOT / "conf" / ".secrets"
 
-_CATEGORY_DIRS = ("harness", "tools", "practices", "actions")
-
 
 def _load_secrets(path: Path | None = None) -> None:
     """Load KEY=VALUE lines into os.environ without overwriting existing vars."""
@@ -30,12 +28,10 @@ def _load_secrets(path: Path | None = None) -> None:
 
 
 def _ensure_import_paths() -> None:
-    """Make repo root and category dirs importable (hybrid nested + flat model)."""
-    entries = [str(_REPO_ROOT)]
-    entries.extend(str(_REPO_ROOT / name) for name in _CATEGORY_DIRS)
-    for entry in reversed(entries):
-        if entry not in sys.path:
-            sys.path.insert(0, entry)
+    """Make repo root and category dirs importable without shadowing the MCP SDK."""
+    from installation.installer import Installer
+
+    Installer.ensure_import_path(_REPO_ROOT)
 
 
 def _ensure_hyphenated_import(module_name: str, file_path: Path) -> None:

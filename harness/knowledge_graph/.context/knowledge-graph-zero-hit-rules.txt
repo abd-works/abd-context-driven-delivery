@@ -1,11 +1,15 @@
 avoid-vague-parameter-names
-keep-operations-small-focused
+deep-module
+do-not-invent-parallel-object-models
+hide-inner-details
 layer-separation
+limit-operation-parameters
 low-coupling
 never-swallow-exceptions
 one-way-deps
 prefer-class-operations
 provide-meaningful-context
+put-logic-on-the-owning-resource
 shape-classes-around-resources
 simplify-control-flow
 use-exceptions-properly

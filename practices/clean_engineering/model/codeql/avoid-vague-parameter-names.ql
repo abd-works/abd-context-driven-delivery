@@ -7,12 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f, Parameter p
-where
-  inSubject(f) and
-  domainParameter(f, p) and
-  (p.getName() = "data" or p.getName() = "options" or p.getName() = "info")
-select f,
-  "Operation '" + f.getName() + "' names a parameter '" + p.getName() + "'.", p
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "avoid-vague-parameter-names")
+select subject, message, contributor

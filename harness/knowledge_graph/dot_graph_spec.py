@@ -16,7 +16,7 @@ from expects import contain, equal, expect
 from mamba import description, it
 
 from harness.knowledge_graph.model import Kind, Node, PracticeGraph
-from practices.stories.model.codeql.stories import Epic, Example, Step
+from practices.stories.model.codeql.codeql_model import Epic, Example, Step
 
 _CATALOG = _REPO_ROOT / "practices" / "stories" / "catalog-examples"
 _PML = Path(os.environ.get("PML_DOMAINMODEL", r"C:\dev\paradise-mobile\pml-domainmodel"))

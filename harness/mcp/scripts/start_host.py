@@ -46,7 +46,7 @@ def main() -> None:
     from installation.installer import Installer
 
     Installer.ensure_import_path(repo)
-    from installation.mcp.mcp_server import McpHost, claim_host_pid, host_pid_path
+    from harness.mcp.mcp_server import McpHost, claim_host_pid, host_pid_path
 
     toolsets = _arg_after(argv, "--toolsets") or os.environ.get("MCP_TOOLSET_REFS", "")
     refs = _toolset_refs(toolsets)

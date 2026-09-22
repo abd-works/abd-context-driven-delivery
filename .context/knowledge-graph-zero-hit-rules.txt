@@ -1,0 +1,7 @@
+deep-module
+layer-separation
+one-way-deps
+provide-meaningful-context
+public-seam-only
+use-exceptions-properly
+use-typed-signatures

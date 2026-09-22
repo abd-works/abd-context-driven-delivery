@@ -7,10 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f
-where inSubject(f) and longOperation(f)
-select f,
-  "Operation '" + f.getName() + "' is " + operationLineCount(f).toString() +
-    " lines (max 20).", f
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "keep-operations-small-focused")
+select subject, message, contributor

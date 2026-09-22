@@ -1,3 +1,6 @@
+import alpha
+
+
 class Beta:
-    def pong(self, alpha):
-        return alpha.ping(self)
+    def pong(self):
+        return alpha.Alpha().ping()

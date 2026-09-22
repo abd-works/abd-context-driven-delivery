@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from _drawio_base import DrawioScanner, collect_drawio_files
+from _drawio_base import DrawioScanner
 
 Y_TOLERANCE = 30
 MIN_ROW_SIZE = 4
@@ -99,12 +99,4 @@ class LeafNodesNotInHorizontalRowScanner(DrawioScanner):
 
 
 if __name__ == "__main__":
-    from scan import ScannerRunner
-
-    raise SystemExit(
-        ScannerRunner.run_scanner_main(
-            LeafNodesNotInHorizontalRowScanner,
-            LeafNodesNotInHorizontalRowScanner.RULE,
-            collect_drawio_files,
-        )
-    )
+    raise SystemExit(LeafNodesNotInHorizontalRowScanner.run_main())

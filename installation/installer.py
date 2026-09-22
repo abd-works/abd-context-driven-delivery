@@ -16,9 +16,9 @@ from harness.agent_tools.agent_tools import (
     agent_tool,
     agent_toolset,
 )
-from installation.harness_files.harness_files import MarkdownInstallation, Skill
-from installation.hooks.hooks import Hook
-from installation.mcp.mcp_server import Mcp
+from installation.files import FileInstallation, Skill
+from harness.hooks.hooks import Hook
+from harness.mcp.mcp_server import Mcp
 
 
 @agent_toolset
@@ -46,7 +46,7 @@ class Installer:
             "harness",
         }
     )
-    _CATALOG_DIRS = ("harness", "tools", "practices", "actions")
+    _CATALOG_DIRS = ("tools", "practices", "actions")
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
     _SKIP_ROOT_TOOLSET_NAMES = frozenset(
@@ -88,8 +88,8 @@ class Installer:
             self._state_file = self.path / self._STATE_NAME
         else:
             self._state_file = shared_state
-        from installation.hooks.hooks import HookInstallation
-        from installation.mcp.mcp_server import McpInstallation
+        from harness.hooks.hooks import HookInstallation
+        from harness.mcp.mcp_server import McpInstallation
 
         self.ensure_import_path(self.repo)
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
@@ -107,7 +107,7 @@ class Installer:
 
     @classmethod
     def import_path_entries(cls, repo: Path | str) -> list[str]:
-        """Repo root plus catalog folders. Never includes ``installation/`` (that shadows the MCP SDK)."""
+        """Repo root plus tools, practices, and actions. Never ``installation/`` or ``harness/`` (those shadow the MCP SDK)."""
         root = Path(repo).resolve()
         entries = [str(root)]
         for name in cls._CATALOG_DIRS:
@@ -258,7 +258,7 @@ class Installer:
             InstallDestination.RULE,
         ):
             if destination in destinations:
-                markdown = MarkdownInstallation(
+                markdown = FileInstallation(
                     self.ide,
                     self.path,
                     destination,
@@ -303,8 +303,8 @@ class Installer:
     @agent_tool
     def install(self, toolsets: Iterable[Any] | None = None) -> Any:
         """Install annotated toolsets into the IDE path — skills, commands, rules, MCP, and hooks. Runs clean first."""
-        from installation.hooks.hooks import HookInstallation
-        from installation.mcp.mcp_server import McpInstallation
+        from harness.hooks.hooks import HookInstallation
+        from harness.mcp.mcp_server import McpInstallation
 
         self.clean()
         self._installed_paths = []
@@ -336,7 +336,7 @@ class Installer:
         return self._mcp
 
     def ensure_mcp_host(self, payload: dict[str, Any] | None = None) -> str:
-        from installation.mcp.mcp_server import McpInstallation
+        from harness.mcp.mcp_server import McpInstallation
 
         return McpInstallation(self.ide, self.path, repo=self.repo).ensure_cursor_host()
 

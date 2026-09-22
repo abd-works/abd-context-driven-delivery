@@ -7,13 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Class cls, Function init, Class constructed
-where
-  inSubject(cls) and
-  ownerClass(init, cls) and
-  constructsTypeInInit(init, constructed)
-select cls,
-  "Class '" + cls.getName() + "' constructs '" + constructed.getName() + "' inside __init__.",
-  init
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "use-explicit-dependencies")
+select subject, message, contributor

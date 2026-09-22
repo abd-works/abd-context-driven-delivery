@@ -26,10 +26,10 @@ Markdown channel for *Echo* and *PromptEcho*. Same types as `prompt-echo-model.p
 
 ---
 
-# installation/hooks/prompt_echo
+# tools/prompt_echo
 - **Purpose:** Mark members with *Echo* and toast on `preToolUse`.
 - **Seam (terms):** Echo, PromptEcho, catalog, detect, detect_echo, handle, show_ide_toast, inject_rules_toast
-- **Dependencies (one-way):** installation (Destination), installation/hooks (HookPayload, HookResult), harness/agent_tools (AgentTool, AgentToolSet)
+- **Dependencies (one-way):** installation (Destination), harness/hooks (HookPayload, HookResult), harness/agent_tools (AgentTool, AgentToolSet)
 
 ## Echo : Destination
 
@@ -55,6 +55,7 @@ catalog: list[tuple[str, str]]
 ----
 on_pre_tool_use(hook_payload: HookPayload): HookResult
 	// after handle, always show_ide_toast when user_message is present
+	-> PromptEcho.install_ide_toast_extension
 	-> PromptEcho.handle
 	-> PromptEcho.show_ide_toast
 handle(hook_payload: HookPayload, toolsets: list[AgentToolSet] | None): HookResult
@@ -82,7 +83,7 @@ install_ide_toast_extension(): Path
 # harness/guidance_actions
 - **Purpose:** One *Echo* on `begin` covers every action kit.
 - **Seam (terms):** GuidanceAction.begin
-- **Dependencies (one-way):** installation/hooks/prompt_echo (Echo, inject_rules_toast, show_ide_toast)
+- **Dependencies (one-way):** tools/prompt_echo (Echo, inject_rules_toast, show_ide_toast)
 
 ## GuidanceAction
 
@@ -121,7 +122,7 @@ sketch(guidance): str
 # harness/guidance
 - **Purpose:** Practice and fidelity prompts toast independently of actions.
 - **Seam (terms):** PracticeGuidance.instructions, FidelityGuidance.instructions
-- **Dependencies (one-way):** installation/hooks/prompt_echo (Echo)
+- **Dependencies (one-way):** tools/prompt_echo (Echo)
 
 ## PracticeGuidance
 

@@ -8,6 +8,6 @@ import python
 import subject_filter
 import model
 
-from File caller, File callee
+from Module caller, Module callee
 where moduleDependsOn(caller, callee)
-select caller, caller.getRelativePath(), callee
+select caller, caller.getFile().getRelativePath(), callee

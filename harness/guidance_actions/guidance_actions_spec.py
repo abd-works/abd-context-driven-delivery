@@ -24,7 +24,7 @@ sys.path[:] = [
 if _root in sys.path:
     sys.path.remove(_root)
 sys.path.insert(0, _root)
-for _cat in ("harness", "tools", "practices", "actions"):
+for _cat in ("tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p in sys.path:
         sys.path.remove(_p)
@@ -48,7 +48,7 @@ from mamba import description, it
 
 with description("GuidanceAction"):
     with it("should skip opening a work session when begin runs"):
-        from guidance_actions import GuidanceAction
+        from harness.guidance_actions import GuidanceAction
 
         tmp = Path(tempfile.mkdtemp(prefix="guidance-action-default-"))
         kit = GuidanceAction(path=str(tmp))
@@ -57,7 +57,7 @@ with description("GuidanceAction"):
         expect(warning).to(equal(""))
 
     with it("should run the passed operation once when guidance is a string"):
-        from guidance_actions import GuidanceAction
+        from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-run-"))))
         seen: list = []
@@ -65,7 +65,7 @@ with description("GuidanceAction"):
         expect(seen).to(equal(["just this text"]))
 
     with it("should treat a module class ref as a listed Guidance"):
-        from guidance_actions import GuidanceAction
+        from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-ref-"))))
         kit._bind_guidance(
@@ -76,7 +76,7 @@ with description("GuidanceAction"):
         expect(type(listed[0]).__name__).to(equal("CleanEngineering"))
 
     with it("should run the passed operation on each Guidance when guidance is a list"):
-        from guidance_actions import GuidanceAction
+        from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-run-"))))
         first, second = object(), object()
@@ -97,7 +97,7 @@ with description("GuidanceAction"):
         )
         expect("sample rule one" in (result.get("additional_context") or "")).to(equal(True))
         expect(getattr(type(kit).inject_rules, "_echo", False)).to(equal(True))
-        from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
+        from prompt_echo.prompt_echo import TOAST_NOTICE
 
         notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
         expect(notice).to(contain("generate"))

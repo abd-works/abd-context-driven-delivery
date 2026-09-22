@@ -7,11 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Class cls, Function f
-where
-  inSubject(cls) and
-  ownerClass(f, cls) and
-  accessorOperation(f)
-select cls, "Class '" + cls.getName() + "' exposes '" + f.getName() + "' as an accessor.", f
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "use-property-not-accessor")
+select subject, message, contributor

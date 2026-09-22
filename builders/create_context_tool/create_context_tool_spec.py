@@ -21,7 +21,7 @@ for _p in [
 import practices  # noqa: F401
 from harness.harness.runner import InstructionRunRequest, InstructionRunner
 from harness.instructions import Instruction
-from agent_tools import AgentToolSet
+from harness.agent_tools import AgentToolSet
 from harness.harness.toolset_loader import ToolsetLoader
 
 _CREATE_DIR = Path(__file__).resolve().parent

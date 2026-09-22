@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from actions.scan.rule import Rule
+from actions.validate.rule import Rule
 
 from .graph_rules import GraphRule
 
@@ -14,14 +14,16 @@ def load_graph_rules_from_markdown() -> List[GraphRule]:
     from practices.clean_engineering.clean_engineering import CleanEngineering
     from practices.ddd.ddd import Ddd
     from practices.stories.stories import Stories
+    from practices.ux.ux import Ux
 
     wrapped: List[GraphRule] = []
     for practice, guidance in (
         ("stories", Stories()),
         ("clean_engineering", CleanEngineering()),
         ("ddd", Ddd()),
-        ("bdd", Bdd()),
-    ):
+            ("bdd", Bdd()),
+            ("ux", Ux()),
+        ):
         wrapped.extend(_wrap(guidance.rules, practice=practice, shared=True))
         fidelities = getattr(guidance, "fidelities", None)
         if fidelities is None:

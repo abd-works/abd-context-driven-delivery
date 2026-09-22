@@ -1,8 +1,8 @@
 ## Language
 
-*Tools* are utilities beside the lifecycle kits — workspace, git, echo, handoff, diagnose — not practices and not `/generate`.
+*Tools* are utilities beside the lifecycle kits — workspace, git, echo, prompt echo, handoff, diagnose — not practices and not `/generate`.
 
-Build order: `tools/workspace` → `tools/git` → `tools/record_decisions` → `tools/echo` → `tools/handoff` → `tools/workflow` → `tools/plan` → `tools/diagnose` → `tools/context_setup` → `tools/catalog_generator`
+Build order: `tools/workspace` → `tools/git` → `tools/record_decisions` → `tools/echo` → `tools/prompt_echo` → `tools/prompt_log` → `tools/handoff` → `tools/workflow` → `tools/plan` → `tools/diagnose` → `tools/context_setup` → `tools/catalog_generator`
 
 ---
 
@@ -50,6 +50,28 @@ Do not batch or invent CDRs. Number them sequentially under `{root}/.context/cdr
 - **Purpose:** Wrap instructions in a DO-NOT-FOLLOW fence so a human can read them without the agent executing them.
 - **Seam (terms):** Echo, fence
 - **Dependencies (one-way):** `harness/agent_tools`
+
+---
+
+# tools/prompt_echo
+- **Purpose:** Toast the invoked action, practice, fidelity, or guideline on Cursor `preToolUse`.
+- **Seam (terms):** Echo, PromptEcho
+- **Dependencies (one-way):** `harness/hooks`, `harness/agent_tools`
+
+## Constraint
+
+Mark members with `@echo` from `prompt_echo.prompt_echo`. That mark is not the fenced *Echo* toolset.
+
+---
+
+# tools/prompt_log
+- **Purpose:** Append a read-only audit of what Cursor sent the model on hook events.
+- **Seam (terms):** PromptLog
+- **Dependencies (one-way):** `harness/hooks`, `harness/agent_tools`
+
+## Constraint
+
+`@Hooks(disabled=True)` on PromptLog skips every audit handler.
 
 ---
 

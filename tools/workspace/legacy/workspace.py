@@ -15,16 +15,16 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
 from record_decisions.record_decisions import RecordDecisions
 from workspace.legacy.context_index import ContextIndex
 from git import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
-from agent_tools.agent_tools import agent_tool, agent_toolset
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
-from installation.hooks.hooks import hook, hooks
-from installation.hooks.session_logs import (
+from harness.agent_tools.agent_tools import agent_tool, agent_toolset
+from installation.files import skill
+from harness.mcp.mcp_server import mcp
+from harness.hooks.hooks import hook, hooks
+from harness.hooks.session_logs import (
     clear_active_session,
     consolidate_logs_for_close,
     write_active_session,
@@ -449,7 +449,7 @@ class Turn:
         expansion or run entry in the session events.log. Falls back to
         empty strings when no log is available.
         """
-        from installation.hooks.session_logs import session_logs_dir, active_session_name
+        from harness.hooks.session_logs import session_logs_dir, active_session_name
 
         root = Path(__file__).resolve().parents[2]
         log_file = session_logs_dir(root) / "events.log"

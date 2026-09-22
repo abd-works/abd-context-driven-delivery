@@ -1,2 +1,2 @@
-"""Catalog-folder import: ``from guidance_actions import GuidanceAction``."""
+"""Harness guidance actions — ``from harness.guidance_actions import GuidanceAction``."""
 from .guidance_actions import *  # noqa: F403

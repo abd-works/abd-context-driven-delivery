@@ -8,6 +8,6 @@ import python
 import subject_filter
 import model
 
-from File a, File b
+from Module a, Module b
 where cyclicModules(a, b)
-select a, a.getRelativePath(), b
+select a, a.getFile().getRelativePath(), b

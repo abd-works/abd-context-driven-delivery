@@ -7,10 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f
-where inSubject(f) and tooManyParameters(f)
-select f,
-  "Operation '" + f.getName() + "' takes " + domainParameterCount(f).toString() +
-    " parameters (prefer 0-2).", f
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "limit-operation-parameters")
+select subject, message, contributor

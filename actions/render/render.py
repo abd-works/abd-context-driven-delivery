@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools.agent_tools import agent_toolset
-from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import Skill
-from installation.mcp.mcp_server import Mcp
+from harness.agent_tools.agent_tools import agent_tool
+from installation.files import Skill
+from harness.mcp.mcp_server import Mcp
 
 @agent_toolset
 class Render(GuidanceAction):

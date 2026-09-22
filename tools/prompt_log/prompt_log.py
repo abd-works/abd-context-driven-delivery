@@ -14,16 +14,12 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-for _category in ("harness", "tools"):
-    _entry = str(_REPO_ROOT / _category)
-    if _entry not in sys.path:
-        sys.path.insert(0, _entry)
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from agent_tools import agent_toolset
-from installation.hooks.hooks import Hook, Hooks
+from harness.agent_tools.agent_tools import agent_toolset
+from harness.hooks.hooks import Hook, Hooks
 _PREVIEW_LINES = 8
 _PREVIEW_CHARS = 600
 
@@ -33,7 +29,7 @@ def log_path() -> Path:
     override = os.environ.get("PROMPT_LOG_PATH")
     if override:
         return Path(override)
-    from installation.hooks.session_logs import session_log_path
+    from harness.hooks.session_logs import session_log_path
 
     return session_log_path(_REPO_ROOT, "prompt-log.txt")
 

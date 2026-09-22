@@ -1,4 +1,4 @@
-"""DDD types on the practice graph — wrap live DDD types."""
+"""CodeQL graph types for DDD — wrap live DDD types."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from practices.ddd.model.nodes import (
 )
 from practices.ddd.model.stereotypes import plain_class_name
 
-from practices.clean_engineering.model.codeql.clean_engineering import OoadClass, _Members
+from practices.clean_engineering.model.codeql.codeql_model import OoadClass, _Members
 from harness.knowledge_graph.model.graph_node import Node
 
 

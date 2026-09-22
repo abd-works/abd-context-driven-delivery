@@ -9,10 +9,10 @@ from typing import Any, Iterator
 
 from harness.agent_tools.agent_tools import collect, agent_toolset, instructions, tools
 from harness.markdown.markdown import MarkdownCollection
-from installation.hooks.hooks import Hook
-from installation.hooks.prompt_echo.prompt_echo import echo
+from harness.hooks.hooks import Hook
+from prompt_echo.prompt_echo import echo
 
-from .scanner import Scanner
+from actions.scan.scanner import Scanner
 
 class AppliesTo:
     """Cursor attach data for a rules section — owned in the practice markdown fence."""
@@ -118,7 +118,7 @@ class RulesCollection(MarkdownCollection):
     @echo
     @Hook("postToolUse")
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        from installation.hooks.prompt_echo.prompt_echo import PromptEcho
+        from prompt_echo.prompt_echo import PromptEcho
 
         data = payload or {}
         path = self._payload_path(data)

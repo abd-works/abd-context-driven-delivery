@@ -38,19 +38,19 @@ with description("a shared rules section containing scanner bullets") as self:
             expect(self.guidance.rules.matches("pkg/other.py")).to(equal(False))
 
         with it("should match any file when always_apply and the bag has no glob"):
-            from actions.scan.rule import AppliesTo, RulesCollection
+            from actions.validate.rule import AppliesTo, RulesCollection
 
             bag = RulesCollection(applies_to=AppliesTo(always_apply=True))
             expect(bag.matches("pkg/notes.md")).to(equal(True))
             expect(bag.matches("C:/dev/repo/src/app.py")).to(equal(True))
 
         with it("should not treat a trailing directory ** as every filename"):
-            from actions.scan.rule import AppliesTo, RulesCollection
+            from actions.validate.rule import AppliesTo, RulesCollection
 
             bag = RulesCollection(
                 applies_to=AppliesTo(globs="**/*agent_spec*,**/.agent_bdd_sessions/**")
             )
-            expect(bag.matches("actions/scan/rule.py")).to(equal(False))
+            expect(bag.matches("actions/validate/rule.py")).to(equal(False))
             expect(bag.matches("foo/bar_agent_spec.py")).to(equal(True))
 
         with it("should not inject AgentBdd rules for a production python file"):
@@ -59,7 +59,7 @@ with description("a shared rules section containing scanner bullets") as self:
             result = AgentBdd().rules.inject_rules(
                 {
                     "tool_name": "Write",
-                    "tool_input": {"path": "actions/scan/rule.py"},
+                    "tool_input": {"path": "actions/validate/rule.py"},
                 }
             )
             expect(result).to(equal({}))
@@ -80,7 +80,7 @@ with description("a shared rules section containing scanner bullets") as self:
             expect(result.get("additional_context")).to(contain("sample rule one"))
 
         with it("should inject nothing from a rules collection that has no parent"):
-            from actions.scan.rule import RulesCollection
+            from actions.validate.rule import RulesCollection
 
             result = RulesCollection().inject_rules(
                 {

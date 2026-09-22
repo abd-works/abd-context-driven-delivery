@@ -1,5 +1,6 @@
 """BDD specs for installer @Hook dispatch."""
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -9,7 +10,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("harness", "tools"):
+for _cat in ("tools",):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -18,11 +19,12 @@ sys.modules.pop("hooks", None)
 
 from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
-from agent_tools import agent_toolset
+from harness.agent_tools import agent_toolset
 
 from harness.agent_tools.agent_tools import agent_tool
-from installation.hooks.hook_server import CursorEvent, HandlerCatalog, HookPayload, HookServer
-from installation.hooks.hooks import Hook, Hooks
+from harness.hooks.hook_server import CursorEvent, HandlerCatalog, HookPayload, HookServer
+from harness.hooks.hooks import Hook, Hooks
+from installation.installer import Installer
 
 
 def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
@@ -270,7 +272,7 @@ with description("session hook logs"):
         with it("should create default session logs under .sessions/default/logs"):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
-                from installation.hooks.session_logs import (
+                from harness.hooks.session_logs import (
                     ensure_default_session,
                     session_log_path,
                 )
@@ -395,11 +397,12 @@ with description("the Cursor hook_server.py command"):
             [
                 sys.executable,
                 "-u",
-                str(_REPO_ROOT / "installation" / "hooks" / "hook_server.py"),
+                str(_REPO_ROOT / "harness" / "hooks" / "hook_server.py"),
             ],
             input=b'{"hook_event_name":"sessionStart"}',
             cwd=str(_REPO_ROOT),
             capture_output=True,
+            env={**os.environ, "PYTHONPATH": Installer.pythonpath(_REPO_ROOT)},
         )
         expect(proc.returncode).to(equal(0))
         expect(json.loads(proc.stdout.decode("utf-8"))["permission"]).to(equal("allow"))

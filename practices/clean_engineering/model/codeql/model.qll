@@ -23,7 +23,52 @@ predicate publicMethod(Class cls, Function method) {
 
 int publicMethodCount(Class cls) { result = count(Function method | publicMethod(cls, method)) }
 
-predicate tooManyPublicMethods(Class cls) { publicMethodCount(cls) > 10 }
+bindingset[name]
+string identToken(string name) { result = name.toLowerCase().regexpFind("[a-z][a-z0-9]*", _, _) }
+
+/** A public method — QL splits identifiers; Python WordNet decides which tokens are nouns. */
+class PublicOperation extends Function {
+  Class owner;
+
+  PublicOperation() { publicMethod(owner, this) }
+
+  Class getOwner() { result = owner }
+
+  string getAToken() {
+    result = identToken(this.getName())
+    or
+    exists(Attribute field |
+      field.getScope() = this and
+      field.getObject().(Name).getId() = "self" and
+      result = identToken(field.getName())
+    )
+    or
+    exists(Parameter p |
+      domainParameter(this, p) and result = identToken(p.getName())
+    )
+    or
+    exists(Attribute attr, Call call |
+      call.getScope() = this and
+      call.getFunc() = attr and
+      attr.getObject().(Name).getId() = "self" and
+      result = identToken(attr.getName())
+    )
+    or
+    exists(Call call |
+      call.getScope() = this and result = identToken(call.getFunc().(Name).getId())
+    )
+  }
+}
+
+class ClassWithOperations extends Class {
+  ClassWithOperations() { exists(PublicOperation op | op.getOwner() = this) }
+
+  int getPublicOperationCount() { result = count(PublicOperation op | op.getOwner() = this) }
+}
+
+predicate tooManyPublicMethods(Class cls) {
+  cls.(ClassWithOperations).getPublicOperationCount() > 3
+}
 
 predicate domainParameter(Function f, Parameter p) {
   p = f.getAnArg() and
@@ -33,10 +78,18 @@ predicate domainParameter(Function f, Parameter p) {
 
 int domainParameterCount(Function f) { result = count(Parameter p | domainParameter(f, p)) }
 
-predicate tooManyParameters(Function f) { domainParameterCount(f) > 2 }
+predicate tooManyParameters(Function f) {
+  f.getName() != "__init__" and
+  domainParameterCount(f) > 2
+}
 
 int operationLineCount(Function f) {
-  result = f.getLocation().getEndLine() - f.getLocation().getStartLine() + 1
+  result =
+    max(int line |
+      exists(AstNode n | n.getScope() = f | line = n.getLocation().getEndLine())
+      or
+      line = f.getLocation().getEndLine()
+    ) - f.getLocation().getStartLine() + 1
 }
 
 predicate longOperation(Function f) { operationLineCount(f) > 20 }
@@ -123,6 +176,7 @@ predicate bagClass(Class bag) {
 }
 
 predicate doerOnBag(Class doer, Class bag) {
+  inSubject(bag) and
   bagClass(bag) and
   doer != bag and
   exists(Function method | publicMethod(doer, method) and method.getName() != "__init__") and
@@ -133,17 +187,84 @@ predicate doerOnBag(Class doer, Class bag) {
         p.getName().toLowerCase() = bag.getName().toLowerCase()
         or
         p.getAnnotation().(Name).getId() = bag.getName()
+      ) and
+      usesParameterField(method, p, _)
+    )
+  )
+}
+
+predicate iterationName(For loop, string name) {
+  loop.getTarget().(Name).getId() = name
+  or
+  loop.getTarget().(Tuple).getAnElt().(Name).getId() = name
+}
+
+predicate iteratesParameter(Function f, Parameter p, For loop) {
+  domainParameter(f, p) and
+  loop.getScope() = f and
+  (
+    loop.getIter().(Name).getId() = p.getName()
+    or
+    exists(Call call |
+      loop.getIter() = call and
+      call.getFunc().(Attribute).getObject().(Name).getId() = p.getName()
+    )
+  )
+}
+
+predicate dataAttribute(Attribute attr) { not exists(Call call | call.getFunc() = attr) }
+
+predicate usesParameterField(Function f, Parameter p, Expr e) {
+  domainParameter(f, p) and
+  e.getScope() = f and
+  exists(Attribute attr |
+    attr = e and
+    dataAttribute(attr) and
+    (
+      attr.getObject().(Name).getId() = p.getName()
+      or
+      exists(For loop, string name |
+        iteratesParameter(f, p, loop) and
+        iterationName(loop, name) and
+        attr.getObject().(Name).getId() = name
       )
     )
   )
 }
 
+predicate inComputation(Expr e) {
+  exists(BinaryExpr bin | e = bin.getLeft() or e = bin.getRight())
+  or
+  exists(Compare cmp | e = cmp.getLeft())
+  or
+  exists(Compare cmp, int i | e = cmp.getComparator(i))
+  or
+  exists(BoolExpr b, int i | e = b.getValue(i))
+  or
+  exists(UnaryExpr u | e = u.getOperand())
+  or
+  exists(AugAssign a | e = a.getValue() or e = a.getTarget())
+}
+
+predicate usesSelfField(Function f, Expr e) {
+  exists(Attribute attr |
+    attr = e and
+    attr.getScope() = f and
+    attr.getObject().(Name).getId() = "self"
+  )
+  or
+  exists(Subscript sub |
+    sub = e and
+    sub.getScope() = f and
+    sub.getObject().(Name).getId() = "self"
+  )
+}
+
 predicate envies(Function f, Parameter p) {
   domainParameter(f, p) and
-  count(Attribute attr |
-    attr.getScope() = f and
-    attr.getObject().(Name).getId() = p.getName()
-  ) >= 3
+  count(Expr e | usesParameterField(f, p, e) and inComputation(e)) >= 2 and
+  count(Expr e | usesParameterField(f, p, e) and inComputation(e)) >=
+    count(Expr e | usesSelfField(f, e))
 }
 
 predicate untypedPublicParameter(Function f, Parameter p) {
@@ -173,9 +294,25 @@ predicate numberedParameter(Function f, Parameter p) {
 string normalizedPath(File f) { result = f.getRelativePath().replaceAll("\\", "/") }
 
 predicate skippedModulePath(string path) {
-  path.matches("%/examples/%") or
-  path.matches("%_spec.py") or
-  path.regexpMatch("(^|/)test_[^/]+\\.py$")
+  exists(File f | path = normalizedPath(f)) and
+  (
+    path.matches("%/examples/%") or
+    path.matches("%_spec.py") or
+    path.regexpMatch("(^|/)test_[^/]+\\.py$")
+  )
+}
+
+string enclosingFirstClassPrefix(string path) {
+  exists(File f | path = normalizedPath(f)) and
+  firstClassModulePrefix(result) and
+  result != "" and
+  (path = result or path.matches(result + "/%")) and
+  not exists(string nested |
+    firstClassModulePrefix(nested) and
+    nested != result and
+    nested.matches(result + "/%") and
+    (path = nested or path.matches(nested + "/%"))
+  )
 }
 
 predicate firstClassModule(Module m) {
@@ -190,14 +327,8 @@ predicate classInFirstClassModule(Class cls, Module pkg) {
   firstClassModule(pkg) and
   inSource(cls) and
   not skippedModulePath(normalizedPath(cls.getLocation().getFile())) and
-  exists(string prefix |
-    firstClassModulePrefix(prefix) and
-    normalizedPath(pkg.getFile()) = prefix + "/__init__.py" and
-    (
-      normalizedPath(cls.getLocation().getFile()) = prefix + "/__init__.py" or
-      normalizedPath(cls.getLocation().getFile()).matches(prefix + "/%")
-    )
-  )
+  enclosingFirstClassPrefix(normalizedPath(cls.getLocation().getFile())) =
+    enclosingFirstClassPrefix(normalizedPath(pkg.getFile()))
 }
 
 int classCount(Module pkg) {
@@ -226,14 +357,21 @@ predicate shallowModule(Module m) {
 
 predicate moduleDependsOn(Module caller, Module callee) {
   caller != callee and
-  exists(Function callerFn, Function calleeFn |
-    inSource(callerFn) and
-    inSource(calleeFn) and
-    callerFn.getEnclosingModule() = caller and
-    calleeFn.getEnclosingModule() = callee and
-    exists(Call call |
-      call.getScope() = callerFn and
-      call.getFunc().(Attribute).getName() = calleeFn.getName()
+  (
+    exists(Function callerFn, Function calleeFn |
+      inSource(callerFn) and
+      inSource(calleeFn) and
+      callerFn.getEnclosingModule() = caller and
+      calleeFn.getEnclosingModule() = callee and
+      exists(Call call |
+        call.getScope() = callerFn and
+        call.getFunc().(Attribute).getName() = calleeFn.getName()
+      )
+    )
+    or
+    exists(Import imp |
+      imp.getScope() = caller and
+      callee.getFile().getBaseName() = imp.getAnImportedModuleName() + ".py"
     )
   )
 }
@@ -252,4 +390,28 @@ predicate passThrough(Function f) {
     not exists(Call other | other.getScope() = f and other != call) and
     not exists(Return other | other.getScope() = f and other != ret)
   )
+}
+
+predicate moduleContextSourceFile(File f) {
+  f.getExtension() = "py" and
+  not f.getBaseName() = "__init__.py" and
+  not f.getBaseName() = "register.py" and
+  not f.getBaseName().matches("%_spec.py") and
+  not f.getBaseName().matches("test_%") and
+  not f.getBaseName().matches("%_test.py") and
+  not normalizedPath(f).matches("%/scanners/%") and
+  not normalizedPath(f).matches("%/templates/%")
+}
+
+/** A class whose folder should own `.context/module-context.md`. Markdown is not in the Python DB — Python reads the file after this row. */
+predicate moduleOwningClass(Class cls) {
+  inSubject(cls) and
+  publicName(cls.getName()) and
+  moduleContextSourceFile(cls.getLocation().getFile()) and
+  not skippedModulePath(normalizedPath(cls.getLocation().getFile()))
+}
+
+string moduleOwningClassPath(Class cls) {
+  moduleOwningClass(cls) and
+  result = cls.getLocation().getFile().getAbsolutePath()
 }

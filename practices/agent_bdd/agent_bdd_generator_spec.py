@@ -23,7 +23,7 @@ from harness.agent_tools.agent_tools import AgentToolSet
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import practices  # noqa: F401
 from harness.markdown import Markdown
-from agent_tools import AgentToolSet
+from harness.agent_tools import AgentToolSet
 from validate.validate import Validate
 from practices.bdd.bdd import Bdd
 

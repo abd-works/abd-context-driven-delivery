@@ -39,7 +39,7 @@ class NodeRules:
         if self._fidelity is not None:
             hits = [hit for hit in hits if hit.fidelity == self._fidelity]
         if self._direct_only:
-            closest = closest_fidelity(self._node.practice, self._node._semantic_type_name)
+            closest = closest_fidelity(self._node.practice, self._node.semantic_type())
             hits = [hit for hit in hits if hit.fidelity == closest]
         if self._rule_slug is not None:
             hits = [hit for hit in hits if hit.rule_slug == self._rule_slug]
@@ -64,13 +64,13 @@ class NodeRules:
 
     @property
     def closest_fidelity(self) -> Optional[str]:
-        return closest_fidelity(self._node.practice, self._node._semantic_type_name)
+        return closest_fidelity(self._node.practice, self._node.semantic_type())
 
     @property
     def applicable_rule_slugs(self) -> List[str]:
         rules = self.graph.rule_registry.rules_for_node(
             practice=self._node.practice,
-            semantic_type=self._node._semantic_type_name,
+            semantic_type=self._node.semantic_type(),
         )
         return [rule.slug for rule in rules]
 

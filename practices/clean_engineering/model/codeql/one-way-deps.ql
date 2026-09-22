@@ -7,12 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from File a, File b
-where
-  inSubjectPath(a.getRelativePath()) and
-  cyclicModules(a, b) and
-  a.getRelativePath() < b.getRelativePath()
-select a,
-  "File '" + a.getRelativePath() + "' and '" + b.getRelativePath() + "' depend on each other.", b
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "one-way-deps")
+select subject, message, contributor

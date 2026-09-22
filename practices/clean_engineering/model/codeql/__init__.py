@@ -1,6 +1,6 @@
-"""Clean Engineering types and CodeQL queries on the practice graph."""
+"""CodeQL graph types for Clean Engineering."""
 
-from .clean_engineering import (
+from .codeql_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,

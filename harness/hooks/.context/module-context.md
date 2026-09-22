@@ -1,40 +1,37 @@
-# hooks
+## Language
 
-Object model: [hooks-runtime-model.md](hooks-runtime-model.md)
+*Hook* is an operation Cursor may call when a named IDE event fires. The author marks the member; install writes Cursor’s hook files; Cursor starts `hook_server.py` with stdin JSON and gets one merged result.
 
-## Purpose
+Object model: [hooks-runtime-model.md](hooks-runtime-model.md). Toast work lives in [tools/prompt_echo](../../tools/prompt_echo/.context/module-context.md).
 
-Connect Cursor IDE hook events to Python toolset methods. Authors mark an operation with `@hook("sessionStart")` from `installation.marks`. `Installer.install` runs `HookInstallation`, which wires `hook_server.py` into `.cursor/hooks.json`.
+### Hook
 
-## Author annotation
+- Put `@Hook("sessionStart")` (or `hook`) on a toolset member so that Cursor event runs the method.
+- The body receives the event payload and returns the fields Cursor reads (`permission`, `continue`, `user_message`, `agent_message`, `followup_message`, `additional_context`).
+- **Invariant:** the event string is one of `Hook.EVENTS`. Unknown names fail at decoration.
 
-| Annotation | Role |
-| --- | --- |
-| `@hook("event")` | Required Cursor event on an operation. Sets `_hook` and `_hook_name`. |
-| `@hooks(disabled=True)` | Class annotation. Skips every hook on that toolset. |
+### Hooks
 
-Valid events include `CURSOR_EVENTS` in `installer/marks.py` (`sessionStart`, `beforeSubmitPrompt`, `beforeReadFile`, `subagentStart`, `preToolUse`, …).
+- Put `@Hooks(disabled=True)` above `@agent_toolset` to skip every hook on that class. PromptLog uses this today; PromptEcho does not.
 
-## Toolsets
+### HookInstallation
 
-| Toolset | Events | Role |
-| --- | --- | --- |
-| `Turn` | `afterAgentResponse` | Auto-commit; `@hooks(disabled=True)` |
-| `PromptLog` | `beforeSubmitPrompt`, `beforeReadFile`, `preToolUse`, `subagentStart`, `afterAgentResponse` | Audit log |
-| `PromptEcho` | `preToolUse` | Action-name echo; `@hooks(disabled=True)` |
+- `Installer.install` walks marked members here. The writer records handlers and points each distinct event at `hook_server.py`.
+- `@Hook` and `@mcp` on the same operation stay two independent installs.
 
-Dispatch puts each handler’s `tool.docstring` on the merged event as `agent_message`.
+### HookServer
 
-## Seam
+- Cursor’s stdin process for every hooked event. Authors do not start it by hand; install wires the command.
 
-1. **Declare** — `@hook` on a toolset method; body receives Cursor stdin JSON.
-2. **Install** — `HookInstallation` writes dispatch entries in `hooks.json` and refs in `hook-handlers.json`.
-3. **HookServer** — Cursor’s stdin process; loads the catalog, runs enabled handlers, and merges one `HookResult`.
+Build order: `installation` → `harness/hooks`
 
-Disable example: `@hooks(disabled=True)` on `Turn` and `PromptEcho`.
+---
 
-## Public API
+# harness/hooks
+- **Purpose:** Mark a member `@Hook("event")` so Cursor stdin events run that Python and return one merged result.
+- **Seam (terms):** Hook, Hooks, HookInstallation, HookServer
+- **Dependencies (one-way):** `installation` (*Destination*, *Installation*), `harness/agent_tools`
 
-- Install mark: `installation.marks.hook`, `CURSOR_EVENTS`
-- Installer: `HookInstallation`
-- Runtime: `HookServer`, `HookPayload`, `HookResult`, `HandlerCatalog`, `HookHandler`
+## Constraint
+
+The event name is the Cursor event (`sessionStart`, `preToolUse`, …) from `Hook.EVENTS` in `harness.hooks.hooks`. `@Hooks(disabled=True)` on a toolset skips every hook on it. *Echo* / *PromptEcho* live in `tools/prompt_echo`.

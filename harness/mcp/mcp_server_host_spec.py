@@ -18,10 +18,10 @@ from mamba import context, description, it
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-_HOSTING_DEMO = "installation.mcp.examples.hosting_demo.hosting_demo:HostingDemo"
+_HOSTING_DEMO = "harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo"
 _ECHO = "echo.echo:Echo"
 _PARAMETER_TYPES = (
-    "installation.mcp.examples.parameter_types.parameter_types:ParameterTypes"
+    "harness.mcp.examples.parameter_types.parameter_types:ParameterTypes"
 )
 _ECHO_ARGUMENTS = {
     "text": "parcel",
@@ -56,7 +56,7 @@ def _run_async(coro):
 def _host_params(toolsets: str) -> StdioServerParameters:
     return StdioServerParameters(
         command=str(_PYTHON),
-        args=["-m", "installation.mcp", "--toolsets", toolsets],
+        args=["-m", "harness.mcp", "--toolsets", toolsets],
         cwd=str(_REPO_ROOT),
         env={**__import__("os").environ, "PYTHONPATH": _PYTHONPATH},
     )

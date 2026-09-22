@@ -6,11 +6,10 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from guidance_actions import GuidanceArg, GuidanceAction
-from harness.agent_tools.agent_tools import AgentToolSet, agent_toolset
-from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import Skill
-from installation.mcp.mcp_server import Mcp
+from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.agent_tools.agent_tools import AgentToolSet, agent_tool, agent_toolset
+from installation.files import Skill
+from harness.mcp.mcp_server import Mcp
 
 from .scanner import Scanner
 from .scanner_collection import ScannerCollection, ScannerReport

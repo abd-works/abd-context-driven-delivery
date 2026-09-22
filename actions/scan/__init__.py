@@ -1,19 +1,8 @@
-"""Scan action kit and shared scanner engine: named rules, path + files, violations."""
+"""Scan action kit and shared scanner engine: path + files, violations."""
 
 from __future__ import annotations
 
-from .rule import Rule, RulesCollection
-from .scan import Scan, ScanReport
-from .scanner import SKIP_DIR_NAMES, Scanner
-from .scanner_collection import ScannerCollection, ScannerReport
-from .scanner_runner import ScannerRunner
-from .violation import Violation
-
-run_scanner_main = ScannerRunner.run_scanner_main
-
 __all__ = [
-    "Rule",
-    "RulesCollection",
     "Scan",
     "ScanReport",
     "SKIP_DIR_NAMES",
@@ -24,3 +13,28 @@ __all__ = [
     "Violation",
     "run_scanner_main",
 ]
+
+_LAZY = {
+    "Scan": (".scan", "Scan"),
+    "ScanReport": (".scan", "ScanReport"),
+    "SKIP_DIR_NAMES": (".scanner", "SKIP_DIR_NAMES"),
+    "Scanner": (".scanner", "Scanner"),
+    "ScannerCollection": (".scanner_collection", "ScannerCollection"),
+    "ScannerReport": (".scanner_collection", "ScannerReport"),
+    "ScannerRunner": (".scanner_runner", "ScannerRunner"),
+    "Violation": (".violation", "Violation"),
+}
+
+
+def __getattr__(name: str):
+    if name == "run_scanner_main":
+        from .scanner_runner import ScannerRunner
+
+        return ScannerRunner.run_scanner_main
+    spec = _LAZY.get(name)
+    if spec is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attr = spec
+    from importlib import import_module
+
+    return getattr(import_module(module_name, __name__), attr)

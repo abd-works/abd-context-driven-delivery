@@ -17,17 +17,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import ClassVar
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-for _category in ("harness", "tools"):
-    _entry = str(_REPO_ROOT / _category)
-    if _entry not in sys.path:
-        sys.path.insert(0, _entry)
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from agent_tools import agent_toolset
+from harness.agent_tools.agent_tools import agent_toolset
 from installation.destination import Destination
-from installation.hooks.hooks import Hook
+from harness.hooks.hooks import Hook
 
 
 class Echo(Destination):
@@ -91,6 +87,7 @@ class PromptEcho:
 
     @Hook("preToolUse")
     def on_pre_tool_use(self, hook_payload: dict) -> dict:
+        self.install_ide_toast_extension()
         result = self.handle(hook_payload, toolsets=self.echo_toolsets())
         message = result.get("user_message")
         if message:

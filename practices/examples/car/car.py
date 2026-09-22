@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from agent_tools.agent_tools import agent_tool
+from harness.agent_tools.agent_tools import agent_tool
 
 _TRIP_HEADER = "===== TRIP LOG (read only) ====="
 _TRIP_FOOTER = "===== END TRIP LOG ====="

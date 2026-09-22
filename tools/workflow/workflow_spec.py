@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("harness", "tools", "practices", "actions"):
+for _cat in ("tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -343,13 +343,13 @@ with description("a WorkTicket"):
         context_dir.mkdir(parents=True)
         (context_dir / "workflow-packages.yaml").write_text(
             "packages:\n"
-            "  - location: installation/mcp\n"
+            "  - location: harness/mcp\n"
             "    layer: MCP Invocation Layer\n"
             "    theme: mcp-invocation-layer\n",
             encoding="utf-8",
         )
         expect(
-            WorkTicket.infer_theme("deploy harness for installation/mcp", tmp)
+            WorkTicket.infer_theme("deploy harness for harness/mcp", tmp)
         ).to(equal("mcp-invocation-layer"))
         expect(
             WorkTicket.infer_theme("MCP Invocation Layer host tests", tmp)

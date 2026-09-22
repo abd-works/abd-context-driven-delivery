@@ -4,10 +4,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from agent_tools import agent_instructions, agent_toolset, instructions, tools
-from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
+from harness.agent_tools.agent_tools import agent_tool
+from installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 _FORMAT_PATH = Path(__file__).parent / "CDR-FORMAT.md"
 _CDR_NAME_RE = re.compile(r"^(\d{4})-")

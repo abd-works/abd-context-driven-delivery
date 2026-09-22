@@ -7,9 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Class doer, Class bag
-where inSubject(doer) and doerOnBag(doer, bag)
-select doer,
-  "Class '" + doer.getName() + "' acts on bag '" + bag.getName() + "'.", bag
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "shape-classes-around-resources")
+select subject, message, contributor

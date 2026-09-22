@@ -69,7 +69,7 @@ with description("context guidance"):
             expect(getattr(inject, "_echo", False)).to(equal(True))
             expect(getattr(inject, "_hook", False)).to(equal(True))
             expect(getattr(inject, "_hook_name", "")).to(equal("postToolUse"))
-            from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
+            from prompt_echo.prompt_echo import TOAST_NOTICE
 
             notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
             expect(notice).to(contain("chat edit"))
@@ -84,7 +84,7 @@ with description("context guidance"):
 
         with it("should inject the matching fidelity rules when a practice file is written"):
             from practices.clean_engineering.clean_engineering import CleanEngineering
-            from installation.hooks.prompt_echo.prompt_echo import TOAST_NOTICE
+            from prompt_echo.prompt_echo import TOAST_NOTICE
 
             result = CleanEngineering().rules.inject_rules(
                 {

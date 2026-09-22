@@ -17,4 +17,4 @@ Workflow
 
 ## Package themes
 
-Ticket themes for impacted packages live in `.context/workflow-packages.yaml` at the repo root. `/tickets` and `WorkTicket.infer_theme` read that file — cite package location (for example `installation/mcp`) in issue bodies so the board gets the right `theme:` label.
+Ticket themes for impacted packages live in `.context/workflow-packages.yaml` at the repo root. `/tickets` and `WorkTicket.infer_theme` read that file — cite package location (for example `harness/mcp`) in issue bodies so the board gets the right `theme:` label.

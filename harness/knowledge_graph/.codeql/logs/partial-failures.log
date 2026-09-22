@@ -21,3 +21,184 @@ Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean
 ERROR: getASuperType() cannot be resolved for type Class::Class (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:82,59-72)
 
 
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+WARNING: The @id property should be a valid query identifier. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-12,4)
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-12,4)
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:119,1-143,32)
+[1/6 comp 10.8s] Compiled C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+ERROR: 'path' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\model.qll:175,36-40)
+ERROR: 'path' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\model.qll:181,41-45)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\graph_rules.py", line 273, in evaluate
+    batch = codeql.run_queries(queries)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 219, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+WARNING: The @id property should be a valid query identifier. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-12,4)
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-12,4)
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:119,1-143,32)
+[1/6 comp 10.8s] Compiled C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+ERROR: 'path' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\model.qll:175,36-40)
+ERROR: 'path' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\model.qll:181,41-45)
+
+
+run-queries codeql: CodeQLRunError: codeql bqrs decode failed for C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\results\cdd\clean-engineering-graph-query\put-logic-on-the-owning-resource.bqrs: 
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 277, in _evaluate_graph_rules
+    batch = codeql.run_queries(queries)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 226, in run_queries
+    return {query.stem: self._decode_bqrs(self._bqrs_for(db, query)) for query in queries}
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 255, in _decode_bqrs
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql bqrs decode failed for C:\dev\abd-cdd-code-ql-practice-semanti\.codeql\python-db\results\cdd\clean-engineering-graph-query\put-logic-on-the-owning-resource.bqrs: 
+
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+WARNING: The @id property should be a valid query identifier. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-12,4)
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-12,4)
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:119,1-143,32)
+[1/20] Found in cache: C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql:12,1-16,55)
+[2/20 comp 14.9s] Compiled C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\use-typed-signatures.ql.
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\use-typed-signatures.ql:12,1-15,87)
+[3/20 comp 13.6s] Compiled C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\use-typed-signatures.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\one-way-deps.ql.
+ERROR: Files::File is not compatible with Module::Module (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\one-way-deps.ql:15,3-22)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 277, in _evaluate_graph_rules
+    batch = codeql.run_queries(queries)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 223, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+WARNING: The @id property should be a valid query identifier. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-12,4)
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-12,4)
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:119,1-143,32)
+[1/20] Found in cache: C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql:12,1-16,55)
+[2/20 comp 14.9s] Compiled C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\use-typed-signatures.ql.
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\use-typed-signatures.ql:12,1-15,87)
+[3/20 comp 13.6s] Compiled C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\use-typed-signatures.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\one-way-deps.ql.
+ERROR: Files::File is not compatible with Module::Module (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\one-way-deps.ql:15,3-22)
+
+
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+WARNING: The @id property should be a valid query identifier. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-13,4)
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-13,4)
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:126,1-150,32)
+[1/20 comp 11.8s] Compiled C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+ERROR: 'field' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\model.qll:35,17-22)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 271, in _evaluate_graph_rules
+    batch = codeql.run_queries(queries)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 223, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+WARNING: The @id property should be a valid query identifier. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-13,4)
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-13,4)
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:126,1-150,32)
+[1/20 comp 11.8s] Compiled C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+ERROR: 'field' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\model.qll:35,17-22)
+
+
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+WARNING: The @id property should be a valid query identifier. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-13,4)
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-13,4)
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:126,1-150,32)
+[1/20] Found in cache: C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+ERROR: 'i' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\model.qll:210,27-28)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 271, in _evaluate_graph_rules
+    batch = codeql.run_queries(queries)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 223, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+WARNING: The @id property should be a valid query identifier. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-13,4)
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:1,1-13,4)
+WARNING: A problem query must select an even number of columns. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:126,1-150,32)
+[1/20] Found in cache: C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\deep-module.ql.
+ERROR: 'i' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\model.qll:210,27-28)
+
+
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+ERROR: 'name' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:54,36-40)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 271, in _evaluate_graph_rules
+    batch = codeql.run_queries(queries)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 223, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Resolving data extensions.
+Finished resolving data extensions.
+Error retrieving qlpack commit hash from Git repository
+Loading data extensions.
+Finished loading data extensions.
+Compiling query plan for C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql.
+ERROR: 'name' is not bound to a value. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\clean_engineering\model\codeql\do-not-invent-parallel-object-models.ql:54,36-40)
+
+

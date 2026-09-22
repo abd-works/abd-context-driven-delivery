@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("harness", "tools", "practices", "actions"):
+for _cat in ("tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -16,7 +16,7 @@ import yaml
 from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from agent_tools.examples.car import Car
+from harness.agent_tools.examples.car import Car
 from harness.agent_tools.agent_tools import (
     AgentInstructions,
     collect,
@@ -30,18 +30,18 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
     toolsetCollection,
 )
-from installation.hooks.hooks import hook
-from installation.mcp.mcp_server import mcp
+from harness.hooks.hooks import hook
+from harness.mcp.mcp_server import mcp
 from harness.agent_tools.agent_tools import AgentInstructions
 from actions.examples.car_story.car_story import CarStory
-from agent_tools.examples.super_delegation.super_delegation_demo import (
+from harness.agent_tools.examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
     EmptyWithReturn,
     ExplicitSuperChild,
     SuperBase,
 )
 from agent_bdd.yaml_fence import load_fenced
-from agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tools, instructions
+from harness.agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tools, instructions
 
 
 def car_instance(*, running: bool = False) -> Car:
@@ -216,7 +216,7 @@ with description("a class"):
 
         with context("when expand makes tools available to the chat"):
             with it("should tell the AI to display those tools by name and purpose in the user-visible reply"):
-                from agent_tools.examples.logged_probe import LoggedProbe
+                from harness.agent_tools.examples.logged_probe import LoggedProbe
 
                 response = LoggedProbe().instructions["narrate"].expand(
                     {},
@@ -271,9 +271,9 @@ with description("an action"):
 
     with context("that has templated string literals in the @agent_instructions body"):
         with it("should put {{param}} / {{self.attr}} values into expanded instructions"):
-            from agent_tools.examples.templated_md import TemplatedMdDemo
+            from harness.agent_tools.examples.templated_md import TemplatedMdDemo
 
-            from agent_tools.examples.templated_md import TemplatedMdDemo
+            from harness.agent_tools.examples.templated_md import TemplatedMdDemo
 
             response = TemplatedMdDemo(label="Desk").instructions["greet"].expand(
                 {},

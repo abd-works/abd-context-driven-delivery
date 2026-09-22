@@ -14,8 +14,12 @@ DEFAULT_SESSION = "default"
 _LEGACY_LOG_PATHS = (
     Path(".context") / "prompt-log.txt",
     Path("installation/hooks/dispatch.debug"),
+    Path("harness/hooks/dispatch.debug"),
     Path("installation/hooks/prompt_echo.debug"),
-    Path("installation/hooks/prompt_echo/prompt_echo.debug"),
+    Path("tools/prompt_echo.debug"),
+    Path("tools/prompt_echo/prompt_echo.debug"),
+    Path("tools/prompt_log.debug"),
+    Path("tools/prompt_log/prompt_log.debug"),
 )
 
 

@@ -20,7 +20,7 @@ for _p in [
 
 import practices  # noqa: F401
 from harness.harness.runner import InstructionRunRequest, InstructionRunner
-from agent_tools import AgentToolSet
+from harness.agent_tools import AgentToolSet
 from harness.harness.toolset_loader import ToolsetLoader
 from generate.generate import Generate
 

@@ -1,0 +1,89 @@
+"""Noun clusters for keep-classes-single-responsibility.
+
+CodeQL emits identifier tokens. NLTK WordNet decides which are nouns; operations
+that share a noun sit in one responsibility cluster.
+"""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from typing import Dict, Iterable, List, Mapping, Set
+
+from actions.scan.vocabulary_helper import VocabularyHelper
+from nltk.corpus import wordnet as wn
+
+_MIN_PUBLIC_OPERATIONS = 3
+_MIN_NOUN_CLUSTERS = 3
+
+
+def _stem_noun(token: str) -> str:
+    lemma = wn.morphy(token.lower(), wn.NOUN)
+    return lemma or token.lower()
+
+
+def nouns_in(tokens: Iterable[str]) -> Set[str]:
+    words = [token.lower() for token in tokens if token]
+    nouns: Set[str] = set()
+    for index, word in enumerate(words):
+        as_noun = VocabularyHelper.is_noun(word)
+        as_verb = VocabularyHelper.is_verb(word)
+        if as_verb and (not as_noun or index == 0):
+            continue
+        if as_noun:
+            nouns.add(_stem_noun(word))
+    return nouns
+
+
+def _cluster_operations(tokens_by_operation: Mapping[str, Set[str]]) -> List[Set[str]]:
+    parent = {name: name for name in tokens_by_operation}
+
+    def find(name: str) -> str:
+        while parent[name] != name:
+            parent[name] = parent[parent[name]]
+            name = parent[name]
+        return name
+
+    def union(left: str, right: str) -> None:
+        root_left, root_right = find(left), find(right)
+        if root_left != root_right:
+            parent[root_right] = root_left
+
+    nouns_by_op = {name: nouns_in(tokens) for name, tokens in tokens_by_operation.items()}
+    named = [name for name, nouns in nouns_by_op.items() if nouns]
+    for index, left in enumerate(named):
+        for right in named[index + 1 :]:
+            if nouns_by_op[left] & nouns_by_op[right]:
+                union(left, right)
+
+    clusters: Dict[str, Set[str]] = defaultdict(set)
+    for name in named:
+        clusters[find(name)].add(name)
+    return list(clusters.values())
+
+
+def rows_for_keep_classes(rows: Iterable[dict]) -> List[dict]:
+    by_class: Dict[str, Dict[str, Set[str]]] = defaultdict(lambda: defaultdict(set))
+    for row in rows:
+        class_name = row.get("name") or ""
+        operation = row.get("contributor") or ""
+        token = row.get("message") or ""
+        if not class_name or not operation:
+            continue
+        by_class[class_name][operation].add(token)
+
+    refined: List[dict] = []
+    for class_name, tokens_by_operation in by_class.items():
+        if len(tokens_by_operation) <= _MIN_PUBLIC_OPERATIONS:
+            continue
+        clusters = _cluster_operations(tokens_by_operation)
+        if len(clusters) < _MIN_NOUN_CLUSTERS:
+            continue
+        message = (
+            f"Class '{class_name}' has {len(tokens_by_operation)} public operations "
+            f"whose nouns cluster into {len(clusters)} responsibilities."
+        )
+        for operation in tokens_by_operation:
+            refined.append(
+                {"name": class_name, "message": message, "contributor": operation}
+            )
+    return refined

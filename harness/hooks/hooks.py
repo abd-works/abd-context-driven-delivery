@@ -78,7 +78,7 @@ class HookInstallation(Installation):
     """Write Cursor ``hooks.json`` dispatch and ``hook-handlers.json`` refs."""
 
     channel = "hook"
-    DISPATCH_SCRIPT = "installation/hooks/hook_server.py"
+    DISPATCH_SCRIPT = "harness/hooks/hook_server.py"
 
     def __init__(
         self,
@@ -173,10 +173,8 @@ class HookInstallation(Installation):
         self.track_write(dest)
 
     def standup(self) -> Any:
-        from installation.hooks.hook_server import HookServer
-        from installation.hooks.prompt_echo.prompt_echo import PromptEcho
+        from harness.hooks.hook_server import HookServer
 
-        PromptEcho().install_ide_toast_extension()
         self.server = HookServer.standup(self.path / "hook-handlers.json", repo=self.repo)
         return self.server
 

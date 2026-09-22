@@ -7,13 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Class cls, Function method
-where
-  inSubject(cls) and
-  tooManyPublicMethods(cls) and
-  publicMethod(cls, method)
-select cls,
-  "Class '" + cls.getName() + "' has " + publicMethodCount(cls).toString() + " public methods.",
-  method
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "keep-classes-single-responsibility")
+select subject, message, contributor

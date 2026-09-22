@@ -44,6 +44,14 @@ class Operation(OoadNode):
         self.parameters: List[Parameter] = []
         self._legacy_parameters: List[str] = []
 
+    @property
+    def legacy_parameters(self) -> List[str]:
+        return list(self._legacy_parameters)
+
+    @legacy_parameters.setter
+    def legacy_parameters(self, values: List[str]) -> None:
+        self._legacy_parameters = list(values)
+
     @classmethod
     def from_field(cls, field: OperationField, sequential_order: int) -> "Operation":
         op = cls(
@@ -86,7 +94,7 @@ class Operation(OoadNode):
         self.return_type = source.return_type
         self.description = source.description
         self.callees = list(source.callees)
-        self._legacy_parameters = list(source._legacy_parameters)
+        self.legacy_parameters = list(source.legacy_parameters)
 
     def load_parameter(self, source: Parameter) -> Parameter:
         return Parameter(source.name, source.sequential_order, source.type_hint)

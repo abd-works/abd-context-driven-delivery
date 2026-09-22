@@ -1,66 +1,64 @@
-# Hooks runtime — object model (model fidelity)
+# Hooks — object model (model fidelity)
 
-Markdown channel for **`installation/hooks`**. Requirements are the live install mark, `HookInstallation` artifacts, and the Cursor process (`hook_server.py` and the `@hook` toolsets). This file names the resources those files implement; it does not add a second hook decorator or a second installer.
+Markdown channel for **`harness/hooks`**. Requirements are the live install mark, `HookInstallation` artifacts, and the Cursor process (`hook_server.py`). Partition: [module-context.md](module-context.md). *PromptEcho* types stay in [prompt-echo-model.md](../../tools/prompt_echo/.context/prompt-echo-model.md).
 
-**Install** writes files. **Runtime** is Cursor launching `hook_server.py` with stdin JSON. `@hook` and `@mcp` on the same operation remain two independent installs.
+**Install** writes files. **Runtime** is Cursor launching `hook_server.py` with stdin JSON. `@Hook` and `@mcp` on the same operation remain two independent installs.
 
 ## Language companion                                             <!-- L -->
 
-*Hook* is an operation on an `AgentToolSet` that Cursor may call when a named IDE event fires. The event name is the identity Cursor uses (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`, …). The operation receives the event payload and returns the fields Cursor understands (`permission`, `continue`, `user_message`, `agent_message`, `followup_message`).
+*Hook* is a *Destination* on an `AgentToolSet` member. The event name is the identity Cursor uses (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`, …). The operation receives the event payload and returns the fields Cursor understands.
 
 *Dispatch* is the Cursor process: read stdin, find every enabled hook for that event, run them, merge their results, print one JSON object. It is not an MCP client.
 
-## Modules                                                        <!-- Mu -->
-
-Build order: `installation` (mark + `HookInstallation`) → `installation/hooks` (catalog, class disable, dispatch) → hook toolsets (`PromptLog`, `PromptEcho`, `workspace.Turn`)
-
 ---
 
-# installation                                            <!-- Mu -->
+# harness/hooks                                                <!-- Mu -->
 
-- **Purpose:** Declare the hook on the operation and write Cursor’s hook files. The mark and the installment live here so install stays one walk. <!-- Mu -->
-- **Seam (terms):** HookMark, HookInstallation, AgentTool <!-- Mu -->
-- **Dependencies (one-way):** AgentToolSet <!-- Mu -->
+- **Purpose:** Mark a member `@Hook("event")` so Cursor stdin events run that Python and return one merged result. <!-- Mu -->
+- **Seam (terms):** Hook, Hooks, HookInstallation, HookServer <!-- Mu -->
+- **Dependencies (one-way):** installation (Destination, Installation), harness/agent_tools (AgentToolSet) <!-- Mu -->
 
-## HookMark                                                       <!-- Md -->
+## Hook : Destination                                             <!-- Md -->
 
-The `@hook` decorator on an operation. Event is required and must be a Cursor event name.
+The `@Hook` decorator on an operation. Event is required and must be a Cursor event name.
 
-+ HookMark(event: str)
-	// event is one of CURSOR_EVENTS; unknown names are rejected at decoration
++ Hook(event: str)
+	// event is one of Hook.EVENTS; unknown names are rejected at decoration
 ------
-+ event: str
++ name: str
 	// identity Cursor sends as hook_event_name
++ EVENTS: frozenset[str]
 ----
-+ apply(operation): operation
++ annotate(operation): operation
 	// sets _hook, _hook_name = event
-	-> AgentTool.destinations includes hook
++ normalize_event(event: str): str
+	// sessionStart → session_start
 
-## HooksDisable                                                    <!-- Md -->
+## Hooks                                                          <!-- Md -->
 
 Class annotation. Turns off every hook on that toolset.
 
-+ HooksDisable(disabled: bool = false)
++ Hooks(disabled: bool = false)
 ------
 + disabled: bool
 ----
-+ apply(toolset): toolset
++ annotate(toolset): toolset
 	// sets _hooks_disabled
-	// write `@hooks(disabled=True)` above `@agent_toolset` so the mark stays on the registered type
+	// write `@Hooks(disabled=True)` above `@agent_toolset` so the mark stays on the registered type
 
-## HookInstallation                                               <!-- Md -->
+## HookInstallation : Installation                                <!-- Md -->
 
 Install-time writer for hook artifacts. Same walk as markdown and MCP; only the leaf writes differ.
 
 + HookInstallation(ide: str, path: Path)
 ------
 + python: str
-+ << composition >> handlers: list[HookHandler]
++ << composition >> handlers: list
 ----
 + write(tool: AgentTool): None
 	// skip unless tool.install_to_hook and the member has _hook_name
-	-> write skill file skills/hook-{name}/SKILL.md
-	-> append HookHandler(event, operation, toolset_ref)
+	// skip inject_rules on RulesCollection and FidelityGuidance
+	-> append { event, operation, ref }
 	-> write_hooks_manifest()
 	-> write_handlers()
 + write_handlers(): None
@@ -69,40 +67,37 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 	// Cursor hooks.json version 1; one hook_server.py command per distinct event
 	// afterAgentResponse holds only the dispatch command — Cursor runs the first entry only
 	// other events keep non-dispatch commands already in the file
-
----
-
-# installation/hooks                                                <!-- Mu -->
-
-- **Purpose:** Run enabled hooks for one Cursor event and return one merged result. Owns catalog load, class disable, payload parse, and result merge. <!-- Mu -->
-- **Seam (terms):** CursorEvent, HookPayload, HookResult, HookHandler, HandlerCatalog, HookServer <!-- Mu -->
-- **Dependencies (one-way):** installation (HookMark, HookInstallation), harness/agent_tools (AgentToolSet), SessionLog <!-- Mu -->
++ standup(): HookServer
+	-> HookServer.standup
++ diagnose(): dict
+	-> HookServer.diagnose
 
 ## CursorEvent                                                    <!-- Md -->
 
 Named Cursor hook moment. Identity is the event string.
 
 + CursorEvent(name: str)
-	// name is a CURSOR_EVENTS value
+	// name is a Hook.EVENTS value
 ------
 + name: str
 ----
 + normalize(): str
 	// sessionStart → session_start
+	-> Hook.normalize_event
 
 ## HookPayload                                                    <!-- Md -->
 
 Cursor stdin JSON for one firing.
 
 + HookPayload.from_stdin(raw: bytes): HookPayload
-	// strip UTF-8 BOM; empty or unreadable raw → allow-only result at the process, not here
+	// strip UTF-8 BOM; empty or unreadable raw → allow-only result at HookServer.run, not here
 ------
 + hook_event_name: str
 	// empty name means no handlers run; result is permission allow
 + conversation_id: str
-+ fields: dict
-	// remaining Cursor keys (tool_name, tool_input, prompt, …) stay on the payload for the handler
 ----
++ as_dict(): dict
+	// remaining Cursor keys (tool_name, tool_input, prompt, …) stay on the payload for the handler
 
 ## HookResult                                                     <!-- Md -->
 
@@ -119,28 +114,37 @@ Fields Cursor reads back from the hook process.
 + agent_message: str | None
 + followup_message: str | None
 	// last non-empty followup_message wins
++ additional_context: str | None
+	// unique parts join with blank lines
 ----
-+ merge(others: list[HookResult]): HookResult
++ from_handler(raw: dict | None): HookResult
++ with_description(description: str): HookResult
+	// prepends tool docstring onto agent_message
++ merged(results: list[HookResult]): HookResult
 	// user_message and agent_message concatenate with newlines
 	// empty handler results are skipped
++ as_dict(): dict
 
 ## HookHandler                                                    <!-- Md -->
 
 One marked operation that may run for an event.
 
-+ HookHandler(event: CursorEvent, operation: str, ref: str)
-	// ref is module:Class of the AgentToolSet
++ HookHandler(tool: AgentTool, event: CursorEvent, repo_root: Path)
 ------
 + event: CursorEvent
 + operation: str
-+ ref: str
-+ << association >> owner: type
+	// tool.name
++ owner: type
+	// type(tool.toolset)
++ << association >> tool: AgentTool
 ----
 + is_enabled(): bool
 	// false when owner._hooks_disabled is true
 + invoke(payload: HookPayload): HookResult
-	// construct owner() and call operation(payload)
-	// agent_message includes tool.docstring; the handler body owns domain work
+	// call the bound operation with payload.as_dict()
+	// agent_message includes tool.docstring unless additional_context is already set
+	-> HookResult.from_handler
+	-> HookResult.with_description
 
 ## HandlerCatalog                                                 <!-- Md -->
 
@@ -159,6 +163,28 @@ Installed list of hook handlers. File is next to Cursor config: `{Installer.path
 + for_event(event: CursorEvent): list[HookHandler]
 	// tools_for(HOOK) whose _hook_name matches the event
 
+## HookStandupFailed                                              <!-- Md -->
+
+The hook server could not stand up or failed diagnose.
+
++ HookStandupFailed(operation: str, server: HookServer | None, message: str, cause: BaseException | None = None)
+------
++ operation: str
++ server: HookServer | None
++ cause: BaseException | None
+----
+
+## HookIllegitimateHandler                                        <!-- Md -->
+
+One hook handler was skipped so the hook server could finish standup.
+
++ HookIllegitimateHandler(tool: str, reason: str, cause: BaseException | None = None)
+------
++ tool: str
++ reason: str
++ cause: BaseException | None
+----
+
 ## HookServer                                                     <!-- Md -->
 
 Cursor process for every hooked event. `hook_server.py` constructs `HookServer` and calls `run`.
@@ -167,6 +193,8 @@ Cursor process for every hooked event. `hook_server.py` constructs `HookServer` 
 	// HandlerCatalog(toolsets, repo_root)
 ------
 + << association >> catalog: HandlerCatalog
++ exceptions: list[HookIllegitimateHandler]
+----
 + run(): None
 	// ensure default session; read stdin; print JSON HookResult
 	-> HookPayload.from_stdin
@@ -177,47 +205,32 @@ Cursor process for every hooked event. `hook_server.py` constructs `HookServer` 
 	-> HookHandler.is_enabled
 	-> HookHandler.invoke
 	-> HookResult.merged
++ standup(handlers: Path, repo: Path | None = None): HookServer
++ diagnose(): dict
+	-> ping()
+	-> dispatch
++ ping(): str
+	// "pong"
 - _append_debug(message: str): None
 	// dispatch.debug under the session logs folder
 
----
-
-# installation/hooks toolsets                                       <!-- Mu -->
-
-- **Purpose:** Domain handlers that happen to be hooks. Each is an AgentToolSet; operations carry HookMark. Dispatch does not special-case them. <!-- Mu -->
-- **Seam (terms):** PromptLog, PromptEcho <!-- Mu -->
-- **Dependencies (one-way):** installation/hooks (HookPayload, HookResult), installation (HookMark) <!-- Mu -->
-
-`Turn.auto_turn` lives on `workspace.workspace:Turn` (`afterAgentResponse`). It is a toolset in workspace, not a type in this package. `@hooks(disabled=True)` on `Turn` skips that handler.
-
 ## PromptLog                                                      <!-- Md -->
 
-Audit what Cursor sent the model.
+Audit what Cursor sent the model. Off while `@Hooks(disabled=True)` stays on the class.
 
 + PromptLog()
 ------
 ----
 + before_submit_prompt(payload: HookPayload): HookResult
-	// @hook("beforeSubmitPrompt")
+	// @Hook("beforeSubmitPrompt") — appends to the session prompt-log.txt; returns continue true
 + before_read_file(payload: HookPayload): HookResult
-	// @hook("beforeReadFile")
+	// @Hook("beforeReadFile")
 + pre_tool_use(payload: HookPayload): HookResult
-	// @hook("preToolUse")
+	// @Hook("preToolUse")
 + subagent_start(payload: HookPayload): HookResult
-	// @hook("subagentStart")
+	// @Hook("subagentStart")
 + after_agent_response(payload: HookPayload): HookResult
-	// @hook("afterAgentResponse")
-	// appends to the session prompt-log.txt; beforeSubmitPrompt returns continue true
-
-## PromptEcho                                                     <!-- Md -->
-
-Surface a detected action name on preToolUse. `@hooks(disabled=True)` skips the handler.
-
-+ PromptEcho()
-------
-----
-+ on_pre_tool_use(payload: HookPayload): HookResult
-	// @hook("preToolUse")
+	// @Hook("afterAgentResponse")
 
 ---
 
@@ -227,21 +240,5 @@ Surface a detected action name on preToolUse. `@hooks(disabled=True)` skips the 
 {Installer.path}/                 typically .cursor/
   hooks.json                      CursorEvent → hook_server.py command
   hook-handlers.json              HandlerCatalog
-  skills/hook-{operation}/SKILL.md
 .sessions/{name}/logs/            dispatch.debug, prompt-log.txt
 ```
-
-## Requirements trace (code → model)                              <!-- Mu -->
-
-| Requirement | Code today | Model |
-| ----------- | ---------- | ----- |
-| Mark | `marks.hook` | `HookMark` |
-| Install files | `HookInstallation.write` | `HookInstallation` |
-| Catalog file | `hook-handlers.json` | `HandlerCatalog` |
-| Cursor command | `dispatch.main` | `HookServer.run` |
-| Find methods | `_hook_methods` | `HandlerCatalog.for_event` |
-| Disable | `@hooks(disabled=True)` / `HookHandler.is_enabled` | `HooksDisable` |
-| Invoke + merge | `HookServer.dispatch` | `HookHandler.invoke` + `HookResult.merged` |
-| Audit / echo | `PromptLog` / `PromptEcho` | same names, as hook toolsets |
-| Operation description | `HookHandler.invoke` puts `tool.docstring` on `agent_message` | `HookHandler.invoke` |
-| Auto-turn | `Turn.auto_turn` | toolset in workspace |

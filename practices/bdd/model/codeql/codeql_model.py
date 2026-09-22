@@ -1,4 +1,4 @@
-"""BDD types on the practice graph — wrap live BDD types."""
+"""CodeQL graph types for BDD — wrap live BDD types."""
 
 from __future__ import annotations
 

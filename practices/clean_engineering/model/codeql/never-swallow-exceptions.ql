@@ -7,8 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f, ExceptStmt ex
-where inSubject(f) and swallowedExcept(f, ex)
-select f, "Operation '" + f.getName() + "' catches an exception and ignores it.", ex
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "never-swallow-exceptions")
+select subject, message, contributor

@@ -9,7 +9,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions", "harness"):
+for _cat in ("tools", "practices", "actions"):
     _path = str(_REPO_ROOT / _cat)
     if _path not in sys.path:
         sys.path.insert(0, _path)
@@ -18,11 +18,11 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from installation.installer import Installer
-from installation.mcp.examples.parameter_types.parameter_types import ParameterTypes
-from installation.mcp.mcp_server import McpHost, McpInstallation
+from harness.mcp.examples.parameter_types.parameter_types import ParameterTypes
+from harness.mcp.mcp_server import McpHost, McpInstallation
 from actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
-from installation.mcp.examples.illegitimate_name.illegitimate_name import (
+from harness.mcp.examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
 
@@ -349,7 +349,7 @@ with description("an MCP host Cursor has stopped spawning") as self:
         nudge = self.tree / "mcp-host-nudge"
         if nudge.is_file():
             nudge.unlink()
-        import installation.mcp.mcp_server as mcp_mod
+        import harness.mcp.mcp_server as mcp_mod
 
         self._mcp_mod = mcp_mod
         user_mcp = self.tree / "user-mcp.json"
@@ -396,7 +396,7 @@ with description("an MCP host Cursor has stopped spawning") as self:
                                 "command": "C:/old/.venv/Scripts/python.exe",
                                 "args": [
                                     "-u",
-                                    "C:/old/installation/mcp/scripts/start_host.py",
+                                    "C:/old/harness/mcp/scripts/start_host.py",
                                 ],
                                 "cwd": "C:/old",
                                 "env": {"CDD_REPO": "C:/old"},

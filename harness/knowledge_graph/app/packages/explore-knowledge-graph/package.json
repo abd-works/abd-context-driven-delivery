@@ -1,0 +1,33 @@
+{
+  "name": "@cdd/explore-knowledge-graph",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./ExploreKnowledgeGraphView.tsx",
+    "./app": "./app.ts",
+    "./knowledge-graph": "./knowledge-graph/knowledge-graph.ts",
+    "./knowledge-graph/knowledge-graph-server": "./knowledge-graph/knowledge-graph-server.ts",
+    "./knowledge-graph/knowledge-graph-client": "./knowledge-graph/knowledge-graph-client.tsx"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "tsx serve.ts",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "cors": "^2.8.0",
+    "express": "^4.19.0",
+    "lowdb": "^7.0.1",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "tsx": "^4.0.0",
+    "vite": "^6.0.0"
+  }
+}

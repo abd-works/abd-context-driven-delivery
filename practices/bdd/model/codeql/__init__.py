@@ -1,5 +1,5 @@
-"""BDD types on the practice graph."""
+"""CodeQL graph types for BDD."""
 
-from .bdd import Context, Description, Observation
+from .codeql_model import Context, Description, Observation
 
 __all__ = ["Context", "Description", "Observation"]

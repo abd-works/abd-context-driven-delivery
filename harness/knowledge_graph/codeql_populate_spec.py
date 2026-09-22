@@ -15,8 +15,8 @@ from expects import equal, expect, have_length
 from mamba import description, it
 
 from harness.knowledge_graph.model import CodeQL, Kind, PracticeGraph
-from practices.clean_engineering.model.codeql.clean_engineering import Operation
-from practices.stories.model.codeql.stories import Example, Step
+from practices.clean_engineering.model.codeql.codeql_model import Operation
+from practices.stories.model.codeql.codeql_model import Example, Step
 from practices.stories.model.scenario import Phase
 from practices.stories.model.source_location import SourceLocation
 

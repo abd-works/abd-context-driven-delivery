@@ -1,6 +1,6 @@
-"""Stories types and CodeQL queries on the practice graph."""
+"""CodeQL graph types for Stories."""
 
-from .stories import Background, Epic, Example, Scenario, Step, Story, StoryMap, SubEpic
+from .codeql_model import Background, Epic, Example, Scenario, Step, Story, StoryMap, SubEpic
 
 __all__ = [
     "Background",

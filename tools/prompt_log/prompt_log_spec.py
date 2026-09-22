@@ -3,18 +3,17 @@ import sys
 import tempfile
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("harness", "installation/hooks", "installation/hooks/prompt_log"):
-    _p = str(_REPO_ROOT / _cat)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+_tools = str(_REPO_ROOT / "tools")
+if _tools not in sys.path:
+    sys.path.insert(0, _tools)
 
 from expects import contain, equal, expect
 from mamba import context, description, it
 
-import prompt_log as pl  # noqa: E402
+import prompt_log.prompt_log as pl  # noqa: E402
 
 _CURSOR = _REPO_ROOT / ".cursor"
 _RULE = _CURSOR / "rules" / "character-driven-development.mdc"
@@ -123,7 +122,7 @@ with description("a prompt log hook"):
                     "tool_name": "Task",
                     "tool_input": {
                         "description": "Explore hooks",
-                        "prompt": "Find all hook scripts under installation/hooks",
+                        "prompt": "Find all hook scripts under harness/hooks",
                         "subagent_type": "explore",
                     },
                 }
@@ -131,7 +130,7 @@ with description("a prompt log hook"):
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
                 expect(text).to(contain("preToolUse:Task"))
-                expect(text).to(contain("installation/hooks"))
+                expect(text).to(contain("harness/hooks"))
 
     with context("that handles a subagentStart event"):
         with it("should record the subagent task"):

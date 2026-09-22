@@ -59,13 +59,16 @@ class Node:
     _node_id: str = ""
     practice: str = ""
 
+    def semantic_type(self) -> str:
+        return getattr(type(self), "_semantic_type_name", type(self).__name__)
+
     @staticmethod
     def slug(name: str) -> str:
         return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
     def join(self, graph: "PracticeGraph", node_id: Optional[str] = None) -> "Node":
         if node_id is None:
-            node_id = graph._make_id(self)
+            node_id = graph.id_for(self)
         self._graph = graph
         self._node_id = node_id
         return self
@@ -90,13 +93,13 @@ class Node:
             owners = [
                 n
                 for n in self.related(Kind.BELONGS_TO)
-                if n._semantic_type_name == "Module"
+                if n.semantic_type() == "Module"
             ]
             if not owners:
                 owners = [
                     n
                     for n in self.related(Kind.OWNS, direction="in")
-                    if n._semantic_type_name == "Module"
+                    if n.semantic_type() == "Module"
                 ]
             if owners:
                 return owners[0]
@@ -180,7 +183,7 @@ class Node:
                 return
             nxt = path | {op.node_id}
             for callee in op.related(Kind.INVOKES):
-                if callee._semantic_type_name != "Operation":
+                if callee.semantic_type() != "Operation":
                     continue
                 if callee.node_id in seen:
                     continue

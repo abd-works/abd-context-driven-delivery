@@ -9,10 +9,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from workspace import SessionPaths, Workspace
-from agent_tools import agent_instructions, agent_toolset
-from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools.agent_tools import agent_tool
+from installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 @agent_toolset
 class Handoff:

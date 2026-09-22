@@ -7,9 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f, Class cls
-where inSubject(f) and calledOnlyFrom(f, cls)
-select f,
-  "Function '" + f.getName() + "' is only called from '" + cls.getName() + "'.", cls
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "prefer-class-operations")
+select subject, message, contributor

@@ -35,7 +35,7 @@ _CHILD_RANK = {
 
 
 def _hierarchy_rank(node: Node) -> Tuple[int, int]:
-    semantic = getattr(node, "_semantic_type_name", "")
+    semantic = node.semantic_type()
     return (
         _CHILD_RANK.get(semantic, 10),
         int(getattr(node, "sequential_order", 0) or 0),
@@ -98,7 +98,7 @@ def hierarchy_text(root: Node) -> str:
 
 
 def _hierarchy_line(depth: int, node: Node) -> str:
-    semantic = getattr(node, "_semantic_type_name", type(node).__name__)
+    semantic = node.semantic_type()
     if semantic == "OoadClass":
         semantic = "Class"
     name = getattr(node, "name", "") or ""
@@ -125,12 +125,51 @@ def _hierarchy_line(depth: int, node: Node) -> str:
     return f"{indent}{semantic}: {name}"
 
 
+def graph_name_matches(module_name: str, graphs: list[str] | None) -> bool:
+    if not graphs:
+        return True
+    name = (module_name or "").replace("\\", "/").replace(".", "/")
+    for wanted in graphs:
+        token = (wanted or "").replace("\\", "/").replace(".", "/").strip().strip("/")
+        if token and (name == token or name.endswith("/" + token) or token in name):
+            return True
+    return False
+
+
+def violation_row_indexes(marks: list[tuple[int, bool]]) -> list[int]:
+    keep = [False] * len(marks)
+    stack: list[int] = []
+    for index, (depth, marked) in enumerate(marks):
+        while stack and marks[stack[-1]][0] >= depth:
+            stack.pop()
+        if marked:
+            keep[index] = True
+            for ancestor in stack:
+                keep[ancestor] = True
+        stack.append(index)
+    return [index for index, flagged in enumerate(keep) if flagged]
+
+
+def prune_to_violations(
+    entries: Iterable[Tuple[int, Node]],
+) -> List[Tuple[int, Node]]:
+    rows = list(entries)
+    keep = violation_row_indexes(
+        [(depth, bool(_hierarchy_violations(node))) for depth, node in rows]
+    )
+    return [rows[index] for index in keep]
+
+
 def _hierarchy_violations(node: Node) -> str:
     graph = getattr(node, "graph", None)
     if graph is None:
         return ""
     try:
-        hits = list(node.rules.violations)
+        hits = [
+            hit
+            for hit in node.rules.violations
+            if hit.node_id == node.node_id
+        ]
     except Exception as error:
         graph.record_partial_failure(
             f"violations {getattr(node, 'name', type(node).__name__)}",
@@ -253,7 +292,7 @@ def _dot_id(node_id: str) -> str:
 
 
 def _dot_label(node: Node) -> str:
-    semantic = getattr(node, '_semantic_type_name', type(node).__name__)
+    semantic = node.semantic_type()
     practice = getattr(node, 'practice', '')
     name = _node_display_name(node)
     if practice:

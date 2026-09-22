@@ -16,7 +16,7 @@ sys.path[:] = [
 if _root in sys.path:
     sys.path.remove(_root)
 sys.path.insert(0, _root)
-for _cat in ("harness", "tools", "practices", "actions"):
+for _cat in ("tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p in sys.path:
         sys.path.remove(_p)

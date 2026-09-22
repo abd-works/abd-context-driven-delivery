@@ -5,14 +5,14 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import GuidanceArg, GuidanceAction
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
-from agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
-from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import Skill
-from installation.mcp.mcp_server import Mcp
+from harness.agent_tools.agent_tools import agent_tool
+from installation.files import Skill
+from harness.mcp.mcp_server import Mcp
 
 @agent_toolset
 class Partition(GuidanceAction):

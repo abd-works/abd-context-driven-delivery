@@ -18,4 +18,4 @@ Judgment rules in `drawio.md` (e.g. `module-spatial-cohesion`, `ull-bullets-beco
 
 ## Dependencies
 
-`harness.agent_tools` (`@action` / `@agentic_toolset`); `tools.scanners` (`Scan` / `Scanner`); `practices.actions.repair` (`Repair`); stdlib XML via `drawio_tools`.
+`harness.agent_tools` (`@action` / `@agentic_toolset`); `DrawioScanner` in `model/drawio/scanners/_drawio_base.py`; `practices.actions.repair` (`Repair`); stdlib XML via `drawio_tools`.

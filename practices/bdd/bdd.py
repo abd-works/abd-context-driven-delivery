@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from harness.agent_tools.agent_tools import agent_toolset
+from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from agent_tools.agent_tools import agent_tool  # noqa: F401
 
 
 @agent_toolset

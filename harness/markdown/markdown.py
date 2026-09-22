@@ -581,7 +581,7 @@ class Markdown:
             return text
         if origin is dict:
             return _templates_path_map(self)
-        from actions.scan.rule import RulesCollection
+        from actions.validate.rule import RulesCollection
 
         if return_type is RulesCollection:
             return RulesCollection.from_markdown(text, parent=self._instance)
@@ -926,7 +926,7 @@ def _markdown_property(fn: _F, prop_label: str) -> property:
             return text
         result = md.coerce(raw, return_type)
         bind_yaml(result, raw)
-        from actions.scan.rule import RulesCollection
+        from actions.validate.rule import RulesCollection
 
         if isinstance(result, RulesCollection):
             class_dir = class_file_directory(self)

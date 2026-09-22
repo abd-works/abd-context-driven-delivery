@@ -8,6 +8,9 @@ __pycache__/
 primitives/tools/hooks/.manifest_gate_clearance.json
 primitives/tools/hooks/manifest_gate.log
 
+# Node toolchains
+**/node_modules/
+
 # Sandbox Node toolchain
 sandbox/node_modules/
 
@@ -30,6 +33,10 @@ primitives/hooks/dispatch.debug
 primitives/hooks/skill_inject.debug
 primitives/hooks/prompt_echo.debug
 primitives/hooks/prompt_echo/prompt_echo.debug
+tools/prompt_echo.debug
+tools/prompt_echo/prompt_echo.debug
+tools/prompt_log.debug
+tools/prompt_log/prompt_log.debug
 
 # Ephemeral tool run requests (python -m tools run _req.yaml)
 /_req.yaml

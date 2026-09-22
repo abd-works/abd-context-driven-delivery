@@ -7,8 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f
-where inSubject(f) and passThrough(f)
-select f, "Operation '" + f.getName() + "' only forwards a single call.", f
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "layer-separation")
+select subject, message, contributor

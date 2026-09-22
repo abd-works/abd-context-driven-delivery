@@ -1,0 +1,2 @@
+class LeakySeam:
+    pass

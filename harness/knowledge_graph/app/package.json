@@ -1,0 +1,29 @@
+{
+  "name": "@cdd/knowledge-graph-explorer",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/explore-knowledge-graph"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "dev": "npm run dev --workspace=@cdd/explore-knowledge-graph",
+    "dev:server": "npm run dev:server --workspace=@cdd/explore-knowledge-graph"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/supertest": "^6.0.2",
+    "@vitejs/plugin-react": "^4.3.0",
+    "jsdom": "^25.0.0",
+    "supertest": "^7.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

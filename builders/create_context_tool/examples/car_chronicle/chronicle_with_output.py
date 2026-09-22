@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_instructions
 from practices.base.base_context_tool import BaseContextTool
-from agent_tools.agent_tools import agent_tool
+from harness.agent_tools.agent_tools import agent_tool
 
 
 class ChronicleWithOutput(BaseContextTool):

@@ -1,7 +1,7 @@
 """Canonical AgentToolSet shape — matching-by example for CreateAgentToolset."""
 from __future__ import annotations
 
-from agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 
 
 @agent_toolset

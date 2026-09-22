@@ -16,7 +16,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 _PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
-_HOSTING_DEMO = "installation.mcp.examples.hosting_demo.hosting_demo:HostingDemo"
+_HOSTING_DEMO = "harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo"
 _BDD = "practices.bdd.bdd:Bdd"
 
 
@@ -25,7 +25,7 @@ async def _probe(toolsets: str) -> None:
         command=str(_PYTHON),
         args=[
             "-m",
-            "installation.mcp",
+            "harness.mcp",
             "--toolsets",
             toolsets,
         ],

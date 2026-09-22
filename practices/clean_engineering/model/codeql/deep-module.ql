@@ -7,10 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Module m
-where inSubject(m) and firstClassModule(m) and shallowModule(m)
-select m,
-  "Module exposes " + publicClassCount(m).toString() + " of " +
-    classCount(m).toString() + " classes publicly.", m
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "deep-module")
+select subject, message, contributor

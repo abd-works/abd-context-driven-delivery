@@ -1,24 +1,24 @@
-  47.38s  hits=  89  run-queries:codeql
-  11.27s  hits=  15  run-queries:knowledge-graph
-   0.00s  hits=   3  keep-classes-single-responsibility
-   0.00s  hits=   1  do-not-invent-parallel-object-models
-   0.00s  hits=   7  put-logic-on-the-owning-resource
-   0.00s  hits=   5  hide-inner-details
-   0.00s  hits=  16  limit-operation-parameters
-   0.00s  hits=   1  deep-module
-   0.00s  hits=   0  use-typed-signatures  skipped
-   0.00s  hits=   0  one-way-deps  skipped
-   0.00s  hits=   0  low-coupling  skipped
-   0.00s  hits=   0  layer-separation  skipped
-   0.00s  hits=   0  shape-classes-around-resources  skipped
-   0.00s  hits=   0  use-property-not-accessor  skipped
-   0.00s  hits=   0  prefer-class-operations  skipped
-   0.00s  hits=   0  use-explicit-dependencies  skipped
-   0.00s  hits=   0  avoid-vague-parameter-names  skipped
-   0.00s  hits=   0  keep-operations-small-focused  skipped
-   0.00s  hits=   0  simplify-control-flow  skipped
-   0.00s  hits=   0  provide-meaningful-context  skipped
-   0.00s  hits=   0  use-exceptions-properly  skipped
-   0.00s  hits=   0  never-swallow-exceptions  skipped
+   6.95s  hits= 833  run-queries:codeql
+   2.81s  hits=  40  decode-facts:knowledge-graph
+   2.21s  hits=   2  keep-classes-single-responsibility
+   0.00s  hits=   0  do-not-invent-parallel-object-models
+   0.00s  hits=  13  keep-operations-small-focused
+   0.00s  hits=   0  use-typed-signatures
+   0.00s  hits=   0  layer-separation
+   0.00s  hits=   0  one-way-deps
+   0.00s  hits=   0  put-logic-on-the-owning-resource
+   0.00s  hits=   0  limit-operation-parameters
+   0.00s  hits=   0  prefer-class-operations
+   0.00s  hits=   0  simplify-control-flow
+   0.00s  hits=   0  hide-inner-details
+   0.00s  hits=   0  shape-classes-around-resources
+   0.00s  hits=   0  deep-module
+   0.00s  hits=   0  low-coupling
+   0.00s  hits=   0  provide-meaningful-context
+   0.00s  hits=   0  use-explicit-dependencies
+   0.00s  hits=   0  use-property-not-accessor
+   0.00s  hits=   0  avoid-vague-parameter-names
+   0.00s  hits=   0  use-exceptions-properly
+   0.00s  hits=   0  never-swallow-exceptions
 
-22 rules, 58.65s total
+22 rules, 11.97s total

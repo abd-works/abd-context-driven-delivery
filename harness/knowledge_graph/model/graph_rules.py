@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Set
 
-from actions.scan.rule import Rule
+from actions.validate.rule import Rule
 
 _REPO = Path(__file__).resolve().parents[3]
 _PRACTICES = _REPO / "practices"
@@ -28,6 +26,7 @@ FIDELITY_ORDER: Dict[str, List[str]] = {
     "clean_engineering": ["code", "model", "modules", "language"],
     "ddd": ["tactics", "building_blocks", "bounded_context"],
     "bdd": ["behavior"],
+    "ux": ["front_end_code", "mockup", "ia"],
 }
 
 FIDELITY_NODE_SCOPE: Dict[str, Dict[str, Set[str]]] = {
@@ -79,6 +78,11 @@ FIDELITY_NODE_SCOPE: Dict[str, Dict[str, Set[str]]] = {
     "bdd": {
         "behavior": {"Description", "Context", "Observation"},
     },
+    "ux": {
+        "ia": {"Screen", "UxMap"},
+        "mockup": {"Screen", "Control", "UxMap"},
+        "front_end_code": {"Screen", "Control", "UxMap"},
+    },
 }
 
 @dataclass
@@ -95,40 +99,19 @@ class RuleViolation:
     contributors: List[str] = field(default_factory=list)
 
     @classmethod
-    def for_rows(cls, rule: "GraphRule", graph, rows) -> List["RuleViolation"]:
-        grouped: Dict[str, dict] = {}
-        for row in rows:
-            name = row.get("name", "")
-            bucket = grouped.setdefault(
-                name,
-                {"message": row.get("message", ""), "contributors": []},
-            )
-            contributor = row.get("contributor")
-            if contributor:
-                bucket["contributors"].append(contributor)
-        violations: List[RuleViolation] = []
-        for name, payload in grouped.items():
-            subjects = [
-                candidate
-                for candidate in graph.nodes.values()
-                if getattr(candidate, "name", None) == name and rule._is_subject(candidate)
-            ]
-            contributor_ids = [
-                child.node_id
-                for contributor in payload["contributors"]
-                for child in graph.nodes.values()
-                if getattr(child, "name", None) == contributor
-            ]
-            for subject in subjects:
-                violations.append(
-                    rule._violation(
-                        subject,
-                        payload["message"],
-                        contributors=contributor_ids,
-                        source="codeql",
-                    )
-                )
-        return violations
+    def node_on(cls, graph, entry: dict):
+        node_id = entry.get("node_id") or ""
+        if node_id and node_id in graph.nodes:
+            return graph.nodes[node_id]
+        semantic = entry.get("semantic_type") or ""
+        name = entry.get("node_name") or ""
+        for node in graph.nodes.values():
+            if node.semantic_type() != semantic:
+                continue
+            if node.name != name:
+                continue
+            return node
+        return None
 
 
 class GraphRule:
@@ -153,12 +136,21 @@ class GraphRule:
         return set(FIDELITY_NODE_SCOPE.get(self.practice, {}).get(self.fidelity or "", set()))
 
     @property
+    def query_pack(self) -> Path:
+        return _PRACTICES / self.practice / "model" / "codeql"
+
+    @property
+    def pack_rules_query(self) -> Optional[Path]:
+        path = self.query_pack / "rules.ql"
+        return path if path.is_file() else None
+
+    @property
     def graph_evaluated(self) -> bool:
         return self.graphQuery is not None
 
     @property
     def graphQuery(self) -> Optional[Path]:
-        path = _PRACTICES / self.practice / "model" / "codeql" / f"{self.slug}.ql"
+        path = self.query_pack / f"{self.slug}.ql"
         return path if path.is_file() else None
 
     def load_graph_query(self) -> str:
@@ -168,21 +160,65 @@ class GraphRule:
         return path.read_text(encoding="utf-8")
 
     def evaluate(self, graph, rows=None) -> List[RuleViolation]:
-        path = self.graphQuery
-        if path is None:
-            raise FileNotFoundError(f"no graphQuery file for {self.slug}")
         if rows is None:
-            from .codeql import CodeQL
+            from .codeql import CodeQL, Rows
 
-            rows = CodeQL(graph.root).run(path)
-        return RuleViolation.for_rows(self, graph, rows)
+            combined = self.pack_rules_query
+            if combined is not None:
+                grouped = CodeQL(graph.root).run_rules(combined, [self.slug])
+                rows = Rows.from_tuples(grouped.get(self.slug) or [])
+            elif self.graphQuery is not None:
+                rows = CodeQL(graph.root).run(self.graphQuery)
+            else:
+                raise FileNotFoundError(f"no graphQuery file for {self.slug}")
+        from .graph_query_spec import refine_rows
+
+        rows = refine_rows(self.slug, rows)
+        return self.hits_from_rows(graph, rows)
+
+    def hits_from_rows(self, graph, rows) -> List[RuleViolation]:
+        grouped: Dict[str, dict] = {}
+        for row in rows:
+            name = row.get("name", "")
+            bucket = grouped.setdefault(
+                name,
+                {"message": row.get("message", ""), "contributors": []},
+            )
+            contributor = row.get("contributor")
+            if contributor:
+                bucket["contributors"].append(contributor)
+        by_name: Dict[str, list] = {}
+        for candidate in graph.nodes.values():
+            by_name.setdefault(getattr(candidate, "name", None), []).append(candidate)
+        violations: List[RuleViolation] = []
+        for name, payload in grouped.items():
+            subjects = [
+                candidate
+                for candidate in by_name.get(name, ())
+                if self._is_subject(candidate)
+            ]
+            contributor_ids = [
+                child.node_id
+                for contributor in payload["contributors"]
+                for child in by_name.get(contributor, ())
+            ]
+            for subject in subjects:
+                violations.append(
+                    self._violation(
+                        subject,
+                        payload["message"],
+                        contributors=contributor_ids,
+                        source="codeql",
+                    )
+                )
+        return violations
 
     def _is_subject(self, node) -> bool:
         from practices.clean_engineering.model.base_class_model import OoadClass
 
         if isinstance(node, OoadClass):
             return True
-        return getattr(node, "_semantic_type_name", "") in self.applies_to
+        return node.semantic_type() in self.applies_to
 
     def _violation(
         self,
@@ -230,16 +266,12 @@ class RuleRegistry:
 
         self.rules = load_graph_rules_from_markdown()
 
-    def evaluate(
+    def runnable(
         self,
-        graph,
         *,
         slugs: Optional[Set[str]] = None,
         skip: Optional[Set[str]] = None,
-    ) -> Dict[str, List[RuleViolation]]:
-        from .codeql import CodeQL
-
-        by_node: Dict[str, List[RuleViolation]] = {}
+    ) -> tuple[List[GraphRule], List[GraphRule]]:
         seen: Set[str] = set()
         runnable: List[GraphRule] = []
         skipped: List[GraphRule] = []
@@ -253,54 +285,16 @@ class RuleRegistry:
                 skipped.append(rule)
                 continue
             runnable.append(rule)
-        for rule in skipped:
-            print(f"skip {rule.slug} (0 hits)", flush=True)
-            graph.record_rule_timing(rule.slug, 0.0, 0, "skipped")
-        by_pack: Dict[Path, List[GraphRule]] = defaultdict(list)
-        for rule in runnable:
-            if rule.graphQuery is None:
-                continue
-            by_pack[rule.graphQuery.parent].append(rule)
-        codeql = CodeQL(graph.root)
-        for pack, pack_rules in by_pack.items():
-            if not pack_rules:
-                continue
-            codeql._write_subject_filter(pack)
-            queries = [rule.graphQuery for rule in pack_rules if rule.graphQuery is not None]
-            print(f"run-queries {pack.name} ({len(queries)} rules) ...", flush=True)
-            started = time.perf_counter()
-            try:
-                batch = codeql.run_queries(queries)
-            except Exception as error:
-                seconds = time.perf_counter() - started
-                graph.record_rule_timing(f"run-queries:{pack.name}", seconds, 0, f"{type(error).__name__}: {error}")
-                graph.record_partial_failure(f"run-queries {pack.name}", error)
-                print(f"run-queries {pack.name}  {seconds:.2f}s  ERROR {error}", flush=True)
-                continue
-            seconds = time.perf_counter() - started
-            graph.record_rule_timing(
-                f"run-queries:{pack.name}",
-                seconds,
-                sum(len(batch.get(rule.slug) or []) for rule in pack_rules),
-            )
-            print(f"run-queries {pack.name}  {seconds:.2f}s", flush=True)
-            for rule in pack_rules:
-                print(f"rule {rule.slug} ...", flush=True)
-                mapped = time.perf_counter()
-                try:
-                    hits = rule.evaluate(graph, rows=codeql._select_rows(batch.get(rule.slug) or []))
-                except Exception as error:
-                    elapsed = time.perf_counter() - mapped
-                    graph.record_rule_timing(rule.slug, elapsed, 0, f"{type(error).__name__}: {error}")
-                    graph.record_partial_failure(f"rule {rule.slug}", error)
-                    print(f"rule {rule.slug}  {elapsed:.2f}s  ERROR {error}", flush=True)
-                    continue
-                elapsed = time.perf_counter() - mapped
-                graph.record_rule_timing(rule.slug, elapsed, len(hits))
-                print(f"rule {rule.slug}  {elapsed:.2f}s  hits={len(hits)}", flush=True)
-                for violation in hits:
-                    by_node.setdefault(violation.node_id, []).append(violation)
-        return by_node
+        return runnable, skipped
+
+    def evaluate(
+        self,
+        graph,
+        *,
+        slugs: Optional[Set[str]] = None,
+        skip: Optional[Set[str]] = None,
+    ) -> Dict[str, List[RuleViolation]]:
+        return graph._evaluate_graph_rules(slugs=slugs, skip=skip)
 
     def rules_for_node(
         self,

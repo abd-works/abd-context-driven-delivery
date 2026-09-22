@@ -249,7 +249,7 @@ class OoadClass(OoadNode):
             description=source.description,
             callees=list(source.callees),
         )
-        node._legacy_parameters = list(source._legacy_parameters)
+        node.legacy_parameters = list(source.legacy_parameters)
         return node
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:

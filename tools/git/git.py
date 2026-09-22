@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from agent_tools import agent_toolset
+from harness.agent_tools import agent_toolset
 
 
 class GitConnectError(RuntimeError):

@@ -10,11 +10,11 @@ import yaml
 from git import NullGitRepo, Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
-from agent_tools import agent_instructions, agent_toolset
+from installation.files import skill
+from harness.mcp.mcp_server import mcp
+from harness.agent_tools import agent_instructions, agent_toolset
 from sub_agent.sub_agent import sub_agent
-from agent_tools.agent_tools import agent_tool
+from harness.agent_tools.agent_tools import agent_tool
 from workflow.work_ticket import WorkTicket
 from workspace import Workspace
 from workspace.workspace import Turn

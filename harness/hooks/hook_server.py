@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-for _category in ("harness", "tools", "practices", "actions"):
+for _category in ("tools", "practices", "actions"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
@@ -19,8 +19,10 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from installation.installer import Installer  # noqa: F401
-from installation.hooks.hooks import Hook
+from installation.installer import Installer
+from harness.hooks.hooks import Hook
+
+Installer.ensure_import_path(_REPO_ROOT)
 
 logger = logging.getLogger(__name__)
 
@@ -356,7 +358,7 @@ class HookServer:
         return results, injected
 
     def run(self) -> None:
-        from installation.hooks.session_logs import ensure_default_session
+        from harness.hooks.session_logs import ensure_default_session
 
         ensure_default_session(self._repo_root)
         raw = sys.stdin.buffer.read()
@@ -450,7 +452,7 @@ class HookServer:
     def _work_session_rules(self) -> Any:
         from types import SimpleNamespace
 
-        from installation.hooks.session_logs import active_session_name, session_folder
+        from harness.hooks.session_logs import active_session_name, session_folder
         from workspace.workspace import WorkSessionRulesCollection
 
         name = active_session_name(self._repo_root)
@@ -463,7 +465,7 @@ class HookServer:
         )
 
     def _write_last_chat_injected(self, result: HookResult) -> None:
-        from installation.hooks.session_logs import active_session_name, session_folder
+        from harness.hooks.session_logs import active_session_name, session_folder
 
         folder = session_folder(
             self._repo_root, active_session_name(self._repo_root)
@@ -577,7 +579,7 @@ class HookServer:
         return server
 
     def _append_debug(self, message: str) -> None:
-        from installation.hooks.session_logs import session_log_path
+        from harness.hooks.session_logs import session_log_path
 
         path = session_log_path(self._repo_root, "dispatch.debug")
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

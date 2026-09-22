@@ -17,8 +17,8 @@ from mamba import description, it
 
 from harness.knowledge_graph.model import CodeQL, Kind, PracticeGraph
 from harness.knowledge_graph.model.graph_rules import RuleRegistry
-from practices.clean_engineering.model.codeql.clean_engineering import OoadClass, Operation
-from practices.stories.model.codeql.stories import Example, Scenario, Step
+from practices.clean_engineering.model.codeql.codeql_model import OoadClass, Operation
+from practices.stories.model.codeql.codeql_model import Example, Scenario, Step
 from practices.stories.model.scenario import Phase
 from practices.stories.model.source_location import SourceLocation
 

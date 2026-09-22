@@ -7,11 +7,11 @@ iterate_session (which calls grill_with_context in-method).
 from __future__ import annotations
 
 from grill_context.grill_context import GrillContext
-from guidance_actions import GuidanceArg, GuidanceAction
-from agent_tools import agent_instructions, agent_toolset
-from agent_tools.agent_tools import agent_tool
-from installation.harness_files.harness_files import Skill
-from installation.mcp.mcp_server import Mcp
+from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools.agent_tools import agent_tool
+from installation.files import Skill
+from harness.mcp.mcp_server import Mcp
 
 @agent_toolset
 class Iterate(GuidanceAction):

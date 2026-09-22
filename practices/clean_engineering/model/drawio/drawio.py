@@ -1,18 +1,18 @@
 """Draw.io miniature kit — render class diagrams, scan layout rules, repair on failure.
 
 Not a full context tool: no partition / grill / sketch / fidelities. Composed by
-CleanEngineering when ``format`` is ``drawio``. Reuses Scan kit.
+CleanEngineering when ``format`` is ``drawio``. Layout scan lives on DrawioScanner.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from agent_tools import agent_instructions, agent_toolset, instructions, tools
+from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
-from scan.scan import Scan
 from sub_agent.sub_agent import sub_agent
-from agent_tools.agent_tools import agent_tool
+from harness.agent_tools.agent_tools import agent_tool
+from practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 from practices.clean_engineering.model.drawio.drawio_class_model import (
     DrawIOCleanEngineeringModel,
@@ -29,19 +29,10 @@ class Drawio:
 
     def __init__(self, workspace=None) -> None:
         self.workspace = workspace
-        self.scanner = Scan.bound_to(self)
 
     @property
     def module_dir(self) -> Path:
         return Path(__file__).resolve().parent
-
-    def _scanner_collection(self):
-        from scan.scanner_collection import ScannerCollection
-
-        return ScannerCollection(
-            module_dir=self.module_dir,
-            root_path=self.module_dir / "scanners",
-        )
 
     @property
     def domain_slug(self) -> str:
@@ -108,7 +99,7 @@ class Drawio:
     def scan(self, paths: list[str], root: str | None = None, rule: str | None = None) -> str:
         """scan layout rules on `.drawio` paths (drawio.md rule slugs)."""
         scan_root = root if root is not None else str(self.module_dir)
-        return self.scanner.scan(paths, root=scan_root, rule=rule)
+        return str(DrawioScanner.run_report(paths, scan_root, rule))
 
     @agent_instructions
     def validate(self) -> str:

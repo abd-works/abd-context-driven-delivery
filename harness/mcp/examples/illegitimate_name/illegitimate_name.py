@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from installation.mcp.mcp_server import mcp
+from harness.mcp.mcp_server import mcp
 
 
 @agent_toolset

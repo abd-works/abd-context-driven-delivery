@@ -3,9 +3,12 @@ import json
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+_tools = str(_REPO_ROOT / "tools")
+if _tools not in sys.path:
+    sys.path.insert(0, _tools)
 
 from expects import contain, equal, expect
 from mamba import context, description, it
@@ -13,8 +16,8 @@ from mamba import context, description, it
 from installation.installer import Installer  # noqa: F401 — load Destination before hooks
 from tempfile import TemporaryDirectory
 
-from installation.hooks.prompt_echo.prompt_echo import PromptEcho, echo
-from agent_tools import agent_instructions, agent_tool, agent_toolset
+from prompt_echo.prompt_echo import PromptEcho, echo
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 
 _prompt_echo = PromptEcho()
 

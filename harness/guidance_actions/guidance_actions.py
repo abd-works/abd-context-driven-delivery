@@ -6,10 +6,10 @@ import json
 import re
 from typing import Any
 
-from agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
-from installation.hooks.prompt_echo.prompt_echo import PromptEcho, echo
-from installation.hooks.hooks import Hook
-from installation.mcp.mcp_server import mcp
+from harness.agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
+from prompt_echo.prompt_echo import PromptEcho, echo
+from harness.hooks.hooks import Hook
+from harness.mcp.mcp_server import mcp
 
 # Guidance list, one Guidance (ref or {toolset, …}), or a string to act on directly.
 GuidanceArg = str | dict[str, Any] | list[str | dict[str, Any]]

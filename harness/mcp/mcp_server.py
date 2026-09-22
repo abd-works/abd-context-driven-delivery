@@ -63,7 +63,7 @@ def _cdd_stdio_names(servers: Mapping[str, Any]) -> list[str]:
         if not isinstance(spec, dict):
             continue
         blob = " ".join(str(item) for item in spec.get("args") or [])
-        if "start_host.py" not in blob and "installation.mcp" not in blob:
+        if "start_host.py" not in blob and "harness.mcp" not in blob:
             continue
         if name == "cdd" or str(name).startswith("cdd"):
             names.append(str(name))
@@ -132,7 +132,7 @@ def _touch_mcp_manifest(path: Path, *, bump_env: bool = False) -> None:
     if not path.is_file():
         return
     text = path.read_text(encoding="utf-8")
-    if "start_host.py" not in text and "installation.mcp" not in text:
+    if "start_host.py" not in text and "harness.mcp" not in text:
         return
     if not bump_env:
         path.write_text(text, encoding="utf-8")
@@ -148,7 +148,7 @@ def _touch_mcp_manifest(path: Path, *, bump_env: bool = False) -> None:
         if not isinstance(spec, dict):
             continue
         blob = " ".join(str(item) for item in spec.get("args") or [])
-        if "start_host.py" not in blob and "installation.mcp" not in blob:
+        if "start_host.py" not in blob and "harness.mcp" not in blob:
             continue
         env = spec.setdefault("env", {})
         if not isinstance(env, dict):
@@ -306,7 +306,7 @@ class McpInstallation(Installation):
         from installation.installer import Installer
 
         repo = self.repo or Path(__file__).resolve().parents[2]
-        host = repo / "installation" / "mcp" / "scripts" / "start_host.py"
+        host = repo / "harness" / "mcp" / "scripts" / "start_host.py"
         payload = {
             "mcpServers": {
                 "cdd": {
@@ -819,7 +819,7 @@ class McpHost:
             if not isinstance(spec, dict):
                 continue
             blob = " ".join(str(item) for item in spec.get("args") or [])
-            if "start_host.py" in blob or "installation.mcp" in blob:
+            if "start_host.py" in blob or "harness.mcp" in blob:
                 return spec
         first = next(iter(raw.values()), {})
         return first if isinstance(first, dict) else {}

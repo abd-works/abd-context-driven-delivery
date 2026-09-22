@@ -7,8 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f
-where inSubject(f) and deeplyNested(f)
-select f, "Operation '" + f.getName() + "' nests control flow more than three levels.", f
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "simplify-control-flow")
+select subject, message, contributor

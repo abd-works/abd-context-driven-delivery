@@ -1,12 +1,12 @@
 # mcp — module context
 
 **Layer:** MCP Invocation Layer  
-**Location:** `installation/mcp`  
+**Location:** `harness/mcp`  
 **Ticket theme:** `theme:mcp-invocation-layer` (see `.context/workflow-packages.yaml`)
 
 ## Purpose
 
-One MCP package: the `@mcp` annotation, `McpInstallation` (writes `mcp.json` and records ops), and the stdio host (`McpServer` + `McpHost`). Cursor starts `python -m installation.mcp --toolsets module:Class,…`.
+One MCP package: the `@mcp` annotation, `McpInstallation` (writes `mcp.json` and records ops), and the stdio host (`McpServer` + `McpHost`). Cursor starts `python -m harness.mcp --toolsets module:Class,…`.
 
 ## Seam
 
@@ -15,7 +15,7 @@ One MCP package: the `@mcp` annotation, `McpInstallation` (writes `mcp.json` and
 ## Public API
 
 - `McpOperationDefinition.from_tool` / `invoke_line` — MCP name and the skill/command `Use MCP tool:` tail
-- `McpInstallation.write` — record the op and write `.cursor/mcp.json` with `-m installation.mcp`
+- `McpInstallation.write` — record the op and write `.cursor/mcp.json` with `-m harness.mcp`
 - `McpServer.start` / `bind_from` — enroll recorded `@mcp` ops only
 - `McpHost.build` / `run` — stdio process; `cdd.ping` is always listed
 - `McpHost.input_schema_for_callable` — JSON Schema from Python parameter types
@@ -23,5 +23,5 @@ One MCP package: the `@mcp` annotation, `McpInstallation` (writes `mcp.json` and
 ## Host process
 
 - **Transport:** stdio
-- **Entry:** `python -m installation.mcp` — `--toolsets` or `MCP_TOOLSET_REFS`
+- **Entry:** `python -m harness.mcp` — `--toolsets` or `MCP_TOOLSET_REFS`
 - **Built-in:** `cdd.ping`

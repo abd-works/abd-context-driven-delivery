@@ -42,7 +42,7 @@
 
 - Named child *AgentToolSet* instances, iterated in entry order, so one parent can publish nested toolsets without flattening them.
 
-Build order: `harness/markdown` → `harness/agent_tools` → `harness/guidance` → `harness/guidance_actions`
+Build order: `harness/markdown` → `harness/agent_tools` → `harness/guidance` → `harness/guidance_actions` → `harness/mcp` → `harness/hooks`
 
 ---
 
@@ -60,7 +60,7 @@ Callers import child packages (`harness.markdown`, `harness.agent_tools`, …). 
 # harness/markdown
 - **Purpose:** Let a practice keep its words next to its class and read them as HTML or a collection without assembling agent recipes here.
 - **Seam (terms):** Markdown, MarkdownCollection, HTML, `@markdown`, `@markdownCollection`
-- **Dependencies (one-way):** `actions.scan.rule.RulesCollection` (from coerce of rules extracts)
+- **Dependencies (one-way):** `actions.validate.rule.RulesCollection` (from coerce of rules extracts)
 
 ## Constraint
 
@@ -75,14 +75,14 @@ Property name is the match. **File:** `{name}.md` beside the class. **Section:**
 
 ## Constraint
 
-Stamp `@agent_toolset` when you want the agent (and install) to see the class; do not subclass *AgentToolSet*. A member carries exactly one of `@agent_tool` (run Python) or `@agent_instructions` (the **instructions** the agent follows). Wrap deferred work in `tools(...)` and nested recipes in `instructions(...)`. Wire-out (MCP, hooks, skills) lives in `installation`. Put `@mcp`, `@skill`, `@hook`, `@command`, or `@rules` on a member to publish it there.
+Stamp `@agent_toolset` when you want the agent (and install) to see the class; do not subclass *AgentToolSet*. A member carries exactly one of `@agent_tool` (run Python) or `@agent_instructions` (the **instructions** the agent follows). Wrap deferred work in `tools(...)` and nested recipes in `instructions(...)`. Wire-out (MCP, hooks, skills) lives in `harness/mcp`, `harness/hooks`, and `installation`. Put `@mcp`, `@skill`, `@hook`, `@command`, or `@rules` on a member to publish it there.
 
 ---
 
 # harness/guidance
 - **Purpose:** Let a practice be one class plus co-located markdown the agent follows, including fidelities and format **render**.
 - **Seam (terms):** Guidance, GuidanceCollection, PracticeGuidance, FidelityGuidance
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/markdown`, `actions.scan.rule.RulesCollection`, `installation` (`@rules`, `@skill`, `@echo`, `@mcp`)
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/markdown`, `actions.validate.rule.RulesCollection`, `installation` (`@rules`, `@skill`, `@echo`, `@mcp`)
 
 ## Constraint
 
@@ -93,7 +93,7 @@ Stamp `@agent_toolset` when you want the agent (and install) to see the class; d
 # harness/guidance_actions
 - **Purpose:** Let generate, document, scan, and the other kits share one prelude: bind the guidance list (or a string) and run the operation, optionally on an open work session.
 - **Seam (terms):** GuidanceAction, GuidanceArg
-- **Dependencies (one-way):** `agent_tools`, `installation` (`@echo`, `@hook`, `@mcp`)
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/hooks`, `harness/mcp` (`@echo`, `@hook`, `@mcp`)
 
 ## Constraint
 
@@ -105,3 +105,26 @@ Stamp `@agent_toolset` when you want the agent (and install) to see the class; d
 - **Purpose:** Name the catalog shape — ToolSets, NestedTools, Tools, Operations, Instructions — so install and introspection share one outline.
 - **Seam (terms):** AgentToolCatalog
 - **Dependencies (one-way):** *(none — markdown outline only; no Python package)*
+
+---
+
+# harness/mcp
+- **Purpose:** Mark a member `@mcp` and run a stdio host so Cursor can call it as an MCP tool or prompt.
+- **Seam (terms):** Mcp, McpInstallation, McpServer, McpHost
+- **Dependencies (one-way):** `installation`, `harness/agent_tools`
+
+## Constraint
+
+Cursor starts `python -m harness.mcp` or `harness/mcp/scripts/start_host.py`. `cdd.ping` is always listed. Only members marked `@mcp` enroll. Do not put this folder on `PYTHONPATH` as top-level `mcp`.
+
+---
+
+# harness/hooks
+- **Purpose:** Mark a member `@Hook("event")` so Cursor stdin events run that Python and return one merged result.
+- **Seam (terms):** Hook, Hooks, HookInstallation, HookServer
+- **Dependencies (one-way):** `installation`, `harness/agent_tools`
+
+## Constraint
+
+The event name is the Cursor event (`sessionStart`, `preToolUse`, …). `@Hooks(disabled=True)` on a toolset skips every hook on it.
+

@@ -27,7 +27,7 @@ Slash names match the operation (`/grill`, not `/grill-context`). Inner helpers 
 
 # actions/scan
 - **Purpose:** Run a Guidance’s scanners over paths so rules fire on disk, not only in chat.
-- **Seam (terms):** Scan, Scanner, ScannerCollection, RulesCollection, Rule
+- **Seam (terms):** Scan, Scanner, ScannerCollection
 - **Dependencies (one-way):** `harness/guidance_actions`
 
 ## Constraint
@@ -56,7 +56,7 @@ Flag violations; do not fix them. Write under the session (or the path the calle
 
 # actions/validate
 - **Purpose:** Check artifacts against rules, or add a named rule from a failed example.
-- **Seam (terms):** Validate, createRule
+- **Seam (terms):** Validate, createRule, Rule, RulesCollection, AppliesTo
 - **Dependencies (one-way):** `harness/guidance_actions`, `actions/scan`
 
 ---

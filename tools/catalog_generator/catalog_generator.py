@@ -29,9 +29,9 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from agent_tools import agent_tool, agent_toolset
-from installation.harness_files.harness_files import skill
-from installation.mcp.mcp_server import mcp
+from harness.agent_tools import agent_tool, agent_toolset
+from installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"

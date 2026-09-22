@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("harness", "tools", "practices", "actions"):
+for _cat in ("tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -18,7 +18,7 @@ from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
 from workspace.legacy.session_log import SessionLog
-from agent_tools.examples.logged_probe import LoggedProbe
+from harness.agent_tools.examples.logged_probe import LoggedProbe
 
 
 with description("an action that is expanded"):

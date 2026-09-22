@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar
 
 from .graph_node import Kind, Node, Relationship
 from .graph_rules import RuleRegistry, RuleViolation, closest_fidelity
@@ -83,11 +83,14 @@ class PracticeGraph:
         path: str | Path,
         *,
         codeql_results: str | Path | None = None,
+        populate: bool = True,
     ) -> "PracticeGraph":
         graph = cls(Path(path))
         from .codeql import CodeQL
 
-        CodeQL(graph.root).populate(graph, results_path=codeql_results)
+        CodeQL(graph.root).populate(
+            graph, results_path=codeql_results, populate=populate
+        )
         graph.evaluate_rules()
         return graph
 
@@ -96,9 +99,9 @@ class PracticeGraph:
         self.nodes[node.node_id] = node
         return node
 
-    def _make_id(self, node: Node) -> str:
+    def id_for(self, node: Node) -> str:
         practice = getattr(node, "practice", "node")
-        semantic = getattr(node, "_semantic_type_name", type(node).__name__)
+        semantic = node.semantic_type()
         return f"{practice}:{semantic}:{Node.slug(node.name)}:{id(node)}"
 
     def relate(self, edge: Relationship) -> Relationship:
@@ -114,7 +117,7 @@ class PracticeGraph:
         if not plain:
             return None
         for node in self.nodes.values():
-            if node.name == plain and node._semantic_type_name in _CLASS_SEMANTICS:
+            if node.name == plain and node.semantic_type() in _CLASS_SEMANTICS:
                 return node
         return None
 
@@ -123,7 +126,7 @@ class PracticeGraph:
         if owner is None:
             return None
         for node in owner.related(Kind.OWNS):
-            if node._semantic_type_name == "Operation" and node.name == operation_name:
+            if node.semantic_type() == "Operation" and node.name == operation_name:
                 return node
         return None
 
@@ -136,7 +139,7 @@ class PracticeGraph:
     ) -> Failures:
         wanted = set(slugs.names) if slugs is not None and slugs.names else None
         skipped = set(skip.names) if skip is not None and skip.names else None
-        by_node = self.rule_registry.evaluate(self, slugs=wanted, skip=skipped)
+        by_node = self._evaluate_graph_rules(slugs=wanted, skip=skipped)
         if wanted:
             self._merge_rule_hits(by_node, wanted)
         else:
@@ -162,7 +165,9 @@ class PracticeGraph:
     def zero_hit_slugs(self) -> RuleSlugs:
         names: List[str] = []
         for item in self.rule_timings:
-            if item.slug.startswith("run-queries:"):
+            if item.slug.startswith("run-queries:") or item.slug.startswith(
+                "decode-facts:"
+            ):
                 continue
             if item.error and item.error != "skipped":
                 continue
@@ -200,17 +205,11 @@ class PracticeGraph:
             log.write("".join(traceback.format_exception(error)))
             log.write("\n")
 
-    def record_rule_timing(
-        self,
-        slug: str,
-        seconds: float,
-        hits: int,
-        error: str = "",
-    ) -> None:
-        self.rule_timings.append(RuleTiming(slug, seconds, hits, error))
+    def record_rule_timing(self, timing: RuleTiming) -> None:
+        self.rule_timings.append(timing)
 
     def _is_direct_violation(self, node: Node, violation: RuleViolation) -> bool:
-        closest = closest_fidelity(node.practice, node._semantic_type_name)
+        closest = closest_fidelity(node.practice, node.semantic_type())
         if violation.fidelity is not None:
             return violation.fidelity == closest
         return violation.practice == node.practice
@@ -229,7 +228,7 @@ class PracticeGraph:
             return
         raw = json.loads(export_path.read_text(encoding="utf-8"))
         for entry in raw.get("rule_violations", []):
-            node = self._resolve_violation_node(entry)
+            node = RuleViolation.node_on(self, entry)
             if node is None:
                 continue
             by_node.setdefault(node.node_id, []).append(
@@ -243,21 +242,86 @@ class PracticeGraph:
                     line=int(entry.get("line") or 0),
                     source="codeql",
                 )
-            )
+                )
 
-    def _resolve_violation_node(self, entry: dict):
-        node_id = entry.get("node_id") or ""
-        if node_id and node_id in self.nodes:
-            return self.nodes[node_id]
-        semantic = entry.get("semantic_type") or ""
-        name = entry.get("node_name") or ""
-        for node in self.nodes.values():
-            if node._semantic_type_name != semantic:
+    def _evaluate_graph_rules(
+        self,
+        *,
+        slugs: Optional[set] = None,
+        skip: Optional[set] = None,
+    ) -> Dict[str, List[RuleViolation]]:
+        import time
+        from collections import defaultdict
+
+        from .codeql import CodeQL, Rows
+
+        by_node: Dict[str, List[RuleViolation]] = {}
+        runnable, skipped_rules = self.rule_registry.runnable(slugs=slugs, skip=skip)
+        for rule in skipped_rules:
+            print(f"skip {rule.slug} (0 hits)", flush=True)
+            self.record_rule_timing(RuleTiming(rule.slug, 0.0, 0, "skipped"))
+        by_pack = defaultdict(list)
+        for rule in runnable:
+            if rule.graphQuery is None and rule.pack_rules_query is None:
                 continue
-            if node.name != name:
+            by_pack[rule.query_pack].append(rule)
+        codeql = CodeQL(self.root)
+        for pack, pack_rules in by_pack.items():
+            if not pack_rules:
                 continue
-            return node
-        return None
+            print(f"run-queries {pack.name} ({len(pack_rules)} rules) ...", flush=True)
+            started = time.perf_counter()
+            try:
+                batch = self._rule_rows(codeql, pack, pack_rules)
+            except Exception as error:
+                seconds = time.perf_counter() - started
+                self.record_rule_timing(
+                    RuleTiming(
+                        f"run-queries:{pack.name}",
+                        seconds,
+                        0,
+                        f"{type(error).__name__}: {error}",
+                    )
+                )
+                self.record_partial_failure(f"run-queries {pack.name}", error)
+                print(f"run-queries {pack.name}  {seconds:.2f}s  ERROR {error}", flush=True)
+                continue
+            seconds = time.perf_counter() - started
+            self.record_rule_timing(
+                RuleTiming(
+                    f"run-queries:{pack.name}",
+                    seconds,
+                    sum(len(batch.get(rule.slug) or []) for rule in pack_rules),
+                )
+            )
+            print(f"run-queries {pack.name}  {seconds:.2f}s", flush=True)
+            for rule in pack_rules:
+                print(f"rule {rule.slug} ...", flush=True)
+                mapped = time.perf_counter()
+                try:
+                    hits = rule.evaluate(self, rows=Rows.from_tuples(batch.get(rule.slug) or []))
+                except Exception as error:
+                    elapsed = time.perf_counter() - mapped
+                    self.record_rule_timing(
+                        RuleTiming(rule.slug, elapsed, 0, f"{type(error).__name__}: {error}")
+                    )
+                    self.record_partial_failure(f"rule {rule.slug}", error)
+                    print(f"rule {rule.slug}  {elapsed:.2f}s  ERROR {error}", flush=True)
+                    continue
+                elapsed = time.perf_counter() - mapped
+                self.record_rule_timing(RuleTiming(rule.slug, elapsed, len(hits)))
+                print(f"rule {rule.slug}  {elapsed:.2f}s  hits={len(hits)}", flush=True)
+                for violation in hits:
+                    by_node.setdefault(violation.node_id, []).append(violation)
+        return by_node
+
+    def _rule_rows(self, codeql, pack: Path, pack_rules) -> Dict[str, list]:
+        combined = pack / "rules.ql"
+        slugs = [rule.slug for rule in pack_rules]
+        if combined.is_file():
+            return codeql.run_rules(combined, slugs)
+        queries = [rule.graphQuery for rule in pack_rules if rule.graphQuery is not None]
+        return codeql.run_queries(queries)
 
     @property
     def dot_graph(self) -> str:

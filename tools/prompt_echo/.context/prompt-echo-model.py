@@ -32,6 +32,7 @@ class PromptEcho:
 
     def on_pre_tool_use(self, hook_payload: HookPayload) -> HookResult:
         # after handle, always show_ide_toast when user_message is present
+        # -> PromptEcho.install_ide_toast_extension
         # -> PromptEcho.handle
         # -> PromptEcho.show_ide_toast
         ...

@@ -1,6 +1,6 @@
-"""DDD types on the practice graph."""
+"""CodeQL graph types for DDD."""
 
-from .ddd import (
+from .codeql_model import (
     Aggregate,
     BoundedContext,
     DomainEvent,

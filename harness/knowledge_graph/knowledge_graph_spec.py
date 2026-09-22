@@ -15,8 +15,8 @@ from expects import equal, expect
 from mamba import description, it
 
 from harness.knowledge_graph.model import Kind, Node, PracticeGraph
-from practices.bdd.model.codeql.bdd import Description
-from practices.stories.model.codeql.stories import Epic, Step
+from practices.bdd.model.codeql.codeql_model import Description
+from practices.stories.model.codeql.codeql_model import Epic, Step
 
 
 _CATALOG = _REPO_ROOT / "practices" / "stories" / "catalog-examples"

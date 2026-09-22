@@ -5,7 +5,7 @@ import html
 import re
 from pathlib import Path
 
-from _drawio_base import DrawioScanner, collect_drawio_files
+from _drawio_base import DrawioScanner
 from practices.clean_engineering.model.drawio.drawio_tools import unescape
 
 
@@ -37,12 +37,4 @@ class ClassTitleNoMarkdownBoldScanner(DrawioScanner):
 
 
 if __name__ == "__main__":
-    from scan import ScannerRunner
-
-    raise SystemExit(
-        ScannerRunner.run_scanner_main(
-            ClassTitleNoMarkdownBoldScanner,
-            ClassTitleNoMarkdownBoldScanner.RULE,
-            collect_drawio_files,
-        )
-    )
+    raise SystemExit(ClassTitleNoMarkdownBoldScanner.run_main())

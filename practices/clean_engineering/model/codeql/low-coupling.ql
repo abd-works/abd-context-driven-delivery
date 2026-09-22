@@ -7,9 +7,8 @@
 
 import python
 import subject_filter
-import model
+import rule_hits
 
-from Function f, Attribute attr
-where inSubject(f) and privateAttributeRead(f, attr)
-select f,
-  "Operation '" + f.getName() + "' reaches past a seam via '" + attr.getName() + "'.", attr
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "low-coupling")
+select subject, message, contributor
