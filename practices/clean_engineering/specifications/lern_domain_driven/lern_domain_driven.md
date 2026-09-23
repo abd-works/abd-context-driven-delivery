@@ -234,7 +234,7 @@ recorded before scenarios are written.
 
 ```yaml
 alwaysApply: false
-globs: "**/*-server.ts,**/*-client.tsx,**/*View.tsx,**/*_spec.server.ts,**/*_spec.client.ts,**/*_spec.e2e.ts"
+globs: "**/*-server.ts,**/*-client.tsx,**/*View.tsx,**/*_spec.server.ts,**/*_spec.client.ts,**/*_spec.e2e.ts,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete a domain-module feature package (domain / server / client / View), or tests that package supports. Follow these rules.

@@ -47,6 +47,7 @@ Before sketching ASCII, drawio regions, or brand-layer html, open the matching f
 
 ```yaml
 alwaysApply: false
+globs: "**/*-sketch.md"
 ```
 
 Whenever you name screens, attach stories, or import domain terms on the UX surface, or change later UI work that forces that vocabulary to move. Follow these rules.
@@ -93,7 +94,7 @@ Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate 
 
 ```yaml
 alwaysApply: false
-globs: "**/*.drawio,**/ux-context.md"
+globs: "**/*.drawio,**/ux-context.md,**/*-sketch.md"
 ```
 
 Whenever you decide which screens exist and how users move between them, or change mockups or shipping UI that forces that structure to move. Follow these rules.
@@ -138,7 +139,7 @@ Lock screens as runnable greybox — typed controls and key interactions.
 
 ```yaml
 alwaysApply: false
-globs: "**/*.html,**/*mockup*"
+globs: "**/*.html,**/*mockup*,**/*-sketch.md"
 ```
 
 Whenever you place controls and wire story steps on a greybox, or change shipping UI that those mockups support. Follow these rules.
@@ -177,7 +178,7 @@ Ship the product UI — production frontend talking to a real backend.
 
 ```yaml
 alwaysApply: false
-globs: "**/*View.tsx,**/*View.ts,**/*View.jsx,**/*View.js"
+globs: "**/*View.tsx,**/*View.ts,**/*View.jsx,**/*View.js,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete shipping UI or how it talks to the backend. Follow these rules.

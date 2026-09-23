@@ -20,8 +20,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from mern_scanner_base import TypeScriptScanner
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
+from mern_scanner_base import TypeScriptScanner, Violation
 
 # Known built-in Node modules (not npm packages)
 _NODE_BUILTINS = frozenset(

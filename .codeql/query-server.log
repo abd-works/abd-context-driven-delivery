@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\mcp\codeql_query_daemon.py", line 12, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\graph_rules.py", line 9, in <module>
+    from harness.guidance.rule import Rule
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\guidance\guidance.py", line 10, in <module>
+    from harness.guidance.rule import RulesCollection
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\guidance\rule.py", line 13, in <module>
+    from prompt_echo.prompt_echo import echo
+ModuleNotFoundError: No module named 'prompt_echo'

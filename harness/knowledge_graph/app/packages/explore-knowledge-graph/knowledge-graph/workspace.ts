@@ -63,6 +63,20 @@ export function pickerRelativePath(webkitRelativePath: string): {
   };
 }
 
+export function resolveScanRoot(
+  chosen: string | undefined,
+  lastChosen: string | undefined,
+  repoDefault: string,
+): string {
+  if (chosen && chosen.trim().length > 0) {
+    return chosen.trim();
+  }
+  if (lastChosen && lastChosen.trim().length > 0) {
+    return lastChosen.trim();
+  }
+  return repoDefault;
+}
+
 const TS_SKIP = new Set([
   'if',
   'for',
@@ -87,12 +101,13 @@ export function knowledgeGraphFromWorkspace(
   const folders = new Set<string>();
 
   for (const file of files) {
-    const parent = _parentFolder(file.relativePath);
-    if (parent) {
-      folders.add(parent);
+    const ancestors = _ancestorFolders(file.relativePath);
+    for (const ancestor of ancestors) {
+      folders.add(ancestor);
     }
     const fileNode = _fileNode(file);
     nodes.push(fileNode);
+    const parent = ancestors[ancestors.length - 1];
     if (parent) {
       relationships.push({
         kind: 'owns',
@@ -100,11 +115,26 @@ export function knowledgeGraphFromWorkspace(
         to_id: fileNode.node_id,
       });
     }
-    for (const operation of _operationsIn(file)) {
-      nodes.push(operation);
+    const classes = _classesIn(file);
+    for (const ooadClass of classes) {
+      nodes.push(ooadClass);
       relationships.push({
         kind: 'owns',
         from_id: fileNode.node_id,
+        to_id: ooadClass.node_id,
+      });
+    }
+    for (const operation of _operationsIn(file)) {
+      nodes.push(operation);
+      const owner =
+        classes.find(
+          (ooadClass) =>
+            (ooadClass.source?.start_line ?? 0) <= (operation.source?.start_line ?? 0) &&
+            (operation.source?.end_line ?? 0) <= (ooadClass.source?.end_line ?? 0),
+        ) ?? fileNode;
+      relationships.push({
+        kind: 'owns',
+        from_id: owner.node_id,
         to_id: operation.node_id,
       });
     }
@@ -112,6 +142,14 @@ export function knowledgeGraphFromWorkspace(
 
   for (const folderName of folders) {
     nodes.push(_folderNode(folderName));
+    const parent = _parentFolder(folderName);
+    if (parent) {
+      relationships.push({
+        kind: 'owns',
+        from_id: _folderId(parent),
+        to_id: _folderId(folderName),
+      });
+    }
   }
 
   const dto: KnowledgeGraphDto = {
@@ -130,7 +168,7 @@ export function knowledgeGraphFromWorkspace(
 }
 
 function _folderId(relative: string): string {
-  return `ce:Module:${relative.replaceAll('\\', '/')}`;
+  return `pkg:${relative.replaceAll('\\', '/')}`;
 }
 
 function _fileId(relative: string): string {
@@ -142,8 +180,8 @@ function _folderNode(relative: string): NodeDto {
   return {
     node_id: _folderId(relative),
     name,
-    practice: 'clean_engineering',
-    semantic_type: 'Module',
+    practice: '',
+    semantic_type: 'Package',
     properties: { folder: relative.replaceAll('\\', '/') },
     applicable_rules: [],
     violations: [],
@@ -172,6 +210,18 @@ function _fileNode(file: WorkspaceFile): NodeDto {
   };
 }
 
+function _ancestorFolders(relativePath: string): string[] {
+  const parts = relativePath.replaceAll('\\', '/').split('/').filter(Boolean);
+  parts.pop();
+  const folders: string[] = [];
+  let prefix = '';
+  for (const part of parts) {
+    prefix = prefix ? `${prefix}/${part}` : part;
+    folders.push(prefix);
+  }
+  return folders;
+}
+
 function _parentFolder(relativePath: string): string | null {
   const normalized = relativePath.replaceAll('\\', '/');
   const cut = normalized.lastIndexOf('/');
@@ -179,6 +229,86 @@ function _parentFolder(relativePath: string): string | null {
     return null;
   }
   return normalized.slice(0, cut);
+}
+
+function _classesIn(file: WorkspaceFile): NodeDto[] {
+  if (file.relativePath.endsWith('.py')) {
+    return _pythonClasses(file);
+  }
+  if (/\.(ts|tsx|js|jsx)$/.test(file.relativePath) && !file.relativePath.endsWith('.d.ts')) {
+    return _scriptClasses(file);
+  }
+  return [];
+}
+
+function _scriptClasses(file: WorkspaceFile): NodeDto[] {
+  const found: NodeDto[] = [];
+  const pattern =
+    /(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)[^{]*\{/g;
+  let match: RegExpExecArray | null = pattern.exec(file.text);
+  while (match) {
+    const start = match.index;
+    const end = _closingBrace(file.text, (match.index ?? 0) + match[0].length - 1);
+    found.push(_typeNode(file, 'OoadClass', match[1], start, end));
+    match = pattern.exec(file.text);
+  }
+  return found;
+}
+
+function _pythonClasses(file: WorkspaceFile): NodeDto[] {
+  const found: NodeDto[] = [];
+  const lines = file.text.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const matched = lines[index].match(/^(\s*)class\s+([A-Za-z_][A-Za-z0-9_]*)\s*[:(]/);
+    if (!matched) {
+      continue;
+    }
+    const indent = matched[1].length;
+    let end = index;
+    for (let next = index + 1; next < lines.length; next += 1) {
+      const line = lines[next];
+      if (line.trim() === '') {
+        end = next;
+        continue;
+      }
+      const nextIndent = line.match(/^\s*/)![0].length;
+      if (nextIndent <= indent) {
+        break;
+      }
+      end = next;
+    }
+    const startOffset = _offsetAtLine(file.text, index);
+    const endOffset = _offsetAtLine(file.text, end) + lines[end].length;
+    found.push(_typeNode(file, 'OoadClass', matched[2], startOffset, endOffset));
+  }
+  return found;
+}
+
+function _typeNode(
+  file: WorkspaceFile,
+  semanticType: string,
+  name: string,
+  startOffset: number,
+  endOffset: number,
+): NodeDto {
+  const startLine = _lineAt(file.text, startOffset);
+  const endLine = _lineAt(file.text, endOffset);
+  const normalized = file.relativePath.replaceAll('\\', '/');
+  return {
+    node_id: `ce:${semanticType}:${normalized}:${name}`,
+    name,
+    practice: 'clean_engineering',
+    semantic_type: semanticType,
+    properties: {},
+    applicable_rules: [],
+    violations: [],
+    source: {
+      file: normalized,
+      start_line: startLine,
+      end_line: endLine,
+      text: file.text.slice(startOffset, endOffset),
+    },
+  };
 }
 
 function _operationsIn(file: WorkspaceFile): NodeDto[] {

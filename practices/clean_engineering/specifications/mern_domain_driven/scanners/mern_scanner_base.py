@@ -1,16 +1,5 @@
-"""Base scanners for MERN architecture compliance checks - ported from the
-old-world abd-skills MERN domain-first specification onto the shared
-scan.Scanner / ScannerCollection contract used by every other
-context tool (clean_engineering, stories, ...).
-
-MERNScanner keeps the same helper methods and names as the old world's
-mern_scanner.py, but every helper takes ``root: Path`` directly (Scanner.scan
-already resolves and passes root) instead of a ``context: Dict`` with a
-``project_root`` key - the only real shape change concrete scanners need.
-
-TypeScriptScanner adds the same tree-sitter TypeScript AST extraction the old
-ts_scanner_base.py provided (classes, interfaces, imports, calls), unchanged,
-so every AST-based concrete scanner ports with no logic changes at all.
+"""Base scanners for MERN architecture checks. Scanner and Violation live in
+``_scan_base`` beside these files — same idea as Draw.io's ``_drawio_base``.
 """
 from __future__ import annotations
 
@@ -18,8 +7,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Scanner
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
+from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
+    Scanner,
+    Violation,
+)
+
+__all__ = ["MERNScanner", "Scanner", "TypeScriptScanner", "Violation"]
 
 try:
     import tree_sitter as _ts

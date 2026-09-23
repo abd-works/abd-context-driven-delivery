@@ -94,7 +94,9 @@ with description("a MernDomainDriven generator"):
 
     with context("whose scanners are discovered from its own scanners/ folder"):
         with before.each:
-            from practices.clean_engineering.model.drawio.scanners._drawio_base import ScannerCollection
+            from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
+                ScannerCollection,
+            )
 
             self.discovered = ScannerCollection(module_dir=_MODULE_DIR).discover()
 
@@ -103,7 +105,9 @@ with description("a MernDomainDriven generator"):
 
     with context("whose ported scanners run end-to-end against its own templates/"):
         with before.each:
-            from practices.clean_engineering.model.drawio.scanners._drawio_base import ScannerCollection
+            from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
+                ScannerCollection,
+            )
 
             collection = ScannerCollection(module_dir=_MODULE_DIR)
             self.report = collection.run(_MODULE_DIR, [_MODULE_DIR / "templates"])

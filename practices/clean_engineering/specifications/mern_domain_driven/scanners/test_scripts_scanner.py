@@ -15,8 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
-from mern_scanner_base import TypeScriptScanner
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
+from mern_scanner_base import TypeScriptScanner, Violation
 
 
 class TestScriptsScanner(TypeScriptScanner):

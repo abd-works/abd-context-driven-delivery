@@ -430,7 +430,7 @@ with description("an MCP host Cursor has stopped spawning") as self:
                                     "-u",
                                     str(
                                         _REPO_ROOT
-                                        / "installation"
+                                        / "harness"
                                         / "mcp"
                                         / "scripts"
                                         / "start_host.py"
@@ -454,4 +454,39 @@ with description("an MCP host Cursor has stopped spawning") as self:
                 "cdd"
             ]["args"]
             expect(",".join(str(item) for item in args)).to(contain(full))
+
+        with it("should retarget a same-repo host whose start_host.py is gone"):
+            import json
+
+            self._user_mcp.write_text(
+                json.dumps(
+                    {
+                        "mcpServers": {
+                            "cdd": {
+                                "type": "stdio",
+                                "args": [
+                                    "-u",
+                                    str(
+                                        _REPO_ROOT
+                                        / "installation"
+                                        / "mcp"
+                                        / "scripts"
+                                        / "start_host.py"
+                                    ),
+                                ],
+                                "cwd": str(_REPO_ROOT),
+                                "env": {"CDD_REPO": str(_REPO_ROOT)},
+                            }
+                        }
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            expect(self.mcp.ensure_cursor_host()).to(equal("nudged"))
+            args = json.loads(self._user_mcp.read_text(encoding="utf-8"))["mcpServers"][
+                "cdd"
+            ]["args"]
+            expect(args[1]).to(contain("harness"))
+            expect(Path(args[1]).is_file()).to(equal(True))
 

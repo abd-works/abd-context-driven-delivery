@@ -8,6 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+import mcp.types  # SDK, before harness/mcp is on PYTHONPATH
 for _cat in ("practices", "harness", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
@@ -18,9 +19,11 @@ from mamba import description, it
 
 from harness.knowledge_graph.model.codeql import CodeQL, _RUN_QUERIES_FLAGS
 from harness.knowledge_graph.model.dot_graph import (
+    _hierarchy_violations,
     graph_name_matches,
     violation_row_indexes,
 )
+from harness.knowledge_graph.model.graph_rules import RuleViolation
 from harness.knowledge_graph.model.practice_graph import PracticeGraph
 
 _KG = _REPO_ROOT / "harness" / "knowledge_graph"
@@ -104,3 +107,31 @@ with description("CodeQL report runner"):
         expect(
             violation_row_indexes([(0, False), (1, True), (1, False), (2, True)])
         ).to(equal([0, 1, 2, 3]))
+
+    with it("should mark hierarchy lines from stored hits without walking every node"):
+        class _Graph:
+            _violations_by_node = {
+                "op": [
+                    RuleViolation(
+                        "keep-operations-small-focused",
+                        "too long",
+                        "clean_engineering",
+                        node_id="op",
+                    )
+                ]
+            }
+
+            def record_partial_failure(self, *args):
+                raise AssertionError("hierarchy should not walk inherited rules")
+
+        class _Node:
+            node_id = "op"
+            name = "op"
+            graph = _Graph()
+
+            @property
+            def rules(self):
+                raise AssertionError("hierarchy should not query node.rules")
+
+        mark = _hierarchy_violations(_Node())
+        expect("keep-operations-small-focused" in mark).to(equal(True))

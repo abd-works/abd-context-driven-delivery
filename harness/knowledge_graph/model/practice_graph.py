@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Type, TypeVar
 
 from .graph_node import Kind, Node, Relationship
-from .graph_rules import RuleRegistry, RuleViolation, closest_fidelity
+from .graph_rules import RuleRegistry, RuleViolation, _nodes_by_name, closest_fidelity
 
 T = TypeVar("T", bound=Node)
 
@@ -67,6 +67,8 @@ class PracticeGraph:
         self.nodes: Dict[str, Node] = {}
         self.relationships: List[Relationship] = []
         self._used_by: Dict[str, List[str]] = {}
+        self._outgoing: Dict[str, List[Relationship]] = {}
+        self._incoming: Dict[str, List[Relationship]] = {}
         self._violations_by_node: Dict[str, List[RuleViolation]] = {}
         self.partial_failures: List[str] = []
         self.rule_timings: List[RuleTiming] = []
@@ -107,6 +109,8 @@ class PracticeGraph:
     def relate(self, edge: Relationship) -> Relationship:
         self.relationships.append(edge)
         self._used_by.setdefault(edge.to_id, []).append(edge.from_id)
+        self._outgoing.setdefault(edge.from_id, []).append(edge)
+        self._incoming.setdefault(edge.to_id, []).append(edge)
         return edge
 
     def nodes_of_type(self, cls: Type[T]) -> List[T]:
@@ -266,6 +270,7 @@ class PracticeGraph:
                 continue
             by_pack[rule.query_pack].append(rule)
         codeql = CodeQL(self.root)
+        names = _nodes_by_name(self)
         for pack, pack_rules in by_pack.items():
             if not pack_rules:
                 continue
@@ -299,7 +304,11 @@ class PracticeGraph:
                 print(f"rule {rule.slug} ...", flush=True)
                 mapped = time.perf_counter()
                 try:
-                    hits = rule.evaluate(self, rows=Rows.from_tuples(batch.get(rule.slug) or []))
+                    hits = rule.evaluate(
+                        self,
+                        rows=Rows.from_tuples(batch.get(rule.slug) or []),
+                        by_name=names,
+                    )
                 except Exception as error:
                     elapsed = time.perf_counter() - mapped
                     self.record_rule_timing(
@@ -316,12 +325,53 @@ class PracticeGraph:
         return by_node
 
     def _rule_rows(self, codeql, pack: Path, pack_rules) -> Dict[str, list]:
-        combined = pack / "rules.ql"
-        slugs = [rule.slug for rule in pack_rules]
-        if combined.is_file():
-            return codeql.run_rules(combined, slugs)
-        queries = [rule.graphQuery for rule in pack_rules if rule.graphQuery is not None]
-        return codeql.run_queries(queries)
+        hits_lib = pack / "rule_hits.qll"
+        combined_slugs: List[str] = []
+        leftover: List[Path] = []
+        for rule in pack_rules:
+            if rule.graphQuery is None:
+                continue
+            if not codeql._query_matches_pack(rule.graphQuery):
+                print(
+                    f"skip {rule.slug} (query language does not match pack)",
+                    flush=True,
+                )
+                continue
+            if hits_lib.is_file():
+                combined_slugs.append(rule.slug)
+            else:
+                leftover.append(rule.graphQuery)
+        batch: Dict[str, list] = {}
+        if combined_slugs:
+            combined = pack / "rules.ql"
+            language = codeql._query_language(combined) if combined.is_file() else (
+                codeql._pack_language(pack) or "python"
+            )
+            codeql._write_rules_query(pack)
+            batch.update(
+                codeql.run_rules(
+                    pack / "rules.ql",
+                    combined_slugs,
+                    database=codeql.ensure_database(language),
+                )
+            )
+        by_language: Dict[str, list] = {}
+        for query in leftover:
+            language = codeql._query_language(query)
+            by_language.setdefault(language, []).append(query)
+        for language, queries in by_language.items():
+            try:
+                batch.update(
+                    codeql.run_queries(
+                        queries, database=codeql.ensure_database(language)
+                    )
+                )
+            except Exception as error:
+                print(
+                    f"run-queries {pack.name}/{language}  ERROR {error}",
+                    flush=True,
+                )
+        return batch
 
     @property
     def dot_graph(self) -> str:

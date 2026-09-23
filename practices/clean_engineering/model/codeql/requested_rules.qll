@@ -2,6 +2,7 @@
 
 predicate requestedRule(string slug) {
   slug = "do-not-invent-parallel-object-models" or
+  slug = "named-seam-and-constraint" or
   slug = "deep-module" or
   slug = "public-seam-only" or
   slug = "use-typed-signatures" or
@@ -17,6 +18,10 @@ predicate requestedRule(string slug) {
   slug = "use-explicit-dependencies" or
   slug = "limit-operation-parameters" or
   slug = "avoid-vague-parameter-names" or
+  slug = "limit-comments" or
+  slug = "use-intention-revealing-names" or
+  slug = "use-consistent-naming" or
+  slug = "eliminate-duplication" or
   slug = "keep-operations-small-focused" or
   slug = "simplify-control-flow" or
   slug = "provide-meaningful-context" or

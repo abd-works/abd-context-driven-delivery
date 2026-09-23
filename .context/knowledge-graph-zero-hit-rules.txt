@@ -1,7 +1,16 @@
 deep-module
+describe-is-subject-not-internal
+eliminate-duplication
+layer-isolation
 layer-separation
+limit-comments
+named-seam-and-constraint
+observable-behavior
+one-assertion-per-test
 one-way-deps
 provide-meaningful-context
-public-seam-only
+state-not-when
+use-consistent-naming
 use-exceptions-properly
+use-intention-revealing-names
 use-typed-signatures

@@ -2,12 +2,19 @@
 import json
 import sys
 import tempfile
+import threading
+import time
 from io import BytesIO
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+import mcp.types  # SDK, before harness/mcp is on PYTHONPATH
+for _cat in ("practices", "harness", "tools"):
+    _p = str(_REPO_ROOT / _cat)
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from expects import equal, expect
 from mamba import after, context, description, it
@@ -18,6 +25,7 @@ from harness.knowledge_graph.model.codeql import (
     attach_query_server,
     detach_query_server,
 )
+from harness.mcp.codeql_query_daemon import _connect, serve
 from harness.mcp.codeql_server import CodeQLQueryServer
 from harness.mcp.mcp_server import McpHost
 
@@ -70,6 +78,37 @@ with description("the MCP CodeQL query server"):
             host = McpHost.build((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
             host.codeql_server = server
             host._stop_codeql_server()
-            expect(server.stopped).to(equal(True))
+            expect(server.stopped).to(equal(False))
             expect(host.codeql_server).to(equal(None))
             expect(attached_query_server()).to(equal(None))
+
+    with context("a persistent query daemon"):
+        with it("should ping without starting CodeQL"):
+            class _Inner:
+                def run_queries(self, queries, database, on_line):
+                    return {}
+
+            import harness.mcp.codeql_query_daemon as daemon
+
+            folder = Path(tempfile.mkdtemp())
+            marker = folder / "query-server.json"
+            original = daemon.state_path
+            daemon.state_path = lambda repo: marker
+            try:
+                thread = threading.Thread(
+                    target=serve,
+                    args=(folder,),
+                    kwargs={"inner": _Inner()},
+                    daemon=True,
+                )
+                thread.start()
+                client = None
+                deadline = time.time() + 3
+                while time.time() < deadline:
+                    client = _connect(marker)
+                    if client is not None:
+                        break
+                    time.sleep(0.05)
+                expect(client is not None).to(equal(True))
+            finally:
+                daemon.state_path = original

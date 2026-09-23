@@ -2,23 +2,27 @@ import { Router } from 'express';
 import { Low } from 'lowdb';
 import { Memory } from 'lowdb';
 import { JSONFilePreset } from 'lowdb/node';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, delimiter, join, relative } from 'node:path';
 import {
   KnowledgeGraph,
   KnowledgeGraphSchema,
   type CreateKnowledgeGraphInput,
   type GraphFilter,
+  type KnowledgeGraphDto,
   type KnowledgeGraphRepository,
   type KnowledgeGraphSearch,
 } from './knowledge-graph';
 import {
   isScanSourcePath,
   knowledgeGraphFromWorkspace,
+  resolveScanRoot,
   scanSourceFiles,
   SKIP_DIR,
   type WorkspaceFile,
 } from './workspace';
+import { overlayWorkspaceTree } from './workspace-overlay';
 
 type KnowledgeGraphStore = {
   knowledge_graphs: unknown[];
@@ -26,6 +30,7 @@ type KnowledgeGraphStore = {
 
 const defaultData: KnowledgeGraphStore = { knowledge_graphs: [] };
 const STORE_PATH = 'data/knowledge-graphs.json';
+const SCAN_ROOT_PATH = 'data/scan-root.json';
 
 export class KnowledgeGraphRepositoryServer implements KnowledgeGraphRepository {
   constructor(private readonly db: Low<KnowledgeGraphStore>) {}
@@ -55,7 +60,7 @@ export class KnowledgeGraphRepositoryServer implements KnowledgeGraphRepository 
     if (!doc) {
       return null;
     }
-    return KnowledgeGraph.fromDto(KnowledgeGraphSchema.parse(doc));
+    return graphFromWorkspaceDto(KnowledgeGraphSchema.parse(doc));
   }
 
   async create(input: CreateKnowledgeGraphInput): Promise<KnowledgeGraph> {
@@ -65,16 +70,16 @@ export class KnowledgeGraphRepositoryServer implements KnowledgeGraphRepository 
       practice_graphs: input.practiceGraphs,
     };
     const parsed = KnowledgeGraphSchema.parse(doc);
-    await this.db.update(({ knowledge_graphs }) => {
-      knowledge_graphs.push(parsed);
+    await this.db.update((data) => {
+      data.knowledge_graphs = [parsed];
     });
-    return KnowledgeGraph.fromDto(parsed);
+    return graphFromWorkspaceDto(parsed);
   }
 
   async search(query?: KnowledgeGraphSearch): Promise<KnowledgeGraph[]> {
     await this.db.read();
     const graphs = this.db.data.knowledge_graphs.map((row) =>
-      KnowledgeGraph.fromDto(KnowledgeGraphSchema.parse(row)),
+      graphFromWorkspaceDto(KnowledgeGraphSchema.parse(row)),
     );
     if (!query?.id) {
       return graphs;
@@ -93,7 +98,7 @@ export class KnowledgeGraphRepositoryServer implements KnowledgeGraphRepository 
         knowledge_graphs[index] = parsed;
       }
     });
-    return KnowledgeGraph.fromDto(parsed);
+    return graphFromWorkspaceDto(parsed);
   }
 }
 
@@ -123,15 +128,22 @@ export class KnowledgeGraphsServer {
     folder: string,
     repo: KnowledgeGraphRepository,
     files?: WorkspaceFile[],
+    force = false,
   ): Promise<KnowledgeGraph> {
-    const workspaceFiles = files
-      ? scanSourceFiles(files)
-      : _readWorkspaceFromDisk(folder);
-    const graph = knowledgeGraphFromWorkspace(
-      folder || 'workspace',
-      workspaceFiles,
-      crypto.randomUUID(),
-    );
+    const uploaded = files ? scanSourceFiles(files) : [];
+    const root =
+      uploaded.length > 0
+        ? _isDir(folder)
+          ? folder
+          : folder || _diskScanRoot('')
+        : _diskScanRoot(folder);
+    if (_isDir(root)) {
+      _writeLastScanRoot(root);
+    }
+    const graph =
+      uploaded.length > 0
+        ? knowledgeGraphFromWorkspace(root, uploaded, crypto.randomUUID())
+        : _fromPracticeHierarchyCli(root, Boolean(force));
     return repo.create({
       folder: graph.folder,
       practiceGraphs: graph.toDto().practice_graphs,
@@ -163,6 +175,56 @@ export class FolderNotFound extends Error {
 }
 
 const SKIP_DIRS = SKIP_DIR;
+
+function _isDir(folder: string): boolean {
+  return folder.length > 0 && existsSync(folder) && statSync(folder).isDirectory();
+}
+
+function _diskScanRoot(chosen: string): string {
+  const last = _readLastScanRoot();
+  const root = resolveScanRoot(
+    _isDir(chosen) ? chosen : undefined,
+    last && _isDir(last) ? last : undefined,
+    _repoRoot(),
+  );
+  if (!_isDir(root)) {
+    throw new FolderNotFound(root);
+  }
+  return root;
+}
+
+function _repoRoot(): string {
+  let dir = process.cwd();
+  while (true) {
+    if (existsSync(join(dir, '.git'))) {
+      return dir;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) {
+      return process.cwd();
+    }
+    dir = parent;
+  }
+}
+
+function _readLastScanRoot(): string | undefined {
+  if (!existsSync(SCAN_ROOT_PATH)) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(readFileSync(SCAN_ROOT_PATH, 'utf8')) as {
+      folder?: string;
+    };
+    return parsed.folder;
+  } catch {
+    return undefined;
+  }
+}
+
+function _writeLastScanRoot(folder: string): void {
+  mkdirSync(dirname(SCAN_ROOT_PATH), { recursive: true });
+  writeFileSync(SCAN_ROOT_PATH, `${JSON.stringify({ folder }, null, 2)}\n`);
+}
 
 function _readWorkspaceFromDisk(folder: string): WorkspaceFile[] {
   if (!existsSync(folder) || !statSync(folder).isDirectory()) {
@@ -212,6 +274,7 @@ export function createKnowledgeGraphsRouter(
         String(req.body.folder ?? ''),
         repo,
         files,
+        Boolean(req.body.force),
       );
       res.status(201).json(graph.present());
     } catch (error) {
@@ -273,16 +336,81 @@ export function createKnowledgeGraphsRouter(
   return router;
 }
 
+function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph {
+  const cached = join(root, '.context', 'explorer-graph.json');
+  if (!force && existsSync(cached)) {
+    const dto = JSON.parse(readFileSync(cached, 'utf8'));
+    dto.folder = dto.folder || root;
+    return graphFromWorkspaceDto(dto);
+  }
+  const repo = _repoRoot();
+  const script = join(
+    repo,
+    'harness',
+    'knowledge_graph',
+    'write_practice_hierarchy.py',
+  );
+  const pythonPath = [
+    repo,
+    join(repo, 'harness'),
+    join(repo, 'tools'),
+    join(repo, 'practices'),
+    join(repo, 'actions'),
+    process.env.PYTHONPATH ?? '',
+  ]
+    .filter(Boolean)
+    .join(delimiter);
+  const result = spawnSync(
+    process.env.PYTHON ?? 'python',
+    [script, '--json', '--no-populate', root],
+    {
+      cwd: repo,
+      env: { ...process.env, PYTHONPATH: pythonPath },
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr || result.stdout || 'write_practice_hierarchy.py failed',
+    );
+  }
+  const line = (result.stdout || '')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .at(-1);
+  if (!line) {
+    throw new Error('write_practice_hierarchy.py printed no JSON');
+  }
+  return graphFromWorkspaceDto(JSON.parse(line));
+}
+
+function graphFromWorkspaceDto(dto: KnowledgeGraphDto): KnowledgeGraph {
+  return KnowledgeGraph.fromDto(overlayWorkspaceTree(dto));
+}
+
 function _filterFromQuery(query: Record<string, unknown>): GraphFilter {
   return {
-    practice: _stringQuery(query.practice),
+    practices: _stringList(query.practice),
+    stages: _stringList(query.stage ?? query.fidelity),
+    nodeTypes: _stringList(query.node_type),
+    relationshipTypes: _stringList(query.relationship_type),
     connectorKind: _stringQuery(query.connector_kind),
     node: _stringQuery(query.node),
     violations: query.violations === 'true',
-    rule: _stringQuery(query.rule),
+    rules: _stringList(query.rule),
   };
 }
 
 function _stringQuery(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function _stringList(value: unknown): string[] | undefined {
+  const raw = Array.isArray(value) ? value : value == null ? [] : [value];
+  const items = raw.flatMap((entry) =>
+    typeof entry === 'string' ? entry.split(',').map((part) => part.trim()) : [],
+  ).filter(Boolean);
+  return items.length > 0 ? items : undefined;
 }

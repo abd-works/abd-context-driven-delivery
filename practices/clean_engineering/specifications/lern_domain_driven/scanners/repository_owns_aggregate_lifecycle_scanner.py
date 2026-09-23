@@ -4,8 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Set
 
-from lern_scanner_base import TypeScriptScanner
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
+from lern_scanner_base import TypeScriptScanner, Violation
 
 _REQUIRED = ("load", "create", "search", "update")
 

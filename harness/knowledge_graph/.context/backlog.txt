@@ -1,9 +1,11 @@
 reference implementation to test based on paradise mobile and mid tier
-replace scanner pros / cons?
+
 use render to validate transformation - can codeql do markdown, drawio? 
-optimize, straighrt performance , update on file change, update on /turn   IP
+
+update on file change, update on /turn   IP
 project guidlines - auto easy codeql creation on error and correct -> promote to practice
-inject through hook - async check when ever asset is modified
+
+inject through hook - async CodeQL classify + evaluate on file change; sync hook reads last violations + report path  IP
 reports and rendering - simple merl front end    IP
 KnowledgeGraph  
     PracticeGraph

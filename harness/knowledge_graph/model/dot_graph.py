@@ -165,11 +165,7 @@ def _hierarchy_violations(node: Node) -> str:
     if graph is None:
         return ""
     try:
-        hits = [
-            hit
-            for hit in node.rules.violations
-            if hit.node_id == node.node_id
-        ]
+        hits = list(graph._violations_by_node.get(node.node_id, []))
     except Exception as error:
         graph.record_partial_failure(
             f"violations {getattr(node, 'name', type(node).__name__)}",

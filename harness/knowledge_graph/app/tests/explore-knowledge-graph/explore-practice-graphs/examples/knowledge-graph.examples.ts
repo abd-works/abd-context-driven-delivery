@@ -36,7 +36,9 @@ export function seededKnowledgeGraph(): KnowledgeGraphDto {
 }
 
 function operationNamed(name: string): NodeDto {
-  const node = SEEDED.practice_graphs[0].nodes.find((entry) => entry.name === name);
+  const node = SEEDED.practice_graphs
+    .flatMap((graph) => graph.nodes)
+    .find((entry) => entry.name === name);
   if (!node) {
     throw new Error(`Fixture is missing operation ${name}`);
   }

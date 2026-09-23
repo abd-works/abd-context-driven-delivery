@@ -159,7 +159,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: _parse_classes(): model  [hide-inner-details] Operation '_parse_classes' reads private attribute '_ARROW_TO_KIND'. | [keep-operations-small-focused] Operation '_parse_classes' is 39 lines (max 20).
         Parameter: cls
         Parameter: mxcells
-    Class: Drawio  [keep-classes-single-responsibility] Class 'Drawio' has 10 public operations whose nouns cluster into 3 responsibilities.
+    Class: Drawio  [keep-classes-single-responsibility] Class 'Drawio' has 10 public operations whose nouns cluster into 3 responsibilities. | [public-seam-only] Module 'drawio' module-context names private '_drawio_base'.
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: workspace
       Operation: contexts()
@@ -260,7 +260,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: cls
         Parameter: tuples
     Class: Kind
-    Class: Node  [keep-classes-single-responsibility] Class 'Node' has 15 public operations whose nouns cluster into 4 responsibilities.
+    Class: Node  [keep-classes-single-responsibility] Class 'Node' has 15 public operations whose nouns cluster into 5 responsibilities.
       Property: practice
       Operation: join(): self
         Parameter: graph
@@ -288,7 +288,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: _violation(): RuleViolation  [keep-operations-small-focused] Operation '_violation' is 22 lines (max 20).
         Parameter: message
         Parameter: node
-    Class: RuleRegistry  [keep-classes-single-responsibility] Class 'RuleRegistry' has 5 public operations whose nouns cluster into 3 responsibilities.
+    Class: RuleRegistry
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
       Operation: __iter__(): iter
       Operation: load(): registry  [hide-inner-details] Operation 'load' reads private attribute '_attach_existing_session_worktree'. | [keep-operations-small-focused] Operation 'load' is 25 lines (max 20).
@@ -692,7 +692,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: _reconcile_collection()  [keep-operations-small-focused] Operation '_reconcile_collection' is 22 lines (max 20).
         Parameter: report
         Parameter: pair
-      Operation: _find_match(): None  [limit-operation-parameters] Operation '_find_match' takes 3 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation '_find_match' works through parameter 'candidates' instead of that object.
+      Operation: _find_match(): None  [limit-operation-parameters] Operation '_find_match' takes 3 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation '_find_match' works through parameter 'source' instead of that object.
         Parameter: source
         Parameter: consumed_ids
         Parameter: candidates
@@ -701,7 +701,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: source
       Operation: load_operation(): node
         Parameter: source
-    Class: JavaCleanEngineeringModel  [keep-classes-single-responsibility] Class 'JavaCleanEngineeringModel' has 6 public operations whose nouns cluster into 3 responsibilities.
+    Class: JavaCleanEngineeringModel  [keep-classes-single-responsibility] Class 'JavaCleanEngineeringModel' has 6 public operations whose nouns cluster into 4 responsibilities.
       Operation: parse(): parse_c_family  [hide-inner-details] Operation 'parse' reads private attribute '_parse_modules'. | [keep-operations-small-focused] Operation 'parse' is 52 lines (max 20). | [limit-operation-parameters] Operation 'parse' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'parse' nests control flow more than three levels.
         Parameter: text
         Parameter: cls
@@ -713,7 +713,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: parse_detailed(): ParsedPython  [hide-inner-details] Operation 'parse_detailed' reads private attribute '_parse_regex'.
         Parameter: text
         Parameter: cls
-    Class: JavaScriptCleanEngineeringModel  [keep-classes-single-responsibility] Class 'JavaScriptCleanEngineeringModel' has 6 public operations whose nouns cluster into 3 responsibilities.
+    Class: JavaScriptCleanEngineeringModel  [keep-classes-single-responsibility] Class 'JavaScriptCleanEngineeringModel' has 6 public operations whose nouns cluster into 4 responsibilities.
       Operation: parse(): parse_c_family  [hide-inner-details] Operation 'parse' reads private attribute '_parse_modules'. | [keep-operations-small-focused] Operation 'parse' is 52 lines (max 20). | [limit-operation-parameters] Operation 'parse' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'parse' nests control flow more than three levels.
         Parameter: text
         Parameter: cls
@@ -725,7 +725,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: parse_detailed(): ParsedPython  [hide-inner-details] Operation 'parse_detailed' reads private attribute '_parse_regex'.
         Parameter: text
         Parameter: cls
-    Class: JsonCleanEngineeringModel
+    Class: JsonCleanEngineeringModel  [keep-classes-single-responsibility] Class 'JsonCleanEngineeringModel' has 5 public operations whose nouns cluster into 3 responsibilities.
       Operation: load_module(): JsonModule
         Parameter: source
       Operation: parse(): model  [hide-inner-details] Operation 'parse' reads private attribute '_parse_modules'. | [keep-operations-small-focused] Operation 'parse' is 52 lines (max 20). | [limit-operation-parameters] Operation 'parse' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'parse' nests control flow more than three levels.
@@ -763,7 +763,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: text
         Parameter: cls
         Parameter: tree
-    Class: TypeScriptCleanEngineeringModel  [keep-classes-single-responsibility] Class 'TypeScriptCleanEngineeringModel' has 6 public operations whose nouns cluster into 3 responsibilities.
+    Class: TypeScriptCleanEngineeringModel  [keep-classes-single-responsibility] Class 'TypeScriptCleanEngineeringModel' has 6 public operations whose nouns cluster into 4 responsibilities.
       Operation: parse(): parse_c_family  [hide-inner-details] Operation 'parse' reads private attribute '_parse_modules'. | [keep-operations-small-focused] Operation 'parse' is 52 lines (max 20). | [limit-operation-parameters] Operation 'parse' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'parse' nests control flow more than three levels.
         Parameter: text
         Parameter: cls
@@ -1279,7 +1279,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Property: agent_result
       Property: shell_captures
       Property: raw_lines
-  Module: actions.scan
+  Module: actions
     Class: Rule
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: fidelity
@@ -1354,7 +1354,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: path
       Operation: explicitly_requested()  [hide-inner-details] Operation 'explicitly_requested' reads private attribute '_explicit_paths'.
         Parameter: paths
-    Class: ScannerCollection  [keep-classes-single-responsibility] Class 'ScannerCollection' has 4 public operations whose nouns cluster into 3 responsibilities.
+    Class: ScannerCollection
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: module_dir
         Parameter: root_path
@@ -1375,6 +1375,14 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: message
         Parameter: rule
+    Class: Generate  [keep-classes-single-responsibility] Class 'Generate' has 4 public operations whose nouns cluster into 3 responsibilities.
+      Operation: generate()
+        Parameter: guidance
+      Operation: _generate_item()
+        Parameter: item
+    Class: Validate
+    Class: Document
+    Class: Satisfy
     Class: AppliesTo
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: always_apply
@@ -1385,6 +1393,17 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: from_value(): value
         Parameter: value
         Parameter: cls
+    Class: Render
+      Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
+        Parameter: path
+        Parameter: session
+      Operation: render()  [hide-inner-details] Operation 'render' reads private attribute '_render_modules'. | [keep-operations-small-focused] Operation 'render' is 21 lines (max 20). | [limit-operation-parameters] Operation 'render' takes 5 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation 'render' works through parameter 'ux_map' instead of that object. | [simplify-control-flow] Operation 'render' nests control flow more than three levels.
+        Parameter: format
+        Parameter: guidance
+        Parameter: content
+        Parameter: source
+    Class: CapabilityCli
+      Operation: _build_parser(): parser  [hide-inner-details] Operation '_build_parser' reads private attribute '_subparsers'.
     Class: ScannerPaths
       Operation: _parse_frontmatter_scanner(): None
         Parameter: content
@@ -1799,7 +1818,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: data
       Operation: _scenario_from_dict(): scenario  [avoid-vague-parameter-names] Operation '_scenario_from_dict' names a parameter 'data'.
         Parameter: data
-    Class: MiroStoryMap  [keep-classes-single-responsibility] Class 'MiroStoryMap' has 10 public operations whose nouns cluster into 3 responsibilities.
+    Class: MiroStoryMap
       Operation: parse(): story_map  [hide-inner-details] Operation 'parse' reads private attribute '_parse_modules'. | [keep-operations-small-focused] Operation 'parse' is 52 lines (max 20). | [limit-operation-parameters] Operation 'parse' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'parse' nests control flow more than three levels.
         Parameter: text
       Operation: parse_thin_slice(): increments  [keep-operations-small-focused] Operation 'parse_thin_slice' is 50 lines (max 20). | [simplify-control-flow] Operation 'parse_thin_slice' nests control flow more than three levels.
@@ -1889,7 +1908,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: _reconcile_collection()  [keep-operations-small-focused] Operation '_reconcile_collection' is 22 lines (max 20).
         Parameter: report
         Parameter: pair
-      Operation: _find_match(): None  [limit-operation-parameters] Operation '_find_match' takes 3 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation '_find_match' works through parameter 'candidates' instead of that object.
+      Operation: _find_match(): None  [limit-operation-parameters] Operation '_find_match' takes 3 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation '_find_match' works through parameter 'source' instead of that object.
         Parameter: consumed_ids
         Parameter: source_child
         Parameter: candidates
@@ -2622,7 +2641,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
     Class: CursorEvent
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
-    Class: HookPayload
+    Class: HookPayload  [keep-classes-single-responsibility] Class 'HookPayload' has 4 public operations whose nouns cluster into 3 responsibilities.
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: fields
       Operation: from_stdin(): cls
@@ -2772,7 +2791,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: op
       Operation: _enroll_toolset()
         Parameter: toolset
-    Class: McpHost  [keep-classes-single-responsibility] Class 'McpHost' has 12 public operations whose nouns cluster into 4 responsibilities.
+    Class: McpHost  [keep-classes-single-responsibility] Class 'McpHost' has 12 public operations whose nouns cluster into 3 responsibilities.
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: runtime
       Operation: run()  [keep-operations-small-focused] Operation 'run' is 41 lines (max 20).
@@ -2817,7 +2836,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: op
       Operation: invoke(): result
         Parameter: arguments
-  Module: practices.clean_engineering.scanners
+  Module: practices.clean_engineering
     Class: CodeScanner
       Operation: _iter_operations(): pairs
         Parameter: file_path
@@ -2827,6 +2846,59 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
         Parameter: files
+    Class: TypeScriptScanner  [use-property-not-accessor] Class 'TypeScriptScanner' exposes 'get_classes' as an accessor.
+      Property: TREE_SITTER_AVAILABLE
+      Operation: parse_file(): None
+        Parameter: path
+      Operation: get_all_source_files(): files
+        Parameter: directory
+      Operation: has_import_from(): any
+        Parameter: root
+      Operation: get_classes(): classes
+        Parameter: root
+      Operation: node_text(): _txt
+        Parameter: node
+    Class: ArgNamingScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_domain(): violations  [keep-operations-small-focused] Operation '_check_domain' is 35 lines (max 20). | [simplify-control-flow] Operation '_check_domain' nests control flow more than three levels.
+        Parameter: domain_path
+    Class: LERNScanner
+      Property: RULE
+      Operation: _find_domain_packages(): domain_packages  [keep-operations-small-focused] Operation '_find_domain_packages' is 33 lines (max 20). | [simplify-control-flow] Operation '_find_domain_packages' nests control flow more than three levels.
+        Parameter: project_root
+      Operation: _find_tier_files(): list  [limit-operation-parameters] Operation '_find_tier_files' takes 3 parameters (prefer 0-2).
+        Parameter: tier
+        Parameter: domain_path
+        Parameter: pattern
+      Operation: _read_file_content(): None
+        Parameter: file_path
+      Operation: _client_file(): path
+        Parameter: domain_path
+      Operation: _domain_core_file(): None  [keep-operations-small-focused] Operation '_domain_core_file' is 21 lines (max 20).
+        Parameter: domain_path
+      Operation: _server_file(): path
+        Parameter: domain_path
+      Operation: _is_domain_dir(): True
+        Parameter: path
+      Operation: _find_test_folders(): sub_epic_folders  [keep-operations-small-focused] Operation '_find_test_folders' is 21 lines (max 20).
+        Parameter: project_root
+    Class: AskCrossAggregateSyncScanner
+      Operation: _read_grill_answers(): None
+        Parameter: root
+    Class: CleanEngineering  [use-explicit-dependencies] Class 'CleanEngineering' constructs 'Drawio' inside __init__.
+      Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
+        Parameter: format
+        Parameter: fidelity
+    Class: CasingTransformScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_ts_properties(): violations  [keep-operations-small-focused] Operation '_check_ts_properties' is 29 lines (max 20). | [simplify-control-flow] Operation '_check_ts_properties' nests control flow more than three levels.
+        Parameter: domain_path
+      Operation: _check_json_bodies(): violations  [keep-operations-small-focused] Operation '_check_json_bodies' is 25 lines (max 20).
+        Parameter: domain_path
     Class: CeCommentsAreForInvariantsScanner
       Operation: scan_file(): violations  [keep-operations-small-focused] Operation 'scan_file' is 42 lines (max 20). | [simplify-control-flow] Operation 'scan_file' nests control flow more than three levels.
         Parameter: root
@@ -2854,7 +2926,37 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
         Parameter: files
+    Class: CrossLayerNamingScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_domain(): violations  [keep-operations-small-focused] Operation '_check_domain' is 35 lines (max 20). | [simplify-control-flow] Operation '_check_domain' nests control flow more than three levels.
+        Parameter: domain_path
+      Operation: _extract_shared_methods(): methods
+        Parameter: domain_path
+      Operation: _extract_server_methods(): methods
+        Parameter: domain_path
+      Operation: _extract_http_functions(): fns
+        Parameter: domain_path
     Class: DeepModuleScanner  [shape-classes-around-resources] Class 'DeepModuleScanner' acts on bag 'Module'.
+    Class: DependencyDeclarationsScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _load_all_deps(): set
+        Parameter: pkg_json_path
+      Operation: _check_root_dev_deps(): violations
+        Parameter: project_root
+        Parameter: root_deps
+      Operation: _check_tier_imports(): violations  [keep-operations-small-focused] Operation '_check_tier_imports' is 36 lines (max 20). | [simplify-control-flow] Operation '_check_tier_imports' nests control flow more than three levels.
+        Parameter: tier_dir
+        Parameter: all_deps
+      Operation: _check_tier_restrictions(): violations  [limit-operation-parameters] Operation '_check_tier_restrictions' takes 3 parameters (prefer 0-2).
+        Parameter: tier
+        Parameter: tier_dir
+        Parameter: domain_name
+      Operation: _extract_package_name(): None
+        Parameter: source
     Class: DoNotInventParallelObjectModelsScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
@@ -2873,10 +2975,49 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
         Parameter: files
+    Class: DomainStructureScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+    Class: MERNScanner
+      Property: RULE
+      Operation: _find_domain_packages(): domain_packages  [keep-operations-small-focused] Operation '_find_domain_packages' is 33 lines (max 20). | [simplify-control-flow] Operation '_find_domain_packages' nests control flow more than three levels.
+        Parameter: project_root
+      Operation: _find_tier_files(): list  [limit-operation-parameters] Operation '_find_tier_files' takes 3 parameters (prefer 0-2).
+        Parameter: tier
+        Parameter: domain_path
+        Parameter: pattern
+      Operation: _read_file_content(): None
+        Parameter: file_path
+      Operation: _client_file(): path
+        Parameter: domain_path
+      Operation: _domain_core_file(): None  [keep-operations-small-focused] Operation '_domain_core_file' is 21 lines (max 20).
+        Parameter: domain_path
+      Operation: _server_file(): path
+        Parameter: domain_path
+      Operation: _is_domain_dir(): True
+        Parameter: path
+      Operation: _find_test_folders(): sub_epic_folders  [keep-operations-small-focused] Operation '_find_test_folders' is 21 lines (max 20).
+        Parameter: project_root
     Class: DuplicationScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
         Parameter: files
+    Class: EntityBehaviorScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_shared_entities(): violations  [keep-operations-small-focused] Operation '_check_shared_entities' is 25 lines (max 20).
+        Parameter: domain_path
+      Operation: _check_server_repositories(): violations  [keep-operations-small-focused] Operation '_check_server_repositories' is 29 lines (max 20).
+        Parameter: domain_path
+      Operation: _is_exempt_class(): False
+        Parameter: cls
+      Operation: _check_no_async_on_entity(): violations
+        Parameter: cls
+        Parameter: ts_file
+      Operation: _is_collection_class(): False
+        Parameter: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
     Class: ExceptionHandlingScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
@@ -2911,15 +3052,87 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: file_path
         Parameter: violations
         Parameter: loop_targets
+    Class: InterfaceInfo
+      Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
+      Property: start_line
+      Property: is_exported
+      Property: method_names
+      Property: property_names
+    Class: InterfaceImplementationScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_server_repositories(): violations  [keep-operations-small-focused] Operation '_check_server_repositories' is 29 lines (max 20).
+        Parameter: domain_path
+      Operation: _check_service_depends_on_interface(): violations  [keep-operations-small-focused] Operation '_check_service_depends_on_interface' is 32 lines (max 20).
+        Parameter: domain_path
+      Operation: _check_test_fake_repositories(): violations  [keep-operations-small-focused] Operation '_check_test_fake_repositories' is 29 lines (max 20).
+        Parameter: project_root
+      Operation: _regex_check_implements(): violations
+        Parameter: domain_name
+        Parameter: repo_file
     Class: LanguageModulesOneSectionScanner  [shape-classes-around-resources] Class 'LanguageModulesOneSectionScanner' acts on bag 'Module'.
       Operation: scan_module(): violations  [keep-operations-small-focused] Operation 'scan_module' is 22 lines (max 20). | [simplify-control-flow] Operation 'scan_module' nests control flow more than three levels.
         Parameter: module
         Parameter: root
+    Class: LayerPurityScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_core_purity(): violations  [keep-operations-small-focused] Operation '_check_core_purity' is 22 lines (max 20). | [simplify-control-flow] Operation '_check_core_purity' nests control flow more than three levels.
+        Parameter: domain_path
+        Parameter: domain_name
+      Operation: _check_no_cross_import(): violations  [keep-operations-small-focused] Operation '_check_no_cross_import' is 33 lines (max 20). | [limit-operation-parameters] Operation '_check_no_cross_import' takes 4 parameters (prefer 0-2). | [simplify-control-flow] Operation '_check_no_cross_import' nests control flow more than three levels.
+        Parameter: domain_path
+        Parameter: domain_name
+        Parameter: source_tier
+        Parameter: forbidden_tier
+    Class: LernDomainDriven
+      Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
+      Operation: _stories(): instance
+    Class: MethodInfo
+      Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
+      Property: return_type
+      Property: param_count
+      Property: start_line
+      Property: end_line
+      Property: modifiers
+      Property: is_static
+      Property: is_async
+      Property: is_abstract
+    Class: PropertyInfo
+      Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
+      Property: start_line
+      Property: modifiers
+      Property: type_annotation
+    Class: ClassInfo
+      Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
+      Property: properties
+      Property: methods
+      Property: start_line
+      Property: end_line
+      Property: extends
+      Property: implements
+      Property: is_abstract
+      Property: is_exported
+    Class: ImportInfo
+      Property: names
+      Property: source
+      Property: start_line
+      Property: default_name
+      Property: is_type_only
+    Class: CallInfo
+      Property: args_text
+      Property: callee
+      Property: start_line
     Class: LowCouplingScanner  [shape-classes-around-resources] Class 'LowCouplingScanner' acts on bag 'Module'.
     Class: MeaningfulContextScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
         Parameter: files
+    Class: MernDomainDriven
+      Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
+      Operation: _stories(): instance
     Class: MissingModuleContextScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
@@ -2948,10 +3161,35 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: scan_module(): violations  [keep-operations-small-focused] Operation 'scan_module' is 22 lines (max 20). | [simplify-control-flow] Operation 'scan_module' nests control flow more than three levels.
         Parameter: module
         Parameter: root
+    Class: MutationResponseScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_server_routes(): violations  [keep-operations-small-focused] Operation '_check_server_routes' is 26 lines (max 20).
+        Parameter: domain_path
+      Operation: _check_http_client(): violations  [keep-operations-small-focused] Operation '_check_http_client' is 28 lines (max 20).
+        Parameter: domain_path
+    Class: OneJsonStorePerAggregateScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_shared_filenames(): violations
+        Parameter: content
+        Parameter: server
+      Operation: _check_default_data_shape(): violations
+        Parameter: content
+        Parameter: server
     Class: OutputFormatScanner
       Operation: scan_file(): violations  [keep-operations-small-focused] Operation 'scan_file' is 42 lines (max 20). | [simplify-control-flow] Operation 'scan_file' nests control flow more than three levels.
         Parameter: root
         Parameter: file_path
+    Class: PackageNamesScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_import_paths(): violations  [keep-operations-small-focused] Operation '_check_import_paths' is 54 lines (max 20). | [simplify-control-flow] Operation '_check_import_paths' nests control flow more than three levels.
+        Parameter: project_root
+        Parameter: declared_names
     Class: PreferClassOperationsScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
@@ -2964,6 +3202,10 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: file_path
         Parameter: violations
         Parameter: oclass
+    Class: RepositoryOwnsAggregateLifecycleScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
     Class: ReuseEstablishedNotationScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
@@ -2980,10 +3222,32 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: _scan_text(): violations  [keep-operations-small-focused] Operation '_scan_text' is 39 lines (max 20).
         Parameter: path
         Parameter: text
+    Class: RouteDelegationScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_file(): violations  [keep-operations-small-focused] Operation '_check_file' is 45 lines (max 20). | [limit-operation-parameters] Operation '_check_file' takes 3 parameters (prefer 0-2).
+        Parameter: path
+      Operation: _handler_line_ranges(): ranges  [keep-operations-small-focused] Operation '_handler_line_ranges' is 23 lines (max 20). | [simplify-control-flow] Operation '_handler_line_ranges' nests control flow more than three levels.
+        Parameter: content
     Class: SeparateConcernsScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
         Parameter: files
+    Class: ShareDomainLogicScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_schema_in_core(): violations
+        Parameter: domain_path
+      Operation: _check_server_uses_schema(): violations  [keep-operations-small-focused] Operation '_check_server_uses_schema' is 36 lines (max 20).
+        Parameter: domain_path
+      Operation: _check_client_uses_schema(): violations  [keep-operations-small-focused] Operation '_check_client_uses_schema' is 31 lines (max 20).
+        Parameter: domain_path
+      Operation: _check_no_duplicate_schemas(): violations
+        Parameter: domain_path
+      Operation: _check_http_client_hydrates(): violations  [keep-operations-small-focused] Operation '_check_http_client_hydrates' is 33 lines (max 20).
+        Parameter: domain_path
     Class: SimplifyControlFlowScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
@@ -3000,10 +3264,40 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
         Parameter: files
+    Class: TypeSafetyScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_controller(): violations  [keep-operations-small-focused] Operation '_check_controller' is 63 lines (max 20).
+        Parameter: ts_file
+    Class: UbiquitousLanguageScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_file(): violations  [keep-operations-small-focused] Operation '_check_file' is 45 lines (max 20). | [limit-operation-parameters] Operation '_check_file' takes 3 parameters (prefer 0-2).
+        Parameter: tier
+        Parameter: ts_file
+        Parameter: domain_name
+      Operation: _check_test_names(): violations  [keep-operations-small-focused] Operation '_check_test_names' is 32 lines (max 20).
+        Parameter: ts_file
+      Operation: _check_class_name(): violations  [keep-operations-small-focused] Operation '_check_class_name' is 29 lines (max 20).
+        Parameter: cls
+        Parameter: tier
+        Parameter: ts_file
+      Operation: _check_method_names(): violations
+        Parameter: cls
+        Parameter: tier
+        Parameter: ts_file
     Class: UselessCommentsScanner
       Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
         Parameter: root
         Parameter: files
+    Class: ViewNamingScanner
+      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: _check_client(): violations  [keep-operations-small-focused] Operation '_check_client' is 46 lines (max 20).
+        Parameter: domain_path
   Module: actions.partition
     Class: PartitionIndex
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
@@ -3362,7 +3656,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: _reconcile_collection()  [keep-operations-small-focused] Operation '_reconcile_collection' is 22 lines (max 20).
         Parameter: report
         Parameter: pair
-      Operation: _find_match(): None  [limit-operation-parameters] Operation '_find_match' takes 3 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation '_find_match' works through parameter 'candidates' instead of that object.
+      Operation: _find_match(): None  [limit-operation-parameters] Operation '_find_match' takes 3 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation '_find_match' works through parameter 'source' instead of that object.
         Parameter: source
         Parameter: consumed_ids
         Parameter: candidates
@@ -3370,7 +3664,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: nodes
       Operation: children(): result  [never-swallow-exceptions] Operation 'children' catches an exception and ignores it.
   Module: tools  [hide-inner-details] Operation 'tools' reads private attribute '_marked_members'. | [low-coupling] Operation 'tools' reaches past a seam via '_marked_members'.
-    Class: Example  [do-not-invent-parallel-object-models] Class 'Example' restates Example as a second type the rest of the graph already has.
+    Class: Example  [keep-classes-single-responsibility] Class 'Example' has 5 public operations whose nouns cluster into 3 responsibilities. | [do-not-invent-parallel-object-models] Class 'Example' restates Example as a second type the rest of the graph already has.
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
         Parameter: correction
@@ -3391,7 +3685,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: graph
         Parameter: cls
         Parameter: entries
-    Class: WorkSession  [keep-classes-single-responsibility] Class 'WorkSession' has 52 public operations whose nouns cluster into 3 responsibilities. | [use-explicit-dependencies] Class 'WorkSession' constructs 'GitConnectError' inside __init__. | [use-property-not-accessor] Class 'WorkSession' exposes 'set_session_model' as an accessor.
+    Class: WorkSession  [use-explicit-dependencies] Class 'WorkSession' constructs 'GitConnectError' inside __init__. | [use-property-not-accessor] Class 'WorkSession' exposes 'set_session_model' as an accessor.
       Property: default_workspace_folder
       Property: context_index_key
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
@@ -3969,26 +4263,6 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: guidance()
     Class: SampleTool
       Operation: guidance()
-  Module: actions
-    Class: Generate  [keep-classes-single-responsibility] Class 'Generate' has 4 public operations whose nouns cluster into 3 responsibilities.
-      Operation: generate()
-        Parameter: guidance
-      Operation: _generate_item()
-        Parameter: item
-    Class: Validate
-    Class: Document
-    Class: Satisfy
-    Class: Render
-      Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
-        Parameter: path
-        Parameter: session
-      Operation: render()  [hide-inner-details] Operation 'render' reads private attribute '_render_modules'. | [keep-operations-small-focused] Operation 'render' is 21 lines (max 20). | [limit-operation-parameters] Operation 'render' takes 5 parameters (prefer 0-2). | [put-logic-on-the-owning-resource] Operation 'render' works through parameter 'ux_map' instead of that object. | [simplify-control-flow] Operation 'render' nests control flow more than three levels.
-        Parameter: format
-        Parameter: guidance
-        Parameter: content
-        Parameter: source
-    Class: CapabilityCli
-      Operation: _build_parser(): parser  [hide-inner-details] Operation '_build_parser' reads private attribute '_subparsers'.
   Module: harness.agent_tools
     Class: AgentOperation
     Class: AgentToolSet  [keep-classes-single-responsibility] Class 'AgentToolSet' has 16 public operations whose nouns cluster into 4 responsibilities.
@@ -4082,7 +4356,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Property: result
       Property: instructions  [keep-operations-small-focused] Operation 'instructions' is 39 lines (max 20).
       Property: tools  [hide-inner-details] Operation 'tools' reads private attribute '_marked_members'.
-    Class: ToolSetCollection
+    Class: ToolSetCollection  [keep-classes-single-responsibility] Class 'ToolSetCollection' has 5 public operations whose nouns cluster into 3 responsibilities.
       Operation: __bool__(): bool
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: parent
@@ -4093,7 +4367,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: bind()
         Parameter: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
         Parameter: instance  [hide-inner-details] Operation 'instance' reads private attribute '_instance'.
-    Class: AgentTool  [keep-classes-single-responsibility] Class 'AgentTool' has 16 public operations whose nouns cluster into 6 responsibilities.
+    Class: AgentTool  [keep-classes-single-responsibility] Class 'AgentTool' has 16 public operations whose nouns cluster into 8 responsibilities.
       Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
       Property: callable
       Property: toolset
@@ -4230,7 +4504,7 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: node
     Class: InstallDestination
   Module: harness.markdown
-    Class: Markdown  [keep-classes-single-responsibility] Class 'Markdown' has 10 public operations whose nouns cluster into 3 responsibilities.
+    Class: Markdown
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: instance  [hide-inner-details] Operation 'instance' reads private attribute '_instance'.
         Parameter: label
@@ -4333,282 +4607,6 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
         Parameter: search_root
       Operation: _first_extension_match(): None
         Parameter: search_root
-  Module: practices.clean_engineering
-    Class: TypeScriptScanner  [use-property-not-accessor] Class 'TypeScriptScanner' exposes 'get_classes' as an accessor.
-      Property: TREE_SITTER_AVAILABLE
-      Operation: parse_file(): None
-        Parameter: path
-      Operation: get_all_source_files(): files
-        Parameter: directory
-      Operation: has_import_from(): any
-        Parameter: root
-      Operation: get_classes(): classes
-        Parameter: root
-      Operation: node_text(): _txt
-        Parameter: node
-    Class: ArgNamingScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_domain(): violations  [keep-operations-small-focused] Operation '_check_domain' is 35 lines (max 20). | [simplify-control-flow] Operation '_check_domain' nests control flow more than three levels.
-        Parameter: domain_path
-    Class: LERNScanner
-      Property: RULE
-      Operation: _find_domain_packages(): domain_packages  [keep-operations-small-focused] Operation '_find_domain_packages' is 33 lines (max 20). | [simplify-control-flow] Operation '_find_domain_packages' nests control flow more than three levels.
-        Parameter: project_root
-      Operation: _find_tier_files(): list  [limit-operation-parameters] Operation '_find_tier_files' takes 3 parameters (prefer 0-2).
-        Parameter: tier
-        Parameter: domain_path
-        Parameter: pattern
-      Operation: _read_file_content(): None
-        Parameter: file_path
-      Operation: _client_file(): path
-        Parameter: domain_path
-      Operation: _domain_core_file(): None  [keep-operations-small-focused] Operation '_domain_core_file' is 21 lines (max 20).
-        Parameter: domain_path
-      Operation: _server_file(): path
-        Parameter: domain_path
-      Operation: _is_domain_dir(): True
-        Parameter: path
-      Operation: _find_test_folders(): sub_epic_folders  [keep-operations-small-focused] Operation '_find_test_folders' is 21 lines (max 20).
-        Parameter: project_root
-    Class: AskCrossAggregateSyncScanner
-      Operation: _read_grill_answers(): None
-        Parameter: root
-    Class: CleanEngineering  [use-explicit-dependencies] Class 'CleanEngineering' constructs 'Drawio' inside __init__.
-      Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
-        Parameter: format
-        Parameter: fidelity
-    Class: CasingTransformScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_ts_properties(): violations  [keep-operations-small-focused] Operation '_check_ts_properties' is 29 lines (max 20). | [simplify-control-flow] Operation '_check_ts_properties' nests control flow more than three levels.
-        Parameter: domain_path
-      Operation: _check_json_bodies(): violations  [keep-operations-small-focused] Operation '_check_json_bodies' is 25 lines (max 20).
-        Parameter: domain_path
-    Class: CrossLayerNamingScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_domain(): violations  [keep-operations-small-focused] Operation '_check_domain' is 35 lines (max 20). | [simplify-control-flow] Operation '_check_domain' nests control flow more than three levels.
-        Parameter: domain_path
-      Operation: _extract_shared_methods(): methods
-        Parameter: domain_path
-      Operation: _extract_server_methods(): methods
-        Parameter: domain_path
-      Operation: _extract_http_functions(): fns
-        Parameter: domain_path
-    Class: DependencyDeclarationsScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _load_all_deps(): set
-        Parameter: pkg_json_path
-      Operation: _check_root_dev_deps(): violations
-        Parameter: project_root
-        Parameter: root_deps
-      Operation: _check_tier_imports(): violations  [keep-operations-small-focused] Operation '_check_tier_imports' is 36 lines (max 20). | [simplify-control-flow] Operation '_check_tier_imports' nests control flow more than three levels.
-        Parameter: tier_dir
-        Parameter: all_deps
-      Operation: _check_tier_restrictions(): violations  [limit-operation-parameters] Operation '_check_tier_restrictions' takes 3 parameters (prefer 0-2).
-        Parameter: tier
-        Parameter: tier_dir
-        Parameter: domain_name
-      Operation: _extract_package_name(): None
-        Parameter: source
-    Class: DomainStructureScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-    Class: MERNScanner
-      Property: RULE
-      Operation: _find_domain_packages(): domain_packages  [keep-operations-small-focused] Operation '_find_domain_packages' is 33 lines (max 20). | [simplify-control-flow] Operation '_find_domain_packages' nests control flow more than three levels.
-        Parameter: project_root
-      Operation: _find_tier_files(): list  [limit-operation-parameters] Operation '_find_tier_files' takes 3 parameters (prefer 0-2).
-        Parameter: tier
-        Parameter: domain_path
-        Parameter: pattern
-      Operation: _read_file_content(): None
-        Parameter: file_path
-      Operation: _client_file(): path
-        Parameter: domain_path
-      Operation: _domain_core_file(): None  [keep-operations-small-focused] Operation '_domain_core_file' is 21 lines (max 20).
-        Parameter: domain_path
-      Operation: _server_file(): path
-        Parameter: domain_path
-      Operation: _is_domain_dir(): True
-        Parameter: path
-      Operation: _find_test_folders(): sub_epic_folders  [keep-operations-small-focused] Operation '_find_test_folders' is 21 lines (max 20).
-        Parameter: project_root
-    Class: EntityBehaviorScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_shared_entities(): violations  [keep-operations-small-focused] Operation '_check_shared_entities' is 25 lines (max 20).
-        Parameter: domain_path
-      Operation: _check_server_repositories(): violations  [keep-operations-small-focused] Operation '_check_server_repositories' is 29 lines (max 20).
-        Parameter: domain_path
-      Operation: _is_exempt_class(): False
-        Parameter: cls
-      Operation: _check_no_async_on_entity(): violations
-        Parameter: cls
-        Parameter: ts_file
-      Operation: _is_collection_class(): False
-        Parameter: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
-    Class: InterfaceInfo
-      Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
-      Property: start_line
-      Property: is_exported
-      Property: method_names
-      Property: property_names
-    Class: InterfaceImplementationScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_server_repositories(): violations  [keep-operations-small-focused] Operation '_check_server_repositories' is 29 lines (max 20).
-        Parameter: domain_path
-      Operation: _check_service_depends_on_interface(): violations  [keep-operations-small-focused] Operation '_check_service_depends_on_interface' is 32 lines (max 20).
-        Parameter: domain_path
-      Operation: _check_test_fake_repositories(): violations  [keep-operations-small-focused] Operation '_check_test_fake_repositories' is 29 lines (max 20).
-        Parameter: project_root
-      Operation: _regex_check_implements(): violations
-        Parameter: domain_name
-        Parameter: repo_file
-    Class: LayerPurityScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_core_purity(): violations  [keep-operations-small-focused] Operation '_check_core_purity' is 22 lines (max 20). | [simplify-control-flow] Operation '_check_core_purity' nests control flow more than three levels.
-        Parameter: domain_path
-        Parameter: domain_name
-      Operation: _check_no_cross_import(): violations  [keep-operations-small-focused] Operation '_check_no_cross_import' is 33 lines (max 20). | [limit-operation-parameters] Operation '_check_no_cross_import' takes 4 parameters (prefer 0-2). | [simplify-control-flow] Operation '_check_no_cross_import' nests control flow more than three levels.
-        Parameter: domain_path
-        Parameter: domain_name
-        Parameter: source_tier
-        Parameter: forbidden_tier
-    Class: LernDomainDriven
-      Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
-      Operation: _stories(): instance
-    Class: MethodInfo
-      Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
-      Property: return_type
-      Property: param_count
-      Property: start_line
-      Property: end_line
-      Property: modifiers
-      Property: is_static
-      Property: is_async
-      Property: is_abstract
-    Class: PropertyInfo
-      Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
-      Property: start_line
-      Property: modifiers
-      Property: type_annotation
-    Class: ClassInfo
-      Property: name  [hide-inner-details] Operation 'name' reads private attribute '_slugify_class_name'.
-      Property: properties
-      Property: methods
-      Property: start_line
-      Property: end_line
-      Property: extends
-      Property: implements
-      Property: is_abstract
-      Property: is_exported
-    Class: ImportInfo
-      Property: names
-      Property: source
-      Property: start_line
-      Property: default_name
-      Property: is_type_only
-    Class: CallInfo
-      Property: args_text
-      Property: callee
-      Property: start_line
-    Class: MernDomainDriven
-      Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
-      Operation: _stories(): instance
-    Class: MutationResponseScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_server_routes(): violations  [keep-operations-small-focused] Operation '_check_server_routes' is 26 lines (max 20).
-        Parameter: domain_path
-      Operation: _check_http_client(): violations  [keep-operations-small-focused] Operation '_check_http_client' is 28 lines (max 20).
-        Parameter: domain_path
-    Class: OneJsonStorePerAggregateScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_shared_filenames(): violations
-        Parameter: content
-        Parameter: server
-      Operation: _check_default_data_shape(): violations
-        Parameter: content
-        Parameter: server
-    Class: PackageNamesScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_import_paths(): violations  [keep-operations-small-focused] Operation '_check_import_paths' is 54 lines (max 20). | [simplify-control-flow] Operation '_check_import_paths' nests control flow more than three levels.
-        Parameter: project_root
-        Parameter: declared_names
-    Class: RepositoryOwnsAggregateLifecycleScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-    Class: RouteDelegationScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_file(): violations  [keep-operations-small-focused] Operation '_check_file' is 45 lines (max 20). | [limit-operation-parameters] Operation '_check_file' takes 3 parameters (prefer 0-2).
-        Parameter: path
-      Operation: _handler_line_ranges(): ranges  [keep-operations-small-focused] Operation '_handler_line_ranges' is 23 lines (max 20). | [simplify-control-flow] Operation '_handler_line_ranges' nests control flow more than three levels.
-        Parameter: content
-    Class: ShareDomainLogicScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_schema_in_core(): violations
-        Parameter: domain_path
-      Operation: _check_server_uses_schema(): violations  [keep-operations-small-focused] Operation '_check_server_uses_schema' is 36 lines (max 20).
-        Parameter: domain_path
-      Operation: _check_client_uses_schema(): violations  [keep-operations-small-focused] Operation '_check_client_uses_schema' is 31 lines (max 20).
-        Parameter: domain_path
-      Operation: _check_no_duplicate_schemas(): violations
-        Parameter: domain_path
-      Operation: _check_http_client_hydrates(): violations  [keep-operations-small-focused] Operation '_check_http_client_hydrates' is 33 lines (max 20).
-        Parameter: domain_path
-    Class: TypeSafetyScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_controller(): violations  [keep-operations-small-focused] Operation '_check_controller' is 63 lines (max 20).
-        Parameter: ts_file
-    Class: UbiquitousLanguageScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_file(): violations  [keep-operations-small-focused] Operation '_check_file' is 45 lines (max 20). | [limit-operation-parameters] Operation '_check_file' takes 3 parameters (prefer 0-2).
-        Parameter: tier
-        Parameter: ts_file
-        Parameter: domain_name
-      Operation: _check_test_names(): violations  [keep-operations-small-focused] Operation '_check_test_names' is 32 lines (max 20).
-        Parameter: ts_file
-      Operation: _check_class_name(): violations  [keep-operations-small-focused] Operation '_check_class_name' is 29 lines (max 20).
-        Parameter: cls
-        Parameter: tier
-        Parameter: ts_file
-      Operation: _check_method_names(): violations
-        Parameter: cls
-        Parameter: tier
-        Parameter: ts_file
-    Class: ViewNamingScanner
-      Operation: scan(): violations  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: _check_client(): violations  [keep-operations-small-focused] Operation '_check_client' is 46 lines (max 20).
-        Parameter: domain_path
   Module: tools.catalog_generator
     Class: Catalog
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
@@ -4694,6 +4692,27 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: __init__()  [hide-inner-details] Operation '__init__' reads private attribute '_session_cls'. | [keep-operations-small-focused] Operation '__init__' is 23 lines (max 20).
         Parameter: format
         Parameter: fidelity
+    Class: UxWorkspaceScanner
+      Operation: scan(): list  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
+        Parameter: root
+        Parameter: files
+      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
+        Parameter: workspace
+    Class: IaNamedRegionsOnlyScanner
+      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
+        Parameter: workspace
+    Class: ScreenNamesUseDomainTermsScanner
+      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
+        Parameter: workspace
+    Class: ScreenStoryBudgetScanner
+      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
+        Parameter: workspace
+    Class: StoryDomainJsImportedScanner
+      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
+        Parameter: workspace
+    Class: TabStatesAreSeparateScreensScanner
+      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
+        Parameter: workspace
   Module: tools.diagnose
     Class: Diagnose
       Operation: diagnose()  [keep-operations-small-focused] Operation 'diagnose' is 99 lines (max 20).
@@ -4731,28 +4750,6 @@ CleanEngineeringModel: CleanEngineering  [use-explicit-dependencies] Class 'Clea
       Operation: from_workspace(): None  [hide-inner-details] Operation 'from_workspace' reads private attribute '_parse_file'. | [keep-operations-small-focused] Operation 'from_workspace' is 30 lines (max 20).
         Parameter: root
         Parameter: cls
-  Module: practices.ux.scanners
-    Class: UxWorkspaceScanner
-      Operation: scan(): list  [keep-operations-small-focused] Operation 'scan' is 25 lines (max 20). | [limit-operation-parameters] Operation 'scan' takes 3 parameters (prefer 0-2). | [simplify-control-flow] Operation 'scan' nests control flow more than three levels.
-        Parameter: root
-        Parameter: files
-      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
-        Parameter: workspace
-    Class: IaNamedRegionsOnlyScanner
-      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
-        Parameter: workspace
-    Class: ScreenNamesUseDomainTermsScanner
-      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
-        Parameter: workspace
-    Class: ScreenStoryBudgetScanner
-      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
-        Parameter: workspace
-    Class: StoryDomainJsImportedScanner
-      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
-        Parameter: workspace
-    Class: TabStatesAreSeparateScreensScanner
-      Operation: scan_workspace()  [keep-operations-small-focused] Operation 'scan_workspace' is 23 lines (max 20). | [put-logic-on-the-owning-resource] Operation 'scan_workspace' works through parameter 'workspace' instead of that object. | [simplify-control-flow] Operation 'scan_workspace' nests control flow more than three levels.
-        Parameter: workspace
   Module: practices.ux.model.json
     Class: JsonUxMap
       Operation: from_workspace(): None  [hide-inner-details] Operation 'from_workspace' reads private attribute '_parse_file'. | [keep-operations-small-focused] Operation 'from_workspace' is 30 lines (max 20).

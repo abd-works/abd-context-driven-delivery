@@ -16,7 +16,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 ```yaml
 alwaysApply: false
-globs: "**/*story-map*,**/*_story.test.*,**/*story_test*,**/*story-test*"
+globs: "**/*story-map*,**/*_story.test.*,**/*story_test*,**/*story-test*,**/*-sketch.md"
 ```
 
 Whenever you define or change user interactions and resulting system behavior, at any level of detail. Follow these rules.
@@ -59,7 +59,7 @@ Define a story map as Epic → nestable Sub-Epic → Story. Change the map while
 
 ```yaml
 alwaysApply: false
-globs: "**/*story-map*"
+globs: "**/*story-map*,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete epics, sub-epics, or stories on the map, or change scenarios or acceptance work that forces a map change. Follow these rules.
@@ -100,7 +100,7 @@ stage: specification
 
 ```yaml
 alwaysApply: false
-globs: "**/*_story.test.*,**/*story_test*,**/*story-test*"
+globs: "**/*_story.test.*,**/*story_test*,**/*story-test*,**/*-sketch.md"
 ```
 
 Whenever you write or change Given/When/Then scenarios, or change acceptance tests or production code that those scenarios support. Follow these rules.
@@ -150,7 +150,7 @@ Refer to [`../language-tools.md`](../language-tools.md) for language-specific te
 
 ```yaml
 alwaysApply: false
-globs: "**/*_story.test.*,**/*story_test*,**/*story-test*"
+globs: "**/*_story.test.*,**/*story_test*,**/*story-test*,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.

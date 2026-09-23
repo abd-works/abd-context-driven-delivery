@@ -12,8 +12,7 @@ import re
 from pathlib import Path
 from typing import List, Tuple
 
-from lern_scanner_base import LERNScanner
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
+from lern_scanner_base import LERNScanner, Violation
 
 
 class RouteDelegationScanner(LERNScanner):

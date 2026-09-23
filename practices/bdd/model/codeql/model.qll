@@ -41,3 +41,19 @@ predicate observesPrivate(Call call) {
     not attr.getName().matches("\\_\\_%")
   )
 }
+
+predicate relativeInternalMock(Call call, string target) {
+  exists(string name |
+    (
+      call.getFunc().(Name).getId() = name or
+      call.getFunc().(Attribute).getName() = name
+    ) and
+    (name = "patch" or name = "mock") and
+    target = call.getArg(0).(StringLiteral).getText() and
+    (
+      target.matches("./%") or
+      target.matches("../%") or
+      target.matches(".%")
+    )
+  )
+}

@@ -11,7 +11,7 @@ export async function createApp(
   const app = express();
   app.use(cors());
   app.use(express.json());
-  const store = repo ?? (await KnowledgeGraphRepositoryServer.open());
+  const store = repo ?? KnowledgeGraphRepositoryServer.openMemory();
   app.use('/api/knowledge-graphs', createKnowledgeGraphsRouter(store));
   return app;
 }

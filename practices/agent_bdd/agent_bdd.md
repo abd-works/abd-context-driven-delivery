@@ -48,7 +48,7 @@ Read `practices/bdd/bdd.md` § Overview — the underlying test discipline appli
 
 ```yaml
 alwaysApply: false
-globs: "**/*agent_spec*,**/.agent_bdd_sessions/**"
+globs: "**/*agent_spec*,**/.agent_bdd_sessions/**,**/*-sketch.md"
 ```
 
 Whenever an agent-harness spec (`agent()`, `instruct`, `instruct_use_tool`) is in play, or production behavior that spec is proving. Follow these rules.

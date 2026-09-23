@@ -10,6 +10,7 @@ Partition first, then type the objects, then implement. Keep the same names in l
 
 ```yaml
 alwaysApply: false
+globs: "**/*-sketch.md"
 ```
 
 Use these rules whenever you name a concept, draw a dependency, or write a public seam — in prose, a diagram, or source.
@@ -98,7 +99,7 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 ```yaml
 alwaysApply: false
-globs: "**/module-context.md,**/*modules*.drawio"
+globs: "**/module-context.md,**/*modules*.drawio,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete object-oriented boundaries and public seams across modules. Follow these rules.
@@ -174,7 +175,7 @@ Use an interface when the model requires more than one implementation, when a ca
 
 ```yaml
 alwaysApply: false
-globs: "**/*-model.md,**/*-model.py,**/*example_factory*"
+globs: "**/*-model.md,**/*-model.py,**/*example_factory*,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete types and how they relate, or change production code that those types support. Follow these rules.
@@ -253,7 +254,7 @@ When writing out code take care to **Fill out all interactions with real code.**
 
 ```yaml
 alwaysApply: false
-globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java"
+globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete production behavior — bodies, constructors, call sites — including code supported by a model or module map. Follow these rules.

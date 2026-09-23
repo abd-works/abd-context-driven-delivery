@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
-from mern_scanner_base import MERNScanner
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
+from mern_scanner_base import MERNScanner, Violation
 
 
 class DomainStructureScanner(MERNScanner):

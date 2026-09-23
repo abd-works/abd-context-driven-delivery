@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+import uuid
+from collections import defaultdict
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -16,7 +19,13 @@ for _cat in ("practices", "harness", "tools", "actions"):
         sys.path.insert(0, _p)
 
 from harness.knowledge_graph.model import PracticeGraph, RuleSlugs
-from harness.knowledge_graph.model.codeql import CodeQL
+from harness.knowledge_graph.model.codeql import (
+    CodeQL,
+    attach_query_server,
+    detach_query_server,
+)
+from harness.knowledge_graph.model.graph_rules import closest_fidelity
+from harness.mcp.codeql_query_daemon import ensure_query_server
 from harness.knowledge_graph.model.dot_graph import (
     _hierarchy_line,
     _hierarchy_violations,
@@ -25,6 +34,9 @@ from harness.knowledge_graph.model.dot_graph import (
     walk_hierarchy,
 )
 from practices.clean_engineering.model.codeql.codeql_model import Module
+
+_DEFAULT_PRACTICES = ("clean_engineering", "bdd", "stories")
+
 
 def _append_line(lines: list[str], depth: int, node, graph: PracticeGraph) -> None:
     try:
@@ -61,17 +73,263 @@ def _render_kg(
     return "\n".join(lines) + ("\n" if lines else "")
 
 
+def _slugs_for(graph: PracticeGraph, practices: tuple[str, ...]) -> RuleSlugs:
+    wanted = set(practices)
+    return RuleSlugs(
+        [
+            rule.slug
+            for rule in graph.rule_registry
+            if rule.practice in wanted and rule.graph_evaluated
+        ]
+    )
+
+
+_SKIP_PACKAGES = {
+    "node_modules",
+    ".git",
+    "dist",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "coverage",
+    ".codeql",
+    ".context",
+    ".cursor",
+    ".vscode",
+    ".github",
+    "htmlcov",
+    "examples",
+}
+
+
+def _node_folder(node: dict) -> str:
+    folder = (node.get("properties") or {}).get("folder") or ""
+    path = str(folder).replace("\\", "/")
+    if path:
+        return path
+    name = node.get("name") or ""
+    if node.get("semantic_type") == "Module" and "." in name:
+        return name.replace(".", "/")
+    return ""
+
+
+def _package_node(path: str) -> dict:
+    return {
+        "node_id": f"pkg:{path}",
+        "name": path.split("/")[-1],
+        "practice": "",
+        "fidelity": None,
+        "semantic_type": "Package",
+        "properties": {"folder": path},
+        "applicable_rules": [],
+        "violations": [],
+        "source": None,
+    }
+
+
+def _top_level_folders(root: Path) -> list[str]:
+    if not root.is_dir():
+        return []
+    names: list[str] = []
+    for child in sorted(root.iterdir()):
+        if not child.is_dir():
+            continue
+        if child.name in _SKIP_PACKAGES or child.name.startswith("."):
+            continue
+        names.append(child.name)
+    return names
+
+
+def _ensure_packages(
+    nodes: list[dict],
+    relationships: list[dict],
+    root: Path,
+) -> None:
+    by_path: dict[str, str] = {}
+    for node in nodes:
+        semantic = node.get("semantic_type")
+        if semantic not in ("Module", "Package"):
+            continue
+        path = _node_folder(node)
+        if not path:
+            continue
+        props = node.setdefault("properties", {})
+        props["folder"] = path
+        by_path[path] = node["node_id"]
+    needed = set(_top_level_folders(root))
+    for path in list(by_path):
+        parts = path.split("/")
+        for index in range(1, len(parts)):
+            needed.add("/".join(parts[:index]))
+        needed.add(parts[0])
+    for path in sorted(needed):
+        if path in by_path:
+            continue
+        package = _package_node(path)
+        nodes.append(package)
+        by_path[path] = package["node_id"]
+    seen = {(edge["from_id"], edge["to_id"]) for edge in relationships}
+    for path, node_id in by_path.items():
+        if "/" not in path:
+            continue
+        parent_path = path.rsplit("/", 1)[0]
+        parent_id = by_path.get(parent_path)
+        if not parent_id:
+            continue
+        key = (parent_id, node_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        relationships.append(
+            {"kind": "owns", "from_id": parent_id, "to_id": node_id}
+        )
+
+
+def _nest_contained_modules(nodes: list[dict], relationships: list[dict]) -> None:
+    _ensure_packages(nodes, relationships, Path())
+    modules = [
+        node
+        for node in nodes
+        if node.get("semantic_type") == "Module"
+    ]
+    paths: list[tuple[str, str]] = []
+    for node in modules:
+        folder = (node.get("properties") or {}).get("folder") or ""
+        name = node.get("name") or ""
+        path = folder.replace("\\", "/")
+        if not path and name.count(".") >= 1:
+            path = name.replace(".", "/")
+        if path:
+            paths.append((node["node_id"], path))
+    seen = {(edge["from_id"], edge["to_id"]) for edge in relationships}
+    for child_id, child_path in paths:
+        nearest: tuple[str, str] | None = None
+        for parent_id, parent_path in paths:
+            if parent_path == child_path:
+                continue
+            if not child_path.startswith(parent_path + "/"):
+                continue
+            if nearest is None or len(parent_path) > len(nearest[1]):
+                nearest = (parent_id, parent_path)
+        if nearest is None:
+            continue
+        key = (nearest[0], child_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        relationships.append(
+            {"kind": "owns", "from_id": nearest[0], "to_id": child_id}
+        )
+
+
+def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
+    grouped: dict[str, dict[str, list]] = defaultdict(
+        lambda: {"nodes": [], "relationships": []}
+    )
+    practices: dict[str, str] = {}
+    rule_slugs: dict[tuple[str, str], list[str]] = {}
+    for node in graph.nodes.values():
+        practice = getattr(node, "practice", "") or "node"
+        practices[node.node_id] = practice
+        semantic = node.semantic_type()
+        key = (practice, semantic)
+        if key not in rule_slugs:
+            rule_slugs[key] = [
+                rule.slug
+                for rule in graph.rule_registry.rules_for_node(
+                    practice=practice,
+                    semantic_type=semantic,
+                )
+            ]
+        hits = graph._violations_by_node.get(node.node_id, [])
+        grouped[practice]["nodes"].append(
+            {
+                "node_id": node.node_id,
+                "name": getattr(node, "name", None) or semantic,
+                "practice": practice,
+                "fidelity": closest_fidelity(practice, semantic),
+                "semantic_type": semantic,
+                "properties": {},
+                "applicable_rules": rule_slugs[key],
+                "violations": [
+                    {
+                        "rule_slug": hit.rule_slug,
+                        "message": hit.message,
+                        "practice": hit.practice,
+                        "fidelity": hit.fidelity,
+                    }
+                    for hit in hits
+                ],
+                "source": None,
+            }
+        )
+    for edge in graph.relationships:
+        practice = (
+            practices.get(edge.from_id)
+            or practices.get(edge.to_id)
+            or "node"
+        )
+        grouped[practice]["relationships"].append(
+            {
+                "kind": edge.kind,
+                "from_id": edge.from_id,
+                "to_id": edge.to_id,
+            }
+        )
+    all_nodes = [
+        node for payload in grouped.values() for node in payload["nodes"]
+    ]
+    overlay = list(all_nodes)
+    package_rels: list[dict] = []
+    _ensure_packages(overlay, package_rels, folder)
+    package_nodes = [
+        node for node in overlay if node.get("semantic_type") == "Package"
+    ]
+    graphs = [
+        {
+            "id": f"practice:{name}",
+            "name": name,
+            "nodes": payload["nodes"],
+            "relationships": payload["relationships"],
+        }
+        for name, payload in sorted(grouped.items())
+    ]
+    if package_nodes:
+        graphs.insert(
+            0,
+            {
+                "id": "practice:workspace",
+                "name": "workspace",
+                "nodes": package_nodes,
+                "relationships": package_rels,
+            },
+        )
+    return {
+        "id": str(uuid.uuid4()),
+        "folder": str(folder),
+        "practice_graphs": graphs,
+    }
+
+
 def main(
     populate: bool = True,
     graphs: list[str] | None = None,
     violations_only: bool = False,
     root: Path | None = None,
+    ddd: bool = False,
+    as_json: bool = False,
+    practices: tuple[str, ...] | None = None,
 ) -> None:
     workspace = Path(root) if root is not None else _REPO
     names = ",".join(graphs) if graphs else "all"
+    selected = practices if practices else _DEFAULT_PRACTICES
+    if ddd and "ddd" not in selected:
+        selected = selected + ("ddd",)
+    log = sys.stderr if as_json else sys.stdout
     print(
         f"loading {workspace} populate={populate} graphs={names} "
-        f"violations_only={violations_only}",
+        f"practices={','.join(selected)} violations_only={violations_only}",
+        file=log,
         flush=True,
     )
     graph = PracticeGraph(workspace)
@@ -79,48 +337,91 @@ def main(
     hierarchy_path = ctx / "knowledge-graph-ce-hierarchy.txt"
     timings_path = ctx / "knowledge-graph-ce-rule-timings.txt"
     zero_hits_path = ctx / "knowledge-graph-zero-hit-rules.txt"
-    CodeQL(workspace).populate(graph, populate=populate)
-    ce_slugs = RuleSlugs(
-        [
-            rule.slug
-            for rule in graph.rule_registry
-            if rule.practice == "clean_engineering" and rule.graph_evaluated
-        ]
-    )
-    skip = RuleSlugs()
-    print("full run: no skipped rules", flush=True)
-    graph.evaluate_rules(ce_slugs)
-    zeros = graph.zero_hit_slugs()
-    zeros.write(zero_hits_path)
-    print(f"stored {len(zeros.names)} zero-hit rules in {zero_hits_path}", flush=True)
-    print(
-        f"loaded {len(graph.nodes)} nodes, {len(graph.relationships)} edges",
-        flush=True,
-    )
-    timings = sorted(graph.rule_timings, key=lambda item: item.seconds, reverse=True)
-    lines = [
-        f"{item.seconds:7.2f}s  hits={item.hits:4d}  {item.slug}"
-        + (
-            f"  {item.error}"
-            if item.error == "skipped"
-            else f"  ERROR {item.error}"
-            if item.error
-            else ""
+    server = None
+    try:
+        server = ensure_query_server(workspace)
+        attach_query_server(server)
+        print(
+            f"query-server daemon pid={server.pid} port={server.port}",
+            file=log,
+            flush=True,
         )
-        for item in timings
-    ]
-    total = sum(item.seconds for item in timings)
-    body = "\n".join(lines) + f"\n\n{len(timings)} rules, {total:.2f}s total\n"
-    timings_path.write_text(body, encoding="utf-8")
-    print(body, flush=True)
-    print(f"wrote {timings_path}", flush=True)
-    text = _render_kg(graph, graphs=graphs, violations_only=violations_only)
-    hierarchy_path.write_text(text, encoding="utf-8")
-    print(f"wrote {hierarchy_path} ({len(text)} chars, {text.count(chr(10))} lines)", flush=True)
-    failures = list(graph.partial_failures)
-    print(f"partial failures: {len(failures)}", flush=True)
-    for item in failures:
-        print(f"  {item}", flush=True)
+    except Exception as error:
+        print(
+            f"query-server daemon did not start ({error}); using database run-queries",
+            file=log,
+            flush=True,
+        )
+        server = None
+    try:
+        CodeQL(workspace).populate(graph, populate=populate)
+        slugs = _slugs_for(graph, selected)
+        if as_json:
+            print(
+                f"loaded {len(graph.nodes)} nodes, {len(graph.relationships)} edges",
+                file=log,
+                flush=True,
+            )
+            payload = explorer_dto(graph, workspace)
+            export_path = ctx / "explorer-graph.json"
+            export_path.write_text(json.dumps(payload), encoding="utf-8")
+            print(f"wrote {export_path}", file=log, flush=True)
+            print(json.dumps(payload), flush=True)
+            return
+        print(
+            f"full run: {len(slugs.names)} graph rules "
+            f"({', '.join(selected)})",
+            file=log,
+            flush=True,
+        )
+        graph.evaluate_rules(slugs)
+        zeros = graph.zero_hit_slugs()
+        zeros.write(zero_hits_path)
+        print(
+            f"stored {len(zeros.names)} zero-hit rules in {zero_hits_path}",
+            file=log,
+            flush=True,
+        )
+        print(
+            f"loaded {len(graph.nodes)} nodes, {len(graph.relationships)} edges",
+            file=log,
+            flush=True,
+        )
+        timings = sorted(graph.rule_timings, key=lambda item: item.seconds, reverse=True)
+        lines = [
+            f"{item.seconds:7.2f}s  hits={item.hits:4d}  {item.slug}"
+            + (
+                f"  {item.error}"
+                if item.error == "skipped"
+                else f"  ERROR {item.error}"
+                if item.error
+                else ""
+            )
+            for item in timings
+        ]
+        total = sum(item.seconds for item in timings)
+        body = "\n".join(lines) + f"\n\n{len(timings)} rules, {total:.2f}s total\n"
+        timings_path.write_text(body, encoding="utf-8")
+        print(body, file=log, flush=True)
+        print(f"wrote {timings_path}", file=log, flush=True)
+        export_path = ctx / "explorer-graph.json"
+        payload = explorer_dto(graph, workspace)
+        export_path.write_text(json.dumps(payload), encoding="utf-8")
+        print(f"wrote {export_path}", file=log, flush=True)
+        text = _render_kg(graph, graphs=graphs, violations_only=violations_only)
+        hierarchy_path.write_text(text, encoding="utf-8")
+        print(
+            f"wrote {hierarchy_path} ({len(text)} chars, {text.count(chr(10))} lines)",
+            file=log,
+            flush=True,
+        )
+        failures = list(graph.partial_failures)
+        print(f"partial failures: {len(failures)}", file=log, flush=True)
+        for item in failures:
+            print(f"  {item}", file=log, flush=True)
+    finally:
+        if server is not None:
+            detach_query_server(server)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -145,13 +446,39 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Print only nodes with violations and their ancestors.",
     )
     parser.add_argument(
+        "--practice",
+        dest="practices",
+        action="append",
+        metavar="NAME",
+        help="Practice to evaluate; repeatable. Default: clean_engineering, bdd, stories.",
+    )
+    parser.add_argument(
+        "--ddd",
+        dest="ddd",
+        action="store_true",
+        help="Also evaluate DDD graph rules. Default: Clean Engineering, BDD, Stories.",
+    )
+    parser.add_argument(
+        "--json",
+        dest="as_json",
+        action="store_true",
+        help="Print the explorer KnowledgeGraph JSON on stdout.",
+    )
+    parser.add_argument(
         "root",
         nargs="?",
         type=Path,
         default=_REPO,
         help="Workspace to load. Default: repository root.",
     )
-    parser.set_defaults(populate=True, graphs=None, violations_only=False)
+    parser.set_defaults(
+        populate=True,
+        graphs=None,
+        violations_only=False,
+        ddd=False,
+        as_json=False,
+        practices=None,
+    )
     return parser.parse_args(argv)
 
 
@@ -162,4 +489,7 @@ if __name__ == "__main__":
         graphs=args.graphs,
         violations_only=args.violations_only,
         root=args.root,
+        ddd=args.ddd,
+        as_json=args.as_json,
+        practices=tuple(args.practices) if args.practices else None,
     )

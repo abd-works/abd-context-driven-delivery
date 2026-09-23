@@ -54,9 +54,12 @@ Nav tags: [action]
   key:
     filters live in the top strip, left side — not a left column
     practice · connector kind · node · violations · rule
-    violations = only Nodes with failing rules
+    violations = only Nodes with failing rules, plus ancestors so the path stays visible; passing siblings drop out
     rule = only Nodes that have that named rule
-    left = PracticeGraph tree (properties and rules stay on the Node in the tree)
+    opening rules on a filtered Node lists only the violating rule
+    a Node with a violating rule is red; every parent is red too
+    (failed / total) sits beside the name at every level — subtree rollup
+    left = PracticeGraph tree (each child indented under its parent; classes live in their file/subfolder; a Node's rules sit under a collapsed rules child; hover the icon or name for the Node type: Package · Module · File · Class · Operation · Rule)
     right = source file for the selected file Node; range highlighted
     folder Node: tree selection only; right pane unchanged
     file Node: open file + highlight the Node's selected area

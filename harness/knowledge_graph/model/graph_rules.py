@@ -159,7 +159,7 @@ class GraphRule:
             return ""
         return path.read_text(encoding="utf-8")
 
-    def evaluate(self, graph, rows=None) -> List[RuleViolation]:
+    def evaluate(self, graph, rows=None, by_name=None) -> List[RuleViolation]:
         if rows is None:
             from .codeql import CodeQL, Rows
 
@@ -174,9 +174,9 @@ class GraphRule:
         from .graph_query_spec import refine_rows
 
         rows = refine_rows(self.slug, rows)
-        return self.hits_from_rows(graph, rows)
+        return self.hits_from_rows(graph, rows, by_name=by_name)
 
-    def hits_from_rows(self, graph, rows) -> List[RuleViolation]:
+    def hits_from_rows(self, graph, rows, by_name=None) -> List[RuleViolation]:
         grouped: Dict[str, dict] = {}
         for row in rows:
             name = row.get("name", "")
@@ -187,20 +187,18 @@ class GraphRule:
             contributor = row.get("contributor")
             if contributor:
                 bucket["contributors"].append(contributor)
-        by_name: Dict[str, list] = {}
-        for candidate in graph.nodes.values():
-            by_name.setdefault(getattr(candidate, "name", None), []).append(candidate)
+        names = by_name if by_name is not None else _nodes_by_name(graph)
         violations: List[RuleViolation] = []
         for name, payload in grouped.items():
             subjects = [
                 candidate
-                for candidate in by_name.get(name, ())
+                for candidate in names.get(name, ())
                 if self._is_subject(candidate)
             ]
             contributor_ids = [
                 child.node_id
                 for contributor in payload["contributors"]
-                for child in by_name.get(contributor, ())
+                for child in names.get(contributor, ())
             ]
             for subject in subjects:
                 violations.append(
@@ -214,11 +212,10 @@ class GraphRule:
         return violations
 
     def _is_subject(self, node) -> bool:
-        from practices.clean_engineering.model.base_class_model import OoadClass
-
-        if isinstance(node, OoadClass):
+        semantic = node.semantic_type()
+        if semantic in _CLASS_TYPES:
             return True
-        return node.semantic_type() in self.applies_to
+        return semantic in self.applies_to
 
     def _violation(
         self,
@@ -242,6 +239,13 @@ class GraphRule:
             source=source,
             contributors=list(contributors or ()),
         )
+
+
+def _nodes_by_name(graph) -> Dict[str, list]:
+    names: Dict[str, list] = {}
+    for candidate in graph.nodes.values():
+        names.setdefault(getattr(candidate, "name", None), []).append(candidate)
+    return names
 
 
 def _all_types_for_practice(practice: str) -> Set[str]:

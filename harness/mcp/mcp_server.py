@@ -80,15 +80,22 @@ def _server_identity(spec: Mapping[str, Any]) -> tuple:
     )
 
 
-def _host_repo(spec: Mapping[str, Any]) -> str:
-    env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
+def _start_host_script(spec: Mapping[str, Any]) -> Path | None:
     for item in spec.get("args") or []:
         text = str(item)
         if text.endswith("start_host.py"):
-            try:
-                return str(Path(text).resolve().parents[3])
-            except (IndexError, OSError):
-                break
+            return Path(text)
+    return None
+
+
+def _host_repo(spec: Mapping[str, Any]) -> str:
+    env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
+    script = _start_host_script(spec)
+    if script is not None:
+        try:
+            return str(script.resolve().parents[3])
+        except (IndexError, OSError):
+            pass
     return str(env.get("CDD_REPO") or spec.get("cwd") or "")
 
 
@@ -113,7 +120,9 @@ def sync_user_cursor_server(server: Mapping[str, Any], *, canonical: bool = Fals
         return False
     this_repo = _host_repo(server)
     if not canonical and any(_host_repo(servers[name]) == this_repo for name in stale):
-        return False
+        scripts = [_start_host_script(servers[name]) for name in stale]
+        if scripts and all(path is not None and path.is_file() for path in scripts):
+            return False
     if all(_server_identity(servers[name]) == _server_identity(server) for name in stale):
         return False
     for name in stale:
@@ -755,18 +764,17 @@ class McpHost:
 
     def _start_codeql_server(self) -> None:
         from harness.knowledge_graph.model.codeql import attach_query_server
-        from harness.mcp.codeql_server import CodeQLQueryServer
+        from harness.mcp.codeql_query_daemon import ensure_query_server
 
-        server = CodeQLQueryServer(self._runtime.repo)
         try:
-            server.start()
+            server = ensure_query_server(Path(self._runtime.repo))
         except Exception:
             logger.exception("CodeQL query server did not start; queries will use the CLI")
             self.codeql_server = None
             return
         self.codeql_server = server
         attach_query_server(server)
-        logger.info("codeql query-server2 pid=%s", server.pid)
+        logger.info("codeql query-server daemon pid=%s", getattr(server, "pid", None))
 
     def _stop_codeql_server(self) -> None:
         from harness.knowledge_graph.model.codeql import detach_query_server
@@ -776,7 +784,6 @@ class McpHost:
         if server is None:
             return
         detach_query_server(server)
-        server.stop()
 
     def ping(self) -> str:
         return "pong"

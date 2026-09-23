@@ -10,8 +10,7 @@ import re
 from pathlib import Path
 from typing import List
 
-from mern_scanner_base import TypeScriptScanner
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
+from mern_scanner_base import TypeScriptScanner, Violation
 
 _SNAKE_CASE_PROP_RE = re.compile(r"(?:readonly\s+)?(\w+_\w+)\s*[?:]")
 _CAMEL_IN_JSON_RE = re.compile(r"body:\s*JSON\.stringify\(\s*\{([^}]+)\}", re.DOTALL)

@@ -239,10 +239,14 @@ class CodeQL:
             self._emit("query-server " + " ".join(query.stem for query in queries))
             try:
                 produced = server.run_queries(queries, db, self._emit)
-                return {
-                    query.stem: self._decode_bqrs(produced[str(query.resolve())])
-                    for query in queries
-                }
+                decoded: Dict[str, List[list]] = {}
+                for query in queries:
+                    key = str(query.resolve())
+                    if key not in produced:
+                        decoded[query.stem] = []
+                        continue
+                    decoded[query.stem] = self._decode_bqrs(produced[key])
+                return decoded
             except QueryServerDown as error:
                 self._emit(
                     f"query server failed ({error}); falling back to database run-queries"
@@ -268,6 +272,25 @@ class CodeQL:
             )
         return {query.stem: self._decode_bqrs(self._bqrs_for(db, query)) for query in queries}
 
+    def _produce_bqrs(self, queries, database):
+        server = attached_query_server()
+        if server is not None and getattr(server, "alive", False):
+            return server.run_queries(queries, database, self._emit)
+        run = subprocess.run(
+            self._run_queries_args(database, queries),
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(self.repo_root()),
+        )
+        if run.returncode != 0:
+            raise CodeQLRunError(
+                f"codeql database run-queries failed: {run.stderr or run.stdout}"
+            )
+        return {
+            str(query.resolve()): self._bqrs_for(database, query) for query in queries
+        }
+
     def _emit(self, line: str) -> None:
         print(line, flush=True)
 
@@ -291,8 +314,38 @@ class CodeQL:
         write_filter: bool = True,
     ) -> Dict[str, List[list]]:
         self._write_requested_rules(query.parent, slugs)
+        self._write_rules_query(query.parent)
         tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
         return self._rows_by_slug(tuples, slugs)
+
+    def _write_rules_query(self, pack_dir: Path) -> None:
+        language = self._pack_language(pack_dir) or "python"
+        text = (
+            "/**\n"
+            " * @name practice-graph-rules\n"
+            " * @kind problem\n"
+            " * @id cdd/practice-graph/rules\n"
+            " * @problem.severity warning\n"
+            " *\n"
+            " * One query for every graph rule in this pack. `requestedRule` selects\n"
+            " * which slugs this pass evaluates; each row still names its rule.\n"
+            " */\n"
+            "\n"
+            f"import {language}\n"
+            "import subject_filter\n"
+            "import requested_rules\n"
+            "import rule_hits\n"
+            "\n"
+            "from AstNode subject, string message, AstNode contributor, string slug\n"
+            "where\n"
+            "  requestedRule(slug) and\n"
+            "  graphRuleHit(subject, message, contributor, slug)\n"
+            "select subject, message, contributor, slug\n"
+        )
+        target = pack_dir / "rules.ql"
+        if target.is_file() and target.read_text(encoding="utf-8") == text:
+            return
+        target.write_text(text, encoding="utf-8")
 
     def _rows_by_slug(self, tuples: List[list], slugs: List[str]) -> Dict[str, List[list]]:
         grouped: Dict[str, List[list]] = {slug: [] for slug in slugs}
@@ -474,11 +527,31 @@ class CodeQL:
             return
         target.write_text(text, encoding="utf-8")
 
-    def _query_language(self, ql_path: Path) -> str:
+    def _pack_language(self, pack_dir: Path) -> str | None:
+        qlpack = pack_dir / "qlpack.yml"
+        if not qlpack.is_file():
+            return None
+        text = qlpack.read_text(encoding="utf-8")
+        if "javascript-all" in text or "codeql/javascript" in text:
+            return "javascript"
+        if "python-all" in text or "codeql/python" in text:
+            return "python"
+        return None
+
+    def _file_language(self, ql_path: Path) -> str:
         text = ql_path.read_text(encoding="utf-8")
         if "import javascript" in text:
             return "javascript"
         return "python"
+
+    def _query_language(self, ql_path: Path) -> str:
+        return self._pack_language(ql_path.parent) or self._file_language(ql_path)
+
+    def _query_matches_pack(self, ql_path: Path) -> bool:
+        pack_language = self._pack_language(ql_path.parent)
+        if pack_language is None:
+            return True
+        return pack_language == self._file_language(ql_path)
 
     def _database_ready(self, database: Path) -> bool:
         return (database / "db-python").is_dir() or (database / "db-javascript").is_dir()

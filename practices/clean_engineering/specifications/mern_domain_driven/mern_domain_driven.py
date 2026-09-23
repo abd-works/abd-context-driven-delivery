@@ -21,6 +21,19 @@ class MernDomainDriven(PracticeGuidance):
             format="typescript",
             default_workspace_folder="packages",
         )
+        from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
+            Scan,
+        )
+
+        self.scanner = Scan.bound_to(self)
+
+    def _scanner_collection(self):
+        from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
+            ScannerCollection,
+        )
+
+        folder = self.install_folder
+        return ScannerCollection(module_dir=folder, root_path=folder / "scanners")
 
     def _stories(self) -> "Stories":
         """Stories companion pinned at acceptance_tests fidelity, typescript format."""

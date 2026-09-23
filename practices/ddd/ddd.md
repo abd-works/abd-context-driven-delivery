@@ -50,6 +50,7 @@ When documenting an existing system, tactical wraps live under the DDD working a
 
 ```yaml
 alwaysApply: false
+globs: "**/*-sketch.md"
 ```
 
 Use these rules when defining domain logic in code, a model, or language.
@@ -110,7 +111,7 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 ```yaml
 alwaysApply: false
-globs: "**/*bounded-context*"
+globs: "**/*bounded-context*,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete bounded contexts, aggregates, or the language between them, or change a model or code that forces a language-boundary change. Follow these rules.
@@ -169,7 +170,7 @@ As you define aggregates and bounded contexts, **decide synchronization for ever
 
 ```yaml
 alwaysApply: false
-globs: "**/*bounded-context*,**/*-model.md"
+globs: "**/*bounded-context*,**/*-model.md,**/*-sketch.md"
 ```
 
 Whenever you classify or reshape domain types as entity, value, repository, event, or service, or change tactics or code that those types support. Follow these rules.
@@ -230,7 +231,7 @@ Decide one implementation pattern for each building block the model uses, then i
 
 ```yaml
 alwaysApply: false
-globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java"
+globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java,**/*-sketch.md"
 ```
 
 Whenever you persist, publish, or test repositories, events, or factories, or change production code they support. Follow these rules.

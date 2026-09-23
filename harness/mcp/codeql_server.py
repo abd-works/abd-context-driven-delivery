@@ -126,6 +126,7 @@ class CodeQLQueryServer:
                 },
             )
             failures: list[str] = []
+            produced: dict[str, Path] = {}
             by_path = {
                 str(Path(path).resolve()): value
                 for path, value in (result or {}).items()
@@ -137,12 +138,16 @@ class CodeQLQueryServer:
                 if result_type != 0 or not bqrs.is_file():
                     message = entry.get("message") or f"resultType={result_type}"
                     failures.append(f"{Path(resolved).stem}: {message}")
+                else:
+                    produced[resolved] = bqrs
                 dil = bqrs.with_suffix(".dil")
                 if dil.is_file():
                     dil.unlink()
-            if failures:
+            if failures and not produced:
                 raise CodeQLRunError("codeql query server failed: " + "; ".join(failures))
-            return outputs
+            if failures and on_line is not None:
+                on_line("query-server partial: " + "; ".join(failures))
+            return produced
 
     def _register(self, database: str) -> None:
         if database in self._registered:

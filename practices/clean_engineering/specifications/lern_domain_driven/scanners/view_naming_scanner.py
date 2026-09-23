@@ -10,8 +10,7 @@ import re
 from pathlib import Path
 from typing import List
 
-from lern_scanner_base import TypeScriptScanner
-from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
+from lern_scanner_base import TypeScriptScanner, Violation
 
 _EXPORT_COMPONENT_RE = re.compile(r"export\s+(?:default\s+)?(?:function|const)\s+([A-Z]\w+)")
 
