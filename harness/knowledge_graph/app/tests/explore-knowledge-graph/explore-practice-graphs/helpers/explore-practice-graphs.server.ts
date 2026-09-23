@@ -8,7 +8,7 @@ import {
   seededKnowledgeGraph,
   SEEDED_GRAPH_ID,
 } from './explore-practice-graphs.base';
-import { FIXTURE_WORKSPACE } from '../examples/knowledge-graph.examples';
+import { workspaceFiles } from '../examples/knowledge-graph.examples';
 
 export class ExplorePracticeGraphsServerHelper extends ExplorePracticeGraphsBaseHelper {
   app: Express | null = null;
@@ -52,9 +52,10 @@ export class ExplorePracticeGraphsServerHelper extends ExplorePracticeGraphsBase
     this.listed = response.body;
   }
 
-  async selectFolder(folder: string = FIXTURE_WORKSPACE): Promise<void> {
+  async selectFolder(): Promise<void> {
     const response = await request(this.app!).post('/api/knowledge-graphs/scan').send({
-      folder,
+      folder: 'workspace',
+      files: workspaceFiles(),
     });
     this.listed = response.body;
   }

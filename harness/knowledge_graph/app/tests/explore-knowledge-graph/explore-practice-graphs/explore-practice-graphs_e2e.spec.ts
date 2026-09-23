@@ -6,8 +6,7 @@ const helper = new ExplorePracticeGraphsE2eHelper();
 
 test('Select Working Folder scans the folder into the tree', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('working-folder').fill(FIXTURE_WORKSPACE);
-  await page.getByTestId('scan-folder').click();
+  await page.getByTestId('working-folder').setInputFiles(FIXTURE_WORKSPACE);
   await expect(page.getByTestId('practice-graph-tree')).toContainText('load');
   await expect(page.getByTestId('practice-graph-tree')).toContainText(
     KEEP_OPERATIONS_SMALL_FOCUSED,
@@ -15,7 +14,6 @@ test('Select Working Folder scans the folder into the tree', async ({ page }) =>
 });
 
 test('Browse Practice Graphs shows passing and violating rules', async ({ page }) => {
-  await page.goto(helper.graphQuery());
   await page.goto(helper.graphQuery());
   await expect(page.getByTestId('practice-graph-tree')).toContainText('load');
   await expect(page.getByTestId('practice-graph-tree')).toContainText(

@@ -17,6 +17,52 @@ export type WorkspaceFile = {
   text: string;
 };
 
+export const SKIP_DIR = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  '__pycache__',
+  '.venv',
+  'coverage',
+  '.codeql',
+]);
+
+const SOURCE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.py']);
+
+export function scanSourceFiles(files: WorkspaceFile[]): WorkspaceFile[] {
+  return files
+    .filter((file) => isScanSourcePath(file.relativePath))
+    .slice(0, 500);
+}
+
+export function isScanSourcePath(relativePath: string): boolean {
+  const parts = relativePath.replaceAll('\\', '/').split('/');
+  if (parts.some((part) => SKIP_DIR.has(part))) {
+    return false;
+  }
+  const name = parts[parts.length - 1] ?? '';
+  if (name.endsWith('.d.ts')) {
+    return false;
+  }
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 && SOURCE_EXT.has(name.slice(dot));
+}
+
+export function pickerRelativePath(webkitRelativePath: string): {
+  folder: string;
+  relativePath: string;
+} {
+  const normalized = webkitRelativePath.replaceAll('\\', '/');
+  const slash = normalized.indexOf('/');
+  if (slash < 0) {
+    return { folder: 'workspace', relativePath: normalized };
+  }
+  return {
+    folder: normalized.slice(0, slash),
+    relativePath: normalized.slice(slash + 1),
+  };
+}
+
 const TS_SKIP = new Set([
   'if',
   'for',

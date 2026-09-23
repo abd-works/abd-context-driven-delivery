@@ -755,7 +755,7 @@ class McpHost:
 
     def _start_codeql_server(self) -> None:
         from harness.knowledge_graph.model.codeql import attach_query_server
-        from installation.mcp.codeql_server import CodeQLQueryServer
+        from harness.mcp.codeql_server import CodeQLQueryServer
 
         server = CodeQLQueryServer(self._runtime.repo)
         try:

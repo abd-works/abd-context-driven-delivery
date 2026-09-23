@@ -33,7 +33,7 @@ Nav tags: [action]
 [ Explore Knowledge Graph ]                    top-header + split-screen
   ┌──────────────────────────────────────────────────────────┐
   │ KnowledgeGraph                                           │
-  │ folder [________________] Scan                           │  working folder to scan
+  │ folder [ Choose folder ]                                 │  native folder picker
   │ practice · connector · node · violations · rule          │  filters top-left, not a column
   ├────────────────────────────┬─────────────────────────────┤
   │ PracticeGraph tree         │ source file                 │

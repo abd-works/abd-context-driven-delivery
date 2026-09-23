@@ -145,7 +145,7 @@ class PracticeGuidance(Guidance):
         super().__init__(format=format)
         self.default_workspace_folder = default_workspace_folder
         self._formats = dict(formats or {})
-        from actions.scan.scan import Scan
+        from practices.clean_engineering.model.drawio.scanners._drawio_base import Scan
 
         self.scanner = Scan.bound_to(self)
         self._attach_workspace()

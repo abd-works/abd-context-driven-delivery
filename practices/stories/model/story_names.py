@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Iterable, List
 
-from actions.scan.vocabulary_helper import VocabularyHelper
+from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
 
 _VAGUE_VERBS = {"handle", "process", "manage", "do", "perform"}
 _GENERIC_NOUNS = {"request", "data", "record", "item", "thing", "info"}

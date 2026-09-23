@@ -122,7 +122,7 @@ class RulesCollection(MarkdownCollection):
     @echo
     @Hook("postToolUse")
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        from installation.hooks.prompt_echo.prompt_echo import PromptEcho
+        from prompt_echo.prompt_echo import PromptEcho
 
         data = payload or {}
         path = self._payload_path(data)

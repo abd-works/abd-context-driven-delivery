@@ -10,7 +10,6 @@ from pathlib import Path
 
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
-from sub_agent.sub_agent import sub_agent
 from harness.agent_tools.agent_tools import agent_tool
 from practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
@@ -107,7 +106,6 @@ class Drawio:
         tools(self.scan)
         return "Validation report for Draw.io layout rules (see contexts)."
 
-    @sub_agent
     @agent_instructions
     def repair(self, asset: str, violation: str) -> str:
         """repair"""
@@ -137,7 +135,6 @@ class Drawio:
             "report; otherwise done."
         )
 
-    @sub_agent
     @agent_tool
     def verify_regression(self, examples_root: str = "") -> str:
         """Regression check after repair (scan before/after + judge)."""

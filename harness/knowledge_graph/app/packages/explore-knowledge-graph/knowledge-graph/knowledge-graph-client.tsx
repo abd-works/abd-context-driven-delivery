@@ -5,6 +5,7 @@ import {
   type GraphFilter,
   type SourceRangeDto,
 } from './knowledge-graph';
+import { type WorkspaceFile } from './workspace';
 
 function hydrate(raw: unknown): KnowledgeGraph {
   const parsed = KnowledgeGraphSchema.parse(
@@ -14,13 +15,14 @@ function hydrate(raw: unknown): KnowledgeGraph {
 }
 
 export class KnowledgeGraphHttpClient {
-  static async scan(
-    folder: string,
-  ): Promise<ReturnType<KnowledgeGraph['present']>> {
+  static async scan(input: {
+    folder: string;
+    files?: WorkspaceFile[];
+  }): Promise<ReturnType<KnowledgeGraph['present']>> {
     const response = await fetch('/api/knowledge-graphs/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folder }),
+      body: JSON.stringify(input),
     });
     return response.json() as Promise<ReturnType<KnowledgeGraph['present']>>;
   }
@@ -78,8 +80,11 @@ export class KnowledgeGraphsClient {
     readonly presentation: ReturnType<KnowledgeGraph['present']>,
   ) {}
 
-  static async scan(folder: string): Promise<KnowledgeGraphsClient> {
-    const raw = await KnowledgeGraphHttpClient.scan(folder);
+  static async scan(input: {
+    folder: string;
+    files?: WorkspaceFile[];
+  }): Promise<KnowledgeGraphsClient> {
+    const raw = await KnowledgeGraphHttpClient.scan(input);
     const graph = hydrate(raw);
     return new KnowledgeGraphsClient(graph.id, graph.present());
   }
@@ -149,12 +154,15 @@ export function useKnowledgeGraph(id: string) {
     });
   }, []);
 
-  const selectFolder = useCallback((folder: string) => {
-    setLoading(true);
-    KnowledgeGraphsClient.scan(folder)
-      .then(setClient)
-      .finally(() => setLoading(false));
-  }, []);
+  const selectFolder = useCallback(
+    (input: { folder: string; files?: WorkspaceFile[] }) => {
+      setLoading(true);
+      KnowledgeGraphsClient.scan(input)
+        .then(setClient)
+        .finally(() => setLoading(false));
+    },
+    [],
+  );
 
   return {
     loading,
@@ -167,134 +175,4 @@ export function useKnowledgeGraph(id: string) {
     filterGraph,
     selectFolder,
   };
-}
-
-export function KnowledgeGraphExplorerView({ graphId = '' }: { graphId?: string }) {
-  const {
-    loading,
-    folder: scannedFolder,
-    listedNodes,
-    selectedNode,
-    sourceFile,
-    selectNode,
-    followRelationship,
-    filterGraph,
-    selectFolder,
-  } = useKnowledgeGraph(graphId);
-  const [rule, setRule] = useState('');
-  const [violations, setViolations] = useState(false);
-  const [folder, setFolder] = useState(scannedFolder);
-
-  useEffect(() => {
-    if (scannedFolder) {
-      setFolder(scannedFolder);
-    }
-  }, [scannedFolder]);
-
-  return (
-    <div className="knowledge-graph-explorer">
-      <header>
-        <h1>KnowledgeGraph</h1>
-        <form
-          className="folder-scan"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (folder.trim()) {
-              selectFolder(folder.trim());
-            }
-          }}
-        >
-          <label>
-            folder
-            <input
-              data-testid="working-folder"
-              value={folder}
-              onChange={(event) => setFolder(event.target.value)}
-              placeholder="C:\\path\\to\\workspace"
-            />
-          </label>
-          <button type="submit" data-testid="scan-folder">
-            Scan
-          </button>
-        </form>
-        <div className="filters">
-          <label>
-            violations
-            <input
-              type="checkbox"
-              checked={violations}
-              onChange={(event) => {
-                const next = event.target.checked;
-                setViolations(next);
-                filterGraph({ violations: next, rule: rule || undefined });
-              }}
-            />
-          </label>
-          <label>
-            rule
-            <input
-              value={rule}
-              onChange={(event) => setRule(event.target.value)}
-              onBlur={() =>
-                filterGraph({ violations, rule: rule || undefined })
-              }
-            />
-          </label>
-        </div>
-      </header>
-      <div className="split">
-        <nav className="tree" data-testid="practice-graph-tree">
-          {loading && <p>Loading KnowledgeGraph...</p>}
-          {!loading && listedNodes.length === 0 && (
-            <p>Select a folder to scan</p>
-          )}
-          <ul>
-            {listedNodes.map((node) => (
-              <li key={node.node_id}>
-                <button
-                  type="button"
-                  className={
-                    selectedNode?.node_id === node.node_id ? 'selected' : ''
-                  }
-                  onClick={() => selectNode(node.node_id)}
-                >
-                  {node.name}
-                </button>
-                <ul>
-                  {Object.entries(node.rule_statuses).map(([slug, status]) => (
-                    <li key={slug}>
-                      {slug} {status}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <section className="source" data-testid="source-file">
-          {sourceFile ? (
-            <pre>
-              <h2>{sourceFile.file}</h2>
-              <code data-start-line={sourceFile.start_line}>
-                {sourceFile.text}
-              </code>
-            </pre>
-          ) : (
-            <p>No source file</p>
-          )}
-        </section>
-      </div>
-      {selectedNode && !selectedNode.is_file && (
-        <button
-          type="button"
-          hidden
-          onClick={() =>
-            selectedNode && followRelationship(selectedNode.node_id)
-          }
-        >
-          follow
-        </button>
-      )}
-    </div>
-  );
 }

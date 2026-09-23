@@ -234,6 +234,27 @@ class CodeQL:
         )
         if write_filter:
             self._write_subject_filter(queries[0].parent, path_root=self._ql_path_root(db))
+        server = attached_query_server()
+        if server is not None and getattr(server, "alive", False):
+            self._emit("query-server " + " ".join(query.stem for query in queries))
+            try:
+                produced = server.run_queries(queries, db, self._emit)
+                return {
+                    query.stem: self._decode_bqrs(produced[str(query.resolve())])
+                    for query in queries
+                }
+            except QueryServerDown as error:
+                self._emit(
+                    f"query server failed ({error}); falling back to database run-queries"
+                )
+                self._restart_query_server(server)
+            except CodeQLRunError:
+                raise
+            except Exception as error:
+                self._emit(
+                    f"query server failed ({error}); falling back to database run-queries"
+                )
+                self._restart_query_server(server)
         run = subprocess.run(
             self._run_queries_args(db, queries),
             check=False,
@@ -246,6 +267,17 @@ class CodeQL:
                 f"codeql database run-queries failed: {run.stderr or run.stdout}"
             )
         return {query.stem: self._decode_bqrs(self._bqrs_for(db, query)) for query in queries}
+
+    def _emit(self, line: str) -> None:
+        print(line, flush=True)
+
+    def _restart_query_server(self, server) -> None:
+        try:
+            server.stop()
+            server.start()
+        except Exception as error:
+            self._emit(f"query server restart failed ({error})")
+            detach_query_server(server)
 
     def run_query_tuples(self, ql_path: Path, database: Path) -> List[list]:
         return self.run_queries([ql_path], database)[ql_path.stem]

@@ -5,7 +5,7 @@ import {
   seededKnowledgeGraph,
 } from './explore-practice-graphs.base';
 import { KnowledgeGraphsClient } from '../../../../packages/explore-knowledge-graph/knowledge-graph/knowledge-graph-client';
-import { FIXTURE_WORKSPACE, workspaceFiles } from '../examples/knowledge-graph.examples';
+import { workspaceFiles } from '../examples/knowledge-graph.examples';
 
 export class ExplorePracticeGraphsClientHelper extends ExplorePracticeGraphsBaseHelper {
   private client: KnowledgeGraphsClient | null = null;
@@ -15,13 +15,16 @@ export class ExplorePracticeGraphsClientHelper extends ExplorePracticeGraphsBase
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes('/scan')) {
-        const body = JSON.parse(String(init?.body ?? '{}')) as { folder?: string };
+        const body = JSON.parse(String(init?.body ?? '{}')) as {
+          folder?: string;
+          files?: { relativePath: string; text: string }[];
+        };
         const { knowledgeGraphFromWorkspace } = await import(
           '../../../../packages/explore-knowledge-graph/knowledge-graph/workspace'
         );
         const scanned = knowledgeGraphFromWorkspace(
-          body.folder ?? FIXTURE_WORKSPACE,
-          workspaceFiles(),
+          body.folder ?? 'workspace',
+          body.files ?? workspaceFiles(),
           seed.id,
         );
         return new Response(JSON.stringify(scanned.present()), {
@@ -86,8 +89,11 @@ export class ExplorePracticeGraphsClientHelper extends ExplorePracticeGraphsBase
     this.listed = this.client.presentation;
   }
 
-  async selectFolder(folder: string = FIXTURE_WORKSPACE): Promise<void> {
-    this.client = await KnowledgeGraphsClient.scan(folder);
+  async selectFolder(): Promise<void> {
+    this.client = await KnowledgeGraphsClient.scan({
+      folder: 'workspace',
+      files: workspaceFiles(),
+    });
     this.listed = this.client.presentation;
   }
 }

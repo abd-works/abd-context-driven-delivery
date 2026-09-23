@@ -18,8 +18,8 @@ from harness.knowledge_graph.model.codeql import (
     attach_query_server,
     detach_query_server,
 )
-from installation.mcp.codeql_server import CodeQLQueryServer
-from installation.mcp.mcp_server import McpHost
+from harness.mcp.codeql_server import CodeQLQueryServer
+from harness.mcp.mcp_server import McpHost
 
 
 class _Server:

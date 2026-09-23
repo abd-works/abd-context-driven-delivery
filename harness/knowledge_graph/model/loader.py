@@ -529,8 +529,22 @@ def _maybe_external(
     graph.relate(owner_class, Kind.DEPENDS_ON, target)
 
 
+def _is_python_spec(path: Path) -> bool:
+    name = path.name.lower()
+    return path.suffix.lower() == ".py" and (
+        name.endswith("_spec.py") or "_spec." in name
+    )
+
+
+def _read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
 def _load_bdd_descriptions(graph: PracticeGraph, root: Path) -> None:
-    from practices.bdd.scanners.bdd_scan_helpers import is_python_spec, read_text
+    is_python_spec, read_text = _is_python_spec, _read_text
 
     candidates: list[Path] = []
     for path in sorted(root.glob("**/*.py")):

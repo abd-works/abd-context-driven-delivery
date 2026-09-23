@@ -3,7 +3,7 @@ import { Low } from 'lowdb';
 import { Memory } from 'lowdb';
 import { JSONFilePreset } from 'lowdb/node';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { extname, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 import {
   KnowledgeGraph,
   KnowledgeGraphSchema,
@@ -12,7 +12,13 @@ import {
   type KnowledgeGraphRepository,
   type KnowledgeGraphSearch,
 } from './knowledge-graph';
-import { knowledgeGraphFromWorkspace, type WorkspaceFile } from './workspace';
+import {
+  isScanSourcePath,
+  knowledgeGraphFromWorkspace,
+  scanSourceFiles,
+  SKIP_DIR,
+  type WorkspaceFile,
+} from './workspace';
 
 type KnowledgeGraphStore = {
   knowledge_graphs: unknown[];
@@ -116,14 +122,14 @@ export class KnowledgeGraphsServer {
   static async selectFolder(
     folder: string,
     repo: KnowledgeGraphRepository,
+    files?: WorkspaceFile[],
   ): Promise<KnowledgeGraph> {
-    if (!existsSync(folder) || !statSync(folder).isDirectory()) {
-      throw new FolderNotFound(folder);
-    }
-    const files = _readWorkspaceFiles(folder);
+    const workspaceFiles = files
+      ? scanSourceFiles(files)
+      : _readWorkspaceFromDisk(folder);
     const graph = knowledgeGraphFromWorkspace(
-      folder,
-      files,
+      folder || 'workspace',
+      workspaceFiles,
       crypto.randomUUID(),
     );
     return repo.create({
@@ -156,22 +162,15 @@ export class FolderNotFound extends Error {
   }
 }
 
-const SKIP_DIR = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  '__pycache__',
-  '.venv',
-  'coverage',
-  '.codeql',
-]);
+const SKIP_DIRS = SKIP_DIR;
 
-const SOURCE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.py']);
-
-function _readWorkspaceFiles(folder: string): WorkspaceFile[] {
+function _readWorkspaceFromDisk(folder: string): WorkspaceFile[] {
+  if (!existsSync(folder) || !statSync(folder).isDirectory()) {
+    throw new FolderNotFound(folder);
+  }
   const files: WorkspaceFile[] = [];
   _walk(folder, folder, files);
-  return files;
+  return scanSourceFiles(files);
 }
 
 function _walk(root: string, current: string, files: WorkspaceFile[]): void {
@@ -179,7 +178,7 @@ function _walk(root: string, current: string, files: WorkspaceFile[]): void {
     return;
   }
   for (const entry of readdirSync(current)) {
-    if (SKIP_DIR.has(entry)) {
+    if (SKIP_DIRS.has(entry)) {
       continue;
     }
     const full = join(current, entry);
@@ -188,7 +187,7 @@ function _walk(root: string, current: string, files: WorkspaceFile[]): void {
       _walk(root, full, files);
       continue;
     }
-    if (!SOURCE_EXT.has(extname(entry)) || entry.endsWith('.d.ts')) {
+    if (!isScanSourcePath(relative(root, full))) {
       continue;
     }
     files.push({
@@ -208,9 +207,11 @@ export function createKnowledgeGraphsRouter(
 
   router.post('/scan', async (req, res) => {
     try {
+      const files = Array.isArray(req.body.files) ? req.body.files : undefined;
       const graph = await KnowledgeGraphsServer.selectFolder(
         String(req.body.folder ?? ''),
         repo,
+        files,
       );
       res.status(201).json(graph.present());
     } catch (error) {

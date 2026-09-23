@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Dict, Iterable, List, Mapping, Set
 
-from actions.scan.vocabulary_helper import VocabularyHelper
+from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
 from nltk.corpus import wordnet as wn
 
 _MIN_PUBLIC_OPERATIONS = 3
