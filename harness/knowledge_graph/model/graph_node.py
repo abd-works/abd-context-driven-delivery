@@ -58,6 +58,7 @@ class Node:
     _graph: Optional["PracticeGraph"] = None
     _node_id: str = ""
     practice: str = ""
+    source = None
 
     def semantic_type(self) -> str:
         return getattr(type(self), "_semantic_type_name", type(self).__name__)
@@ -101,6 +102,12 @@ class Node:
                     for n in self.related(Kind.OWNS, direction="in")
                     if n.semantic_type() == "Module"
                 ]
+            if not owners:
+                for parent in self.related(Kind.BELONGS_TO):
+                    nested = parent.home_module
+                    if nested is not None:
+                        owners = [nested]
+                        break
             if owners:
                 return owners[0]
             error: BaseException = RuntimeError(f"{self.name} has no owning Module")
@@ -192,6 +199,9 @@ class Node:
 
         walk(self, depth, set())
         return found
+
+
+GraphNodeMixin = Node
 
 
 def _dedupe_nodes(nodes: List[Node]) -> List[Node]:

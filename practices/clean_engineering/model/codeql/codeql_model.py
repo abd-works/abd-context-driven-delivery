@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+import re
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel as SourceModel,
     Module as SourceModule,
     OoadClass as SourceClass,
+    OoadNode,
 )
 from practices.clean_engineering.model.operation import (
     Operation as SourceOperation,
@@ -17,6 +20,7 @@ from practices.clean_engineering.model.property import Property as SourcePropert
 from practices.ddd.model.nodes import Aggregate, BoundedContext
 from practices.ddd.model.stereotypes import ddd_class_kind
 
+from practices.stories.model.source_location import SourceLocation
 from harness.knowledge_graph.model.graph_node import Kind, Node
 
 if TYPE_CHECKING:
@@ -94,21 +98,6 @@ class _Members:
         ]
         return node
 
-
-class OoadClass(_Members, SourceClass, Node):
-    practice = "clean_engineering"
-    _semantic_type_name = "OoadClass"
-
-    def sync_tree_from_legacy(self) -> None:
-        self.property_nodes = [
-            Property.from_field(field, index)
-            for index, field in enumerate(self.properties, start=1)
-        ]
-        self.operation_nodes = [
-            Operation.from_field(field, index)
-            for index, field in enumerate(self.operations, start=1)
-        ]
-
     def accept_property(self, name: str, type_hint: str = "") -> Optional[Property]:
         if any(p.name == name for p in self.property_nodes):
             return None
@@ -142,6 +131,21 @@ class OoadClass(_Members, SourceClass, Node):
             node.relate(Kind.RETURNS, ret)
         return node
 
+
+class OoadClass(_Members, SourceClass, Node):
+    practice = "clean_engineering"
+    _semantic_type_name = "OoadClass"
+
+    def sync_tree_from_legacy(self) -> None:
+        self.property_nodes = [
+            Property.from_field(field, index)
+            for index, field in enumerate(self.properties, start=1)
+        ]
+        self.operation_nodes = [
+            Operation.from_field(field, index)
+            for index, field in enumerate(self.operations, start=1)
+        ]
+
     @property
     def external_classes(self) -> List["OoadClass"]:
         return [cls for cls in self.related(Kind.DEPENDS_ON) if isinstance(cls, OoadClass)]
@@ -172,6 +176,13 @@ class Module(SourceModule, Node):
         cls.relate(Kind.BELONGS_TO, self)
         return cls
 
+    def accept_file(self, path: str) -> "File":
+        node = File(path.replace("\\", "/"), len(self.classes) + 1)
+        self.graph.register(node)
+        self.relate(Kind.OWNS, node)
+        node.relate(Kind.BELONGS_TO, self)
+        return node
+
     @property
     def external_classes(self) -> List[OoadClass]:
         return [cls for cls in self.related(Kind.DEPENDS_ON) if isinstance(cls, OoadClass)]
@@ -183,6 +194,141 @@ class Module(SourceModule, Node):
     @property
     def callers(self) -> List["Module"]:
         return [mod for mod in self.used_by if isinstance(mod, Module)]
+
+
+class File(_Members, OoadNode, Node):
+    practice = "clean_engineering"
+    _semantic_type_name = "File"
+
+    def __init__(self, name: str, sequential_order: int) -> None:
+        OoadNode.__init__(self, name, sequential_order)
+        self.property_nodes: List[Property] = []
+        self.operation_nodes: List[Operation] = []
+        self.properties: List = []
+        self.operations: List = []
+
+    def sync_tree_from_legacy(self) -> None:
+        return
+
+    def update_self(self, source: OoadNode) -> None:
+        self.name = source.name
+
+    def child_collections(self, source: OoadNode):
+        return []
+
+
+def _file_owner_name(name: str) -> bool:
+    text = (name or "").replace("\\", "/")
+    return "/" in text or text.endswith(".py")
+
+
+def _module_for_path(
+    modules: Dict[str, Module],
+    path: str,
+    model: "CleanEngineeringModel",
+    order: int,
+) -> tuple[Module, int]:
+    normalized = path.replace("\\", "/")
+    matches = [
+        mod
+        for mod in modules.values()
+        if normalized == mod.name.replace(".", "/")
+        or normalized.startswith(mod.name.replace(".", "/") + "/")
+        or normalized.startswith(mod.name + "/")
+    ]
+    if matches:
+        return max(matches, key=lambda mod: len(mod.name)), order
+    folder = str(Path(normalized).parent).replace("\\", "/")
+    if folder in (".", ""):
+        folder = normalized
+    key = folder.lower()
+    if key not in modules:
+        modules[key] = model.module_named(folder, order=order)
+        order += 1
+    return modules[key], order
+
+
+def bind_source(node: Node, row: dict, root: Path | None = None) -> None:
+    file = str(row.get("file") or "").replace("\\", "/")
+    start = int(row.get("line") or 0)
+    end = int(row.get("end_line") or start)
+    if not file:
+        return
+    text = str(row.get("text") or "")
+    if root is not None and start > 0:
+        sliced_start, sliced_end, sliced = read_source_span(root, file, start, end)
+        if sliced:
+            start, end, text = sliced_start, sliced_end, sliced
+        else:
+            end = end or start
+    node.source = SourceLocation(file=file, line=start, end_line=end or start, text=text)
+
+
+def read_source_span(
+    root: Path, relative: str, start: int, end: int
+) -> tuple[int, int, str]:
+    path = Path(root) / relative
+    if not path.is_file():
+        return start, end or start, ""
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    lo = max(start, 1)
+    hi = max(end or lo, lo)
+    if lo > len(lines):
+        return lo, hi, ""
+    if relative.endswith(".py"):
+        hi = max(hi, _python_block_end(lines, lo - 1) + 1)
+    elif relative.endswith((".ts", ".tsx", ".js", ".jsx")):
+        hi = max(hi, _brace_block_end(lines, lo - 1) + 1)
+    hi = min(hi, len(lines))
+    return lo, hi, "\n".join(lines[lo - 1 : hi])
+
+
+def _python_block_end(lines: list[str], start_index: int) -> int:
+    header = lines[start_index]
+    matched = re.match(r"^(\s*)(?:async\s+)?(?:class|def)\b", header)
+    if not matched:
+        return start_index
+    indent = len(matched.group(1))
+    end = _signature_end(lines, start_index)
+    for index in range(end + 1, len(lines)):
+        line = lines[index]
+        if line.strip() == "":
+            end = index
+            continue
+        if len(line) - len(line.lstrip(" ")) <= indent:
+            break
+        end = index
+    return end
+
+
+def _signature_end(lines: list[str], start_index: int) -> int:
+    depth = 0
+    for index in range(start_index, len(lines)):
+        line = lines[index]
+        depth += line.count("(") - line.count(")")
+        if depth <= 0 and ":" in line:
+            return index
+    return start_index
+
+
+def _brace_block_end(lines: list[str], start_index: int) -> int:
+    depth = 0
+    seen = False
+    for index in range(start_index, len(lines)):
+        for ch in lines[index]:
+            if ch == "{":
+                depth += 1
+                seen = True
+            elif ch == "}":
+                depth -= 1
+                if seen and depth == 0:
+                    return index
+    return start_index
+
+
+def _read_span(root: Path, relative: str, start: int, end: int) -> str:
+    _lo, _hi, text = read_source_span(root, relative, start, end)
+    return text
 
 
 class CleanEngineeringModel(SourceModel, Node):
@@ -216,16 +362,20 @@ class CleanEngineeringModel(SourceModel, Node):
         operation_rows: List[dict],
         parameter_rows: List[dict] | None = None,
     ) -> None:
-        if class_rows and graph.ce_model is None:
+        if graph.ce_model is None and (class_rows or property_rows or operation_rows):
             graph.ce_model = cls("CleanEngineering", 1)
             graph.register(graph.ce_model)
         model: CleanEngineeringModel = graph.ce_model
         modules: Dict[str, Module] = {mod.name.lower(): mod for mod in graph.nodes_of_type(Module)}
         classes: Dict[str, OoadClass] = {}
+        files: Dict[str, File] = {}
         for node in graph.nodes.values():
             if isinstance(node, OoadClass):
                 classes[node.name.lower()] = node
+            if isinstance(node, File):
+                files[node.name.replace("\\", "/").lower()] = node
         order = 1
+        root = getattr(graph, "root", None)
         for entry in class_rows:
             module_name = entry.get("module") or ""
             name = entry.get("name") or ""
@@ -237,15 +387,44 @@ class CleanEngineeringModel(SourceModel, Node):
                 order += 1
                 modules[module_name.lower()] = mod
             if name.lower() in classes:
+                bind_source(classes[name.lower()], entry, root)
                 continue
             classes[name.lower()] = mod.accept_class(name, entry.get("stereotypes") or [])
+            bind_source(classes[name.lower()], entry, root)
+
+        def member_owner(row: dict):
+            nonlocal order
+            class_name = str(row.get("class_name") or "").replace("\\", "/")
+            owned = classes.get(class_name.lower())
+            if owned is not None:
+                return owned
+            if not _file_owner_name(class_name):
+                return None
+            key = class_name.lower()
+            if key not in files:
+                file_path = str(row.get("file") or class_name).replace("\\", "/")
+                mod, order = _module_for_path(modules, file_path, model, order)
+                files[key] = mod.accept_file(file_path)
+                bind_source(
+                    files[key],
+                    {"file": file_path, "line": 1, "end_line": 1},
+                    root,
+                )
+            return files[key]
+
         for prop in property_rows:
-            owned = classes.get((prop.get("class_name") or "").lower())
+            owned = member_owner(prop)
             if owned is None:
                 continue
             owned.accept_property(prop.get("name") or "", prop.get("type_hint") or "")
+            node = next(
+                (p for p in owned.property_nodes if p.name == (prop.get("name") or "")),
+                None,
+            )
+            if node is not None:
+                bind_source(node, prop, root)
         for op in operation_rows:
-            owned = classes.get((op.get("class_name") or "").lower())
+            owned = member_owner(op)
             if owned is None:
                 continue
             owned.accept_operation(
@@ -253,14 +432,26 @@ class CleanEngineeringModel(SourceModel, Node):
                 op.get("return_type") or "",
                 op.get("parameters") or [],
             )
+            node = next(
+                (o for o in owned.operation_nodes if o.name == (op.get("name") or "")),
+                None,
+            )
+            if node is not None:
+                bind_source(node, op, root)
         for row in parameter_rows or []:
-            owned = classes.get((row.get("class_name") or "").lower())
+            owned = member_owner(row)
             if owned is None:
                 continue
             operation = next((o for o in owned.operation_nodes if o.name == row.get("operation")), None)
             if operation is None:
                 continue
             operation.accept_parameter(row.get("name") or "")
+            param = next(
+                (p for p in operation.parameters if p.name == (row.get("name") or "")),
+                None,
+            )
+            if param is not None:
+                bind_source(param, row, root)
 
     @classmethod
     def wire_calls(cls, graph: "PracticeGraph", calls: List[dict]) -> None:

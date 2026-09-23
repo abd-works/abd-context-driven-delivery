@@ -131,3 +131,107 @@ practices.knowledge_graph.model.codeql.CodeQLRunError: codeql query run failed f
 (eventual cause: OverlappingFileLockException)
 
 
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Error retrieving qlpack commit hash from Git repository
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\stories\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\stories\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 291, in _evaluate_graph_rules
+    batch = self._rule_rows(codeql, pack, pack_rules, database=database)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 370, in _rule_rows
+    codeql.run_rules(
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 463, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 415, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Error retrieving qlpack commit hash from Git repository
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\stories\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\stories\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Error retrieving qlpack commit hash from Git repository
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\ux\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\ux\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 291, in _evaluate_graph_rules
+    batch = self._rule_rows(codeql, pack, pack_rules, database=database)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 370, in _rule_rows
+    codeql.run_rules(
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 463, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 415, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Error retrieving qlpack commit hash from Git repository
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\ux\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\ux\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Error retrieving qlpack commit hash from Git repository
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\stories\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\stories\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 291, in _evaluate_graph_rules
+    batch = self._rule_rows(codeql, pack, pack_rules, database=database)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 370, in _rule_rows
+    codeql.run_rules(
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 463, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 415, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Error retrieving qlpack commit hash from Git repository
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\stories\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\stories\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: Error retrieving qlpack commit hash from Git repository
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\ux\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\ux\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 291, in _evaluate_graph_rules
+    batch = self._rule_rows(codeql, pack, pack_rules, database=database)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\practice_graph.py", line 370, in _rule_rows
+    codeql.run_rules(
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 463, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\knowledge_graph\model\codeql.py", line 415, in run_queries
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql database run-queries failed: Error retrieving qlpack commit hash from Git repository
+WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-cdd-code-ql-practice-semanti\practices\ux\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\ux\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+

@@ -1,7 +1,7 @@
 # knowledge_graph — file change (sketch)
 
 fidelity: model / behavior
-status: unlocked from grill; not generate yet
+status: model written; session, hook/mcp session, graph rules collection, and refresh master green; remaining increments not started
 
 KnowledgeGraph always reads the working copy.
 
@@ -17,7 +17,15 @@ No master classification query. CodeQL.populate is under both calls, not the pub
 
 PracticeGuidance.rules and FidelityGuidance.rules return GraphRulesCollection. An entry is a GraphRule when `practices/{practice}/model/codeql/{slug}.ql` exists, otherwise a Rule — GraphRule.validate defers to Rule.validate when there is no query.
 
-The file-change hook is `@Hook("stop")` on GraphRulesCollection — agent loop end, once per turn. `inject_rules` stays `@Hook("postToolUse")`. Stop payload has no paths; dirty set is working copy vs master.
+Objects live on Session (harness/session). Session.knowledge_graph and Session.practices are lazy: first get instantiates, setter replaces, reset() clears so the next get instantiates again.
+
+This work adds a persistent HookServer process (same ensure/spawn pattern as the CodeQL query daemon). Cursor still launches `hook_server.py` per event; that process is a CLI client onto the daemon. The daemon holds one Session so postToolUse, stop, and present share the same RAM graph and practices across hook runs. McpServer holds its own Session for now — two Sessions is fine; do not join hook and MCP onto one object in this increment.
+
+Two GraphRulesCollection hooks. `inject_rules` stays `@Hook("postToolUse")`.
+
+`notice_changed_file` is `@Hook("stop")` — once per turn, payload has no paths. Dirty set vs master → `updateWorkingCopy` → validate (CodeQL on the working copy) → hits live on `node.rules.violations`. Filter Session.knowledge_graph to dirty paths ∩ violations (same `filterGraph` as the explorer). No report file.
+
+`present_violations` is also `@Hook("stop")` and `@echo`, after notice has updated the daemon Session. Channel is `followup_message` (not `afterAgentResponse` — that fires before stop). The follow-up carries the slice plus instructions: present so the user can navigate, recommend a fix for each, drop items that later validate clean. Empty follow-up when the slice has no hits. Same toast path as `inject_rules`: `PromptEcho.show_ide_toast` names that there are violations and the count.
 
 `Validate.validate` never hand-loops rules. It iterates Guidance (`GuidanceAction.run`). Whole bag → `item.rules.validate`. One `rule=` → that `Rule.validate()` once; guidance is the practice binding, not a slug search.
 
@@ -26,6 +34,37 @@ theme: working copy then validate
 ---------
 ce:
 
+Session
+       // harness/session — not WorkSession, not session_logs
+  knowledge_graph
+       // lazy instantiate on get
+       // setter replaces
+       -> KnowledgeGraph
+  practices
+       // lazy instantiate on get
+       // one PracticeGuidance per practice
+       // hook and mcp read these — never load_toolsets per event
+       -> PracticeGuidance
+  reset
+       // set graph and practices to nothing; next get instantiates again
+
+  ----
+HookServer
+  session
+       -> Session
+       // this work: long-lived daemon; Session lives here
+       // hook_server.py per Cursor event is the CLI client
+       // same Session across hook runs — never a new graph per event
+       // never own the graph or the practices as fields beside Session
+
+  ----
+McpServer
+  session
+       -> Session
+       // own Session — two Sessions is fine for now
+       // never the hook daemon's Session in this increment
+
+  ----
 KnowledgeGraph
   practice_graphs
        // always the working copy — never master
@@ -39,13 +78,17 @@ KnowledgeGraph
        -> CodeQL.populate
        // populate from the new working copy — never read master
        // never updateWorkingCopy for this job
+  filterGraph dirty violations
+       // explorer already has this
+       // dirty paths ∩ nodes with node.rules.violations
+       // keep ancestors; drop passing siblings
+       // never a report file as the hook contract
 
   ----
 PracticeGraph
   root
   nodes
-  report_path
-       // last validate written for the agent to Read
+       // node.rules.violations is the source of truth
 
   ----
 PracticeGuidance
@@ -85,11 +128,23 @@ GraphRulesCollection : RulesCollection
   notice_changed_file payload
        @Hook("stop")
        // end of agent loop — not postToolUse, not afterAgentResponse
-       // 30s, no CodeQL; payload has no paths
+       // payload has no paths
        -> dirty paths vs master
-       -> last node.rules.violations for those locations
-       -> additional_context count + report_path
-       // empty when no RuleViolation.location matches a dirty path
+       -> KnowledgeGraph.updateWorkingCopy
+       -> validate
+       // CodeQL on the working copy; write node.rules.violations on the objects
+       -> session.knowledge_graph.filterGraph dirty violations
+       // objects on Session; never a report file
+  present_violations payload
+       @echo
+       @Hook("stop")
+       // after notice_changed_file on the same daemon Session
+       // not afterAgentResponse
+       -> followup_message from those objects + instructions
+       -> PromptEcho.show_ide_toast
+       // same path as inject_rules
+       // toast: we have violations + the count
+       // no toast when the slice is empty
   validate
        // inherited @collect — GraphRule.validate or Rule.validate per entry
        -> node.rules.violations
@@ -191,13 +246,32 @@ a repo
         it should include module or class nodes whose location is that file
         it should not treat the file as a story
       that the agent loop has stopped
-        it should not run CodeQL on the hook
-        it should read the last evaluation only
-        it should take dirty paths vs master, not the stop payload
-        with violations stored for those files
-          it should return additional_context that names the report path
-        with no violations for those files
-          it should return no additional_context
+        with dirty story-test and production-code files
+          it should take dirty paths vs master, not the stop payload
+          it should update the working copy from those paths
+          it should extract onto the working copy
+          it should not rewrite the master
+          it should run CodeQL on the working copy
+          it should validate from the nodes in that hierarchy
+          it should attach rule violations to nodes in those files
+          it should filter the knowledge graph to dirty paths and violations
+          it should keep ancestors so the path stays visible
+          it should drop passing siblings
+          it should not write a report file for the hook
+          it should keep those objects on the session knowledge graph
+          with no remaining violations
+            it should present an empty slice
+            it should not echo a violations toast
+          that has remaining violations
+            it should return a followup_message on stop
+            it should not use afterAgentResponse
+            it should echo a toast that names the violation count
+            it should instruct the agent to present the violations so the user can navigate them
+            it should instruct the agent to recommend a fix for each violation
+            it should instruct the agent to drop violations that have been fixed
+            that the agent has fixed some of those violations
+              it should keep the remaining violations on the objects
+              it should not show the ones that now validate
       that is injecting on postToolUse
         it should still match bags with AppliesTo.globs
         it should not use graph matching for inject yet
@@ -208,4 +282,76 @@ a repo
         it should populate the master
         it should copy the master to the working copy
         it should not read the master after the copy
+
+a session
+  that the hook server holds
+    it should live on the persistent hook server
+    it should be the same object across hook runs
+    it should expose a knowledge graph
+    it should expose each practice guidance
+    that has no graph yet
+      it should instantiate a knowledge graph on get
+    that has no practices yet
+      it should instantiate practice guidance on get
+    that has been given a knowledge graph
+      it should return that graph on get
+    that has been reset
+      it should instantiate a knowledge graph on the next get
+      it should instantiate practice guidance on the next get
+    it should not load toolsets on each hook event
+  that the mcp server holds
+    it should be a session
+    it should not be the hook server session
+    it should expose a knowledge graph
+    it should expose each practice guidance
+    it should not load toolsets on each mcp call
+
+=========
+theme: increments
+---------
+
+each: one real slice, mamba on real files, no stubs; then the next
+
+an increment
+  that is session
+    it should lazy load knowledge_graph and practices
+    it should accept a setter
+    it should reset so the next get instantiates again
+    // a session — except hook/mcp
+  that is hook and mcp session
+    it should keep a persistent hook server and a CLI per Cursor event
+    it should reuse the hook session across hook runs
+    it should let mcp keep its own session
+    // two Sessions is fine for now
+  that is graph rules collection
+    it should use GraphRule when a .ql exists
+    it should still inject with globs
+    // that is injecting on postToolUse
+  that is refresh master
+    it should extract codeql-slice into master
+    it should copy master to working copy
+    // that is ready to become the master
+  that is update working copy
+    it should extract dirty story-test and production files onto the working copy
+    it should not rewrite the master
+    // that has changed… file-type nests
+  that is validate from the hierarchy
+    it should attach node.rules.violations
+    it should validate only that rule when rule is passed
+    // that has updated the working copy / that has been validated
+  that is filter graph
+    it should keep dirty paths and violations
+    it should keep ancestors
+    it should drop passing siblings
+  that is notice changed file
+    it should run on stop
+    it should take dirty paths vs master
+    it should run update working copy then validate then filter onto the session
+    // that the agent loop has stopped — minus present
+  that is present violations
+    it should return followup_message on stop
+    it should echo a toast with the violation count
+    it should not use afterAgentResponse
+    it should keep remaining violations after a real fix
+
  

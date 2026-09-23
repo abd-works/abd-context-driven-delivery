@@ -1,5 +1,5 @@
 """PracticeGraph — the graph registry. Not a practice and not a second type."""
 
-from .model import PracticeGraph
+from .model import KnowledgeGraph, PracticeGraph
 
-__all__ = ["PracticeGraph"]
+__all__ = ["KnowledgeGraph", "PracticeGraph"]

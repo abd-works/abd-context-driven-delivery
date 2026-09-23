@@ -4,6 +4,11 @@ predicate subjectFilterPrefix(string prefix) { prefix = "" }
 
 predicate firstClassModulePrefix(string prefix) { none() }
 
-predicate inSubject(AstNode n) { exists(n.getLocation()) }
+predicate inSubject(AstNode n) {
+  inSubjectPath(n.getLocation().getFile().getRelativePath().replaceAll("\\", "/"))
+}
 
-predicate inSubjectPath(string path) { exists(File f | path = f.getRelativePath()) }
+bindingset[path]
+predicate inSubjectPath(string path) {
+  any()
+}

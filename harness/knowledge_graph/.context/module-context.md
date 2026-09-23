@@ -2,7 +2,7 @@
 
 **Purpose:** Hold one graph for a working area: nodes, relationships, and rule hits. Stories, Clean Engineering, DDD, and BDD each add their own node types and CodeQL populate; this package does not name those types.
 
-**Primary use case:** `PracticeGraph(root)`, register and relate nodes, then `evaluate_rules` so `node.rules.violations` can be read.
+**Primary use case:** `PracticeGraph(root)`, register and relate nodes, then `evaluate_rules` so `node.rules.violations` can be read. `KnowledgeGraph` holds those practice graphs and is always the working copy. `Session` in `harness/session` lazy-holds that graph and each `PracticeGuidance`.
 
 **Rationale:** The graph is the registry. Practice guidance stays on Stories, Clean Engineering, DDD, BDD, UX. This is not a practice and not a second graph type beside PracticeGraph.
 

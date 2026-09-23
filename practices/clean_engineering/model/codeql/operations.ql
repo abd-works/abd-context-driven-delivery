@@ -6,6 +6,8 @@
 
 import python
 import subject_filter
+import source_span
+import model
 
 string returnedName(Function method) {
   exists(Return ret, Name name |
@@ -24,7 +26,9 @@ string returnedName(Function method) {
   result = ""
 }
 
-from Class cls, Function method
-where inSubject(cls) and method = cls.getAMethod()
-select cls.getName(), method.getName(), returnedName(method),
-  method.getLocation().getStartLine()
+from Function method
+where inSubject(method) and exists(graphOwnerName(method))
+select graphOwnerName(method), method.getName(), returnedName(method),
+  sourceStart(method),
+  method.getLocation().getFile().getRelativePath(),
+  sourceEnd(method)

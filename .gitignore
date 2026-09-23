@@ -45,6 +45,10 @@ tools/prompt_log/prompt_log.debug
 # CodeQL extracted databases and local scan output (regenerate with .codeql/README.md)
 .codeql/**-db/
 **/.codeql/**-db/
+.codeql/**-master/
+**/.codeql/**-master/
+.codeql/**-working-copy/
+**/.codeql/**-working-copy/
 .codeql/**-db.zip
 .codeql/results/
 .codeql/logs/

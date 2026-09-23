@@ -6,8 +6,10 @@
 
 import python
 import subject_filter
+import source_span
 
 from Class cls
 where inSubject(cls)
-select cls.getName(), cls.getEnclosingModule().getName(),
-  cls.getLocation().getFile().getRelativePath(), cls.getLocation().getStartLine()
+select cls.getName(), cls.getLocation().getFile().getShortName(),
+  cls.getLocation().getFile().getRelativePath(), sourceStart(cls),
+  cls.getLocation().getEndLine()

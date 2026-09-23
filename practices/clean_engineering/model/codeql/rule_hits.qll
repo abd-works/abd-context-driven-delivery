@@ -117,8 +117,8 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     subject = f and
     contributor = f and
     message =
-      "Operation '" + f.getName() + "' is " + operationLineCount(f).toString() +
-        " lines (max 20)."
+      "Operation '" + operationLabel(f) + "' is " + operationStatementCount(f).toString() +
+        " statements (max 20)."
   )
   or
   slug = "limit-operation-parameters" and
@@ -128,7 +128,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     subject = f and
     contributor = f and
     message =
-      "Operation '" + f.getName() + "' takes " + domainParameterCount(f).toString() +
+      "Operation '" + operationLabel(f) + "' takes " + domainParameterCount(f).toString() +
         " parameters (prefer 0-2)."
   )
   or
@@ -139,7 +139,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     (p.getName() = "data" or p.getName() = "options" or p.getName() = "info") and
     subject = f and
     contributor = p and
-    message = "Operation '" + f.getName() + "' names a parameter '" + p.getName() + "'."
+    message = "Operation '" + operationLabel(f) + "' names a parameter '" + p.getName() + "'."
   )
   or
   slug = "simplify-control-flow" and
@@ -148,7 +148,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     deeplyNested(f) and
     subject = f and
     contributor = f and
-    message = "Operation '" + f.getName() + "' nests control flow more than three levels."
+    message = "Operation '" + operationLabel(f) + "' nests control flow more than three levels."
   )
   or
   slug = "never-swallow-exceptions" and
@@ -157,7 +157,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     swallowedExcept(f, ex) and
     subject = f and
     contributor = ex and
-    message = "Operation '" + f.getName() + "' catches an exception and ignores it."
+    message = "Operation '" + operationLabel(f) + "' catches an exception and ignores it."
   )
   or
   slug = "use-exceptions-properly" and
@@ -166,7 +166,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     bareExcept(f, ex) and
     subject = f and
     contributor = ex and
-    message = "Operation '" + f.getName() + "' uses a bare except."
+    message = "Operation '" + operationLabel(f) + "' uses a bare except."
   )
   or
   slug = "use-explicit-dependencies" and
@@ -192,12 +192,25 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
   )
   or
   slug = "prefer-class-operations" and
-  exists(Function f, Class cls |
+  exists(Function f |
     inSubject(f) and
-    calledOnlyFrom(f, cls) and
+    moduleLevelFunction(f) and
     subject = f and
-    contributor = cls and
-    message = "Function '" + f.getName() + "' is only called from '" + cls.getName() + "'."
+    contributor = f and
+    message =
+      "Function '" + f.getName() +
+        "' hangs off the module. Put it on the class that owns the work."
+  )
+  or
+  slug = "prefer-instance-operations" and
+  exists(Function f |
+    inSubject(f) and
+    staticUtilityMethod(f) and
+    subject = f and
+    contributor = f and
+    message =
+      "Operation '" + operationLabel(f) +
+        "' is static — keep operations on the instance except a creation method."
   )
   or
   slug = "hide-inner-details" and
@@ -207,7 +220,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     subject = f and
     contributor = attr and
     message =
-      "Operation '" + f.getName() + "' reads private attribute '" + attr.getName() + "'."
+      "Operation '" + operationLabel(f) + "' reads private attribute '" + attr.getName() + "'."
   )
   or
   slug = "low-coupling" and
@@ -217,7 +230,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     subject = f and
     contributor = attr and
     message =
-      "Operation '" + f.getName() + "' reaches past a seam via '" + attr.getName() + "'."
+      "Operation '" + operationLabel(f) + "' reaches past a seam via '" + attr.getName() + "'."
   )
   or
   slug = "shape-classes-around-resources" and
@@ -280,6 +293,17 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     subject = a and
     contributor = b and
     message = "Module '" + a.getName() + "' and '" + b.getName() + "' depend on each other."
+  )
+  or
+  slug = "extensions-live-with-the-domain" and
+  exists(Class extension, Class domainType |
+    inSubject(extension) and
+    domainExtensionInFrameworkModule(extension, domainType) and
+    subject = extension and
+    contributor = domainType and
+    message =
+      "Class '" + extension.getName() + "' extends '" + domainType.getName() +
+        "' inside the framework module. Put the extension in the domain module."
   )
   or
   slug = "layer-separation" and

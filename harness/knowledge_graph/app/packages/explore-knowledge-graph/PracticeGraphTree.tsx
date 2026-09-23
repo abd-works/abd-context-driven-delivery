@@ -123,15 +123,7 @@ function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
 }
 
 function listedRules(node: ListedTreeNode) {
-  if (node.rules.length > 0) {
-    return node.rules;
-  }
-  return Object.entries(node.rule_statuses).map(([slug, status]) => ({
-    slug,
-    status,
-    body: '',
-    message: '',
-  }));
+  return node.rules;
 }
 
 function RulesGroup({

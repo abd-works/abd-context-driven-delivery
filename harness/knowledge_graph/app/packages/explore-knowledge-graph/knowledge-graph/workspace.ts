@@ -8,9 +8,11 @@ import {
   type KnowledgeGraphDto,
   type NodeDto,
   type RelationshipDto,
+  type SourceRangeDto,
 } from './knowledge-graph';
 
-export const MAX_OPERATION_LINES = 20;
+export const MAX_OPERATION_STATEMENTS = 20;
+export const MAX_OPERATION_LINES = MAX_OPERATION_STATEMENTS;
 
 export type WorkspaceFile = {
   relativePath: string;
@@ -77,6 +79,9 @@ export function resolveScanRoot(
   return repoDefault;
 }
 
+/** Native pickers only give the last folder name, not a disk path. */
+export const PICKER_UPLOAD_LIMIT = 20;
+
 const TS_SKIP = new Set([
   'if',
   'for',
@@ -90,6 +95,35 @@ const TS_SKIP = new Set([
   'with',
   'constructor',
 ]);
+
+export type SourceDefinition = {
+  semantic_type: 'OoadClass' | 'Operation';
+  name: string;
+  source: SourceRangeDto;
+};
+
+export function definitionsInFile(file: WorkspaceFile): SourceDefinition[] {
+  const found: SourceDefinition[] = [];
+  for (const node of _classesIn(file)) {
+    if (node.source) {
+      found.push({
+        semantic_type: 'OoadClass',
+        name: node.name,
+        source: node.source,
+      });
+    }
+  }
+  for (const node of _operationsIn(file)) {
+    if (node.source) {
+      found.push({
+        semantic_type: 'Operation',
+        name: node.name,
+        source: node.source,
+      });
+    }
+  }
+  return found;
+}
 
 export function knowledgeGraphFromWorkspace(
   folder: string,
@@ -125,13 +159,28 @@ export function knowledgeGraphFromWorkspace(
       });
     }
     for (const operation of _operationsIn(file)) {
-      nodes.push(operation);
       const owner =
         classes.find(
           (ooadClass) =>
             (ooadClass.source?.start_line ?? 0) <= (operation.source?.start_line ?? 0) &&
             (operation.source?.end_line ?? 0) <= (ooadClass.source?.end_line ?? 0),
         ) ?? fileNode;
+      if (owner === fileNode) {
+        operation.applicable_rules = [
+          ...operation.applicable_rules,
+          'prefer-class-operations',
+        ];
+        operation.violations = [
+          ...operation.violations,
+          {
+            rule_slug: 'prefer-class-operations',
+            message: `Function '${operation.name}' hangs off the module. Put it on the class that owns the work.`,
+            practice: 'clean_engineering',
+            fidelity: 'code',
+          },
+        ];
+      }
+      nodes.push(operation);
       relationships.push({
         kind: 'owns',
         from_id: owner.node_id,
@@ -342,29 +391,52 @@ function _pythonOperations(file: WorkspaceFile): NodeDto[] {
   const found: NodeDto[] = [];
   const lines = file.text.split('\n');
   for (let index = 0; index < lines.length; index += 1) {
-    const matched = lines[index].match(/^(\s*)def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
+    const matched = lines[index].match(
+      /^(\s*)(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/,
+    );
     if (!matched) {
       continue;
     }
-    const indent = matched[1].length;
-    let end = index;
-    for (let next = index + 1; next < lines.length; next += 1) {
-      const line = lines[next];
-      if (line.trim() === '') {
-        end = next;
-        continue;
-      }
-      const nextIndent = line.match(/^\s*/)![0].length;
-      if (nextIndent <= indent) {
-        break;
-      }
-      end = next;
-    }
+    const end = pythonBlockEnd(lines, index);
     const startOffset = _offsetAtLine(file.text, index);
     const endOffset = _offsetAtLine(file.text, end) + lines[end].length;
     found.push(_operationNode(file, matched[2], startOffset, endOffset));
   }
   return found;
+}
+
+export function pythonBlockEnd(lines: string[], startIndex: number): number {
+  const header = lines[startIndex] ?? '';
+  const matched = /^(\s*)(?:async\s+)?(?:class|def)\b/.exec(header);
+  if (!matched) {
+    return startIndex;
+  }
+  const indent = matched[1].length;
+  let end = signatureEnd(lines, startIndex);
+  for (let index = end + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line.trim() === '') {
+      end = index;
+      continue;
+    }
+    if (line.length - line.trimStart().length <= indent) {
+      break;
+    }
+    end = index;
+  }
+  return end;
+}
+
+function signatureEnd(lines: string[], startIndex: number): number {
+  let depth = 0;
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index];
+    depth += (line.match(/\(/g) ?? []).length - (line.match(/\)/g) ?? []).length;
+    if (depth <= 0 && line.includes(':')) {
+      return index;
+    }
+  }
+  return startIndex;
 }
 
 function _operationNode(
@@ -375,9 +447,10 @@ function _operationNode(
 ): NodeDto {
   const startLine = _lineAt(file.text, startOffset);
   const endLine = _lineAt(file.text, endOffset);
-  const lineCount = endLine - startLine + 1;
+  const body = file.text.slice(startOffset, endOffset);
+  const statements = _statementCount(body);
   const normalized = file.relativePath.replaceAll('\\', '/');
-  const violating = lineCount > MAX_OPERATION_LINES;
+  const violating = statements > MAX_OPERATION_STATEMENTS;
   return {
     node_id: `ce:Operation:${normalized}:${name}`,
     name,
@@ -389,7 +462,7 @@ function _operationNode(
       ? [
           {
             rule_slug: KEEP_OPERATIONS_SMALL_FOCUSED,
-            message: `Operation '${name}' is ${lineCount} lines (max ${MAX_OPERATION_LINES}). Extract helpers.`,
+            message: `Operation '${name}' is ${statements} statements (max ${MAX_OPERATION_STATEMENTS}). Extract helpers.`,
             practice: 'clean_engineering',
             fidelity: 'code',
           },
@@ -399,9 +472,54 @@ function _operationNode(
       file: normalized,
       start_line: startLine,
       end_line: endLine,
-      text: file.text.slice(startOffset, endOffset),
+      text: body,
     },
   };
+}
+
+function _bracketDelta(line: string): number {
+  return (line.match(/[(\[{]/g) ?? []).length - (line.match(/[)\]}]/g) ?? []).length;
+}
+
+function _statementCount(source: string): number {
+  let depth = 0;
+  let inTriple = false;
+  let skippedHeader = false;
+  let count = 0;
+  for (const raw of source.split('\n')) {
+    const line = raw.trim();
+    if (inTriple) {
+      if (line.includes('"""') || line.includes("'''")) {
+        inTriple = false;
+        if (depth === 0) {
+          count += 1;
+        }
+      }
+      continue;
+    }
+    if (!line || line.startsWith('#') || line.startsWith('//')) {
+      continue;
+    }
+    const triples = (line.match(/"""/g) ?? []).length + (line.match(/'''/g) ?? []).length;
+    if (!skippedHeader) {
+      skippedHeader = true;
+      continue;
+    }
+    depth += _bracketDelta(line);
+    if (triples % 2 === 1) {
+      inTriple = true;
+      continue;
+    }
+    if (depth > 0) {
+      continue;
+    }
+    depth = 0;
+    if (line === '{' || line === '}' || line === ')' || line === ');') {
+      continue;
+    }
+    count += 1;
+  }
+  return count;
 }
 
 function _closingBrace(text: string, openIndex: number): number {

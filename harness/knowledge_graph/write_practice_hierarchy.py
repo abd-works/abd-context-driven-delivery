@@ -222,6 +222,28 @@ def _nest_contained_modules(nodes: list[dict], relationships: list[dict]) -> Non
         )
 
 
+def _source_dto(node, folder: Path) -> dict | None:
+    src = getattr(node, "source", None)
+    file = str(getattr(src, "file", "") or "").replace("\\", "/")
+    if not file:
+        return None
+    start = int(getattr(src, "line", 0) or 0)
+    end = int(getattr(src, "end_line", 0) or start)
+    text = str(getattr(src, "text", "") or "")
+    from practices.clean_engineering.model.codeql.codeql_model import read_source_span
+
+    if start > 0:
+        sliced_start, sliced_end, sliced = read_source_span(folder, file, start, end)
+        if sliced:
+            start, end, text = sliced_start, sliced_end, sliced
+    return {
+        "file": file,
+        "start_line": start,
+        "end_line": end or start,
+        "text": text,
+    }
+
+
 def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
     grouped: dict[str, dict[str, list]] = defaultdict(
         lambda: {"nodes": [], "relationships": []}
@@ -260,7 +282,7 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
                     }
                     for hit in hits
                 ],
-                "source": None,
+                "source": _source_dto(node, folder),
             }
         )
     for edge in graph.relationships:

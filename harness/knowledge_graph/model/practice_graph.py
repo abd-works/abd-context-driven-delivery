@@ -7,7 +7,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Type, TypeVar
 
 from .graph_node import Kind, Node, Relationship
-from .graph_rules import RuleRegistry, RuleViolation, _nodes_by_name, closest_fidelity
+from .graph_rules import (
+    RuleRegistry,
+    RuleViolation,
+    _nodes_by_name,
+    closest_fidelity,
+    drop_cloned_operation_hits,
+)
 
 T = TypeVar("T", bound=Node)
 
@@ -128,6 +134,14 @@ class PracticeGraph:
     def operation_named(self, class_name: str, operation_name: str) -> Optional[Node]:
         owner = self.class_named(class_name)
         if owner is None:
+            wanted = (class_name or "").replace("\\", "/")
+            for node in self.nodes.values():
+                if node.semantic_type() != "File":
+                    continue
+                if node.name.replace("\\", "/") == wanted:
+                    owner = node
+                    break
+        if owner is None:
             return None
         for node in owner.related(Kind.OWNS):
             if node.semantic_type() == "Operation" and node.name == operation_name:
@@ -140,10 +154,13 @@ class PracticeGraph:
         skip: RuleSlugs | None = None,
         *,
         codeql_results: str | Path | None = None,
+        database: Path | None = None,
     ) -> Failures:
         wanted = set(slugs.names) if slugs is not None and slugs.names else None
         skipped = set(skip.names) if skip is not None and skip.names else None
-        by_node = self._evaluate_graph_rules(slugs=wanted, skip=skipped)
+        by_node = self._evaluate_graph_rules(
+            slugs=wanted, skip=skipped, database=database
+        )
         if wanted:
             self._merge_rule_hits(by_node, wanted)
         else:
@@ -152,6 +169,7 @@ class PracticeGraph:
             self._violations_by_node,
             Path(codeql_results) if codeql_results else None,
         )
+        drop_cloned_operation_hits(self, self._violations_by_node)
         for node_id, violations in self._violations_by_node.items():
             node = self.nodes.get(node_id)
             if node is None:
@@ -253,6 +271,7 @@ class PracticeGraph:
         *,
         slugs: Optional[set] = None,
         skip: Optional[set] = None,
+        database: Path | None = None,
     ) -> Dict[str, List[RuleViolation]]:
         import time
         from collections import defaultdict
@@ -277,7 +296,7 @@ class PracticeGraph:
             print(f"run-queries {pack.name} ({len(pack_rules)} rules) ...", flush=True)
             started = time.perf_counter()
             try:
-                batch = self._rule_rows(codeql, pack, pack_rules)
+                batch = self._rule_rows(codeql, pack, pack_rules, database=database)
             except Exception as error:
                 seconds = time.perf_counter() - started
                 self.record_rule_timing(
@@ -306,7 +325,7 @@ class PracticeGraph:
                 try:
                     hits = rule.evaluate(
                         self,
-                        rows=Rows.from_tuples(batch.get(rule.slug) or []),
+                        hits=Rows.from_tuples(batch.get(rule.slug) or []),
                         by_name=names,
                     )
                 except Exception as error:
@@ -324,7 +343,13 @@ class PracticeGraph:
                     by_node.setdefault(violation.node_id, []).append(violation)
         return by_node
 
-    def _rule_rows(self, codeql, pack: Path, pack_rules) -> Dict[str, list]:
+    def _rule_rows(
+        self,
+        codeql,
+        pack: Path,
+        pack_rules,
+        database: Path | None = None,
+    ) -> Dict[str, list]:
         hits_lib = pack / "rule_hits.qll"
         combined_slugs: List[str] = []
         leftover: List[Path] = []
@@ -348,11 +373,12 @@ class PracticeGraph:
                 codeql._pack_language(pack) or "python"
             )
             codeql._write_rules_query(pack)
+            db = database if database is not None else codeql.ensure_database(language)
             batch.update(
                 codeql.run_rules(
                     pack / "rules.ql",
                     combined_slugs,
-                    database=codeql.ensure_database(language),
+                    database=db,
                 )
             )
         by_language: Dict[str, list] = {}
@@ -363,7 +389,10 @@ class PracticeGraph:
             try:
                 batch.update(
                     codeql.run_queries(
-                        queries, database=codeql.ensure_database(language)
+                        queries,
+                        database=database
+                        if database is not None
+                        else codeql.ensure_database(language),
                     )
                 )
             except Exception as error:

@@ -7,6 +7,12 @@ predicate inSource(AstNode n) {
 
 predicate ownerClass(Function method, Class cls) { method = cls.getAMethod() }
 
+string operationLabel(Function f) {
+  if exists(Class cls | ownerClass(f, cls))
+  then result = min(Class cls | ownerClass(f, cls) | cls.getName()) + "." + f.getName()
+  else result = f.getName()
+}
+
 predicate publicName(string name) {
   (
     exists(Function f | name = f.getName())
@@ -83,16 +89,11 @@ predicate tooManyParameters(Function f) {
   domainParameterCount(f) > 2
 }
 
-int operationLineCount(Function f) {
-  result =
-    max(int line |
-      exists(AstNode n | n.getScope() = f | line = n.getLocation().getEndLine())
-      or
-      line = f.getLocation().getEndLine()
-    ) - f.getLocation().getStartLine() + 1
-}
+int operationStatementCount(Function f) { result = count(Stmt s | s.getScope() = f) }
 
-predicate longOperation(Function f) { operationLineCount(f) > 20 }
+int operationLineCount(Function f) { result = operationStatementCount(f) }
+
+predicate longOperation(Function f) { operationStatementCount(f) > 20 }
 
 predicate controlStmt(Stmt s) {
   s instanceof If
@@ -141,9 +142,63 @@ predicate accessorOperation(Function f) {
   f.getName().matches("set_%")
 }
 
+predicate decoratorNamed(Function f, string decorator) {
+  exists(Expr dec | dec = f.getADecorator() |
+    dec.(Name).getId() = decorator
+    or
+    dec.(Call).getFunc().(Name).getId() = decorator
+  )
+}
+
+predicate staticOrClassMethod(Function f) {
+  decoratorNamed(f, "staticmethod") or decoratorNamed(f, "classmethod")
+}
+
+bindingset[name]
+predicate instanceCreationName(string name) {
+  name = "__new__" or
+  name = "instance" or
+  name = "get_instance" or
+  name = "getInstance" or
+  name = "shared" or
+  name = "create" or
+  name.matches("from_%")
+}
+
+predicate returnsNewOwner(Function f) {
+  exists(Class cls, Return ret, Call call |
+    ownerClass(f, cls) and
+    ret.getScope() = f and
+    call = ret.getValue() and
+    (
+      call.getFunc().(Name).getId() = cls.getName() or
+      call.getFunc().(Name).getId() = "cls"
+    )
+  )
+}
+
+predicate instanceCreationMethod(Function f) {
+  instanceCreationName(f.getName()) or returnsNewOwner(f)
+}
+
+predicate staticUtilityMethod(Function f) {
+  staticOrClassMethod(f) and
+  not instanceCreationMethod(f)
+}
+
 predicate moduleLevelFunction(Function f) {
   inSource(f) and
+  f.getScope() instanceof Module and
   not exists(Class cls | ownerClass(f, cls))
+}
+
+string graphOwnerName(Function method) {
+  exists(Class cls | ownerClass(method, cls) and result = cls.getName())
+  or
+  (
+    moduleLevelFunction(method) and
+    result = normalizedPath(method.getLocation().getFile())
+  )
 }
 
 predicate calledFromClass(Function f, Class cls) {
@@ -163,7 +218,17 @@ predicate privateAttributeRead(Function f, Attribute attr) {
   attr.getScope() = f and
   attr.getName().matches("\\_%") and
   not attr.getName().matches("\\_\\_%") and
-  attr.getObject().(Name).getId() != "self"
+  not ownPrivateRead(f, attr)
+}
+
+predicate ownPrivateRead(Function f, Attribute attr) {
+  exists(string receiver | receiver = attr.getObject().(Name).getId() |
+    receiver = "self"
+    or
+    receiver = "cls"
+    or
+    exists(Class owner | ownerClass(f, owner) and receiver = owner.getName())
+  )
 }
 
 predicate bagClass(Class bag) {
@@ -172,12 +237,26 @@ predicate bagClass(Class bag) {
   not exists(Function method |
     ownerClass(method, bag) and
     method.getName() != "__init__"
+  ) and
+  not resourceNamed(bag.getName())
+}
+
+predicate resourceNamed(string name) {
+  exists(Class resource, Function method |
+    resource.getName() = name and
+    publicMethod(resource, method) and
+    method.getName() != "__init__"
   )
+}
+
+predicate proceduralDoer(Class doer) {
+  doer.getName().toLowerCase().regexpMatch(".*(service|handler|manager|processor|helper|worker)$")
 }
 
 predicate doerOnBag(Class doer, Class bag) {
   inSubject(bag) and
   bagClass(bag) and
+  proceduralDoer(doer) and
   doer != bag and
   exists(Function method | publicMethod(doer, method) and method.getName() != "__init__") and
   forex(Function method | publicMethod(doer, method) and method.getName() != "__init__" |
@@ -329,6 +408,26 @@ predicate classInFirstClassModule(Class cls, Module pkg) {
   not skippedModulePath(normalizedPath(cls.getLocation().getFile())) and
   enclosingFirstClassPrefix(normalizedPath(cls.getLocation().getFile())) =
     enclosingFirstClassPrefix(normalizedPath(pkg.getFile()))
+}
+
+predicate classModulePrefix(Class cls, string prefix) {
+  prefix = enclosingFirstClassPrefix(normalizedPath(cls.getLocation().getFile()))
+}
+
+predicate inheritsNamed(Class child, Class parent) {
+  child.getABase().(Name).getId() = parent.getName()
+}
+
+predicate domainExtensionInFrameworkModule(Class extension, Class domainType) {
+  inheritsNamed(extension, domainType) and
+  exists(Class frameworkType, string host, string domainPrefix |
+    inheritsNamed(extension, frameworkType) and
+    frameworkType != domainType and
+    classModulePrefix(extension, host) and
+    classModulePrefix(frameworkType, host) and
+    classModulePrefix(domainType, domainPrefix) and
+    host != domainPrefix
+  )
 }
 
 int classCount(Module pkg) {

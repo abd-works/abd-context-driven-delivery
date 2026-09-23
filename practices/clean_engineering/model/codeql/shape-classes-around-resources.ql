@@ -11,4 +11,5 @@ import rule_hits
 
 from AstNode subject, string message, AstNode contributor
 where graphRuleHit(subject, message, contributor, "shape-classes-around-resources")
+
 select subject, message, contributor

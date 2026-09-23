@@ -21,6 +21,7 @@ _CHILD_RANK = {
     "BoundedContext": 1,
     "Aggregate": 2,
     "Module": 2,
+    "File": 2,
     "OoadClass": 3,
     "Entity": 3,
     "EntityRoot": 3,

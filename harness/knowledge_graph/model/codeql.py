@@ -61,6 +61,72 @@ class Rows(list):
                 return text[len(prefix) :]
         return text
 
+    @staticmethod
+    def entity_location(item) -> tuple[str, int]:
+        if not isinstance(item, dict):
+            return "", 0
+        url = item.get("url")
+        if isinstance(url, dict):
+            return Rows._file_from_uri(str(url.get("uri") or "")), int(
+                url.get("startLine") or 0
+            )
+        if isinstance(url, str) and url:
+            path, _, rest = url.partition(":")
+            if path.startswith("file"):
+                file, line = Rows._split_file_url(url)
+                return file, line
+            line = 0
+            if rest:
+                try:
+                    line = int(rest.split(":")[0])
+                except ValueError:
+                    line = 0
+            return Rows._file_from_uri(path), line
+        return "", 0
+
+    @staticmethod
+    def _split_file_url(url: str) -> tuple[str, int]:
+        stripped = url
+        if stripped.startswith("file://"):
+            stripped = stripped[7:]
+            if stripped.startswith("/") and len(stripped) > 2 and stripped[2] == ":":
+                stripped = stripped[1:]
+        file_part, _, rest = stripped.partition(":")
+        if len(file_part) == 1 and rest:
+            drive, _, rest = rest.partition(":")
+            file_part = f"{file_part}:{drive}"
+        line = 0
+        if rest:
+            try:
+                line = int(rest.split(":")[0])
+            except ValueError:
+                line = 0
+        return file_part.replace("\\", "/"), line
+
+    @staticmethod
+    def _file_from_uri(uri: str) -> str:
+        text = uri
+        if text.startswith("file://"):
+            text = text[7:]
+            if text.startswith("/") and len(text) > 2 and text[2] == ":":
+                text = text[1:]
+        return text.split("?")[0].replace("\\", "/")
+
+    @staticmethod
+    def entity_kind(item) -> str:
+        raw = item.get("label", item) if isinstance(item, dict) else str(item)
+        text = str(raw)
+        for prefix, kind in (
+            ("Class ", "Class"),
+            ("Function ", "Function"),
+            ("Module ", "Module"),
+            ("File ", "File"),
+            ("Script ", "Module"),
+        ):
+            if text.startswith(prefix):
+                return kind
+        return ""
+
     @classmethod
     def from_tuples(cls, tuples: List[list]) -> "Rows":
         rows: List[dict] = []
@@ -70,7 +136,15 @@ class Rows(list):
             message = item[1] if len(item) > 1 else ""
             if isinstance(message, dict):
                 message = message.get("label", "")
+            file, line = cls.entity_location(item[0])
             row = {"name": cls.entity_name(item[0]), "message": str(message)}
+            kind = cls.entity_kind(item[0])
+            if kind:
+                row["kind"] = kind
+            if file:
+                row["file"] = file
+            if line:
+                row["line"] = line
             if len(item) > 2:
                 contributor = cls.entity_name(item[2])
                 if contributor:
@@ -125,6 +199,70 @@ class CodeQL:
             )
         return database
 
+    @property
+    def master(self) -> Path:
+        return self.root / ".codeql" / "python-master"
+
+    @property
+    def working_copy(self) -> Path:
+        return self.root / ".codeql" / "python-working-copy"
+
+    def rewrite_master(self, language: str = "python") -> Path:
+        database = self.root / ".codeql" / f"{language}-master"
+        self._retire_database(database)
+        return self._create_database(database, language, self.root)
+
+    def extract_working_copy(self, paths: list[Path]) -> Path:
+        if not paths:
+            return self.working_copy
+        staging = self.working_copy.with_name("python-working-copy.building")
+        self._retire_database(staging)
+        created = self._create_database(staging, "python", self.root)
+        self._retire_database(self.working_copy)
+        created.rename(self.working_copy)
+        return self.working_copy
+
+    def _create_database(self, database: Path, language: str, source_root: Path) -> Path:
+        database.parent.mkdir(parents=True, exist_ok=True)
+        run = subprocess.run(
+            [
+                self.executable(),
+                "database",
+                "create",
+                str(database),
+                f"--language={language}",
+                f"--source-root={source_root}",
+                "--build-mode=none",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if run.returncode != 0 or not self._database_ready(database):
+            raise CodeQLRunError(
+                f"codeql database create failed for {source_root}: {run.stderr or run.stdout}"
+            )
+        return database
+
+    def copy_master_to_working_copy(self) -> Path:
+        working = self.working_copy
+        self._retire_database(working)
+        shutil.copytree(self.master, working)
+        return working
+
+    def _retire_database(self, database: Path) -> None:
+        if not database.exists():
+            return
+        retired = database.with_name(database.name + ".retired")
+        if retired.exists():
+            shutil.rmtree(retired, ignore_errors=True)
+        try:
+            database.rename(retired)
+        except OSError:
+            shutil.rmtree(database, ignore_errors=True)
+            return
+        shutil.rmtree(retired, ignore_errors=True)
+
     def class_rows(self, tuples: List[list] | None = None) -> Rows:
         database = self.ensure_database("python")
         if tuples is None:
@@ -135,6 +273,7 @@ class CodeQL:
                 "module": self._cell(row, 1),
                 "file": self._cell(row, 2),
                 "line": self._int_cell(row, 3),
+                "end_line": self._int_cell(row, 4),
             }
             for row in tuples
             if self._cell(row, 0)
@@ -150,6 +289,8 @@ class CodeQL:
                 "name": self._cell(row, 1),
                 "return_type": self._cell(row, 2),
                 "line": self._int_cell(row, 3),
+                "file": self._cell(row, 4),
+                "end_line": self._int_cell(row, 5),
             }
             for row in tuples
             if self._cell(row, 0) and self._cell(row, 1)
@@ -165,6 +306,8 @@ class CodeQL:
                 "operation": self._cell(row, 1),
                 "name": self._cell(row, 2),
                 "line": self._int_cell(row, 3),
+                "file": self._cell(row, 4),
+                "end_line": self._int_cell(row, 5),
             }
             for row in tuples
             if self._cell(row, 0) and self._cell(row, 1) and self._cell(row, 2)
@@ -180,6 +323,8 @@ class CodeQL:
                 "name": self._cell(row, 1),
                 "module": self._cell(row, 2),
                 "line": self._int_cell(row, 3),
+                "file": self._cell(row, 4),
+                "end_line": self._int_cell(row, 5),
             }
             for row in tuples
             if self._cell(row, 0) and self._cell(row, 1)
@@ -467,11 +612,12 @@ class CodeQL:
     def _skipped_graph_path(self, file_path: str) -> bool:
         path = str(file_path or "").replace("\\", "/")
         name = Path(path).name
-        return (
-            "/examples/" in f"/{path}"
-            or name.endswith("_spec.py")
-            or name.startswith("test_")
-        )
+        if name.endswith("_spec.py") or name.startswith("test_"):
+            return True
+        if "/examples/" not in f"/{path}":
+            return False
+        root = self.root.resolve().as_posix().replace("\\", "/").lower()
+        return root not in path.lower()
 
     def _ql_prefix_predicate(self, name: str, prefixes: List[str]) -> str:
         if not prefixes:
@@ -492,11 +638,7 @@ class CodeQL:
                 "  )\n"
             )
         else:
-            path_body = (
-                "  exists(File f |\n"
-                '    path = f.getRelativePath().replaceAll("\\\\", "/")\n'
-                "  )\n"
-            )
+            path_body = "  any()\n"
         language = "python"
         qlpack = pack_dir / "qlpack.yml"
         if qlpack.is_file() and "javascript" in qlpack.read_text(encoding="utf-8"):
@@ -509,13 +651,13 @@ class CodeQL:
                 "  inSubject(cls)\n"
                 "}\n"
             )
-        binding = "bindingset[path]\n" if prefix else ""
+        binding = "bindingset[path]\n"
         text = (
             f"import {language}\n\n"
             f'predicate subjectFilterPrefix(string prefix) {{ prefix = "{prefix}" }}\n\n'
             f"{self._ql_prefix_predicate('firstClassModulePrefix', modules)}\n"
             f"predicate inSubject({ast} n) {{\n"
-            "  inSubjectPath(n.getLocation().getFile().getRelativePath())\n"
+            '  inSubjectPath(n.getLocation().getFile().getRelativePath().replaceAll("\\\\", "/"))\n'
             "}\n"
             f"{extra}\n"
             f"{binding}predicate inSubjectPath(string path) {{\n"
@@ -589,6 +731,7 @@ class CodeQL:
     def populate(
         self,
         graph: PracticeGraph,
+        database: Path | None = None,
         *,
         results_path: str | Path | None = None,
         populate: bool = True,
@@ -596,8 +739,8 @@ class CodeQL:
         if not populate:
             self.load_existing_facts(graph, results_path=results_path)
             return
-        database = self.ensure_database("python")
-        self._write_subject_filter(_CODEQL_QUERIES, path_root=self._ql_path_root(database))
+        db = database if database is not None else self.ensure_database("python")
+        self._write_subject_filter(_CODEQL_QUERIES, path_root=self._ql_path_root(db))
         populate_queries = [
             _CODEQL_QUERIES / "classes.ql",
             _CODEQL_QUERIES / "operations.ql",
@@ -607,7 +750,7 @@ class CodeQL:
         ]
         print(f"run-queries populate ({len(populate_queries)} queries) ...", flush=True)
         started = time.perf_counter()
-        batch = self.run_queries(populate_queries, database)
+        batch = self.run_queries(populate_queries, db)
         seconds = time.perf_counter() - started
         from .practice_graph import RuleTiming
 
@@ -662,7 +805,7 @@ class CodeQL:
             operation_rows = operation_rows + list(raw.get("operations") or [])
             property_rows = property_rows + list(raw.get("properties") or [])
             call_rows = call_rows + list(raw.get("calls") or [])
-        if not class_rows and not (raw and (raw.get("stories") or raw.get("steps"))):
+        if not class_rows and not operation_rows and not (raw and (raw.get("stories") or raw.get("steps"))):
             raise RuntimeError(f"CodeQL returned no classes or stories for {self.root}")
         self._assign_module_names(class_rows)
         from practices.clean_engineering.model.codeql.codeql_model import (

@@ -40,13 +40,21 @@ export class KnowledgeGraphHttpClient {
     files?: WorkspaceFile[];
     force?: boolean;
   } = {}): Promise<ReturnType<KnowledgeGraph['present']>> {
-    const response = await fetch('/api/knowledge-graphs/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
+    let response: Response;
+    try {
+      response = await fetch('/api/knowledge-graphs/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+    } catch {
+      throw new Error('Could not reach the explorer API on port 3001');
+    }
     if (!response.ok) {
-      throw new Error('Could not scan KnowledgeGraph');
+      const detail = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      throw new Error(detail.error ?? 'Could not scan KnowledgeGraph');
     }
     return response.json() as Promise<ReturnType<KnowledgeGraph['present']>>;
   }
@@ -159,15 +167,24 @@ export class KnowledgeGraphsClient {
 export function useKnowledgeGraph(id: string) {
   const [client, setClient] = useState<KnowledgeGraphsClient | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scanError, setScanError] = useState('');
   const request = useRef(0);
 
   const take = useCallback((work: Promise<KnowledgeGraphsClient>) => {
     const token = ++request.current;
     setLoading(true);
+    setScanError('');
     work
       .then((next) => {
         if (token === request.current) {
           setClient(next);
+        }
+      })
+      .catch((error: unknown) => {
+        if (token === request.current) {
+          setScanError(
+            error instanceof Error ? error.message : 'Could not scan KnowledgeGraph',
+          );
         }
       })
       .finally(() => {
@@ -178,7 +195,22 @@ export function useKnowledgeGraph(id: string) {
   }, []);
 
   useEffect(() => {
-    take(openLastGraph(id));
+    if (id) {
+      take(KnowledgeGraphsClient.load(id));
+      return;
+    }
+    const lastId =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem(SCAN_GRAPH_ID_KEY) ?? ''
+        : '';
+    const lastFolder =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem(SCAN_ROOT_KEY) ?? ''
+        : '';
+    if (!lastId && !lastFolder) {
+      return;
+    }
+    take(openLastGraph(''));
   }, [id, take]);
 
   const selectNode = useCallback((nodeId: string, ruleSlug?: string) => {
@@ -234,6 +266,7 @@ export function useKnowledgeGraph(id: string) {
 
   return {
     loading,
+    scanError,
     folder: client?.presentation.folder ?? '',
     listedNodes: client?.presentation.listed_nodes ?? [],
     listedTree: client?.presentation.listed_tree ?? [],
@@ -245,6 +278,7 @@ export function useKnowledgeGraph(id: string) {
       rules: [],
     },
     selectedNode: client?.presentation.selected_node ?? null,
+    selectedTree: client?.presentation.selected_tree ?? null,
     selectedRule: client?.presentation.selected_rule ?? null,
     sourceFile: client?.presentation.source_file as SourceRangeDto | null,
     selectNode,

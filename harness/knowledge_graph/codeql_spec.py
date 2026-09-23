@@ -81,6 +81,56 @@ with description("CodeQL report runner"):
         expect(grouped["deep-module"][0][0]).to(equal("Class A"))
         expect(len(grouped["one-way-deps"])).to(equal(1))
 
+    with it("should map CodeQL operation location onto file and line range"):
+        rows = list(
+            CodeQL(_KG).operation_rows(
+                [
+                    [
+                        "PracticeGraph",
+                        "_evaluate_graph_rules",
+                        "",
+                        251,
+                        "harness/knowledge_graph/model/practice_graph.py",
+                        300,
+                    ]
+                ]
+            )
+        )
+        expect(rows[0]["file"]).to(
+            equal("harness/knowledge_graph/model/practice_graph.py")
+        )
+        expect(rows[0]["line"]).to(equal(251))
+        expect(rows[0]["end_line"]).to(equal(300))
+
+    with it("should expand a class header to the whole class body"):
+        from practices.clean_engineering.model.codeql.codeql_model import read_source_span
+
+        start, end, text = read_source_span(
+            _REPO_ROOT,
+            "harness/knowledge_graph/model/codeql.py",
+            25,
+            25,
+        )
+        expect("class CodeQLRunError" in text).to(equal(True))
+        expect('"""' in text).to(equal(True))
+        expect(end > start).to(equal(True))
+        expect("class QueryServerDown" in text).to(equal(False))
+
+    with it("should expand a multi-line def header through the body"):
+        from practices.clean_engineering.model.codeql.codeql_model import read_source_span
+
+        path = "harness/knowledge_graph/model/codeql.py"
+        lines = (_REPO_ROOT / path).read_text(encoding="utf-8").splitlines()
+        lo = next(
+            index
+            for index, line in enumerate(lines, 1)
+            if line.startswith("    def populate(")
+        )
+        start, end, text = read_source_span(_REPO_ROOT, path, lo, lo)
+        expect("self._apply_fact_batch" in text).to(equal(True))
+        expect("def load_existing_facts" in text).to(equal(False))
+        expect(end - start + 1 < 43).to(equal(True))
+
     with it("should populate by default"):
         expect(
             inspect.signature(CodeQL.populate).parameters["populate"].default

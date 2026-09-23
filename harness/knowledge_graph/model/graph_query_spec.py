@@ -11,10 +11,10 @@ from typing import Callable, Dict, Iterable, List, Optional
 def refine_rows(slug: str, rows: List[dict]) -> List[dict]:
     if slug == "keep-classes-single-responsibility":
         from practices.clean_engineering.model.responsibilities import (
-            rows_for_keep_classes,
+            hits_for_keep_classes,
         )
 
-        return rows_for_keep_classes(rows)
+        return hits_for_keep_classes(rows)
     if slug == "verb-noun-format":
         from practices.stories.model.story_names import rows_for_verb_noun
 

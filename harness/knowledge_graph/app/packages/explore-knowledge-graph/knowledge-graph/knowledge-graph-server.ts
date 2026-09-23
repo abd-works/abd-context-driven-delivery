@@ -4,7 +4,7 @@ import { Memory } from 'lowdb';
 import { JSONFilePreset } from 'lowdb/node';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, delimiter, join, relative } from 'node:path';
+import { basename, dirname, delimiter, join, relative } from 'node:path';
 import {
   KnowledgeGraph,
   KnowledgeGraphSchema,
@@ -132,11 +132,9 @@ export class KnowledgeGraphsServer {
   ): Promise<KnowledgeGraph> {
     const uploaded = files ? scanSourceFiles(files) : [];
     const root =
-      uploaded.length > 0
-        ? _isDir(folder)
-          ? folder
-          : folder || _diskScanRoot('')
-        : _diskScanRoot(folder);
+      uploaded.length > 0 && !_isDir(folder)
+        ? folder || _diskScanRoot('')
+        : _resolvePickedFolder(folder);
     if (_isDir(root)) {
       _writeLastScanRoot(root);
     }
@@ -193,6 +191,28 @@ function _diskScanRoot(chosen: string): string {
   return root;
 }
 
+function _resolvePickedFolder(folder: string): string {
+  const chosen = folder.trim();
+  if (_isDir(chosen)) {
+    return chosen;
+  }
+  const last = _readLastScanRoot();
+  const repo = _repoRoot();
+  const bases = [last, repo, last ? dirname(last) : '', dirname(repo)].filter(
+    Boolean,
+  );
+  for (const base of bases) {
+    if (basename(base) === chosen && _isDir(base)) {
+      return base;
+    }
+    const nested = chosen ? join(base, chosen) : '';
+    if (nested && _isDir(nested)) {
+      return nested;
+    }
+  }
+  return _diskScanRoot('');
+}
+
 function _repoRoot(): string {
   let dir = process.cwd();
   while (true) {
@@ -205,6 +225,21 @@ function _repoRoot(): string {
     }
     dir = parent;
   }
+}
+
+function _python(): string {
+  if (process.env.PYTHON) {
+    return process.env.PYTHON;
+  }
+  const venvWin = join(_repoRoot(), '.venv', 'Scripts', 'python.exe');
+  const venvUnix = join(_repoRoot(), '.venv', 'bin', 'python');
+  if (existsSync(venvWin)) {
+    return venvWin;
+  }
+  if (existsSync(venvUnix)) {
+    return venvUnix;
+  }
+  return 'python';
 }
 
 function _readLastScanRoot(): string | undefined {
@@ -282,7 +317,9 @@ export function createKnowledgeGraphsRouter(
         res.status(400).json({ error: error.message });
         return;
       }
-      throw error;
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Scan failed',
+      });
     }
   });
 
@@ -361,7 +398,7 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
     .filter(Boolean)
     .join(delimiter);
   const result = spawnSync(
-    process.env.PYTHON ?? 'python',
+    _python(),
     [script, '--json', '--no-populate', root],
     {
       cwd: repo,
@@ -371,6 +408,11 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
     },
   );
   if (result.status !== 0) {
+    if (existsSync(cached)) {
+      const dto = JSON.parse(readFileSync(cached, 'utf8'));
+      dto.folder = dto.folder || root;
+      return graphFromWorkspaceDto(dto);
+    }
     throw new Error(
       result.stderr || result.stdout || 'write_practice_hierarchy.py failed',
     );

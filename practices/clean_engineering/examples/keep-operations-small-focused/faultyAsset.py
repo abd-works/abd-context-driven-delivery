@@ -1,3 +1,18 @@
+def string_block():
+    text = """
+    a multi-line string is one statement
+    not a line per fragment
+    """
+    run = dict(
+        language="python",
+        source_root="repo",
+        command="echo skip",
+        extra="x",
+        more="y",
+    )
+    return text, run
+
+
 def huge():
     a = 1
     b = 2

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set
+from typing import Any, Dict, Iterator, List, Optional, Set
 
-from harness.guidance.rule import Rule
+from harness.guidance.rule import Rule, RulesCollection
 
 _REPO = Path(__file__).resolve().parents[3]
 _PRACTICES = _REPO / "practices"
@@ -19,6 +20,12 @@ _CLASS_TYPES = {
     "DomainEvent",
     "DomainService",
 }
+_KIND_SEMANTICS = {
+    "Function": {"Operation", "Property"},
+    "Class": set(_CLASS_TYPES),
+    "Module": {"Module", "Package"},
+}
+_MEMBER_TYPES = {"Operation", "Property", "Parameter"}
 
 # Fidelity order: first match wins as "closest" (most specific first).
 FIDELITY_ORDER: Dict[str, List[str]] = {
@@ -39,6 +46,7 @@ FIDELITY_NODE_SCOPE: Dict[str, Dict[str, Set[str]]] = {
         "modules": {"Module", "CleanEngineeringModel"},
         "model": {
             "Module",
+            "File",
             "OoadClass",
             "Property",
             "Operation",
@@ -51,6 +59,7 @@ FIDELITY_NODE_SCOPE: Dict[str, Dict[str, Set[str]]] = {
             "Operation",
             "Parameter",
             "Module",
+            "File",
         },
         "language": {"Module", "CleanEngineeringModel"},
     },
@@ -114,14 +123,20 @@ class RuleViolation:
         return None
 
 
-class GraphRule:
+class GraphRule(Rule):
     def __init__(self, rule: Rule, *, practice: str, shared: bool = False) -> None:
-        self.rule = rule
+        super().__init__(rule.slug, rule.body, rule.fidelity)
+        self.scanner = rule.scanner
+        parent = getattr(rule, "parent", None)
+        if parent is not None:
+            self.parent = parent
         self.practice = practice
         self.shared = shared
 
-    def __getattr__(self, name: str):
-        return getattr(self.rule, name)
+    def validate(self) -> str:
+        if self.graphQuery is None:
+            return super().validate()
+        return super().validate()
 
     @property
     def inherits_to_children(self) -> bool:
@@ -159,42 +174,37 @@ class GraphRule:
             return ""
         return path.read_text(encoding="utf-8")
 
-    def evaluate(self, graph, rows=None, by_name=None) -> List[RuleViolation]:
-        if rows is None:
+    def evaluate(self, graph, hits=None, by_name=None) -> List[RuleViolation]:
+        if hits is None:
             from .codeql import CodeQL, Rows
 
             combined = self.pack_rules_query
             if combined is not None:
                 grouped = CodeQL(graph.root).run_rules(combined, [self.slug])
-                rows = Rows.from_tuples(grouped.get(self.slug) or [])
+                hits = Rows.from_tuples(grouped.get(self.slug) or [])
             elif self.graphQuery is not None:
-                rows = CodeQL(graph.root).run(self.graphQuery)
+                hits = CodeQL(graph.root).run(self.graphQuery)
             else:
                 raise FileNotFoundError(f"no graphQuery file for {self.slug}")
         from .graph_query_spec import refine_rows
 
-        rows = refine_rows(self.slug, rows)
-        return self.hits_from_rows(graph, rows, by_name=by_name)
+        hits = refine_rows(self.slug, hits)
+        return self.hits_from_query(graph, hits, by_name=by_name)
 
-    def hits_from_rows(self, graph, rows, by_name=None) -> List[RuleViolation]:
-        grouped: Dict[str, dict] = {}
-        for row in rows:
-            name = row.get("name", "")
-            bucket = grouped.setdefault(
-                name,
-                {"message": row.get("message", ""), "contributors": []},
-            )
-            contributor = row.get("contributor")
-            if contributor:
-                bucket["contributors"].append(contributor)
+    def hits_from_query(self, graph, hits, by_name=None) -> List[RuleViolation]:
         names = by_name if by_name is not None else _nodes_by_name(graph)
         violations: List[RuleViolation] = []
-        for name, payload in grouped.items():
-            subjects = [
-                candidate
-                for candidate in names.get(name, ())
-                if self._is_subject(candidate)
-            ]
+        for (name, file, line), payload in _group_query_hits(hits).items():
+            kind = str(payload.get("kind") or "")
+            subjects = _subjects_for_hit(
+                [
+                    candidate
+                    for candidate in names.get(name, ())
+                    if self._is_subject(candidate, kind)
+                ],
+                file,
+                line,
+            )
             contributor_ids = [
                 child.node_id
                 for contributor in payload["contributors"]
@@ -211,10 +221,18 @@ class GraphRule:
                 )
         return violations
 
-    def _is_subject(self, node) -> bool:
+    def _is_subject(self, node, kind: str = "") -> bool:
         semantic = node.semantic_type()
-        if semantic in _CLASS_TYPES:
-            return True
+        if kind:
+            allowed = _KIND_SEMANTICS.get(kind)
+            if allowed is not None:
+                return semantic in allowed and semantic in self.applies_to
+        if semantic == "Parameter" and self.slug not in (
+            "avoid-vague-parameter-names",
+            "limit-operation-parameters",
+            "use-typed-signatures",
+        ):
+            return False
         return semantic in self.applies_to
 
     def _violation(
@@ -241,6 +259,28 @@ class GraphRule:
         )
 
 
+def _group_query_hits(hits) -> Dict[tuple, dict]:
+    grouped: Dict[tuple, dict] = {}
+    for hit in hits:
+        name = hit.get("name", "")
+        file = str(hit.get("file") or "").replace("\\", "/")
+        line = int(hit.get("line") or 0)
+        bucket = grouped.setdefault(
+            (name, file, line),
+            {
+                "message": hit.get("message", ""),
+                "contributors": [],
+                "kind": hit.get("kind") or "",
+            },
+        )
+        if hit.get("kind") and not bucket.get("kind"):
+            bucket["kind"] = hit.get("kind")
+        contributor = hit.get("contributor")
+        if contributor:
+            bucket["contributors"].append(contributor)
+    return grouped
+
+
 def _nodes_by_name(graph) -> Dict[str, list]:
     names: Dict[str, list] = {}
     for candidate in graph.nodes.values():
@@ -248,11 +288,140 @@ def _nodes_by_name(graph) -> Dict[str, list]:
     return names
 
 
+def _subjects_for_hit(candidates: list, file: str, line: int) -> list:
+    if file and line > 0:
+        return [
+            candidate
+            for candidate in candidates
+            if _node_matches_location(candidate, file, line)
+        ]
+    if len(candidates) == 1:
+        return candidates
+    return []
+
+
+def _node_matches_location(node, file: str, line: int) -> bool:
+    src = getattr(node, "source", None)
+    node_file = str(getattr(src, "file", "") or "").replace("\\", "/")
+    if not node_file or line <= 0:
+        return False
+    hit = file.replace("\\", "/")
+    if not (
+        node_file.endswith(hit)
+        or hit.endswith(node_file)
+        or node_file.split("/")[-1] == hit.split("/")[-1]
+    ):
+        return False
+    start = int(getattr(src, "line", 0) or 0)
+    end = int(getattr(src, "end_line", 0) or start)
+    if start <= 0:
+        return False
+    return start <= line <= max(end, start)
+
+
+def drop_cloned_operation_hits(graph, by_node: Dict[str, list]) -> None:
+    from collections import Counter
+
+    counts: Counter = Counter()
+    member_ids: List[str] = []
+    for node_id, hits in by_node.items():
+        node = graph.nodes.get(node_id)
+        if node is None or node.semantic_type() not in _MEMBER_TYPES:
+            continue
+        member_ids.append(node_id)
+        for hit in hits:
+            counts[(hit.rule_slug, hit.message)] += 1
+    for node_id in member_ids:
+        node = graph.nodes[node_id]
+        owner = _owner_class(node)
+        by_node[node_id] = [
+            hit
+            for hit in by_node[node_id]
+            if counts[(hit.rule_slug, hit.message)] <= 1
+            or _operation_hit_belongs(node, owner, hit)
+        ]
+
+
+def _owner_class(node):
+    related = getattr(node, "related", None)
+    if callable(related):
+        from .graph_node import Kind
+
+        for kind in (Kind.BELONGS_TO, Kind.OWNS):
+            for other in related(kind):
+                if other.semantic_type() == "OoadClass":
+                    return other
+    for other in getattr(node, "used_by", []) or []:
+        semantic = getattr(other, "semantic_type", None)
+        if callable(semantic) and semantic() == "OoadClass":
+            return other
+    return None
+
+
+def _operation_hit_belongs(node, owner, hit) -> bool:
+    message = hit.message
+    labeled = re.search(r"Operation '([^']+)'", message)
+    if labeled and "." in labeled.group(1):
+        cls, _, op = labeled.group(1).rpartition(".")
+        return node.name == op and owner is not None and owner.name == cls
+    size = re.search(r" is (\d+) (lines|statements)", message)
+    if size:
+        if size.group(2) == "statements":
+            return True
+        src = getattr(node, "source", None)
+        start = int(getattr(src, "line", 0) or 0)
+        end = int(getattr(src, "end_line", 0) or start)
+        return start > 0 and (end - start + 1) == int(size.group(1))
+    attr = re.search(r"private attribute '([^']+)'", message) or re.search(
+        r"via '([^']+)'", message
+    )
+    if attr:
+        text = str(getattr(getattr(node, "source", None), "text", "") or "")
+        return bool(text) and attr.group(1) in text
+    return False
+
+
 def _all_types_for_practice(practice: str) -> Set[str]:
     out: Set[str] = set()
     for types in FIDELITY_NODE_SCOPE.get(practice, {}).values():
         out.update(types)
     return out
+
+
+def _practice_slug(parent: Any) -> str:
+    if parent is None:
+        return ""
+    practice = getattr(parent, "practice_guidance", None)
+    if practice is None and getattr(parent, "fidelities", None) is not None:
+        practice = parent
+    if practice is None:
+        return ""
+    from harness.markdown import class_file_directory
+
+    return class_file_directory(practice).name
+
+
+class GraphRulesCollection(RulesCollection):
+    @classmethod
+    def from_markdown(
+        cls,
+        text: str,
+        fidelity: str | None = None,
+        parent: Any = None,
+    ) -> RulesCollection:
+        collection = super().from_markdown(text, fidelity=fidelity, parent=parent)
+        practice = _practice_slug(parent)
+        if not practice:
+            return collection
+        shared = getattr(parent, "fidelities", None) is not None
+        for slug, rule in list(collection.entries.items()):
+            if not isinstance(rule, Rule) or isinstance(rule, GraphRule):
+                continue
+            query = _PRACTICES / practice / "model" / "codeql" / f"{slug}.ql"
+            if not query.is_file():
+                continue
+            collection.entries[slug] = GraphRule(rule, practice=practice, shared=shared)
+        return collection
 
 
 class RuleRegistry:

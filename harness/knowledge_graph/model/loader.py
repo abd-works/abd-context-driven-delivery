@@ -616,3 +616,38 @@ def _subject_class_name(label: str) -> str:
     if not parts:
         return cleaned
     return parts[0][:1].upper() + parts[0][1:]
+
+
+def attach_story_tests(graph: PracticeGraph, paths: list[Path]) -> None:
+    from practices.stories.model.typescript.nodes import TypeScriptStoryMap
+
+    for path in paths:
+        if path.suffix.lower() not in {".ts", ".tsx"}:
+            continue
+        relative = str(path.resolve().relative_to(graph.root)).replace("\\", "/")
+        for suite in TypeScriptStoryMap.from_workspace(path):
+            _register_parsed_story_suite(graph, suite, relative)
+
+
+def _register_parsed_story_suite(graph: PracticeGraph, suite, relative: str) -> None:
+    from practices.stories.model.source_location import SourceLocation
+
+    from .graph_node import Kind
+    from .nodes import GraphScenario, GraphStory
+
+    story = GraphStory(suite.name, 1)
+    story.source = SourceLocation(relative, 1)
+    graph.register(story)
+    seen: set[str] = set()
+    for index, case in enumerate(suite.cases, start=1):
+        name = case.covers_scenario or case.name
+        if name in seen:
+            continue
+        seen.add(name)
+        scenario = GraphScenario(name, index, story.name)
+        scenario.source = SourceLocation(
+            relative,
+            case.story_source.line if case.story_source else 1,
+        )
+        graph.register(scenario)
+        story.relate(Kind.OWNS, scenario)

@@ -32,7 +32,7 @@ def load_graph_rules_from_markdown() -> List[GraphRule]:
             child_rules = getattr(child, "rules", None)
             for rule in _wrap(child_rules, practice=practice, shared=False):
                 if rule.fidelity is None:
-                    rule.rule.fidelity = getattr(child, "fidelity", None) or name
+                    rule.fidelity = getattr(child, "fidelity", None) or name
                 wrapped.append(rule)
     return wrapped
 
@@ -40,8 +40,10 @@ def load_graph_rules_from_markdown() -> List[GraphRule]:
 def _wrap(collection, *, practice: str, shared: bool) -> List[GraphRule]:
     if collection is None:
         return []
-    return [
-        GraphRule(rule, practice=practice, shared=shared)
-        for rule in collection
-        if isinstance(rule, Rule)
-    ]
+    wrapped: List[GraphRule] = []
+    for rule in collection:
+        if isinstance(rule, GraphRule):
+            wrapped.append(rule)
+        elif isinstance(rule, Rule):
+            wrapped.append(GraphRule(rule, practice=practice, shared=shared))
+    return wrapped

@@ -66,20 +66,30 @@ def _database(root: Path) -> Optional[Path]:
 
 
 def _rows(payload: dict) -> List[dict]:
+    from .codeql import Rows as CodeQLRows
+
     tuples = payload.get("#select", {}).get("tuples", [])
     rows: List[dict] = []
     for item in tuples:
         if not item:
             continue
         first = item[0]
-        name = first.get("label", first) if isinstance(first, dict) else str(first)
+        name = CodeQLRows.entity_name(first)
         message = item[1] if len(item) > 1 else ""
         if isinstance(message, dict):
             message = message.get("label", "")
         contributor = item[2] if len(item) > 2 else None
         if isinstance(contributor, dict):
             contributor = contributor.get("label")
+        file, line = CodeQLRows.entity_location(first)
         row = {"name": name, "message": str(message)}
+        kind = CodeQLRows.entity_kind(first)
+        if kind:
+            row["kind"] = kind
+        if file:
+            row["file"] = file
+        if line:
+            row["line"] = line
         if contributor:
             row["contributor"] = str(contributor)
         rows.append(row)

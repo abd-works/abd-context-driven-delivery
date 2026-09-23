@@ -1,7 +1,8 @@
 """Noun clusters for keep-classes-single-responsibility.
 
 CodeQL emits identifier tokens. NLTK WordNet decides which are nouns; operations
-that share a noun sit in one responsibility cluster.
+that share a noun sit in one responsibility cluster. A stray singleton noun is
+not a second job — only several distinct clusters on a large public surface count.
 """
 
 from __future__ import annotations
@@ -9,11 +10,10 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Dict, Iterable, List, Mapping, Set
 
-from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
 from nltk.corpus import wordnet as wn
 
-_MIN_PUBLIC_OPERATIONS = 3
-_MIN_NOUN_CLUSTERS = 3
+_MIN_PUBLIC_OPERATIONS = 8
+_MIN_NOUN_CLUSTERS = 4
 
 
 def _stem_noun(token: str) -> str:
@@ -25,8 +25,8 @@ def nouns_in(tokens: Iterable[str]) -> Set[str]:
     words = [token.lower() for token in tokens if token]
     nouns: Set[str] = set()
     for index, word in enumerate(words):
-        as_noun = VocabularyHelper.is_noun(word)
-        as_verb = VocabularyHelper.is_verb(word)
+        as_noun = bool(wn.synsets(word, wn.NOUN))
+        as_verb = bool(wn.synsets(word, wn.VERB))
         if as_verb and (not as_noun or index == 0):
             continue
         if as_noun:
@@ -61,23 +61,29 @@ def _cluster_operations(tokens_by_operation: Mapping[str, Set[str]]) -> List[Set
     return list(clusters.values())
 
 
-def rows_for_keep_classes(rows: Iterable[dict]) -> List[dict]:
+def _tokens_by_class(hits: Iterable[dict]) -> Dict[str, Dict[str, Set[str]]]:
     by_class: Dict[str, Dict[str, Set[str]]] = defaultdict(lambda: defaultdict(set))
-    for row in rows:
-        class_name = row.get("name") or ""
-        operation = row.get("contributor") or ""
-        token = row.get("message") or ""
-        if not class_name or not operation:
-            continue
-        by_class[class_name][operation].add(token)
+    for hit in hits:
+        class_name = hit.get("name") or ""
+        operation = hit.get("contributor") or ""
+        token = hit.get("message") or ""
+        if class_name and operation:
+            by_class[class_name][operation].add(token)
+    return by_class
 
+
+def _mixed_responsibilities(tokens_by_operation: Mapping[str, Set[str]]) -> bool:
+    if len(tokens_by_operation) <= _MIN_PUBLIC_OPERATIONS:
+        return False
+    return len(_cluster_operations(tokens_by_operation)) >= _MIN_NOUN_CLUSTERS
+
+
+def hits_for_keep_classes(hits: Iterable[dict]) -> List[dict]:
     refined: List[dict] = []
-    for class_name, tokens_by_operation in by_class.items():
-        if len(tokens_by_operation) <= _MIN_PUBLIC_OPERATIONS:
+    for class_name, tokens_by_operation in _tokens_by_class(hits).items():
+        if not _mixed_responsibilities(tokens_by_operation):
             continue
         clusters = _cluster_operations(tokens_by_operation)
-        if len(clusters) < _MIN_NOUN_CLUSTERS:
-            continue
         message = (
             f"Class '{class_name}' has {len(tokens_by_operation)} public operations "
             f"whose nouns cluster into {len(clusters)} responsibilities."

@@ -453,6 +453,15 @@ class McpServer:
         self._prompts: dict[str, McpPrompt] = {}
         self.exceptions: list[McpIllegitimateTool] = []
         self._started = False
+        self._session = None
+
+    @property
+    def session(self):
+        if self._session is None:
+            from harness.session import Session
+
+            self._session = Session()
+        return self._session
 
     @property
     def started(self) -> bool:

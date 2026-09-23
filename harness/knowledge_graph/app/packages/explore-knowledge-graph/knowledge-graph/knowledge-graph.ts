@@ -115,6 +115,7 @@ export type ListedTreeNode = {
   is_file: boolean;
   rule_statuses: Record<string, 'passing' | 'violating'>;
   rules: ListedRule[];
+  source: SourceRangeDto | null;
   failed: number;
   total: number;
   children: ListedTreeNode[];
@@ -364,11 +365,7 @@ export class KnowledgeGraph {
   }
 
   get sourceFile(): SourceRangeDto | null {
-    const node = this.selectedNode;
-    if (node === null || node.isFolder) {
-      return null;
-    }
-    return node.source;
+    return this.selectedNode?.source ?? null;
   }
 
   toDto(): KnowledgeGraphDto {
@@ -376,13 +373,14 @@ export class KnowledgeGraph {
   }
 
   present() {
+    const listedTree = this._listedTree();
     return {
       knowledge_graph: this.dto,
       folder: this.folder,
       filter: this.view.filter,
       filter_options: this._filterOptions(),
       listed_nodes: this.listedNodes().map((node) => this._listedLeaf(node)),
-      listed_tree: this._listedTree(),
+      listed_tree: listedTree,
       selected_node: this.selectedNode
         ? {
             node_id: this.selectedNode.nodeId,
@@ -395,13 +393,14 @@ export class KnowledgeGraph {
             rules: this._listedRules(this.selectedNode),
           }
         : null,
+      selected_tree: findListedNode(listedTree, this.view.selectedNodeId),
       selected_rule: this._selectedRule(),
       source_file: this.sourceFile,
     };
   }
 
   static fromDto(dto: KnowledgeGraphDto): KnowledgeGraph {
-    return new KnowledgeGraph(ensureFolderPackages(dto));
+    return new KnowledgeGraph(ensureFolderPackages(dropClonedOperationHits(dto)));
   }
 
   private _withView(view: {
@@ -430,17 +429,35 @@ export class KnowledgeGraph {
       is_file: node.isFile,
       rule_statuses: node.rules.statuses(),
       rules: this._listedRules(node),
+      source: node.source,
       failed: counts.failed,
       total: counts.total,
     };
   }
 
   private _listedRules(node: GraphNode): ListedRule[] {
-    const details = node.rules.details();
-    if (this.view.filter.violations) {
-      return details.filter((rule) => rule.status === 'violating');
-    }
     const slugs = listed(this.view.filter.rules, this.view.filter.rule);
+    if (this.view.filter.violations) {
+      const seen = new Set<string>();
+      const violating: ListedRule[] = [];
+      for (const hit of node.rules.violations) {
+        if (seen.has(hit.ruleSlug)) {
+          continue;
+        }
+        if (slugs !== null && !slugs.includes(hit.ruleSlug)) {
+          continue;
+        }
+        seen.add(hit.ruleSlug);
+        violating.push({
+          slug: hit.ruleSlug,
+          status: 'violating',
+          body: hit.body || RULE_GUIDANCE[hit.ruleSlug] || '',
+          message: hit.message,
+        });
+      }
+      return violating;
+    }
+    const details = node.rules.details();
     if (slugs === null) {
       return details;
     }
@@ -833,6 +850,7 @@ export class KnowledgeGraph {
       this._attachFolderParents(take);
       this._attachSourceParents(take);
       this._attachOwnedMembers(take);
+      this._attachMembersBySourceRange(take);
       this._treeOwns = [...parentByChild.entries()].map(([toId, parent]) => ({
         fromId: parent.fromId,
         toId,
@@ -864,6 +882,13 @@ export class KnowledgeGraph {
     const byPath = this._foldersByPath();
     const fileNode = this._fileNodeByPath();
     for (const node of this._allNodes()) {
+      if (
+        node.semanticType === 'Operation' ||
+        node.semanticType === 'Property' ||
+        node.semanticType === 'Parameter'
+      ) {
+        continue;
+      }
       const file = node.source?.file?.replaceAll('\\', '/');
       if (!file) {
         continue;
@@ -902,6 +927,7 @@ export class KnowledgeGraph {
     }
     return (
       node.nodeId.startsWith('ce:File:') ||
+      node.semanticType === 'File' ||
       Boolean(node.semanticType === 'Module' && node.properties.file)
     );
   }
@@ -914,7 +940,12 @@ export class KnowledgeGraph {
       if (edge.kind === 'owns' || edge.kind === 'hasParameter') {
         const from = this._nodeById(edge.from_id);
         const to = this._nodeById(edge.to_id);
-        if (!from || skip.has(from.semanticType) || this._isDistantFolderOwner(from, to)) {
+        if (
+          !from ||
+          skip.has(from.semanticType) ||
+          this._isDistantFolderOwner(from, to) ||
+          containmentRank(from.semanticType) > containmentRank(to.semanticType)
+        ) {
           continue;
         }
         take(edge.from_id, edge.to_id, treeOwnerRank(from.semanticType));
@@ -922,10 +953,54 @@ export class KnowledgeGraph {
       if (edge.kind === 'belongsTo') {
         const parent = this._nodeById(edge.to_id);
         const child = this._nodeById(edge.from_id);
-        if (!parent || skip.has(parent.semanticType) || this._isDistantFolderOwner(parent, child)) {
+        if (
+          !parent ||
+          skip.has(parent.semanticType) ||
+          this._isDistantFolderOwner(parent, child) ||
+          containmentRank(parent.semanticType) > containmentRank(child.semanticType)
+        ) {
           continue;
         }
         take(edge.to_id, edge.from_id, treeOwnerRank(parent.semanticType));
+      }
+    }
+  }
+
+  private _attachMembersBySourceRange(
+    take: (fromId: string, toId: string, rank: number) => void,
+  ) {
+    const classes = this._allNodes().filter(
+      (node) =>
+        node.semanticType === 'OoadClass' &&
+        node.source?.file &&
+        (node.source.start_line ?? 0) >= 1,
+    );
+    for (const node of this._allNodes()) {
+      if (node.semanticType !== 'Operation' && node.semanticType !== 'Property') {
+        continue;
+      }
+      const file = node.source?.file?.replaceAll('\\', '/') ?? '';
+      const line = node.source?.start_line ?? 0;
+      if (!file || line < 1) {
+        continue;
+      }
+      let owner: GraphNode | null = null;
+      let span = Number.POSITIVE_INFINITY;
+      for (const cls of classes) {
+        const clsFile = cls.source?.file.replaceAll('\\', '/') ?? '';
+        const start = cls.source?.start_line ?? 0;
+        const end = cls.source?.end_line ?? start;
+        if (clsFile !== file || line < start || line > end) {
+          continue;
+        }
+        const size = end - start;
+        if (size < span) {
+          span = size;
+          owner = cls;
+        }
+      }
+      if (owner) {
+        take(owner.nodeId, node.nodeId, treeOwnerRank(owner.semanticType));
       }
     }
   }
@@ -1014,6 +1089,15 @@ export class KnowledgeGraph {
       slugs.push(...node.rules.applicable);
       slugs.push(...node.rules.violations.map((hit) => hit.ruleSlug));
     }
+    if (this.view.filter.violations) {
+      const failing = new Set<string>();
+      for (const node of this._allNodes()) {
+        for (const hit of node.rules.violations) {
+          failing.add(hit.ruleSlug);
+        }
+      }
+      return unique(slugs).filter((slug) => failing.has(slug));
+    }
     return unique(slugs);
   }
 
@@ -1101,6 +1185,99 @@ export class KnowledgeGraph {
   }
 }
 
+function dropClonedOperationHits(dto: KnowledgeGraphDto): KnowledgeGraphDto {
+  const nodeById = new Map<string, NodeDto>();
+  const classOf = new Map<string, string>();
+  for (const graph of dto.practice_graphs) {
+    for (const node of graph.nodes) {
+      nodeById.set(node.node_id, node);
+    }
+  }
+  for (const graph of dto.practice_graphs) {
+    for (const edge of graph.relationships) {
+      if (edge.kind !== 'owns' && edge.kind !== 'belongsTo') {
+        continue;
+      }
+      const parentId = edge.kind === 'owns' ? edge.from_id : edge.to_id;
+      const childId = edge.kind === 'owns' ? edge.to_id : edge.from_id;
+      if (nodeById.get(parentId)?.semantic_type === 'OoadClass') {
+        classOf.set(childId, parentId);
+      }
+    }
+  }
+  const memberTypes = new Set(['Operation', 'Property', 'Parameter']);
+  const counts = new Map<string, number>();
+  for (const graph of dto.practice_graphs) {
+    for (const node of graph.nodes) {
+      if (!memberTypes.has(node.semantic_type)) {
+        continue;
+      }
+      for (const hit of node.violations) {
+        const key = `${hit.rule_slug}\0${hit.message}`;
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+  }
+  for (const graph of dto.practice_graphs) {
+    for (const node of graph.nodes) {
+      if (!memberTypes.has(node.semantic_type)) {
+        continue;
+      }
+      const owner = nodeById.get(classOf.get(node.node_id) ?? '');
+      node.violations = node.violations.filter((hit) => {
+        const copies = counts.get(`${hit.rule_slug}\0${hit.message}`) ?? 0;
+        return copies <= 1 || operationHitBelongs(node, owner, hit);
+      });
+    }
+  }
+  return dto;
+}
+
+function operationHitBelongs(
+  node: NodeDto,
+  owner: NodeDto | undefined,
+  hit: { message: string },
+): boolean {
+  const labeled = /Operation '([^']+)'/.exec(hit.message);
+  if (labeled && labeled[1].includes('.')) {
+    const split = labeled[1].lastIndexOf('.');
+    const cls = labeled[1].slice(0, split);
+    const op = labeled[1].slice(split + 1);
+    return node.name === op && owner?.name === cls;
+  }
+  const lines = / is (\d+) lines/.exec(hit.message);
+  if (lines && node.source && node.source.start_line >= 1) {
+    const end = node.source.end_line || node.source.start_line;
+    return end - node.source.start_line + 1 === Number(lines[1]);
+  }
+  const attr =
+    /private attribute '([^']+)'/.exec(hit.message) ??
+    /via '([^']+)'/.exec(hit.message);
+  if (attr && node.source?.text) {
+    return node.source.text.includes(attr[1]);
+  }
+  return false;
+}
+
+function findListedNode(
+  nodes: ListedTreeNode[],
+  nodeId: string | null,
+): ListedTreeNode | null {
+  if (!nodeId) {
+    return null;
+  }
+  for (const node of nodes) {
+    if (node.node_id === nodeId) {
+      return node;
+    }
+    const nested = findListedNode(node.children, nodeId);
+    if (nested) {
+      return nested;
+    }
+  }
+  return null;
+}
+
 function listed(
   values: string[] | undefined,
   fallback?: string,
@@ -1144,11 +1321,30 @@ function treeTypeRank(kind: string): number {
 }
 
 function treeOwnerRank(kind: string): number {
+  if (kind === 'OoadClass') return 8;
   if (kind === 'Operation') return 10;
   if (kind === 'Package') return 40;
-  if (kind === 'Module') return 30;
+  if (kind === 'Module' || kind === 'File') return 30;
   if (kind === 'CleanEngineeringModel' || kind === 'StoryMap') return 80;
   return 20;
+}
+
+function containmentRank(kind: string): number {
+  if (kind === 'Package' || kind === 'Module' || kind === 'File') return 1;
+  if (
+    kind === 'OoadClass' ||
+    kind === 'Entity' ||
+    kind === 'EntityRoot' ||
+    kind === 'ValueObject' ||
+    kind === 'Repository' ||
+    kind === 'DomainEvent' ||
+    kind === 'DomainService'
+  ) {
+    return 2;
+  }
+  if (kind === 'Operation' || kind === 'Property') return 3;
+  if (kind === 'Parameter') return 4;
+  return 2;
 }
 
 function folderPathOf(node: NodeDto): string {

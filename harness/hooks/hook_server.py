@@ -6,9 +6,13 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+
+_READY_WAIT_SECONDS = 90
+_READY_POLL_SECONDS = 0.2
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 for _category in ("tools", "practices", "actions"):
@@ -291,14 +295,78 @@ class HookIllegitimateHandler(Exception):
 
 
 class HookServer:
-    """Cursor process for every hooked event."""
+    """Long-lived daemon that holds one Session across Cursor hook runs."""
 
     def __init__(
-        self, repo_root: Path, toolsets: list[Any] | None = None
+        self,
+        repo_root: Path,
+        toolsets: list[Any] | None = None,
+        *,
+        host: str | None = None,
+        port: int | None = None,
     ) -> None:
         self._repo_root = repo_root
         self.exceptions: list[HookIllegitimateHandler] = []
-        self._catalog = HandlerCatalog(toolsets, repo_root, skip=self.skip)
+        self._host = host
+        self._port = port
+        self._catalog = (
+            None
+            if port is not None
+            else HandlerCatalog(toolsets, repo_root, skip=self.skip)
+        )
+        self._session = None
+
+    @classmethod
+    def state_path(cls, repo: Path) -> Path:
+        return Path(repo).resolve() / ".cursor" / "hook-server.json"
+
+    @classmethod
+    def ensure(cls, repo: Path) -> HookServer:
+        path = cls.state_path(repo)
+        connected = cls._connect(repo, path)
+        if connected is not None:
+            return connected
+        cls._spawn(repo, path)
+        connected = cls._wait_until_connected(repo, path)
+        if connected is None:
+            raise HookStandupFailed(
+                "ensure", None, "hook server daemon did not become ready"
+            )
+        return connected
+
+    @classmethod
+    def _connect(cls, repo: Path, path: Path) -> HookServer | None:
+        from harness.hooks.hook_daemon import live_address
+
+        address = live_address(path)
+        if address is None:
+            return None
+        host, port, _pid = address
+        return cls(repo, toolsets=[], host=host, port=port)
+
+    @classmethod
+    def _wait_until_connected(cls, repo: Path, path: Path) -> HookServer | None:
+        attempts = int(_READY_WAIT_SECONDS / _READY_POLL_SECONDS)
+        for _ in range(attempts):
+            connected = cls._connect(repo, path)
+            if connected is not None:
+                return connected
+            time.sleep(_READY_POLL_SECONDS)
+        return None
+
+    @classmethod
+    def _spawn(cls, repo: Path, path: Path) -> None:
+        from harness.hooks.hook_daemon import spawn_daemon
+
+        spawn_daemon(repo, path)
+
+    @property
+    def session(self):
+        if self._session is None:
+            from harness.session import Session
+
+            self._session = Session()
+        return self._session
 
     def skip(self, tool: str, error: BaseException) -> None:
         skipped = (
@@ -341,6 +409,8 @@ class HookServer:
         enabled: list[str] = []
         results: list[HookResult] = []
         injected: dict[str, list[str]] = {"practices": [], "fidelities": []}
+        if self._catalog is None:
+            return results, injected
         for handler in self._catalog.for_event(event):
             if not handler.is_enabled():
                 continue
@@ -357,19 +427,22 @@ class HookServer:
         self._append_debug(f"ENABLED {enabled or ['(none)']}")
         return results, injected
 
-    def run(self) -> None:
+    def handle_stdin(self, raw: bytes) -> HookResult:
+        if self._port is not None:
+            from harness.hooks.hook_daemon import call_handle_stdin
+
+            return HookResult.from_handler(
+                call_handle_stdin(self._host, self._port, raw)
+            )
         from harness.hooks.session_logs import ensure_default_session
 
         ensure_default_session(self._repo_root)
-        raw = sys.stdin.buffer.read()
         if not raw.strip():
-            print(json.dumps(HookResult().as_dict()))
-            return
+            return HookResult()
         try:
             payload = HookPayload.from_stdin(raw)
         except (json.JSONDecodeError, UnicodeDecodeError):
-            print(json.dumps(HookResult().as_dict()))
-            return
+            return HookResult()
         result = self.dispatch(payload)
         self._publish_context(result)
         self._write_last_chat_injected(result)
@@ -377,7 +450,10 @@ class HookServer:
             followup = self._consume_followup()
             if followup:
                 result.followup_message = followup
-        print(json.dumps(result.as_dict()))
+        return result
+
+    def run(self) -> None:
+        print(json.dumps(self.handle_stdin(sys.stdin.buffer.read()).as_dict()))
 
     def _record_injected(
         self,
@@ -509,6 +585,8 @@ class HookServer:
         return "pong"
 
     def _event_names(self) -> list[str]:
+        if self._catalog is None:
+            return []
         names: list[str] = []
         for toolset in self._catalog.toolsets:
             try:
@@ -607,7 +685,11 @@ def _ref_label(item: Any) -> str:
 
 def main() -> None:
     os.chdir(_REPO_ROOT)
-    HookServer(_REPO_ROOT).run()
+    raw = sys.stdin.buffer.read()
+    if not raw.strip():
+        print(json.dumps(HookResult().as_dict()))
+        return
+    print(json.dumps(HookServer.ensure(_REPO_ROOT).handle_stdin(raw).as_dict()))
 
 
 if __name__ == "__main__":

@@ -6,12 +6,16 @@
 
 import python
 import subject_filter
+import model
 
-from Class cls, Function method, Parameter param
+from Function method, Parameter param
 where
-  inSubject(cls) and
-  method = cls.getAMethod() and
+  inSubject(method) and
+  exists(graphOwnerName(method)) and
   param = method.getAnArg() and
-  param.getName() != "self"
-select cls.getName(), method.getName(), param.getName(),
-  param.getLocation().getStartLine()
+  param.getName() != "self" and
+  param.getName() != "cls"
+select graphOwnerName(method), method.getName(), param.getName(),
+  param.getLocation().getStartLine(),
+  param.getLocation().getFile().getRelativePath(),
+  param.getLocation().getEndLine()

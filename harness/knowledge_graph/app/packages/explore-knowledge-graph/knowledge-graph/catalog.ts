@@ -56,7 +56,13 @@ export const STAGE_BY_FIDELITY: Record<string, string> = {
 
 export const RULE_GUIDANCE: Record<string, string> = {
   'keep-operations-small-focused':
-    'Keep each operation short enough to read as one thought — under 20 lines. When it grows, extract a private helper whose name says why that slice exists.',
+    'Keep each operation short enough to read as one thought — under 20 statements. A multi-line call, list, or string initializer is one statement. When it grows, extract a private helper whose name says why that slice exists.',
+  'prefer-class-operations':
+    'Put operations on a class. Do not leave functions or variables hanging off the module or package.',
+  'prefer-instance-operations':
+    'Keep operations on the instance. Do not mark them @staticmethod or @classmethod. A single creation method — instance, create, or from_* — may be static so callers can obtain the object.',
+  'extensions-live-with-the-domain':
+    'Domain extensions of a framework belong in the domain module — a nested package under that domain is fine. Do not host them in the base framework package.',
 };
 
 export function stageFor(fidelity: string | null | undefined): string {

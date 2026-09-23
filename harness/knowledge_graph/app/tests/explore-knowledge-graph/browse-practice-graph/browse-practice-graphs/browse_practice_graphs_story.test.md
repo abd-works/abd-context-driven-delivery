@@ -14,7 +14,7 @@ format: md
 
 | Source | Note |
 |--------|------|
-| knowledge-graph-explorer-sketch.md | Browse / Open / Follow / Filter stories |
+| knowledge-graph-explorer-sketch.md | Browse Practice Graphs |
 
 ## Behaviors
 

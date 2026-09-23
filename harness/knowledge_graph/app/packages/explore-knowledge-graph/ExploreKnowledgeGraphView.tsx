@@ -1,8 +1,11 @@
 import { type ChangeEvent, useEffect, useState } from 'react';
 import { useKnowledgeGraph } from './knowledge-graph/knowledge-graph-client';
 import { PracticeGraphTree } from './PracticeGraphTree';
+import { SelectedNodePane } from './SelectedNodePane';
 import {
+  isScanSourcePath,
   pickerRelativePath,
+  PICKER_UPLOAD_LIMIT,
   scanSourceFiles,
   type WorkspaceFile,
 } from './knowledge-graph/workspace';
@@ -20,6 +23,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     listedNodes,
     listedTree,
     selectedNode,
+    selectedTree,
     selectedRule,
     sourceFile,
     selectNode,
@@ -28,6 +32,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     selectFolder,
     filterOptions,
     refreshGraph,
+    scanError,
   } = useKnowledgeGraph(graphId);
   const [practices, setPractices] = useState<string[] | null>(null);
   const [stages, setStages] = useState<string[] | null>(null);
@@ -62,19 +67,29 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     if (!list || list.length === 0) {
       return;
     }
-    const picked: WorkspaceFile[] = [];
     let folderName = 'workspace';
+    const source: File[] = [];
     for (const file of Array.from(list)) {
       const mapped = pickerRelativePath(file.webkitRelativePath || file.name);
       folderName = mapped.folder;
+      if (isScanSourcePath(mapped.relativePath)) {
+        source.push(file);
+      }
+    }
+    setFolder(folderName);
+    if (source.length === 0 || source.length > PICKER_UPLOAD_LIMIT) {
+      selectFolder({ folder: folderName });
+      return;
+    }
+    const picked: WorkspaceFile[] = [];
+    for (const file of source) {
+      const mapped = pickerRelativePath(file.webkitRelativePath || file.name);
       picked.push({
         relativePath: mapped.relativePath,
         text: await file.text(),
       });
     }
-    const files = scanSourceFiles(picked);
-    setFolder(folderName);
-    selectFolder({ folder: folderName, files });
+    selectFolder({ folder: folderName, files: scanSourceFiles(picked) });
   }
 
   function applyFilters(next: {
@@ -103,9 +118,6 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
   }
 
   const engineering = theme === 'engineering';
-  const reportRules = selectedRule
-    ? [selectedRule]
-    : selectedNode?.rules ?? [];
 
   return (
     <main className="explore-knowledge-graph">
@@ -157,12 +169,12 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
         <div className="toolbar">
           <div className="folder-scan">
             <span className="btn-primary">
-              Working folder
+              Repo folder
               <input
                 data-testid="working-folder"
                 type="file"
                 multiple
-                title="Select the folder that is the PracticeGraph root"
+                title="Select a repo folder to load the Knowledge Graph"
                 onChange={(event) => {
                   void pickFolder(event.target.files);
                   event.target.value = '';
@@ -246,10 +258,14 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
         <div className="split">
           <nav className="panel tree" data-testid="practice-graph-tree">
             {loading && <p className="empty-state">Loading KnowledgeGraph...</p>}
-            {!loading && listedNodes.length === 0 && (
+            {!loading && scanError && (
+              <p className="empty-state" data-testid="scan-error">
+                {scanError}
+              </p>
+            )}
+            {!loading && !scanError && listedNodes.length === 0 && (
               <p className="empty-state">
-                Select a working folder. That folder is the PracticeGraph root; classes load from it.
-                A file in the tree only opens source.
+                Select a repo folder to load the Knowledge Graph.
               </p>
             )}
             <PracticeGraphTree
@@ -261,52 +277,13 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
             />
           </nav>
           <section className="panel" data-testid="source-file">
-            {selectedNode ? (
-              <div className="rule-report">
-                <h2>{selectedNode.name}</h2>
-                <p className="report-meta">
-                  {[
-                    selectedNode.practice,
-                    selectedNode.stage,
-                    selectedNode.semantic_type,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-                {reportRules.length === 0 && (
-                  <p className="empty-state">No rules on this node.</p>
-                )}
-                {reportRules.map((entry) => (
-                  <article
-                    key={entry.slug}
-                    className={`rule-card ${entry.status}`}
-                  >
-                    <h3>
-                      {entry.slug}{' '}
-                      <span className={`rule-status ${entry.status}`}>
-                        {entry.status}
-                      </span>
-                    </h3>
-                    {entry.body ? <p>{entry.body}</p> : null}
-                    {entry.message ? (
-                      <p className="violation">{entry.message}</p>
-                    ) : null}
-                  </article>
-                ))}
-                {sourceFile ? (
-                  <pre className="source-file">
-                    <h2>{sourceFile.file}</h2>
-                    <code data-start-line={sourceFile.start_line}>
-                      {sourceFile.text}
-                    </code>
-                  </pre>
-                ) : null}
-              </div>
-            ) : (
-              <p className="empty-state">
-                Select a node or a rule to open its report. A folder stays on the tree.
-              </p>
-            )}
+            <SelectedNodePane
+              selectedNode={selectedNode}
+              selectedTree={selectedTree}
+              selectedRule={selectedRule}
+              sourceFile={sourceFile}
+              violations={violations}
+            />
           </section>
         </div>
         {selectedNode && !selectedNode.is_file && (

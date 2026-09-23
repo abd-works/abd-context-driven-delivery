@@ -32,6 +32,7 @@ _RULES = {
     "use-explicit-dependencies": "Cart",
     "use-property-not-accessor": "Cart",
     "prefer-class-operations": "_extended_price",
+    "prefer-instance-operations": "is_noun",
     "hide-inner-details": "total",
     "low-coupling": "total",
     "shape-classes-around-resources": "PaymentService",
@@ -40,6 +41,7 @@ _RULES = {
     "provide-meaningful-context": "split_items",
     "deep-module": "faultyAsset.py",
     "one-way-deps": "one-way-deps/alpha.py",
+    "extensions-live-with-the-domain": "GraphEpic",
     "layer-separation": "subtotal",
     "use-intention-revealing-names": "to",
     "use-consistent-naming": "applyDiscount",
@@ -59,13 +61,16 @@ _PREDICATES = {
     "constructsTypeInInit": "CartRepository",
     "accessorOperation": "get_total",
     "calledOnlyFrom": "_extended_price",
+    "staticUtilityMethod": "is_noun",
     "privateAttributeRead": "total",
     "doerOnBag": "PaymentService",
+    "proceduralDoer": "PaymentService",
     "envies": "validate_last_transaction",
     "untypedPublicParameter": "checkout",
     "numberedParameter": "split_items",
     "shallowModule": "faultyAsset.py",
     "cyclicModules": "one-way-deps/alpha.py",
+    "domainExtensionInFrameworkModule": "GraphEpic",
     "passThrough": "subtotal",
     "inSource": "huge",
     "ownerClass": "add",
@@ -150,3 +155,17 @@ with description("Clean Engineering graphQuery rules"):
             if not _hit(rows, expected):
                 misses.append(f"{predicate} expected {expected}")
         expect(misses).to(equal([]))
+
+    with it("should not treat two collaborating resources as a service-plus-bag"):
+        db = _ensure_examples_db()
+        rows = CodeQL(_EXAMPLES).run(
+            _PACK / "shape-classes-around-resources.ql",
+            database=db,
+        )
+        blob = " ".join(
+            str(row.get(key) or "")
+            for row in rows
+            for key in ("name", "message")
+        )
+        expect("PaymentService" in blob).to(equal(True))
+        expect("GraphCleanEngineeringModel" in blob).to(equal(False))

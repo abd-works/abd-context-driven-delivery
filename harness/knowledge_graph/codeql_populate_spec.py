@@ -1,5 +1,6 @@
 """BDD spec for CodeQL populate pass on PracticeGraph."""
 
+import mcp.types  # SDK, before harness/mcp is on PYTHONPATH
 import sys
 from pathlib import Path
 
@@ -15,7 +16,10 @@ from expects import equal, expect, have_length
 from mamba import description, it
 
 from harness.knowledge_graph.model import CodeQL, Kind, PracticeGraph
-from practices.clean_engineering.model.codeql.codeql_model import Operation
+from practices.clean_engineering.model.codeql.codeql_model import (
+    CleanEngineeringModel,
+    Operation,
+)
 from practices.stories.model.codeql.codeql_model import Example, Step
 from practices.stories.model.scenario import Phase
 from practices.stories.model.source_location import SourceLocation
@@ -73,6 +77,76 @@ with description("CodeQL populate on PracticeGraph"):
         expect(customer is not None).to(equal(True))
         demos = example.related(Kind.DEMONSTRATES)
         expect(any(d is customer for d in demos)).to(equal(True))
+
+    with it("should keep CodeQL source range on each operation"):
+        graph = PracticeGraph(_SLICE)
+        CleanEngineeringModel.ensure(
+            graph,
+            [
+                {
+                    "name": "CustomerRepository",
+                    "module": "Customer",
+                    "file": "domain/customer/Customer.ts",
+                    "line": 120,
+                    "end_line": 160,
+                }
+            ],
+            [],
+            [
+                {
+                    "class_name": "CustomerRepository",
+                    "name": "load",
+                    "return_type": "Customer",
+                    "file": "domain/customer/Customer.ts",
+                    "line": 130,
+                    "end_line": 138,
+                    "text": "load(customerId: string): Customer {",
+                }
+            ],
+        )
+        load_op = graph.operation_named("CustomerRepository", "load")
+        expect(load_op.source.file).to(equal("domain/customer/Customer.ts"))
+        expect(load_op.source.line).to(equal(130))
+        expect(load_op.source.end_line).to(equal(138))
+        expect("load(" in load_op.source.text).to(equal(True))
+        from harness.knowledge_graph.write_practice_hierarchy import explorer_dto
+
+        payload = explorer_dto(graph, _SLICE)
+        listed = [
+            node
+            for group in payload["practice_graphs"]
+            for node in group["nodes"]
+            if node["name"] == "load"
+        ]
+        expect(listed[0]["source"]["file"]).to(equal("domain/customer/Customer.ts"))
+        expect(listed[0]["source"]["start_line"]).to(equal(130))
+        expect("load(" in listed[0]["source"]["text"]).to(equal(True))
+
+    with it("should parent module-level operations on the file"):
+        graph = PracticeGraph(_SLICE)
+        CleanEngineeringModel.ensure(
+            graph,
+            [],
+            [],
+            [
+                {
+                    "class_name": "harness/knowledge_graph/model/dot_graph.py",
+                    "name": "walk_hierarchy",
+                    "return_type": "",
+                    "file": "harness/knowledge_graph/model/dot_graph.py",
+                    "line": 45,
+                    "end_line": 72,
+                }
+            ],
+        )
+        walk = graph.operation_named(
+            "harness/knowledge_graph/model/dot_graph.py",
+            "walk_hierarchy",
+        )
+        expect(walk is not None).to(equal(True))
+        owner = next(iter(walk.related(Kind.BELONGS_TO)), None)
+        expect(owner.semantic_type()).to(equal("File"))
+        expect(owner.name).to(equal("harness/knowledge_graph/model/dot_graph.py"))
 
     with it("should load catalog stories and merge CodeQL when export is present"):
         catalog = _REPO_ROOT / "practices" / "stories" / "catalog-examples"

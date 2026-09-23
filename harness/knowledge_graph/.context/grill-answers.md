@@ -149,3 +149,43 @@ The file-change hook is a @Hook method on GraphRulesCollection, same pattern as 
 
 inject_rules stays @Hook("postToolUse") — one file, glob markdown. GraphRulesCollection file-change is @Hook("stop") — existing Cursor event when the turn ends. Change set is dirty paths vs master, not the hook payload path. afterAgentResponse fires per assistant message and can land before later edits. Grounded in Hook.EVENTS and hook_spec.py stop handlers.
 
+### Stop updates and validates; a second hook presents the report
+
+On agent-loop stop, GraphRulesCollection takes dirty paths vs master, KnowledgeGraph.updateWorkingCopy, then validate (CodeQL on the working copy). The outcome is the existing hierarchy report with prune_to_violations — only nodes that have hits, with the rule and message, same shape as write_practice_hierarchy. A second hook then feeds that report into the chat with instructions to present it so the user can navigate errors, recommend a fix per violation, and drop items that later validate clean. Reverses “read last evaluation only / no CodeQL on the hook.” Grounded in write_practice_hierarchy.py prune_to_violations and user correction of the file-change scenarios.
+
+### Hook reads filtered KnowledgeGraph objects, not a report file
+
+Better: no violations report file for the hook. Cursor hooks are a new process, so “in memory” means load the KnowledgeGraph (already persisted in knowledge-graphs.json after updateWorkingCopy + validate), then filterGraph to dirty paths and violations. Source of truth is node.rules.violations on those objects. The hook still has to project that slice to a string (additional_context / followup_message); do not make the agent Read a report_path. write_practice_hierarchy stays an optional dump, not the chat contract. Grounded in knowledge-graph.ts filterGraph and knowledge-graphs.json.
+
+### HookServer holds the KnowledgeGraph objects
+
+The KnowledgeGraph lives on HookServer, not in a report file and not reloaded from knowledge-graphs.json for each chat. notice_changed_file updates those objects (updateWorkingCopy, validate, filterGraph). present_violations reads the same objects and only then projects a string for Cursor stdout. Grounded in hook_server.py HookServer and user correction.
+
+### KnowledgeGraph is an instance field on a long-lived HookServer
+
+HookServer today does not hold a KnowledgeGraph: Cursor spawns python hook_server.py per event, run() reads stdin, prints JSON, exits. Catalog only. In-memory across stop and present needs the same long-lived process as codeql_query_daemon: spawn once, keep knowledge_graph as an instance field, stdin hook_server.py connects and mutates that field. Grounded in hook_server.py run() and codeql_query_daemon.ensure_query_server.
+
+### Session in harness/session holds knowledge_graph
+
+New type Session in harness/session. HookServer and McpServer each hold a session reference. Session.knowledge_graph is a lazy property: first get instantiates, setter replaces, reset() clears so the next get instantiates again. That field is the in-memory KnowledgeGraph — not a field on HookServer itself, not a report file. Do not reuse tools.workspace WorkSession or session_logs name slug. Grounded in user naming and mcp_server.py McpServer / hook_server.py HookServer.
+
+### Session holds each PracticeGuidance
+
+Session also holds the PracticeGuidance instances (one per practice), lazy like knowledge_graph. HookServer and McpServer read session.practices instead of AgentToolSet.load_toolsets on every event. reset() clears practices too so the next get instantiates again. Fidelities stay on those PracticeGuidance objects. Grounded in guidance.py PracticeGuidance, hook_server.py HandlerCatalog.load_toolsets, mcp_server.py load_toolsets.
+
+### Persistent HookServer daemon holds Session
+
+This work replaces one-shot python hook_server.py with a persistent HookServer (ensure/spawn like codeql_query_daemon). Cursor hooks.json still points at a short CLI that connects; Session lives on the daemon. Hook events and McpServer share that same Session in RAM. Do not accept two Sessions. Grounded in user correction and codeql_query_daemon.ensure_query_server.
+
+### present_violations is stop followup_message
+
+present_violations is @Hook("stop") on GraphRulesCollection, same event as notice_changed_file, after the objects are updated. Channel is followup_message (optional additional_context). Not afterAgentResponse — that fires before stop. Empty followup when the slice has no hits. Grounded in hook_server.py stop followup and Cursor stop output.
+
+### Persistent hook daemon; two Sessions; stop followup_message
+
+This work adds a persistent HookServer daemon; hook_server.py per Cursor event is the CLI client. That daemon holds one Session so hook runs share RAM. McpServer keeps a second Session for now — do not merge hook and MCP onto one object. present_violations is @Hook("stop") after notice_changed_file; Cursor channel is followup_message, not afterAgentResponse. Grounded in hook_server.py run() spawn-per-event, codeql_query_daemon ensure, and user lock.
+
+### present_violations echoes a violations-count toast
+
+present_violations is @echo and @Hook("stop"), same as inject_rules in rule.py. After the followup_message, PromptEcho.show_ide_toast reports that violations were found and the count. No toast when the slice is empty. Grounded in rule.py inject_rules @echo and PromptEcho.show_ide_toast.
+
