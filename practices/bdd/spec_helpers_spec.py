@@ -20,12 +20,12 @@ from practices.bdd.spec_helpers import (  # noqa: E402
     expect_scan_fails,
     expect_scan_passes,
 )
-from scan import Scan, ScannerCollection  # noqa: E402
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Scan, ScannerCollection  # noqa: E402
 
 _FLAG_FAIL_MARKER_SCANNER = '''
 from pathlib import Path
 
-from scan import Scanner
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Scanner
 
 
 class FlagFailMarkerScanner(Scanner):

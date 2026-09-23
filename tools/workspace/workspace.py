@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from actions.scan.rule import AppliesTo, Rule, RulesCollection
+from harness.guidance.rule import AppliesTo, Rule, RulesCollection
 from git.git import GitConnectError, GitRepo, Repo
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown import markdownCollection

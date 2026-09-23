@@ -1,7 +1,7 @@
 """Draw.io miniature kit — render class diagrams, scan layout rules, repair on failure.
 
 Not a full context tool: no partition / grill / sketch / fidelities. Composed by
-CleanEngineering when ``format`` is ``drawio``. Reuses Scan kit.
+CleanEngineering when ``format`` is ``drawio``. Scan engine lives in ``scanners/_drawio_base``.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from pathlib import Path
 
 from agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
-from scan.scan import Scan
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Scan, ScannerCollection
 from sub_agent.sub_agent import sub_agent
 from agent_tools.agent_tools import agent_tool
 
@@ -36,8 +36,6 @@ class Drawio:
         return Path(__file__).resolve().parent
 
     def _scanner_collection(self):
-        from scan.scanner_collection import ScannerCollection
-
         return ScannerCollection(
             module_dir=self.module_dir,
             root_path=self.module_dir / "scanners",

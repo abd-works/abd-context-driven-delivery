@@ -20,7 +20,7 @@ for _cat in ("harness", "tools", "practices", "actions"):
 from harness.agent_tools.agent_tools import AgentToolSet
 import practices  # noqa: F401 - generator package on path
 from harness.markdown import Markdown
-from scan import ScannerCollection
+from practices.clean_engineering.model.drawio.scanners._drawio_base import ScannerCollection
 from agent_tools import AgentToolSet
 
 from satisfy.satisfy import Satisfy

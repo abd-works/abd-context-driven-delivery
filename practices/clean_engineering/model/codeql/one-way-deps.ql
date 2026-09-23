@@ -9,10 +9,10 @@ import python
 import subject_filter
 import model
 
-from File a, File b
+from Module a, Module b
 where
-  inSubjectPath(a.getRelativePath()) and
+  inSubjectPath(a.getFile().getRelativePath()) and
   cyclicModules(a, b) and
-  a.getRelativePath() < b.getRelativePath()
+  a.getFile().getRelativePath() < b.getFile().getRelativePath()
 select a,
-  "File '" + a.getRelativePath() + "' and '" + b.getRelativePath() + "' depend on each other.", b
+  "Module '" + a.getName() + "' and '" + b.getName() + "' depend on each other.", b

@@ -51,6 +51,29 @@ class CodeQLRunError(RuntimeError):
     """CodeQL CLI was missing, the database was missing, or the query failed."""
 
 
+class QueryServerDown(CodeQLRunError):
+    """The long-lived query server process is gone or its stream closed."""
+
+
+_attached_query_server = None
+
+
+def attach_query_server(server) -> None:
+    """Keep the MCP host's CodeQL process as the runner for later batches."""
+    global _attached_query_server
+    _attached_query_server = server
+
+
+def detach_query_server(server=None) -> None:
+    global _attached_query_server
+    if server is None or _attached_query_server is server:
+        _attached_query_server = None
+
+
+def attached_query_server():
+    return _attached_query_server
+
+
 class Rows(list):
     """Decoded CodeQL select tuples as dict rows."""
 
@@ -196,32 +219,149 @@ class CodeQL:
         db = database if database is not None else self.ensure_database(self._query_language(query))
         return Rows(self._select_rows(self.run_query_tuples(query, db)))
 
+    def run_log_path(self) -> Path:
+        folder = self.root / ".codeql" / "logs"
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder / "query-run.log"
+
+    def append_run_log(self, line: str) -> None:
+        with self.run_log_path().open("a", encoding="utf-8") as log:
+            log.write(line.rstrip("\r\n") + "\n")
+            log.flush()
+
     def run_queries(self, queries: List[Path], database: Path | None = None) -> Dict[str, List[list]]:
         if not queries:
             return {}
         db = database if database is not None else self.ensure_database("python")
-        run = subprocess.run(
-            [
-                self.executable(),
-                "database",
-                "run-queries",
-                str(db),
-                "--",
-                *[str(query.resolve()) for query in queries],
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-            cwd=str(self.repo_root()),
-        )
-        if run.returncode != 0:
+        produced = self._produce_bqrs(queries, db)
+        decoded: Dict[str, List[list]] = {}
+        for query in queries:
+            tuples = self._decode_bqrs(produced[str(query.resolve())])
+            decoded[query.stem] = tuples
+            self._emit(f"query {query.stem}  rows={len(tuples)}")
+        return decoded
+
+    def _produce_bqrs(self, queries: List[Path], database: Path) -> Dict[str, Path]:
+        server = attached_query_server()
+        if server is not None and server.alive:
+            self._emit("query-server " + " ".join(query.stem for query in queries))
+            try:
+                return server.run_queries(queries, database, self._emit)
+            except QueryServerDown as error:
+                self._emit(
+                    f"query server failed ({error}); falling back to database run-queries"
+                )
+                self._restart_query_server(server)
+            except CodeQLRunError:
+                raise
+            except Exception as error:
+                self._emit(
+                    f"query server failed ({error}); falling back to database run-queries"
+                )
+                self._restart_query_server(server)
+        return self._run_queries_cli(queries, database)
+
+    def _restart_query_server(self, server) -> None:
+        try:
+            server.stop()
+            server.start()
+        except Exception as error:
+            self._emit(f"query server restart failed ({error})")
+            detach_query_server(server)
+
+    def _emit(self, line: str) -> None:
+        self.append_run_log(line)
+        print(line, flush=True)
+
+    def _run_queries_cli(self, queries: List[Path], database: Path) -> Dict[str, Path]:
+        command = [
+            self.executable(),
+            "database",
+            "run-queries",
+            str(database),
+            "--",
+            *[str(query.resolve()) for query in queries],
+        ]
+        header = "run-queries " + " ".join(query.stem for query in queries)
+        captured: List[str] = []
+        returncode = 1
+        for attempt in range(3):
+            captured = []
+            with self.run_log_path().open("a", encoding="utf-8") as log:
+                self._write_log_line(log, header)
+                print(header, flush=True)
+                process = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    cwd=str(self.repo_root()),
+                    bufsize=1,
+                )
+                if process.stdout is None:
+                    raise CodeQLRunError("codeql database run-queries produced no output stream")
+                for line in process.stdout:
+                    captured.append(line)
+                    text = line.rstrip("\r\n")
+                    self._write_log_line(log, text)
+                    print(text, flush=True)
+                returncode = process.wait()
+            output = "".join(captured)
+            if returncode == 0 or "already locked" not in output or attempt == 2:
+                break
+            notice = "codeql cache locked, retrying"
+            self._emit(notice)
+            time.sleep(3)
+        if returncode != 0:
             raise CodeQLRunError(
-                f"codeql database run-queries failed: {run.stderr or run.stdout}"
+                "codeql database run-queries failed: " + "".join(captured)
             )
-        return {query.stem: self._decode_bqrs(self._bqrs_for(db, query)) for query in queries}
+        return {str(query.resolve()): self._bqrs_for(database, query) for query in queries}
+
+    def _write_log_line(self, log, line: str) -> None:
+        log.write(line.rstrip("\r\n") + "\n")
+        log.flush()
 
     def run_query_tuples(self, ql_path: Path, database: Path) -> List[list]:
         return self.run_queries([ql_path], database)[ql_path.stem]
+
+    def reuse_model_results(self, queries: List[Path], database: Path) -> Optional[Dict[str, List[list]]]:
+        """Return saved model rows when the database and query sources are unchanged."""
+        fresh: Dict[str, List[list]] = {}
+        for query in queries:
+            bqrs = self._fresh_bqrs(query, database)
+            if bqrs is None:
+                return None
+            fresh[query.stem] = self._decode_bqrs(bqrs)
+        return fresh
+
+    def _fresh_bqrs(self, query: Path, database: Path) -> Optional[Path]:
+        results = database / "results"
+        matches = list(results.rglob(f"{query.stem}.bqrs")) if results.is_dir() else []
+        if not matches:
+            return None
+        bqrs = max(matches, key=lambda path: path.stat().st_mtime)
+        sources = [
+            path
+            for path in query.parent.glob("*")
+            if path.suffix in {".ql", ".qll"} and path.name != "subject_filter.qll" and path.is_file()
+        ]
+        stamp = database / "codeql-database.yml"
+        if stamp.is_file():
+            sources.append(stamp)
+        if sources and bqrs.stat().st_mtime < max(path.stat().st_mtime for path in sources):
+            return None
+        current_filter = query.parent / "subject_filter.qll"
+        remembered = database / "model-subject-filter.qll"
+        if current_filter.is_file():
+            text = current_filter.read_text(encoding="utf-8")
+            if remembered.is_file() and remembered.read_text(encoding="utf-8") != text:
+                return None
+            if not remembered.is_file():
+                remembered.write_text(text, encoding="utf-8")
+        return bqrs
 
     def _bqrs_for(self, database: Path, query: Path) -> Path:
         results = database / "results"
@@ -259,6 +399,8 @@ class CodeQL:
             prefix = self.root.resolve().relative_to(repo).as_posix().rstrip("/")
         except ValueError:
             prefix = ""
+        if prefix == ".":
+            prefix = ""
         if prefix:
             path_body = (
                 "  exists(File f, string prefix, string normalized |\n"
@@ -274,9 +416,10 @@ class CodeQL:
                 '    path = f.getRelativePath().replaceAll("\\\\", "/")\n'
                 "  )\n"
             )
-        (pack_dir / "subject_filter.qll").write_text(
+        text = (
             "import python\n\n"
             f'predicate subjectFilterPrefix(string prefix) {{ prefix = "{prefix}" }}\n\n'
+            f'predicate firstClassModulePrefix(string prefix) {{ prefix = "{prefix}" }}\n\n'
             "predicate inSubject(AstNode n) {\n"
             "  inSubjectPath(n.getLocation().getFile().getRelativePath())\n"
             "}\n\n"
@@ -285,9 +428,12 @@ class CodeQL:
             "}\n\n"
             "predicate inSubjectPath(string path) {\n"
             f"{path_body}"
-            "}\n",
-            encoding="utf-8",
+            "}\n"
         )
+        target = pack_dir / "subject_filter.qll"
+        if target.is_file() and target.read_text(encoding="utf-8") == text:
+            return
+        target.write_text(text, encoding="utf-8")
 
     def _query_language(self, ql_path: Path) -> str:
         text = ql_path.read_text(encoding="utf-8")
@@ -353,12 +499,31 @@ class CodeQL:
             _CODEQL_QUERIES / "properties.ql",
             _CODEQL_QUERIES / "calls.ql",
         ]
-        print(f"run-queries populate ({len(populate_queries)} queries) ...", flush=True)
         started = time.perf_counter()
-        batch = self.run_queries(populate_queries, database)
+        batch = self.reuse_model_results(populate_queries, database)
+        if batch is None:
+            print(f"run-queries populate ({len(populate_queries)} queries) ...", flush=True)
+            batch = self.run_queries(populate_queries, database)
+            filt = _CODEQL_QUERIES / "subject_filter.qll"
+            if filt.is_file():
+                (database / "model-subject-filter.qll").write_text(
+                    filt.read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                )
+        else:
+            notice = "reuse model results"
+            self.append_run_log(notice)
+            print(notice, flush=True)
         seconds = time.perf_counter() - started
         graph.record_rule_timing("run-queries:knowledge-graph", seconds, len(batch.get("classes") or []))
         print(f"run-queries populate  {seconds:.2f}s", flush=True)
+        self.append_run_log(
+            f"building graph classes={len(batch.get('classes') or [])} calls={len(batch.get('calls') or [])}"
+        )
+        print(
+            f"building graph classes={len(batch.get('classes') or [])} calls={len(batch.get('calls') or [])}",
+            flush=True,
+        )
         class_rows = list(self.class_rows(batch["classes"]))
         operation_rows = list(self.operation_rows(batch["operations"]))
         property_rows = list(self.property_rows(batch["properties"]))
@@ -756,6 +921,8 @@ class CodeQL:
 
 
     def _wire_calls(self, graph: PracticeGraph, calls: List[dict]) -> None:
+        print(f"wiring {len(calls)} calls", flush=True)
+        self.append_run_log(f"wiring {len(calls)} calls")
         for call in calls:
             caller = graph.operation_named( call.get("caller_class") or "", call.get("caller_operation") or ""
             )

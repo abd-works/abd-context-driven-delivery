@@ -41,6 +41,12 @@ _RULES = {
     "deep-module": "faultyAsset.py",
     "one-way-deps": "one-way-deps/alpha.py",
     "layer-separation": "subtotal",
+    "use-intention-revealing-names": "to",
+    "use-consistent-naming": "applyDiscount",
+    "eliminate-duplication": "backup_subtotal",
+    "limit-comments": "transient",
+    "named-seam-and-constraint": "Cart module",
+    "public-seam-only": "Internal design",
 }
 
 _PREDICATES = {
@@ -71,6 +77,12 @@ _PREDICATES = {
     "publicName": "CartManager",
     "numberedName": "item1",
     "calledFromClass": "Cart",
+    "intentionHidingName": "to",
+    "mixedNamingFunction": "applyDiscount",
+    "duplicateOperation": "backup_subtotal",
+    "narratingComment": "transient",
+    "missingSeamOrConstraint": "Cart module",
+    "leakedInternalDoc": "Internal design",
 }
 
 

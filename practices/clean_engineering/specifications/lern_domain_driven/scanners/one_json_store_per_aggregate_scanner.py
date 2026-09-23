@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from lern_scanner_base import TypeScriptScanner
-from scan.violation import Violation
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
 
 _SHARED_STORE_NAMES = ("db.json", "database.json", "store.json", "data.json")
 _PRESET_PATH_RE = re.compile(

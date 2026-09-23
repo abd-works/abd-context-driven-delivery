@@ -1,0 +1,3 @@
+run-queries codeql: CodeQLRunError: codeql database run-queries failed: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-context-driven-delivery\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+

@@ -128,7 +128,7 @@ with description("prompt echo detection"):
 
     with context("that receives a scan kit source file Read or edit"):
         with it("should not toast the scan action"):
-            path = str(_REPO_ROOT / "actions" / "scan" / "rule.py")
+            path = str(_REPO_ROOT / "harness" / "guidance" / "rule.py")
             expect(
                 _prompt_echo.handle({"tool_name": "Read", "tool_input": {"path": path}}).get(
                     "user_message"

@@ -67,6 +67,9 @@ class PracticeGraph:
         self.nodes: Dict[str, Node] = {}
         self.relationships: List[Relationship] = []
         self._used_by: Dict[str, List[str]] = {}
+        self._outgoing: Dict[str, List[Relationship]] = {}
+        self._incoming: Dict[str, List[Relationship]] = {}
+        self._classes_by_name: Dict[str, Node] = {}
         self._violations_by_node: Dict[str, List[RuleViolation]] = {}
         self.partial_failures: List[str] = []
         self.rule_timings: List[RuleTiming] = []
@@ -94,6 +97,8 @@ class PracticeGraph:
     def register(self, node: Node, node_id: Optional[str] = None) -> Node:
         node.join(self, node_id)
         self.nodes[node.node_id] = node
+        if node._semantic_type_name in _CLASS_SEMANTICS:
+            self._classes_by_name.setdefault(node.name, node)
         return node
 
     def _make_id(self, node: Node) -> str:
@@ -103,6 +108,8 @@ class PracticeGraph:
 
     def relate(self, edge: Relationship) -> Relationship:
         self.relationships.append(edge)
+        self._outgoing.setdefault(edge.from_id, []).append(edge)
+        self._incoming.setdefault(edge.to_id, []).append(edge)
         self._used_by.setdefault(edge.to_id, []).append(edge.from_id)
         return edge
 
@@ -113,16 +120,16 @@ class PracticeGraph:
         plain = (name or "").strip()
         if not plain:
             return None
-        for node in self.nodes.values():
-            if node.name == plain and node._semantic_type_name in _CLASS_SEMANTICS:
-                return node
-        return None
+        return self._classes_by_name.get(plain)
 
     def operation_named(self, class_name: str, operation_name: str) -> Optional[Node]:
         owner = self.class_named(class_name)
         if owner is None:
             return None
-        for node in owner.related(Kind.OWNS):
+        for edge in self._outgoing.get(owner.node_id, ()):
+            if edge.kind != Kind.OWNS:
+                continue
+            node = edge.to_node
             if node._semantic_type_name == "Operation" and node.name == operation_name:
                 return node
         return None
@@ -208,6 +215,14 @@ class PracticeGraph:
         error: str = "",
     ) -> None:
         self.rule_timings.append(RuleTiming(slug, seconds, hits, error))
+        log_dir = self.root / ".codeql" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        suffix = f"  {error}" if error else ""
+        line = f"{seconds:7.2f}s  hits={hits:4d}  {slug}{suffix}"
+        with (log_dir / "query-run.log").open("a", encoding="utf-8") as log:
+            log.write(line + "\n")
+            log.flush()
+        print(line, flush=True)
 
     def _is_direct_violation(self, node: Node, violation: RuleViolation) -> bool:
         closest = closest_fidelity(node.practice, node._semantic_type_name)

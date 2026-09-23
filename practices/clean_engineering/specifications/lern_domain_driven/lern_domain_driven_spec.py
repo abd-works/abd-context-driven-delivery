@@ -39,7 +39,7 @@ from practices.clean_engineering.specifications.lern_domain_driven.lern_domain_d
     LernDomainDriven,
 )
 from practices.stories.stories import Stories
-from scan.scanner_collection import ScannerCollection
+from practices.clean_engineering.model.drawio.scanners._drawio_base import ScannerCollection
 
 _ALL_RULE_SLUGS = (
     "organize-by-domain-module",

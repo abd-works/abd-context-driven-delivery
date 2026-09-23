@@ -172,6 +172,7 @@ predicate numberedParameter(Function f, Parameter p) {
 
 string normalizedPath(File f) { result = f.getRelativePath().replaceAll("\\", "/") }
 
+bindingset[path]
 predicate skippedModulePath(string path) {
   path.matches("%/examples/%") or
   path.matches("%_spec.py") or
@@ -180,9 +181,15 @@ predicate skippedModulePath(string path) {
 
 predicate firstClassModule(Module m) {
   m.getFile().getBaseName() = "__init__.py" and
-  exists(string prefix |
-    firstClassModulePrefix(prefix) and
-    normalizedPath(m.getFile()) = prefix + "/__init__.py"
+  not skippedModulePath(normalizedPath(m.getFile())) and
+  (
+    firstClassModulePrefix("")
+    or
+    exists(string prefix |
+      prefix != "" and
+      firstClassModulePrefix(prefix) and
+      normalizedPath(m.getFile()) = prefix + "/__init__.py"
+    )
   )
 }
 
@@ -190,12 +197,11 @@ predicate classInFirstClassModule(Class cls, Module pkg) {
   firstClassModule(pkg) and
   inSource(cls) and
   not skippedModulePath(normalizedPath(cls.getLocation().getFile())) and
-  exists(string prefix |
-    firstClassModulePrefix(prefix) and
-    normalizedPath(pkg.getFile()) = prefix + "/__init__.py" and
+  exists(string pkgDir |
+    pkgDir = normalizedPath(pkg.getFile()).regexpReplaceAll("/__init\\.py$", "") and
     (
-      normalizedPath(cls.getLocation().getFile()) = prefix + "/__init__.py" or
-      normalizedPath(cls.getLocation().getFile()).matches(prefix + "/%")
+      normalizedPath(cls.getLocation().getFile()) = pkgDir + "/__init__.py" or
+      normalizedPath(cls.getLocation().getFile()).matches(pkgDir + "/%")
     )
   )
 }
@@ -251,5 +257,134 @@ predicate passThrough(Function f) {
     ret.getValue() = call and
     not exists(Call other | other.getScope() = f and other != call) and
     not exists(Return other | other.getScope() = f and other != ret)
+  )
+}
+
+predicate genericAssignedName(string name) {
+  name = "info" or
+  name = "thing" or
+  name = "stuff" or
+  name = "temp" or
+  name = "tmp" or
+  name = "val" or
+  name = "obj" or
+  name = "item" or
+  name = "foo" or
+  name = "bar" or
+  name = "baz" or
+  name = "misc" or
+  name = "blob" or
+  name = "value" or
+  name = "to"
+}
+
+predicate loopVarName(string name) {
+  name = "i" or
+  name = "j" or
+  name = "k" or
+  name = "n" or
+  name = "x" or
+  name = "y" or
+  name = "z"
+}
+
+bindingset[name]
+predicate shortAssignedName(string name) {
+  name.length() < 3 and
+  not loopVarName(name) and
+  not name.matches("\\_%")
+}
+
+predicate assignedName(Function f, Name nm) {
+  exists(AssignStmt assign |
+    assign.getScope() = f and
+    nm = assign.getTarget(_)
+  )
+}
+
+predicate intentionHidingName(Function f, Name nm) {
+  assignedName(f, nm) and
+  (
+    genericAssignedName(nm.getId()) or
+    shortAssignedName(nm.getId())
+  )
+}
+
+bindingset[name]
+predicate snakeFunctionName(string name) {
+  name.regexpMatch("_*[a-z][a-z0-9]*(_[a-z0-9]+)*_*") and
+  not name.regexpMatch("__[a-z]+__")
+}
+
+bindingset[name]
+predicate camelFunctionName(string name) {
+  name.regexpMatch("_*[a-z]+[A-Z][a-zA-Z0-9]*")
+}
+
+predicate mixedNamingModule(Module m) {
+  exists(Function snake, Function camel |
+    snake.getEnclosingModule() = m and
+    camel.getEnclosingModule() = m and
+    snakeFunctionName(snake.getName()) and
+    camelFunctionName(camel.getName())
+  )
+}
+
+predicate mixedNamingFunction(Module m, Function f) {
+  mixedNamingModule(m) and
+  f.getEnclosingModule() = m and
+  (snakeFunctionName(f.getName()) or camelFunctionName(f.getName()))
+}
+
+int scopedStmtCount(Function f) { result = count(Stmt s | s.getScope() = f) }
+
+predicate duplicateOperation(Function a, Function b) {
+  a != b and
+  a.getEnclosingModule() = b.getEnclosingModule() and
+  operationLineCount(a) >= 3 and
+  operationLineCount(a) = operationLineCount(b) and
+  scopedStmtCount(a) >= 3 and
+  scopedStmtCount(a) = scopedStmtCount(b) and
+  count(For loop | loop.getScope() = a) = count(For loop | loop.getScope() = b) and
+  count(For loop | loop.getScope() = a) >= 1
+}
+
+bindingset[text]
+predicate invariantCommentText(string text) {
+  text.regexpMatch("(?i).*(must|never|always|only|before|after|then|once|when|why).*")
+}
+
+predicate narratingComment(Comment c) {
+  exists(string text |
+    text = c.getText() and
+    not invariantCommentText(text)
+  )
+}
+
+predicate moduleDocString(Module m, string doc) {
+  exists(ExprStmt stmt, StrConst str |
+    stmt.getScope() = m and
+    str = stmt.getValue() and
+    doc = str.getText()
+  )
+}
+
+predicate missingSeamOrConstraint(Module m) {
+  exists(string doc |
+    moduleDocString(m, doc) and
+    (
+      not doc.toLowerCase().matches("%seam%") or
+      not doc.toLowerCase().matches("%constraint%")
+    )
+  )
+}
+
+predicate leakedInternalDoc(Module m) {
+  exists(string doc |
+    moduleDocString(m, doc) and
+    (
+      doc.matches("%Internal design%") or
+      doc.matches("%_CartLog%")
+    )
   )
 }

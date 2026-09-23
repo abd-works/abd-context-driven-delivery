@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List
 
 from mern_scanner_base import MERNScanner
-from scan.violation import Violation
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
 
 
 class TestStructureScanner(MERNScanner):

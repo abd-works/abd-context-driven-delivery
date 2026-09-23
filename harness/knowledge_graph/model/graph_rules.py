@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Set
 
-from actions.scan.rule import Rule
+from harness.guidance.rule import Rule
 
 _REPO = Path(__file__).resolve().parents[3]
 _PRACTICES = _REPO / "practices"
@@ -243,18 +243,23 @@ class RuleRegistry:
         seen: Set[str] = set()
         runnable: List[GraphRule] = []
         skipped: List[GraphRule] = []
+        omitted_ddd = False
         for rule in self.rules:
             if not rule.graph_evaluated or rule.slug in seen:
                 continue
             if slugs is not None and rule.slug not in slugs:
                 continue
             seen.add(rule.slug)
+            if rule.practice == "ddd" and slugs is None:
+                omitted_ddd = True
+                continue
             if skip is not None and rule.slug in skip:
                 skipped.append(rule)
                 continue
             runnable.append(rule)
+        if omitted_ddd:
+            graph.record_rule_timing("practice:ddd", 0.0, 0, "skipped")
         for rule in skipped:
-            print(f"skip {rule.slug} (0 hits)", flush=True)
             graph.record_rule_timing(rule.slug, 0.0, 0, "skipped")
         by_pack: Dict[Path, List[GraphRule]] = defaultdict(list)
         for rule in runnable:
@@ -267,7 +272,6 @@ class RuleRegistry:
                 continue
             codeql._write_subject_filter(pack)
             queries = [rule.graphQuery for rule in pack_rules if rule.graphQuery is not None]
-            print(f"run-queries {pack.name} ({len(queries)} rules) ...", flush=True)
             started = time.perf_counter()
             try:
                 batch = codeql.run_queries(queries)
@@ -275,7 +279,6 @@ class RuleRegistry:
                 seconds = time.perf_counter() - started
                 graph.record_rule_timing(f"run-queries:{pack.name}", seconds, 0, f"{type(error).__name__}: {error}")
                 graph.record_partial_failure(f"run-queries {pack.name}", error)
-                print(f"run-queries {pack.name}  {seconds:.2f}s  ERROR {error}", flush=True)
                 continue
             seconds = time.perf_counter() - started
             graph.record_rule_timing(
@@ -283,9 +286,7 @@ class RuleRegistry:
                 seconds,
                 sum(len(batch.get(rule.slug) or []) for rule in pack_rules),
             )
-            print(f"run-queries {pack.name}  {seconds:.2f}s", flush=True)
             for rule in pack_rules:
-                print(f"rule {rule.slug} ...", flush=True)
                 mapped = time.perf_counter()
                 try:
                     hits = rule.evaluate(graph, rows=codeql._select_rows(batch.get(rule.slug) or []))
@@ -293,11 +294,9 @@ class RuleRegistry:
                     elapsed = time.perf_counter() - mapped
                     graph.record_rule_timing(rule.slug, elapsed, 0, f"{type(error).__name__}: {error}")
                     graph.record_partial_failure(f"rule {rule.slug}", error)
-                    print(f"rule {rule.slug}  {elapsed:.2f}s  ERROR {error}", flush=True)
                     continue
                 elapsed = time.perf_counter() - mapped
                 graph.record_rule_timing(rule.slug, elapsed, len(hits))
-                print(f"rule {rule.slug}  {elapsed:.2f}s  hits={len(hits)}", flush=True)
                 for violation in hits:
                     by_node.setdefault(violation.node_id, []).append(violation)
         return by_node

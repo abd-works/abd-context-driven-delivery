@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Set
 
 from mern_scanner_base import TypeScriptScanner
-from scan.violation import Violation
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
 
 _RES_JSON_RE = re.compile(r"res\.(?:status\(\d+\)\.)?json\(\s*(\{[^}]*\}|\w+)")
 _SUCCESS_PATTERN_RE = re.compile(r"\{\s*(?:success|message|ok|status)\s*:")

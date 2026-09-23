@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import List
 
 from lern_scanner_base import TypeScriptScanner
-from scan.violation import Violation
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
 
 _REQ_CUSTOM_PROP_RE = re.compile(r"\breq\.(user|session|auth|claims|tenant)\b")
 _AS_ANY_REQ_RE = re.compile(r"\(\s*req\s+as\s+any\s*\)\.")

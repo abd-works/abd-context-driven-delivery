@@ -5,7 +5,7 @@ import html
 import re
 from pathlib import Path
 
-from _drawio_base import DrawioScanner, collect_drawio_files
+from practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner, collect_drawio_files
 from practices.clean_engineering.model.drawio.drawio_tools import unescape
 
 RULE = "stereotype-above-class-name"
@@ -41,7 +41,7 @@ class StereotypeAboveClassNameScanner(DrawioScanner):
 
 
 if __name__ == "__main__":
-    from scan import ScannerRunner
+    from practices.clean_engineering.model.drawio.scanners._drawio_base import ScannerRunner
 
     raise SystemExit(
         ScannerRunner.run_scanner_main(

@@ -218,7 +218,7 @@ class MarkdownInstallation(Installation):
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
         rel = self.relative_path(kind, toolset, member, tool.deploy_name)
         if kind == "rules":
-            from actions.scan.rule import AppliesTo
+            from harness.guidance.rule import AppliesTo
 
             text = AppliesTo.strip_fence(text)
             text = self._rules_front_matter(text, toolset) + text
