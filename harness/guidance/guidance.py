@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from actions.validate.rule import RulesCollection
+from harness.guidance.rule import RulesCollection
 from harness.agent_tools.agent_tools import (
     collect,
     agent_instructions,

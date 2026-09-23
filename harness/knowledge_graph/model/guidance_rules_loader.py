@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from actions.validate.rule import Rule
+from harness.guidance.rule import Rule
 
 from .graph_rules import GraphRule
 

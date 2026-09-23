@@ -915,7 +915,7 @@ with description("markdown skill front matter") as self:
 with description("markdown rules front matter"):
     with it("should copy alwaysApply and globs from rules.appliesTo"):
         from installation.files import FileInstallation
-        from actions.validate.rule import AppliesTo, RulesCollection
+        from harness.guidance.rule import AppliesTo, RulesCollection
 
         guidance = type(
             "Guidance",

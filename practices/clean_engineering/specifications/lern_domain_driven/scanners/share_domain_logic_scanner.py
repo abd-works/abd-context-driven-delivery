@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import List
 
 from lern_scanner_base import TypeScriptScanner
-from scan.violation import Violation
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
 
 _ZOD_OBJECT_RE = re.compile(r"\bz\.(object|string|number|boolean|enum|array|union)\s*\(")
 _PARSE_CALL_RE = re.compile(r"\.(safe)?[Pp]arse\s*\(")

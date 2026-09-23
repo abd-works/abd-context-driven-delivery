@@ -550,6 +550,7 @@ class McpHost:
     def __init__(self, runtime: McpServer) -> None:
         self._runtime = runtime
         self._server = Server("cdd")
+        self.codeql_server = None
         self._register_handlers()
 
     @staticmethod
@@ -739,14 +740,43 @@ class McpHost:
             )
 
     def run(self) -> None:
-        while True:
-            try:
-                anyio.run(self.run_stdio)
-                return
-            except (KeyboardInterrupt, SystemExit):
-                raise
-            except Exception:
-                logger.exception("MCP stdio host crashed; restarting")
+        self._start_codeql_server()
+        try:
+            while True:
+                try:
+                    anyio.run(self.run_stdio)
+                    return
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except Exception:
+                    logger.exception("MCP stdio host crashed; restarting")
+        finally:
+            self._stop_codeql_server()
+
+    def _start_codeql_server(self) -> None:
+        from harness.knowledge_graph.model.codeql import attach_query_server
+        from installation.mcp.codeql_server import CodeQLQueryServer
+
+        server = CodeQLQueryServer(self._runtime.repo)
+        try:
+            server.start()
+        except Exception:
+            logger.exception("CodeQL query server did not start; queries will use the CLI")
+            self.codeql_server = None
+            return
+        self.codeql_server = server
+        attach_query_server(server)
+        logger.info("codeql query-server2 pid=%s", server.pid)
+
+    def _stop_codeql_server(self) -> None:
+        from harness.knowledge_graph.model.codeql import detach_query_server
+
+        server = self.codeql_server
+        self.codeql_server = None
+        if server is None:
+            return
+        detach_query_server(server)
+        server.stop()
 
     def ping(self) -> str:
         return "pong"
@@ -764,12 +794,14 @@ class McpHost:
             {"tool": item.tool, "reason": item.reason}
             for item in self._runtime.exceptions
         ]
+        server = self.codeql_server
         return {
             "ok": True,
             "ping": reply,
             "tools": tools,
             "exceptions": exceptions,
             "notice": self.notice(),
+            "codeqlServer": server.pid if server is not None and server.alive else None,
         }
 
     def notice(self) -> str:

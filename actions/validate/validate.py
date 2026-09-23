@@ -6,7 +6,7 @@ from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset
 from installation.files import Skill
 from harness.mcp.mcp_server import Mcp
-from actions.validate.rule import Rule
+from harness.guidance.rule import Rule
 
 @agent_toolset
 class Validate(GuidanceAction):

@@ -570,7 +570,6 @@ _KIT_LIFECYCLE_SPECS: tuple[tuple[str, Path, str], ...] = (
         ("satisfy", _REPO_ROOT / "actions" / "satisfy" / "satisfy.py", "satisfy"),
         ("repair", _REPO_ROOT / "actions" / "improvement" / "improvement.py", "improvement"),
         ("createRule", _REPO_ROOT / "actions" / "validate" / "validate.py", "validate"),
-        ("scan", _REPO_ROOT / "actions" / "scan" / "scan.py", "scan"),
     )
 
 _LIFECYCLE_KIT_IMPORTS: tuple[tuple[str, str, str], ...] = (

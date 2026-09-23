@@ -1,6 +1,5 @@
-"""BDD spec for clean_engineering - action expansion and scanner tools (in-process)."""
+"""BDD spec for clean_engineering - action expansion (in-process)."""
 
-import ast
 import re
 import sys
 from pathlib import Path
@@ -20,8 +19,6 @@ for _cat in ("tools", "practices", "actions"):
 from harness.agent_tools.agent_tools import AgentToolSet
 import practices  # noqa: F401 - generator package on path
 from harness.markdown import Markdown
-from scan import ScannerCollection
-from harness.agent_tools import AgentToolSet
 
 from satisfy.satisfy import Satisfy
 from validate.validate import Validate
@@ -30,7 +27,6 @@ _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "practices" / "clean_engineering"
 _GENERATE_DIR = _REPO_ROOT / "practices" / "actions" / "generate"
 _VALIDATE_DIR = _REPO_ROOT / "practices" / "actions" / "validate"
 _SATISFY_DIR = _REPO_ROOT / "practices" / "actions" / "satisfy"
-_PYTHON_SCANNERS = _CLEAN_ENGINEERING_DIR / "scanners"
 _CLEAN_ENGINEERING_TOOLSET = "practices.clean_engineering.clean_engineering:CleanEngineering"
 _VALIDATE_TOOLSET = "validate.validate:Validate"
 _SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
@@ -205,25 +201,6 @@ with description("CleanEngineering action expansion"):
             expect("ShoppingCart" in self.examples).to(be_true)
             expect("evals/" in self.examples).to(equal(False))
             expect("faultyAsset" in self.examples).to(equal(False))
-
-
-with description("CleanEngineering scan tool"):
-    with context("a CleanEngineering generator constructed with format python"):
-        with before.all:
-            self.clean_engineering = _load_clean_engineering(format_name="python")
-            self.collection = ScannerCollection(_CLEAN_ENGINEERING_DIR, _PYTHON_SCANNERS)
-            self.expected_slugs = sorted(self.collection.discover().keys())
-            self.concept_slugs = _context_rule_slugs(_load_contexts_section(_CLEAN_ENGINEERING_DIR))
-
-        with context("the scan tool is invoked with an explicit path list"):
-            with before.each:
-                template = _CLEAN_ENGINEERING_DIR / "templates" / "clean_engineering-templates.py"
-                self.report = ast.literal_eval(
-                    self.clean_engineering.scanner.scan(paths=[str(template)])
-                )
-
-            with it("should return a deterministic scanner report"):
-                expect(self.report["ok"] in (True, False)).to(be_true)
 
 
 with description("clean_engineering content helpers"):

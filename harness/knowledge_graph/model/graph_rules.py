@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Set
 
-from actions.validate.rule import Rule
+from harness.guidance.rule import Rule
 
 _REPO = Path(__file__).resolve().parents[3]
 _PRACTICES = _REPO / "practices"

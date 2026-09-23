@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Dict, List, Set
 
 from mern_scanner_base import InterfaceInfo, TypeScriptScanner
-from scan.violation import Violation
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
 
 _NOT_IMPLEMENTED_RE = re.compile(r"throw\s+new\s+Error\s*\(['\"]not\s+implemented", re.IGNORECASE)
 

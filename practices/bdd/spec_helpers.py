@@ -8,7 +8,7 @@ from pathlib import Path
 
 from expects import be_false, be_true, expect
 
-from scan.scan import Scan, ScanReport
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Scan, ScanReport
 
 
 def _scan_report(

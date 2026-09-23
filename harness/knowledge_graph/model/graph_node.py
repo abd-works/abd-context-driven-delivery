@@ -143,8 +143,8 @@ class Node:
         if direction == "out":
             nodes = [
                 edge.to_node
-                for edge in self.graph.relationships
-                if edge.from_id == self.node_id and (kind is None or edge.kind == kind)
+                for edge in self.graph._outgoing.get(self.node_id, ())
+                if kind is None or edge.kind == kind
             ]
             return _dedupe_nodes(nodes)
         if direction == "in":
@@ -155,14 +155,13 @@ class Node:
             if kind not in (None, Kind.USED_BY):
                 nodes.extend(
                     edge.from_node
-                    for edge in self.graph.relationships
-                    if edge.to_id == self.node_id and edge.kind == kind
+                    for edge in self.graph._incoming.get(self.node_id, ())
+                    if edge.kind == kind
                 )
             elif kind is None:
                 nodes.extend(
                     edge.from_node
-                    for edge in self.graph.relationships
-                    if edge.to_id == self.node_id
+                    for edge in self.graph._incoming.get(self.node_id, ())
                 )
             return _dedupe_nodes(nodes)
         raise ValueError("direction must be 'out' or 'in'")
@@ -170,8 +169,8 @@ class Node:
     def outgoing(self, kind: Optional[str] = None) -> List[tuple]:
         return [
             (edge.kind, edge.to_node)
-            for edge in self.graph.relationships
-            if edge.from_id == self.node_id and (kind is None or edge.kind == kind)
+            for edge in self.graph._outgoing.get(self.node_id, ())
+            if kind is None or edge.kind == kind
         ]
 
     def invoked_operations(self, *, depth: int = 3) -> List["Node"]:

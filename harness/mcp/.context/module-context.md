@@ -25,3 +25,4 @@ One MCP package: the `@mcp` annotation, `McpInstallation` (writes `mcp.json` and
 - **Transport:** stdio
 - **Entry:** `python -m harness.mcp` — `--toolsets` or `MCP_TOOLSET_REFS`
 - **Built-in:** `cdd.ping`
+- **CodeQL:** `McpHost.run` starts one `codeql execute query-server2` and keeps it on `McpHost.codeql_server` until the host exits. Rule batches use that process; the CLI `database run-queries` path remains when the server is down.

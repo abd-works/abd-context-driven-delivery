@@ -18,8 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from scan.scanner import Scanner
-from scan.violation import Violation
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Scanner
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
 
 try:
     import tree_sitter as _ts

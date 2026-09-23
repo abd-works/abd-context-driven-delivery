@@ -26,6 +26,29 @@ class CodeQLRunError(RuntimeError):
     """CodeQL CLI was missing, the database was missing, or the query failed."""
 
 
+class QueryServerDown(CodeQLRunError):
+    """The long-lived query server process is gone or its stream closed."""
+
+
+_attached_query_server = None
+
+
+def attach_query_server(server) -> None:
+    """Keep the MCP host's CodeQL process as the runner for later batches."""
+    global _attached_query_server
+    _attached_query_server = server
+
+
+def detach_query_server(server=None) -> None:
+    global _attached_query_server
+    if server is None or _attached_query_server is server:
+        _attached_query_server = None
+
+
+def attached_query_server():
+    return _attached_query_server
+
+
 class Rows(list):
     """Decoded CodeQL select tuples as dict rows."""
 

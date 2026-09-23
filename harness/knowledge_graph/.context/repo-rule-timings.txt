@@ -1,0 +1,40 @@
+  34.88s  hits= 673  run-queries:knowledge-graph
+   8.96s  hits=   0  run-queries:codeql  CodeQLRunError: codeql database run-queries failed: A fatal error occurred: Error initializing the IMB disk cache: the cache directory is already locked by another running process. Only one instance of the IMB can access a cache directory at a time. The lock file is located at C:\dev\abd-context-driven-delivery\.codeql\python-db\db-python\default\cache\.lock
+(eventual cause: OverlappingFileLockException)
+
+ 114.16s  hits=8161  run-queries:codeql
+   0.07s  hits=  13  do-not-invent-parallel-object-models
+   0.54s  hits= 299  named-seam-and-constraint
+   0.00s  hits=   0  deep-module
+   0.00s  hits=   1  public-seam-only
+   0.82s  hits=   0  use-typed-signatures
+   1.07s  hits= 163  one-way-deps
+   0.19s  hits=   0  low-coupling
+   0.29s  hits=   0  layer-separation
+   0.21s  hits=  20  keep-classes-single-responsibility
+   0.03s  hits=  18  shape-classes-around-resources
+   0.26s  hits= 436  put-logic-on-the-owning-resource
+   0.19s  hits= 540  hide-inner-details
+   0.02s  hits=  13  use-property-not-accessor
+   0.20s  hits=   9  prefer-class-operations
+   0.03s  hits=  18  use-explicit-dependencies
+   0.32s  hits= 366  limit-operation-parameters
+   0.02s  hits=  12  avoid-vague-parameter-names
+   1.06s  hits=   0  limit-comments
+   0.23s  hits= 164  use-intention-revealing-names
+   0.05s  hits=  77  use-consistent-naming
+   0.01s  hits=   1  eliminate-duplication
+   0.00s  hits= 166  keep-operations-small-focused
+   0.13s  hits= 159  simplify-control-flow
+   0.00s  hits=   0  provide-meaningful-context
+   0.00s  hits=   0  use-exceptions-properly
+   0.03s  hits=  18  never-swallow-exceptions
+  67.14s  hits= 674  run-queries:codeql
+   0.54s  hits= 491  building-blocks-fidelity-requires-tactical-stereotype
+   0.03s  hits=  59  flaccid-data-object-no-behavior
+   0.00s  hits=   0  screen-interface-not-a-domain-object
+  21.57s  hits=  99  run-queries:codeql
+   0.00s  hits=   0  observable-behavior
+   0.00s  hits=   0  layer-isolation
+
+36 timings, 253.05s total

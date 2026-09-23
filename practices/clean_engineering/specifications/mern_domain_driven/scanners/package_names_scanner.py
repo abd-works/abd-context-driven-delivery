@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
 from mern_scanner_base import TypeScriptScanner
-from scan.violation import Violation
+from practices.clean_engineering.model.drawio.scanners._drawio_base import Violation
 
 _PLACEHOLDER_SCOPES = frozenset(
     {
