@@ -5,3 +5,4 @@ playwright-report/
 test-results/
 packages/explore-knowledge-graph/data/scan-root.json
 packages/explore-knowledge-graph/data/knowledge-graphs.json
+packages/explore-knowledge-graph/data/.knowledge-graphs.json.tmp
