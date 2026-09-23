@@ -1,9 +1,14 @@
 import python
 
-predicate subjectFilterPrefix(string prefix) { prefix = "practices/stories/catalog-examples" }
+predicate subjectFilterPrefix(string prefix) { prefix = "" }
 
 predicate firstClassModulePrefix(string prefix) {
-  prefix = "practices/stories/catalog-examples"
+  prefix = "deep-module" or
+  prefix = "language-modules-one-section" or
+  prefix = "modules-not-model-blocks" or
+  prefix = "public-seam-only" or
+  prefix = "extensions-live-with-the-domain/framework" or
+  prefix = "extensions-live-with-the-domain/domain"
 }
 
 predicate inSubject(AstNode n) {
@@ -16,9 +21,5 @@ predicate inSubjectFilter(Class cls) {
 
 bindingset[path]
 predicate inSubjectPath(string path) {
-  exists(string filterPrefix, string normalized |
-    subjectFilterPrefix(filterPrefix) and
-    normalized = path.replaceAll("\\", "/") and
-    (normalized = filterPrefix or normalized.matches(filterPrefix + "/%"))
-  )
+  any()
 }
