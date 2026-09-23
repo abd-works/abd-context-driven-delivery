@@ -7,20 +7,10 @@ from pathlib import Path
 from typing import List
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from installation.destination import Destination
+from harness.mcp.mcp_server import mcp
 from installation.files import Skill
 
-
-class Mcp(Destination):
-    flag = "_mcp"
-
-    def __new__(cls, fn=None):
-        inst = object.__new__(cls)
-        inst.name = None
-        if callable(fn):
-            return inst.annotate(fn)
-        return inst
-
+from .graph_filter import expand_ids, match_node, parse_filter
 from .graph_node import Kind
 from .practice_graph import PracticeGraph
 
@@ -104,76 +94,55 @@ class KnowledgeGraph:
             texts.append(item.validate())
         return texts
 
-    @Mcp
+    @mcp
     @Skill
     @agent_tool
-    def return_nodes(self, filter: str | dict | None = None) -> str:
-        """Return matching graph nodes as JSON. Filter with a dotted path (Class.operation) or a dict of name, node_id, file, rule, practice, semantic_type, violations."""
+    def return_nodes(
+        self,
+        filter: str | dict | None = None,
+        root: str | None = None,
+    ) -> str:
+        """Return matching graph nodes as JSON. Filter with a dotted path (Class.operation) or a dict of name, node_id, file, rule, rules, practice, practices, semantic_type, semantic_types, violations, related_to. Always includes ancestors, children, and relationships of matched nodes. Optional root is a folder that already has .codeql/results/practice-graph.json."""
+        if root:
+            self._root = Path(root)
+            self._practice_graphs = []
         return json.dumps(self._nodes_as_json(filter), indent=2)
 
     def _graphs(self) -> List[PracticeGraph]:
         if self._practice_graphs:
             return self._practice_graphs
         try:
-            self._practice_graphs = [PracticeGraph.load(self.root)]
+            from .codeql import CodeQL
+
+            graph = PracticeGraph(self.root)
+            CodeQL(self.root).populate(graph, populate=False)
+            self._practice_graphs = [graph]
         except Exception:
             self._practice_graphs = []
         return self._practice_graphs
 
-    def _parse_filter(self, filter) -> dict:
-        if filter in (None, "", {}, []):
-            return {}
-        if isinstance(filter, str):
-            stripped = filter.strip()
-            if stripped.startswith("{"):
-                return json.loads(stripped)
-            return {"path": stripped}
-        return dict(filter)
-
     def _nodes_as_json(self, filter) -> list[dict]:
-        parsed = self._parse_filter(filter)
+        parsed = parse_filter(filter)
         matched: list[dict] = []
         for graph in self._graphs():
+            seeds = {
+                node.node_id
+                for node in graph.nodes.values()
+                if match_node(node, graph, parsed)
+            }
+            kept = expand_ids(seeds, graph) if parsed else set(graph.nodes)
             for node in graph.nodes.values():
-                if self._node_matches(node, graph, parsed):
-                    matched.append(self._node_as_json(node, graph))
+                if node.node_id not in kept:
+                    continue
+                matched.append(
+                    self._node_as_json(
+                        node,
+                        graph,
+                        seed=node.node_id in seeds,
+                        kept=kept,
+                    )
+                )
         return matched
-
-    def _node_matches(self, node, graph, parsed: dict) -> bool:
-        path = str(parsed.get("path") or "").strip()
-        if path:
-            hits = {item.node_id for item in self._nodes_along(graph, path.split("."))}
-            if node.node_id not in hits:
-                return False
-        return self._field_matches(node, graph, parsed)
-
-    def _field_matches(self, node, graph, parsed: dict) -> bool:
-        name = parsed.get("name")
-        if name and self._name_key(node) != str(name).casefold():
-            return False
-        node_id = parsed.get("node_id")
-        if node_id and node.node_id != str(node_id):
-            return False
-        practice = parsed.get("practice")
-        if practice and (getattr(node, "practice", "") or "") != practice:
-            return False
-        semantic = parsed.get("semantic_type")
-        if semantic and node.semantic_type() != semantic:
-            return False
-        return self._source_and_rule_match(node, graph, parsed)
-
-    def _source_and_rule_match(self, node, graph, parsed: dict) -> bool:
-        file = str(parsed.get("file") or "").replace("\\", "/").casefold()
-        src = str(getattr(getattr(node, "source", None), "file", "") or "").replace("\\", "/")
-        if file and file not in src.casefold():
-            return False
-        rule = str(parsed.get("rule") or "")
-        hits = graph._violations_by_node.get(node.node_id, [])
-        if rule and not any(hit.rule_slug == rule for hit in hits):
-            return False
-        if parsed.get("violations") in (True, "true", "True", 1) and not hits:
-            return False
-        return True
 
     def _nodes_along(self, graph, parts: list[str]):
         keys = [part.strip().casefold() for part in parts if part.strip()]
@@ -212,15 +181,32 @@ class KnowledgeGraph:
             names.append(str(getattr(current, "name", "") or current.semantic_type()))
         return ".".join(reversed(names))
 
-    def _node_as_json(self, node, graph) -> dict:
+    def _node_as_json(self, node, graph, seed: bool = True, kept: set | None = None) -> dict:
         src = getattr(node, "source", None)
         hits = graph._violations_by_node.get(node.node_id, [])
+        kept_ids = kept if kept is not None else {node.node_id}
+        relationships = []
+        for edge in list(graph._outgoing.get(node.node_id, ())) + list(
+            graph._incoming.get(node.node_id, ())
+        ):
+            if edge.from_id not in kept_ids or edge.to_id not in kept_ids:
+                continue
+            other = edge.to_node if edge.from_id == node.node_id else edge.from_node
+            relationships.append(
+                {
+                    "kind": edge.kind,
+                    "from_id": edge.from_id,
+                    "to_id": edge.to_id,
+                    "name": getattr(other, "name", None) or other.semantic_type(),
+                }
+            )
         return {
             "path": self._dotted_path(node),
             "node_id": node.node_id,
             "name": getattr(node, "name", None) or node.semantic_type(),
             "practice": getattr(node, "practice", "") or "",
             "semantic_type": node.semantic_type(),
+            "seed": seed,
             "source": None
             if src is None
             else {
@@ -229,6 +215,7 @@ class KnowledgeGraph:
                 "end_line": int(getattr(src, "end_line", 0) or 0),
                 "text": str(getattr(src, "text", "") or ""),
             },
+            "relationships": relationships,
             "violations": [
                 {
                     "rule_slug": hit.rule_slug,

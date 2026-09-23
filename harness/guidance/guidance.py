@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from harness.guidance.rule import RulesCollection
-from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
 from harness.agent_tools.agent_tools import (
     collect,
     agent_instructions,

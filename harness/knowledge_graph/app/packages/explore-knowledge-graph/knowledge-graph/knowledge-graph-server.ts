@@ -377,7 +377,7 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
   const cached = join(root, '.context', 'explorer-graph.json');
   if (!force && existsSync(cached)) {
     const dto = JSON.parse(readFileSync(cached, 'utf8'));
-    dto.folder = dto.folder || root;
+    dto.folder = _isDir(String(dto.folder ?? '')) ? dto.folder : root;
     return graphFromWorkspaceDto(dto);
   }
   const repo = _repoRoot();
@@ -410,7 +410,7 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
   if (result.status !== 0) {
     if (existsSync(cached)) {
       const dto = JSON.parse(readFileSync(cached, 'utf8'));
-      dto.folder = dto.folder || root;
+      dto.folder = _isDir(String(dto.folder ?? '')) ? dto.folder : root;
       return graphFromWorkspaceDto(dto);
     }
     throw new Error(

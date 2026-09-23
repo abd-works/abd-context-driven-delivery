@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import sys
+import threading
 import time
 import types as py_types
 from collections.abc import Callable, Mapping, Sequence
@@ -569,6 +570,8 @@ class McpHost:
         self._runtime = runtime
         self._server = Server("cdd")
         self.codeql_server = None
+        self._codeql_closed = False
+        self._codeql_lock = threading.Lock()
         self._register_handlers()
 
     @staticmethod
@@ -758,7 +761,11 @@ class McpHost:
             )
 
     def run(self) -> None:
-        self._start_codeql_server()
+        threading.Thread(
+            target=self._start_codeql_server,
+            name="codeql-query-server",
+            daemon=True,
+        ).start()
         try:
             while True:
                 try:
@@ -779,17 +786,21 @@ class McpHost:
             server = ensure_query_server(Path(self._runtime.repo))
         except Exception:
             logger.exception("CodeQL query server did not start; queries will use the CLI")
-            self.codeql_server = None
             return
-        self.codeql_server = server
-        attach_query_server(server)
+        with self._codeql_lock:
+            if self._codeql_closed:
+                return
+            self.codeql_server = server
+            attach_query_server(server)
         logger.info("codeql query-server daemon pid=%s", getattr(server, "pid", None))
 
     def _stop_codeql_server(self) -> None:
         from harness.knowledge_graph.model.codeql import detach_query_server
 
-        server = self.codeql_server
-        self.codeql_server = None
+        with self._codeql_lock:
+            self._codeql_closed = True
+            server = self.codeql_server
+            self.codeql_server = None
         if server is None:
             return
         detach_query_server(server)

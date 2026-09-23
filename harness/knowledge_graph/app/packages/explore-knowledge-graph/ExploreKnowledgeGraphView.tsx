@@ -313,7 +313,7 @@ function FilterList({
   options: string[];
   onChange: (next: string[] | null) => void;
 }) {
-  const [sort, setSort] = useState<'none' | 'asc' | 'desc'>('none');
+  const [sort, setSort] = useState<'none' | 'asc' | 'desc'>('asc');
   const shown = sortedOptions(options, sort);
   const selected = values === null ? options : values;
   return (

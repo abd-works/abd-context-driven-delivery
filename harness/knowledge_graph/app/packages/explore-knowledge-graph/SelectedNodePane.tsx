@@ -29,8 +29,10 @@ export function SelectedNodePane({
           {
             node_id: selectedNode.name,
             name: selectedNode.name,
+            path: selectedNode.name,
             semantic_type: selectedNode.semantic_type,
             source: sourceFile,
+            origin: sourceFile,
             rules: selectedRule ? [selectedRule] : selectedNode.rules,
           },
         ]
@@ -49,11 +51,13 @@ export function SelectedNodePane({
           key={section.node_id}
           nested={index > 0}
           name={section.name}
+          path={section.path}
           semanticType={section.semantic_type}
           rules={
             violations ? violatingRules(section.rules) : section.rules
           }
           source={section.source}
+          origin={section.origin}
         />
       ))}
     </div>
@@ -66,8 +70,10 @@ function flattenSections(
 ): Array<{
   node_id: string;
   name: string;
+  path: string;
   semantic_type: string;
   source: SourceRangeDto | null;
+  origin: SourceRangeDto | null;
   rules: ListedRule[];
 }> {
   const children = violations
@@ -83,8 +89,10 @@ function flattenSections(
     {
       node_id: node.node_id,
       name: node.name,
+      path: node.path,
       semantic_type: node.semantic_type,
       source: node.source,
+      origin: node.origin,
       rules: node.rules,
     },
     ...children.flatMap((child) => flattenSections(child, violations)),
@@ -94,16 +102,21 @@ function flattenSections(
 function NodeSection({
   nested = false,
   name,
+  path,
   semanticType,
   rules,
   source,
+  origin,
 }: {
   nested?: boolean;
   name: string;
+  path: string;
   semanticType: string;
   rules: ListedRule[];
   source: SourceRangeDto | null;
+  origin: SourceRangeDto | null;
 }) {
+  const shown = source?.text ? source : nested ? null : origin?.text ? origin : null;
   return (
     <div
       className="node-report"
@@ -111,8 +124,8 @@ function NodeSection({
     >
       <h2>{name}</h2>
       <p className="report-meta">{semanticType}</p>
-      {source?.text ? (
-        <SourceSnippetEditor source={source} excerpt={!nested} />
+      {shown ? (
+        <SourceSnippetEditor source={shown} excerpt={!nested} />
       ) : null}
       {rules.length > 0 ? (
         <div className="rule-report" data-testid="rule-report">
@@ -131,7 +144,12 @@ function NodeSection({
                   data-testid="copy-info-to-prompt"
                   onClick={() =>
                     void navigator.clipboard.writeText(
-                      violationPrompt({ name, semanticType, source, rule: entry }),
+                      violationPrompt({
+                        path,
+                        semanticType,
+                        source: source?.file ? source : origin,
+                        rule: entry,
+                      }),
                     )
                   }
                 >
@@ -151,24 +169,26 @@ function violatingRules(rules: ListedRule[]): ListedRule[] {
 }
 
 function violationPrompt({
-  name,
+  path,
   semanticType,
   source,
   rule,
 }: {
-  name: string;
+  path: string;
   semanticType: string;
   source: SourceRangeDto | null;
   rule: ListedRule;
 }): string {
-  const file = source
-    ? `${source.file}:${source.start_line}-${source.end_line}`
-    : '(no source)';
+  const file = source?.file
+    ? source.start_line >= 1
+      ? `${source.file}:${source.start_line}-${source.end_line}`
+      : source.file
+    : '';
   const snippet = source?.text ? `\n\nSource:\n${source.text}` : '';
   return [
     `Fix this Knowledge Graph rule violation.`,
-    `Node: ${name} (${semanticType})`,
-    `File: ${file}`,
+    `Node: ${path} (${semanticType})`,
+    file ? `File: ${file}` : '',
     `Rule: ${rule.slug}`,
     rule.body,
     `Violation: ${rule.message}`,

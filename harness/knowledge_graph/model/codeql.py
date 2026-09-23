@@ -737,6 +737,22 @@ class CodeQL:
         populate: bool = True,
     ) -> None:
         if not populate:
+            existing = self.results_path(
+                Path(results_path) if results_path is not None else None
+            )
+            if existing is not None:
+                self._apply_fact_batch(
+                    graph,
+                    {
+                        "classes": [],
+                        "operations": [],
+                        "properties": [],
+                        "parameters": [],
+                        "calls": [],
+                    },
+                    existing,
+                )
+                return
             self.load_existing_facts(graph, results_path=results_path)
             return
         db = database if database is not None else self.ensure_database("python")

@@ -111,11 +111,13 @@ export type CreateKnowledgeGraphInput = {
 export type ListedTreeNode = {
   node_id: string;
   name: string;
+  path: string;
   semantic_type: string;
   is_file: boolean;
   rule_statuses: Record<string, 'passing' | 'violating'>;
   rules: ListedRule[];
   source: SourceRangeDto | null;
+  origin: SourceRangeDto | null;
   failed: number;
   total: number;
   children: ListedTreeNode[];
@@ -474,10 +476,23 @@ export class KnowledgeGraph {
         }
         return this._treeLabel(left).localeCompare(this._treeLabel(right));
       });
-    const nest = (node: GraphNode): ListedTreeNode => ({
-      ...this._listedLeaf(node),
-      children: sortChildren(childrenByParent.get(node.nodeId) ?? []).map(nest),
-    });
+    const nest = (
+      node: GraphNode,
+      prefix: string,
+      parentOrigin: SourceRangeDto | null,
+    ): ListedTreeNode => {
+      const leaf = this._listedLeaf(node);
+      const origin = leaf.source?.file ? leaf.source : parentOrigin;
+      const path = prefix ? `${prefix}.${leaf.name}` : leaf.name;
+      return {
+        ...leaf,
+        path,
+        origin,
+        children: sortChildren(childrenByParent.get(node.nodeId) ?? []).map((child) =>
+          nest(child, path, origin),
+        ),
+      };
+    };
     const folders = this._topLevelFolders();
     const listedRoots = this._narrowsToHits()
       ? folders.filter(
@@ -494,10 +509,10 @@ export class KnowledgeGraph {
         for (const folder of listedRoots) {
           this._adoptChild(childrenByParent, childIds, head.nodeId, folder);
         }
-        return [nest(head)];
+        return [nest(head, '', null)];
       }
     }
-    return sortChildren(listedRoots).map(nest);
+    return sortChildren(listedRoots).map((node) => nest(node, '', null));
   }
 
   private _narrowsToHits(): boolean {
@@ -756,14 +771,14 @@ export class KnowledgeGraph {
   }
 
   private _visibleNodes(): GraphNode[] {
-    const matching = this.listedNodes();
-    const matchingIds = new Set(matching.map((node) => node.nodeId));
-    const visible = new Map(matching.map((node) => [node.nodeId, node]));
+    const seeds = this.listedNodes();
+    const seedIds = new Set(seeds.map((node) => node.nodeId));
+    const visible = new Map(seeds.map((node) => [node.nodeId, node]));
     let grew = true;
     while (grew) {
       grew = false;
       for (const edge of this._treeOwnsEdges()) {
-        if (!matchingIds.has(edge.toId) || visible.has(edge.fromId)) {
+        if (!visible.has(edge.toId) || visible.has(edge.fromId)) {
           continue;
         }
         const parent = this._nodeById(edge.fromId);
@@ -771,8 +786,36 @@ export class KnowledgeGraph {
           continue;
         }
         visible.set(parent.nodeId, parent);
-        matchingIds.add(parent.nodeId);
         grew = true;
+      }
+    }
+    if (!this._narrowsToHits()) {
+      grew = true;
+      const down = new Set(seedIds);
+      while (grew) {
+        grew = false;
+        for (const edge of this._treeOwnsEdges()) {
+          if (!down.has(edge.fromId) || down.has(edge.toId)) {
+            continue;
+          }
+          const child = this._nodeById(edge.toId);
+          if (!child) {
+            continue;
+          }
+          down.add(edge.toId);
+          visible.set(child.nodeId, child);
+          grew = true;
+        }
+      }
+      for (const edge of this._allEdges()) {
+        if (!seedIds.has(edge.from_id) && !seedIds.has(edge.to_id)) {
+          continue;
+        }
+        const otherId = seedIds.has(edge.from_id) ? edge.to_id : edge.from_id;
+        const other = this._nodeById(otherId);
+        if (other) {
+          visible.set(other.nodeId, other);
+        }
       }
     }
     return [...visible.values()];

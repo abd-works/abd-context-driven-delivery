@@ -167,7 +167,9 @@ class Installer:
             rel_parts = py_file.parts
         if any(part.startswith(".") for part in rel_parts[:-1]):
             return True
-        if any(part.lower() in self._SKIP_DIRS for part in py_file.parts):
+        if rel_parts[:2] == ("harness", "knowledge_graph"):
+            pass
+        elif any(part.lower() in self._SKIP_DIRS for part in py_file.parts):
             return True
         name = py_file.name
         if name in self._SKIP_FILE_NAMES:

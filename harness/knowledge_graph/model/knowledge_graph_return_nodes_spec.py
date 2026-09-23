@@ -54,6 +54,7 @@ with description("KnowledgeGraph.return_nodes"):
         graph.register(op)
         graph.register(other)
         graph.relate(Relationship(Kind.OWNS, owner, op))
+        graph.relate(Relationship(Kind.OWNS, owner, other))
         op.source = SourceLocation(file="model/codeql.py", line=176, end_line=200, text="def ensure_database")
         graph._violations_by_node[op.node_id] = [
             Hit(
@@ -73,10 +74,13 @@ with description("KnowledgeGraph.return_nodes"):
 
     with it("should return the operation as json for a dotted Class.operation path"):
         payload = json.loads(self.kg.return_nodes("CodeQL.ensure_database"))
-        expect(len(payload)).to(equal(1))
-        expect(payload[0]["name"]).to(equal("ensure_database"))
-        expect(payload[0]["path"]).to(equal("CodeQL.ensure_database"))
-        expect(payload[0]["violations"][0]["rule_slug"]).to(
+        names = {item["name"]: item for item in payload}
+        expect("ensure_database" in names).to(equal(True))
+        expect("CodeQL" in names).to(equal(True))
+        expect("populate" in names).to(equal(False))
+        expect(names["ensure_database"]["seed"]).to(equal(True))
+        expect(names["CodeQL"]["seed"]).to(equal(False))
+        expect(names["ensure_database"]["violations"][0]["rule_slug"]).to(
             equal("keep-operations-small-focused")
         )
 
@@ -84,4 +88,21 @@ with description("KnowledgeGraph.return_nodes"):
         payload = json.loads(self.kg.return_nodes({"violations": True}))
         names = {item["name"] for item in payload}
         expect("ensure_database" in names).to(equal(True))
+        expect("CodeQL" in names).to(equal(True))
         expect("populate" in names).to(equal(False))
+
+    with it("should keep children of a type filter"):
+        payload = json.loads(self.kg.return_nodes({"semantic_types": ["OoadClass"]}))
+        names = {item["name"] for item in payload}
+        expect("CodeQL" in names).to(equal(True))
+        expect("ensure_database" in names).to(equal(True))
+        expect("populate" in names).to(equal(True))
+
+    with it("should keep nodes related to another node"):
+        payload = json.loads(
+            self.kg.return_nodes({"related_to": {"name": "CodeQL", "kind": "owns"}})
+        )
+        names = {item["name"] for item in payload}
+        expect("ensure_database" in names).to(equal(True))
+        expect("populate" in names).to(equal(True))
+        expect("CodeQL" in names).to(equal(True))

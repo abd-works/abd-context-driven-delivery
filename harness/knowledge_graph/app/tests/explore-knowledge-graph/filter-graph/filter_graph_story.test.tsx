@@ -192,7 +192,7 @@ story('Filter Graph', () => {
       fireEvent.click(getByTestId('copy-info-to-prompt'));
       expect(writeText).toHaveBeenCalled();
       const copied = String(writeText.mock.calls[0][0]);
-      expect(copied).toContain('too_long');
+      expect(copied).toContain('harness.GraphClass.too_long');
       expect(copied).toContain(KEEP_OPERATIONS_SMALL_FOCUSED);
       expect(copied).toContain('too_long is 40 lines');
     });

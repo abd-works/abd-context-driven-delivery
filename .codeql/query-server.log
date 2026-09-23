@@ -17,3 +17,254 @@ Traceback (most recent call last):
   File "C:\dev\abd-cdd-code-ql-practice-semanti\harness\guidance\rule.py", line 13, in <module>
     from prompt_echo.prompt_echo import echo
 ModuleNotFoundError: No module named 'prompt_echo'
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 18, in <module>
+    from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\__init__.py", line 3, in <module>
+    from .model import PracticeGraph
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\__init__.py", line 5, in <module>
+    from .graph_rules import GraphRule, RuleRegistry, RuleViolation
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 10, in <module>
+    from harness.guidance.rule import Rule, RulesCollection
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\__init__.py", line 2, in <module>
+    from .guidance import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 11, in <module>
+    from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+ImportError: cannot import name 'GraphRulesCollection' from partially initialized module 'harness.knowledge_graph.model.graph_rules' (most likely due to a circular import) (C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 211, in <module>
+    serve(Path(sys.argv[1] if len(sys.argv) > 1 else "."))
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 83, in serve
+    server.start()
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_server.py", line 42, in start
+    executable = self._codeql.executable()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 167, in executable
+    raise CodeQLRunError("codeql is not on PATH")
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql is not on PATH
