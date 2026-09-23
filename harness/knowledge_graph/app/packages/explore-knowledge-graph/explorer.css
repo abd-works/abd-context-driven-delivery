@@ -530,11 +530,21 @@ ul.tree ul {
 }
 
 .rule-card {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: var(--space-sm);
+  padding-bottom: calc(var(--space-sm) + 1.75rem);
   margin-bottom: var(--space-sm);
   background: var(--raised);
+}
+
+.rule-card .copy-prompt {
+  position: absolute;
+  right: var(--space-sm);
+  bottom: var(--space-sm);
+  font-size: var(--text-xs);
+  padding: 0.15rem 0.45rem;
 }
 
 .rule-card h3 {

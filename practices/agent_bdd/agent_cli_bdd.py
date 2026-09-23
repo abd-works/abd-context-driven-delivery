@@ -159,7 +159,7 @@ class _ToolAgentBlock:
         task_path = self._write_artifact("judge-prompt.txt", task_text)
         launch_prompt = JUDGE_LAUNCH.format(path=task_path.relative_to(self._workspace).as_posix())
         self._write_artifact("judge-launch.txt", launch_prompt)
-        judge_session = AgentSession.get_or_create(
+        judge_session = AgentSession.from_workspace(
             self._session_file.with_name(f"{self._session_file.stem}-judge.json"),
             self._workspace,
             fresh=True,
@@ -321,7 +321,7 @@ def _cli_agent(workspace: Path, session_file: Path) -> Iterator[_ToolAgentBlock]
     """Establish one cursor-agent session for nested agent-instruct calls."""
     _ToolAgentBlock.assert_authenticated()
     block = _ToolAgentBlock(workspace, session_file)
-    block._session = AgentSession.get_or_create(
+    block._session = AgentSession.from_workspace(
         block._session_file, block._workspace, fresh=False
     )
     yield block

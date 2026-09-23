@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react';
+import { vi } from 'vitest';
 import { story, scenario } from '../../story-test';
 import { PracticeGraphTree } from '../../../packages/explore-knowledge-graph/PracticeGraphTree';
 import { KnowledgeGraph } from '../../../packages/explore-knowledge-graph/knowledge-graph/knowledge-graph';
@@ -169,6 +170,31 @@ story('Filter Graph', () => {
       expect(childNames).not.toContain('load_operation');
       expect(childNames).not.toContain('sync_tree_from_legacy');
       expect(treeNames(presented.listed_tree)).not.toContain('load');
+    });
+  });
+  scenario('copy info to prompt copies node and violation for chat', ({ given, when, then }) => {
+    given('a violating operation is open in the source pane', () => {});
+    when('the Engineer copies info to prompt', () => {});
+    then('the clipboard holds node, rule, and violation text', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { clipboard: { writeText } });
+      const presented = KnowledgeGraph.fromDto(violatingClassWithPassingOps())
+        .selectNode('ce:Operation:too_long')
+        .present();
+      const { getByTestId } = render(
+        <SelectedNodePane
+          selectedNode={presented.selected_node}
+          selectedTree={presented.selected_tree}
+          selectedRule={null}
+          sourceFile={presented.source_file}
+        />,
+      );
+      fireEvent.click(getByTestId('copy-info-to-prompt'));
+      expect(writeText).toHaveBeenCalled();
+      const copied = String(writeText.mock.calls[0][0]);
+      expect(copied).toContain('too_long');
+      expect(copied).toContain(KEEP_OPERATIONS_SMALL_FOCUSED);
+      expect(copied).toContain('too_long is 40 lines');
     });
   });
 });

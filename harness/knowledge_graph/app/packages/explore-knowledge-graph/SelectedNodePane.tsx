@@ -124,6 +124,20 @@ function NodeSection({
               </h3>
               {entry.body ? <p>{entry.body}</p> : null}
               {entry.message ? <p className="violation">{entry.message}</p> : null}
+              {entry.status === 'violating' || entry.message ? (
+                <button
+                  type="button"
+                  className="copy-prompt"
+                  data-testid="copy-info-to-prompt"
+                  onClick={() =>
+                    void navigator.clipboard.writeText(
+                      violationPrompt({ name, semanticType, source, rule: entry }),
+                    )
+                  }
+                >
+                  Copy info to prompt
+                </button>
+              ) : null}
             </article>
           ))}
         </div>
@@ -134,5 +148,33 @@ function NodeSection({
 
 function violatingRules(rules: ListedRule[]): ListedRule[] {
   return rules.filter((rule) => rule.status === 'violating');
+}
+
+function violationPrompt({
+  name,
+  semanticType,
+  source,
+  rule,
+}: {
+  name: string;
+  semanticType: string;
+  source: SourceRangeDto | null;
+  rule: ListedRule;
+}): string {
+  const file = source
+    ? `${source.file}:${source.start_line}-${source.end_line}`
+    : '(no source)';
+  const snippet = source?.text ? `\n\nSource:\n${source.text}` : '';
+  return [
+    `Fix this Knowledge Graph rule violation.`,
+    `Node: ${name} (${semanticType})`,
+    `File: ${file}`,
+    `Rule: ${rule.slug}`,
+    rule.body,
+    `Violation: ${rule.message}`,
+    snippet,
+  ]
+    .filter((line) => line)
+    .join('\n');
 }
 

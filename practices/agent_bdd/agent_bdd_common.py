@@ -138,24 +138,24 @@ class RunResponse:
     arguments: dict[str, Any] | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> RunResponse:
-        if not isinstance(data, dict):
-            raise AgentHarnessError(f"run output is not a mapping: {data!r}")
-        if not data.get("ok"):
-            error = str(data.get("error") or "unknown error")
+    def from_dict(cls, run_mapping: dict[str, Any]) -> RunResponse:
+        if not isinstance(run_mapping, dict):
+            raise AgentHarnessError(f"run output is not a mapping: {run_mapping!r}")
+        if not run_mapping.get("ok"):
+            error = str(run_mapping.get("error") or "unknown error")
             raise AgentHarnessError(f"run returned ok: false - {error}")
-        tools_field = data.get("tools")
-        result = data.get("result")
+        tools_field = run_mapping.get("tools")
+        result = run_mapping.get("result")
         return cls(
             ok=True,
-            toolset=str(data.get("toolset", "")),
-            tool=str(data["tool"]) if data.get("tool") else None,
-            action=str(data["action"]) if data.get("action") else None,
+            toolset=str(run_mapping.get("toolset", "")),
+            tool=str(run_mapping["tool"]) if run_mapping.get("tool") else None,
+            action=str(run_mapping["action"]) if run_mapping.get("action") else None,
             result=result,
-            instructions=str(data["instructions"]) if data.get("instructions") else None,
+            instructions=str(run_mapping["instructions"]) if run_mapping.get("instructions") else None,
             tools=list(tools_field) if isinstance(tools_field, list) else None,
-            arguments=dict(data["arguments"]) if isinstance(data.get("arguments"), dict) else None,
-            resources=dict(data.get("resources") or {}),
+            arguments=dict(run_mapping["arguments"]) if isinstance(run_mapping.get("arguments"), dict) else None,
+            resources=dict(run_mapping.get("resources") or {}),
         )
 
     @classmethod
@@ -210,17 +210,23 @@ class AgentSession:
         )
 
     @classmethod
-    def get_or_create(
+    def from_workspace(
         cls, session_file: Path, workspace: Path, *, fresh: bool = False
     ) -> AgentSession:
         if not fresh:
             existing = cls.load(session_file)
             if existing is not None:
-                _log_harness("cursor_channel", f"session resumed: {existing.chat_id} ({session_file.name})")
+                _log_harness(
+                    "cursor_channel",
+                    f"session resumed: {existing.chat_id} ({session_file.name})",
+                )
                 return existing
         from cli_agent.cli_agent import CursorCli
 
-        _log_harness("cursor_channel", f"creating new session for {session_file.name} in {workspace} ...")
+        _log_harness(
+            "cursor_channel",
+            f"creating new session for {session_file.name} in {workspace} ...",
+        )
         chat_id = CursorCli().create_chat(str(workspace.resolve()))
         session = cls(chat_id=chat_id, session_file=session_file)
         session.save()
@@ -345,22 +351,24 @@ def yaml_from_prompt(prompt: str) -> str | None:
         return _sanitize_yaml_body(marker.group(1))
     if "toolset:" not in prompt:
         return None
+    return _toolset_block_from_prompt(prompt)
+
+
+def _toolset_block_from_prompt(prompt: str) -> str | None:
     lines: list[str] = []
     collecting = False
     for line in prompt.splitlines():
         stripped = line.strip()
         if stripped.startswith("toolset:"):
             collecting = True
-        if collecting:
-            if stripped.startswith("IMPORTANT:"):
-                break
-            if stripped.startswith("Return the complete"):
-                break
-            if stripped == '"@' or stripped == '@"':
-                break
-            lines.append(line)
-    body = "\n".join(lines).strip()
-    return body or None
+        if not collecting:
+            continue
+        if stripped.startswith("IMPORTANT:") or stripped.startswith("Return the complete"):
+            break
+        if stripped == '"@' or stripped == '@"':
+            break
+        lines.append(line)
+    return "\n".join(lines).strip() or None
 
 
 def _sanitize_yaml_body(body: str) -> str:
@@ -418,7 +426,18 @@ def reject_agent_deferral(agent_text: str) -> None:
 
 def invoke_run_request(request: dict[str, Any]) -> RunResponse:
     """Load a toolset and expand or invoke the named member the same way production does."""
-    from harness.agent_tools.agent_tools import AgentOperation, AgentToolSet
+    instance, toolset_path, context, arguments = _bound_toolset(request)
+    action_name = request.get("action")
+    if action_name:
+        return _expanded_action(instance, toolset_path, str(action_name), context, arguments)
+    tool_name = request.get("tool")
+    if not tool_name:
+        raise AgentHarnessError("request missing tool or action")
+    return _invoked_tool(instance, toolset_path, str(tool_name), arguments)
+
+
+def _bound_toolset(request: dict[str, Any]):
+    from harness.agent_tools.agent_tools import AgentToolSet
 
     toolset_path = request.get("toolset")
     if not toolset_path:
@@ -434,39 +453,40 @@ def invoke_run_request(request: dict[str, Any]) -> RunResponse:
         instance = AgentToolSet.instantiate({"toolset": str(toolset_path), "context": context})
     except TypeError as exc:
         raise AgentHarnessError(str(exc)) from exc
-    action_name = request.get("action")
-    tool_name = request.get("tool")
-    if action_name:
-        try:
-            expanded = instance.instructions[str(action_name)].expand(context, arguments)
-        except KeyError as exc:
-            raise AgentHarnessError(f"unknown action {action_name!r}") from exc
-        return RunResponse(
-            ok=True,
-            toolset=str(toolset_path),
-            action=str(action_name),
-            result=expanded.result,
-            instructions=expanded.instructions,
-            tools=list(expanded.tools),
-            arguments=arguments,
-            resources={},
-        )
-    if not tool_name:
-        raise AgentHarnessError("request missing tool or action")
-    member = instance.tools.get(str(tool_name))
+    return instance, str(toolset_path), context, arguments
+
+
+def _expanded_action(instance, toolset_path: str, action_name: str, context, arguments) -> RunResponse:
+    try:
+        expanded = instance.instructions[action_name].expand(context, arguments)
+    except KeyError as exc:
+        raise AgentHarnessError(f"unknown action {action_name!r}") from exc
+    return RunResponse(
+        ok=True,
+        toolset=toolset_path,
+        action=action_name,
+        result=expanded.result,
+        instructions=expanded.instructions,
+        tools=list(expanded.tools),
+        arguments=arguments,
+        resources={},
+    )
+
+
+def _invoked_tool(instance, toolset_path: str, tool_name: str, arguments) -> RunResponse:
+    from harness.agent_tools.agent_tools import AgentOperation
+
+    member = instance.tools.get(tool_name)
     if member is None:
         raise AgentHarnessError(f"unknown tool {tool_name!r}")
     try:
-        if isinstance(member, AgentOperation):
-            result = member.invoke(arguments)
-        else:
-            result = getattr(instance, str(tool_name))(**arguments)
+        result = member.invoke(arguments) if isinstance(member, AgentOperation) else getattr(instance, tool_name)(**arguments)
     except TypeError as exc:
         raise AgentHarnessError(str(exc)) from exc
     return RunResponse(
         ok=True,
-        toolset=str(toolset_path),
-        tool=str(tool_name),
+        toolset=toolset_path,
+        tool=tool_name,
         result=result,
         resources={},
     )
@@ -528,7 +548,16 @@ def _replay_tools_run(command: str, workspace: Path) -> str | None:
 
 
 def _parse_judge_result(stdout: str) -> tuple[str, str]:
-    last_pass: tuple[str, str] | None = None
+    line_verdict = _verdict_from_json_lines(stdout)
+    if line_verdict is not None:
+        return line_verdict
+    embedded = _preferred_embedded_verdict(stdout)
+    if embedded is not None:
+        return embedded
+    return "ERROR", f"no parseable verdict in output:\n{stdout[:500]}"
+
+
+def _verdict_from_json_lines(stdout: str) -> tuple[str, str] | None:
     last_fail: tuple[str, str] | None = None
     for line in reversed(stdout.splitlines()):
         line = line.strip()
@@ -539,23 +568,21 @@ def _parse_judge_result(stdout: str) -> tuple[str, str]:
             continue
         verdict, reason = parsed
         if verdict == "PASS":
-            last_pass = (verdict, reason)
-            break
+            return verdict, reason
         if verdict == "FAIL":
             last_fail = (verdict, reason)
-    if last_pass:
-        return last_pass
-    if last_fail:
-        return last_fail
+    return last_fail
+
+
+def _preferred_embedded_verdict(stdout: str) -> tuple[str, str] | None:
     embedded = _embedded_judge_verdicts(stdout)
-    if embedded:
-        for verdict, reason in reversed(embedded):
-            if verdict == "PASS":
-                return verdict, reason
-        for verdict, reason in reversed(embedded):
-            if verdict == "FAIL":
-                return verdict, reason
-    return "ERROR", f"no parseable verdict in output:\n{stdout[:500]}"
+    for verdict, reason in reversed(embedded):
+        if verdict == "PASS":
+            return verdict, reason
+    for verdict, reason in reversed(embedded):
+        if verdict == "FAIL":
+            return verdict, reason
+    return None
 
 
 def _parse_judge_json(text: str) -> tuple[str, str] | None:
