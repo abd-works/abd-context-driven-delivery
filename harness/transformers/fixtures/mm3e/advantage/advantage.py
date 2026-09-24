@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from checks.measurement import Measurement
 from checks.trait import Trait
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ class Advantage(Trait):
         character: object,
         trait_name: str,
         purchased_rank: int,
-        measurement: object,
+        measurement: Measurement,
         category: str,
         rank: int,
         hero: Hero,

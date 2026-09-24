@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment
 
 from harness.transformers.transformer import Transformer
 from practices.stories.model.background import Background as SourceBackground
@@ -17,6 +15,7 @@ from practices.stories.model.nodes import (
     SubEpic as SourceSubEpic,
 )
 from practices.stories.model.python.story_file import render_story_file
+from practices.stories.model.python.tree import PythonTree
 from practices.stories.model.scenario import Scenario as SourceScenario
 from practices.stories.model.step import Step as SourceStep
 from practices.stories.model.story_map import StoryMap as SourceStoryMap
@@ -33,7 +32,7 @@ class StoryMapTransformer(SourceStoryMap, Transformer):
         root = cls()
         for epic in parsed.epics:
             root.append_epic(root.load_epic(epic))
-        root.attach_environment(_python_environment())
+        _attach_scenarios(root, sketch)
         return root
 
     def load_epic(self, source: SourceEpic) -> "EpicTransformer":
@@ -44,6 +43,10 @@ class StoryMapTransformer(SourceStoryMap, Transformer):
 
     def children(self) -> list:
         return list(self.epics)
+
+    def attach_environment(self, environment: Environment, root: Transformer | None = None) -> None:
+        _bind_python_filters(environment)
+        super().attach_environment(environment, root)
 
 
 class EpicTransformer(SourceEpic, Transformer):
@@ -80,7 +83,6 @@ class SubEpicTransformer(SourceSubEpic, Transformer):
     def load_story(self, source: SourceStory) -> "StoryTransformer":
         story = StoryTransformer(source.name, source.sequential_order, source.story_type)
         story.users = list(source.users)
-        story.scenarios = list(source.scenarios)
         return story
 
     def children(self) -> list:
@@ -118,14 +120,12 @@ class ExampleTransformer(SourceExample, Transformer):
     pass
 
 
-def _python_environment() -> Environment:
-    root = Path(__file__).resolve().parent / "logical" / "python"
-    environment = Environment(loader=FileSystemLoader(str(root)), autoescape=False)
+def _bind_python_filters(environment: Environment) -> None:
     environment.filters["snake"] = to_snake
     environment.filters["kebab"] = to_kebab
     environment.filters["pascal"] = to_pascal
     environment.filters["story_python"] = render_story_file
-    return environment
+    environment.filters["epic_python"] = PythonTree()._render_epic_helper
 
 
 def _stories_outline(sketch: str) -> str:
@@ -145,6 +145,46 @@ def _stories_outline(sketch: str) -> str:
     return "\n".join(lines)
 
 
+def _attach_scenarios(root: StoryMapTransformer, sketch: str) -> None:
+    remaining = list(_all_stories(root))
+    current: StoryTransformer | None = None
+    for raw in _lens_body(sketch).splitlines():
+        stripped = raw.strip()
+        indent = (len(raw) - len(raw.lstrip(" "))) // 4
+        if "-->" in stripped and not stripped.startswith("//"):
+            name = stripped.split("-->", 1)[1].strip()
+            current = _take_story(remaining, name)
+            continue
+        if current is None or indent != 3 or _skip_line(stripped):
+            continue
+        current.scenarios.append(
+            ScenarioTransformer(stripped, len(current.scenarios) + 1, current.name)
+        )
+
+
+def _take_story(remaining: list[StoryTransformer], name: str) -> StoryTransformer | None:
+    for index, story in enumerate(remaining):
+        if story.name == name:
+            return remaining.pop(index)
+    return None
+
+
+def _all_stories(root: StoryMapTransformer) -> list[StoryTransformer]:
+    stories: list[StoryTransformer] = []
+    for epic in root.epics:
+        for sub in epic.sub_epics:
+            stories.extend(_stories_under(sub))
+    return stories
+
+
+def _stories_under(sub: SubEpicTransformer) -> list[StoryTransformer]:
+    stories: list[StoryTransformer] = []
+    for nested in sub.sub_epics:
+        stories.extend(_stories_under(nested))
+    stories.extend(sub.stories)
+    return stories
+
+
 def _skip_line(stripped: str) -> bool:
     if not stripped or stripped.startswith("//") or stripped.startswith("*"):
         return True
@@ -161,7 +201,7 @@ def _lens_body(sketch: str) -> str:
         return sketch
     end = len(lines)
     for i in range(start + 1, len(lines)):
-        if lines[i].endswith(":") and lines[i] in _NEXT_LENSES:
+        if any(lines[i].startswith(marker) for marker in _NEXT_LENSES):
             end = i
             break
     return "\n".join(lines[start + 1 : end])

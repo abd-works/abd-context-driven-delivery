@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from checks.measurement import Measurement
 from checks.trait import Trait
 
 if TYPE_CHECKING:
@@ -21,7 +22,7 @@ class Ability(Trait):
         character: object,
         trait_name: str,
         purchased_rank: int,
-        measurement: object,
+        measurement: Measurement,
         hero: Hero,
     ) -> None:
         ...
@@ -58,7 +59,7 @@ class Defense(Trait):
         character: object,
         trait_name: str,
         purchased_rank: int,
-        measurement: object,
+        measurement: Measurement,
         source_ability: Ability,
     ) -> None:
         ...
