@@ -16,6 +16,7 @@ for _cat in ("practices", "tools"):
 from expects import equal, expect
 from mamba import before, description, it
 
+from harness.transformers.logical_dump import write_temp
 from harness.transformers.transformers import Transformers
 from practices.clean_engineering.model.transformation.clean_engineering_transformer import (
     CleanEngineeringTransformer,
@@ -24,6 +25,7 @@ from practices.stories.model.transformation.story_map_transformer import StoryMa
 
 _FIXTURE_SKETCH = _REPO_ROOT / "harness" / "transformers" / "fixtures" / "mm3e" / "mm3e-sketch.md"
 _FIXTURE_PYTHON = _REPO_ROOT / "harness" / "transformers" / "fixtures" / "mm3e"
+_TEMP = _FIXTURE_PYTHON / "temp"
 _SNAKE = re.compile(r"([a-z0-9])([A-Z])")
 
 
@@ -33,6 +35,8 @@ class Mm3ePythonCatalog:
     def from_directory(self, root: Path) -> dict[str, dict]:
         files = {}
         for path in sorted(root.rglob("*.py")):
+            if "temp" in path.parts:
+                continue
             files[str(path.relative_to(root)).replace("\\", "/")] = path.read_text(
                 encoding="utf-8"
             )
@@ -131,7 +135,7 @@ class Mm3ePythonCatalog:
 
 
 with description("Transformers"):
-    with before.each:
+    with before.all:
         self.sketch = _FIXTURE_SKETCH.read_text(encoding="utf-8")
         self.roots = Transformers().transform_sketch(self.sketch)
         self.story_map = next(
@@ -146,6 +150,7 @@ with description("Transformers"):
         self.fixture_ce = self.catalog.from_directory(_FIXTURE_PYTHON)
         self.emitted_ce = self.catalog.from_files(self.ce_files)
         self.ce_delta = self.catalog.compare(self.fixture_ce, self.emitted_ce)
+        write_temp(self.roots, _TEMP)
 
     with it("should load StoryMapTransformer from the stories lens"):
         expect(self.story_map.epics[0].name).to(equal("Resolve Checks"))
