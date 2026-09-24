@@ -78,13 +78,10 @@ class Operation(SourceOperation, Node):
         callee_cls = next(iter(callee.related(Kind.BELONGS_TO)), None)
         if caller_cls is None or callee_cls is None or caller_cls is callee_cls:
             return False
-        caller_name = getattr(caller_cls, "name", "")
-        callee_name = getattr(callee_cls, "name", "")
-        if callee_name and callee_name in (
-            rel.target
-            for rel in getattr(caller_cls, "relationships", [])
-            if getattr(rel, "kind", "") == "inheritance"
-        ):
+        callee_name = getattr(callee_cls, "name", "") or ""
+        source = getattr(self, "source", None)
+        text = str(getattr(source, "text", "") or "")
+        if callee_name and callee_name in text:
             return False
         return True
 
