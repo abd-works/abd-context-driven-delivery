@@ -2,7 +2,7 @@
 """
 from __future__ import annotations
 
-from power.power import Power
+from power.power import Array, Power
 
 
 class Equipment:

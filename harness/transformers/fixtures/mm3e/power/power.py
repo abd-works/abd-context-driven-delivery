@@ -38,33 +38,6 @@ class Flaw:
         ...
 
 
-class Array:
-    """Holds a base effect and alternates; non-dynamic arrays are mutually exclusive."""
-
-    # non-dynamic array effects are mutually exclusive
-
-    def __init__(self, base_effect: Effect, alternates: list[Effect], dynamic: bool) -> None:
-        ...
-
-    @property
-    def base_effect(self) -> Effect:
-        ...
-
-    @property
-    def alternates(self) -> list[Effect]:
-        ...
-
-    @property
-    def dynamic(self) -> bool:
-        ...
-
-    def switch_active(self) -> None:
-        ...
-
-    def reallocate(self) -> None:
-        ...
-
-
 class Effect(Trait):
     """A power effect whose rank is a trait rank, resolved through checks."""
 
@@ -103,6 +76,33 @@ class Effect(Trait):
 
     def resolve(self) -> CheckResult:
         # -> Trait.perform_check
+        ...
+
+
+class Array:
+    """Holds a base effect and alternates; non-dynamic arrays are mutually exclusive."""
+
+    # non-dynamic array effects are mutually exclusive
+
+    def __init__(self, base_effect: Effect, alternates: list[Effect], dynamic: bool) -> None:
+        ...
+
+    @property
+    def base_effect(self) -> Effect:
+        ...
+
+    @property
+    def alternates(self) -> list[Effect]:
+        ...
+
+    @property
+    def dynamic(self) -> bool:
+        ...
+
+    def switch_active(self) -> None:
+        ...
+
+    def reallocate(self) -> None:
         ...
 
 
