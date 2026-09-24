@@ -84,6 +84,7 @@ _PREDICATES = {
     "publicName": "CartManager",
     "numberedName": "item1",
     "calledFromClass": "Cart",
+    "directCall": "pong",
     "intentionHidingName": "to",
     "mixedNamingFunction": "applyDiscount",
     "duplicateOperation": "backup_subtotal",
@@ -156,6 +157,11 @@ with description("Clean Engineering graphQuery rules"):
             if not ExamplesQuery().hit(rows, expected):
                 misses.append(f"{predicate} expected {expected}")
         expect(misses).to(equal([]))
+
+    with it("should not treat every __init__ as calling every other __init__"):
+        db = ExamplesQuery().ensure()
+        rows = CodeQL(_EXAMPLES).run(_TESTS / "unrelatedInitCall.ql", database=db)
+        expect(rows).to(equal([]))
 
     with it("should not treat two collaborating resources as a service-plus-bag"):
         db = ExamplesQuery().ensure()

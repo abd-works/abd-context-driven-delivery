@@ -653,6 +653,161 @@ predicate inheritsNamed(Class child, Class parent) {
   child.getABase().(Name).getId() = parent.getName()
 }
 
+predicate ancestorClass(Class child, Class ancestor) {
+  inheritsNamed(child, ancestor)
+  or
+  exists(Class mid | inheritsNamed(child, mid) and ancestorClass(mid, ancestor))
+}
+
+predicate nearestAncestorMethod(Class child, string name, Function callee) {
+  exists(Class parent |
+    inheritsNamed(child, parent) and
+    (
+      ownerClass(callee, parent) and callee.getName() = name
+      or
+      not exists(Function own | ownerClass(own, parent) and own.getName() = name) and
+      nearestAncestorMethod(parent, name, callee)
+    )
+  )
+}
+
+predicate constructedClass(Call call, Class cls) {
+  inSource(cls) and
+  (
+    call.getFunc().(Name).getId() = cls.getName()
+    or
+    call.getFunc().(Attribute).getName() = cls.getName()
+  )
+}
+
+predicate constructorCallee(Call call, Function callee) {
+  callee.getName() = "__init__" and
+  exists(Class cls | constructedClass(call, cls) and ownerClass(callee, cls))
+}
+
+predicate superCall(Call call, Function callee) {
+  exists(Attribute attr, Call superExpr, Class child, string name |
+    attr = call.getFunc() and
+    superExpr = attr.getObject() and
+    superExpr.getFunc().(Name).getId() = "super" and
+    ownerClass(call.getScope(), child) and
+    name = attr.getName() and
+    callee.getName() = name and
+    nearestAncestorMethod(child, name, callee)
+  )
+}
+
+predicate selfCall(Call call, Function callee) {
+  exists(Attribute attr, Class owner, string name |
+    attr = call.getFunc() and
+    attr.getObject().(Name).getId() = "self" and
+    ownerClass(call.getScope(), owner) and
+    name = attr.getName() and
+    callee.getName() = name and
+    (
+      ownerClass(callee, owner)
+      or
+      not exists(Function own | ownerClass(own, owner) and own.getName() = name) and
+      nearestAncestorMethod(owner, name, callee)
+    )
+  )
+}
+
+predicate methodOnConstructed(Call call, Function callee) {
+  exists(Call ctor, Attribute attr, Class cls |
+    attr = call.getFunc() and
+    ctor = attr.getObject() and
+    constructedClass(ctor, cls) and
+    ownerClass(callee, cls) and
+    attr.getName() = callee.getName()
+  )
+}
+
+predicate methodOnTypedField(Call call, Function callee) {
+  exists(Attribute attr, Attribute recv, Class owner, Class typ |
+    attr = call.getFunc() and
+    recv = attr.getObject() and
+    recv.getObject().(Name).getId() = "self" and
+    ownerClass(call.getScope(), owner) and
+    instanceFieldClass(owner, recv.getName(), typ) and
+    ownerClass(callee, typ) and
+    attr.getName() = callee.getName()
+  )
+}
+
+predicate methodOnTypedParameter(Call call, Function callee) {
+  exists(Attribute attr, Name obj, Function caller, Parameter p, Class typ |
+    attr = call.getFunc() and
+    obj = attr.getObject() and
+    caller = call.getScope() and
+    p = caller.getAnArg() and
+    obj.getId() = p.getName() and
+    annotationClass(p.getAnnotation(), typ) and
+    ownerClass(callee, typ) and
+    attr.getName() = callee.getName()
+  )
+}
+
+predicate classAttributeCall(Call call, Function callee) {
+  exists(Attribute attr, Class cls |
+    attr = call.getFunc() and
+    (
+      attr.getObject().(Name).getId() = cls.getName()
+      or
+      attr.getObject().(Attribute).getName() = cls.getName()
+    ) and
+    ownerClass(callee, cls) and
+    attr.getName() = callee.getName()
+  )
+}
+
+predicate sameModuleNameCall(Call call, Function callee) {
+  moduleLevelFunction(callee) and
+  call.getFunc().(Name).getId() = callee.getName() and
+  call.getEnclosingModule() = callee.getEnclosingModule()
+}
+
+predicate resolvedCallee(Call call, Function callee) {
+  constructorCallee(call, callee)
+  or
+  superCall(call, callee)
+  or
+  selfCall(call, callee)
+  or
+  methodOnConstructed(call, callee)
+  or
+  methodOnTypedField(call, callee)
+  or
+  methodOnTypedParameter(call, callee)
+  or
+  classAttributeCall(call, callee)
+  or
+  sameModuleNameCall(call, callee)
+}
+
+predicate directCall(Function caller, Function callee) {
+  inSource(caller) and
+  inSource(callee) and
+  caller != callee and
+  exists(Call call | call.getScope() = caller and resolvedCallee(call, callee))
+}
+
+predicate importedModule(Module caller, Module callee) {
+  exists(Import imp, string imported, string path |
+    imp.getScope() = caller and
+    not skippedModulePath(normalizedPath(imp.getLocation().getFile())) and
+    imported = imp.getAnImportedModuleName() and
+    path = normalizedPath(callee.getFile()) and
+    (
+      callee.getFile().getBaseName() = imported + ".py"
+      or
+      path.matches("%/" + imported.regexpReplaceAll("\\.", "/") + ".py")
+      or
+      path.matches("%/" + imported.regexpReplaceAll("\\.", "/") + "/__init__.py")
+    )
+  )
+}
+
 predicate domainExtensionInFrameworkModule(Class extension, Class domainType) {
   inheritsNamed(extension, domainType) and
   exists(Class frameworkType, string host, string domainPrefix |
@@ -701,17 +856,10 @@ predicate moduleDependsOn(Module caller, Module callee) {
       not skippedModulePath(normalizedPath(calleeFn.getLocation().getFile())) and
       callerFn.getEnclosingModule() = caller and
       calleeFn.getEnclosingModule() = callee and
-      exists(Call call |
-        call.getScope() = callerFn and
-        call.getFunc().(Attribute).getName() = calleeFn.getName()
-      )
+      directCall(callerFn, calleeFn)
     )
     or
-    exists(Import imp |
-      imp.getScope() = caller and
-      not skippedModulePath(normalizedPath(imp.getLocation().getFile())) and
-      callee.getFile().getBaseName() = imp.getAnImportedModuleName() + ".py"
-    )
+    importedModule(caller, callee)
   )
 }
 
