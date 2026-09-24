@@ -2,14 +2,7 @@ import python
 
 predicate subjectFilterPrefix(string prefix) { prefix = "" }
 
-predicate firstClassModulePrefix(string prefix) {
-  prefix = "deep-module" or
-  prefix = "extensions-live-with-the-domain/domain" or
-  prefix = "extensions-live-with-the-domain/framework" or
-  prefix = "language-modules-one-section" or
-  prefix = "modules-not-model-blocks" or
-  prefix = "public-seam-only"
-}
+predicate firstClassModulePrefix(string prefix) { none() }
 
 predicate inSubject(AstNode n) {
   inSubjectPath(n.getLocation().getFile().getRelativePath().replaceAll("\\", "/"))

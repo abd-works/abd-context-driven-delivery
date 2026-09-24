@@ -614,6 +614,13 @@ class GraphLoader:
             if isinstance(target, OoadClass):
                 self._maybe_external(oclass, target)
         for target in owned.related(Kind.INVOKES):
+            if (
+                isinstance(owned, GraphOperation)
+                and isinstance(target, GraphOperation)
+                and owned.name == "__init__"
+                and target.name == "__init__"
+            ):
+                continue
             self._collect_invoke_owner(oclass, target)
 
     def _collect_invoke_owner(self, oclass, target) -> None:

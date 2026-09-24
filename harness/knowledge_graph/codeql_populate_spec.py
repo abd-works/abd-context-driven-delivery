@@ -80,7 +80,41 @@ with description("CodeQL populate on PracticeGraph"):
         demos = example.related(Kind.DEMONSTRATES)
         expect(any(d is customer for d in demos)).to(equal(True))
 
-    with it("should keep CodeQL source range on each operation"):
+    with it("should not treat another class __init__ as a dependency of this __init__"):
+        graph = PracticeGraph(_SLICE)
+        rows = GraphMemberRows(
+            [
+                {"name": "CreateAgentToolset", "module": "builders.create_agent_toolset"},
+                {"name": "Ddd", "module": "practices.ddd"},
+            ],
+            [],
+        )
+        rows.operations = [
+            {"class_name": "CreateAgentToolset", "name": "__init__"},
+            {"class_name": "Ddd", "name": "__init__"},
+        ]
+        model = CleanEngineeringModel("CleanEngineering", 1)
+        model.ensure(graph, rows)
+        model.wire_calls(
+            graph,
+            [
+                {
+                    "caller_class": "CreateAgentToolset",
+                    "caller_operation": "__init__",
+                    "callee_class": "Ddd",
+                    "callee_operation": "__init__",
+                }
+            ],
+        )
+        toolset = graph.operation_named("CreateAgentToolset", "__init__")
+        ddd_init = graph.operation_named("Ddd", "__init__")
+        expect(ddd_init in toolset.invoked_operations()).to(equal(False))
+        modules = [
+            edge
+            for edge in graph.relationships
+            if edge.kind == Kind.DEPENDS_ON
+        ]
+        expect(modules).to(equal([]))
         graph = PracticeGraph(_SLICE)
         rows = GraphMemberRows(
             [

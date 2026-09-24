@@ -55,6 +55,8 @@ class Operation(SourceOperation, Node):
         return param
 
     def invokes(self, callee: "Operation") -> None:
+        if self._unresolved_init_call(callee):
+            return
         self.relate(Kind.INVOKES, callee)
         caller_cls = next(iter(self.related(Kind.BELONGS_TO)), None)
         callee_cls = next(iter(callee.related(Kind.BELONGS_TO)), None)
@@ -68,6 +70,23 @@ class Operation(SourceOperation, Node):
         names = getattr(caller_mod, "dependencies", None)
         if names is not None and callee_mod.name not in names:
             names.append(callee_mod.name)
+
+    def _unresolved_init_call(self, callee: "Operation") -> bool:
+        if self.name != "__init__" or callee.name != "__init__":
+            return False
+        caller_cls = next(iter(self.related(Kind.BELONGS_TO)), None)
+        callee_cls = next(iter(callee.related(Kind.BELONGS_TO)), None)
+        if caller_cls is None or callee_cls is None or caller_cls is callee_cls:
+            return False
+        caller_name = getattr(caller_cls, "name", "")
+        callee_name = getattr(callee_cls, "name", "")
+        if callee_name and callee_name in (
+            rel.target
+            for rel in getattr(caller_cls, "relationships", [])
+            if getattr(rel, "kind", "") == "inheritance"
+        ):
+            return False
+        return True
 
     @property
     def called_by(self) -> List["Operation"]:
