@@ -28,6 +28,7 @@ dependencies = [
   "uvicorn>=0.31.1",
   "mamba>=0.11.3",
   "nltk>=3.9",
+  "Jinja2>=3.1.0",
 ]
 
 [tool.setuptools.packages.find]

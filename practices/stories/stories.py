@@ -33,3 +33,14 @@ class Stories(PracticeGuidance):
         )
         if stage is not None:
             self._activate(stage=stage)
+
+    @property
+    def model(self):
+        from practices.stories.model.transformation.story_map_transformer import (
+            StoryMapTransformer,
+        )
+
+        class StoriesModel:
+            transformer = StoryMapTransformer
+
+        return StoriesModel()
