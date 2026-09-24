@@ -1,0 +1,113 @@
+{
+  "concepts": {
+    "Trait": {
+      "attributes": [
+        "character", "traitName", "purchasedRank",
+        "circumstanceModifier", "effectiveRank",
+        "conditionPenalty"
+      ],
+      "inherits": null
+    },
+    "MEASUREMENT_TYPE": {
+      "attributes": ["MASS", "TIME", "DISTANCE", "VOLUME"],
+      "inherits": null
+    },
+    "Measurement": {
+      "attributes": [
+        "rank", "measurement_type", "real_world_value", "unit",
+        "time_rank", "speed_rank", "distance_rank",
+        "strength_rank", "mass_rank", "result_rank", "result_value"
+      ],
+      "inherits": null
+    },
+    "DifficultyClass": {
+      "attributes": ["value", "dc_value"],
+      "inherits": null
+    },
+    "Check": {
+      "attributes": [
+        "trait", "dc", "circumstanceModifier",
+        "d20_roll", "rollTotal", "roll_total",
+        "isSuccess", "is_success", "margin",
+        "isCritical", "is_critical"
+      ],
+      "inherits": null
+    },
+    "CheckResult": {
+      "attributes": [
+        "rollTotal", "roll_total", "dc",
+        "isSuccess", "is_success", "margin",
+        "isCritical", "is_critical"
+      ],
+      "inherits": null
+    },
+    "GradedCheckResult": {
+      "attributes": ["degree", "resultingCondition"],
+      "inherits": "CheckResult"
+    },
+    "OpposedCheck": {
+      "attributes": ["opponent", "isPassive"],
+      "inherits": "Check"
+    },
+    "RoutineCheck": {
+      "attributes": [],
+      "inherits": "Check"
+    },
+    "TeamCheck": {
+      "attributes": [
+        "helpers",
+        "leader_name", "leader_trait", "leader_rank",
+        "leader_circumstance_modifier",
+        "helper_modifier", "helper_dc",
+        "successes", "has_failure"
+      ],
+      "inherits": "Check"
+    },
+    "Condition": {
+      "attributes": ["name", "gameModifier", "supersedes", "supersededBy"],
+      "inherits": null
+    },
+    "GameModifier": {
+      "attributes": ["appliesTo", "amount"],
+      "inherits": null
+    },
+    "ConditionSource": {
+      "attributes": ["identity"],
+      "inherits": null
+    },
+    "ImposedCondition": {
+      "attributes": [
+        "condition", "source", "isActive", "blockingCondition"
+      ],
+      "inherits": null
+    },
+    "ImposedConditions": {
+      "attributes": [
+        "appliedConditions",
+        "dyingSuccessCount", "dying_success_count",
+        "dyingFailureCount", "dying_failure_count",
+        "outcome"
+      ],
+      "inherits": null
+    },
+    "CombinedCondition": {
+      "attributes": ["name", "constituents"],
+      "inherits": null
+    },
+    "AppliedEffect": {
+      "attributes": ["effect", "character", "isOngoing", "imposedConditions"],
+      "inherits": null
+    },
+    "Effect": {
+      "attributes": ["name", "rank", "effectDc"],
+      "inherits": null
+    },
+    "Character": {
+      "attributes": ["character_name", "role", "traits", "imposedConditions", "appliedEffects"],
+      "inherits": null
+    }
+  },
+  "aliases": {
+    "scenario": "*"
+  }
+}

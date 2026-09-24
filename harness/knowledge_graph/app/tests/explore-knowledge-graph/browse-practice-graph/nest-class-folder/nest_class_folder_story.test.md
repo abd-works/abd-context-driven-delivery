@@ -20,9 +20,11 @@ format: md
 
 #### Scenario: classes sit in their subfolder, not the parent Module
 
-*Given* ++Module++ harness that owns class Guidance under harness/guidance  
+*Given* catalog folder harness that contains ++Module++ guidance under harness/guidance  
 *When* the **Engineer** opens harness  
 *Then* harness children include the guidance folder  
+  *And* do not list Guidance as a direct child  
+  *And* harness is a ++Package++  
   *And* do not list Guidance as a direct child
 
 #### Scenario: a class lists its operations

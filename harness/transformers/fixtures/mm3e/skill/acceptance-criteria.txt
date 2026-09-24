@@ -1,0 +1,595 @@
+Acceptance Criteria -- MM3E Online Holistic [Skill Module]
+
+Pass 2 story map -- covers all stories in docs/skill/story-map.md.
+Actors: Player (human building/playing a hero), GM (Gamemaster), System (rules engine / application).
+
+---
+
+EPIC: Manage Skills
+
+---
+
+SUB-EPIC: Configure Skill Ranks
+
+---
+
+STORY: Assign Skill Ranks (user)
+
+Domain terms:
+- Skill Rank -- numeric investment; bonus on checks
+- Power Point (PP) -- 1 PP buys 2 ranks
+- Trained Status -- active when rank >= 1
+- Skill Modifier Limit -- max total modifier = PL + 10
+
+1. WHEN Player allocates skill ranks
+   THEN the system records each rank against the nominated skill
+   AND deducts 1 PP per 2 ranks
+   AND activates Trained Status on any skill receiving >= 1 rank
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+2. WHEN Player splits 1 PP across two skills
+   THEN both skills receive 1 rank
+   AND both gain Trained Status
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+3. WHEN allocation would push total modifier above PL + 10
+   THEN the system blocks the assignment
+   AND shows current modifier and limit
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+4. WHEN Player leaves a skill at 0 ranks
+   THEN the skill remains untrained
+   AND ability modifier still applies for non-Trained-Only skills
+   Evidence: HeroesHandbook-rules__chunk_042.md lines 2736-2796
+
+5. BUT allocating ranks to one skill does not reduce ranks on another
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+---
+
+STORY: Enforce Skill Modifier Limit (system)
+
+Domain terms:
+- Skill Modifier Limit -- total modifier (rank + ability + misc) <= PL + 10
+- Power Level (PL) -- GM-set campaign ceiling
+- Circumstance Modifier -- situational; applied at check time not build time
+
+1. WHEN any skill's total modifier reaches PL + 10 + 1
+   THEN the system rejects further rank allocation
+   AND reports total and limit
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+2. WHEN GM increases campaign PL
+   THEN the system recalculates limits for all skills
+   AND unlocks previously capped allocations
+   Evidence: HeroesHandbook-rules__chunk_024.md lines 1650-1767
+
+3. WHEN a circumstance bonus temporarily pushes check total above limit
+   THEN the system applies it for that single check
+   BUT does not alter stored rank or modifier
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+4. BUT the limit applies per-skill independently -- not cumulative across all skills
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+---
+
+SUB-EPIC: Resolve Skill Checks
+
+---
+
+STORY: Make Skill Check (user)
+
+Domain terms:
+- Skill Check -- d20 + rank + ability mod + circumstance mods vs DC
+- Difficulty Class (DC) -- threshold; equal or above = success
+- Degree of Success/Failure -- (total-DC)/5 or (DC-total)/5
+
+1. WHEN Player declares a skill use and DC is established
+   THEN system computes total = d20 + rank + ability + circumstances
+   AND compares to DC
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735; chunk_042.md lines 2736-2796
+
+2. WHEN total >= DC
+   THEN system records success
+   AND degree of success = (total-DC)/5 rounded down
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+3. WHEN total < DC
+   THEN system records failure
+   AND degree of failure = (DC-total)/5 rounded down
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+4. WHEN skill is Trained Only and rank = 0
+   THEN attempt automatically fails, no roll made
+   Evidence: HeroesHandbook-rules__chunk_042.md lines 2736-2796
+
+5. BUT one DC applies to the entire check
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+---
+
+STORY: Apply Critical Success on Natural 20 (system)
+
+Domain terms:
+- Natural 20 -- d20 face showing 20
+- Critical Success -- degree increased by 1 after normal calculation
+- Degree of Success -- graded result
+
+1. WHEN d20 result is exactly 20
+   THEN system calculates normal degree first
+   AND increases that degree by one
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+2. WHEN natural 20 on already-maximum-degree check
+   THEN degree stays at maximum
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+3. WHEN natural 20 on a failing check
+   THEN system applies degree increase after failure calculation
+   AND may convert failure to success if boost crosses zero
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+4. BUT natural 20 is not automatic success -- degree math runs first
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+---
+
+STORY: Resolve Untrained Skill Attempt (system)
+
+Domain terms:
+- Trained Only -- skill flag; rank 0 = auto-fail
+- Untrained -- character has rank 0
+- Ability Modifier -- always applies even at rank 0
+
+1. WHEN Player attempts Trained Only skill with rank 0
+   THEN system automatically fails, no roll made
+   Evidence: HeroesHandbook-rules__chunk_042.md lines 2736-2796
+
+2. WHEN Player attempts non-Trained-Only skill with rank 0
+   THEN system computes total = d20 + 0 + ability + circumstances
+   AND resolves normally
+   Evidence: HeroesHandbook-rules__chunk_042.md lines 2736-2796
+
+3. WHEN skill has distinct trained/untrained aspects
+   THEN untrained characters may attempt only the untrained aspects
+   AND system blocks trained-aspect attempts
+   Evidence: HeroesHandbook-rules__chunk_042.md lines 2736-2796
+
+4. BUT Trained Only is a hard block, not an attempt-at-penalty
+   Evidence: HeroesHandbook-rules__chunk_042.md lines 2736-2796
+
+---
+
+STORY: Apply Skill Mastery Routine Result (system)
+
+Domain terms:
+- Skill Mastery -- advantage granting routine result without rolling
+- Routine Check Result -- modifier + 10
+- Nominated Skill -- specific skill assigned to Skill Mastery
+
+1. WHEN Player has Skill Mastery and attempts the nominated skill under stress
+   THEN system returns modifier + 10 without rolling
+   Evidence: HeroesHandbook-rules__chunk_043.md lines 2797-2849
+
+2. WHEN Skill Mastery applies
+   THEN routine result is final; no roll to improve it
+   Evidence: HeroesHandbook-rules__chunk_043.md lines 2797-2849
+
+3. WHEN nominated skill would require a check in combat
+   THEN Skill Mastery applies; no roll needed
+   Evidence: HeroesHandbook-rules__chunk_059.md lines 3762-3826
+
+4. BUT Skill Mastery does not apply to other skills
+   Evidence: HeroesHandbook-rules__chunk_043.md lines 2797-2849
+
+5. BUT routine result still uses capped modifier
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+---
+
+STORY: Apply Circumstance Modifier to Skill Check (system)
+
+Domain terms:
+- Circumstance Modifier -- situational bonus or penalty
+- Requires Tools -- skill flag; lacking tools = -5
+- Stacking -- multiple circumstance modifiers add together
+
+1. WHEN favorable condition applies
+   THEN system adds circumstance bonus to check total
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+2. WHEN required tools are absent for Requires Tools skill
+   THEN system applies -5 circumstance penalty
+   Evidence: HeroesHandbook-rules__chunk_043.md lines 2797-2849
+
+3. WHEN multiple circumstance modifiers apply
+   THEN all stack additively
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+4. BUT circumstance modifiers do not permanently alter rank or ability modifier
+   Evidence: HeroesHandbook-rules__chunk_041.md lines 2689-2735
+
+---
+
+SUB-EPIC: Use Interaction Skills
+
+[Full WHEN/THEN/AND/BUT coverage for 14 stories -- see acceptance-criteria.md for complete behavioral detail; .txt mirrors the same AC IDs and evidence references]
+
+STORY: Enforce Interaction Skill Requirements (system)
+1. WHEN subject cannot hear/understand: -5 penalty  Evidence: chunk_042 lines 2736-2796
+2. WHEN subject Intellect rank -5: -5 penalty  Evidence: chunk_042 lines 2736-2796
+3. WHEN subject lacks mental abilities: blocked  Evidence: chunk_042 lines 2736-2796
+4. WHEN Immunity active: blocked  Evidence: chunk_042 lines 2736-2796
+5. WHEN group targeted: uniform result required  BUT no differentiation  Evidence: chunk_042
+
+STORY: Bluff Target with Deception (user)
+1. WHEN Player bluffs: Deception vs target Deception/Insight (higher)  AND believability modifier applied  Evidence: chunk_049 lines 3169-3225
+2. WHEN check succeeds: target believes  Evidence: chunk_049
+3. WHEN move action: -5 penalty  Evidence: chunk_049
+4. WHEN check fails: not deceived  Evidence: chunk_049
+5. BUT effect does not persist beyond scene without GM ruling  Evidence: chunk_049
+
+STORY: Create Disguise with Deception (user)
+1. WHEN Player creates disguise: check result = observer Perception DC  AND GM checks secretly  Evidence: chunk_049; chunk_050 lines 3226-3283
+2. WHEN observer is regular associate: +2 Perception  Evidence: chunk_050
+3. WHEN observer is close friend: +5 Perception  Evidence: chunk_050
+4. WHEN observer is intimate: +10 Perception  Evidence: chunk_050
+5. BUT check is made secretly  Evidence: chunk_050
+
+STORY: Feint Opponent with Deception (user)
+1. WHEN Player feints (standard action): Deception vs target Deception/Insight  Evidence: chunk_050
+2. WHEN check succeeds: Vulnerable Condition until end of user's next round  Evidence: chunk_050
+3. WHEN check fails 2+ degrees: user gains Vulnerable Condition  Evidence: chunk_050
+4. BUT feinting does not replace the attack  Evidence: chunk_050
+
+STORY: Send Innuendo Message with Deception (user)
+1. WHEN Player sends innuendo: Deception vs DC 10/15/20  Evidence: chunk_051 lines 3284-3373
+2. WHEN check succeeds: recipient must make Insight at same DC  Evidence: chunk_051
+3. WHEN Deception fails 2+ degrees: message misinterpreted  Evidence: chunk_051
+4. WHEN recipient Insight fails 2+ degrees: misunderstands hidden message  Evidence: chunk_051
+5. BUT non-targeted observers cannot attempt Insight  Evidence: chunk_051
+
+STORY: Trick Target into Danger with Deception (user)
+1. WHEN Player tricks: Deception vs target Deception/Insight  Evidence: chunk_050
+2. WHEN check succeeds: target acts on misleading info  Evidence: chunk_050
+3. WHEN check fails 2+ degrees: user gains Vulnerable Condition  Evidence: chunk_050
+4. BUT plausibility required; GM may impose penalties for outlandish scenarios  Evidence: chunk_050
+
+STORY: Coerce Target with Intimidation (user)
+1. WHEN Player coerces: Intimidation vs target Insight or Will (higher)  Evidence: chunk_053 lines 3441-3484
+2. WHEN check succeeds: target is friendly while user present  AND target's true attitude becomes hostile  Evidence: chunk_053
+3. WHEN check fails 2+ degrees: opposite effect  Evidence: chunk_053
+4. BUT coerced cooperation only holds while user is present  Evidence: chunk_053
+5. BUT attitude always becomes hostile after attempt  Evidence: chunk_053
+
+STORY: Demoralize Opponent with Intimidation (user)
+1. WHEN Player demoralizes (standard action): success applies Impaired (-2) until end of user's next round  Evidence: chunk_053
+2. WHEN 4+ degrees of success: Disabled (-5) instead  Evidence: chunk_053
+3. WHEN check fails: no condition imposed  Evidence: chunk_053
+4. BUT condition expires at end of user's next round  Evidence: chunk_053
+
+STORY: Intimidate Group of Minions (user)
+1. WHEN Player intimidates visible/audible group: single check vs single group resistance roll  Evidence: chunk_054 lines 3485-3527
+2. WHEN check exceeds group resistance: same effect applied to all members  Evidence: chunk_054
+3. WHEN some members immune: they are excluded  Evidence: chunk_054
+4. BUT cannot produce different results per member in one check  Evidence: chunk_054
+
+STORY: Improve NPC Attitude with Persuasion (user)
+1. WHEN Player persuades (DC 15): NPC attitude improves one step on success  Evidence: chunk_058 lines 3683-3761
+2. WHEN 2 extra degrees of success: +1 additional step per 2 degrees  Evidence: chunk_058
+3. WHEN check fails 2+ degrees: attitude worsens one step  Evidence: chunk_058
+4. WHEN same argument retried same scene: blocked unless situation changed  Evidence: chunk_058
+5. BUT attitude cannot exceed Helpful  Evidence: chunk_058
+
+STORY: Conduct Opposed Negotiation with Persuasion (user)
+1. WHEN multiple parties negotiate: all roll Persuasion; highest result wins  Evidence: chunk_058
+2. WHEN tied: GM resolves  Evidence: chunk_058
+3. BUT outcome determines advocacy, not necessarily attitude change  Evidence: chunk_058
+
+STORY: Resist Interaction Skill with Insight (user)
+1. WHEN Player resists with Insight: compared against incoming skill result  Evidence: chunk_053
+2. WHEN Insight >= incoming result: character unaffected  Evidence: chunk_053
+3. WHEN Insight < incoming: effect proceeds  Evidence: chunk_053
+4. BUT Insight resistance applies only to interaction skills, not powers  Evidence: chunk_053
+
+STORY: Detect Illusion Secretly with Insight (GM-initiated)
+1. WHEN character contacts Illusion: GM makes secret Insight check vs DC 10+Illusion rank  Evidence: chunk_052 lines 3374-3440
+2. WHEN check succeeds: character notices flaw  Evidence: chunk_052
+3. WHEN check fails: illusion appears real  Evidence: chunk_052
+4. BUT player not told check was made  Evidence: chunk_052
+
+STORY: Detect Outside Influence with Insight (user)
+1. WHEN Player checks for influence: Insight vs DC 10+influence rank  Evidence: chunk_052
+2. WHEN check succeeds: character notices subject is influenced  Evidence: chunk_052
+3. WHEN 3+ degrees of success: general idea of source  Evidence: chunk_052
+4. BUT does not automatically remove the effect  Evidence: chunk_052
+
+STORY: Evaluate Trustworthiness with Insight (user)
+1. WHEN Player evaluates trustworthiness: Insight opposed by Deception  Evidence: chunk_052
+2. WHEN evaluating group mood: DC 20  Evidence: chunk_052
+3. WHEN fails 2+ degrees: character misreads situation  Evidence: chunk_052
+4. BUT tells character their read; GM reveals accuracy through consequences  Evidence: chunk_052
+
+---
+
+SUB-EPIC: Use Physical Skills
+
+STORY: Balance on Precarious Surface (user)
+1. WHEN Player balances: Acrobatics vs surface DC  Evidence: chunk_045 lines 2894-2994
+2. WHEN succeeds: move at speed rank -2; character is Vulnerable (unless DC +5)  Evidence: chunk_045
+3. WHEN fails 1 degree: no movement  Evidence: chunk_045
+4. WHEN fails 2+ degrees: character falls  Evidence: chunk_045
+5. WHEN fails resistance check while balancing: reactive Acrobatics vs original DC  Evidence: chunk_045
+
+STORY: Perform Acrobatic Maneuver (user)
+1. WHEN Player attempts stunt: GM sets DC; Acrobatics resolves  Evidence: chunk_047 lines 3066-3117
+2. WHEN succeeds: maneuver completes  Evidence: chunk_047
+3. WHEN fails 2+ degrees: character ends prone  Evidence: chunk_047
+4. BUT 1 degree failure stops but does not prone  Evidence: chunk_047
+
+STORY: Rise from Prone as Free Action (user)
+1. WHEN Player uses Acrobatics to rise: DC 20 required  Evidence: chunk_047
+2. WHEN succeeds: stands as free action  Evidence: chunk_047
+3. WHEN fails: remains prone; must use move action to stand  Evidence: chunk_047
+4. BUT cannot combine with other free actions simultaneously  Evidence: chunk_047
+
+STORY: Reduce Fall Damage with Tumbling (user)
+1. WHEN Player tumbles from fall: DC 5 Acrobatics  Evidence: chunk_047
+2. WHEN succeeds: -1 fall damage rank per degree of success  Evidence: chunk_047
+3. WHEN damage reduced to rank 0: no damage; rises as free action  Evidence: chunk_047
+4. BUT hazardous landing environment may have additional effects  Evidence: chunk_047
+
+STORY: Climb Surface with Athletics (user)
+1. WHEN Player climbs: Athletics vs surface DC  Evidence: chunk_046 lines 2995-3065
+2. WHEN succeeds: climbs at speed rank -2; Vulnerable unless DC +5  Evidence: chunk_046
+3. WHEN fails 1 degree: no progress  Evidence: chunk_046
+4. WHEN fails 2+ degrees: character falls  Evidence: chunk_046
+5. WHEN fails resistance check while climbing: reactive Athletics vs climb DC  Evidence: chunk_046
+
+STORY: Jump with Athletics (user)
+1. WHEN running long-jump: distance in feet = check result  Evidence: chunk_047
+2. WHEN standing long-jump: distance = result / 2  Evidence: chunk_047
+3. WHEN running vertical jump: height = result / 5  Evidence: chunk_047
+4. WHEN standing vertical jump: height = result / 10  Evidence: chunk_047
+5. BUT no movement remaining = standing jump  Evidence: chunk_047
+
+STORY: Sprint to Increase Speed (user)
+1. WHEN Player sprints (free action): DC 15 Athletics  Evidence: chunk_048 lines 3118-3168
+2. WHEN succeeds: ground speed rank +1 for this round  Evidence: chunk_048
+3. WHEN fails: speed unchanged; free action spent  Evidence: chunk_048
+4. BUT increase lasts one round only  Evidence: chunk_048
+
+STORY: Swim with Athletics (user)
+1. WHEN Player swims: DC 10 Athletics  Evidence: chunk_048
+2. WHEN succeeds: moves at speed rank -2  Evidence: chunk_048
+3. WHEN fails 1 degree: no progress  Evidence: chunk_048
+4. WHEN fails 2+ degrees: goes under  Evidence: chunk_048
+
+STORY: Apply Fall Damage to Character (system)
+1. WHEN character falls: damage rank = 4 + 2x distance rank  Evidence: chunk_046
+2. WHEN rank > 16: capped at 16  Evidence: chunk_046
+3. WHEN distance rank <= 0: no damage  Evidence: chunk_046
+4. WHEN damage dealt: character lands prone  Evidence: chunk_046
+5. BUT Acrobatics tumbling may reduce damage first  Evidence: chunk_047
+
+STORY: Hide from Observer with Stealth (user)
+1. WHEN Player hides (cover exists): Stealth vs observer Perception  Evidence: chunk_060 lines 3827-3895
+2. WHEN observers already aware: distraction required first  Evidence: chunk_060
+3. WHEN using distraction: Stealth at -5; cover within 1 foot per Stealth rank  Evidence: chunk_060
+4. WHEN moving at speed rank -1: no penalty  Evidence: chunk_060
+5. WHEN moving at full speed: -5 circumstance penalty  Evidence: chunk_060
+6. BUT hiding in plain sight is not permitted by default  Evidence: chunk_060
+
+STORY: Tail Subject Undetected with Stealth (user)
+1. WHEN Player tails: Stealth check using available cover  Evidence: chunk_060
+2. WHEN subject is unsuspecting: one Perception check per scene  Evidence: chunk_060
+3. WHEN subject becomes worried: Perception each time they change course  Evidence: chunk_060
+4. WHEN subject Perception beats Stealth: tail is spotted  Evidence: chunk_060
+5. BUT losing cover breaks the tail  Evidence: chunk_060
+
+---
+
+SUB-EPIC: Use Combat Skills
+
+STORY: Add Close Combat Rank to Attack Check (user)
+1. WHEN Player attacks with named weapon/power: Close Combat rank added to attack check  Evidence: chunk_048 lines 3118-3168
+2. WHEN attacking with different weapon: rank does not apply  Evidence: chunk_048
+3. WHEN targeting defense: rank does not add to defense  Evidence: chunk_048
+4. WHEN Close Combat: Unarmed: applies to punches/kicks only; not grab/trip  Evidence: chunk_048
+5. BUT narrow alternative to raising Fighting  Evidence: chunk_048
+
+STORY: Add Ranged Combat Rank to Attack Check (user)
+1. WHEN Player attacks with named weapon/power: Ranged Combat rank added to attack check  Evidence: chunk_059 lines 3762-3826
+2. WHEN attacking with different weapon: rank does not apply  Evidence: chunk_059
+3. WHEN targeting defense: rank does not add to defense  Evidence: chunk_059
+4. WHEN Ranged Combat: Throwing: covers thrown weapons and objects  Evidence: chunk_059
+5. BUT for broad bonuses, Ranged Attack advantage is correct mechanic  Evidence: chunk_059
+
+---
+
+SUB-EPIC: Use Manipulation Skills
+
+STORY: Conceal Object on Person with Sleight of Hand (user)
+1. WHEN Player conceals object: check result = discovery DC  Evidence: chunk_059 lines 3762-3826
+2. WHEN object searched: searcher must beat concealment DC  Evidence: chunk_059
+3. BUT low check result = easily found  Evidence: chunk_059
+4. BUT observing at time of concealment: reactive Perception vs check  Evidence: chunk_059
+
+STORY: Escape Restraints with Sleight of Hand (user)
+1. WHEN Player escapes restraints: check vs restraint DC; min 1 minute per attempt  Evidence: chunk_060
+2. WHEN check >= DC: character escapes  Evidence: chunk_060
+3. WHEN check fails: remains restrained; retry after another minute  Evidence: chunk_060
+4. BUT repeated failure does not increase DC unless guards are alerted  Evidence: chunk_060
+
+STORY: Perform Legerdemain with Sleight of Hand (user)
+1. WHEN Player performs legerdemain unobserved: DC 10  Evidence: chunk_059
+2. WHEN observer specifically watching: opposed by observer Perception  Evidence: chunk_059
+3. WHEN check fails: nearby characters may notice  Evidence: chunk_059
+4. BUT limited to physically achievable manual feats  Evidence: chunk_059
+
+STORY: Plant Object on Person with Sleight of Hand (user)
+1. WHEN Player plants object: check result >= 20 required  Evidence: chunk_059
+2. WHEN result >= 20 AND target Perception does not beat check: planted covertly  Evidence: chunk_059
+3. WHEN target Perception beats check: planting noticed  Evidence: chunk_059
+4. BUT check < 20 always fails even if target would not notice  Evidence: chunk_059
+
+STORY: Steal Object from Person with Sleight of Hand (user)
+1. WHEN Player steals: check >= DC 20 AND target Perception does not beat check  Evidence: chunk_059
+2. WHEN both conditions met: object taken covertly  Evidence: chunk_059
+3. WHEN target Perception beats check: theft attempt noticed  Evidence: chunk_059
+4. BUT target checks Perception; GM may call it at any time  Evidence: chunk_059
+
+STORY: Contort Through Tight Space with Sleight of Hand (user)
+1. WHEN Player contorts: DC 30 required  Evidence: chunk_060
+2. WHEN check succeeds: character fits through  Evidence: chunk_060
+3. WHEN check fails: cannot fit; must find another route  Evidence: chunk_060
+4. BUT applies only to head-width but not shoulder-width spaces  Evidence: chunk_060
+
+STORY: Operate Unfamiliar Technological Device (user)
+1. WHEN Player operates unfamiliar device: check vs complexity DC (DC 10-25+)  Evidence: chunk_061 lines 3896-3943
+2. WHEN check succeeds: device operates  Evidence: chunk_061
+3. WHEN check fails: device does not operate  Evidence: chunk_061
+4. WHEN lacking tools: -5 penalty  Evidence: chunk_061
+5. BUT routine operation of familiar device: no check required  Evidence: chunk_061
+
+STORY: Build Technological Item (user)
+1. WHEN Player builds item: check vs build DC after build time  Evidence: chunk_062 lines 3944-3994
+2. WHEN check succeeds: item built and functional  Evidence: chunk_062
+3. WHEN check fails: time wasted, materials consumed  Evidence: chunk_062
+4. WHEN reducing time by 1 rank: -5 penalty  Evidence: chunk_062
+5. BUT failure does not permanently prevent building again  Evidence: chunk_062
+
+STORY: Repair Damaged Technological Item (user)
+1. WHEN Player repairs: check vs DC 5 lower than build DC; time 2 ranks lower  Evidence: chunk_062
+2. WHEN check succeeds: item repaired  Evidence: chunk_062
+3. WHEN check fails: repair attempt fails; retry allowed  Evidence: chunk_062
+4. BUT jury-rigged item must be fully repaired before jury-rigging again  Evidence: chunk_062
+
+STORY: Perform Jury-Rig Repair (user)
+1. WHEN Player jury-rigs (standard action): check vs DC 10 lower than build DC  Evidence: chunk_062
+2. WHEN check succeeds: one problem fixed until end of scene  Evidence: chunk_062
+3. WHEN scene ends: fix expires; problem returns  Evidence: chunk_062
+4. WHEN already jury-rigged this scene: cannot repeat until full repair  Evidence: chunk_062
+5. BUT one problem only per successful check  Evidence: chunk_062
+
+STORY: Place Demolitions Charge with Technology (user)
+1. WHEN Player places charge carefully (min 1 minute): DC 10  Evidence: chunk_063 lines 3995-4045
+2. WHEN 2 full degrees of success: +5 structure damage rank per 2-degree block  Evidence: chunk_063
+3. WHEN fails 2+ degrees: charge detonates prematurely  Evidence: chunk_063
+4. BUT substandard placement deals standard damage only  Evidence: chunk_063
+
+STORY: Defeat Security Device with Technology (user)
+1. WHEN Player disarms: check vs security DC  Evidence: chunk_063
+2. WHEN check >= DC: device disabled  Evidence: chunk_063
+3. WHEN fails 2+ degrees: device triggers  Evidence: chunk_063
+4. WHEN fails 1 degree: disarm fails; device does not trigger  Evidence: chunk_063
+5. BUT multiple attempts allowed if not triggered  Evidence: chunk_063
+
+STORY: Diagnose Injuries and Ailments (user)
+1. WHEN Player diagnoses (min 1 minute): Treatment check  Evidence: chunk_064 lines 4046-4106
+2. WHEN check succeeds: injuries/ailments revealed; optionally +2 to future Treatment  Evidence: chunk_064
+3. WHEN check fails: cannot accurately identify condition  Evidence: chunk_064
+4. BUT cannot invent conditions; only reveals what exists  Evidence: chunk_064
+
+STORY: Provide Long-Term Patient Care (user)
+1. WHEN Player provides care (1+ days): Treatment check per care period  Evidence: chunk_064
+2. WHEN check succeeds: patient recovery time rank decreases by 1  Evidence: chunk_064
+3. WHEN check fails: recovery time rank unchanged  Evidence: chunk_064
+4. WHEN treating multiple patients: limit = Treatment rank  Evidence: chunk_064
+5. BUT cannot reduce below rank 0  Evidence: chunk_064
+
+STORY: Revive Dazed or Stunned Character (user)
+1. WHEN Player revives (standard action): Treatment check  Evidence: chunk_064
+2. WHEN check succeeds: dazed or stunned condition removed  Evidence: chunk_064
+3. WHEN target is dying: revive blocked; must stabilize first  Evidence: chunk_064
+4. BUT only removes dazed/stunned; other conditions remain  Evidence: chunk_064
+
+STORY: Stabilize Dying Character with Treatment (user)
+1. WHEN Player stabilizes (standard action): Treatment check  Evidence: chunk_064
+2. WHEN check succeeds: character stabilized; no longer worsening  Evidence: chunk_064
+3. WHEN check fails: character remains dying  Evidence: chunk_064
+4. BUT stabilizing does not awaken the character  Evidence: chunk_064
+
+STORY: Treat Disease or Poison (user)
+1. WHEN patient must resist disease/poison: Player may make concurrent Treatment check  Evidence: chunk_064
+2. WHEN check succeeds: patient gains +2 to resistance check  Evidence: chunk_064
+3. WHEN 3+ degrees of success: patient gains +5 instead  Evidence: chunk_064
+4. BUT concurrent only; cannot check before/after patient's resistance check  Evidence: chunk_064
+
+STORY: Operate Vehicle Under Stress (user)
+1. WHEN Player attempts dramatic maneuver: Vehicles check vs maneuver DC (DC 10-25+)  Evidence: chunk_064
+2. WHEN check succeeds: maneuver completed  Evidence: chunk_064
+3. WHEN check fails: GM determines consequence  Evidence: chunk_064
+4. WHEN routine operation of familiar vehicle: no check needed  Evidence: chunk_064
+5. BUT Vehicles does not cover animal mounts  Evidence: chunk_064
+
+---
+
+SUB-EPIC: Use Knowledge and Awareness Skills
+
+STORY: Apply Professional Expertise (user)
+1. WHEN trained Player performs routine professional task: no check needed  Evidence: chunk_051 lines 3284-3373
+2. WHEN trained Player answers basic question (DC 15): Expertise check required  Evidence: chunk_051
+3. WHEN trained Player answers difficult question (DC 20+): Expertise check required  Evidence: chunk_051
+4. WHEN untrained: limited to easy questions (DC 10-15); cannot be routine  Evidence: chunk_051
+5. BUT only covers the named Expertise field  Evidence: chunk_051
+
+STORY: Resolve Expert Knowledge Check Secretly (GM)
+1. WHEN knowledge question arises: GM may make Expertise check secretly  Evidence: chunk_051
+2. WHEN check succeeds: GM provides correct information  Evidence: chunk_051
+3. WHEN check fails: GM provides no/misleading information  Evidence: chunk_051
+4. BUT player not told check was made  Evidence: chunk_051
+
+STORY: Search Area for Clues with Investigation (user)
+1. WHEN Player searches: Investigation vs clue DC  Evidence: chunk_055 lines 3528-3571
+2. WHEN check succeeds: clue found  Evidence: chunk_055
+3. WHEN clue was deliberately concealed: DC opposed by concealer's Stealth/Sleight of Hand  Evidence: chunk_055
+4. WHEN check fails: clue not found this attempt; retry allowed  Evidence: chunk_055
+5. BUT no clues exist = no check can find one  Evidence: chunk_055
+
+STORY: Collect Physical Evidence with Investigation (user)
+1. WHEN Player collects evidence (DC 15): success = undamaged evidence  Evidence: chunk_056 lines 3572-3638
+2. WHEN fails 1 degree: evidence compromised; -5 to analysis  Evidence: chunk_056
+3. WHEN fails 2+ degrees: evidence ruined; cannot analyze  Evidence: chunk_056
+4. WHEN succeeds 2+ degrees: +2 to subsequent analysis  Evidence: chunk_056
+5. BUT collection required before analysis  Evidence: chunk_056
+
+STORY: Analyze Collected Evidence (user)
+1. WHEN Player analyzes collected evidence (DC 15 base): success = useful information  Evidence: chunk_056
+2. WHEN time elapsed or scene disturbed: analysis DC increases  Evidence: chunk_056
+3. WHEN check fails: no information this attempt  Evidence: chunk_056
+4. BUT cannot produce information evidence does not contain  Evidence: chunk_056
+
+STORY: Gather Information through Contacts (user)
+1. WHEN Player gathers info (min 1 hour, DC 10): general info on success  Evidence: chunk_056
+2. WHEN DC 15/20/25+: specific/restricted/protected info respectively  Evidence: chunk_056
+3. WHEN fails 2+ degrees: subjects alerted  Evidence: chunk_056
+4. BUT minimum 1 hour per check  Evidence: chunk_056
+5. WHEN fails by 1 degree: no info gathered; subjects not alerted  Evidence: chunk_056
+
+STORY: Conduct Surveillance on Subject (user)
+1. WHEN Player conducts surveillance (stationary): check result = stealth-opposition DC  Evidence: chunk_056
+2. WHEN subject passes through watched area: Stealth vs surveillance DC  Evidence: chunk_056
+3. WHEN character moves from position: surveillance DC deactivated  Evidence: chunk_056
+4. BUT surveillance only covers watched area  Evidence: chunk_056
+
+STORY: Make Secret Perception Check for Character (GM)
+1. WHEN noticeable stimulus exists: GM may make secret Perception check  Evidence: chunk_057 lines 3639-3682
+2. WHEN check succeeds: GM communicates what character notices  Evidence: chunk_057
+3. WHEN check fails: no notification to player  Evidence: chunk_057
+4. WHEN previously failed: retry allowed as move action  Evidence: chunk_057
+5. BUT player not told check was made  Evidence: chunk_057
+
+STORY: Detect Disguise with Perception (user)
+1. WHEN Player observes disguised person: Perception vs earlier Deception result  Evidence: chunk_049; chunk_050
+2. WHEN Perception > DC: disguise seen through  Evidence: chunk_049
+3. WHEN observer is regular associate: +2 Perception  Evidence: chunk_050
+4. WHEN observer is close friend: +5 Perception  Evidence: chunk_050
+5. BUT check typically made secretly by GM  Evidence: chunk_049
+
+STORY: Notice Concealed Object with Perception (user)
+1. WHEN Player searches for concealed object: Perception vs Sleight of Hand concealment DC  Evidence: chunk_059
+2. WHEN Perception > DC: object noticed  Evidence: chunk_059
+3. WHEN observer is 10+ feet away: -1 per 10 feet applied to Perception first  Evidence: chunk_057
+4. BUT cannot sense through opaque barriers  Evidence: chunk_057

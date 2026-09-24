@@ -687,9 +687,12 @@ class CodeQL:
             return ""
         folder = context.parent.parent
         try:
-            return folder.resolve().relative_to(path_root.resolve()).as_posix()
+            prefix = folder.resolve().relative_to(path_root.resolve()).as_posix()
         except ValueError:
             return ""
+        if prefix in (".", ""):
+            return ""
+        return prefix
 
     def _owning_module_prefix(self, file_path: str, prefixes: List[str]) -> str:
         path = str(file_path or "").replace("\\", "/").lstrip("./")

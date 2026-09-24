@@ -37,6 +37,7 @@ with description("CodeQL report runner"):
     with it("should drop catalog prefix harness and keep inner modules"):
         prefixes = CodeQL(_REPO_ROOT)._first_class_module_prefixes(_REPO_ROOT)
         expect("harness" in prefixes).to(equal(False))
+        expect("." in prefixes).to(equal(False))
         expect("harness/knowledge_graph" in prefixes).to(equal(True))
         expect("harness/guidance" in prefixes).to(equal(True))
 

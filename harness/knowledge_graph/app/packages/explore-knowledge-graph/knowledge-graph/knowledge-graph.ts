@@ -1304,6 +1304,102 @@ export class KnowledgeGraph {
   }
 }
 
+function dropCatalogModules(dto: KnowledgeGraphDto): KnowledgeGraphDto {
+  const catalogIds = catalogModuleIds(dto);
+  if (catalogIds.size === 0) {
+    return dto;
+  }
+  rehomeCatalogOwns(dto, catalogIds);
+  for (const graph of dto.practice_graphs) {
+    graph.nodes = graph.nodes.filter((node) => !catalogIds.has(node.node_id));
+    graph.relationships = graph.relationships.filter(
+      (edge) => !catalogIds.has(edge.from_id) && !catalogIds.has(edge.to_id),
+    );
+  }
+  return dto;
+}
+
+function catalogModuleIds(dto: KnowledgeGraphDto): Set<string> {
+  const modules = dto.practice_graphs.flatMap((graph) =>
+    graph.nodes.filter((node) => node.semantic_type === 'Module'),
+  );
+  const folders = modules.map(moduleFolderOf).filter(Boolean);
+  return new Set(
+    modules
+      .filter((node) => {
+        const folder = moduleFolderOf(node);
+        return folders.some((other) => other.startsWith(`${folder}/`));
+      })
+      .map((node) => node.node_id),
+  );
+}
+
+function moduleFolderOf(node: NodeDto): string {
+  const folder = asFolderPath(node.properties?.folder || '');
+  if (folder) {
+    return folder;
+  }
+  if (node.semantic_type !== 'Module') {
+    return '';
+  }
+  return asFolderPath(node.name.replaceAll('.', '/'));
+}
+
+function rehomeCatalogOwns(dto: KnowledgeGraphDto, catalogIds: Set<string>) {
+  for (const graph of dto.practice_graphs) {
+    for (const edge of graph.relationships) {
+      if (edge.kind !== 'owns' || !catalogIds.has(edge.from_id)) {
+        continue;
+      }
+      const child = graph.nodes.find((node) => node.node_id === edge.to_id);
+      const owner = owningModuleForFile(
+        graph,
+        child?.source?.file || '',
+        catalogIds,
+      );
+      if (owner) {
+        edge.from_id = owner.node_id;
+      }
+    }
+  }
+}
+
+function owningModuleForFile(
+  graph: PracticeGraphDto,
+  file: string,
+  catalogIds: Set<string>,
+): NodeDto | null {
+  const path = file.replaceAll('\\', '/');
+  const modules = graph.nodes.filter(
+    (node) => node.semantic_type === 'Module' && !catalogIds.has(node.node_id),
+  );
+  const matches = modules.filter((node) => {
+    const folder = moduleFolderOf(node);
+    return folder && (path === folder || path.startsWith(`${folder}/`));
+  });
+  if (matches.length > 0) {
+    return matches.sort(
+      (left, right) => moduleFolderOf(right).length - moduleFolderOf(left).length,
+    )[0];
+  }
+  const childFolder = path.split('/').slice(0, 2).join('/');
+  if (!childFolder || !path.startsWith(`${childFolder}/`)) {
+    return null;
+  }
+  const created: NodeDto = {
+    node_id: `ce:Module:${childFolder.replaceAll('/', '.')}`,
+    name: childFolder.split('/').pop() || childFolder,
+    practice: 'clean_engineering',
+    semantic_type: 'Module',
+    properties: { folder: childFolder },
+    applicable_rules: [],
+    violations: [],
+    source: null,
+  };
+  graph.nodes.push(created);
+  return created;
+}
+
 function dropClonedOperationHits(dto: KnowledgeGraphDto): KnowledgeGraphDto {
   const nodeById = new Map<string, NodeDto>();
   const classOf = new Map<string, string>();

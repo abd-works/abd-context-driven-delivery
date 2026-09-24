@@ -1,0 +1,624 @@
+Acceptance Criteria - Equipment Module
+
+Source epic: (E) Equip Hero - Pass 2 story map decomposition.
+Domain sketch: docs/equipment/equipment-domain-sketch.md.
+
+---
+
+Story: Acquire Equipment Advantage Ranks
+Story type: user
+
+Domain terms:
+- Equipment Advantage - character trait granting equipment points per rank
+- Equipment Points - currency for purchasing items
+- Rank - the level of the advantage purchased
+
+Acceptance criteria:
+
+1. WHEN the Player selects the Equipment Advantage at rank 1 during character creation
+   THEN the System grants 5 Equipment Points to the character's pool
+   Evidence: HeroesHandbook-rules__chunk_162 - Equipment advantage section
+
+2. WHEN the Player increases the Equipment Advantage rank
+   THEN the System adds the corresponding Equipment Points to the existing pool
+   AND the total pool reflects all ranks purchased
+   Evidence: HeroesHandbook-rules__chunk_162 - acquisition rules
+
+3. WHEN the Player has zero ranks in the Equipment Advantage
+   THEN the System provides no Equipment Points
+   BUT the character may still receive equipment via GM ruling or story circumstance
+   Evidence: HeroesHandbook-rules__chunk_162
+
+4. WHEN the Player reviews the character sheet
+   THEN the System displays the current Equipment Points pool and remaining budget
+   Evidence: HeroesHandbook-rules__chunk_162
+
+---
+
+Story: Pay Equipment Points for Item
+Story type: user
+
+Domain terms:
+- Equipment Points - currency for item purchase
+- Item Cost - the point cost of the specific piece of equipment
+- Equipment Pool - remaining balance of unspent equipment points
+
+Acceptance criteria:
+
+1. WHEN the Player selects an item with a listed point cost within the current Equipment Pool
+   THEN the System adds the item to the character's equipment list
+   AND decrements the Equipment Pool by the item's cost
+   Evidence: HeroesHandbook-rules__chunk_162
+
+2. WHEN the Player attempts to purchase an item whose cost exceeds the remaining Equipment Pool
+   THEN the System rejects the purchase
+   BUT the Equipment Pool is unchanged
+   Evidence: HeroesHandbook-rules__chunk_162 - pool limit rule
+
+3. WHEN the Player sells or removes an item
+   THEN the System returns the item's Equipment Points to the Equipment Pool
+   Evidence: HeroesHandbook-rules__chunk_162
+
+4. WHEN the Player purchases multiple items
+   THEN the System deducts each item's cost sequentially until the pool is exhausted
+   Evidence: HeroesHandbook-rules__chunk_162
+
+---
+
+Story: Enforce Equipment Bonus Non-stacking
+Story type: system
+
+Domain terms:
+- Equipment Bonus - Toughness or other bonus from equipment
+- Stacking Rule - only the highest equipment bonus of the same type applies
+- Protection - the Toughness bonus effect
+
+Acceptance criteria:
+
+1. WHEN a character wears multiple pieces of armor simultaneously
+   THEN the System applies only the highest Equipment Bonus to Toughness
+   BUT the lower bonuses do not add to the total
+   Evidence: HeroesHandbook-rules__chunk_164 - The Limits of Equipment
+
+2. WHEN a character has both an equipment Protection bonus and a device Protection bonus
+   THEN the System applies both bonuses (they are different bonus types)
+   AND the character's Toughness reflects the sum
+   Evidence: HeroesHandbook-rules__chunk_176 - super-shield stacking rule
+
+3. WHEN a character's total equipment Toughness bonus would exceed the series power level
+   THEN the System caps the effective Toughness at the power level
+   Evidence: HeroesHandbook-rules__chunk_175 - PL cap rule
+
+4. WHEN the System calculates defense for a damage resistance check
+   THEN only one equipment armor bonus contributes to the Toughness total
+   Evidence: HeroesHandbook-rules__chunk_164
+
+---
+
+Story: Build Alternate Equipment Array
+Story type: user
+
+Domain terms:
+- Alternate Equipment - array of items usable one at a time
+- Array Cost - full cost for most expensive item plus 1 point per additional
+- Active Item - the one item currently selected from the array
+
+Acceptance criteria:
+
+1. WHEN the Player designates multiple items as an Alternate Equipment array
+   THEN the System charges full cost for the most expensive and 1 point per additional item
+   Evidence: HeroesHandbook-rules__chunk_163
+
+2. WHEN the Player activates a different item from the Alternate Equipment array
+   THEN the System deactivates the previously Active Item
+   AND only one item is available at a time
+   Evidence: HeroesHandbook-rules__chunk_163
+
+3. WHEN the Player spends a hero point during play
+   THEN the System permits adding one non-array item for one scene
+   BUT the temporary item is removed at the scene's end
+   Evidence: HeroesHandbook-rules__chunk_163
+
+4. WHEN the Player reviews the utility belt array
+   THEN the System shows all available items and the current Active Item
+   Evidence: HeroesHandbook-rules__chunk_166 - utility belt
+
+---
+
+Story: Access On-Hand Item with Hero Point
+Story type: user
+
+Domain terms:
+- On-Hand Equipment - item produced for one scene via hero-point stunt
+- Hero Point - currency spent to perform equipment stunts
+- GM Plausibility - gamemaster judgment on whether having the item is possible
+
+Acceptance criteria:
+
+1. WHEN the Player spends a hero point to produce a specific item in a scene
+   THEN the GM determines whether having that item on-hand is plausible
+   AND if approved, the System makes the item available for one scene
+   Evidence: HeroesHandbook-rules__chunk_163
+
+2. WHEN the scene ends
+   THEN the System removes the On-Hand Equipment from available gear
+   BUT the character's equipment pool is not affected
+   Evidence: HeroesHandbook-rules__chunk_163
+
+3. WHEN the GM rules that having the item is not plausible
+   THEN the hero point is not spent AND the item is unavailable
+   Evidence: HeroesHandbook-rules__chunk_163
+
+4. WHEN the Player attempts the On-Hand Equipment stunt for a vehicle
+   THEN the same hero point rule applies
+   Evidence: HeroesHandbook-rules__chunk_163
+
+---
+
+Story: Designate Power as Removable Device
+Story type: user
+
+Domain terms:
+- Removable - flaw applied to external powers
+- Device - power with Removable or Easily Removable flaw
+- Flaw Cost Reduction - point cost decrease from applying the flaw
+
+Acceptance criteria:
+
+1. WHEN the Player designates a power as having the Removable flaw
+   THEN the System reduces the power's point cost by the Removable discount
+   AND marks the power as a device (external item)
+   Evidence: HeroesHandbook-rules__chunk_158 - device definition
+
+2. WHEN an opponent removes the device in play
+   THEN the System removes all powers tied to that device from the character
+   AND restores them when the device is recovered
+   Evidence: HeroesHandbook-rules__chunk_158
+
+3. WHEN the device is permanently lost
+   THEN the System allows the character to reallocate the power points
+   BUT the device must be purchased again if the character wants it back
+   Evidence: HeroesHandbook-rules__chunk_158
+
+4. WHEN the Player reviews device cost
+   THEN the System shows the power's base cost and the Removable-discounted cost
+   Evidence: HeroesHandbook-rules__chunk_158
+
+---
+
+Story: Designate Power as Easily Removable Device
+Story type: user
+
+Domain terms:
+- Easily Removable - more severe form of Removable flaw with greater cost reduction
+- Stripping Threshold - how easily the device can be taken in play
+
+Acceptance criteria:
+
+1. WHEN the Player designates a small or loosely carried item as Easily Removable
+   THEN the System applies a larger cost reduction than standard Removable
+   Evidence: HeroesHandbook-rules__chunk_158
+
+2. WHEN an opponent attempts to remove an Easily Removable device
+   THEN the System applies a lower threshold (easier to strip) compared to standard Removable
+   Evidence: HeroesHandbook-rules__chunk_158
+
+3. WHEN the device is stripped
+   THEN the System removes all associated powers as with any Removable device
+   Evidence: HeroesHandbook-rules__chunk_158
+
+4. WHEN the Player attempts to apply Easily Removable to a bulky worn device
+   THEN the System flags that standard Removable is appropriate instead
+   Evidence: HeroesHandbook-rules__chunk_158
+
+---
+
+Story: Mark Device as Indestructible
+Story type: user
+
+Domain terms:
+- Indestructible - modifier preventing permanent destruction of a Removable device
+- Cost Adjustment - Indestructible reduces the flaw discount
+
+Acceptance criteria:
+
+1. WHEN the Player applies Indestructible to a Removable device
+   THEN the System reduces the Removable cost discount by the Indestructible surcharge
+   AND the device's net cost increases compared to a non-Indestructible version
+   Evidence: HeroesHandbook-rules__chunk_158
+
+2. WHEN an opponent destroys an Indestructible device
+   THEN the System rejects the permanent destruction
+   AND treats the device as temporarily lost, not eliminated
+   Evidence: HeroesHandbook-rules__chunk_158
+
+3. WHEN an Indestructible device is taken away
+   THEN the character still loses its powers until recovered
+   BUT the device cannot be permanently removed from play
+   Evidence: HeroesHandbook-rules__chunk_158
+
+4. WHEN the Player attempts to add Indestructible to a power without Removable
+   THEN the System rejects the modifier
+   Evidence: HeroesHandbook-rules__chunk_158
+
+---
+
+Story: Build Battlesuit Power Armor Device
+Story type: user
+
+Domain terms:
+- Battlesuit - comprehensive power-armor device
+- Bundled Powers - Protection, attack, movement, Senses on one device
+
+Acceptance criteria:
+
+1. WHEN the Player builds a battlesuit by applying Removable to a set of powers
+   THEN the System groups all those powers under one device record
+   AND calculates the combined cost with the Removable discount applied
+   Evidence: HeroesHandbook-rules__chunk_159 - battlesuit structure
+
+2. WHEN the battlesuit is removed from the wearer
+   THEN the System simultaneously removes Protection, attack, movement, and Senses powers
+   AND the character's stats revert to their base values
+   Evidence: HeroesHandbook-rules__chunk_159
+
+3. WHEN the Player adds Alternate Effects to battlesuit attack modes
+   THEN the System treats them as standard Alternate Effects within the battlesuit device
+   Evidence: HeroesHandbook-rules__chunk_159
+
+4. WHEN the Player attempts to use two battlesuit attack modes simultaneously
+   THEN the System allows only one Alternate Effect at a time
+   Evidence: HeroesHandbook-rules__chunk_159
+
+---
+
+Story: Use Device Temporarily Without Power Points
+Story type: user
+
+Domain terms:
+- Temporary Device Use - using another character's device for one scene without paying power points
+
+Acceptance criteria:
+
+1. WHEN the Player finds a device and uses it for one scene without paying power points
+   THEN the System makes the device's powers available for that scene only
+   AND removes them at the scene's end
+   Evidence: HeroesHandbook-rules__chunk_158
+
+2. WHEN the Player uses another character's device
+   THEN the GM may require spending a hero point (analogous to a power stunt)
+   Evidence: HeroesHandbook-rules__chunk_158
+
+3. WHEN the scene ends
+   THEN the borrowed device powers are no longer available
+   BUT the power points remain unspent
+   Evidence: HeroesHandbook-rules__chunk_158
+
+4. WHEN the Player wants to continue using the device beyond one scene
+   THEN the System requires purchasing it as a regular power (spending power points)
+   Evidence: HeroesHandbook-rules__chunk_158
+
+---
+
+Story: Jury-Rig Device by Spending Hero Point
+Story type: user
+
+Domain terms:
+- Jury-Rigging - emergency invention skipping the design phase
+- Compressed Construction - 1 round per power point instead of 4 hours per point
+- DC Penalty - +5 to construction check DC when jury-rigging
+
+Acceptance criteria:
+
+1. WHEN the Player spends a hero point to jury-rig a device
+   THEN the System skips the design phase entirely
+   AND sets construction time to 1 round per power point of cost
+   Evidence: HeroesHandbook-rules__chunk_161 - jury-rigging rule
+
+2. WHEN the jury-rig construction check is made
+   THEN the DC is the normal construction DC + 5
+   AND routine checks are not permitted
+   Evidence: HeroesHandbook-rules__chunk_161
+
+3. WHEN the jury-rig check succeeds
+   THEN the device is available for one scene
+   AND may be extended with additional hero points
+   Evidence: HeroesHandbook-rules__chunk_161
+
+4. WHEN the jury-rig check fails
+   THEN the hero point is spent but the device is not created
+   Evidence: HeroesHandbook-rules__chunk_161
+
+---
+
+Story: Select Vehicle Size Category
+Story type: user
+
+Domain terms:
+- Vehicle Size - category from Medium to Awesome
+- Base Traits - Strength, Toughness, Defense derived from size
+- Defense Penalty - negative Defense modifier for large vehicles
+
+Acceptance criteria:
+
+1. WHEN the Player selects a size category for a vehicle
+   THEN the System sets the vehicle's base Strength, Toughness, and Defense from the category table
+   Evidence: HeroesHandbook-rules__chunk_179 - vehicle size table
+
+2. WHEN the Player selects Huge or larger
+   THEN the System applies a Defense penalty (Huge: -2, Gargantuan: -4)
+   AND the vehicle is easier to target in combat
+   Evidence: HeroesHandbook-rules__chunk_179
+
+3. WHEN the Player pays 1 equipment point per -1 Defense penalty
+   THEN the System removes that penalty from the vehicle's Defense
+   Evidence: HeroesHandbook-rules__chunk_179
+
+4. WHEN the Player increases size above Medium
+   THEN the System charges 1 equipment point per size category above Medium
+   Evidence: HeroesHandbook-rules__chunk_179
+
+---
+
+Story: Calculate Vehicle Power Effect at One-Fifth Cost
+Story type: system
+
+Domain terms:
+- Vehicle Power Effect - power built into the vehicle (cloaking, weapons, armor)
+- One-Fifth Cost Rule - vehicle power effects cost 1/5 normal power-point cost in equipment points
+
+Acceptance criteria:
+
+1. WHEN the Player adds a Concealment 4 cloaking device to a vehicle
+   THEN the System charges approximately 1 equipment point (4 / 5)
+   Evidence: HeroesHandbook-rules__chunk_180 - cloaking device
+
+2. WHEN the Player adds a smokescreen (12 power points)
+   THEN the System charges approximately 2-3 equipment points
+   Evidence: HeroesHandbook-rules__chunk_180
+
+3. WHEN the Player adds vehicle armor Protection
+   THEN the System charges 1 equipment point per +1 Toughness
+   Evidence: HeroesHandbook-rules__chunk_180
+
+4. WHEN the vehicle includes a weapon effect
+   THEN the System applies the one-fifth rule to the weapon's power cost
+   Evidence: HeroesHandbook-rules__chunk_180
+
+---
+
+Story: Set Construct Stamina to None
+Story type: system
+
+Domain terms:
+- No Stamina - constructs have no Stamina (cannot recover naturally)
+- Repair - the only way to restore a damaged construct
+
+Acceptance criteria:
+
+1. WHEN a construct is created
+   THEN the System sets its Stamina to absent (no Stamina score)
+   AND marks it as unable to recover from damage normally
+   Evidence: HeroesHandbook-rules__chunk_194
+
+2. WHEN a construct is damaged
+   THEN the System does not apply any natural recovery
+   AND the damage persists until repaired
+   Evidence: HeroesHandbook-rules__chunk_195
+
+3. WHEN a character uses the Technology skill to repair a construct
+   THEN the System applies repair equal to the check result's degree of success
+   Evidence: HeroesHandbook-rules__chunk_195
+
+4. WHEN the construct is reduced to incapacitated
+   THEN it remains incapacitated until repaired
+   BUT the owner's equipment points are not spent again
+   Evidence: HeroesHandbook-rules__chunk_194
+
+---
+
+Story: Grant Construct Immunity to Fortitude Effects
+Story type: system
+
+Domain terms:
+- Fortitude Immunity - constructs are immune to effects resisted by Fortitude
+- Object Exception - effects that work on objects can still affect constructs
+
+Acceptance criteria:
+
+1. WHEN a Fortitude-resisted effect targets a construct
+   THEN the System automatically grants success to the construct's resistance
+   AND the effect does not apply
+   Evidence: HeroesHandbook-rules__chunk_194
+
+2. WHEN an effect that works on objects targets a construct
+   THEN the System allows the effect to apply normally
+   Evidence: HeroesHandbook-rules__chunk_194
+
+3. WHEN an automaton is targeted by a Will effect
+   THEN the System grants immunity automatically
+   Evidence: HeroesHandbook-rules__chunk_194
+
+4. WHEN an intelligent construct is targeted by a Will effect
+   THEN it makes a resistance check normally (not immune)
+   Evidence: HeroesHandbook-rules__chunk_194
+
+---
+
+Story: Verify Zero Net Cost for Standard Construct Traits
+Story type: system
+
+Domain terms:
+- Net Cost - the power-point cost of the construct's special trait package (absent abilities + Immunity)
+- Absent Abilities - two ability scores not purchased (-30 pp)
+- Immunity to Fortitude Effects - +30 pp
+
+Acceptance criteria:
+
+1. WHEN a construct is created with the standard package (two abilities absent + Immunity to Fortitude)
+   THEN the System calculates that the cost reduction from absent abilities equals the Immunity cost
+   AND the net cost is zero
+   Evidence: HeroesHandbook-rules__chunk_194 - "These qualities average out to 0 points"
+
+2. WHEN the construct has Intellect + Presence absent (automaton)
+   THEN the System confirms the -30 pp reduction
+   AND the +30 pp Immunity to Fortitude Effects offsets it exactly
+   Evidence: HeroesHandbook-rules__chunk_194
+
+3. WHEN the construct has Strength + Agility absent (immobile intellect)
+   THEN the same net-zero calculation applies
+   Evidence: HeroesHandbook-rules__chunk_194
+
+4. WHEN the Player attempts to purchase only one absent ability from the pair
+   THEN the System flags that a full pair must be absent for the construct package
+   Evidence: HeroesHandbook-rules__chunk_194
+
+---
+
+Story: Issue Order to Construct on Move Action
+Story type: user
+
+Domain terms:
+- Order - command given to a construct by its owner
+- Move Action - action type used to command a construct
+- Last Order - most recent command; followed until new order given
+
+Acceptance criteria:
+
+1. WHEN the Player issues an order to the construct as a move action
+   THEN the System records the order and the construct begins executing it
+   Evidence: HeroesHandbook-rules__chunk_195
+
+2. WHEN no new order is given during a round
+   THEN the construct continues executing the Last Order
+   Evidence: HeroesHandbook-rules__chunk_195
+
+3. WHEN an intelligent construct receives an ambiguous order
+   THEN it interprets the order using its Intellect and acts accordingly
+   BUT an automaton executes only the literal instruction
+   Evidence: HeroesHandbook-rules__chunk_195
+
+4. WHEN the construct completes an order and receives no new command
+   THEN the System keeps the construct on standby at its current position
+   Evidence: HeroesHandbook-rules__chunk_195
+
+---
+
+Story: Select Headquarters Size Category
+Story type: user
+
+Domain terms:
+- Headquarters Size - from Fine/Miniscule to Awesome
+- Starting Size - Small at 0 points
+- Toughness - structural Toughness starting at 6
+
+Acceptance criteria:
+
+1. WHEN the Player starts a headquarters
+   THEN the System sets the default size to Small at 0 equipment points
+   AND sets structural Toughness to 6
+   Evidence: HeroesHandbook-rules__chunk_187
+
+2. WHEN the Player selects a size above Small
+   THEN the System charges 1 equipment point per size step increase
+   Evidence: HeroesHandbook-rules__chunk_187
+
+3. WHEN the Player selects a size below Small
+   THEN the System grants 1 equipment point per size step reduction
+   Evidence: HeroesHandbook-rules__chunk_187
+
+4. WHEN the Player selects Awesome (small-town scale)
+   THEN the System charges 6 equipment points for size alone
+   Evidence: HeroesHandbook-rules__chunk_187 - Awesome size entry
+
+---
+
+Story: Add Defense System Feature
+Story type: user
+
+Domain terms:
+- Defense System - weapon emplacements in and around the HQ
+- HQ Power Level - governs maximum feature effect rank (series PL for PCs)
+- Attack Bonus - equals HQ power level for defense system
+
+Acceptance criteria:
+
+1. WHEN the Player adds a Defense System feature
+   THEN the System charges 1 equipment point
+   AND sets the attack effect cost cap at twice the HQ power level
+   Evidence: HeroesHandbook-rules__chunk_188
+
+2. WHEN the Defense System makes an attack
+   THEN the System uses the HQ power level as the attack bonus
+   Evidence: HeroesHandbook-rules__chunk_188
+
+3. WHEN the Player attempts to give the Defense System an effect exceeding 2x HQ PL
+   THEN the System rejects the effect or caps it at the allowed maximum
+   Evidence: HeroesHandbook-rules__chunk_188
+
+4. WHEN the headquarters is destroyed
+   THEN the Defense System is also destroyed
+   AND can be rebuilt with the next headquarters
+   Evidence: HeroesHandbook-rules__chunk_186
+
+---
+
+Story: Add Self-Repairing Feature
+Story type: user
+
+Domain terms:
+- Self-Repairing - feature that heals HQ damage over time
+- Full Rebuild - two self-repairing applications allow the HQ to rebuild from destruction
+
+Acceptance criteria:
+
+1. WHEN the Player adds the Self-Repairing feature once
+   THEN the System charges 1 equipment point and the HQ recovers from damage over time
+   Evidence: HeroesHandbook-rules__chunk_191
+
+2. WHEN the Player adds Self-Repairing twice
+   THEN if the HQ is destroyed, it rebuilds itself within one week
+   Evidence: HeroesHandbook-rules__chunk_191
+
+3. WHEN the HQ is destroyed and does not have Self-Repairing
+   THEN the character must rebuild it manually using the same equipment points
+   Evidence: HeroesHandbook-rules__chunk_186
+
+4. WHEN the HQ is destroyed and has Self-Repairing x2
+   THEN the System marks it as rebuilding (one week)
+   AND the character retains the equipment points during reconstruction
+   Evidence: HeroesHandbook-rules__chunk_191
+
+---
+
+Source Evidence Summary
+
+All AC cite context chunks from:
+c:\dev\mm3e-online-holistic\context\rules\
+
+chunk_158 - Ch7 Gadgets & Gear (device definition and Removable)
+chunk_159 - Battlesuits
+chunk_160 - Enhanced Equipment and inventing design phase
+chunk_161 - Using the Invention and jury-rigging
+chunk_162 - What Items Do You Pay For? and rituals
+chunk_163 - Alternate Equipment and on-hand equipment
+chunk_164 - The Limits of Equipment
+chunk_166 - Utility Belt
+chunk_167 - Melee Weapons
+chunk_168 - Simple Weapons traits
+chunk_169 - Simple and Exotic Melee Weapons table
+chunk_174 - Explosives and weapon accessories
+chunk_175 - Grenades and Explosives, Armor introduction
+chunk_176 - Super-shields
+chunk_177 - Modern armor and shield tables
+chunk_178 - Shield descriptions and vehicles introduction
+chunk_179 - Vehicle Size Categories
+chunk_180 - Vehicle Features
+chunk_181 - Alternate Vehicles
+chunk_186 - Special Vehicles and HQ introduction
+chunk_187 - Equipment Cost - HQ size and traits
+chunk_188 - HQ Features - Defense and Security Systems
+chunk_191 - Library, Living Space, Self-repairing
+chunk_192 - Workshop and team HQ
+chunk_194 - Constructs
+chunk_195 - Commanding Constructs and repair

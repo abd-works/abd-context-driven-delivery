@@ -1,0 +1,134 @@
+Story Map -- MM3E Online Holistic [Skill Module]
+
+Pass 2 (Level 2 -- full decomposition) of the Manage Skills epic.
+Actors: Player (human building/playing a hero), GM (Gamemaster), System (rules engine / application).
+
+---
+
+(E) Manage Skills
+    (E) Configure Skill Ranks
+        (S) Player --> Assign Skill Ranks
+        (S) System --> Enforce Skill Modifier Limit
+    (E) Resolve Skill Checks
+        (S) Player --> Make Skill Check
+        (S) System --> Apply Critical Success on Natural 20
+        (S) System --> Resolve Untrained Skill Attempt
+        (S) System --> Apply Skill Mastery Routine Result
+        (S) System --> Apply Circumstance Modifier to Skill Check
+    (E) Use Interaction Skills
+        (S) System --> Enforce Interaction Skill Requirements
+        (S) Player --> Bluff Target with Deception
+        (S) Player --> Create Disguise with Deception
+        (S) Player --> Feint Opponent with Deception
+        (S) Player --> Send Innuendo Message with Deception
+        (S) Player --> Trick Target into Danger with Deception
+        (S) Player --> Coerce Target with Intimidation
+        (S) Player --> Demoralize Opponent with Intimidation
+        (S) Player --> Intimidate Group of Minions
+        (S) Player --> Improve NPC Attitude with Persuasion
+        (S) Player --> Conduct Opposed Negotiation with Persuasion
+        (S) Player --> Resist Interaction Skill with Insight
+        (S) GM --> Detect Illusion Secretly with Insight
+        (S) Player --> Detect Outside Influence with Insight
+        (S) Player --> Evaluate Trustworthiness with Insight
+    (E) Use Physical Skills
+        (S) Player --> Balance on Precarious Surface
+        (S) Player --> Perform Acrobatic Maneuver
+        (S) Player --> Rise from Prone as Free Action
+        (S) Player --> Reduce Fall Damage with Tumbling
+        (S) Player --> Climb Surface with Athletics
+        (S) Player --> Jump with Athletics
+        (S) Player --> Sprint to Increase Speed
+        (S) Player --> Swim with Athletics
+        (S) System --> Apply Fall Damage to Character
+        (S) Player --> Hide from Observer with Stealth
+        (S) Player --> Tail Subject Undetected with Stealth
+    (E) Use Combat Skills
+        (S) Player --> Add Close Combat Rank to Attack Check
+        (S) Player --> Add Ranged Combat Rank to Attack Check
+    (E) Use Manipulation Skills
+        (S) Player --> Conceal Object on Person with Sleight of Hand
+        (S) Player --> Escape Restraints with Sleight of Hand
+        (S) Player --> Perform Legerdemain with Sleight of Hand
+        (S) Player --> Plant Object on Person with Sleight of Hand
+        (S) Player --> Steal Object from Person with Sleight of Hand
+        (S) Player --> Contort Through Tight Space with Sleight of Hand
+        (S) Player --> Operate Unfamiliar Technological Device
+        (S) Player --> Build Technological Item
+        (S) Player --> Repair Damaged Technological Item
+        (S) Player --> Perform Jury-Rig Repair
+        (S) Player --> Place Demolitions Charge with Technology
+        (S) Player --> Defeat Security Device with Technology
+        (S) Player --> Diagnose Injuries and Ailments
+        (S) Player --> Provide Long-Term Patient Care
+        (S) Player --> Revive Dazed or Stunned Character
+        (S) Player --> Stabilize Dying Character with Treatment
+        (S) Player --> Treat Disease or Poison
+        (S) Player --> Operate Vehicle Under Stress
+    (E) Use Knowledge and Awareness Skills
+        (S) Player --> Apply Professional Expertise
+        (S) GM --> Resolve Expert Knowledge Check Secretly
+        (S) Player --> Search Area for Clues with Investigation
+        (S) Player --> Collect Physical Evidence with Investigation
+        (S) Player --> Analyze Collected Evidence
+        (S) Player --> Gather Information through Contacts
+        (S) Player --> Conduct Surveillance on Subject
+        (S) GM --> Make Secret Perception Check for Character
+        (S) Player --> Detect Disguise with Perception
+        (S) Player --> Notice Concealed Object with Perception
+
+---
+
+Consolidation Notes (for AC phase)
+
+Assign Skill Ranks
+Skill rank purchase follows a fixed 2-ranks-per-PP rate. Ranks may be split freely across any skills. The skill modifier limit is enforced by Character Construction at build time, not at check time.
+
+Enforce Skill Modifier Limit
+Total skill modifier (rank + ability + misc) may not exceed PL + 10. AC must specify: total modifier calculation, limit value, and handling when limit is exceeded.
+
+Make Skill Check
+Core resolution parameterized across all named skills: d20 + rank + ability + circumstance vs. DC. Per-skill stories specify skill-specific DCs and outcomes.
+
+Apply Critical Success on Natural 20
+A natural 20 increases the degree of success by one after normal calculation. AC must cover: trigger condition, degree adjustment, and edge case where degree is already maximum.
+
+Resolve Untrained Skill Attempt
+Two paths: (1) skills without Trained Only -- attempt proceeds with rank 0, ability modifier applies; (2) Trained Only skills -- automatic failure, no roll.
+
+Apply Skill Mastery Routine Result
+Skill Mastery allows routine check result (bonus + 10) even under stress, replacing a required roll for the nominated skill.
+
+Enforce Interaction Skill Requirements
+Three pre-conditions: (1) subject awareness/comprehension (-5 if not met), (2) Intellect minimum (-5 for Int -5, blocked for subjects lacking mental abilities), (3) Immunity effect (blocked entirely).
+
+Feint Opponent with Deception
+Combat action (standard action), makes target vulnerable until end of user's next round. Distinct from Bluffing.
+
+Intimidate Group of Minions
+Single check vs. single GM-rolled group resistance; same effect required for all members.
+
+Detect Illusion Secretly with Insight
+GM-initiated secret check (DC 10 + Illusion rank). Player does not decide when to attempt.
+
+Collect Physical Evidence vs. Analyze Collected Evidence
+Two-step process: Gather Evidence (DC 15) then Analyze Evidence (DC 15). Failure to gather degrades or prevents analysis.
+
+Add Close Combat / Ranged Combat Rank to Attack Check
+Rank adds only to attack checks for the specific weapon/power named. No benefit to defense. Narrow alternative to raising Fighting/Dexterity rank.
+
+Perform Jury-Rig Repair
+DC is 10 lower than building, standard action, fixes one problem, lasts until end of scene. Cannot be jury-rigged again until fully repaired.
+
+Revive Dazed or Stunned Character
+Removes dazed or stunned only. Does not remove other conditions. Cannot revive a dying character without first stabilizing.
+
+---
+
+Context Gaps
+
+- Skill Mastery full definition: The advantage definition lives in the Advantages chapter, outside these source chunks.
+- Technology Inventing: Inventing rules (page 211) are outside scope; covered by Inventor advantage mechanics.
+- Vehicles animal-mount gap: Excluded from Vehicles skill; use Expertise: Riding (Agility-based).
+- Interaction skill group use: GM adjudicates group effectiveness; specific group resistance mechanics not fully specified beyond minion example.
+- Perception sense types: Full sense-type list and modifiers defined in Powers chapter, outside scope here.

@@ -28,20 +28,25 @@ const helper = new ExplorePracticeGraphsClientHelper();
 
 story('Nest Class Folder', () => {
   scenario('classes sit in their subfolder, not the parent Module', ({ given, when, then }) => {
-    given('Module harness that owns class Guidance under harness/guidance', () => {});
-    when('the Engineer opens harness', () => {});
-    then('harness children include the guidance folder', () => {
-      const harness = KnowledgeGraph.fromDto(nestedClassGraph())
-        .present()
-        .listed_tree.find((node) => node.name === 'harness');
-      expect(harness?.children.map((node) => node.name)).toEqual(['guidance']);
-    }).and('do not list Guidance as a direct child', () => {
-      const harness = KnowledgeGraph.fromDto(nestedClassGraph())
-        .present()
-        .listed_tree.find((node) => node.name === 'harness');
-      expect(harness?.children.map((node) => node.name)).not.toContain('Guidance');
-      expect(descendantNames(harness)).toContain('Guidance');
-    });
+        given('catalog folder harness that contains Module guidance under harness/guidance', () => {});
+        when('the Engineer opens harness', () => {});
+        then('harness children include the guidance folder', () => {
+          const harness = KnowledgeGraph.fromDto(nestedClassGraph())
+            .present()
+            .listed_tree.find((node) => node.name === 'harness');
+          expect(harness?.children.map((node) => node.name)).toEqual(['guidance']);
+        }).and('do not list Guidance as a direct child', () => {
+          const harness = KnowledgeGraph.fromDto(nestedClassGraph())
+            .present()
+            .listed_tree.find((node) => node.name === 'harness');
+          expect(harness?.children.map((node) => node.name)).not.toContain('Guidance');
+          expect(descendantNames(harness)).toContain('Guidance');
+        }).and('harness is a Package', () => {
+          const harness = KnowledgeGraph.fromDto(nestedClassGraph())
+            .present()
+            .listed_tree.find((node) => node.name === 'harness');
+          expect(harness?.semantic_type).toBe('Package');
+        });
   });
   scenario('a class lists its operations', ({ given, when, then }) => {
     given('a class Node that owns operations', () => {});

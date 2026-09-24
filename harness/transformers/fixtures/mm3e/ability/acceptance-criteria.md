@@ -1,0 +1,538 @@
+# Acceptance Criteria — MM3E [Ability] Module
+
+Source: `docs/ability/story-map.md` | Domain snapshot: `docs/ability/ability-domain-sketch.md`
+All source evidence references `context/rules/HeroesHandbook-rules__chunk_XXX.md`.
+
+---
+
+## (E) Configure Ability Scores
+
+### (S) Player --> Set Ability Rank
+
+#### Domain terms
+- **ability rank**: signed integer value of a specific ability; starts at 0 (baseline adult); range −5 (voluntary floor) to 20+.
+- **power point**: currency consumed or refunded when ability rank changes.
+- **cost formula**: 2 power points per +1 rank; 2 power points returned per −1 rank.
+- **voluntary floor**: −5; a player may not reduce a rank below this value.
+
+---
+
+(1) WHEN a player raises any of the eight ability ranks (STR, STA, AGL, DEX, FGT, INT, AWE, PRE) from its current value by 1,
+THEN the system records the new rank
+AND deducts 2 power points from the character's pool.
+**Source evidence:** chunk_035 "Buying Ability Ranks"
+
+(2) WHEN a player raises an ability rank by more than 1 in a single adjustment (e.g., from 0 to 5),
+THEN the system records the new rank
+AND deducts 2 power points for each rank gained (total 10 power points for a +5 increase).
+**Source evidence:** chunk_035 "Buying Ability Ranks"
+
+(3) WHEN a player reduces an ability rank below 0 (e.g., from 0 to −3),
+THEN the system records the new rank
+AND credits 2 power points per rank reduced to the character's pool.
+**Source evidence:** chunk_035 "Reducing Abilities"
+
+(4) WHEN a player reduces an ability rank to exactly −5,
+THEN the system records the rank as −5
+AND credits the appropriate power points
+AND permits the action (−5 is the voluntary floor, not a violation).
+**Source evidence:** chunk_035 "Reducing Abilities"
+
+(5) WHEN a player attempts to voluntarily reduce an ability rank below −5,
+THEN the system rejects the adjustment
+AND the ability rank remains at its current value
+AND no power points are transferred.
+**Source evidence:** chunk_035 "Reducing Abilities" — "You cannot lower an ability rank below −5."
+
+(6) WHEN a player attempts to raise an ability rank but the cost exceeds the character's available power points,
+THEN the system rejects the increase
+AND the ability rank remains unchanged
+AND no power points are consumed.
+**Source evidence:** chunk_035 "Buying Ability Ranks" (cost formula implied)
+
+(7) WHEN a player changes any ability rank,
+THEN all dependent traits (skill modifiers, defense base ranks, attack modifiers) update immediately in the same operation
+BUT no secondary power point transactions are triggered by the cascade alone.
+**Source evidence:** chunk_037 "Altering Abilities"
+
+---
+
+### (S) Player --> Designate Ability Rank Portion as Enhanced
+
+#### Domain terms
+- **enhanced ability**: rank portion acquired as an Enhanced Trait (power) rather than naturally.
+- **natural rank**: the non-enhanced portion of an ability rank that cannot be nullified.
+- **Enhanced Trait**: powers-chapter designation for a rank portion that behaves as a power.
+- **nullification**: temporary removal of enhanced rank by the Nullify power effect.
+
+---
+
+(1) WHEN a player designates all of a character's ability rank in an ability as enhanced,
+THEN the system records the entire rank as the enhanced portion
+AND the total ability modifier remains identical to the pre-designation value.
+**Source evidence:** chunk_037 "Enhanced Abilities"
+
+(2) WHEN a player designates only a portion of an ability rank as enhanced (e.g., 3 of 5 AGL rank points),
+THEN the system records 2 rank points as natural and 3 as enhanced
+AND the total Agility modifier is 5 (natural 2 + enhanced 3)
+AND the enhanced portion is separately tracked for nullification and power modifier eligibility.
+**Source evidence:** chunk_037 "Enhanced Abilities"
+
+(3) WHEN a player purchases an enhanced ability rank,
+THEN the cost is 2 power points per +1 rank
+AND this cost is identical to purchasing a natural rank.
+**Source evidence:** chunk_037 "Enhanced Abilities" — "Enhanced Abilities and normal abilities have the same cost."
+
+(4) WHEN a power effect attempts to Nullify the enhanced portion of an ability rank,
+THEN the enhanced portion's contribution to the total modifier is removed for the duration of the Nullify effect
+AND the character's total ability modifier reflects only the natural portion while nullified.
+**Source evidence:** chunk_037 "Enhanced Abilities" — "Enhanced Abilities can be nullified."
+
+(5) WHEN a power effect attempts to Nullify the natural (non-enhanced) portion of an ability rank,
+THEN the natural rank is not affected
+BUT the enhanced portion of the same ability can still be nullified independently.
+**Source evidence:** chunk_037 "Enhanced Abilities" — "normal abilities cannot" be nullified.
+
+(6) WHEN a player attempts to apply a power modifier to the natural (non-enhanced) portion of an ability rank,
+THEN the system rejects the modifier application
+AND reports that power modifiers may only be applied to enhanced rank portions.
+**Source evidence:** chunk_037 "Enhanced Abilities" — "Enhanced Abilities can have power modifiers."
+
+---
+
+### (S) System --> Cascade Trait Changes on Ability Rank Alteration
+
+#### Domain terms
+- **cascade**: automatic propagation of an ability rank change to all dependent traits in one operation.
+- **dependent trait**: any skill modifier, defense rank, or attack modifier derived from an ability rank.
+
+---
+
+(1) WHEN a character's Agility rank increases by any amount,
+THEN the base Dodge defense rank increases by the same amount
+AND the initiative modifier increases by the same amount
+AND Acrobatics and Stealth skill modifiers increase by the same amount
+AND all of these updates occur atomically (not sequentially).
+**Source evidence:** chunk_037 "Altering Abilities" — "if you increase your character's Agility, his Agility-based skills and Dodge defense also increase."
+
+(2) WHEN a character's Stamina rank changes by any amount,
+THEN both the base Toughness defense rank and the base Fortitude defense rank change by the same amount simultaneously
+AND each defense reflects the new Stamina base in the same operation.
+**Source evidence:** chunk_037 "Altering Abilities", chunk_039 "Defense Rank"
+
+(3) WHEN a character's Fighting rank increases by 2,
+THEN close attack check modifiers increase by 2
+AND the base Parry defense rank increases by 2
+AND both updates are reflected before any close attack or Parry check resolves.
+**Source evidence:** chunk_037, chunk_036 "FIGHTING (FGT) section"
+
+(4) WHEN a character's ability rank decreases due to a power effect,
+THEN all traits derived from that ability decrease by the same amount
+AND the decreases take effect before any check that uses those traits.
+**Source evidence:** chunk_037 "Altering Abilities" — "if the hero's Agility bonus decreases, his Agility-based skills and Dodge suffer."
+
+(5) WHEN a character's ability rank changes through any mechanism (spending pp, power effect, or advancement),
+THEN the cascade triggers regardless of the cause
+BUT the power point transaction itself is not cascaded (no secondary pp adjustments result from the cascade alone).
+**Source evidence:** chunk_037 "Altering Abilities"
+
+---
+
+### (S) System --> Enforce Ability Rank Ceiling per Power Level
+
+#### Domain terms
+- **power level**: series-defined ceiling; ability ranks cannot be raised above this value through earned point spending.
+- **ceiling enforcement**: any earned-point increase that would push a rank above the power level is blocked.
+
+---
+
+(1) WHEN a character attempts to raise an ability rank via earned power point spending and the result would equal the series' power level,
+THEN the system permits the increase
+AND records the new rank at the power level value.
+**Source evidence:** chunk_037 "Altering Abilities" — "you cannot increase an ability rank above the limits set by the series' power level."
+
+(2) WHEN a character attempts to raise an ability rank via earned power point spending and the result would exceed the series' power level,
+THEN the system rejects the increase
+AND retains the current rank
+AND returns no power points
+AND reports the power level ceiling as the reason.
+**Source evidence:** chunk_037 "Altering Abilities"
+
+(3) WHEN a power effect (not earned point spending) raises an ability rank above the series' power level during play,
+THEN the system applies the temporary power-effect rank
+AND the inflated rank is effective while the effect is active
+BUT the player cannot spend earned power points to make a rank above the ceiling permanent.
+**Source evidence:** chunk_037 "Altering Abilities"
+
+(4) WHEN a character's ability rank was set above the power level at character creation (a legal creation-time decision),
+THEN the system permits normal play with that rank
+BUT prevents the player from further raising it through earned point spending.
+**Source evidence:** chunk_037 "Altering Abilities"
+
+---
+
+## (E) Configure Derived Defenses
+
+### (S) System --> Derive Base Defense Rank from Ability
+
+#### Domain terms
+- **base defense rank**: starting defense value equal to the rank of the associated ability.
+- **ability-defense mapping**: Dodge ← AGL, Parry ← FGT, Fortitude ← STA, Toughness ← STA, Will ← AWE.
+- **defense class**: base defense rank + 10 = DC for attacks targeting that defense.
+
+---
+
+(1) WHEN a character's ability ranks are set (STR 4, STA 3, AGL 5, DEX 2, FGT 4, INT 3, AWE 2, PRE 2),
+THEN base Dodge is 5, base Parry is 4, base Fortitude is 3, base Toughness is 3, base Will is 2.
+**Source evidence:** chunk_039 "Defense Rank" — "Your base defense ranks are equal to your ranks in their associated abilities."
+
+(2) WHEN a character's Agility rank increases from 3 to 5,
+THEN base Dodge updates immediately from 3 to 5
+AND the Dodge defense class (Dodge + 10) becomes 15.
+**Source evidence:** chunk_037 "Altering Abilities", chunk_039, chunk_040 "Defense Class"
+
+(3) WHEN a character's Stamina rank is 4,
+THEN both base Fortitude and base Toughness are initialized at 4
+AND each can be separately increased above this shared base through independent investments (subject to Toughness restriction).
+**Source evidence:** chunk_039 "Defense Rank"
+
+(4) WHEN a character has an Agility rank of −2,
+THEN base Dodge is −2
+AND the Dodge defense class is 8 (−2 + 10 = 8).
+**Source evidence:** chunk_039, chunk_040 "Defense Class"
+
+(5) WHEN a character has no Agility (absent ability),
+THEN there is no Dodge defense
+AND no Dodge defense class value can be calculated
+AND attacks that would target Dodge automatically succeed against Dodge.
+**Source evidence:** chunk_038 "Absent Abilities — Agility", chunk_039
+
+---
+
+### (S) Player --> Increase Defense Rank Above Ability Base
+
+#### Domain terms
+- **defense rank investment**: 1 power point per +1 defense rank above the ability base.
+- **base**: the defense rank derived from the associated ability; the starting point for investment.
+- **power level cap**: upper bound on the total defense rank (base + investment) purchasable.
+
+---
+
+(1) WHEN a player with AGL rank 3 spends 2 power points to improve Dodge,
+THEN Dodge defense rank becomes 5 (base 3 + investment 2)
+AND 2 power points are deducted from the character's pool.
+**Source evidence:** chunk_039 "Defense Rank" — "1 power point grants you an additional rank in a defense."
+
+(2) WHEN a player with AWE rank 1 spends 3 power points to improve Will,
+THEN Will defense rank becomes 4 (base 1 + investment 3)
+AND 3 power points are deducted.
+**Source evidence:** chunk_039 "Defense Rank"
+
+(3) WHEN a character's base defense rank changes (e.g., AGL rank increases),
+THEN the base portion of Dodge updates
+AND any investment above the old base remains valid
+AND the total Dodge defense rank reflects the new base plus existing investment.
+**Source evidence:** chunk_039, chunk_037
+
+(4) WHEN a player attempts to purchase defense ranks but lacks sufficient power points,
+THEN the system rejects the purchase
+AND the defense rank remains at its current value.
+**Source evidence:** chunk_039 "Defense Rank" (cost formula)
+
+(5) WHEN a player attempts to increase a defense rank (excluding Toughness) to a value above the series' power level,
+THEN the system rejects the purchase
+AND reports the power level ceiling.
+**Source evidence:** chunk_039 "Defense Rank" — "up to the limits imposed by power level."
+
+---
+
+### (S) System --> Enforce Toughness Increase Restriction
+
+#### Domain terms
+- **Toughness restriction**: Toughness cannot be raised above the base Stamina rank by direct power point spending.
+- **permitted routes**: advantages (e.g., Defensive Roll) and powers (e.g., Protection effect) may raise Toughness above base.
+
+---
+
+(1) WHEN a player attempts to spend power points directly on Toughness to raise it above the base Stamina rank,
+THEN the system rejects the purchase
+AND Toughness remains at its current value.
+**Source evidence:** chunk_040 "Toughness Rank" — "Toughness…can only be increased above your base Stamina rank using advantages and powers, not by direct spending of power points."
+
+(2) WHEN a character acquires the Defensive Roll advantage,
+THEN Toughness increases by the advantage's associated rank
+AND this increase is permitted because it is an advantage-based route, not direct power point spending.
+**Source evidence:** chunk_040 "Toughness Rank" — "notably the Defensive Roll advantage."
+
+(3) WHEN a character acquires the Protection power effect,
+THEN Toughness increases by the Protection effect's rank
+AND this increase is permitted because it is a power-based route.
+**Source evidence:** chunk_040 "Toughness Rank" — "and the Protection effect."
+
+(4) WHEN a character's Stamina rank increases and Toughness is currently at its STA base,
+THEN base Toughness updates to the new STA rank automatically
+AND no additional power point expenditure is required for the base update.
+**Source evidence:** chunk_039 "Defense Rank", chunk_037 "Altering Abilities"
+
+(5) WHEN a character has Toughness above the STA base (from an advantage or power) and a player then attempts to spend power points to raise it further,
+THEN the system rejects the direct power point spend
+BUT the advantage or power increase remains valid.
+**Source evidence:** chunk_040 "Toughness Rank"
+
+---
+
+### (S) System --> Derive Initiative Modifier from Agility
+
+#### Domain terms
+- **initiative modifier**: Agility rank + Improved Initiative advantage bonus + power modifiers.
+- **action order**: determined by initiative modifier at the start of a conflict; highest acts first.
+
+---
+
+(1) WHEN a character has AGL rank 4 with no initiative-affecting advantages or power modifiers,
+THEN the initiative modifier is 4.
+**Source evidence:** chunk_040 "INITIATIVE" — "Initiative Modifier = Agility + Advantages (Improved Initiative) + Power Modifiers."
+
+(2) WHEN a character's Agility rank increases by 2,
+THEN the initiative modifier increases by 2
+AND the updated modifier is used for the next initiative check.
+**Source evidence:** chunk_037 "Altering Abilities", chunk_040 "INITIATIVE"
+
+(3) WHEN a character has AGL rank 3 and ranks in the Improved Initiative advantage,
+THEN the initiative modifier equals AGL 3 plus the Improved Initiative bonus plus any power modifier contribution.
+**Source evidence:** chunk_040 "INITIATIVE"
+
+(4) WHEN a character has AGL rank −2 and no Improved Initiative or power modifier,
+THEN the initiative modifier is −2
+AND the character acts later in conflict order than characters with a higher modifier.
+**Source evidence:** chunk_040 "INITIATIVE"
+
+(5) WHEN a character has no Agility (absent ability),
+THEN the AGL component of the initiative modifier is 0
+AND the modifier equals only the Advantage and Power Modifier components.
+**Source evidence:** chunk_038 "Absent Abilities — Agility", chunk_040 "INITIATIVE"
+
+---
+
+## (E) Handle Absent Ability
+
+### (S) System --> Apply Absent Ability Capability Restrictions
+
+#### Domain terms
+- **absent ability**: total absence of an ability — no rank, no modifier, no defense derived from it.
+- **automatic fail**: all checks requiring the absent ability fail without a roll.
+- **per-ability restriction**: each of the eight abilities has a distinct capability-loss set when absent.
+
+---
+
+(1) WHEN a character has no Strength,
+THEN any check requiring a Strength modifier automatically fails
+AND the character is incapable of exerting any physical force (no lifting, no throwing, no strength-based attacks).
+**Source evidence:** chunk_038 "Absent Abilities — Strength"
+
+(2) WHEN a character has no Stamina,
+THEN there is no Fortitude defense
+AND the character is immune to fatigued and exhausted conditions
+AND the character suffers and recovers from damage as an inanimate object rather than a living being.
+**Source evidence:** chunk_038 "Absent Abilities — Stamina"
+
+(3) WHEN a character has no Agility,
+THEN there is no Dodge defense
+AND the character cannot move its body under its own power.
+**Source evidence:** chunk_038 "Absent Abilities — Agility"
+
+(4) WHEN a character has no Awareness,
+THEN Presence is automatically absent as well (the two absences are linked)
+AND the character is completely unaware of its surroundings
+AND is treated as an inanimate object for immunity and defense purposes.
+**Source evidence:** chunk_038 "Absent Abilities — Awareness"
+
+(5) WHEN a character has no Intellect,
+THEN the character is an automaton operating purely on instinct or programming
+AND is immune to mental effects and interaction skills
+AND has no Will defense.
+**Source evidence:** chunk_038 "Absent Abilities — Intellect"
+
+(6) WHEN a character has no Fighting,
+THEN the character is incapable of making any close attack
+AND all close attack checks automatically fail
+BUT the character may still make ranged attacks if it has Dexterity.
+**Source evidence:** chunk_038 "Absent Abilities — Fighting"
+
+(7) WHEN a power effect attempts to weaken an absent ability,
+THEN the Weaken effect has no impact on that ability
+AND the capability restrictions for the absent ability remain unchanged.
+**Source evidence:** chunk_038 — "Absent abilities cannot be weakened…or debilitated."
+
+---
+
+### (S) System --> Grant Bonus Power Points for Absent Ability
+
+#### Domain terms
+- **absence benefit**: −10 power points; character gains 10 extra power points to spend elsewhere.
+- **creation-time grant**: the 10 power points are awarded at character creation, not recalculated during play.
+
+---
+
+(1) WHEN a character lacks one of the eight abilities entirely,
+THEN the system grants 10 additional power points at character creation.
+**Source evidence:** chunk_038 — "Lacking an ability is −10 power points; that is, it gives the character an additional 10 power points."
+
+(2) WHEN the character sheet records an absent ability during character creation (after GM authorization),
+THEN 10 power points are immediately credited to the character's power point pool
+AND these points may be spent on any eligible trait.
+**Source evidence:** chunk_038
+
+(3) WHEN a character has an absent ability (not rank −5),
+THEN the system awards 10 power points for the absence
+BUT does not additionally award power points for rank reductions (there is no rank to reduce for an absent ability).
+**Source evidence:** chunk_038 — absence vs. rank −5 are distinct: both yield 10 pp cumulatively, but through different routes.
+
+(4) WHEN a player declares a hero's ability absent before GM authorization is granted,
+THEN the system does not award the 10 power points
+AND flags the absence as pending authorization.
+**Source evidence:** chunk_038 — "heroes cannot be absent an ability without Gamemaster permission."
+
+---
+
+### (S) GM --> Authorize Hero to Have Absent Ability
+
+#### Domain terms
+- **GM authorization**: explicit Gamemaster approval required before a hero character may have an absent ability.
+- **NPC/creature**: non-hero entities do not require GM authorization for absent abilities.
+
+---
+
+(1) WHEN the GM authorizes a specific ability to be absent for a specific hero,
+THEN the system records the absence for that ability
+AND the 10 power point benefit becomes available to the player.
+**Source evidence:** chunk_038 — "heroes cannot be absent an ability without Gamemaster permission."
+
+(2) WHEN a player attempts to mark an ability as absent for their hero without GM authorization,
+THEN the system blocks the absence from taking effect
+AND reports that GM permission is required
+AND no power points are awarded.
+**Source evidence:** chunk_038
+
+(3) WHEN an NPC, creature, or construct (not a hero character) is configured with an absent ability,
+THEN no GM authorization is required
+AND the per-ability capability restrictions and any point benefit are applied immediately.
+**Source evidence:** chunk_038 — constructs, inanimate objects, and creatures have absent abilities as part of their creature-type definition.
+
+(4) WHEN a GM revokes a previously granted authorization for a hero's absent ability,
+THEN the absence is removed and the ability reverts to its default rank (0)
+AND the 10 power points previously awarded are reclaimed from the character's pool.
+**Source evidence:** chunk_038 (implied by the authorization requirement; absence without authorization is illegal)
+
+---
+
+## (E) Handle Debilitated Ability
+
+### (S) System --> Apply Debilitated Ability Condition Effects
+
+#### Domain terms
+- **debilitated**: state reached when an ability rank drops below −5 due to a game effect.
+- **condition group A** (STR, AGL, DEX): collapse — defenseless, immobilized, stunned (conscious and aware).
+- **condition group B** (STA): dying + −5 Fortitude penalty.
+- **condition group C** (FGT): dazed + defenseless; no close attacks.
+- **condition group D** (INT, AWE, PRE): unaware until rank restored to ≥ −5.
+
+---
+
+(1) WHEN a character's Strength rank drops below −5 due to a power effect,
+THEN the character is immediately defenseless, immobilized, and stunned
+AND the character remains conscious and aware despite being incapacitated.
+**Source evidence:** chunk_037 "Debilitated Abilities" — "Debilitated Strength, Agility, or Dexterity means the hero collapses: defenseless, immobilized, and stunned (although still conscious and aware)."
+
+(2) WHEN a character's Agility or Dexterity rank drops below −5,
+THEN the character is defenseless, immobilized, and stunned (same outcome as Strength debilitation)
+AND the character remains conscious and aware.
+**Source evidence:** chunk_037 "Debilitated Abilities"
+
+(3) WHEN a character's Stamina rank drops below −5,
+THEN the character is dying
+AND the character suffers an additional −5 modifier on Fortitude checks to avoid death on top of any existing penalty.
+**Source evidence:** chunk_037 "Debilitated Abilities" — "Debilitated Stamina means the hero is dying, and suffers a −5 modifier on Fortitude checks to avoid death on top of it."
+
+(4) WHEN a character's Fighting rank drops below −5,
+THEN the character is dazed and defenseless
+AND the character cannot make close attacks for as long as the debilitated state persists.
+**Source evidence:** chunk_037 "Debilitated Abilities" — "Debilitated Fighting means the hero is dazed and defenseless, and cannot make close attacks."
+
+(5) WHEN a character's Intellect rank drops below −5,
+THEN the character is unaware
+AND remains unaware until the Intellect rank is restored to at least −5.
+**Source evidence:** chunk_037 "Debilitated Abilities" — "Debilitated Intellect, Awareness, or Presence means the hero is unaware."
+
+(6) WHEN a character's Awareness or Presence rank drops below −5,
+THEN the character is unaware
+AND remains unaware until that specific ability's rank is restored to at least −5.
+**Source evidence:** chunk_037 "Debilitated Abilities"
+
+(7) WHEN a debilitation condition is applied,
+THEN the appropriate conditions are applied immediately upon the rank dropping below −5
+BUT the game effects that produced the rank reduction (the power effect) continue to be the source of the debilitation.
+**Source evidence:** chunk_037 "Debilitated ability ranks usually result from a power affecting your character."
+
+---
+
+### (S) System --> Prevent Further Rank Reduction When Debilitated
+
+#### Domain terms
+- **floor enforcement**: once debilitated, an ability rank cannot be reduced further by any effect.
+- **debilitated threshold**: the rank below −5 at which an ability entered the debilitated state.
+
+---
+
+(1) WHEN a character's ability rank is already below −5 (debilitated) and a power effect attempts to reduce it further,
+THEN the system blocks any further rank reduction for that ability
+AND the ability rank remains at its current debilitated value.
+**Source evidence:** chunk_037 "Debilitated Abilities" — "Ability ranks cannot be lowered any further once they are debilitated."
+
+(2) WHEN two separate power effects each attempt to reduce the same ability rank below −5,
+THEN the first effect triggers the debilitated state
+AND the second effect does not further reduce the rank
+BUT both effects still need to be resolved before the rank can recover.
+**Source evidence:** chunk_037
+
+(3) WHEN a character's Strength is debilitated at a rank below −5,
+THEN only the Strength rank is floor-enforced
+AND other abilities (e.g., Agility) can still be reduced normally by other game effects.
+**Source evidence:** chunk_037
+
+(4) WHEN a power effect that would debilitate an ability is applied to a character that already has that ability debilitated,
+THEN no new rank reduction occurs
+AND the debilitation conditions are not applied a second time (they are already in effect).
+**Source evidence:** chunk_037
+
+---
+
+### (S) System --> Clear Debilitated State When Ability Rank Recovers
+
+#### Domain terms
+- **recovery**: ability rank returns to −5 or above, ending the debilitated state.
+- **clearance**: all conditions applied by the debilitation are removed when the rank recovers.
+- **recovery threshold**: rank must reach ≥ −5 to clear the debilitated state.
+
+---
+
+(1) WHEN the power effect causing an ability's debilitation ends and the rank returns to −5 or above,
+THEN the debilitated state is cleared
+AND all conditions applied by the debilitation (e.g., defenseless, immobilized, stunned) are removed.
+**Source evidence:** chunk_037 "Debilitated Abilities" — "remains so until restored to at least a −5 rank."
+
+(2) WHEN a debilitated ability's rank returns to exactly −5,
+THEN the debilitated state clears
+AND the character is no longer subject to the debilitation conditions
+AND the ability modifier is −5 (which still applies penalties to related rolls).
+**Source evidence:** chunk_037
+
+(3) WHEN a partial recovery raises a debilitated ability rank but it remains below −5 (e.g., from −8 to −7),
+THEN the debilitated state is not cleared
+AND the debilitation conditions remain in effect.
+**Source evidence:** chunk_037
+
+(4) WHEN multiple power effects contributed to an ability's debilitation and one effect expires,
+THEN the debilitated state clears only if the remaining effects are insufficient to keep the rank below −5
+BUT if remaining effects still push the rank below −5, the debilitated state persists.
+**Source evidence:** chunk_037
