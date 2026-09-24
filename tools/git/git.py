@@ -686,10 +686,10 @@ class Project:
         raise ValueError(f"project field not found: {field_name}")
 
     def _option_id_for_name(
-        self, options: list[dict[str, object]], name: str
+        self, field_options: list[dict[str, object]], name: str
     ) -> str:
         wanted = (name or "").strip()
-        for option in options:
+        for option in field_options:
             label = str(option.get("name") or "").strip()
             if label == wanted or label.lower() == wanted.lower():
                 option_id = str(option.get("id") or "")

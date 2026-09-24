@@ -28,7 +28,7 @@ def rows_for_technical_names(rows: Iterable[dict]) -> List[dict]:
         if class_name in seen:
             continue
         tokens = ident_tokens(class_name)
-        agent = any(VocabularyHelper.is_agent_noun(token)[0] for token in tokens)
+        agent = any(VocabularyHelper().is_agent_noun(token)[0] for token in tokens)
         suffix = bool(tokens) and tokens[-1] in _TECHNICAL_SUFFIXES
         if not agent and not suffix:
             continue

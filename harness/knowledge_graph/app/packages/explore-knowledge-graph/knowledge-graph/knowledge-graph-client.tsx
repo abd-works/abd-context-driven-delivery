@@ -12,8 +12,8 @@ import {
 } from './knowledge-graph';
 import { type WorkspaceFile } from './workspace';
 
-const SCAN_ROOT_KEY = 'kg-scan-root';
-const SCAN_GRAPH_ID_KEY = 'kg-scan-graph-id';
+const SCAN_ROOT_KEY = 'kg-scan-root-v2';
+const SCAN_GRAPH_ID_KEY = 'kg-scan-graph-id-v2';
 
 function rememberScan(graphId: string, folder: string) {
   if (typeof window === 'undefined') {
@@ -109,6 +109,50 @@ export class KnowledgeGraphHttpClient {
     });
     return response.json() as Promise<ReturnType<KnowledgeGraph['present']>>;
   }
+
+  static async createDatabase(
+    folder: string,
+  ): Promise<ReturnType<KnowledgeGraph['present']>> {
+    return KnowledgeGraphHttpClient._databaseOp('/api/knowledge-graphs/create-database', folder);
+  }
+
+  static async refreshMaster(
+    folder: string,
+  ): Promise<ReturnType<KnowledgeGraph['present']>> {
+    return KnowledgeGraphHttpClient._databaseOp('/api/knowledge-graphs/refresh-master', folder);
+  }
+
+  static async reloadWorkingCopy(
+    folder: string,
+  ): Promise<ReturnType<KnowledgeGraph['present']>> {
+    return KnowledgeGraphHttpClient._databaseOp(
+      '/api/knowledge-graphs/reload-working-copy',
+      folder,
+    );
+  }
+
+  private static async _databaseOp(
+    url: string,
+    folder: string,
+  ): Promise<ReturnType<KnowledgeGraph['present']>> {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder }),
+      });
+    } catch {
+      throw new Error('Could not reach the explorer API on port 3001');
+    }
+    if (!response.ok) {
+      const detail = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      throw new Error(detail.error ?? 'Database operation failed');
+    }
+    return response.json() as Promise<ReturnType<KnowledgeGraph['present']>>;
+  }
 }
 
 export class KnowledgeGraphClient extends KnowledgeGraph {
@@ -130,6 +174,27 @@ export class KnowledgeGraphsClient {
     force?: boolean;
   } = {}): Promise<KnowledgeGraphsClient> {
     const raw = await KnowledgeGraphHttpClient.scan(input);
+    const graph = graphFromRaw(raw);
+    rememberScan(graph.id, graph.folder);
+    return new KnowledgeGraphsClient(graph.id, graph.present(), graph);
+  }
+
+  static async createDatabase(folder: string): Promise<KnowledgeGraphsClient> {
+    const raw = await KnowledgeGraphHttpClient.createDatabase(folder);
+    const graph = graphFromRaw(raw);
+    rememberScan(graph.id, graph.folder);
+    return new KnowledgeGraphsClient(graph.id, graph.present(), graph);
+  }
+
+  static async refreshMaster(folder: string): Promise<KnowledgeGraphsClient> {
+    const raw = await KnowledgeGraphHttpClient.refreshMaster(folder);
+    const graph = graphFromRaw(raw);
+    rememberScan(graph.id, graph.folder);
+    return new KnowledgeGraphsClient(graph.id, graph.present(), graph);
+  }
+
+  static async reloadWorkingCopy(folder: string): Promise<KnowledgeGraphsClient> {
+    const raw = await KnowledgeGraphHttpClient.reloadWorkingCopy(folder);
     const graph = graphFromRaw(raw);
     rememberScan(graph.id, graph.folder);
     return new KnowledgeGraphsClient(graph.id, graph.present(), graph);
@@ -168,16 +233,29 @@ export function useKnowledgeGraph(id: string) {
   const [client, setClient] = useState<KnowledgeGraphsClient | null>(null);
   const [loading, setLoading] = useState(false);
   const [scanError, setScanError] = useState('');
+  const [workStatus, setWorkStatus] = useState<{
+    action: string;
+    phase: 'working' | 'done' | 'failed';
+  } | null>(null);
   const request = useRef(0);
 
-  const take = useCallback((work: Promise<KnowledgeGraphsClient>) => {
+  const take = useCallback((
+    work: Promise<KnowledgeGraphsClient>,
+    action?: string,
+  ) => {
     const token = ++request.current;
     setLoading(true);
     setScanError('');
+    if (action) {
+      setWorkStatus({ action, phase: 'working' });
+    }
     work
       .then((next) => {
         if (token === request.current) {
           setClient(next);
+          if (action) {
+            setWorkStatus({ action, phase: 'done' });
+          }
         }
       })
       .catch((error: unknown) => {
@@ -185,6 +263,9 @@ export function useKnowledgeGraph(id: string) {
           setScanError(
             error instanceof Error ? error.message : 'Could not scan KnowledgeGraph',
           );
+          if (action) {
+            setWorkStatus({ action, phase: 'failed' });
+          }
         }
       })
       .finally(() => {
@@ -199,18 +280,7 @@ export function useKnowledgeGraph(id: string) {
       take(KnowledgeGraphsClient.load(id));
       return;
     }
-    const lastId =
-      typeof window !== 'undefined'
-        ? window.localStorage.getItem(SCAN_GRAPH_ID_KEY) ?? ''
-        : '';
-    const lastFolder =
-      typeof window !== 'undefined'
-        ? window.localStorage.getItem(SCAN_ROOT_KEY) ?? ''
-        : '';
-    if (!lastId && !lastFolder) {
-      return;
-    }
-    take(openLastGraph(''));
+    take(KnowledgeGraphsClient.scan({ folder: lastScanFolder() }));
   }, [id, take]);
 
   const selectNode = useCallback((nodeId: string, ruleSlug?: string) => {
@@ -251,21 +321,34 @@ export function useKnowledgeGraph(id: string) {
 
   const selectFolder = useCallback(
     (input: { folder?: string; files?: WorkspaceFile[] } = {}) => {
-      take(KnowledgeGraphsClient.scan(input));
+      take(KnowledgeGraphsClient.scan(input), 'Load Knowledge Graph');
     },
     [take],
   );
 
   const refreshGraph = useCallback(() => {
-    const lastFolder =
-      (typeof window !== 'undefined'
-        ? window.localStorage.getItem(SCAN_ROOT_KEY)
-        : '') ?? '';
-    take(KnowledgeGraphsClient.scan({ folder: lastFolder, force: true }));
+    const lastFolder = lastScanFolder();
+    take(KnowledgeGraphsClient.scan({ folder: lastFolder, force: true }), 'Refresh');
+  }, [take]);
+
+  const createDatabase = useCallback(() => {
+    take(KnowledgeGraphsClient.createDatabase(lastScanFolder()), 'Create database');
+  }, [take]);
+
+  const refreshMaster = useCallback(() => {
+    take(KnowledgeGraphsClient.refreshMaster(lastScanFolder()), 'Refresh master');
+  }, [take]);
+
+  const reloadWorkingCopy = useCallback(() => {
+    take(
+      KnowledgeGraphsClient.reloadWorkingCopy(lastScanFolder()),
+      'Reload working copy',
+    );
   }, [take]);
 
   return {
     loading,
+    workStatus,
     scanError,
     folder: client?.presentation.folder ?? '',
     listedNodes: client?.presentation.listed_nodes ?? [],
@@ -286,33 +369,17 @@ export function useKnowledgeGraph(id: string) {
     filterGraph,
     selectFolder,
     refreshGraph,
+    createDatabase,
+    refreshMaster,
+    reloadWorkingCopy,
   };
 }
 
-async function openLastGraph(
-  id: string,
-  options: { rescan?: boolean; folder?: string } = {},
-): Promise<KnowledgeGraphsClient> {
-  const lastFolder =
-    options.folder ??
-    (typeof window !== 'undefined'
-      ? window.localStorage.getItem(SCAN_ROOT_KEY) ?? ''
-      : '');
-  const lastId =
-    typeof window !== 'undefined'
-      ? window.localStorage.getItem(SCAN_GRAPH_ID_KEY) ?? ''
-      : '';
-  if (id) {
-    return KnowledgeGraphsClient.load(id);
+function lastScanFolder(): string {
+  if (typeof window === 'undefined') {
+    return '';
   }
-  if (lastId) {
-    try {
-      return await KnowledgeGraphsClient.load(lastId);
-    } catch {
-      // Last graph is gone from the server; rebuild from the last folder.
-    }
-  }
-  return KnowledgeGraphsClient.scan({ folder: lastFolder });
+  return window.localStorage.getItem(SCAN_ROOT_KEY) ?? '';
 }
 
 function appendList(

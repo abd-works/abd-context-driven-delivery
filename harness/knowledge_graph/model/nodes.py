@@ -436,6 +436,13 @@ class GraphScenario(Scenario, GraphNodeMixin):
     def load_example(self, source: Example) -> "GraphExample":
         return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
 
+    def sync_tree_from_legacy(self) -> None:
+        if self.steps:
+            return
+        if not (self.given or self.interactions or self.background):
+            return
+        super().sync_tree_from_legacy()
+
 
 class GraphBackground(Background, GraphNodeMixin):
     practice = "stories"

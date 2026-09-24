@@ -623,6 +623,16 @@ class McpHost:
             if len(args) >= 2:
                 schema["additionalProperties"] = McpHost._annotation_schema(args[1])
             return schema
+        if inspect.isclass(annotation) and annotation not in (
+            str,
+            int,
+            float,
+            bool,
+            type(None),
+            Path,
+            bytes,
+        ):
+            return {"type": "object"}
         if annotation is str:
             return {"type": "string"}
         if annotation is int:

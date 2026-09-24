@@ -38,47 +38,55 @@ class CasingTransformScanner(TypeScriptScanner):
 
     def _check_ts_properties(self, domain_path: Path) -> List[Violation]:
         violations: List[Violation] = []
+        for ts_file in self._domain_ts_files(domain_path):
+            violations.extend(self._snake_case_properties_in(ts_file))
+        return violations
 
+    def _domain_ts_files(self, domain_path: Path):
         for tier in ("shared", "client", "server"):
-            for ts_file in self._find_tier_files(domain_path, tier):
-                content = self._read_file_content(ts_file)
-                if content is None:
-                    continue
+            yield from self._find_tier_files(domain_path, tier)
 
-                for block_match in _INTERFACE_BLOCK_RE.finditer(content):
-                    type_name = block_match.group(1)
-                    if _RAW_TYPE_RE.match(type_name):
-                        continue
-                    block = block_match.group(2)
-                    for prop_match in _SNAKE_CASE_PROP_RE.finditer(block):
-                        prop = prop_match.group(1)
-                        if prop.startswith("_"):
-                            continue
-                        camel = self._to_camel(prop)
-                        violations.append(
-                            self.v(
-                                f"Property '{prop}' in {ts_file.name} uses snake_case. "
-                                f"TypeScript properties must be camelCase: '{camel}'.",
-                                str(ts_file),
-                                severity="error",
-                            )
-                        )
+    def _snake_case_properties_in(self, ts_file: Path) -> List[Violation]:
+        content = self._read_file_content(ts_file)
+        if content is None:
+            return []
+        violations: List[Violation] = []
+        for block_match in _INTERFACE_BLOCK_RE.finditer(content):
+            if _RAW_TYPE_RE.match(block_match.group(1)):
+                continue
+            violations.extend(self._snake_props_in_block(ts_file, block_match.group(2)))
+        return violations
 
+    def _snake_props_in_block(self, ts_file: Path, block: str) -> List[Violation]:
+        violations: List[Violation] = []
+        for prop_match in _SNAKE_CASE_PROP_RE.finditer(block):
+            prop = prop_match.group(1)
+            if prop.startswith("_"):
+                continue
+            camel = self._to_camel(prop)
+            violations.append(
+                self.v(
+                    f"Property '{prop}' in {ts_file.name} uses snake_case. "
+                    f"TypeScript properties must be camelCase: '{camel}'.",
+                    str(ts_file),
+                    severity="error",
+                )
+            )
         return violations
 
     def _check_json_bodies(self, domain_path: Path) -> List[Violation]:
-        violations: List[Violation] = []
         client = self._client_file(domain_path)
         if client is None:
-            return violations
-
+            return []
         content = self._read_file_content(client)
         if content is None:
-            return violations
+            return []
+        return self._camel_keys_in_json_bodies(client, content)
 
+    def _camel_keys_in_json_bodies(self, client: Path, content: str) -> List[Violation]:
+        violations: List[Violation] = []
         for body_match in _CAMEL_IN_JSON_RE.finditer(content):
-            body_content = body_match.group(1)
-            for key_match in _CAMEL_KEY_IN_OBJ_RE.finditer(body_content):
+            for key_match in _CAMEL_KEY_IN_OBJ_RE.finditer(body_match.group(1)):
                 key = key_match.group(1)
                 snake = self._to_snake(key)
                 violations.append(
@@ -89,7 +97,6 @@ class CasingTransformScanner(TypeScriptScanner):
                         severity="error",
                     )
                 )
-
         return violations
 
     @staticmethod

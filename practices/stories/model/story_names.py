@@ -30,9 +30,10 @@ def rows_for_verb_noun(rows: Iterable[dict]) -> List[dict]:
             continue
         first = words[0]
         rest = words[1:]
-        gerund, _ = VocabularyHelper.is_gerund(first)
-        verb = VocabularyHelper.is_verb(first)
-        noun = any(VocabularyHelper.is_noun(word) for word in rest)
+        words = VocabularyHelper()
+        gerund, _ = words.is_gerund(first)
+        verb = words.is_verb(first)
+        noun = any(words.is_noun(word) for word in rest)
         if len(words) >= 2 and verb and noun and not gerund:
             continue
         seen.add(label)
@@ -58,7 +59,7 @@ def rows_for_vague_mechanic(rows: Iterable[dict]) -> List[dict]:
             continue
         first = words[0]
         rest = words[1:]
-        if not VocabularyHelper.is_verb(first) or first not in _VAGUE_VERBS:
+        if not VocabularyHelper().is_verb(first) or first not in _VAGUE_VERBS:
             continue
         if not any(word in _GENERIC_NOUNS for word in rest):
             continue

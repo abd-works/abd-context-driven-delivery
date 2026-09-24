@@ -44,8 +44,21 @@ export function SelectedNodePane({
       </p>
     );
   }
+  const panePrompt = paneCopyText(sections, violations);
   return (
     <div className="selected-node-pane" data-testid="selected-subtree">
+      {panePrompt ? (
+        <div className="pane-actions">
+          <button
+            type="button"
+            className="copy-prompt"
+            data-testid="copy-pane-to-prompt"
+            onClick={() => void navigator.clipboard.writeText(panePrompt)}
+          >
+            Copy pane to prompt
+          </button>
+        </div>
+      ) : null}
       {sections.map((section, index) => (
         <NodeSection
           key={section.node_id}
@@ -135,6 +148,11 @@ function NodeSection({
                 {entry.slug}{' '}
                 <span className={`rule-status ${entry.status}`}>{entry.status}</span>
               </h3>
+              {entry.practice || entry.fidelity ? (
+                <p className="report-meta">
+                  {[entry.practice, entry.fidelity].filter(Boolean).join(' · ')}
+                </p>
+              ) : null}
               {entry.body ? <p>{entry.body}</p> : null}
               {entry.message ? <p className="violation">{entry.message}</p> : null}
               {entry.status === 'violating' || entry.message ? (
@@ -168,6 +186,37 @@ function violatingRules(rules: ListedRule[]): ListedRule[] {
   return rules.filter((rule) => rule.status === 'violating');
 }
 
+function paneCopyText(
+  sections: Array<{
+    path: string;
+    semantic_type: string;
+    source: SourceRangeDto | null;
+    origin: SourceRangeDto | null;
+    rules: ListedRule[];
+  }>,
+  violations: boolean,
+): string {
+  const prompts: string[] = [];
+  for (const section of sections) {
+    const rules = violations ? violatingRules(section.rules) : section.rules;
+    const source = section.source?.file ? section.source : section.origin;
+    for (const rule of rules) {
+      if (rule.status !== 'violating' && !rule.message) {
+        continue;
+      }
+      prompts.push(
+        violationPrompt({
+          path: section.path,
+          semanticType: section.semantic_type,
+          source,
+          rule,
+        }),
+      );
+    }
+  }
+  return prompts.join('\n\n---\n\n');
+}
+
 function violationPrompt({
   path,
   semanticType,
@@ -184,15 +233,15 @@ function violationPrompt({
       ? `${source.file}:${source.start_line}-${source.end_line}`
       : source.file
     : '';
-  const snippet = source?.text ? `\n\nSource:\n${source.text}` : '';
   return [
     `Fix this Knowledge Graph rule violation.`,
     `Node: ${path} (${semanticType})`,
     file ? `File: ${file}` : '',
     `Rule: ${rule.slug}`,
+    rule.practice ? `Practice: ${rule.practice}` : '',
+    rule.fidelity ? `Fidelity: ${rule.fidelity}` : '',
     rule.body,
     `Violation: ${rule.message}`,
-    snippet,
   ]
     .filter((line) => line)
     .join('\n');

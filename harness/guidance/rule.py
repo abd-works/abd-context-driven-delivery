@@ -124,8 +124,8 @@ class RulesCollection(MarkdownCollection):
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         from prompt_echo.prompt_echo import PromptEcho
 
-        data = payload or {}
-        path = self._payload_path(data)
+        hook_payload = payload or {}
+        path = self._payload_path(hook_payload)
         bags = self._bags_for_path(path) if path else []
         parts, labels = self._bodies(bags)
         if not parts:
@@ -133,12 +133,12 @@ class RulesCollection(MarkdownCollection):
         body = "\n\n".join(parts)
         PromptEcho().show_ide_toast(
             PromptEcho().inject_rules_toast("chat edit", labels),
-            roots=data.get("workspace_roots"),
+            roots=hook_payload.get("workspace_roots"),
         )
         return {"additional_context": body}
 
-    def _payload_path(self, data: dict[str, Any]) -> str:
-        raw = data.get("tool_input") or {}
+    def _payload_path(self, hook_payload: dict[str, Any]) -> str:
+        raw = hook_payload.get("tool_input") or {}
         if isinstance(raw, str):
             try:
                 raw = json.loads(raw)

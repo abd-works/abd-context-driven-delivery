@@ -12,6 +12,8 @@ Folders (CodeQL takes any database path):
 Two methods on KnowledgeGraph, not one populate that switches:
 - `updateWorkingCopy` paths — extract onto the working copy, populate from it, then validate as today
 - `refreshMaster` — rewrite master, populate master, copy master to working copy; KnowledgeGraph still reads the working copy
+- `reloadWorkingCopy` — reload the working copy from the tree, populate from it, then copy the working copy onto master; KnowledgeGraph still reads the working copy
+- `createDatabase` root — set the path to that repo, write master there, copy master to working copy
 
 No master classification query. CodeQL.populate is under both calls, not the public seam.
 
@@ -78,6 +80,15 @@ KnowledgeGraph
        -> CodeQL.populate
        // populate from the new working copy — never read master
        // never updateWorkingCopy for this job
+  reloadWorkingCopy
+       // reload the working copy from the tree, populate from it, copy working copy to master
+       -> CodeQL.populate
+       // populate from the working copy — never read master
+       // never refreshMaster for this job
+  createDatabase root
+       // set the path to that repo
+       // write master in that repo, copy master to working copy
+       // never populate for this job
   filterGraph dirty violations
        // explorer already has this
        // dirty paths ∩ nodes with node.rules.violations
@@ -282,6 +293,16 @@ a repo
         it should populate the master
         it should copy the master to the working copy
         it should not read the master after the copy
+      that has a working copy to reload
+        it should reload the working copy
+        it should populate from the working copy
+        it should repopulate the master
+
+a knowledge graph
+  that has been pointed at a different repo
+    it should set the path to that repo
+    it should create the database in that repo
+    it should copy the master to the working copy
 
 a session
   that the hook server holds
@@ -331,6 +352,14 @@ an increment
     it should extract codeql-slice into master
     it should copy master to working copy
     // that is ready to become the master
+  that is reload working copy
+    it should reload the working copy from the tree
+    it should copy the working copy onto master
+    // that has a working copy to reload
+  that is create database
+    it should set the path to a different repo
+    it should write master in that repo
+    // that has been pointed at a different repo
   that is update working copy
     it should extract dirty story-test and production files onto the working copy
     it should not rewrite the master

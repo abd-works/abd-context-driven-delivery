@@ -72,7 +72,7 @@ class _Node:
 
 with description("Rows.entity_location"):
     with it("should read startLine from a CodeQL url dict"):
-        file, line = Rows.entity_location(
+        file, line = Rows().entity_location(
             {
                 "label": "Function __init__",
                 "url": {

@@ -452,3 +452,101 @@ export function violatingClassWithPassingOps(): KnowledgeGraphDto {
     ],
   };
 }
+
+export function fileParkingLotGraph(): KnowledgeGraphDto {
+  const file = 'actions/grill_context/grill_context.py';
+  return {
+    id: '11111111-1111-1111-1111-111111111111',
+    folder: 'workspace',
+    practice_graphs: [
+      {
+        id: 'practice:workspace',
+        name: 'workspace',
+        nodes: [
+          {
+            node_id: 'pkg:actions',
+            name: 'actions',
+            practice: '',
+            semantic_type: 'Package',
+            properties: { folder: 'actions' },
+            applicable_rules: [],
+            violations: [],
+            source: null,
+          },
+          {
+            node_id: 'pkg:actions/grill_context',
+            name: 'grill_context',
+            practice: '',
+            semantic_type: 'Package',
+            properties: { folder: 'actions/grill_context' },
+            applicable_rules: [],
+            violations: [],
+            source: null,
+          },
+          {
+            node_id: 'ce:File:grill_context.py',
+            name: file,
+            practice: 'clean_engineering',
+            semantic_type: 'File',
+            properties: {},
+            applicable_rules: [],
+            violations: [],
+            source: { file, start_line: 1, end_line: 40, text: '' },
+          },
+          {
+            node_id: 'ce:OoadClass:GrillContext',
+            name: 'GrillContext',
+            practice: 'clean_engineering',
+            semantic_type: 'OoadClass',
+            properties: {},
+            applicable_rules: [],
+            violations: [],
+            source: { file, start_line: 10, end_line: 30, text: 'class GrillContext: pass' },
+          },
+          {
+            node_id: 'ce:Operation:ask',
+            name: 'ask',
+            practice: 'clean_engineering',
+            semantic_type: 'Operation',
+            properties: {},
+            applicable_rules: [],
+            violations: [],
+            source: { file, start_line: 34, end_line: 38, text: 'def ask(): pass' },
+          },
+          {
+            node_id: 'ce:Property:ROOT',
+            name: 'ROOT',
+            practice: 'clean_engineering',
+            semantic_type: 'Property',
+            properties: {},
+            applicable_rules: [],
+            violations: [],
+            source: { file, start_line: 3, end_line: 3, text: 'ROOT = Path(__file__)' },
+          },
+        ],
+        relationships: [
+          {
+            kind: 'owns',
+            from_id: 'pkg:actions/grill_context',
+            to_id: 'ce:File:grill_context.py',
+          },
+          {
+            kind: 'owns',
+            from_id: 'ce:File:grill_context.py',
+            to_id: 'ce:OoadClass:GrillContext',
+          },
+          {
+            kind: 'owns',
+            from_id: 'ce:File:grill_context.py',
+            to_id: 'ce:Operation:ask',
+          },
+          {
+            kind: 'owns',
+            from_id: 'ce:File:grill_context.py',
+            to_id: 'ce:Property:ROOT',
+          },
+        ],
+      },
+    ],
+  };
+}

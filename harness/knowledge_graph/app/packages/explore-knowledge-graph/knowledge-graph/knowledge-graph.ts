@@ -101,6 +101,8 @@ export type ListedRule = {
   status: 'passing' | 'violating';
   body: string;
   message: string;
+  practice: string;
+  fidelity: string;
 };
 
 export type CreateKnowledgeGraphInput = {
@@ -140,6 +142,10 @@ export class RuleHit {
 
   get practice(): string {
     return this.dto.practice;
+  }
+
+  get fidelity(): string {
+    return this.dto.fidelity ?? '';
   }
 }
 
@@ -185,12 +191,7 @@ export class NodeRules {
       : [...new Set(this.hits.map((hit) => hit.ruleSlug))];
     return slugs.map((slug) => {
       const hit = this.hits.find((entry) => entry.ruleSlug === slug);
-      return {
-        slug,
-        status: hit ? 'violating' : 'passing',
-        body: hit?.body || RULE_GUIDANCE[slug] || '',
-        message: hit?.message ?? '',
-      };
+      return listedRuleFromHit(slug, hit);
     });
   }
 
@@ -307,7 +308,6 @@ export class KnowledgeGraph {
   private _byId: Map<string, GraphNode> | null = null;
   private _owns: Array<{ fromId: string; toId: string }> | null = null;
   private _treeOwns: Array<{ fromId: string; toId: string }> | null = null;
-  private _counts: Map<string, { failed: number; total: number }> | null = null;
   private _edges: RelationshipDto[] | null = null;
   private _kinds: Map<string, Set<string>> | null = null;
 
@@ -415,14 +415,14 @@ export class KnowledgeGraph {
     next._byId = this._byId;
     next._owns = this._owns;
     next._treeOwns = this._treeOwns;
-    next._counts = this._counts;
     next._edges = this._edges;
     next._kinds = this._kinds;
     return next;
   }
 
   private _listedLeaf(node: GraphNode) {
-    const counts = this._subtreeRuleCounts().get(node.nodeId) ?? node.rules.tally();
+    const rules = this._listedRules(node);
+    const failed = rules.filter((rule) => rule.status === 'violating').length;
     return {
       node_id: node.nodeId,
       name: this._treeLabel(node),
@@ -430,10 +430,10 @@ export class KnowledgeGraph {
       semantic_type: node.semanticType,
       is_file: node.isFile,
       rule_statuses: node.rules.statuses(),
-      rules: this._listedRules(node),
+      rules,
       source: node.source,
-      failed: counts.failed,
-      total: counts.total,
+      failed,
+      total: rules.length,
     };
   }
 
@@ -450,12 +450,7 @@ export class KnowledgeGraph {
           continue;
         }
         seen.add(hit.ruleSlug);
-        violating.push({
-          slug: hit.ruleSlug,
-          status: 'violating',
-          body: hit.body || RULE_GUIDANCE[hit.ruleSlug] || '',
-          message: hit.message,
-        });
+        violating.push(listedRuleFromHit(hit.ruleSlug, hit));
       }
       return violating;
     }
@@ -484,13 +479,16 @@ export class KnowledgeGraph {
       const leaf = this._listedLeaf(node);
       const origin = leaf.source?.file ? leaf.source : parentOrigin;
       const path = prefix ? `${prefix}.${leaf.name}` : leaf.name;
+      const children = sortChildren(childrenByParent.get(node.nodeId) ?? []).map(
+        (child) => nest(child, path, origin),
+      );
       return {
         ...leaf,
         path,
         origin,
-        children: sortChildren(childrenByParent.get(node.nodeId) ?? []).map((child) =>
-          nest(child, path, origin),
-        ),
+        children,
+        failed: leaf.failed + children.reduce((sum, child) => sum + child.failed, 0),
+        total: leaf.total + children.reduce((sum, child) => sum + child.total, 0),
       };
     };
     const folders = this._topLevelFolders();
@@ -538,6 +536,16 @@ export class KnowledgeGraph {
     }
     this._adoptFolderTree(childrenByParent, childIds, visibleIds, parentOf);
     for (const node of visible) {
+      if (this._isFileNode(node)) {
+        continue;
+      }
+      if (node.semanticType === 'Property') {
+        const ownerId = parentOf.get(node.nodeId);
+        const owner = ownerId ? this._nodeById(ownerId) : null;
+        if (!owner || owner.semanticType !== 'OoadClass') {
+          continue;
+        }
+      }
       const parentId = this._visibleAncestor(parentOf, visibleIds, node.nodeId);
       if (parentId && !this._isTopLevelFolder(node)) {
         this._adoptChild(childrenByParent, childIds, parentId, node);
@@ -548,6 +556,8 @@ export class KnowledgeGraph {
       if (
         childIds.has(extra.nodeId) ||
         skipRoot.has(extra.semanticType) ||
+        this._isFileNode(extra) ||
+        extra.semanticType === 'Property' ||
         this._isTopLevelFolder(extra)
       ) {
         continue;
@@ -627,7 +637,10 @@ export class KnowledgeGraph {
       }
       seen.add(current);
       if (visibleIds.has(current)) {
-        return current;
+        const ancestor = this._nodeById(current);
+        if (ancestor && !this._isFileNode(ancestor)) {
+          return current;
+        }
       }
       current = parentOf.get(current);
     }
@@ -677,48 +690,6 @@ export class KnowledgeGraph {
       }
     }
     return [...byPath.values()];
-  }
-
-  private _subtreeRuleCounts(): Map<string, { failed: number; total: number }> {
-    if (this._counts) {
-      return this._counts;
-    }
-    const childrenByParent = new Map<string, string[]>();
-    for (const edge of this._treeOwnsEdges()) {
-      const siblings = childrenByParent.get(edge.fromId) ?? [];
-      siblings.push(edge.toId);
-      childrenByParent.set(edge.fromId, siblings);
-    }
-    const counts = new Map<string, { failed: number; total: number }>();
-    const visiting = new Set<string>();
-    const visit = (nodeId: string): { failed: number; total: number } => {
-      const cached = counts.get(nodeId);
-      if (cached) {
-        return cached;
-      }
-      if (visiting.has(nodeId)) {
-        return { failed: 0, total: 0 };
-      }
-      visiting.add(nodeId);
-      const node = this._nodeById(nodeId);
-      const own = node?.rules.tally() ?? { failed: 0, total: 0 };
-      let failed = own.failed;
-      let total = own.total;
-      for (const childId of childrenByParent.get(nodeId) ?? []) {
-        const nested = visit(childId);
-        failed += nested.failed;
-        total += nested.total;
-      }
-      visiting.delete(nodeId);
-      const tally = { failed, total };
-      counts.set(nodeId, tally);
-      return tally;
-    };
-    for (const node of this._allNodes()) {
-      visit(node.nodeId);
-    }
-    this._counts = counts;
-    return counts;
   }
 
   private _folderHome(node: GraphNode): GraphNode | null {
@@ -799,7 +770,7 @@ export class KnowledgeGraph {
             continue;
           }
           const child = this._nodeById(edge.toId);
-          if (!child) {
+          if (!child || this._isFileNode(child)) {
             continue;
           }
           down.add(edge.toId);
@@ -923,22 +894,16 @@ export class KnowledgeGraph {
     take: (fromId: string, toId: string, rank: number) => void,
   ) {
     const byPath = this._foldersByPath();
-    const fileNode = this._fileNodeByPath();
     for (const node of this._allNodes()) {
       if (
-        node.semanticType === 'Operation' ||
-        node.semanticType === 'Property' ||
-        node.semanticType === 'Parameter'
+        this._isFileNode(node) ||
+        node.semanticType === 'Parameter' ||
+        node.semanticType === 'Property'
       ) {
         continue;
       }
       const file = node.source?.file?.replaceAll('\\', '/');
       if (!file) {
-        continue;
-      }
-      const owner = fileNode.get(file);
-      if (owner && owner.nodeId !== node.nodeId) {
-        take(owner.nodeId, node.nodeId, 12);
         continue;
       }
       const cut = file.lastIndexOf('/');
@@ -953,26 +918,21 @@ export class KnowledgeGraph {
     }
   }
 
-  private _fileNodeByPath() {
-    const byFile = new Map<string, GraphNode>();
-    for (const node of this._allNodes()) {
-      if (!this._isFileNode(node) || !node.source?.file) {
-        continue;
-      }
-      byFile.set(node.source.file.replaceAll('\\', '/'), node);
-    }
-    return byFile;
+  private _isFileNode(node: GraphNode): boolean {
+    return (
+      node.semanticType === 'File' ||
+      node.nodeId.startsWith('ce:File:')
+    );
   }
 
-  private _isFileNode(node: GraphNode): boolean {
-    if (!node.source) {
-      return false;
+  private _treeOwner(node: GraphNode | null): GraphNode | null {
+    if (!node) {
+      return null;
     }
-    return (
-      node.nodeId.startsWith('ce:File:') ||
-      node.semanticType === 'File' ||
-      Boolean(node.semanticType === 'Module' && node.properties.file)
-    );
+    if (!this._isFileNode(node)) {
+      return node;
+    }
+    return this._folderHome(node);
   }
 
   private _attachOwnedMembers(
@@ -981,30 +941,38 @@ export class KnowledgeGraph {
     const skip = new Set(['CleanEngineeringModel', 'StoryMap']);
     for (const edge of this._allEdges()) {
       if (edge.kind === 'owns' || edge.kind === 'hasParameter') {
-        const from = this._nodeById(edge.from_id);
         const to = this._nodeById(edge.to_id);
+        if (!to || this._isFileNode(to)) {
+          continue;
+        }
+        const from = this._treeOwner(this._nodeById(edge.from_id));
         if (
           !from ||
           skip.has(from.semanticType) ||
+          (to.semanticType === 'Property' && from.semanticType !== 'OoadClass') ||
           this._isDistantFolderOwner(from, to) ||
           containmentRank(from.semanticType) > containmentRank(to.semanticType)
         ) {
           continue;
         }
-        take(edge.from_id, edge.to_id, treeOwnerRank(from.semanticType));
+        take(from.nodeId, edge.to_id, treeOwnerRank(from.semanticType));
       }
       if (edge.kind === 'belongsTo') {
-        const parent = this._nodeById(edge.to_id);
         const child = this._nodeById(edge.from_id);
+        if (!child || this._isFileNode(child)) {
+          continue;
+        }
+        const parent = this._treeOwner(this._nodeById(edge.to_id));
         if (
           !parent ||
           skip.has(parent.semanticType) ||
+          (child.semanticType === 'Property' && parent.semanticType !== 'OoadClass') ||
           this._isDistantFolderOwner(parent, child) ||
           containmentRank(parent.semanticType) > containmentRank(child.semanticType)
         ) {
           continue;
         }
-        take(edge.to_id, edge.from_id, treeOwnerRank(parent.semanticType));
+        take(parent.nodeId, edge.from_id, treeOwnerRank(parent.semanticType));
       }
     }
   }
@@ -1319,6 +1287,17 @@ function findListedNode(
     }
   }
   return null;
+}
+
+function listedRuleFromHit(slug: string, hit?: RuleHit): ListedRule {
+  return {
+    slug,
+    status: hit ? 'violating' : 'passing',
+    body: hit?.body || RULE_GUIDANCE[slug] || '',
+    message: hit?.message ?? '',
+    practice: hit?.practice ?? '',
+    fidelity: hit?.fidelity ?? '',
+  };
 }
 
 function listed(

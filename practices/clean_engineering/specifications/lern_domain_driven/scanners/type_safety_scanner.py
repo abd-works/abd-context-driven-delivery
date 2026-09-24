@@ -50,65 +50,72 @@ class TypeSafetyScanner(TypeScriptScanner):
         return violations
 
     def _check_controller(self, ts_file: Path) -> List[Violation]:
-        violations: List[Violation] = []
         content = self._read_file_content(ts_file)
         if content is None:
-            return violations
+            return []
+        violations = self._missing_express_augmentation(ts_file, content)
+        violations.extend(self._as_any_req_hits(ts_file, content))
+        violations.extend(self._ts_suppress_hits(ts_file, content))
+        violations.extend(self._untyped_lambda_hits(ts_file, content))
+        return violations
 
-        lines = content.splitlines()
+    def _missing_express_augmentation(self, ts_file: Path, content: str) -> List[Violation]:
+        if not _REQ_CUSTOM_PROP_RE.search(content) or _DECLARE_GLOBAL_RE.search(content):
+            return []
+        return [
+            self.v(
+                f"'{ts_file.name}' accesses req.user/req.session/req.auth "
+                "but has no Express type augmentation. Add:\n"
+                "  declare global { namespace Express { "
+                "interface Request { user?: { id: string } } } }\n"
+                "Otherwise tsc --noEmit will fail with TS2339.",
+                str(ts_file),
+            )
+        ]
 
-        if _REQ_CUSTOM_PROP_RE.search(content):
-            if not _DECLARE_GLOBAL_RE.search(content):
-                violations.append(
-                    self.v(
-                        f"'{ts_file.name}' accesses req.user/req.session/req.auth "
-                        "but has no Express type augmentation. Add:\n"
-                        "  declare global { namespace Express { "
-                        "interface Request { user?: { id: string } } } }\n"
-                        "Otherwise tsc --noEmit will fail with TS2339.",
-                        str(ts_file),
-                    )
+    def _as_any_req_hits(self, ts_file: Path, content: str) -> List[Violation]:
+        return [
+            self.v(
+                f"'{ts_file.name}' uses (req as any).user to bypass type "
+                "checking. Use a global type augmentation instead of "
+                "casting to any.",
+                str(ts_file),
+                line_num,
+            )
+            for line_num, line in enumerate(content.splitlines(), 1)
+            if _AS_ANY_REQ_RE.search(line)
+        ]
+
+    def _ts_suppress_hits(self, ts_file: Path, content: str) -> List[Violation]:
+        return [
+            self.v(
+                f"'{ts_file.name}' uses @ts-ignore/@ts-expect-error to "
+                "suppress a type error. Fix the underlying type issue "
+                "instead of suppressing the diagnostic.",
+                str(ts_file),
+                line_num,
+            )
+            for line_num, line in enumerate(content.splitlines(), 1)
+            if _TS_IGNORE_RE.search(line) or _TS_EXPECT_ERROR_RE.search(line)
+        ]
+
+    def _untyped_lambda_hits(self, ts_file: Path, content: str) -> List[Violation]:
+        violations: List[Violation] = []
+        for line_num, line in enumerate(content.splitlines(), 1):
+            if not _IMPLICIT_ANY_MAP_RE.search(line) or _TYPED_LAMBDA_RE.search(line):
+                continue
+            match = re.search(r"\.(map|filter|forEach|find)\s*\(\s*([a-zA-Z_]\w*)\s*=>", line)
+            if match is None:
+                continue
+            violations.append(
+                self.v(
+                    f"'{ts_file.name}' has an untyped lambda parameter "
+                    f"'{match.group(2)}' in .{match.group(1)}(). "
+                    "Add an explicit type: "
+                    f".{match.group(1)}(({match.group(2)}: DomainType) => ...)",
+                    str(ts_file),
+                    line_num,
+                    severity="warning",
                 )
-
-        for line_num, line in enumerate(lines, 1):
-            if _AS_ANY_REQ_RE.search(line):
-                violations.append(
-                    self.v(
-                        f"'{ts_file.name}' uses (req as any).user to bypass type "
-                        "checking. Use a global type augmentation instead of "
-                        "casting to any.",
-                        str(ts_file),
-                        line_num,
-                    )
-                )
-
-        for line_num, line in enumerate(lines, 1):
-            if _TS_IGNORE_RE.search(line) or _TS_EXPECT_ERROR_RE.search(line):
-                violations.append(
-                    self.v(
-                        f"'{ts_file.name}' uses @ts-ignore/@ts-expect-error to "
-                        "suppress a type error. Fix the underlying type issue "
-                        "instead of suppressing the diagnostic.",
-                        str(ts_file),
-                        line_num,
-                    )
-                )
-
-        for line_num, line in enumerate(lines, 1):
-            if _IMPLICIT_ANY_MAP_RE.search(line) and not _TYPED_LAMBDA_RE.search(line):
-                match = re.search(r"\.(map|filter|forEach|find)\s*\(\s*([a-zA-Z_]\w*)\s*=>", line)
-                if match:
-                    param_name = match.group(2)
-                    violations.append(
-                        self.v(
-                            f"'{ts_file.name}' has an untyped lambda parameter "
-                            f"'{param_name}' in .{match.group(1)}(). "
-                            "Add an explicit type: "
-                            f".{match.group(1)}(({param_name}: DomainType) => ...)",
-                            str(ts_file),
-                            line_num,
-                            severity="warning",
-                        )
-                    )
-
+            )
         return violations

@@ -227,6 +227,8 @@ predicate ownPrivateRead(Function f, Attribute attr) {
     or
     receiver = "cls"
     or
+    receiver = "this"
+    or
     exists(Class owner | ownerClass(f, owner) and receiver = owner.getName())
   )
 }

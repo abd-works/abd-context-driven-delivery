@@ -7,10 +7,19 @@ library. ``server.ts`` must not import from ``client.tsx`` and vice versa.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
 from lern_scanner_base import LERNScanner, Violation
+
+
+@dataclass
+class _CrossTierImport:
+    domain_path: Path
+    domain_name: str
+    source_tier: str
+    forbidden_tier: str
 
 
 class LayerPurityScanner(LERNScanner):
@@ -47,10 +56,14 @@ class LayerPurityScanner(LERNScanner):
 
             violations.extend(self._check_core_purity(domain_path, domain_name))
             violations.extend(
-                self._check_no_cross_import(domain_path, domain_name, "server", "client")
+                self._check_no_cross_import(
+                    _CrossTierImport(domain_path, domain_name, "server", "client")
+                )
             )
             violations.extend(
-                self._check_no_cross_import(domain_path, domain_name, "client", "server")
+                self._check_no_cross_import(
+                    _CrossTierImport(domain_path, domain_name, "client", "server")
+                )
             )
 
         return violations
@@ -58,56 +71,56 @@ class LayerPurityScanner(LERNScanner):
     def _check_core_purity(self, domain_path: Path, domain_name: str) -> List[Violation]:
         violations: List[Violation] = []
         for file_path in self._find_tier_files(domain_path, "shared"):
-            content = self._read_file_content(file_path)
-            if content is None:
-                continue
-
-            lines = content.split("\n")
-            for line_num, line in enumerate(lines, start=1):
-                for pattern in self.FORBIDDEN_IN_CORE:
-                    if re.search(pattern, line):
-                        violations.append(
-                            self.v(
-                                f"Domain '{domain_name}' core file has forbidden "
-                                f"framework import: {line.strip()}",
-                                str(file_path),
-                                line_num,
-                            )
-                        )
-                        break
-
+            violations.extend(self._forbidden_core_imports(file_path, domain_name))
         return violations
 
-    def _check_no_cross_import(
-        self, domain_path: Path, domain_name: str, source_tier: str, forbidden_tier: str
-    ) -> List[Violation]:
+    def _forbidden_core_imports(self, file_path: Path, domain_name: str) -> List[Violation]:
+        content = self._read_file_content(file_path)
+        if content is None:
+            return []
         violations: List[Violation] = []
-        source_files = self._find_tier_files(domain_path, source_tier)
-
-        cross_patterns = [
-            rf"from\s+['\"]\.\/{forbidden_tier}['\"]",
-            rf"from\s+['\"].*/{forbidden_tier}['\"/]",
-            rf"from\s+['\"]@[\w-]+/{domain_name}/{forbidden_tier}['\"]",
-        ]
-
-        for file_path in source_files:
-            content = self._read_file_content(file_path)
-            if content is None:
+        for line_num, line in enumerate(content.split("\n"), start=1):
+            if not self._line_has_forbidden_core_import(line):
                 continue
+            violations.append(
+                self.v(
+                    f"Domain '{domain_name}' core file has forbidden "
+                    f"framework import: {line.strip()}",
+                    str(file_path),
+                    line_num,
+                )
+            )
+        return violations
 
-            lines = content.split("\n")
-            for line_num, line in enumerate(lines, start=1):
-                for pattern in cross_patterns:
-                    if re.search(pattern, line):
-                        violations.append(
-                            self.v(
-                                f"Domain '{domain_name}/{source_tier}' "
-                                f"imports from '{forbidden_tier}' - "
-                                f"cross-tier import violation: {line.strip()}",
-                                str(file_path),
-                                line_num,
-                            )
-                        )
-                        break
+    def _line_has_forbidden_core_import(self, line: str) -> bool:
+        return any(re.search(pattern, line) for pattern in self.FORBIDDEN_IN_CORE)
 
+    def _check_no_cross_import(self, crossing: _CrossTierImport) -> List[Violation]:
+        violations: List[Violation] = []
+        for file_path in self._find_tier_files(crossing.domain_path, crossing.source_tier):
+            violations.extend(self._cross_import_hits(file_path, crossing))
+        return violations
+
+    def _cross_import_hits(self, file_path: Path, crossing: _CrossTierImport) -> List[Violation]:
+        content = self._read_file_content(file_path)
+        if content is None:
+            return []
+        patterns = [
+            rf"from\s+['\"]\.\/{crossing.forbidden_tier}['\"]",
+            rf"from\s+['\"].*/{crossing.forbidden_tier}['\"/]",
+            rf"from\s+['\"]@[\w-]+/{crossing.domain_name}/{crossing.forbidden_tier}['\"]",
+        ]
+        violations: List[Violation] = []
+        for line_num, line in enumerate(content.split("\n"), start=1):
+            if not any(re.search(pattern, line) for pattern in patterns):
+                continue
+            violations.append(
+                self.v(
+                    f"Domain '{crossing.domain_name}/{crossing.source_tier}' "
+                    f"imports from '{crossing.forbidden_tier}' - "
+                    f"cross-tier import violation: {line.strip()}",
+                    str(file_path),
+                    line_num,
+                )
+            )
         return violations

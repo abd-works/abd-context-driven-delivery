@@ -25,9 +25,9 @@ _CATALOG = _REPO_ROOT / "practices" / "stories" / "catalog-examples"
 with description("PracticeGraph"):
     with it("should load catalog story map epics by slug"):
         graph = PracticeGraph.load(_CATALOG)
-        names = {Node.slug(epic.name) for epic in graph.nodes_of_type(Epic)}
+        names = {Node().slug(epic.name) for epic in graph.nodes_of_type(Epic)}
         if graph.story_map is not None:
-            names.update(Node.slug(epic.name) for epic in graph.story_map.epics)
+            names.update(Node().slug(epic.name) for epic in graph.story_map.epics)
         expect(len(graph.nodes) > 0).to(equal(True))
         expect(len(names) > 0 or graph.ce_model is not None).to(equal(True))
 
@@ -44,6 +44,6 @@ with description("PracticeGraph"):
 
     with it("should load BDD descriptions from bdd examples"):
         graph = PracticeGraph.load(_REPO_ROOT / "practices" / "bdd" / "examples")
-        names = {Node.slug(d.name) for d in graph.nodes_of_type(Description)}
+        names = {Node().slug(d.name) for d in graph.nodes_of_type(Description)}
         expect(len(graph.nodes) > 0).to(equal(True))
         expect(len(names) > 0 or graph.ce_model is not None).to(equal(True))

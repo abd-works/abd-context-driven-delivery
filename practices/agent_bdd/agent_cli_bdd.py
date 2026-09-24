@@ -42,6 +42,86 @@ def _log(msg: str) -> None:
     _log_harness("agent_cli_bdd", msg)
 
 
+class _StreamBuckets:
+    """Collect stdout narrative, raw lines, and shell captures from a live process."""
+
+    def __init__(self) -> None:
+        self.narrative: list[str] = []
+        self.raw_lines: list[str] = []
+        self.shell_captures: list[_ShellCapture] = []
+        self.pending_shell_commands: list[str] = []
+        self.stderr_chunks: list[str] = []
+        self.thread_errors: list[str] = []
+        self.stdout = ""
+        self.stderr = ""
+        self.exit_code = 0
+
+    def drain(self, proc: subprocess.Popen, timeout_seconds: int) -> tuple[str, str, int]:
+        self._stdout_thread = threading.Thread(target=lambda: self._read_stdout(proc), daemon=True)
+        self._stderr_thread = threading.Thread(target=lambda: self._read_stderr(proc), daemon=True)
+        self._stdout_thread.start()
+        self._stderr_thread.start()
+        exit_code = self._wait_for_process(proc, timeout_seconds)
+        self._stdout_thread.join()
+        self._stderr_thread.join()
+        self.stderr = "".join(self.stderr_chunks)
+        self.stdout = "".join(self.narrative) or "".join(self.raw_lines)
+        self.exit_code = exit_code
+        return self.stdout, self.stderr, self.exit_code
+
+    def raise_if_failed(self, prefix: str, log_dir: Path) -> None:
+        if self.thread_errors:
+            raise AgentHarnessError(
+                f"cursor-agent stream read failed: {'; '.join(self.thread_errors)}",
+                prefix=prefix,
+                exit_code=self.exit_code,
+                stdout=self.stdout,
+                stderr=self.stderr,
+                log_dir=log_dir,
+            )
+        if self.exit_code != 0:
+            raise AgentHarnessError(
+                f"cursor-agent exited {self.exit_code}",
+                prefix=prefix,
+                exit_code=self.exit_code,
+                stdout=self.stdout,
+                stderr=self.stderr,
+                log_dir=log_dir,
+            )
+
+    def _wait_for_process(self, proc: subprocess.Popen, timeout_seconds: int) -> int:
+        try:
+            return proc.wait(timeout=timeout_seconds)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            self._stdout_thread.join(timeout=5)
+            self._stderr_thread.join(timeout=5)
+            raise
+
+    def _read_stdout(self, proc: subprocess.Popen) -> None:
+        try:
+            assert proc.stdout
+            for raw in proc.stdout:
+                self.raw_lines.append(raw)
+                try:
+                    event = json.loads(raw.strip())
+                except json.JSONDecodeError:
+                    continue
+                _collect_shell_capture(
+                    event, self.pending_shell_commands, self.shell_captures, self.narrative
+                )
+        except Exception as exc:  # noqa: BLE001
+            self.thread_errors.append(f"stdout: {exc}")
+
+    def _read_stderr(self, proc: subprocess.Popen) -> None:
+        try:
+            assert proc.stderr
+            self.stderr_chunks.append(proc.stderr.read())
+        except Exception as exc:  # noqa: BLE001
+            self.thread_errors.append(f"stderr: {exc}")
+
+
 class _ToolAgentBlock:
     """One cursor-agent session - multiple instructs share the same chat."""
 
@@ -206,13 +286,7 @@ class _ToolAgentBlock:
         prefix: str = "",
     ) -> "_AgentRunCapture":
         args = self._build_agent_args(session, prompt)
-        narrative: list[str] = []
-        raw_lines: list[str] = []
-        shell_captures: list[_ShellCapture] = []
-        pending_shell_commands: list[str] = []
-        stderr_chunks: list[str] = []
-        thread_errors: list[str] = []
-
+        buckets = _StreamBuckets()
         proc = subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
@@ -222,75 +296,14 @@ class _ToolAgentBlock:
             errors="replace",
             bufsize=1,
         )
-
-        def _on_stdout() -> None:
-            try:
-                assert proc.stdout
-                for raw in proc.stdout:
-                    raw_lines.append(raw)
-                    try:
-                        event = json.loads(raw.strip())
-                    except json.JSONDecodeError:
-                        continue
-                    _collect_shell_capture(
-                        event, pending_shell_commands, shell_captures, narrative
-                    )
-            except Exception as exc:  # noqa: BLE001
-                thread_errors.append(f"stdout: {exc}")
-
-        def _on_stderr() -> None:
-            try:
-                assert proc.stderr
-                stderr_chunks.append(proc.stderr.read())
-            except Exception as exc:  # noqa: BLE001
-                thread_errors.append(f"stderr: {exc}")
-
-        stdout_thread = threading.Thread(target=_on_stdout, daemon=True)
-        stderr_thread = threading.Thread(target=_on_stderr, daemon=True)
-        stdout_thread.start()
-        stderr_thread.start()
-
-        try:
-            exit_code = proc.wait(timeout=timeout_seconds)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
-            stdout_thread.join(timeout=5)
-            stderr_thread.join(timeout=5)
-            raise
-        stdout_thread.join()
-        stderr_thread.join()
-
-        stderr = "".join(stderr_chunks)
-        stdout = "".join(narrative) or "".join(raw_lines)
-        if thread_errors:
-            raise AgentHarnessError(
-                f"cursor-agent stream read failed: {'; '.join(thread_errors)}",
-                prefix=prefix,
-                exit_code=exit_code,
-                stdout=stdout,
-                stderr=stderr,
-                log_dir=self._log_dir,
-            )
-        if exit_code != 0:
-            raise AgentHarnessError(
-                f"cursor-agent exited {exit_code}",
-                prefix=prefix,
-                exit_code=exit_code,
-                stdout=stdout,
-                stderr=stderr,
-                log_dir=self._log_dir,
-            )
-        agent_result = AgentResult(
-            exit_code=exit_code,
-            text=stdout,
-            stderr=stderr,
-            elapsed_seconds=0.0,
-        )
+        stdout, stderr, exit_code = buckets.drain(proc, timeout_seconds)
+        buckets.raise_if_failed(prefix, self._log_dir)
         return _AgentRunCapture(
-            agent_result=agent_result,
-            shell_captures=shell_captures,
-            raw_lines=raw_lines,
+            agent_result=AgentResult(
+                exit_code=exit_code, text=stdout, stderr=stderr, elapsed_seconds=0.0
+            ),
+            shell_captures=buckets.shell_captures,
+            raw_lines=buckets.raw_lines,
             workspace=self._workspace,
         )
 

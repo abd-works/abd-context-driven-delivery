@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import List, Set
+from typing import List
 
 from lern_scanner_base import TypeScriptScanner, Violation
 
@@ -33,57 +33,48 @@ class MutationResponseScanner(TypeScriptScanner):
         return violations
 
     def _check_server_routes(self, domain_path: Path) -> List[Violation]:
-        violations: List[Violation] = []
         server = self._server_file(domain_path)
         if server is None:
-            return violations
-
+            return []
         content = self._read_file_content(server)
         if content is None:
-            return violations
+            return []
+        return self._success_envelope_hits(server, content)
 
-        for m in _RES_JSON_RE.finditer(content):
-            response_arg = m.group(1)
-            if _SUCCESS_PATTERN_RE.match(response_arg):
-                line_num = content[: m.start()].count("\n") + 1
-                violations.append(
-                    self.v(
-                        "Route returns { success/message/ok } instead of "
-                        "an aggregate snapshot. All mutations must return the "
-                        "same snapshot type.",
-                        str(server),
-                        line_num,
-                        severity="error",
-                    )
+    def _success_envelope_hits(self, server: Path, content: str) -> List[Violation]:
+        violations: List[Violation] = []
+        for match in _RES_JSON_RE.finditer(content):
+            if not _SUCCESS_PATTERN_RE.match(match.group(1)):
+                continue
+            violations.append(
+                self.v(
+                    "Route returns { success/message/ok } instead of "
+                    "an aggregate snapshot. All mutations must return the "
+                    "same snapshot type.",
+                    str(server),
+                    content[: match.start()].count("\n") + 1,
+                    severity="error",
                 )
-
+            )
         return violations
 
     def _check_http_client(self, domain_path: Path) -> List[Violation]:
-        violations: List[Violation] = []
         client = self._client_file(domain_path)
         if client is None:
-            return violations
-
+            return []
         content = self._read_file_content(client)
         if content is None:
-            return violations
-
-        return_types: Set[str] = set()
-        for m in _RETURN_TYPE_RE.finditer(content):
-            return_types.add(m.group(1))
-
-        mutation_types = {t for t in return_types if t != "void"}
-        if len(mutation_types) > 1:
-            violations.append(
-                self.v(
-                    f"HTTP client in {client.name} returns multiple different "
-                    f"types from mutations: {sorted(mutation_types)}. All "
-                    "mutations on the same aggregate should return the same "
-                    "snapshot type.",
-                    str(client),
-                    severity="warning",
-                )
+            return []
+        mutation_types = {m.group(1) for m in _RETURN_TYPE_RE.finditer(content) if m.group(1) != "void"}
+        if len(mutation_types) <= 1:
+            return []
+        return [
+            self.v(
+                f"HTTP client in {client.name} returns multiple different "
+                f"types from mutations: {sorted(mutation_types)}. All "
+                "mutations on the same aggregate should return the same "
+                "snapshot type.",
+                str(client),
+                severity="warning",
             )
-
-        return violations
+        ]

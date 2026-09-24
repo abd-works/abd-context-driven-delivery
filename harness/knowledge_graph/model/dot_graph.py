@@ -166,7 +166,7 @@ def _hierarchy_violations(node: Node) -> str:
     if graph is None:
         return ""
     try:
-        hits = list(graph._violations_by_node.get(node.node_id, []))
+        hits = list(graph.violations_for(node))
     except Exception as error:
         graph.record_partial_failure(
             f"violations {getattr(node, 'name', type(node).__name__)}",
@@ -266,13 +266,13 @@ def _render_dot(
 
     for node in nodes:
         lines.append(
-            f'  {_dot_id(node.node_id)} [label={_dot_label(node)}];'
+            f'  {DotMarkup.id_of(node.node_id)} [label={DotMarkup.label_of(node)}];'
         )
 
     for from_node, kind, to_node in edges:
         lines.append(
-            f'  {_dot_id(from_node.node_id)} -> {_dot_id(to_node.node_id)} '
-            f'[label={_dot_string(kind)}];'
+            f'  {DotMarkup.id_of(from_node.node_id)} -> {DotMarkup.id_of(to_node.node_id)} '
+            f'[label={DotMarkup.quoted(kind)}];'
         )
 
     lines.append('}')
@@ -284,31 +284,32 @@ def _dot_name(name: str) -> str:
     return safe or 'practice_graph'
 
 
-def _dot_id(node_id: str) -> str:
-    return _dot_string(node_id)
+class DotMarkup:
+    def id_of(self, node_id: str) -> str:
+        return self.quoted(node_id)
+
+    def label_of(self, node: Node) -> str:
+        semantic = node.semantic_type()
+        practice = getattr(node, 'practice', '')
+        name = self.display_name(node)
+        if practice:
+            return self.quoted(f'{semantic}\\n{name}\\n({practice})')
+        return self.quoted(f'{semantic}\\n{name}')
+
+    def display_name(self, node: Node) -> str:
+        name = getattr(node, 'name', '') or type(node).__name__
+        if len(name) > 72:
+            return name[:69] + '...'
+        return name
+
+    def quoted(self, value: str) -> str:
+        escaped = (
+            value.replace('\\', '\\\\')
+            .replace('"', '\\"')
+            .replace('\n', '\\n')
+            .replace('\r', '')
+        )
+        return f'"{escaped}"'
 
 
-def _dot_label(node: Node) -> str:
-    semantic = node.semantic_type()
-    practice = getattr(node, 'practice', '')
-    name = _node_display_name(node)
-    if practice:
-        return _dot_string(f'{semantic}\\n{name}\\n({practice})')
-    return _dot_string(f'{semantic}\\n{name}')
-
-
-def _node_display_name(node: Node) -> str:
-    name = getattr(node, 'name', '') or type(node).__name__
-    if len(name) > 72:
-        return name[:69] + '...'
-    return name
-
-
-def _dot_string(value: str) -> str:
-    escaped = (
-        value.replace('\\', '\\\\')
-        .replace('"', '\\"')
-        .replace('\n', '\\n')
-        .replace('\r', '')
-    )
-    return f'"{escaped}"'
+DotMarkup = DotMarkup()

@@ -97,22 +97,20 @@ class RouteDelegationScanner(LERNScanner):
         """Return 1-based (start, end) line ranges for each router.* callback body."""
         ranges: List[Tuple[int, int]] = []
         for match in self.ROUTER_HANDLER.finditer(content):
-            # Find the opening '{' of the handler callback after the match.
             brace = content.find("{", match.end())
             if brace < 0:
                 continue
-            depth = 0
-            end = brace
-            for i in range(brace, len(content)):
-                ch = content[i]
-                if ch == "{":
-                    depth += 1
-                elif ch == "}":
-                    depth -= 1
-                    if depth == 0:
-                        end = i
-                        break
-            start_line = content[:brace].count("\n") + 1
-            end_line = content[:end].count("\n") + 1
-            ranges.append((start_line, end_line))
+            end = self._matching_brace_end(content, brace)
+            ranges.append((content[:brace].count("\n") + 1, content[:end].count("\n") + 1))
         return ranges
+
+    def _matching_brace_end(self, content: str, brace: int) -> int:
+        depth = 0
+        for index in range(brace, len(content)):
+            if content[index] == "{":
+                depth += 1
+            elif content[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    return index
+        return brace

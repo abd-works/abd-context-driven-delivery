@@ -110,19 +110,18 @@ class InterfaceImplementationScanner(TypeScriptScanner):
         return violations
 
     def _check_service_depends_on_interface(self, domain_path: Path) -> List[Violation]:
-        violations: List[Violation] = []
         server = self._server_file(domain_path)
         if server is None:
-            return violations
-
+            return []
         parsed_root = self.parse_file(server)
         if parsed_root is None:
-            return violations
+            return []
+        return self._concrete_repository_injections(server, parsed_root)
 
-        classes = self.get_classes(parsed_root)
-        content = server.read_text(encoding="utf-8", errors="replace")
-        lines = content.splitlines()
-        for cls in classes:
+    def _concrete_repository_injections(self, server: Path, parsed_root) -> List[Violation]:
+        lines = server.read_text(encoding="utf-8", errors="replace").splitlines()
+        violations: List[Violation] = []
+        for cls in self.get_classes(parsed_root):
             if "Server" not in cls.name and "Service" not in cls.name:
                 continue
             ctor = next((m for m in cls.methods if m.name == "constructor"), None)
@@ -139,7 +138,6 @@ class InterfaceImplementationScanner(TypeScriptScanner):
                         ctor.start_line,
                     )
                 )
-
         return violations
 
     # ------------------------------------------------------------------ #
@@ -147,31 +145,34 @@ class InterfaceImplementationScanner(TypeScriptScanner):
     # ------------------------------------------------------------------ #
 
     def _check_test_fake_repositories(self, project_root: Path) -> List[Violation]:
-        violations: List[Violation] = []
         tests_dir = project_root / "tests"
         if not tests_dir.exists():
-            return violations
-
+            return []
+        violations: List[Violation] = []
         for ts_file in tests_dir.rglob("*.ts"):
             if "node_modules" in ts_file.parts:
                 continue
-            parsed_root = self.parse_file(ts_file)
-            if parsed_root is None:
+            violations.extend(self._test_double_without_implements(ts_file))
+        return violations
+
+    def _test_double_without_implements(self, ts_file: Path) -> List[Violation]:
+        parsed_root = self.parse_file(ts_file)
+        if parsed_root is None:
+            return []
+        violations: List[Violation] = []
+        for cls in self.get_classes(parsed_root):
+            name_lower = cls.name.lower()
+            if not any(kw in name_lower for kw in ("fake", "stub", "mock", "in_memory", "inmemory")):
                 continue
-
-            for cls in self.get_classes(parsed_root):
-                name_lower = cls.name.lower()
-                if not any(kw in name_lower for kw in ("fake", "stub", "mock", "in_memory", "inmemory")):
-                    continue
-                if not cls.implements:
-                    violations.append(
-                        self.v(
-                            f"Test class '{cls.name}' in {ts_file.name} looks like a "
-                            "test double but doesn't use `implements`. TypeScript won't "
-                            "catch if it diverges from the real interface.",
-                            str(ts_file),
-                            cls.start_line,
-                        )
-                    )
-
+            if cls.implements:
+                continue
+            violations.append(
+                self.v(
+                    f"Test class '{cls.name}' in {ts_file.name} looks like a "
+                    "test double but doesn't use `implements`. TypeScript won't "
+                    "catch if it diverges from the real interface.",
+                    str(ts_file),
+                    cls.start_line,
+                )
+            )
         return violations

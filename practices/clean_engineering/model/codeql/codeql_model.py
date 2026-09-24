@@ -413,7 +413,8 @@ class CleanEngineeringModel(SourceModel, Node):
             return files[key]
 
         for prop in property_rows:
-            owned = member_owner(prop)
+            class_name = str(prop.get("class_name") or "").replace("\\", "/")
+            owned = classes.get(class_name.lower())
             if owned is None:
                 continue
             owned.accept_property(prop.get("name") or "", prop.get("type_hint") or "")

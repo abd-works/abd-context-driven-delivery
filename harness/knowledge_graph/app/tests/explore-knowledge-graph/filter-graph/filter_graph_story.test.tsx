@@ -26,6 +26,26 @@ import {
 
 const helper = new ExplorePracticeGraphsClientHelper();
 
+function visibleRuleTally(node: { rules: { status: string }[]; children: unknown[] } | undefined): {
+  failed: number;
+  total: number;
+} {
+  if (!node) {
+    return { failed: 0, total: 0 };
+  }
+  const ownFailed = node.rules.filter((rule) => rule.status === 'violating').length;
+  return (node.children as typeof node[]).reduce(
+    (sum, child) => {
+      const nested = visibleRuleTally(child);
+      return {
+        failed: sum.failed + nested.failed,
+        total: sum.total + nested.total,
+      };
+    },
+    { failed: ownFailed, total: node.rules.length },
+  );
+}
+
 story('Filter Graph', () => {
   scenario('tree lists only Nodes that match the filters', ({ given, when, then }) => {
     given('a KnowledgeGraph whose source includes a Node that passes keep-operations-small-focused', async () => {
@@ -125,8 +145,11 @@ story('Filter Graph', () => {
       expect(container.querySelector('.tree-violating')).not.toBeNull();
     }).and('(failed / total) sits beside the name', () => {
       const domain = helper.listed?.listed_tree[0];
+      const visible = visibleRuleTally(domain);
+      expect(domain?.failed).toBe(visible.failed);
+      expect(domain?.total).toBe(visible.total);
       expect(domain?.failed).toBeGreaterThan(0);
-      expect(domain?.total).toBeGreaterThanOrEqual(domain?.failed ?? 0);
+      expect(domain?.total).toBe(domain?.failed);
       const { container } = render(
         <PracticeGraphTree
           roots={helper.listed?.listed_tree ?? []}
@@ -194,7 +217,38 @@ story('Filter Graph', () => {
       const copied = String(writeText.mock.calls[0][0]);
       expect(copied).toContain('harness.GraphClass.too_long');
       expect(copied).toContain(KEEP_OPERATIONS_SMALL_FOCUSED);
+      expect(copied).toContain('Practice: clean_engineering');
+      expect(copied).toContain('Fidelity: code');
       expect(copied).toContain('too_long is 40 lines');
+      expect(copied).not.toContain('Source:');
+    });
+  });
+  scenario('copy pane to prompt joins every copyable card', ({ given, when, then }) => {
+    given('a violating class and nested violating operation are open', () => {});
+    when('the Engineer copies the pane to prompt', () => {});
+    then('the clipboard holds every copyable card in the pane', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { clipboard: { writeText } });
+      const presented = KnowledgeGraph.fromDto(violatingClassWithPassingOps())
+        .selectNode('ce:OoadClass:GraphClass')
+        .present();
+      const { getByTestId } = render(
+        <SelectedNodePane
+          selectedNode={presented.selected_node}
+          selectedTree={presented.selected_tree}
+          selectedRule={null}
+          sourceFile={presented.source_file}
+        />,
+      );
+      fireEvent.click(getByTestId('copy-pane-to-prompt'));
+      const copied = String(writeText.mock.calls[0][0]);
+      expect(copied).toContain('keep-classes-single-responsibility');
+      expect(copied).toContain(KEEP_OPERATIONS_SMALL_FOCUSED);
+      expect(copied).toContain('Practice: clean_engineering');
+      expect(copied).toContain('Fidelity: code');
+      expect(copied).toContain('5 public operations');
+      expect(copied).toContain('too_long is 40 lines');
+      expect(copied).not.toContain('Source:');
     });
   });
 });

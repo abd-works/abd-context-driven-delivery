@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
@@ -28,6 +29,12 @@ _PLACEHOLDER_SCOPES = frozenset(
 )
 
 _VALID_PACKAGE_NAME_RE = re.compile(r"^@[a-z0-9][a-z0-9\-\.]*\/[a-z0-9][a-z0-9\-\.]*$")
+
+
+@dataclass
+class _DeclaredPackages:
+    names: Set[str]
+    scopes: Set[str]
 
 
 class PackageNamesScanner(TypeScriptScanner):
@@ -133,56 +140,58 @@ class PackageNamesScanner(TypeScriptScanner):
     # ------------------------------------------------------------------ #
 
     def _check_import_paths(self, project_root: Path, declared_names: Set[str]) -> List[Violation]:
-        violations: List[Violation] = []
         if not declared_names:
-            return violations
-
-        scopes: Set[str] = {name.split("/")[0] for name in declared_names if name.startswith("@")}
-
-        packages_dir = project_root / "packages"
-        tests_dir = project_root / "tests"
-
-        search_dirs = []
-        if packages_dir.exists():
-            search_dirs.append(packages_dir)
-        if tests_dir.exists():
-            search_dirs.append(tests_dir)
-
-        for search_dir in search_dirs:
-            for ts_file in self.get_all_source_files(search_dir):
-                parsed_root = self.parse_file(ts_file)
-                if parsed_root is None:
-                    continue
-                for imp in self.get_imports(parsed_root):
-                    src = imp.source
-                    if not src.startswith("@"):
-                        continue
-                    if src.count("/") > 1:
-                        if src in declared_names:
-                            continue
-                        violations.append(
-                            self.v(
-                                f"Import path '{src}' contains multiple slashes - "
-                                "this is not a valid npm package name. "
-                                "Use the flat @scope/domain-tier package name, "
-                                "or declare sub-path exports in package.json.",
-                                str(ts_file),
-                                imp.start_line,
-                            )
-                        )
-                        continue
-                    scope = src.split("/")[0]
-                    if scope not in scopes:
-                        continue
-                    if src not in declared_names:
-                        violations.append(
-                            self.v(
-                                f"Import '{src}' references an undeclared package "
-                                f"(not found in any package.json). Declared packages: "
-                                f"{', '.join(sorted(declared_names))}.",
-                                str(ts_file),
-                                imp.start_line,
-                            )
-                        )
-
+            return []
+        declared = _DeclaredPackages(
+            names=declared_names,
+            scopes={name.split("/")[0] for name in declared_names if name.startswith("@")},
+        )
+        violations: List[Violation] = []
+        for ts_file in self._scoped_search_files(project_root):
+            violations.extend(self._undeclared_scoped_imports(ts_file, declared))
         return violations
+
+    def _scoped_search_files(self, project_root: Path) -> List[Path]:
+        files: List[Path] = []
+        for folder in (project_root / "packages", project_root / "tests"):
+            if folder.exists():
+                files.extend(self.get_all_source_files(folder))
+        return files
+
+    def _undeclared_scoped_imports(
+        self, ts_file: Path, declared: _DeclaredPackages
+    ) -> List[Violation]:
+        parsed_root = self.parse_file(ts_file)
+        if parsed_root is None:
+            return []
+        violations: List[Violation] = []
+        for imp in self.get_imports(parsed_root):
+            hit = self._scoped_import_hit(ts_file, imp, declared)
+            if hit is not None:
+                violations.append(hit)
+        return violations
+
+    def _scoped_import_hit(self, ts_file: Path, imp, declared: _DeclaredPackages):
+        src = imp.source
+        if not src.startswith("@"):
+            return None
+        if src.count("/") > 1:
+            if src in declared.names:
+                return None
+            return self.v(
+                f"Import path '{src}' contains multiple slashes - "
+                "this is not a valid npm package name. "
+                "Use the flat @scope/domain-tier package name, "
+                "or declare sub-path exports in package.json.",
+                str(ts_file),
+                imp.start_line,
+            )
+        if src.split("/")[0] not in declared.scopes or src in declared.names:
+            return None
+        return self.v(
+            f"Import '{src}' references an undeclared package "
+            f"(not found in any package.json). Declared packages: "
+            f"{', '.join(sorted(declared.names))}.",
+            str(ts_file),
+            imp.start_line,
+        )

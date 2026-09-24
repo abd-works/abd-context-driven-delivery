@@ -10,7 +10,17 @@ Stories follow fidelity, not a single sketch-to-architecture pipe: Human provide
 
 ### Transformers live on practice guidance
 
-Transformation is not a Transformers bounded context with its own Sketch aggregate. Each PracticeGuidance already has a canonical model (`StoryMap`, `CleanEngineeringModel`, BDD `Description`, DDD `BoundedContext` on CE classes) and format instantiations under `practices/{practice}/model/`. A `transformation/` folder next to that model extends `Transformer` (base in `harness/transformers`, same pattern as `StoryNode` / `OoadNode`) and `transform`s that model. `sketch-to-domain-logic` and `domain-logic-to-tech-stack` are files in that folder (or a subfolder of it), not properties on Transformer. LERN stays a clean_engineering specification; its transform files hang on `practices/clean_engineering/transformation`.
+Transformation is not a Transformers bounded context with its own Sketch aggregate. Each PracticeGuidance already has a canonical model (`StoryMap`, `CleanEngineeringModel`, BDD `Description`, DDD `BoundedContext` on CE classes) and format instantiations under `practices/{practice}/model/`.
+
+### Transformation is a model channel folder — copy codeql
+
+`practices/{practice}/model/transformation/` copies `model/codeql/` as far as it still fits: same type names, every type is `(SourceType, Transformer)` the way codeql is `(SourceType, Node)`, including members (`Module`, `OoadClass`, `Operation`, …), not only the root. Mix-ins live only in that folder. Do not use markdown/python `Markdown*` prefixes. Do not copy `knowledge_graph/model/nodes.py` `Graph*` names — that folder is the older parallel; live mix-in is `model/codeql/`.
+
+`Transformer` is one mix-in in `harness/transformers`, like one `Node` in `knowledge_graph`. There is no `TechStackTransformer` type — Node has no pack subtype. Templates are an argument to `transform`, like `graph` is an argument to `Node.join`. Practice transform templates sit in the channel folder the way `.ql` files sit in `model/codeql/`. LERN `templates/` stay on `LernDomainDriven` and are passed in. Do not hardcode server, client, or view as operations. Architecture predicates hang as existing `Rule` (and scanners / `.ql`), not a new `GraphRule` type.
+
+### Agent surface copies KnowledgeGraph
+
+`Transformer` is `@agent_toolset` with `domain_slug` like `KnowledgeGraph` (`harness/knowledge_graph/model/knowledge_graph.py`). Public transform operations take the same marks as that class’s agent seam: `@mcp` `@Skill` `@agent_tool` on the operation that runs (like `return_nodes`). An operation that only instructs the agent takes `@mcp` `@Skill` `@agent_instructions` (like `fix_violations`). Install still writes MCP, Skill, and agent-tool from those marks — do not add a parallel installer. `Node` stays a mix-in without those marks; the toolset is the aggregate (`KnowledgeGraph` / `Transformer`), not every mixed `Module`.
 
 
 ### Child template notation only
@@ -19,5 +29,5 @@ Lens bodies must use only the child sketch templates: stories indent (Epic / Sub
 
 ### Extend practice models; template-pack tech stack
 
-Same mix-in as graph Node on live practice types (StoryMap, CleanEngineeringModel, Description): Transformer is mixed onto those models, not a parallel Sketch aggregate. One TechStackTransformer takes domain logic from any practice model plus a template pack and runs every template to write files and folders. Guts live in the templates. LERN stays LernDomainDriven; its templates/ are the first pack passed in. Do not hardcode server/client/view as Transformer operations.
+One mix-in: `Transformer`. Channel types wrap the live source type. A pack is passed into `transform model templates`. Guts live in the templates. LERN stays LernDomainDriven.
 

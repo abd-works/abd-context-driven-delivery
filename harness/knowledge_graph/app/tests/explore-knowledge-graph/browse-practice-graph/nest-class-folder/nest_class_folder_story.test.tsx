@@ -21,6 +21,7 @@ import {
   nestedClassGraph,
   codeQlClassWithoutSource,
   violatingClassWithPassingOps,
+  fileParkingLotGraph,
 } from '../../helpers/story-graphs';
 
 const helper = new ExplorePracticeGraphsClientHelper();
@@ -65,6 +66,39 @@ story('Nest Class Folder', () => {
       const customer = findTreeNode(tree, 'Customer');
       expect(customer?.children.map((node) => node.name)).toContain(
         'processEverything',
+      );
+    });
+  });
+  scenario('classless members sit on the package, not a File', ({ given, when, then }) => {
+    given('a package whose file owns a class and a classless operation', () => {});
+    when('the Engineer opens that package', () => {});
+    then('the package children include the class and the classless operation', () => {
+      const grill = findTreeNode(
+        KnowledgeGraph.fromDto(fileParkingLotGraph()).present().listed_tree,
+        'grill_context',
+      );
+      expect(grill?.children.map((node) => node.name)).toEqual(
+        expect.arrayContaining(['GrillContext', 'ask']),
+      );
+    }).and('do not list the file', () => {
+      const grill = findTreeNode(
+        KnowledgeGraph.fromDto(fileParkingLotGraph()).present().listed_tree,
+        'grill_context',
+      );
+      expect(grill?.children.map((node) => node.name)).not.toContain(
+        'actions/grill_context/grill_context.py',
+      );
+      expect(grill?.children.map((node) => node.semantic_type)).not.toContain(
+        'File',
+      );
+    }).and('do not list a module variable as a Property', () => {
+      const grill = findTreeNode(
+        KnowledgeGraph.fromDto(fileParkingLotGraph()).present().listed_tree,
+        'grill_context',
+      );
+      expect(grill?.children.map((node) => node.name)).not.toContain('ROOT');
+      expect(grill?.children.map((node) => node.semantic_type)).not.toContain(
+        'Property',
       );
     });
   });

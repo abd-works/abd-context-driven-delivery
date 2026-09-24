@@ -178,20 +178,20 @@ class Scenario(SourceScenario, Node):
         if entry.get("scenario"):
             key = (
                 _norm_file(entry.get("file") or ""),
-                Node.slug(entry.get("story") or ""),
+                Node().slug(entry.get("story") or ""),
                 (entry.get("scenario") or "").lower(),
             )
             found = scenarios.get(key)
             if found is not None:
                 return found
             for (_file, story_slug, scenario_name), scenario in scenarios.items():
-                if scenario_name == (entry.get("scenario") or "").lower() and story_slug == Node.slug(
+                if scenario_name == (entry.get("scenario") or "").lower() and story_slug == Node().slug(
                     entry.get("story") or ""
                 ):
                     return scenario
         if entry.get("background"):
             for bg_entry, background in backgrounds:
-                if Node.slug(bg_entry.get("story") or "") != Node.slug(entry.get("story") or ""):
+                if Node().slug(bg_entry.get("story") or "") != Node().slug(entry.get("story") or ""):
                     continue
                 if (bg_entry.get("name") or "background") == (entry.get("background") or "background"):
                     return background
@@ -259,15 +259,15 @@ class StoryMap(SourceStoryMap, Node):
         if kind == "story_map":
             return self
         if kind == "epic":
-            return epics.get(Node.slug(owner))
+            return epics.get(Node().slug(owner))
         if kind == "sub_epic":
             for (_epic, sub_slug), sub in subs.items():
-                if sub_slug == Node.slug(owner):
+                if sub_slug == Node().slug(owner):
                     return sub
             return None
         if kind == "story":
-            return stories.get(Node.slug(owner))
-        owner_slug = Node.slug(owner) if owner else ""
+            return stories.get(Node().slug(owner))
+        owner_slug = Node().slug(owner) if owner else ""
         if owner_slug in epics:
             return epics[owner_slug]
         for (_epic, sub_slug), sub in subs.items():
@@ -283,29 +283,29 @@ class StoryMap(SourceStoryMap, Node):
             graph.story_map = cls()
             graph.register(graph.story_map)
         story_map: StoryMap = graph.story_map
-        epics: Dict[str, Epic] = {Node.slug(e.name): e for e in graph.nodes_of_type(Epic)}
+        epics: Dict[str, Epic] = {Node().slug(e.name): e for e in graph.nodes_of_type(Epic)}
         subs: Dict[Tuple[str, str], SubEpic] = {}
         for sub in graph.nodes_of_type(SubEpic):
             parent = ""
             for epic in epics.values():
                 if sub in epic.sub_epics:
-                    parent = Node.slug(epic.name)
+                    parent = Node().slug(epic.name)
                     break
-            subs[(parent, Node.slug(sub.name))] = sub
-        stories: Dict[str, Story] = {Node.slug(s.name): s for s in graph.nodes_of_type(Story)}
+            subs[(parent, Node().slug(sub.name))] = sub
+        stories: Dict[str, Story] = {Node().slug(s.name): s for s in graph.nodes_of_type(Story)}
         for entry in raw.get("stories") or []:
             epic_name = _display(entry.get("epic") or "") or "Stories"
             sub_name = _display(entry.get("sub_epic") or "")
-            epic = epics.get(Node.slug(epic_name))
+            epic = epics.get(Node().slug(epic_name))
             if epic is None:
                 epic = story_map.load_epic(Epic(epic_name, len(epics) + 1))
                 story_map.epics.append(epic)
                 graph.register(epic)
                 story_map.relate(Kind.OWNS, epic)
-                epics[Node.slug(epic_name)] = epic
+                epics[Node().slug(epic_name)] = epic
             parent: Epic | SubEpic = epic
             if sub_name:
-                key = (Node.slug(epic_name), Node.slug(sub_name))
+                key = (Node().slug(epic_name), Node().slug(sub_name))
                 sub = subs.get(key)
                 if sub is None:
                     sub = epic.load_sub_epic(SubEpic(sub_name, len(epic.sub_epics) + 1))
@@ -314,24 +314,24 @@ class StoryMap(SourceStoryMap, Node):
                     epic.relate(Kind.OWNS, sub)
                     subs[key] = sub
                 parent = sub
-            if Node.slug(entry.get("name") or "") in stories:
-                story = stories[Node.slug(entry.get("name") or "")]
+            if Node().slug(entry.get("name") or "") in stories:
+                story = stories[Node().slug(entry.get("name") or "")]
             elif isinstance(parent, SubEpic):
                 story = parent.load_story(Story(entry.get("name") or "", len(parent.stories) + 1))
                 story.source = SourceLocation(entry.get("file") or "", int(entry.get("line") or 0))
                 parent.stories.append(story)
                 graph.register(story)
                 parent.relate(Kind.OWNS, story)
-                stories[Node.slug(story.name)] = story
+                stories[Node().slug(story.name)] = story
             else:
                 story = Story(entry.get("name") or "", len(getattr(parent, "stories", []) or []) + 1)
                 story.source = SourceLocation(entry.get("file") or "", int(entry.get("line") or 0))
                 graph.register(story)
                 parent.relate(Kind.OWNS, story)
-                stories[Node.slug(story.name)] = story
+                stories[Node().slug(story.name)] = story
         backgrounds: List[Tuple[dict, Background]] = []
         for entry in raw.get("backgrounds") or []:
-            story = stories.get(Node.slug(entry.get("story") or ""))
+            story = stories.get(Node().slug(entry.get("story") or ""))
             if story is None or story.backgrounds:
                 continue
             background = story.load_background(Background(entry.get("name") or "background", 1))
@@ -341,12 +341,12 @@ class StoryMap(SourceStoryMap, Node):
             backgrounds.append((entry, background))
         scenarios: Dict[Tuple[str, str, str], Scenario] = {}
         for entry in raw.get("scenarios") or []:
-            story = stories.get(Node.slug(entry.get("story") or ""))
+            story = stories.get(Node().slug(entry.get("story") or ""))
             if story is None:
                 continue
             key = (
                 _norm_file(entry.get("file") or ""),
-                Node.slug(entry.get("story") or ""),
+                Node().slug(entry.get("story") or ""),
                 (entry.get("name") or "").lower(),
             )
             scenario = story.load_scenario(

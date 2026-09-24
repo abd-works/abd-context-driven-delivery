@@ -10,6 +10,7 @@ Uses tree-sitter TypeScript AST to check:
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
@@ -21,6 +22,22 @@ _SAFE_PARSE_RE = re.compile(r"\.safeParse\s*\(")
 _HYDRATE_RE = re.compile(
     r"new\s+[A-Z]\w+\s*\(|[A-Z]\w+\.(?:create|from\w*)\s*\(|\bto[A-Z]\w*\s*\("
 )
+_RAW_JSON_RETURN_RE = re.compile(
+    r"return\s+(data|res|response|json)\.(items|data|results|records)\b"
+    r"|return\s+(?:await\s+)?\w+\.json\s*\(\s*\)"
+)
+
+
+@dataclass
+class _SchemaParseCheck:
+    path: Path
+    domain_name: str
+    relative_name: str
+    missing_schema: str
+    missing_parse: str
+    content: str
+    has_parse: bool
+    warning: bool = False
 
 
 class ShareDomainLogicScanner(TypeScriptScanner):
@@ -60,73 +77,63 @@ class ShareDomainLogicScanner(TypeScriptScanner):
         return violations
 
     def _check_server_uses_schema(self, domain_path: Path) -> List[Violation]:
-        violations: List[Violation] = []
         server = self._server_file(domain_path)
         if server is None:
-            return violations
-
+            return []
         content = server.read_text(encoding="utf-8", errors="replace")
-        domain_name = domain_path.name
-        imports_schema = "Schema" in content and (
-            f"from './{domain_name}'" in content
-            or f'from "./{domain_name}"' in content
-            or "Schema" in content and "from './" in content
-        )
-        # Simpler: schema name usage + parse call
-        has_schema_ref = bool(re.search(r"\b\w+Schema\b", content))
-        has_parse = bool(_PARSE_CALL_RE.search(content))
-
-        if not has_schema_ref:
-            violations.append(
-                self.v(
-                    f"Domain '{domain_name}/server.ts' does not reference the "
+        return self._missing_schema_parse(
+            _SchemaParseCheck(
+                server,
+                domain_path.name,
+                "server.ts",
+                (
+                    f"Domain '{domain_path.name}/server.ts' does not reference the "
                     "Zod schema from the domain core. The repository must call "
-                    "Schema.parse(doc) to validate raw database documents.",
-                    str(server),
-                )
-            )
-        elif not has_parse:
-            violations.append(
-                self.v(
-                    f"Domain '{domain_name}/server.ts' references a schema "
+                    "Schema.parse(doc) to validate raw database documents."
+                ),
+                (
+                    f"Domain '{domain_path.name}/server.ts' references a schema "
                     "but never calls .parse() or .safeParse(). Call "
-                    "Schema.parse(rawDoc) at the repository boundary.",
-                    str(server),
-                )
+                    "Schema.parse(rawDoc) at the repository boundary."
+                ),
+                content,
+                bool(_PARSE_CALL_RE.search(content)),
             )
-        return violations
+        )
 
     def _check_client_uses_schema(self, domain_path: Path) -> List[Violation]:
-        violations: List[Violation] = []
         client = self._client_file(domain_path)
         if client is None:
-            return violations
-
+            return []
         content = client.read_text(encoding="utf-8", errors="replace")
-        domain_name = domain_path.name
-        has_schema_ref = bool(re.search(r"\b\w+Schema\b", content))
-        has_parse = bool(_PARSE_CALL_RE.search(content) or _SAFE_PARSE_RE.search(content))
-
-        if not has_schema_ref:
-            violations.append(
-                self.v(
-                    f"Domain '{domain_name}/client.tsx' does not reference the "
+        return self._missing_schema_parse(
+            _SchemaParseCheck(
+                client,
+                domain_path.name,
+                "client.tsx",
+                (
+                    f"Domain '{domain_path.name}/client.tsx' does not reference the "
                     "Zod schema from the domain core. HTTP clients must validate "
-                    "responses with the shared schema.",
-                    str(client),
-                    severity="warning",
-                )
+                    "responses with the shared schema."
+                ),
+                (
+                    f"Domain '{domain_path.name}/client.tsx' references a schema but "
+                    "never calls .parse() or .safeParse()."
+                ),
+                content,
+                bool(_PARSE_CALL_RE.search(content) or _SAFE_PARSE_RE.search(content)),
+                warning=True,
             )
-        elif not has_parse:
-            violations.append(
-                self.v(
-                    f"Domain '{domain_name}/client.tsx' references a schema but "
-                    "never calls .parse() or .safeParse().",
-                    str(client),
-                    severity="warning",
-                )
-            )
-        return violations
+        )
+
+    def _missing_schema_parse(self, check: _SchemaParseCheck) -> List[Violation]:
+        has_schema_ref = bool(re.search(r"\b\w+Schema\b", check.content))
+        severity = "warning" if check.warning else "error"
+        if not has_schema_ref:
+            return [self.v(check.missing_schema, str(check.path), severity=severity)]
+        if check.has_parse:
+            return []
+        return [self.v(check.missing_parse, str(check.path), severity=severity)]
 
     def _check_no_duplicate_schemas(self, domain_path: Path) -> List[Violation]:
         violations: List[Violation] = []
@@ -147,35 +154,30 @@ class ShareDomainLogicScanner(TypeScriptScanner):
         return violations
 
     def _check_http_client_hydrates(self, domain_path: Path) -> List[Violation]:
-        violations: List[Violation] = []
         client = self._client_file(domain_path)
         if client is None:
-            return violations
-
+            return []
         content = client.read_text(encoding="utf-8", errors="replace")
-        has_fetch = "fetch(" in content or "axios." in content
-        if not has_fetch:
-            return violations
-
-        has_hydration = bool(_HYDRATE_RE.search(content))
-        suspicious_returns: list[int] = []
-        for line_num, line in enumerate(content.splitlines(), 1):
-            stripped = line.strip()
-            if (
-                re.search(r"return\s+(data|res|response|json)\.(items|data|results|records)\b", stripped)
-                or re.search(r"return\s+(?:await\s+)?\w+\.json\s*\(\s*\)", stripped)
-            ):
-                suspicious_returns.append(line_num)
-
-        if suspicious_returns and not has_hydration:
-            violations.append(
-                self.v(
-                    f"HTTP client in '{client.name}' returns raw JSON without "
-                    "hydrating into domain instances. Call toDomainEntity(raw) "
-                    "or new DomainClass(raw) — plain objects don't have domain "
-                    "methods and crash at runtime.",
-                    str(client),
-                    suspicious_returns[0],
-                )
+        if "fetch(" not in content and "axios." not in content:
+            return []
+        if _HYDRATE_RE.search(content):
+            return []
+        line_num = self._first_raw_json_return(content)
+        if line_num is None:
+            return []
+        return [
+            self.v(
+                f"HTTP client in '{client.name}' returns raw JSON without "
+                "hydrating into domain instances. Call toDomainEntity(raw) "
+                "or new DomainClass(raw) — plain objects don't have domain "
+                "methods and crash at runtime.",
+                str(client),
+                line_num,
             )
-        return violations
+        ]
+
+    def _first_raw_json_return(self, content: str) -> int | None:
+        for line_num, line in enumerate(content.splitlines(), 1):
+            if _RAW_JSON_RETURN_RE.search(line.strip()):
+                return line_num
+        return None

@@ -38,7 +38,7 @@ with description("PracticeGraph dot_graph"):
         epic = next(
             node
             for node in graph.nodes_of_type(Epic)
-            if Node.slug(node.name) == "onboard-a-customer"
+            if Node().slug(node.name) == "onboard-a-customer"
         )
         dot = epic.dot_graph
         expect(dot).to(contain("SubEpic"))

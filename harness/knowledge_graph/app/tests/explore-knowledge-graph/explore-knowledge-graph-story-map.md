@@ -23,11 +23,14 @@ section: body
     (S) Engineer --> Open Node Source
     (S) Engineer --> Follow Relationship
     (S) Engineer --> Filter Graph
+    (S) Engineer --> Create Database
+    (S) Engineer --> Refresh Master
+    (S) Engineer --> Reload Working Copy
 
 ---
 
 ## Scope boundary
 
-**In scope:** Engineer loads a repo folder into a KnowledgeGraph, browses the PracticeGraph tree, opens Node source, follows a Relationship, and filters by practice · connector · node · violations · rule.
+**In scope:** Engineer loads a repo folder into a KnowledgeGraph, browses the PracticeGraph tree, opens Node source, follows a Relationship, filters by practice · connector · node · violations · rule, and runs Create database, Refresh master, and Reload working copy.
 
-**Out of scope:** writing or repairing rules, CodeQL database build UX, branding besides the explorer chrome already on the screen.
+**Out of scope:** writing or repairing rules, branding besides the explorer chrome already on the screen.

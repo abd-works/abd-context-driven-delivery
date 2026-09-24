@@ -17,7 +17,6 @@ import {
 import {
   isScanSourcePath,
   knowledgeGraphFromWorkspace,
-  resolveScanRoot,
   scanSourceFiles,
   SKIP_DIR,
   type WorkspaceFile,
@@ -131,10 +130,7 @@ export class KnowledgeGraphsServer {
     force = false,
   ): Promise<KnowledgeGraph> {
     const uploaded = files ? scanSourceFiles(files) : [];
-    const root =
-      uploaded.length > 0 && !_isDir(folder)
-        ? folder || _diskScanRoot('')
-        : _resolvePickedFolder(folder);
+    const root = _resolvePickedFolder(folder);
     if (_isDir(root)) {
       _writeLastScanRoot(root);
     }
@@ -143,7 +139,7 @@ export class KnowledgeGraphsServer {
         ? knowledgeGraphFromWorkspace(root, uploaded, crypto.randomUUID())
         : _fromPracticeHierarchyCli(root, Boolean(force));
     return repo.create({
-      folder: graph.folder,
+      folder: root,
       practiceGraphs: graph.toDto().practice_graphs,
     });
   }
@@ -163,6 +159,27 @@ export class KnowledgeGraphsServer {
   static filterGraph(graph: KnowledgeGraph, filter: GraphFilter) {
     return graph.filterGraph(filter).present();
   }
+
+  static async createDatabase(
+    folder: string,
+    repo: KnowledgeGraphRepository,
+  ): Promise<KnowledgeGraph> {
+    return _runDatabaseOperation('create-database', folder, repo);
+  }
+
+  static async refreshMaster(
+    folder: string,
+    repo: KnowledgeGraphRepository,
+  ): Promise<KnowledgeGraph> {
+    return _runDatabaseOperation('refresh-master', folder, repo);
+  }
+
+  static async reloadWorkingCopy(
+    folder: string,
+    repo: KnowledgeGraphRepository,
+  ): Promise<KnowledgeGraph> {
+    return _runDatabaseOperation('reload-working-copy', folder, repo);
+  }
 }
 
 export class FolderNotFound extends Error {
@@ -178,39 +195,36 @@ function _isDir(folder: string): boolean {
   return folder.length > 0 && existsSync(folder) && statSync(folder).isDirectory();
 }
 
-function _diskScanRoot(chosen: string): string {
-  const last = _readLastScanRoot();
-  const root = resolveScanRoot(
-    _isDir(chosen) ? chosen : undefined,
-    last && _isDir(last) ? last : undefined,
-    _repoRoot(),
-  );
-  if (!_isDir(root)) {
-    throw new FolderNotFound(root);
-  }
-  return root;
-}
-
 function _resolvePickedFolder(folder: string): string {
   const chosen = folder.trim();
   if (_isDir(chosen)) {
     return chosen;
   }
-  const last = _readLastScanRoot();
   const repo = _repoRoot();
-  const bases = [last, repo, last ? dirname(last) : '', dirname(repo)].filter(
+  const last = _readLastScanRoot();
+  if (!chosen || chosen === 'workspace') {
+    if (last && _isDir(last)) {
+      return last;
+    }
+    return repo;
+  }
+  const bases = [repo, last, last ? dirname(last) : '', dirname(repo)].filter(
     Boolean,
   );
   for (const base of bases) {
     if (basename(base) === chosen && _isDir(base)) {
       return base;
     }
-    const nested = chosen ? join(base, chosen) : '';
-    if (nested && _isDir(nested)) {
+    const nested = join(base, chosen);
+    if (_isDir(nested)) {
       return nested;
     }
   }
-  return _diskScanRoot('');
+  throw new FolderNotFound(chosen);
+}
+
+function _databaseRoot(folder: string): string {
+  return _resolvePickedFolder(folder);
 }
 
 function _repoRoot(): string {
@@ -240,6 +254,22 @@ function _python(): string {
     return venvUnix;
   }
   return 'python';
+}
+
+function _pythonEnv(): NodeJS.ProcessEnv {
+  const repo = _repoRoot();
+  const harness = join(repo, 'harness').toLowerCase();
+  const parts = [
+    repo,
+    join(repo, 'tools'),
+    join(repo, 'practices'),
+    join(repo, 'actions'),
+    ...(process.env.PYTHONPATH ?? '').split(delimiter),
+  ].filter(
+    (item) =>
+      Boolean(item) && item.replaceAll('/', '\\').toLowerCase() !== harness,
+  );
+  return { ...process.env, PYTHONPATH: parts.join(delimiter) };
 }
 
 function _readLastScanRoot(): string | undefined {
@@ -301,6 +331,18 @@ export function createKnowledgeGraphsRouter(
   repo: KnowledgeGraphRepository,
 ): Router {
   const router = Router();
+
+  router.post('/create-database', async (req, res) => {
+    await _databaseRoute(req, res, repo, KnowledgeGraphsServer.createDatabase);
+  });
+
+  router.post('/refresh-master', async (req, res) => {
+    await _databaseRoute(req, res, repo, KnowledgeGraphsServer.refreshMaster);
+  });
+
+  router.post('/reload-working-copy', async (req, res) => {
+    await _databaseRoute(req, res, repo, KnowledgeGraphsServer.reloadWorkingCopy);
+  });
 
   router.post('/scan', async (req, res) => {
     try {
@@ -373,12 +415,78 @@ export function createKnowledgeGraphsRouter(
   return router;
 }
 
+async function _databaseRoute(
+  req: { body: { folder?: string } },
+  res: {
+    status: (code: number) => { json: (body: unknown) => void };
+    json: (body: unknown) => void;
+  },
+  repo: KnowledgeGraphRepository,
+  run: (
+    folder: string,
+    repo: KnowledgeGraphRepository,
+  ) => Promise<KnowledgeGraph>,
+) {
+  try {
+    const graph = await run(String(req.body.folder ?? ''), repo);
+    res.status(201).json(graph.present());
+  } catch (error) {
+    if (error instanceof FolderNotFound) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Database operation failed',
+    });
+  }
+}
+
+async function _runDatabaseOperation(
+  operation: 'create-database' | 'refresh-master' | 'reload-working-copy',
+  folder: string,
+  repo: KnowledgeGraphRepository,
+): Promise<KnowledgeGraph> {
+  const root = _databaseRoot(folder);
+  if (_isDir(root)) {
+    _writeLastScanRoot(root);
+  }
+  _spawnDatabaseCli(operation, root);
+  const graph = _fromPracticeHierarchyCli(root, true);
+  return repo.create({
+    folder: root,
+    practiceGraphs: graph.toDto().practice_graphs,
+  });
+}
+
+function _spawnDatabaseCli(
+  operation: 'create-database' | 'refresh-master' | 'reload-working-copy',
+  root: string,
+): void {
+  const repo = _repoRoot();
+  const script = join(repo, 'harness', 'knowledge_graph', 'database_cli.py');
+  const result = spawnSync(_python(), [script, operation, root], {
+    cwd: repo,
+    env: _pythonEnv(),
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: 15 * 60 * 1000,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      [result.stderr, result.stdout, result.error?.message]
+        .filter(Boolean)
+        .join('\n') || `${operation} failed`,
+    );
+  }
+}
+
 function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph {
   const cached = join(root, '.context', 'explorer-graph.json');
   if (!force && existsSync(cached)) {
-    const dto = JSON.parse(readFileSync(cached, 'utf8'));
-    dto.folder = _isDir(String(dto.folder ?? '')) ? dto.folder : root;
-    return graphFromWorkspaceDto(dto);
+    const graph = _graphFromCache(cached, root);
+    if (graph) {
+      return graph;
+    }
   }
   const repo = _repoRoot();
   const script = join(
@@ -387,31 +495,23 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
     'knowledge_graph',
     'write_practice_hierarchy.py',
   );
-  const pythonPath = [
-    repo,
-    join(repo, 'harness'),
-    join(repo, 'tools'),
-    join(repo, 'practices'),
-    join(repo, 'actions'),
-    process.env.PYTHONPATH ?? '',
-  ]
-    .filter(Boolean)
-    .join(delimiter);
+  const pythonPath = _pythonEnv();
   const result = spawnSync(
     _python(),
     [script, '--json', '--no-populate', root],
     {
       cwd: repo,
-      env: { ...process.env, PYTHONPATH: pythonPath },
+      env: pythonPath,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
     },
   );
   if (result.status !== 0) {
     if (existsSync(cached)) {
-      const dto = JSON.parse(readFileSync(cached, 'utf8'));
-      dto.folder = _isDir(String(dto.folder ?? '')) ? dto.folder : root;
-      return graphFromWorkspaceDto(dto);
+      const graph = _graphFromCache(cached, root);
+      if (graph) {
+        return graph;
+      }
     }
     throw new Error(
       result.stderr || result.stdout || 'write_practice_hierarchy.py failed',
@@ -425,7 +525,20 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
   if (!line) {
     throw new Error('write_practice_hierarchy.py printed no JSON');
   }
-  return graphFromWorkspaceDto(JSON.parse(line));
+  const dto = JSON.parse(line) as KnowledgeGraphDto;
+  dto.folder = root;
+  return graphFromWorkspaceDto(dto);
+}
+
+function _graphFromCache(cached: string, root: string): KnowledgeGraph | null {
+  const dto = JSON.parse(readFileSync(cached, 'utf8')) as KnowledgeGraphDto;
+  const cachedFolder = String(dto.folder || '').replaceAll('\\', '/').toLowerCase();
+  const wanted = root.replaceAll('\\', '/').toLowerCase();
+  if (cachedFolder && cachedFolder !== wanted) {
+    return null;
+  }
+  dto.folder = root;
+  return graphFromWorkspaceDto(dto);
 }
 
 function graphFromWorkspaceDto(dto: KnowledgeGraphDto): KnowledgeGraph {

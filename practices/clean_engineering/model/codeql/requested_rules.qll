@@ -16,7 +16,6 @@ predicate requestedRule(string slug) {
   slug = "hide-inner-details" or
   slug = "use-property-not-accessor" or
   slug = "prefer-class-operations" or
-  slug = "prefer-instance-operations" or
   slug = "use-explicit-dependencies" or
   slug = "limit-operation-parameters" or
   slug = "avoid-vague-parameter-names" or
@@ -25,6 +24,7 @@ predicate requestedRule(string slug) {
   slug = "use-consistent-naming" or
   slug = "eliminate-duplication" or
   slug = "keep-operations-small-focused" or
+  slug = "prefer-instance-operations" or
   slug = "simplify-control-flow" or
   slug = "provide-meaningful-context" or
   slug = "use-exceptions-properly" or

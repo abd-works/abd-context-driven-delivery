@@ -44,63 +44,98 @@ def populate_from_codeql(
     results_path: Path | None = None,
 ) -> bool:
     """Merge CodeQL facts into *graph*. Returns True when export was applied."""
-    export_path = resolve_codeql_results_path(root, results_path)
-    if export_path is None:
-        return False
-    export = load_codeql_export(export_path)
-    _ensure_ce_nodes(graph, export)
-    _wire_codeql_calls(graph, export)
-    _wire_story_calls(graph, export)
-    _wire_story_observations(graph, export)
-    _wire_example_demonstrates(graph, export)
-    return True
+    populate = CodeQLPopulate(graph)
+    populate.root = root
+    populate.results_path = results_path
+    return populate.apply()
 
 
-def _ensure_ce_nodes(graph: PracticeGraph, export: CodeQLPracticeGraphExport) -> None:
-    modules: Dict[str, GraphModule] = {}
-    for mod in graph.nodes_of_type(GraphModule):
-        modules[mod.name.lower()] = mod
+class CodeQLPopulate:
+    def __init__(self, graph: PracticeGraph) -> None:
+        self.graph = graph
+        self.root: Path = graph.root
+        self.results_path: Path | None = None
+        self.export: CodeQLPracticeGraphExport
+        self.modules: Dict[str, GraphModule] = {}
+        self.classes: Dict[str, OoadClass] = {}
+        self._module_order = 1
+        self._examples_by_name: Dict[str, List[GraphExample]] = {}
 
-    classes: Dict[str, OoadClass] = {}
-    for cls in graph.nodes.values():
-        if isinstance(cls, OoadClass):
-            classes[cls.name.lower()] = cls
+    def apply(self) -> bool:
+        export_path = resolve_codeql_results_path(self.root, self.results_path)
+        if export_path is None:
+            return False
+        self.export = load_codeql_export(export_path)
+        self._ensure_ce_nodes()
+        self._wire_codeql_calls()
+        self._wire_story_calls()
+        self._wire_story_observations()
+        self._wire_example_demonstrates()
+        return True
 
-    order = 1
-    for entry in export.classes:
-        mod = modules.get(entry.module.lower())
-        if mod is None:
-            mod = GraphModule(entry.module, order)
-            order += 1
-            graph.register(mod)
-            graph.index_module(mod)
-            modules[entry.module.lower()] = mod
-            if graph.ce_model is not None:
-                graph.ce_model.modules.append(mod)
-                graph.relate(graph.ce_model, Kind.OWNS, mod)
+    def _ensure_ce_nodes(self) -> None:
+        self.modules = {}
+        for mod in self.graph.nodes_of_type(GraphModule):
+            self.modules[mod.name.lower()] = mod
+        self.classes = {}
+        for cls in self.graph.nodes.values():
+            if isinstance(cls, OoadClass):
+                self.classes[cls.name.lower()] = cls
+        self._module_order = 1
+        self._ensure_modules_and_classes()
+        self._ensure_properties()
+        self._ensure_operations()
 
-        cls = classes.get(entry.name.lower())
-        if cls is None:
-            decorated = entry.name
-            if entry.stereotypes:
-                decorated = f"{entry.name} {' '.join(f'<<{s}>>' for s in entry.stereotypes)}"
-            stub = OoadClass(decorated, len(mod.classes) + 1)
-            if entry.stereotypes or ddd_class_kind(decorated):
-                cls = graph_ddd_class_for(stub)
-            else:
-                cls = GraphClass(entry.name, len(mod.classes) + 1)
-            mod.classes.append(cls)
-            classes[entry.name.lower()] = cls
-            graph.register(cls)
-            graph.relate(mod, Kind.OWNS, cls)
-            graph.relate(cls, Kind.BELONGS_TO, mod)
+    def _ensure_modules_and_classes(self) -> None:
+        for entry in self.export.classes:
+            mod = self._module_for(entry)
+            self._class_for(entry, mod)
 
-    for prop in export.properties:
-        cls = classes.get(prop.class_name.lower())
-        if cls is None:
-            continue
-        if any(p.name == prop.name for p in cls.property_nodes):
-            continue
+    def _module_for(self, entry) -> GraphModule:
+        key = entry.module.lower()
+        existing = self.modules.get(key)
+        if existing is not None:
+            return existing
+        mod = GraphModule(entry.module, self._module_order)
+        self._module_order += 1
+        self.graph.register(mod)
+        self.graph.index_module(mod)
+        self.modules[key] = mod
+        if self.graph.ce_model is None:
+            return mod
+        self.graph.ce_model.modules.append(mod)
+        self.graph.ce_model.relate(Kind.OWNS, mod)
+        return mod
+
+    def _class_for(self, entry, mod: GraphModule) -> OoadClass:
+        existing = self.classes.get(entry.name.lower())
+        if existing is not None:
+            return existing
+        decorated = entry.name
+        if entry.stereotypes:
+            decorated = f"{entry.name} {' '.join(f'<<{s}>>' for s in entry.stereotypes)}"
+        stub = OoadClass(decorated, len(mod.classes) + 1)
+        if entry.stereotypes or ddd_class_kind(decorated):
+            cls = graph_ddd_class_for(stub)
+        else:
+            cls = GraphClass(entry.name, len(mod.classes) + 1)
+        mod.classes.append(cls)
+        self.classes[entry.name.lower()] = cls
+        self.graph.register(cls)
+        mod.relate(Kind.OWNS, cls)
+        cls.relate(Kind.BELONGS_TO, mod)
+        return cls
+
+    def _ensure_properties(self) -> None:
+        for prop in self.export.properties:
+            cls = self.classes.get(prop.class_name.lower())
+            if cls is None:
+                continue
+            if any(p.name == prop.name for p in cls.property_nodes):
+                continue
+            self._add_property(cls, prop)
+
+    def _add_property(self, cls: OoadClass, prop) -> None:
         if not cls.property_nodes and cls.properties:
             cls.sync_tree_from_legacy()
         node = GraphProperty(
@@ -109,19 +144,24 @@ def _ensure_ce_nodes(graph: PracticeGraph, export: CodeQLPracticeGraphExport) ->
             type_hint=prop.type_hint,
         )
         cls.property_nodes.append(node)
-        graph.register(node)
-        graph.relate(cls, Kind.OWNS, node)
-        graph.relate(node, Kind.BELONGS_TO, cls)
-        target = graph.find_class(prop.type_hint.split("|")[0].strip().rstrip("[]"))
-        if target is not None:
-            graph.relate(node, Kind.HAS_TYPE, target)
+        self.graph.register(node)
+        cls.relate(Kind.OWNS, node)
+        node.relate(Kind.BELONGS_TO, cls)
+        target = self.graph.find_class(prop.type_hint.split("|")[0].strip().rstrip("[]"))
+        if target is None:
+            return
+        node.relate(Kind.HAS_TYPE, target)
 
-    for op in export.operations:
-        cls = classes.get(op.class_name.lower())
-        if cls is None:
-            continue
-        if any(o.name == op.name for o in cls.operation_nodes):
-            continue
+    def _ensure_operations(self) -> None:
+        for op in self.export.operations:
+            cls = self.classes.get(op.class_name.lower())
+            if cls is None:
+                continue
+            if any(o.name == op.name for o in cls.operation_nodes):
+                continue
+            self._add_operation(cls, op)
+
+    def _add_operation(self, cls: OoadClass, op) -> None:
         if not cls.operation_nodes and cls.operations:
             cls.sync_tree_from_legacy()
         node = GraphOperation(
@@ -129,115 +169,116 @@ def _ensure_ce_nodes(graph: PracticeGraph, export: CodeQLPracticeGraphExport) ->
             len(cls.operation_nodes) + 1,
             return_type=op.return_type,
         )
-        node._legacy_parameters = list(op.parameters)
+        node.legacy_parameters = list(op.parameters)
         node._sync_parameters_from_legacy()
         cls.operation_nodes.append(node)
-        graph.register(node)
-        graph.relate(cls, Kind.OWNS, node)
-        graph.relate(node, Kind.BELONGS_TO, cls)
-        ret = graph.find_class(op.return_type.split("|")[0].strip().rstrip("[]"))
-        if ret is not None:
-            graph.relate(node, Kind.RETURNS, ret)
+        self.graph.register(node)
+        cls.relate(Kind.OWNS, node)
+        node.relate(Kind.BELONGS_TO, cls)
+        ret = self.graph.find_class(op.return_type.split("|")[0].strip().rstrip("[]"))
+        if ret is None:
+            return
+        node.relate(Kind.RETURNS, ret)
 
+    def _wire_codeql_calls(self) -> None:
+        for call in self.export.calls:
+            caller = self.graph.find_operation(call.caller_class, call.caller_operation)
+            callee = self.graph.find_operation(call.callee_class, call.callee_operation)
+            if caller is None or callee is None:
+                continue
+            caller.relate(Kind.INVOKES, callee)
 
-def _wire_codeql_calls(graph: PracticeGraph, export: CodeQLPracticeGraphExport) -> None:
-    for call in export.calls:
-        caller = graph.find_operation(call.caller_class, call.caller_operation)
-        callee = graph.find_operation(call.callee_class, call.callee_operation)
-        if caller is None or callee is None:
-            continue
-        graph.relate(caller, Kind.INVOKES, callee)
+    def _wire_story_calls(self) -> None:
+        for story_call in self.export.story_calls:
+            step = self._find_step(story_call)
+            operation = self.graph.find_operation(
+                story_call.callee_class, story_call.callee_operation
+            )
+            if step is None or operation is None:
+                continue
+            step.relate(Kind.INVOKES, operation)
 
+    def _wire_story_observations(self) -> None:
+        for obs in self.export.story_observations:
+            step = self._find_step(obs)
+            if step is None:
+                continue
+            cls = self.graph.find_class(obs.target_class)
+            if cls is None:
+                continue
+            target = self._observation_target(cls, obs)
+            if target is None:
+                continue
+            step.relate(Kind.OBSERVES, target)
 
-def _wire_story_calls(graph: PracticeGraph, export: CodeQLPracticeGraphExport) -> None:
-    for story_call in export.story_calls:
-        step = _find_step(graph, story_call.story_file, story_call.line, story_call.step_text)
-        operation = graph.find_operation(story_call.callee_class, story_call.callee_operation)
-        if step is None or operation is None:
-            continue
-        graph.relate(step, Kind.INVOKES, operation)
+    def _observation_target(self, cls, obs):
+        for owned in self.graph.outgoing_nodes(cls, Kind.OWNS):
+            if (
+                obs.member_kind == "operation"
+                and isinstance(owned, GraphOperation)
+                and owned.name == obs.target_member
+            ):
+                return owned
+            if (
+                obs.member_kind == "property"
+                and isinstance(owned, GraphProperty)
+                and owned.name == obs.target_member
+            ):
+                return owned
+        return None
 
+    def _wire_example_demonstrates(self) -> None:
+        self._examples_by_name = {}
+        for example in self.graph.nodes_of_type(GraphExample):
+            self._examples_by_name.setdefault(example.name.lower(), []).append(example)
+        for entry in self.export.example_exports:
+            if not entry.demonstrates:
+                continue
+            self._relate_demonstrates(entry)
 
-def _wire_story_observations(graph: PracticeGraph, export: CodeQLPracticeGraphExport) -> None:
-    for obs in export.story_observations:
-        step = _find_step(graph, obs.story_file, obs.line, "")
-        if step is None:
-            continue
-        cls = graph.find_class(obs.target_class)
-        if cls is None:
-            continue
-        target = None
-        for owned in graph.outgoing_nodes(cls, Kind.OWNS):
-            if obs.member_kind == "operation" and isinstance(owned, GraphOperation):
-                if owned.name == obs.target_member:
-                    target = owned
-                    break
-            if obs.member_kind == "property" and isinstance(owned, GraphProperty):
-                if owned.name == obs.target_member:
-                    target = owned
-                    break
-        if target is not None:
-            graph.relate(step, Kind.OBSERVES, target)
+    def _relate_demonstrates(self, entry) -> None:
+        for example in self._match_examples(entry):
+            self._demonstrate_classes(example, entry.demonstrates)
 
+    def _demonstrate_classes(self, example: GraphExample, cls_names: List[str]) -> None:
+        for class_name in cls_names:
+            cls = self.graph.find_class(class_name)
+            if cls is None:
+                continue
+            example.relate(Kind.DEMONSTRATES, cls)
 
-def _wire_example_demonstrates(graph: PracticeGraph, export: CodeQLPracticeGraphExport) -> None:
-    examples_by_name: Dict[str, List[GraphExample]] = {}
-    for example in graph.nodes_of_type(GraphExample):
-        examples_by_name.setdefault(example.name.lower(), []).append(example)
+    def _match_examples(self, entry) -> List[GraphExample]:
+        export_lower = entry.export_name.lower()
+        if export_lower in self._examples_by_name:
+            return self._examples_by_name[export_lower]
+        stem = Path(entry.file).stem.replace(".examples", "").replace("-", " ")
+        if stem.lower() in self._examples_by_name:
+            return self._examples_by_name[stem.lower()]
+        out: List[GraphExample] = []
+        for examples in self._examples_by_name.values():
+            for ex in examples:
+                if export_lower in ex.name.lower() or ex.name.lower() in export_lower:
+                    out.append(ex)
+        return out
 
-    for entry in export.example_exports:
-        cls_names = entry.demonstrates
-        if not cls_names:
-            continue
-        matched = _match_examples(examples_by_name, entry.export_name, entry.file)
-        for example in matched:
-            for class_name in cls_names:
-                cls = graph.find_class(class_name)
-                if cls is not None:
-                    graph.relate(example, Kind.DEMONSTRATES, cls)
-
-
-def _match_examples(
-    index: Dict[str, List[GraphExample]],
-    export_name: str,
-    file_path: str,
-) -> List[GraphExample]:
-    export_lower = export_name.lower()
-    if export_lower in index:
-        return index[export_lower]
-    stem = Path(file_path).stem.replace(".examples", "").replace("-", " ")
-    if stem.lower() in index:
-        return index[stem.lower()]
-    out: List[GraphExample] = []
-    for examples in index.values():
-        for ex in examples:
-            if export_lower in ex.name.lower() or ex.name.lower() in export_lower:
-                out.append(ex)
-    return out
-
-
-def _find_step(
-    graph: PracticeGraph,
-    story_file: str,
-    line: int,
-    step_text: str,
-) -> Optional[GraphStep]:
-    normalized = story_file.replace("\\", "/").lstrip("./")
-    best: Tuple[int, Optional[GraphStep]] = (1_000_000, None)
-    for step in graph.nodes_of_type(GraphStep):
-        if step_text and step_text.lower() in step.text.lower():
-            return step
-        src = getattr(step, "source", None)
-        if src is None:
-            continue
-        src_file = str(src.file).replace("\\", "/").lstrip("./")
-        if src_file != normalized and not src_file.endswith(normalized):
-            continue
-        if line <= 0:
-            return step
-        delta = abs(int(src.line) - line)
-        if delta < best[0]:
-            best = (delta, step)
-    if best[1] is not None and best[0] <= 5:
-        return best[1]
-    return None
+    def _find_step(self, story_call) -> Optional[GraphStep]:
+        step_text = getattr(story_call, "step_text", "")
+        normalized = story_call.story_file.replace("\\", "/").lstrip("./")
+        best: Tuple[int, Optional[GraphStep]] = (1_000_000, None)
+        for step in self.graph.nodes_of_type(GraphStep):
+            if step_text and step_text.lower() in step.text.lower():
+                return step
+            src = getattr(step, "source", None)
+            if src is None:
+                continue
+            src_file = str(src.file).replace("\\", "/").lstrip("./")
+            if src_file != normalized and not src_file.endswith(normalized):
+                continue
+            if story_call.line <= 0:
+                return step
+            delta = abs(int(src.line) - story_call.line)
+            if delta < best[0]:
+                best = (delta, step)
+        if best[1] is not None and best[0] <= 5:
+            return best[1]
+        return None

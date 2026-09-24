@@ -49,111 +49,101 @@ class VocabularyHelper:
     AGENT_SUFFIXES = ["er", "or", "ar", "ant", "ent"]
     GERUND_SUFFIX = "ing"
 
-    @staticmethod
-    def _has_synsets(word: str, pos) -> bool:
+    def _has_synsets(self, word: str, pos) -> bool:
         try:
             word_lower = word.lower()
             synsets = wn.synsets(word_lower, pos=pos)
             return len(synsets) > 0
-        except Exception:
+        except Exception as error:
+            print(f"Warning: WordNet synsets failed for {word}: {error}", file=sys.stderr)
             return False
 
-    @staticmethod
-    def is_verb(word: str) -> bool:
-        return VocabularyHelper._has_synsets(word, wn.VERB)
+    def is_verb(self, word: str) -> bool:
+        return self._has_synsets(word, wn.VERB)
 
-    @staticmethod
-    def is_noun(word: str) -> bool:
-        return VocabularyHelper._has_synsets(word, wn.NOUN)
+    def is_noun(self, word: str) -> bool:
+        return self._has_synsets(word, wn.NOUN)
 
-    @staticmethod
-    def is_agent_noun(word: str) -> Tuple[bool, Optional[str], Optional[str]]:
+    def is_agent_noun(self, word: str) -> Tuple[bool, Optional[str], Optional[str]]:
         word_lower = word.lower()
 
-        for suffix in VocabularyHelper.AGENT_SUFFIXES:
+        for suffix in self.AGENT_SUFFIXES:
             if word_lower.endswith(suffix) and len(word_lower) > len(suffix) + 2:
                 base = word_lower[: -len(suffix)]
 
-                if VocabularyHelper.is_verb(base):
+                if self.is_verb(base):
                     return (True, base, suffix)
 
                 if suffix == "er" or suffix == "or":
                     base_with_e = base + "e"
-                    if VocabularyHelper.is_verb(base_with_e):
+                    if self.is_verb(base_with_e):
                         return (True, base_with_e, suffix)
 
         return (False, None, None)
 
-    @staticmethod
-    def is_gerund(word: str) -> Tuple[bool, Optional[str]]:
+    def is_gerund(self, word: str) -> Tuple[bool, Optional[str]]:
         word_lower = word.lower()
 
-        if not word_lower.endswith(VocabularyHelper.GERUND_SUFFIX):
+        if not word_lower.endswith(self.GERUND_SUFFIX):
             return (False, None)
 
-        if len(word_lower) <= len(VocabularyHelper.GERUND_SUFFIX) + 2:
+        if len(word_lower) <= len(self.GERUND_SUFFIX) + 2:
             return (False, None)
 
-        base = word_lower[: -len(VocabularyHelper.GERUND_SUFFIX)]
+        base = word_lower[: -len(self.GERUND_SUFFIX)]
 
-        if VocabularyHelper.is_verb(base):
+        if self.is_verb(base):
             return (True, base)
 
         base_with_e = base + "e"
-        if VocabularyHelper.is_verb(base_with_e):
+        if self.is_verb(base_with_e):
             return (True, base_with_e)
 
         if len(base) > 1 and base[-1] == base[-2]:
             base_single = base[:-1]
-            if VocabularyHelper.is_verb(base_single):
+            if self.is_verb(base_single):
                 return (True, base_single)
 
         return (False, None)
 
-    @staticmethod
-    def get_pos_tags(text: str) -> List[Tuple[str, str]]:
+    def pos_tags(self, text: str) -> List[Tuple[str, str]]:
         try:
             tokens = word_tokenize(text)
             tokens = [t for t in tokens if t.isalnum() or any(c.isalnum() for c in t)]
             return pos_tag(tokens)
-        except Exception:
+        except Exception as error:
+            print(f"Warning: POS tagging failed: {error}", file=sys.stderr)
             return []
 
-    @staticmethod
-    def is_verb_tag(tag: str) -> bool:
+    def is_verb_tag(self, tag: str) -> bool:
         verb_tags = ["VB", "VBP", "VBZ", "VBD", "VBG", "VBN"]
         return tag in verb_tags
 
-    @staticmethod
-    def is_noun_tag(tag: str) -> bool:
+    def is_noun_tag(self, tag: str) -> bool:
         noun_tags = ["NN", "NNS", "NNP", "NNPS"]
         return tag in noun_tags
 
-    @staticmethod
-    def is_proper_noun_tag(tag: str) -> bool:
+    def is_proper_noun_tag(self, tag: str) -> bool:
         proper_noun_tags = ["NNP", "NNPS"]
         return tag in proper_noun_tags
 
-    @staticmethod
-    def is_actor_or_role(word: str) -> bool:
+    def is_actor_or_role(self, word: str) -> bool:
         try:
-            word_lower = word.lower()
-
-            synsets = wn.synsets(word_lower)
-
-            if not synsets:
-                return False
-
-            for synset in synsets:
-                hypernyms = set()
-                for path in synset.hypernym_paths():
-                    hypernyms.update(path)
-
-                for hypernym in hypernyms:
-                    name = hypernym.name().split(".")[0]
-                    if name in ["person", "user", "system", "agent", "entity", "causal_agent"]:
-                        return True
-
+            return self._hypernym_is_actor(word.lower())
+        except Exception as error:
+            print(f"Warning: actor check failed for {word}: {error}", file=sys.stderr)
             return False
-        except Exception:
+
+    def _hypernym_is_actor(self, word_lower: str) -> bool:
+        synsets = wn.synsets(word_lower)
+        if not synsets:
             return False
+        for synset in synsets:
+            hypernyms = set()
+            for path in synset.hypernym_paths():
+                hypernyms.update(path)
+            for hypernym in hypernyms:
+                name = hypernym.name().split(".")[0]
+                if name in ["person", "user", "system", "agent", "entity", "causal_agent"]:
+                    return True
+        return False

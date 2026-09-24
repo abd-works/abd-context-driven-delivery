@@ -33,7 +33,7 @@ class NodeRules:
 
     @property
     def violations(self) -> List[RuleViolation]:
-        hits = _matching(self._node, self.graph)
+        hits = self._matching()
         if self._practice is not None:
             hits = [hit for hit in hits if hit.practice == self._practice]
         if self._fidelity is not None:
@@ -74,36 +74,31 @@ class NodeRules:
         )
         return [rule.slug for rule in rules]
 
+    def _matching(self) -> List[RuleViolation]:
+        return self._dedupe(
+            list(self.graph.violations_for(self._node)) + self._inherited(self._node)
+        )
 
-def _matching(node: Node, graph: "PracticeGraph") -> List[RuleViolation]:
-    combined = _dedupe(
-        list(graph._violations_by_node.get(node.node_id, []))
-        + _inherited(node, graph)
-    )
-    return combined
+    def _inherited(self, node: Node) -> List[RuleViolation]:
+        inherited: List[RuleViolation] = []
+        for parent in node.related(Kind.OWNS, direction="in"):
+            for violation in self.graph.violations_for(parent):
+                if violation.rule_slug in (
+                    "scenario-scopes-example",
+                    "keep-classes-single-responsibility",
+                ):
+                    continue
+                inherited.append(violation)
+            inherited.extend(self._inherited(parent))
+        return inherited
 
-
-def _inherited(node: Node, graph: "PracticeGraph") -> List[RuleViolation]:
-    inherited: List[RuleViolation] = []
-    for parent in node.related(Kind.OWNS, direction="in"):
-        for violation in graph._violations_by_node.get(parent.node_id, []):
-            if violation.rule_slug in (
-                "scenario-scopes-example",
-                "keep-classes-single-responsibility",
-            ):
+    def _dedupe(self, violations: List[RuleViolation]) -> List[RuleViolation]:
+        seen: set[tuple] = set()
+        out: List[RuleViolation] = []
+        for violation in violations:
+            key = (violation.rule_slug, violation.node_id, violation.message)
+            if key in seen:
                 continue
-            inherited.append(violation)
-        inherited.extend(_inherited(parent, graph))
-    return inherited
-
-
-def _dedupe(violations: List[RuleViolation]) -> List[RuleViolation]:
-    seen: set[tuple] = set()
-    out: List[RuleViolation] = []
-    for violation in violations:
-        key = (violation.rule_slug, violation.node_id, violation.message)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(violation)
-    return out
+            seen.add(key)
+            out.append(violation)
+        return out

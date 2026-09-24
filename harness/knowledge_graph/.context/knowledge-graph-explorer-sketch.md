@@ -108,6 +108,12 @@ Explore Knowledge Graph
                 when the Engineer opens harness
                 then harness children include the guidance folder
                     and do not list Guidance as a direct child
+            classless members sit on the package, not a File
+                given a package whose file owns a class and a classless operation
+                when the Engineer opens that package
+                then the package children include the class and the classless operation
+                    and do not list the file
+                    and do not list a module variable as a Property
         Engineer --> Show Disk Packages
             disk folders show under a Module even when they are only Packages
                 given harness with disk folders guidance and mcp

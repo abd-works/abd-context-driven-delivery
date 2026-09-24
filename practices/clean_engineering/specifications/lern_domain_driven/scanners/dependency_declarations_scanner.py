@@ -17,6 +17,7 @@ Checks:
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -51,6 +52,19 @@ _TIER_RESTRICTIONS: Dict[str, str] = {
 }
 
 
+@dataclass
+class _TierScan:
+    directory: Path
+    tier: str
+    domain_name: str
+
+
+@dataclass
+class _FrameworkPlacement:
+    package: str
+    allowed_tier: str
+
+
 class DependencyDeclarationsScanner(TypeScriptScanner):
     """Checks that every external import is declared in package.json."""
 
@@ -71,7 +85,9 @@ class DependencyDeclarationsScanner(TypeScriptScanner):
                 tier_deps = self._load_all_deps(tier_dir / "package.json")
                 all_deps = root_deps | tier_deps
                 violations += self._check_tier_imports(tier_dir, all_deps)
-                violations += self._check_tier_restrictions(tier_dir, tier, domain_path.name)
+                violations += self._check_tier_restrictions(
+                    _TierScan(tier_dir, tier, domain_path.name)
+                )
 
         return violations
 
@@ -118,39 +134,37 @@ class DependencyDeclarationsScanner(TypeScriptScanner):
     def _check_tier_imports(self, tier_dir: Path, all_deps: Set[str]) -> List[Violation]:
         violations: List[Violation] = []
         for ts_file in self.get_all_source_files(tier_dir):
-            parsed_root = self.parse_file(ts_file)
-            if parsed_root is None:
-                continue
-            for imp in self.get_imports(parsed_root):
-                pkg = self._extract_package_name(imp.source)
-                if pkg is None:
-                    continue
-                if pkg in _NODE_BUILTINS:
-                    continue
-                if pkg.startswith("@") and pkg.count("/") == 1:
-                    if pkg not in all_deps:
-                        violations.append(
-                            self.v(
-                                f"'{ts_file.name}' imports '{imp.source}' but "
-                                f"'{pkg}' is not declared in any package.json. "
-                                "Add it to the appropriate package.json "
-                                "dependencies.",
-                                str(ts_file),
-                                imp.start_line,
-                            )
-                        )
-                elif not pkg.startswith("@"):
-                    if pkg not in all_deps:
-                        violations.append(
-                            self.v(
-                                f"'{ts_file.name}' imports '{pkg}' but it is not "
-                                "declared in any package.json. Add it to "
-                                "dependencies.",
-                                str(ts_file),
-                                imp.start_line,
-                            )
-                        )
+            violations.extend(self._undeclared_imports_in(ts_file, all_deps))
         return violations
+
+    def _undeclared_imports_in(self, ts_file: Path, all_deps: Set[str]) -> List[Violation]:
+        parsed_root = self.parse_file(ts_file)
+        if parsed_root is None:
+            return []
+        violations: List[Violation] = []
+        for imp in self.get_imports(parsed_root):
+            hit = self._undeclared_package_hit(ts_file, imp, all_deps)
+            if hit is not None:
+                violations.append(hit)
+        return violations
+
+    def _undeclared_package_hit(self, ts_file: Path, imp, all_deps: Set[str]):
+        pkg = self._extract_package_name(imp.source)
+        if pkg is None or pkg in _NODE_BUILTINS:
+            return None
+        scoped = pkg.startswith("@") and pkg.count("/") == 1
+        bare = not pkg.startswith("@")
+        if not (scoped or bare) or pkg in all_deps:
+            return None
+        imported = imp.source if scoped else pkg
+        return self.v(
+            f"'{ts_file.name}' imports '{imported}' but "
+            f"'{pkg}' is not declared in any package.json. "
+            "Add it to the appropriate package.json "
+            "dependencies.",
+            str(ts_file),
+            imp.start_line,
+        )
 
     def _extract_package_name(self, source: str) -> Optional[str]:
         """Extract the npm package name from an import source string."""
@@ -169,22 +183,29 @@ class DependencyDeclarationsScanner(TypeScriptScanner):
     # Framework tier restriction checks                                    #
     # ------------------------------------------------------------------ #
 
-    def _check_tier_restrictions(self, tier_dir: Path, tier: str, domain_name: str) -> List[Violation]:
+    def _check_tier_restrictions(self, scan: _TierScan) -> List[Violation]:
         violations: List[Violation] = []
         for pkg, allowed_tier in _TIER_RESTRICTIONS.items():
-            if tier == allowed_tier:
+            if scan.tier == allowed_tier:
                 continue
-            for ts_file in self.get_all_source_files(tier_dir):
-                parsed_root = self.parse_file(ts_file)
-                if parsed_root is None:
-                    continue
-                if self.has_import_from(parsed_root, pkg):
-                    violations.append(
-                        self.v(
-                            f"'{domain_name}/{tier}/{ts_file.name}' imports "
-                            f"'{pkg}' which must only be used in '{allowed_tier}/'. "
-                            "This is a layer purity violation.",
-                            str(ts_file),
-                        )
-                    )
+            violations.extend(self._forbidden_framework_imports(scan, _FrameworkPlacement(pkg, allowed_tier)))
+        return violations
+
+    def _forbidden_framework_imports(
+        self, scan: _TierScan, placement: _FrameworkPlacement
+    ) -> List[Violation]:
+        violations: List[Violation] = []
+        for ts_file in self.get_all_source_files(scan.directory):
+            parsed_root = self.parse_file(ts_file)
+            if parsed_root is None or not self.has_import_from(parsed_root, placement.package):
+                continue
+            violations.append(
+                self.v(
+                    f"'{scan.domain_name}/{scan.tier}/{ts_file.name}' imports "
+                    f"'{placement.package}' which must only be used in "
+                    f"'{placement.allowed_tier}/'. "
+                    "This is a layer purity violation.",
+                    str(ts_file),
+                )
+            )
         return violations

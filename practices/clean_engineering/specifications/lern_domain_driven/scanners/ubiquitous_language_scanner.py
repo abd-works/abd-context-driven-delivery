@@ -14,6 +14,7 @@ Uses tree-sitter TypeScript AST to check:
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
@@ -32,6 +33,13 @@ _TECHNICAL_METHOD_NAMES = frozenset(
 _HTTP_TEST_PATTERN = re.compile(r"['\"`](GET|POST|PUT|DELETE|PATCH)\s+/api/", re.IGNORECASE)
 _STATUS_CODE_PATTERN = re.compile(r"['\"`].*returns?\s+[245]\d\d", re.IGNORECASE)
 _DESCRIBE_IT_RE = re.compile(r"\b(describe|it|test)\s*\(")
+
+
+@dataclass
+class _NamedClass:
+    cls: object
+    ts_file: Path
+    tier: str
 
 
 class UbiquitousLanguageScanner(TypeScriptScanner):
@@ -69,90 +77,101 @@ class UbiquitousLanguageScanner(TypeScriptScanner):
             return violations
 
         for cls in self.get_classes(parsed_root):
-            violations += self._check_class_name(cls, ts_file, tier)
-            violations += self._check_method_names(cls, ts_file, tier)
+            named = _NamedClass(cls, ts_file, tier)
+            violations += self._check_class_name(named)
+            violations += self._check_method_names(named)
 
         return violations
 
-    def _check_class_name(self, cls, ts_file: Path, tier: str) -> List[Violation]:
+    def _check_class_name(self, named: _NamedClass) -> List[Violation]:
+        violations = self._forbidden_suffix_hits(named)
+        violations.extend(self._service_suffix_hit(named))
+        return violations
+
+    def _forbidden_suffix_hits(self, named: _NamedClass) -> List[Violation]:
+        name = named.cls.name
         violations: List[Violation] = []
-        name = cls.name
-
         for suffix in _FORBIDDEN_SUFFIXES:
-            if name.endswith(suffix) and name != suffix:
-                violations.append(
-                    self.v(
-                        f"Class '{name}' uses the technical suffix '{suffix}'. "
-                        "Name domain classes after the concept they represent "
-                        f"(e.g. '{name.replace(suffix, '')}' or a specific domain noun). "
-                        "Reserve 'Service' only for application-layer orchestrators.",
-                        str(ts_file),
-                        cls.start_line,
-                    )
-                )
-
-        if name.endswith(_SERVICE_SUFFIX) and tier != "server":
+            if not name.endswith(suffix) or name == suffix:
+                continue
             violations.append(
                 self.v(
-                    f"Class '{name}' uses the 'Service' suffix but is in "
-                    f"'{tier}/'. 'Service' suffix is only appropriate for "
-                    "application-layer orchestrators in server/.",
-                    str(ts_file),
-                    cls.start_line,
+                    f"Class '{name}' uses the technical suffix '{suffix}'. "
+                    "Name domain classes after the concept they represent "
+                    f"(e.g. '{name.replace(suffix, '')}' or a specific domain noun). "
+                    "Reserve 'Service' only for application-layer orchestrators.",
+                    str(named.ts_file),
+                    named.cls.start_line,
                 )
             )
-
         return violations
 
-    def _check_method_names(self, cls, ts_file: Path, tier: str) -> List[Violation]:
+    def _service_suffix_hit(self, named: _NamedClass) -> List[Violation]:
+        if not named.cls.name.endswith(_SERVICE_SUFFIX) or named.tier == "server":
+            return []
+        return [
+            self.v(
+                f"Class '{named.cls.name}' uses the 'Service' suffix but is in "
+                f"'{named.tier}/'. 'Service' suffix is only appropriate for "
+                "application-layer orchestrators in server/.",
+                str(named.ts_file),
+                named.cls.start_line,
+            )
+        ]
+
+    def _check_method_names(self, named: _NamedClass) -> List[Violation]:
         violations: List[Violation] = []
-        for method in cls.methods:
+        for method in named.cls.methods:
             if method.name in ("constructor", "toString", "toJSON"):
                 continue
             if "private" in method.modifiers:
                 continue
-            if method.name in _TECHNICAL_METHOD_NAMES:
-                violations.append(
-                    self.v(
-                        f"Method '{cls.name}.{method.name}()' uses a generic "
-                        f"technical verb '{method.name}'. Replace with a domain "
-                        "verb that expresses business intent, e.g. "
-                        "calculateTotal(), placeOrder(), validateEligibility().",
-                        str(ts_file),
-                        method.start_line,
-                    )
+            if method.name not in _TECHNICAL_METHOD_NAMES:
+                continue
+            violations.append(
+                self.v(
+                    f"Method '{named.cls.name}.{method.name}()' uses a generic "
+                    f"technical verb '{method.name}'. Replace with a domain "
+                    "verb that expresses business intent, e.g. "
+                    "calculateTotal(), placeOrder(), validateEligibility().",
+                    str(named.ts_file),
+                    method.start_line,
                 )
+            )
         return violations
 
     def _check_test_names(self, ts_file: Path) -> List[Violation]:
         """Test descriptions must use domain/scenario language, not HTTP."""
-        violations: List[Violation] = []
         content = self._read_file_content(ts_file)
         if content is None:
-            return violations
+            return []
+        violations: List[Violation] = []
+        for line_num, line in enumerate(content.splitlines(), 1):
+            violations.extend(self._http_language_in_test_line(ts_file, (line_num, line)))
+        return violations
 
-        lines = content.splitlines()
-        for line_num, line in enumerate(lines, 1):
-            if not _DESCRIBE_IT_RE.search(line):
-                continue
-            if _HTTP_TEST_PATTERN.search(line):
-                violations.append(
-                    self.v(
-                        f"Test name uses HTTP route language: {line.strip()!r}. "
-                        "Test names must mirror Gherkin scenario titles in domain "
-                        'language, e.g. "user views list of active stores".',
-                        str(ts_file),
-                        line_num,
-                    )
+    def _http_language_in_test_line(self, ts_file: Path, numbered_line: tuple[int, str]) -> List[Violation]:
+        line_num, line = numbered_line
+        if not _DESCRIBE_IT_RE.search(line):
+            return []
+        violations: List[Violation] = []
+        if _HTTP_TEST_PATTERN.search(line):
+            violations.append(
+                self.v(
+                    f"Test name uses HTTP route language: {line.strip()!r}. "
+                    "Test names must mirror Gherkin scenario titles in domain "
+                    'language, e.g. "user views list of active stores".',
+                    str(ts_file),
+                    line_num,
                 )
-            if _STATUS_CODE_PATTERN.search(line):
-                violations.append(
-                    self.v(
-                        f"Test name references HTTP status code: {line.strip()!r}. "
-                        "Use domain outcomes instead of status codes in test names.",
-                        str(ts_file),
-                        line_num,
-                    )
+            )
+        if _STATUS_CODE_PATTERN.search(line):
+            violations.append(
+                self.v(
+                    f"Test name references HTTP status code: {line.strip()!r}. "
+                    "Use domain outcomes instead of status codes in test names.",
+                    str(ts_file),
+                    line_num,
                 )
-
+            )
         return violations

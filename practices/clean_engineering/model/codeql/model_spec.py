@@ -169,3 +169,13 @@ with description("Clean Engineering graphQuery rules"):
         )
         expect("PaymentService" in blob).to(equal(True))
         expect("GraphCleanEngineeringModel" in blob).to(equal(False))
+
+    with it("should not flag an operation that reads its own private attribute"):
+        db = _ensure_examples_db()
+        rows = CodeQL(_EXAMPLES).run(_PACK / "hide-inner-details.ql", database=db)
+        blob = " ".join(
+            str(row.get(key) or "")
+            for row in rows
+            for key in ("name", "message")
+        )
+        expect("size" in blob).to(equal(False))

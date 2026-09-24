@@ -72,6 +72,15 @@ with description("KnowledgeGraph.return_nodes"):
         expect(getattr(fn, "_is_agent_tool", False)).to(equal(True))
         expect(getattr(KnowledgeGraph, "_is_agent_toolset", False)).to(equal(True))
 
+    with it("should advertise filter as a JSON object on MCP"):
+        from harness.mcp.mcp_server import McpHost
+
+        schema = McpHost.input_schema_for_callable(KnowledgeGraph.return_nodes)
+        filt = schema["properties"]["filter"]
+        types = [filt.get("type")] + [item.get("type") for item in filt.get("anyOf") or []]
+        expect("object" in types).to(equal(True))
+        expect("string" in types).to(equal(False))
+
     with it("should return the operation as json for a dotted Class.operation path"):
         payload = json.loads(self.kg.return_nodes("CodeQL.ensure_database"))
         names = {item["name"]: item for item in payload}

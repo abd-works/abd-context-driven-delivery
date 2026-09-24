@@ -79,6 +79,18 @@ class KnowledgeGraph:
         # -> CodeQL.populate
         ...
 
+    def reload_working_copy(self) -> KnowledgeGraph:
+        # reload the working copy from the tree, populate from it, copy working copy to master
+        # never refresh_master for this job
+        # -> CodeQL.populate
+        ...
+
+    def create_database(self, root: Path) -> KnowledgeGraph:
+        # set the path to that repo
+        # write master in that repo, copy master to working copy
+        # never populate for this job
+        ...
+
     def filter_graph(self, dirty: list[Path], violations: bool) -> KnowledgeGraph:
         # dirty paths ∩ nodes with node.rules.violations
         # keep ancestors; drop passing siblings
@@ -168,13 +180,13 @@ class CodeQL:
     """Database and query runner. Master and working copy are two folders, one populate."""
 
     master: Path
-    # .codeql/{language}-master — written only by refresh_master
+    # .codeql/{language}-master — written by refresh_master and reload_working_copy
     # never extract dirty files onto this folder
     # never --expect-discarded-cache on master
 
     working_copy: Path
     # .codeql/{language}-working-copy — the only database KnowledgeGraph reads
-    # copied from master only in refresh_master
+    # copied from master in refresh_master; copied onto master in reload_working_copy
     # never copy master on each edit
 
     def populate(self, graph: PracticeGraph, database: Path) -> None:
@@ -188,9 +200,14 @@ class CodeQL:
     def run(self, query: Path) -> Any:
         ...
 
+    def copy_working_copy_to_master(self) -> Path:
+        # reload_working_copy: copy the reloaded working copy onto master
+        ...
+
     def ensure_database(self, language: str = "python") -> Path:
         # update_working_copy: working copy + dirty-file extract
         # refresh_master: rewrite master, populate master, copy to working copy
+        # reload_working_copy: reload working copy, populate it, copy to master
         # never OverlayManager / OverlayDatabase
         ...
 

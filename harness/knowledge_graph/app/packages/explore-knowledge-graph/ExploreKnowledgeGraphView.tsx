@@ -19,6 +19,7 @@ import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }) {
   const {
     loading,
+    workStatus,
     folder: scannedFolder,
     listedNodes,
     listedTree,
@@ -32,6 +33,9 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     selectFolder,
     filterOptions,
     refreshGraph,
+    createDatabase,
+    refreshMaster,
+    reloadWorkingCopy,
     scanError,
   } = useKnowledgeGraph(graphId);
   const [practices, setPractices] = useState<string[] | null>(null);
@@ -155,6 +159,35 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 </span>
               </button>
             </div>
+            <div className="database-actions" aria-busy={loading}>
+              <button
+                type="button"
+                className="btn-refresh"
+                data-testid="create-database"
+                disabled={loading || !folder}
+                onClick={() => createDatabase()}
+              >
+                Create database
+              </button>
+              <button
+                type="button"
+                className="btn-refresh"
+                data-testid="refresh-master"
+                disabled={loading || !folder}
+                onClick={() => refreshMaster()}
+              >
+                Refresh master
+              </button>
+              <button
+                type="button"
+                className="btn-refresh"
+                data-testid="reload-working-copy"
+                disabled={loading || !folder}
+                onClick={() => reloadWorkingCopy()}
+              >
+                Reload working copy
+              </button>
+            </div>
             <button
               type="button"
               className="btn-refresh"
@@ -164,6 +197,19 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
             >
               Refresh
             </button>
+            {workStatus ? (
+              <p
+                className={`work-progress is-${workStatus.phase}`}
+                data-testid="work-progress"
+                aria-live="polite"
+              >
+                {workStatus.phase === 'working'
+                  ? `${workStatus.action}…`
+                  : workStatus.phase === 'done'
+                    ? `${workStatus.action} done`
+                    : `${workStatus.action} failed`}
+              </p>
+            ) : null}
           </div>
         </header>
         <div className="toolbar">
@@ -186,9 +232,30 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               />
             </span>
             {folder ? (
-              <span className="chosen-folder" data-testid="chosen-folder">
-                {folder}
-              </span>
+              <input
+                className="chosen-folder"
+                data-testid="chosen-folder"
+                value={folder}
+                spellCheck={false}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  setFolder(event.target.value);
+                }}
+                onBlur={() => {
+                  const next = folder.trim();
+                  if (next && next !== scannedFolder) {
+                    selectFolder({ folder: next });
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') {
+                    return;
+                  }
+                  const next = folder.trim();
+                  if (next) {
+                    selectFolder({ folder: next });
+                  }
+                }}
+              />
             ) : null}
           </div>
           <div className="filters">

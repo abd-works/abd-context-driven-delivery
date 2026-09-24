@@ -224,64 +224,64 @@ class JsonStoryMap(StoryMap):
         if not isinstance(payload["epics"], list):
             raise JsonParseError("'epics' must be a list")
 
-    def _epic_from_dict(self, data: Dict[str, Any]) -> JsonEpic:
-        epic = JsonEpic(data["name"], int(data.get("sequentialOrder", 0)))
-        epic.estimate = str(data.get("estimate", "") or "")
-        factories = data.get("exampleFactories") or []
+    def _epic_from_dict(self, epic_record: Dict[str, Any]) -> JsonEpic:
+        epic = JsonEpic(epic_record["name"], int(epic_record.get("sequentialOrder", 0)))
+        epic.estimate = str(epic_record.get("estimate", "") or "")
+        factories = epic_record.get("exampleFactories") or []
         if factories:
             epic.example_factories = list(factories)
-        for sub in data.get("subEpics", []):
+        for sub in epic_record.get("subEpics", []):
             epic.sub_epics.append(self._sub_epic_from_dict(sub))
         return epic
 
-    def _sub_epic_from_dict(self, data: Dict[str, Any]) -> JsonSubEpic:
-        sub_epic = JsonSubEpic(data["name"], int(data.get("sequentialOrder", 0)))
-        sub_epic.estimate = str(data.get("estimate", "") or "")
-        factories = data.get("exampleFactories") or []
+    def _sub_epic_from_dict(self, sub_epic_record: Dict[str, Any]) -> JsonSubEpic:
+        sub_epic = JsonSubEpic(sub_epic_record["name"], int(sub_epic_record.get("sequentialOrder", 0)))
+        sub_epic.estimate = str(sub_epic_record.get("estimate", "") or "")
+        factories = sub_epic_record.get("exampleFactories") or []
         if factories:
             sub_epic.example_factories = list(factories)
-        for nested in data.get("subEpics", []):
+        for nested in sub_epic_record.get("subEpics", []):
             sub_epic.sub_epics.append(self._sub_epic_from_dict(nested))
-        for story in data.get("stories", []):
+        for story in sub_epic_record.get("stories", []):
             sub_epic.stories.append(self._story_from_dict(story))
         return sub_epic
 
-    def _story_from_dict(self, data: Dict[str, Any]) -> JsonStory:
+    def _story_from_dict(self, story_record: Dict[str, Any]) -> JsonStory:
         story = JsonStory(
-            data["name"],
-            int(data.get("sequentialOrder", 0)),
-            StoryType(data.get("storyType", "user")),
+            story_record["name"],
+            int(story_record.get("sequentialOrder", 0)),
+            StoryType(story_record.get("storyType", "user")),
         )
-        users = data.get("users")
-        if users is None and data.get("actor"):
-            users = [data["actor"]]
+        users = story_record.get("users")
+        if users is None and story_record.get("actor"):
+            users = [story_record["actor"]]
         if users:
             story.users = list(users) if isinstance(users, list) else [str(users)]
-        if data.get("domainTerms"):
-            story.domain_terms = list(data["domainTerms"])
-        if data.get("evidence"):
-            story.evidence = list(data["evidence"])
-        for sc in data.get("scenarios", []):
+        if story_record.get("domainTerms"):
+            story.domain_terms = list(story_record["domainTerms"])
+        if story_record.get("evidence"):
+            story.evidence = list(story_record["evidence"])
+        for sc in story_record.get("scenarios", []):
             story.scenarios.append(self._scenario_from_dict(sc))
         return story
 
-    def _scenario_from_dict(self, data: Dict[str, Any]) -> JsonScenario:
+    def _scenario_from_dict(self, scenario_record: Dict[str, Any]) -> JsonScenario:
         scenario = JsonScenario(
-            name=data.get("name", "Scenario"),
-            sequential_order=int(data.get("sequentialOrder", 0)),
+            name=scenario_record.get("name", "Scenario"),
+            sequential_order=int(scenario_record.get("sequentialOrder", 0)),
         )
-        rows = data.get("exampleRows") or []
+        rows = scenario_record.get("exampleRows") or []
         if rows:
             scenario.example_rows = list(rows)
         return scenario
 
-    def _increment_from_dict(self, data: Dict[str, Any]) -> JsonIncrement:
+    def _increment_from_dict(self, increment_record: Dict[str, Any]) -> JsonIncrement:
         inc = JsonIncrement(
-            name=data["name"],
-            sequential_order=int(data.get("sequentialOrder", 0)),
+            name=increment_record["name"],
+            sequential_order=int(increment_record.get("sequentialOrder", 0)),
         )
-        inc.stories = list(data.get("stories", []))
-        inc.outcome = str(data.get("outcome", "") or "")
-        inc.decision_prompt = str(data.get("decisionPrompt", "") or "")
-        inc.slicing_notes = str(data.get("slicingNotes", "") or "")
+        inc.stories = list(increment_record.get("stories", []))
+        inc.outcome = str(increment_record.get("outcome", "") or "")
+        inc.decision_prompt = str(increment_record.get("decisionPrompt", "") or "")
+        inc.slicing_notes = str(increment_record.get("slicingNotes", "") or "")
         return inc

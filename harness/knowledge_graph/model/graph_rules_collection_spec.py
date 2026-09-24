@@ -9,8 +9,15 @@ import sys
 from unittest.mock import patch
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+_HARNESS = (_REPO_ROOT / "harness").resolve()
+sys.path[:] = [
+    item
+    for item in sys.path
+    if not item or Path(item).resolve() != _HARNESS
+]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+import mcp.types  # SDK; harness/mcp must not shadow this
 for _cat in ("practices", "tools", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
@@ -20,7 +27,7 @@ from expects import be_a, contain, equal, expect
 from mamba import before, context, description, it
 
 from practices.clean_engineering.clean_engineering import CleanEngineering
-from harness.knowledge_graph.model.graph_rules import GraphRule
+from harness.knowledge_graph.model.graph_rules import GraphRule, GraphRulesCollection, RuleRegistry
 
 
 with description("a repo"):
@@ -44,8 +51,27 @@ with description("a repo"):
                 self.practice = CleanEngineering(fidelity="code")
                 self.code_rules = self.practice.fidelities["code"].rules
 
+            with it("should load practice rules as a GraphRulesCollection"):
+                expect(self.practice.rules).to(be_a(GraphRulesCollection))
+                expect(len(list(self.practice.rules)) > 0).to(equal(True))
+
+            with it("should load fidelity rules as a GraphRulesCollection"):
+                expect(self.code_rules).to(be_a(GraphRulesCollection))
+                expect(len(list(self.code_rules)) > 0).to(equal(True))
+
             with it("should use GraphRule when a .ql exists"):
                 expect(self.code_rules["keep-operations-small-focused"]).to(be_a(GraphRule))
+
+            with it("should register those rules for graph nodes"):
+                registry = RuleRegistry.load()
+                slugs = {
+                    rule.slug
+                    for rule in registry.rules_for_node(
+                        practice="clean_engineering",
+                        semantic_type="Operation",
+                    )
+                }
+                expect("keep-operations-small-focused" in slugs).to(equal(True))
 
             with context("that is injecting on postToolUse"):
                 with before.each:

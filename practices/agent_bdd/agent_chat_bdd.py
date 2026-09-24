@@ -131,6 +131,17 @@ class _ChatAgentBlock:
         return ai_response
 
     def _wait_for_inbox(self, prefix: str, prompt: str, *, timeout_seconds: int) -> str:
+        response_path = self._prepare_inbox(prefix, prompt)
+        text = self._poll_inbox_response(response_path, timeout_seconds)
+        if text:
+            return text
+        raise ChatInboxPending(
+            f"timed out waiting for inbox response at {response_path}",
+            prefix=prefix,
+            log_dir=self._log_dir,
+        )
+
+    def _prepare_inbox(self, prefix: str, prompt: str) -> Path:
         inbox_dir = self._log_dir / "inbox"
         inbox_dir.mkdir(parents=True, exist_ok=True)
         slug = prefix.replace("/", "-")
@@ -145,6 +156,9 @@ class _ChatAgentBlock:
             encoding="utf-8",
         )
         _log_harness("agent_chat_bdd", f"inbox ready: {ready_path}")
+        return response_path
+
+    def _poll_inbox_response(self, response_path: Path, timeout_seconds: int) -> str:
         deadline = time.monotonic() + timeout_seconds
         while time.monotonic() < deadline:
             if response_path.is_file():
@@ -152,11 +166,7 @@ class _ChatAgentBlock:
                 if text:
                     return text
             time.sleep(INBOX_POLL_SECONDS)
-        raise ChatInboxPending(
-            f"timed out waiting for inbox response at {response_path}",
-            prefix=prefix,
-            log_dir=self._log_dir,
-        )
+        return ""
 
 
 @contextmanager

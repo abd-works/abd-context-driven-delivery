@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
+
+from .codeql import CodeQL, Rows
 
 
 def refine_rows(slug: str, rows: List[dict]) -> List[dict]:
@@ -56,18 +56,6 @@ def refine_rows(slug: str, rows: List[dict]) -> List[dict]:
 Refine = Callable[[str, List[dict]], List[dict]]
 
 
-def _cli():
-    name = "kg_codeql_cli"
-    if name in sys.modules:
-        return sys.modules[name]
-    path = Path(__file__).with_name("codeql.py")
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
 def write_match_all_filter(pack: Path, language: str) -> None:
     if language == "javascript":
         pack.joinpath("subject_filter.qll").write_text(
@@ -96,7 +84,7 @@ def write_match_all_filter(pack: Path, language: str) -> None:
 
 
 def ensure_examples_db(examples: Path, language: str) -> Path:
-    codeql = _cli().CodeQL(examples)
+    codeql = CodeQL(examples)
     database = examples / ".codeql" / f"{language}-db"
     if codeql._database_ready(database):
         return database
@@ -141,8 +129,7 @@ def assert_pack_hits(
 ) -> List[str]:
     database = ensure_examples_db(examples, language)
     write_match_all_filter(pack, language)
-    cli = _cli()
-    codeql = cli.CodeQL(examples)
+    codeql = CodeQL(examples)
     combined = pack / "rules.ql"
     if combined.is_file():
         batch = codeql.run_rules(
@@ -156,12 +143,12 @@ def assert_pack_hits(
         batch.update(codeql.run_queries(test_queries, database=database, write_filter=False))
     misses: List[str] = []
     for slug, expected in rules.items():
-        rows = cli.Rows.from_tuples(batch.get(slug) or [])
+        rows = Rows.from_tuples(batch.get(slug) or [])
         rows = (refine or refine_rows)(slug, rows)
         if not hit(rows, expected):
             misses.append(f"{slug} expected {expected}")
     for name, expected in (tests or {}).items():
-        rows = cli.Rows.from_tuples(batch.get(name) or [])
+        rows = Rows.from_tuples(batch.get(name) or [])
         if not hit(rows, expected):
             misses.append(f"{name} expected {expected}")
     return misses

@@ -10,9 +10,15 @@ from collections import defaultdict
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
+_HARNESS = (_REPO / "harness").resolve()
+sys.path[:] = [
+    item
+    for item in sys.path
+    if not item or Path(item).resolve() != _HARNESS
+]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
-import mcp.types  # SDK, before harness/mcp is on PYTHONPATH
+import mcp.types  # SDK; harness/mcp must not shadow this
 for _cat in ("practices", "harness", "tools", "actions"):
     _p = str(_REPO / _cat)
     if _p not in sys.path:
@@ -114,9 +120,10 @@ def _node_folder(node: dict) -> str:
 
 
 def _package_node(path: str) -> dict:
+    label = path.split("/")[-1] or path or "workspace"
     return {
-        "node_id": f"pkg:{path}",
-        "name": path.split("/")[-1],
+        "node_id": f"pkg:{path or 'workspace'}",
+        "name": label,
         "practice": "",
         "fidelity": None,
         "semantic_type": "Package",
@@ -158,11 +165,14 @@ def _ensure_packages(
         by_path[path] = node["node_id"]
     needed = set(_top_level_folders(root))
     for path in list(by_path):
-        parts = path.split("/")
+        if not path.strip():
+            continue
+        parts = [part for part in path.split("/") if part]
         for index in range(1, len(parts)):
             needed.add("/".join(parts[:index]))
-        needed.add(parts[0])
-    for path in sorted(needed):
+        if parts:
+            needed.add(parts[0])
+    for path in sorted(item for item in needed if item.strip()):
         if path in by_path:
             continue
         package = _package_node(path)
@@ -263,11 +273,11 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
                     semantic_type=semantic,
                 )
             ]
-        hits = graph._violations_by_node.get(node.node_id, [])
+        hits = graph.violations_for(node)
         grouped[practice]["nodes"].append(
             {
                 "node_id": node.node_id,
-                "name": getattr(node, "name", None) or semantic,
+                "name": (getattr(node, "name", None) or semantic or node.node_id),
                 "practice": practice,
                 "fidelity": closest_fidelity(practice, semantic),
                 "semantic_type": semantic,
@@ -378,6 +388,7 @@ def main(
     try:
         CodeQL(workspace).populate(graph, populate=populate)
         slugs = _slugs_for(graph, selected)
+        graph.evaluate_rules(slugs)
         if as_json:
             print(
                 f"loaded {len(graph.nodes)} nodes, {len(graph.relationships)} edges",
@@ -396,7 +407,6 @@ def main(
             file=log,
             flush=True,
         )
-        graph.evaluate_rules(slugs)
         zeros = graph.zero_hit_slugs()
         zeros.write(zero_hits_path)
         print(

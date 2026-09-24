@@ -61,25 +61,27 @@ class EntityBehaviorScanner(TypeScriptScanner):
         shared_dir = domain_path / "shared"
         if not shared_dir.exists():
             return violations
-
         for ts_file in sorted(shared_dir.glob("*.ts")):
-            if ts_file.name in ("index.ts",):
+            if self._skip_shared_source(ts_file):
                 continue
-            if ts_file.stem.endswith(".schema"):
+            violations.extend(self._entity_violations_in(ts_file))
+        return violations
+
+    def _skip_shared_source(self, ts_file: Path) -> bool:
+        return ts_file.name == "index.ts" or ts_file.stem.endswith(".schema")
+
+    def _entity_violations_in(self, ts_file: Path) -> List[Violation]:
+        parsed_root = self.parse_file(ts_file)
+        if parsed_root is None:
+            return []
+        violations: List[Violation] = []
+        for cls in self.get_classes(parsed_root):
+            if self._is_exempt_class(cls):
                 continue
-
-            parsed_root = self.parse_file(ts_file)
-            if parsed_root is None:
-                continue
-
-            for cls in self.get_classes(parsed_root):
-                if self._is_exempt_class(cls):
-                    continue
-                violations.extend(self._check_entity_methods(cls, ts_file))
-                violations.extend(self._check_no_async_on_entity(cls, ts_file))
-                if self._is_collection_class(cls.name):
-                    violations.extend(self._check_collection_query_methods(cls, ts_file))
-
+            violations.extend(self._check_entity_methods(cls, ts_file))
+            violations.extend(self._check_no_async_on_entity(cls, ts_file))
+            if self._is_collection_class(cls.name):
+                violations.extend(self._check_collection_query_methods(cls, ts_file))
         return violations
 
     def _check_entity_methods(self, cls, ts_file: Path) -> List[Violation]:

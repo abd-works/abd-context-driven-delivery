@@ -62,245 +62,6 @@ from .nodes import (
 from .practice_graph import PracticeGraph
 
 
-def load_practice_graph(
-    path: str | Path,
-    *,
-    codeql_results: str | Path | None = None,
-) -> PracticeGraph:
-    root = Path(path).resolve()
-    codeql_path = Path(codeql_results).resolve() if codeql_results else None
-    graph = PracticeGraph(root)
-
-    workspace = Workspace.load(root)
-    story_map = _resolve_story_map(root, workspace.story_map)
-    graph.story_map = _load_story_map(graph, story_map)
-    graph.ce_model = _load_ce_model(graph, root)
-
-    _index_story_epics(graph)
-    if graph.ce_model is not None:
-        _wire_ce_model(graph, graph.ce_model)
-        _wire_ddd_model(graph, root)
-    else:
-        _load_ddd_structure_from_map(graph, root)
-
-    from .codeql_populate import populate_from_codeql
-
-    populate_from_codeql(graph, root, results_path=codeql_path)
-    _derive_cross_module_dependencies(graph)
-    _load_bdd_descriptions(graph, root)
-
-    from .evaluate_rules import evaluate_rules
-
-    evaluate_rules(graph, root, codeql_results=codeql_path)
-
-    return graph
-
-
-def _resolve_story_map(root: Path, story_map: StoryMap) -> StoryMap:
-    if story_map.epics:
-        return story_map
-    from practices.stories.model.markdown.nodes import MarkdownStoryMap
-
-    for name in ("story_map.md", "story-map.md"):
-        candidate = root / name
-        if candidate.is_file():
-            parsed = MarkdownStoryMap.from_workspace(candidate)
-            if parsed and parsed.epics:
-                parsed.attach_scenarios(MarkdownScenario.from_workspace(root))
-                return parsed
-    parsed = MarkdownStoryMap.from_workspace(root)
-    if parsed and parsed.epics:
-        return parsed
-    return story_map
-
-
-def _load_story_map(graph: PracticeGraph, story_map: StoryMap) -> GraphStoryMap:
-    target = GraphStoryMap()
-    target.translate_from(story_map)
-    graph.register(target)
-    return target
-
-
-def _load_ce_model(graph: PracticeGraph, root: Path) -> Optional[GraphCleanEngineeringModel]:
-    parsed = MarkdownCleanEngineeringModel.from_workspace(root)
-    if parsed is None:
-        return None
-    bc_map = load_bounded_context_map(root)
-    if bc_map:
-        _structure_ce_model_with_bc_map(parsed, bc_map)
-    else:
-        _promote_ce_model_modules_to_aggregates(parsed)
-    target = GraphCleanEngineeringModel(parsed.name, parsed.sequential_order)
-    target.translate_from(parsed)
-    graph.register(target)
-    return target
-
-
-def _index_story_epics(graph: PracticeGraph) -> None:
-    assert graph.story_map is not None
-    for epic in graph.story_map.epics:
-        if not isinstance(epic, GraphEpic):
-            continue
-        graph.register(epic)
-        graph.index_epic(epic)
-        graph.relate(graph.story_map, Kind.OWNS, epic)
-        _register_sub_epic_tree(graph, epic)
-
-
-def _register_sub_epic_tree(graph: PracticeGraph, epic: Epic) -> None:
-    for example in getattr(epic, "examples", []):
-        _register_example(graph, epic, example, scope="epic")
-    for sub in epic.sub_epics:
-        if not isinstance(sub, GraphSubEpic):
-            continue
-        graph.register(sub)
-        graph.epics[slug(sub.name)] = sub  # type: ignore[assignment]
-        graph.relate(epic, Kind.OWNS, sub)
-        _register_sub_epic_tree(graph, sub)
-        for story in sub.stories:
-            _register_story(graph, sub, story)
-    if isinstance(epic, SubEpic):
-        for story in epic.stories:
-            _register_story(graph, epic, story)
-
-
-def _register_story(graph: PracticeGraph, parent: SubEpic, story: Story) -> None:
-    if not isinstance(story, GraphStory):
-        return
-    graph.register(story)
-    graph.relate(parent, Kind.OWNS, story)
-    for example in getattr(story, "examples", []):
-        _register_example(graph, story, example, scope="story")
-    for scenario in story.scenarios:
-        _register_scenario(graph, story, scenario)
-
-
-def _register_scenario(graph: PracticeGraph, story: GraphStory, scenario: Scenario) -> None:
-    if not isinstance(scenario, GraphScenario):
-        return
-    if not scenario.steps and (scenario.given or scenario.interactions or scenario.background):
-        scenario.sync_tree_from_legacy()
-    graph.register(scenario)
-    graph.relate(story, Kind.OWNS, scenario)
-    _wire_scenario_tree(graph, scenario)
-
-
-def _wire_scenario_tree(graph: PracticeGraph, scenario: GraphScenario) -> None:
-    for background in scenario.backgrounds:
-        _register_background(graph, scenario, background)
-    for step in scenario.steps:
-        _register_step(graph, scenario, step)
-    for example in scenario.examples:
-        _register_example(graph, scenario, example, scope="scenario")
-
-
-def _register_background(graph: PracticeGraph, parent: GraphScenario, background: Background) -> None:
-    if isinstance(background, GraphBackground):
-        graph.register(background)
-        graph.relate(parent, Kind.OWNS, background)
-        for step in background.steps:
-            _register_step(graph, background, step)
-
-
-def _register_step(graph: PracticeGraph, parent, step: Step) -> None:
-    if isinstance(step, GraphStep):
-        graph.register(step)
-        graph.relate(parent, Kind.OWNS, step)
-
-
-def _register_example(graph: PracticeGraph, parent, example: Example, *, scope: str) -> None:
-    if isinstance(example, GraphExample):
-        graph.register(example)
-        graph.relate(parent, Kind.SCOPES, example)
-        example.scope = scope
-
-
-def _wire_ce_model(graph: PracticeGraph, model: GraphCleanEngineeringModel) -> None:
-    for module in model.modules:
-        if not isinstance(module, (GraphModule, GraphBoundedContext, GraphAggregate)):
-            continue
-        graph.register(module)
-        graph.index_module(module)
-        graph.relate(model, Kind.OWNS, module)
-        if isinstance(module, GraphBoundedContext):
-            for agg in module.aggregates:
-                if not isinstance(agg, GraphAggregate):
-                    continue
-                graph.register(agg)
-                graph.index_module(agg)
-                graph.relate(module, Kind.OWNS, agg)
-                for index, oclass in enumerate(list(agg.classes)):
-                    _wire_class(graph, agg, oclass, index)
-        else:
-            for index, oclass in enumerate(list(module.classes)):
-                _wire_class(graph, module, oclass, index)
-
-
-def _wire_class(graph: PracticeGraph, module: GraphModule, oclass: OoadClass, index: int) -> None:
-    if not isinstance(oclass, (GraphClass, *_GRAPH_DDD_CLASSES)):
-        if ddd_class_kind(oclass.name):
-            target = graph_ddd_class_for(oclass)
-            target.translate_from(oclass)
-            module.classes[index] = target
-            oclass = target
-        elif not isinstance(oclass, GraphClass):
-            target = GraphClass(plain_class_name(oclass.name), oclass.sequential_order)
-            target.translate_from(oclass)
-            module.classes[index] = target
-            oclass = target
-    graph.register(oclass)
-    graph.relate(module, Kind.OWNS, oclass)
-    graph.relate(oclass, Kind.BELONGS_TO, module)
-
-    if not oclass.property_nodes and not oclass.operation_nodes:
-        oclass.sync_tree_from_legacy()
-
-    for prop in oclass.property_nodes:
-        _register_property(graph, oclass, prop)
-
-    for rel in oclass.relationships:
-        target = graph.find_class(rel.target)
-        if target is not None:
-            graph.relate(oclass, Kind.ASSOCIATES, target)
-
-    for op in oclass.operation_nodes:
-        _register_operation(graph, oclass, op)
-
-
-def _register_property(graph: PracticeGraph, oclass, prop: CeProperty) -> None:
-    if not isinstance(prop, GraphProperty):
-        return
-    graph.register(prop)
-    graph.relate(oclass, Kind.OWNS, prop)
-    graph.relate(prop, Kind.BELONGS_TO, oclass)
-    for type_name in pascal_type_names(prop.type_hint):
-        target = graph.find_class(type_name)
-        if target is not None:
-            graph.relate(prop, Kind.HAS_TYPE, target)
-
-
-def _register_operation(graph: PracticeGraph, oclass, op: CeOperation) -> None:
-    if not isinstance(op, GraphOperation):
-        return
-    graph.register(op)
-    graph.relate(oclass, Kind.OWNS, op)
-    graph.relate(op, Kind.BELONGS_TO, oclass)
-    for type_name in pascal_type_names(op.return_type):
-        target = graph.find_class(type_name)
-        if target is not None:
-            graph.relate(op, Kind.RETURNS, target)
-    for param in op.parameters:
-        if isinstance(param, GraphParameter):
-            graph.register(param)
-            graph.relate(op, Kind.HAS_PARAMETER, param)
-            graph.relate(param, Kind.BELONGS_TO, op)
-            for type_name in pascal_type_names(param.type_hint):
-                target = graph.find_class(type_name)
-                if target is not None:
-                    graph.relate(param, Kind.HAS_TYPE, target)
-    _wire_operation_invocations(graph, op, oclass.name)
-
-
 _GRAPH_DDD_CLASSES = (
     GraphEntity,
     GraphEntityRoot,
@@ -310,344 +71,708 @@ _GRAPH_DDD_CLASSES = (
     GraphDomainService,
 )
 
-
-def _copy_module_meta(source: Module, target: Module) -> None:
-    target.description = source.description
-    target.seam = source.seam
-    target.constraint = source.constraint
-    target.seam_terms = list(source.seam_terms)
-    target.dependencies = list(source.dependencies)
+_DESCRIBE_RE = re.compile(r"""with\s+description\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
+_CONTEXT_RE = re.compile(r"""with\s+context\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
+_IT_RE = re.compile(r"""with\s+it\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
 
 
-def _promote_ce_class(source: OoadClass) -> OoadClass:
-    promoted = ddd_class_for(source)
-    promoted.translate_from(source)
-    return promoted
-
-
-def _structure_ce_model_with_bc_map(model: CleanEngineeringModel, bc_map) -> None:
-    module_by_name = {m.name.lower(): m for m in model.modules}
-    new_modules: list[Module] = []
-    consumed: set[str] = set()
-
-    for order, bc_entry in enumerate(bc_map, start=1):
-        src = module_by_name.get(bc_entry.name.lower())
-        if src:
-            bc = BoundedContext(src.name, src.sequential_order)
-            _copy_module_meta(src, bc)
-            consumed.add(bc_entry.name.lower())
-        else:
-            bc = BoundedContext(bc_entry.name, order)
-
-        for agg_order, agg_entry in enumerate(bc_entry.aggregates, start=1):
-            agg_src = module_by_name.get(agg_entry.name.lower())
-            if agg_src:
-                agg = Aggregate(agg_src.name, agg_src.sequential_order)
-                _copy_module_meta(agg_src, agg)
-                agg.classes = [_promote_ce_class(c) for c in agg_src.classes]
-                consumed.add(agg_entry.name.lower())
-            else:
-                agg = Aggregate(agg_entry.name, agg_order)
-            bc.aggregates.append(agg)
-
-        new_modules.append(bc)
-
-    for mod in model.modules:
-        if mod.name.lower() in consumed:
-            continue
-        if any(ddd_class_kind(c.name) for c in mod.classes):
-            agg = Aggregate(mod.name, mod.sequential_order)
-            _copy_module_meta(mod, agg)
-            agg.classes = [_promote_ce_class(c) for c in mod.classes]
-            new_modules.append(agg)
-        else:
-            new_modules.append(mod)
-
-    model.modules = new_modules
-
-
-def _promote_ce_model_modules_to_aggregates(model: CleanEngineeringModel) -> None:
-    promoted: list[Module] = []
-    for mod in model.modules:
-        if any(ddd_class_kind(c.name) for c in mod.classes):
-            agg = Aggregate(mod.name, mod.sequential_order)
-            _copy_module_meta(mod, agg)
-            agg.classes = [_promote_ce_class(c) for c in mod.classes]
-            promoted.append(agg)
-        else:
-            promoted.append(mod)
-    model.modules = promoted
-
-
-def _load_ddd_structure_from_map(graph: PracticeGraph, root: Path) -> None:
-    bc_map = load_bounded_context_map(root)
-    if not bc_map:
-        return
-    for order, bc_entry in enumerate(bc_map, start=1):
-        bc = GraphBoundedContext(bc_entry.name, order)
-        graph.register(bc)
-        graph.index_module(bc)
-        for agg_order, agg_entry in enumerate(bc_entry.aggregates, start=1):
-            agg = GraphAggregate(agg_entry.name, agg_order)
-            graph.register(agg)
-            graph.index_module(agg)
-            bc.aggregates.append(agg)
-            graph.relate(bc, Kind.OWNS, agg)
-
-
-def _wire_ddd_model(graph: PracticeGraph, root: Path) -> None:
-    del root  # BC map already applied during CE load when present
-    _wire_ddd_relationships(graph)
-
-
-def _wire_ddd_relationships(graph: PracticeGraph) -> None:
-    entity_roots: dict[str, GraphEntityRoot] = {}
-
-    for agg in graph.nodes_of_type(GraphAggregate):
-        for oclass in agg.classes:
-            if isinstance(oclass, GraphEntityRoot):
-                agg.root = oclass
-                oclass.aggregate = agg
-                graph.relate(agg, Kind.ROOT, oclass)
-                graph.relate(oclass, Kind.BELONGS_TO, agg)
-                entity_roots[oclass.name.lower()] = oclass
-
-    for repo in graph.nodes_of_type(GraphRepository):
-        root_name = repository_root_name(repo.name)
-        if not root_name:
-            continue
-        root = entity_roots.get(root_name.lower())
-        if root is None:
-            found = graph.find_class(root_name)
-            if isinstance(found, GraphEntityRoot):
-                root = found
-        if root is not None:
-            repo.accesses = root
-            graph.relate(repo, Kind.ACCESSES, root)
-
-    for node in graph.nodes.values():
-        if isinstance(node, DddEntity):
-            _wire_entity_identity(graph, node)
-
-
-def _wire_entity_identity(graph: PracticeGraph, entity: DddEntity) -> None:
-    for prop in entity.property_nodes:
-        if is_identity_property(prop.name, prop.type_hint):
-            entity.identity.append(prop)
-            graph.relate(entity, Kind.HAS_IDENTITY, prop)
-    for op in entity.operation_nodes:
-        if is_identity_property(op.name):
-            entity.identity.append(op)
-            graph.relate(entity, Kind.HAS_IDENTITY, op)
-    for prop in entity.property_nodes:
-        if prop.name != "identity":
-            continue
-        type_name = prop.type_hint.split("|")[0].strip().rstrip("[]")
-        identity_cls = graph.find_class(type_name)
-        if identity_cls is None:
-            continue
-        for id_prop in identity_cls.property_nodes:
-            if is_identity_property(id_prop.name, id_prop.type_hint):
-                entity.identity.append(id_prop)
-                graph.relate(entity, Kind.HAS_IDENTITY, id_prop)
-
-
-def _wire_operation_invocations(graph: PracticeGraph, operation: GraphOperation, owner_class: str) -> None:
-    for callee in operation.callees:
-        callee = callee.strip()
-        if not callee:
-            continue
-        if "." in callee:
-            class_name, op_name = callee.split(".", 1)
-        else:
-            class_name, op_name = owner_class, callee
-        target = graph.find_operation(class_name, op_name)
-        if target is not None:
-            graph.relate(operation, Kind.INVOKES, target)
-
-
-def _domain_modules(graph: PracticeGraph):
-    for node in graph.nodes.values():
-        if isinstance(node, (GraphModule, GraphBoundedContext, GraphAggregate)):
-            yield node
-
-
-def _domain_classes(graph: PracticeGraph):
-    for node in graph.nodes.values():
-        if isinstance(node, (GraphClass, *_GRAPH_DDD_CLASSES)):
-            yield node
-
-
-def _derive_cross_module_dependencies(graph: PracticeGraph) -> None:
-    class_home: dict[str, Module] = {}
-    for module in _domain_modules(graph):
-        for oclass in module.classes:
-            class_home[oclass.node_id] = module
-
-    for oclass in _domain_classes(graph):
-        home = class_home.get(oclass.node_id)
-        if home is None:
-            continue
-        external: dict[str, OoadClass] = {}
-        for owned in graph.outgoing_nodes(oclass, Kind.OWNS):
-            if isinstance(owned, GraphProperty):
-                for target in graph.outgoing_nodes(owned, Kind.HAS_TYPE):
-                    if isinstance(target, OoadClass):
-                        _maybe_external(graph, oclass, home, target, class_home, external)
-            elif isinstance(owned, GraphOperation):
-                for target in graph.outgoing_nodes(owned, Kind.RETURNS):
-                    if isinstance(target, OoadClass):
-                        _maybe_external(graph, oclass, home, target, class_home, external)
-                for target in graph.outgoing_nodes(owned, Kind.INVOKES):
-                    if isinstance(target, GraphOperation):
-                        for owner in graph.incoming_nodes(target, Kind.BELONGS_TO):
-                            if isinstance(owner, OoadClass):
-                                _maybe_external(graph, oclass, home, owner, class_home, external)
-        for target in graph.outgoing_nodes(oclass, Kind.ASSOCIATES):
-            if isinstance(target, OoadClass):
-                _maybe_external(graph, oclass, home, target, class_home, external)
-
-        for ext in external.values():
-            graph.relate(home, Kind.DEPENDS_ON, ext)
-            ext_home = class_home.get(ext.node_id)
-            if ext_home is not None:
-                graph.relate(home, Kind.DEPENDS_ON, ext_home)
-
-
-def _maybe_external(
-    graph: PracticeGraph,
-    owner_class: OoadClass,
-    home: Module,
-    target: OoadClass,
-    class_home: dict[str, Module],
-    external: dict[str, OoadClass],
-) -> None:
-    target_home = class_home.get(target.node_id)
-    if target_home is None or target_home.node_id == home.node_id:
-        return
-    external[target.node_id] = target
-    graph.relate(owner_class, Kind.DEPENDS_ON, target)
-
-
-def _is_python_spec(path: Path) -> bool:
-    name = path.name.lower()
-    return path.suffix.lower() == ".py" and (
-        name.endswith("_spec.py") or "_spec." in name
-    )
-
-
-def _read_text(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return ""
-
-
-def _load_bdd_descriptions(graph: PracticeGraph, root: Path) -> None:
-    is_python_spec, read_text = _is_python_spec, _read_text
-
-    candidates: list[Path] = []
-    for path in sorted(root.glob("**/*.py")):
-        if path.name in ("examples.py",) or is_python_spec(path):
-            candidates.append(path)
-    for path in candidates:
-        content = read_text(path)
-        if "description(" not in content:
-            continue
-        _parse_python_bdd_file(graph, path, content)
-
-
-def _parse_python_bdd_file(graph: PracticeGraph, path: Path, content: str) -> None:
-    describe_re = re.compile(r"""with\s+description\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
-    context_re = re.compile(r"""with\s+context\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
-    it_re = re.compile(r"""with\s+it\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
-
-    stack: List[GraphDescription | GraphContext] = []
-
-    for line_no, line in enumerate(content.splitlines(), start=1):
-        m_desc = describe_re.search(line)
-        if m_desc:
-            label = m_desc.group(1)
-            if stack and isinstance(stack[-1], GraphDescription):
-                ctx = GraphContext(label, line_no)
-                graph.register(ctx)
-                graph.relate(stack[-1], Kind.OWNS, ctx)
-                stack.append(ctx)
-                continue
-            desc = GraphDescription(label, line_no)
-            graph.register(desc)
-            graph.index_description(desc)
-            stack = [desc]
-            subject = _subject_class_name(label)
-            cls = graph.find_class(subject)
-            if cls is not None:
-                graph.relate(desc, Kind.DESCRIBES, cls)
-            continue
-
-        m_ctx = context_re.search(line)
-        if m_ctx and stack:
-            ctx = GraphContext(m_ctx.group(1), line_no)
-            graph.register(ctx)
-            graph.relate(stack[-1], Kind.OWNS, ctx)
-            stack.append(ctx)
-            continue
-
-        m_it = it_re.search(line)
-        if m_it and stack and isinstance(stack[-1], GraphContext):
-            obs = GraphObservation(m_it.group(1), line_no)
-            graph.register(obs)
-            graph.relate(stack[-1], Kind.OWNS, obs)
-            continue
-
-        stripped = line.strip()
-        if stripped.startswith("with description(") or stripped.startswith("with context("):
-            continue
-        if stripped == "pass" and len(stack) > 1:
-            stack.pop()
-
-
-def _subject_class_name(label: str) -> str:
-    cleaned = label.strip()
-    for prefix in ("a ", "an ", "the "):
-        if cleaned.lower().startswith(prefix):
-            cleaned = cleaned[len(prefix) :]
-            break
-    parts = cleaned.split()
-    if not parts:
-        return cleaned
-    return parts[0][:1].upper() + parts[0][1:]
+def load_practice_graph(
+    path: str | Path,
+    *,
+    codeql_results: str | Path | None = None,
+) -> PracticeGraph:
+    return GraphLoader(path, codeql_results).load()
 
 
 def attach_story_tests(graph: PracticeGraph, paths: list[Path]) -> None:
-    from practices.stories.model.typescript.nodes import TypeScriptStoryMap
+    GraphLoader.from_graph(graph).attach(paths)
 
-    for path in paths:
-        if path.suffix.lower() not in {".ts", ".tsx"}:
-            continue
-        relative = str(path.resolve().relative_to(graph.root)).replace("\\", "/")
+
+class GraphLoader:
+    def __init__(self, path: str | Path, codeql_results: str | Path | None = None) -> None:
+        self.root = Path(path).resolve()
+        self._codeql_results = Path(codeql_results).resolve() if codeql_results else None
+        self.graph = PracticeGraph(self.root)
+        self._scope = ""
+        self._module = None
+        self._class_home: dict[str, Module] = {}
+        self._external: dict[str, OoadClass] = {}
+        self._home = None
+        self._owner_class_name = ""
+        self._relative = ""
+        self._stack: List[GraphDescription | GraphContext] = []
+
+    @classmethod
+    def from_graph(cls, graph: PracticeGraph) -> "GraphLoader":
+        loader = cls.__new__(cls)
+        loader.graph = graph
+        loader.root = graph.root
+        loader._codeql_results = None
+        loader._scope = ""
+        loader._module = None
+        loader._class_home = {}
+        loader._external = {}
+        loader._home = None
+        loader._owner_class_name = ""
+        loader._relative = ""
+        loader._stack = []
+        return loader
+
+    def load(self) -> PracticeGraph:
+        workspace = Workspace.load(self.root)
+        story_map = self._resolve_story_map(workspace.story_map)
+        self.graph.story_map = self._load_story_map(story_map)
+        self.graph.ce_model = self._load_ce_model()
+        self._index_story_epics()
+        if self.graph.ce_model is not None:
+            self._wire_ce_model(self.graph.ce_model)
+            self._wire_ddd_model()
+        else:
+            self._load_ddd_structure_from_map()
+        from .codeql_populate import populate_from_codeql
+
+        populate_from_codeql(self.graph, self.root, results_path=self._codeql_results)
+        self._derive_cross_module_dependencies()
+        self._load_bdd_descriptions()
+        from .evaluate_rules import evaluate_rules
+
+        evaluate_rules(self.graph, self.root, codeql_results=self._codeql_results)
+        return self.graph
+
+    def attach(self, paths: list[Path]) -> None:
+        self._attach_story_tests(paths)
+
+    def _resolve_story_map(self, story_map: StoryMap) -> StoryMap:
+        if story_map.epics:
+            return story_map
+        from practices.stories.model.markdown.nodes import MarkdownStoryMap
+
+        for name in ("story_map.md", "story-map.md"):
+            parsed = self._story_map_from_named_file(MarkdownStoryMap, name)
+            if parsed is not None:
+                return parsed
+        parsed = MarkdownStoryMap.from_workspace(self.root)
+        if parsed and parsed.epics:
+            return parsed
+        return story_map
+
+    def _story_map_from_named_file(self, markdown_story_map, name: str):
+        candidate = self.root / name
+        if not candidate.is_file():
+            return None
+        parsed = markdown_story_map.from_workspace(candidate)
+        if not parsed or not parsed.epics:
+            return None
+        parsed.attach_scenarios(MarkdownScenario.from_workspace(self.root))
+        return parsed
+
+    def _load_story_map(self, story_map: StoryMap) -> GraphStoryMap:
+        target = GraphStoryMap()
+        target.translate_from(story_map)
+        self.graph.register(target)
+        return target
+
+    def _load_ce_model(self) -> Optional[GraphCleanEngineeringModel]:
+        parsed = MarkdownCleanEngineeringModel.from_workspace(self.root)
+        if parsed is None:
+            return None
+        self._parsed = parsed
+        self._bc_map = load_bounded_context_map(self.root)
+        if self._bc_map:
+            self._structure_ce_model_with_bc_map()
+        else:
+            self._promote_ce_model_modules_to_aggregates(parsed)
+        target = GraphCleanEngineeringModel(parsed.name, parsed.sequential_order)
+        target.translate_from(parsed)
+        self.graph.register(target)
+        return target
+
+    def _index_story_epics(self) -> None:
+        story_map = self.graph.story_map
+        assert story_map is not None
+        for epic in story_map.epics:
+            if not isinstance(epic, GraphEpic):
+                continue
+            self.graph.register(epic)
+            self.graph.index_epic(epic)
+            story_map.relate(Kind.OWNS, epic)
+            self._register_sub_epic_tree(epic)
+
+    def _register_sub_epic_tree(self, epic: Epic) -> None:
+        self._scope = "epic"
+        for example in getattr(epic, "examples", []):
+            self._register_example(epic, example)
+        for sub in epic.sub_epics:
+            self._register_sub_epic(epic, sub)
+        if isinstance(epic, SubEpic):
+            for story in epic.stories:
+                self._register_story(epic, story)
+
+    def _register_sub_epic(self, epic: Epic, sub: SubEpic) -> None:
+        if not isinstance(sub, GraphSubEpic):
+            return
+        self.graph.register(sub)
+        self.graph.epics[slug(sub.name)] = sub
+        epic.relate(Kind.OWNS, sub)
+        self._register_sub_epic_tree(sub)
+        for story in sub.stories:
+            self._register_story(sub, story)
+
+    def _register_story(self, parent: SubEpic, story: Story) -> None:
+        if not isinstance(story, GraphStory):
+            return
+        self.graph.register(story)
+        parent.relate(Kind.OWNS, story)
+        self._scope = "story"
+        for example in getattr(story, "examples", []):
+            self._register_example(story, example)
+        for scenario in story.scenarios:
+            self._register_scenario(story, scenario)
+
+    def _register_scenario(self, story: GraphStory, scenario: Scenario) -> None:
+        if not isinstance(scenario, GraphScenario):
+            return
+        scenario.sync_tree_from_legacy()
+        self.graph.register(scenario)
+        story.relate(Kind.OWNS, scenario)
+        self._wire_scenario_tree(scenario)
+
+    def _wire_scenario_tree(self, scenario: GraphScenario) -> None:
+        for background in scenario.backgrounds:
+            self._register_background(scenario, background)
+        for step in scenario.steps:
+            self._register_step(scenario, step)
+        self._scope = "scenario"
+        for example in scenario.examples:
+            self._register_example(scenario, example)
+
+    def _register_background(self, parent: GraphScenario, background: Background) -> None:
+        if not isinstance(background, GraphBackground):
+            return
+        self.graph.register(background)
+        parent.relate(Kind.OWNS, background)
+        for step in background.steps:
+            self._register_step(background, step)
+
+    def _register_step(self, parent, step: Step) -> None:
+        if not isinstance(step, GraphStep):
+            return
+        self.graph.register(step)
+        parent.relate(Kind.OWNS, step)
+
+    def _register_example(self, parent, example: Example) -> None:
+        if not isinstance(example, GraphExample):
+            return
+        self.graph.register(example)
+        parent.relate(Kind.SCOPES, example)
+        example.scope = self._scope
+
+    def _wire_ce_model(self, model: GraphCleanEngineeringModel) -> None:
+        for module in model.modules:
+            self._wire_ce_module(model, module)
+
+    def _wire_ce_module(self, model: GraphCleanEngineeringModel, module) -> None:
+        if not isinstance(module, (GraphModule, GraphBoundedContext, GraphAggregate)):
+            return
+        self.graph.register(module)
+        self.graph.index_module(module)
+        model.relate(Kind.OWNS, module)
+        if isinstance(module, GraphBoundedContext):
+            self._wire_bounded_context(module)
+            return
+        self._wire_module_classes(module)
+
+    def _wire_bounded_context(self, module: GraphBoundedContext) -> None:
+        for agg in module.aggregates:
+            if not isinstance(agg, GraphAggregate):
+                continue
+            self.graph.register(agg)
+            self.graph.index_module(agg)
+            module.relate(Kind.OWNS, agg)
+            self._wire_module_classes(agg)
+
+    def _wire_module_classes(self, module: GraphModule) -> None:
+        self._module = module
+        for oclass in list(module.classes):
+            self._wire_class(oclass)
+
+    def _wire_class(self, oclass: OoadClass) -> None:
+        oclass = self._promote_class(oclass)
+        self._register_class(oclass)
+        if not oclass.property_nodes and not oclass.operation_nodes:
+            oclass.sync_tree_from_legacy()
+        self._wire_class_properties(oclass)
+        self._wire_class_associations(oclass)
+        self._wire_class_operations(oclass)
+
+    def _promote_class(self, oclass: OoadClass) -> OoadClass:
+        if isinstance(oclass, (GraphClass, *_GRAPH_DDD_CLASSES)):
+            return oclass
+        return self._replace_module_class(oclass)
+
+    def _replace_module_class(self, oclass: OoadClass) -> OoadClass:
+        target = self._promoted_graph_class(oclass)
+        target.translate_from(oclass)
+        index = self._module.classes.index(oclass)
+        self._module.classes[index] = target
+        return target
+
+    def _promoted_graph_class(self, oclass: OoadClass) -> OoadClass:
+        if ddd_class_kind(oclass.name):
+            return graph_ddd_class_for(oclass)
+        return GraphClass(plain_class_name(oclass.name), oclass.sequential_order)
+
+    def _register_class(self, oclass: OoadClass) -> None:
+        self.graph.register(oclass)
+        self._module.relate(Kind.OWNS, oclass)
+        oclass.relate(Kind.BELONGS_TO, self._module)
+
+    def _wire_class_properties(self, oclass: OoadClass) -> None:
+        for prop in oclass.property_nodes:
+            self._register_property(oclass, prop)
+
+    def _wire_class_associations(self, oclass: OoadClass) -> None:
+        for rel in oclass.relationships:
+            target = self.graph.class_named(rel.target)
+            if target is not None:
+                oclass.relate(Kind.ASSOCIATES, target)
+
+    def _wire_class_operations(self, oclass: OoadClass) -> None:
+        self._owner_class_name = oclass.name
+        for op in oclass.operation_nodes:
+            self._register_operation(oclass, op)
+
+    def _register_property(self, oclass, prop: CeProperty) -> None:
+        if not isinstance(prop, GraphProperty):
+            return
+        self.graph.register(prop)
+        oclass.relate(Kind.OWNS, prop)
+        prop.relate(Kind.BELONGS_TO, oclass)
+        self._wire_type_hints(prop, prop.type_hint)
+
+    def _register_operation(self, oclass, op: CeOperation) -> None:
+        if not isinstance(op, GraphOperation):
+            return
+        self.graph.register(op)
+        oclass.relate(Kind.OWNS, op)
+        op.relate(Kind.BELONGS_TO, oclass)
+        self._wire_operation_returns(op)
+        self._register_parameters(op)
+        self._wire_operation_invocations(op)
+
+    def _wire_operation_returns(self, op: GraphOperation) -> None:
+        for type_name in pascal_type_names(op.return_type):
+            target = self.graph.class_named(type_name)
+            if target is not None:
+                op.relate(Kind.RETURNS, target)
+
+    def _register_parameters(self, op: GraphOperation) -> None:
+        for param in op.parameters:
+            self._register_parameter(op, param)
+
+    def _register_parameter(self, op: GraphOperation, param) -> None:
+        if not isinstance(param, GraphParameter):
+            return
+        self.graph.register(param)
+        op.relate(Kind.HAS_PARAMETER, param)
+        param.relate(Kind.BELONGS_TO, op)
+        self._wire_type_hints(param, param.type_hint)
+
+    def _wire_type_hints(self, node, type_hint: str) -> None:
+        for type_name in pascal_type_names(type_hint):
+            target = self.graph.class_named(type_name)
+            if target is not None:
+                node.relate(Kind.HAS_TYPE, target)
+
+    def _copy_module_meta(self, source: Module, target: Module) -> None:
+        target.description = source.description
+        target.seam = source.seam
+        target.constraint = source.constraint
+        target.seam_terms = list(source.seam_terms)
+        target.dependencies = list(source.dependencies)
+
+    def _promote_ce_class(self, source: OoadClass) -> OoadClass:
+        promoted = ddd_class_for(source)
+        promoted.translate_from(source)
+        return promoted
+
+    def _structure_ce_model_with_bc_map(self) -> None:
+        self._module_by_name = {m.name.lower(): m for m in self._parsed.modules}
+        self._new_modules: list[Module] = []
+        self._consumed: set[str] = set()
+        for order, bc_entry in enumerate(self._bc_map, start=1):
+            self._append_bounded_context(bc_entry, order)
+        self._append_unconsumed_modules()
+        self._parsed.modules = self._new_modules
+
+    def _append_bounded_context(self, bc_entry, order: int) -> None:
+        self._bc_entry = bc_entry
+        src = self._module_by_name.get(bc_entry.name.lower())
+        if src:
+            bc = BoundedContext(src.name, src.sequential_order)
+            self._copy_module_meta(src, bc)
+            self._consumed.add(bc_entry.name.lower())
+        else:
+            bc = BoundedContext(bc_entry.name, order)
+        self._append_aggregates(bc)
+        self._new_modules.append(bc)
+
+    def _append_aggregates(self, bc: BoundedContext) -> None:
+        for agg_order, agg_entry in enumerate(self._bc_entry.aggregates, start=1):
+            bc.aggregates.append(self._aggregate_from_map(agg_entry, agg_order))
+
+    def _aggregate_from_map(self, agg_entry, agg_order: int) -> Aggregate:
+        agg_src = self._module_by_name.get(agg_entry.name.lower())
+        if not agg_src:
+            return Aggregate(agg_entry.name, agg_order)
+        agg = Aggregate(agg_src.name, agg_src.sequential_order)
+        self._copy_module_meta(agg_src, agg)
+        agg.classes = [self._promote_ce_class(c) for c in agg_src.classes]
+        self._consumed.add(agg_entry.name.lower())
+        return agg
+
+    def _append_unconsumed_modules(self) -> None:
+        for mod in self._parsed.modules:
+            if mod.name.lower() in self._consumed:
+                continue
+            self._new_modules.append(self._promoted_or_module(mod))
+
+    def _promoted_or_module(self, mod: Module) -> Module:
+        if not any(ddd_class_kind(c.name) for c in mod.classes):
+            return mod
+        return self._promote_module_to_aggregate(mod)
+
+    def _promote_module_to_aggregate(self, mod: Module) -> Aggregate:
+        agg = Aggregate(mod.name, mod.sequential_order)
+        self._copy_module_meta(mod, agg)
+        agg.classes = [self._promote_ce_class(c) for c in mod.classes]
+        return agg
+
+    def _promote_ce_model_modules_to_aggregates(self, model: CleanEngineeringModel) -> None:
+        model.modules = [self._promoted_or_module(mod) for mod in model.modules]
+
+    def _load_ddd_structure_from_map(self) -> None:
+        bc_map = load_bounded_context_map(self.root)
+        if not bc_map:
+            return
+        for order, bc_entry in enumerate(bc_map, start=1):
+            self._register_map_bounded_context(bc_entry, order)
+
+    def _register_map_bounded_context(self, bc_entry, order: int) -> None:
+        self._map_bc = GraphBoundedContext(bc_entry.name, order)
+        self.graph.register(self._map_bc)
+        self.graph.index_module(self._map_bc)
+        for agg_order, agg_entry in enumerate(bc_entry.aggregates, start=1):
+            self._register_map_aggregate(agg_entry, agg_order)
+
+    def _register_map_aggregate(self, agg_entry, agg_order: int) -> None:
+        agg = GraphAggregate(agg_entry.name, agg_order)
+        self.graph.register(agg)
+        self.graph.index_module(agg)
+        self._map_bc.aggregates.append(agg)
+        self._map_bc.relate(Kind.OWNS, agg)
+
+    def _wire_ddd_model(self) -> None:
+        self._wire_ddd_relationships()
+
+    def _wire_ddd_relationships(self) -> None:
+        self._entity_roots: dict[str, GraphEntityRoot] = {}
+        self._wire_aggregate_roots()
+        self._wire_repository_access()
+        for node in self.graph.nodes.values():
+            if isinstance(node, DddEntity):
+                self._wire_entity_identity(node)
+
+    def _wire_aggregate_roots(self) -> None:
+        for agg in self.graph.nodes_of_type(GraphAggregate):
+            self._wire_aggregate_root(agg)
+
+    def _wire_aggregate_root(self, agg: GraphAggregate) -> None:
+        for oclass in agg.classes:
+            if not isinstance(oclass, GraphEntityRoot):
+                continue
+            agg.root = oclass
+            oclass.aggregate = agg
+            agg.relate(Kind.ROOT, oclass)
+            oclass.relate(Kind.BELONGS_TO, agg)
+            self._entity_roots[oclass.name.lower()] = oclass
+
+    def _wire_repository_access(self) -> None:
+        for repo in self.graph.nodes_of_type(GraphRepository):
+            self._wire_repository(repo)
+
+    def _wire_repository(self, repo: GraphRepository) -> None:
+        root_name = repository_root_name(repo.name)
+        if not root_name:
+            return
+        root = self._entity_root_for(root_name)
+        if root is None:
+            return
+        repo.accesses = root
+        repo.relate(Kind.ACCESSES, root)
+
+    def _entity_root_for(self, root_name: str):
+        root = self._entity_roots.get(root_name.lower())
+        if root is not None:
+            return root
+        found = self.graph.class_named(root_name)
+        if isinstance(found, GraphEntityRoot):
+            return found
+        return None
+
+    def _wire_entity_identity(self, entity: DddEntity) -> None:
+        for prop in entity.property_nodes:
+            self._maybe_identity_member(entity, prop)
+        for op in entity.operation_nodes:
+            if is_identity_property(op.name):
+                entity.identity.append(op)
+                entity.relate(Kind.HAS_IDENTITY, op)
+        for prop in entity.property_nodes:
+            self._wire_identity_type(entity, prop)
+
+    def _maybe_identity_member(self, entity: DddEntity, prop) -> None:
+        if not is_identity_property(prop.name, prop.type_hint):
+            return
+        entity.identity.append(prop)
+        entity.relate(Kind.HAS_IDENTITY, prop)
+
+    def _wire_identity_type(self, entity: DddEntity, prop) -> None:
+        if prop.name != "identity":
+            return
+        type_name = prop.type_hint.split("|")[0].strip().rstrip("[]")
+        identity_cls = self.graph.class_named(type_name)
+        if identity_cls is None:
+            return
+        self._append_identity_from_class(entity, identity_cls)
+
+    def _append_identity_from_class(self, entity: DddEntity, identity_cls) -> None:
+        for id_prop in identity_cls.property_nodes:
+            if is_identity_property(id_prop.name, id_prop.type_hint):
+                entity.identity.append(id_prop)
+                entity.relate(Kind.HAS_IDENTITY, id_prop)
+
+    def _wire_operation_invocations(self, operation: GraphOperation) -> None:
+        for callee in operation.callees:
+            self._wire_invocation(operation, callee)
+
+    def _wire_invocation(self, operation: GraphOperation, callee: str) -> None:
+        callee = callee.strip()
+        if not callee:
+            return
+        class_name, op_name = self._split_callee(callee)
+        target = self.graph.operation_named(class_name, op_name)
+        if target is not None:
+            operation.relate(Kind.INVOKES, target)
+
+    def _split_callee(self, callee: str):
+        if "." in callee:
+            return callee.split(".", 1)
+        return self._owner_class_name, callee
+
+    def _domain_modules(self):
+        for node in self.graph.nodes.values():
+            if isinstance(node, (GraphModule, GraphBoundedContext, GraphAggregate)):
+                yield node
+
+    def _domain_classes(self):
+        for node in self.graph.nodes.values():
+            if isinstance(node, (GraphClass, *_GRAPH_DDD_CLASSES)):
+                yield node
+
+    def _derive_cross_module_dependencies(self) -> None:
+        self._class_home = {}
+        for module in self._domain_modules():
+            for oclass in module.classes:
+                self._class_home[oclass.node_id] = module
+        for oclass in self._domain_classes():
+            self._collect_class_dependencies(oclass)
+
+    def _collect_class_dependencies(self, oclass) -> None:
+        self._home = self._class_home.get(oclass.node_id)
+        if self._home is None:
+            return
+        self._external = {}
+        self._collect_owned_externals(oclass)
+        for target in oclass.related(Kind.ASSOCIATES):
+            if isinstance(target, OoadClass):
+                self._maybe_external(oclass, target)
+        self._relate_module_dependencies()
+
+    def _collect_owned_externals(self, oclass) -> None:
+        for owned in oclass.related(Kind.OWNS):
+            if isinstance(owned, GraphProperty):
+                self._collect_property_externals(oclass, owned)
+            elif isinstance(owned, GraphOperation):
+                self._collect_operation_externals(oclass, owned)
+
+    def _collect_property_externals(self, oclass, owned) -> None:
+        for target in owned.related(Kind.HAS_TYPE):
+            if isinstance(target, OoadClass):
+                self._maybe_external(oclass, target)
+
+    def _collect_operation_externals(self, oclass, owned) -> None:
+        for target in owned.related(Kind.RETURNS):
+            if isinstance(target, OoadClass):
+                self._maybe_external(oclass, target)
+        for target in owned.related(Kind.INVOKES):
+            self._collect_invoke_owner(oclass, target)
+
+    def _collect_invoke_owner(self, oclass, target) -> None:
+        if not isinstance(target, GraphOperation):
+            return
+        for owner in target.related(Kind.BELONGS_TO, direction="in"):
+            if isinstance(owner, OoadClass):
+                self._maybe_external(oclass, owner)
+
+    def _relate_module_dependencies(self) -> None:
+        for ext in self._external.values():
+            self._home.relate(Kind.DEPENDS_ON, ext)
+            ext_home = self._class_home.get(ext.node_id)
+            if ext_home is not None:
+                self._home.relate(Kind.DEPENDS_ON, ext_home)
+
+    def _maybe_external(self, owner_class, target) -> None:
+        target_home = self._class_home.get(target.node_id)
+        if target_home is None or target_home.node_id == self._home.node_id:
+            return
+        self._external[target.node_id] = target
+        owner_class.relate(Kind.DEPENDS_ON, target)
+
+    def _is_python_spec(self, path: Path) -> bool:
+        name = path.name.lower()
+        return path.suffix.lower() == ".py" and (
+            name.endswith("_spec.py") or "_spec." in name
+        )
+
+    def _read_text(self, path: Path) -> str:
+        try:
+            return path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return ""
+
+    def _load_bdd_descriptions(self) -> None:
+        for path in self._bdd_candidate_paths():
+            self._parse_python_bdd_file(path)
+
+    def _bdd_candidate_paths(self) -> list[Path]:
+        candidates: list[Path] = []
+        for path in sorted(self.root.glob("**/*.py")):
+            if path.name in ("examples.py",) or self._is_python_spec(path):
+                candidates.append(path)
+        return candidates
+
+    def _parse_python_bdd_file(self, path: Path) -> None:
+        content = self._read_text(path)
+        if "description(" not in content:
+            return
+        self._stack = []
+        for line_no, line in enumerate(content.splitlines(), start=1):
+            self._parse_bdd_line(line, line_no)
+
+    def _parse_bdd_line(self, line: str, line_no: int) -> None:
+        match = _DESCRIBE_RE.search(line)
+        if match:
+            self._handle_description_line(match.group(1), line_no)
+            return
+        match = _CONTEXT_RE.search(line)
+        if match:
+            self._handle_context_line(match.group(1), line_no)
+            return
+        match = _IT_RE.search(line)
+        if match:
+            self._handle_it_line(match.group(1), line_no)
+            return
+        self._maybe_pop_bdd_stack(line)
+
+    def _handle_description_line(self, label: str, line_no: int) -> None:
+        if self._stack and isinstance(self._stack[-1], GraphDescription):
+            self._nest_description_as_context(label, line_no)
+            return
+        self._start_description(label, line_no)
+
+    def _nest_description_as_context(self, label: str, line_no: int) -> None:
+        ctx = GraphContext(label, line_no)
+        self.graph.register(ctx)
+        self._stack[-1].relate(Kind.OWNS, ctx)
+        self._stack.append(ctx)
+
+    def _start_description(self, label: str, line_no: int) -> None:
+        desc = GraphDescription(label, line_no)
+        self.graph.register(desc)
+        self.graph.index_description(desc)
+        self._stack = [desc]
+        cls = self.graph.class_named(self._subject_class_name(label))
+        if cls is not None:
+            desc.relate(Kind.DESCRIBES, cls)
+
+    def _handle_context_line(self, label: str, line_no: int) -> None:
+        if not self._stack:
+            return
+        ctx = GraphContext(label, line_no)
+        self.graph.register(ctx)
+        self._stack[-1].relate(Kind.OWNS, ctx)
+        self._stack.append(ctx)
+
+    def _handle_it_line(self, label: str, line_no: int) -> None:
+        if not self._stack or not isinstance(self._stack[-1], GraphContext):
+            return
+        obs = GraphObservation(label, line_no)
+        self.graph.register(obs)
+        self._stack[-1].relate(Kind.OWNS, obs)
+
+    def _maybe_pop_bdd_stack(self, line: str) -> None:
+        stripped = line.strip()
+        if stripped.startswith("with description(") or stripped.startswith("with context("):
+            return
+        if stripped == "pass" and len(self._stack) > 1:
+            self._stack.pop()
+
+    def _subject_class_name(self, label: str) -> str:
+        cleaned = label.strip()
+        for prefix in ("a ", "an ", "the "):
+            if cleaned.lower().startswith(prefix):
+                cleaned = cleaned[len(prefix) :]
+                break
+        parts = cleaned.split()
+        if not parts:
+            return cleaned
+        return parts[0][:1].upper() + parts[0][1:]
+
+    def _attach_story_tests(self, paths: list[Path]) -> None:
+        for path in paths:
+            if path.suffix.lower() not in {".ts", ".tsx"}:
+                continue
+            self._relative = str(path.resolve().relative_to(self.graph.root)).replace("\\", "/")
+            self._attach_suites_from(path)
+
+    def _attach_suites_from(self, path: Path) -> None:
+        from practices.stories.model.typescript.nodes import TypeScriptStoryMap
+
         for suite in TypeScriptStoryMap.from_workspace(path):
-            _register_parsed_story_suite(graph, suite, relative)
+            self._register_parsed_story_suite(suite)
 
+    def _register_parsed_story_suite(self, suite) -> None:
+        from practices.stories.model.source_location import SourceLocation
 
-def _register_parsed_story_suite(graph: PracticeGraph, suite, relative: str) -> None:
-    from practices.stories.model.source_location import SourceLocation
+        story = GraphStory(suite.name, 1)
+        story.source = SourceLocation(self._relative, 1)
+        self.graph.register(story)
+        self._suite_story = story
+        self._suite_seen: set[str] = set()
+        for index, case in enumerate(suite.cases, start=1):
+            self._register_suite_case(case, index)
 
-    from .graph_node import Kind
-    from .nodes import GraphScenario, GraphStory
+    def _register_suite_case(self, case, index: int) -> None:
+        from practices.stories.model.source_location import SourceLocation
 
-    story = GraphStory(suite.name, 1)
-    story.source = SourceLocation(relative, 1)
-    graph.register(story)
-    seen: set[str] = set()
-    for index, case in enumerate(suite.cases, start=1):
         name = case.covers_scenario or case.name
-        if name in seen:
-            continue
-        seen.add(name)
-        scenario = GraphScenario(name, index, story.name)
+        if name in self._suite_seen:
+            return
+        self._suite_seen.add(name)
+        scenario = GraphScenario(name, index, self._suite_story.name)
         scenario.source = SourceLocation(
-            relative,
+            self._relative,
             case.story_source.line if case.story_source else 1,
         )
-        graph.register(scenario)
-        story.relate(Kind.OWNS, scenario)
+        self.graph.register(scenario)
+        self._suite_story.relate(Kind.OWNS, scenario)

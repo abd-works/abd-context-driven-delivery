@@ -43,6 +43,8 @@ test.beforeEach(async ({ page, request }) => {
   await page.addInitScript(() => {
     window.localStorage.removeItem('kg-scan-graph-id');
     window.localStorage.removeItem('kg-scan-root');
+    window.localStorage.removeItem('kg-scan-graph-id-v2');
+    window.localStorage.removeItem('kg-scan-root-v2');
   });
   await helper.seed(request);
 });

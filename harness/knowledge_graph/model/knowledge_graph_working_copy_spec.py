@@ -44,6 +44,14 @@ def _restore_slice_files() -> None:
     _STORY_TEST.write_text(_ORIGINAL_STORY, encoding="utf-8")
 
 
+with description("KnowledgeGraph.update_working_copy"):
+    with it("should be marked for mcp skill and agent tool"):
+        fn = KnowledgeGraph.update_working_copy
+        expect(getattr(fn, "_mcp", False)).to(equal(True))
+        expect(getattr(fn, "_skill", False)).to(equal(True))
+        expect(getattr(fn, "_is_agent_tool", False)).to(equal(True))
+
+
 with description("a repo"):
     with context("that has been captured as a kg database"):
         with before.each:
