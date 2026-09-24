@@ -464,4 +464,21 @@ templates that describe the tech stack
   that have been written
     it should bind predicates as rules on the specification
 
-~> Increment 1: Mix Transformer onto *Transformer types in model/transformation/; Transformers.transform sketch loads each practice transformer from the sketch and render "logical": Write Stories Sketch, Write Clean Engineering Sketch, Write Bdd Sketch, Write Ddd Sketch, Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior
+~> Increment 1: logical story map in python from the sketch: Scaffold Story Map
+~> Increment 2: logical clean engineering model in python from the sketch: Scaffold Modules
+~> Increment 3: logical domain driven model in python from the sketch: Scaffold Bounded Context
+~> Increment 4: logical bdd in python from the sketch: Scaffold Bdd Behavior
+~> Increment 5: logical markdown from the sketch: Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior
+~> Increment 6: logical typescript from the sketch: Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior
+~> Increment 7: logical java from the sketch: Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior
+~> Increment 8: logical javascript from the sketch: Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior
+~> Increment 9: logical json from the sketch: Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior
+~> Increment 10: logical drawio from the sketch: Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior
+~> Increment 11: logical miro from the sketch: Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior
+// stop — sketch LERN to logical model mapping before coding
+~> Increment 12: tech stack LERN from logical models: Pass Lern Templates, Run Tech Stack Templates
+// stop — sketch how cross model works
+~> Increment 13: logical place clean engineering into scenarios: Scaffold Story Scenarios
+~> Increment 14: logical place clean engineering into acceptance tests: Scaffold Story Acceptance Tests
+~> Increment 15: logical place clean engineering into bdd tests: Scaffold Bdd Signatures, Scaffold Bdd Development
+~> Increment 16: logical add missing info

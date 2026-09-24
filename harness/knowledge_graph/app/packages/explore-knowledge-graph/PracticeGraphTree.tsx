@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { ListedTreeNode } from './knowledge-graph';
+import type {
+  ListedRelationshipKind,
+  ListedTreeNode,
+} from './knowledge-graph';
 
 function kindLabel(kind: string, isFile: boolean): string {
   if (isFile && kind === 'Module') {
@@ -100,6 +103,39 @@ function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
           <path d="M4 2.5h8v11.5L8 11.5 4 14z" />
         </g>
       )}
+      {label === 'Properties' && (
+        <g
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        >
+          <rect x="3" y="3.5" width="10" height="9" rx="1" />
+          <path d="M5.5 6.5h5M5.5 9.5h3.5" />
+        </g>
+      )}
+      {label === 'Relationships' && (
+        <g
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        >
+          <circle cx="4" cy="8" r="2" />
+          <circle cx="12" cy="8" r="2" />
+          <path d="M6 8h4" />
+        </g>
+      )}
+      {label === 'Relationship' && (
+        <g
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        >
+          <path d="M3 8h10M11 5.5 13.5 8 11 10.5" />
+        </g>
+      )}
       {label === 'Package' && (
         <g
           fill="none"
@@ -111,7 +147,7 @@ function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
           <path d="M2.5 13V5.5h4.2l1.3 1.5H13.5V13z" />
         </g>
       )}
-      {!['PracticeGraph', 'File', 'Module', 'Package', 'Class', 'Operation', 'Rule', 'Rules'].includes(
+      {!['PracticeGraph', 'File', 'Module', 'Package', 'Class', 'Operation', 'Rule', 'Rules', 'Properties', 'Relationships', 'Relationship'].includes(
         label,
       ) && (
         <g fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -123,7 +159,70 @@ function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
 }
 
 function listedRules(node: ListedTreeNode) {
-  return node.rules;
+  return node.rules ?? [];
+}
+
+function listedProperties(node: ListedTreeNode) {
+  return Object.entries(node.properties ?? {}).filter(([, value]) => value);
+}
+
+function listedRelationships(node: ListedTreeNode) {
+  return node.relationships ?? [];
+}
+
+function relatedCount(groups: ListedRelationshipKind[]) {
+  return groups.reduce((sum, group) => sum + group.targets.length, 0);
+}
+
+function PropertiesGroup({
+  nodeId,
+  properties,
+  depth,
+  expanded,
+  onToggle,
+}: {
+  nodeId: string;
+  properties: Array<[string, string]>;
+  depth: number;
+  expanded: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  const propertiesId = `${nodeId}::properties`;
+  const isOpen = expanded.has(propertiesId);
+  return (
+    <li data-depth={depth} data-testid="tree-properties">
+      <div className="tree-row">
+        <button
+          type="button"
+          className="tree-twist"
+          data-testid="tree-expand-properties"
+          aria-expanded={isOpen}
+          aria-label={`${isOpen ? 'Collapse' : 'Expand'} properties`}
+          onClick={() => onToggle(propertiesId)}
+        >
+          {isOpen ? '▼' : '▶'}
+        </button>
+        <button type="button" title="Properties" onClick={() => onToggle(propertiesId)}>
+          <KindMark kind="Properties" isFile={false} />
+          <span className="tree-name">properties</span>
+        </button>
+      </div>
+      {isOpen && (
+        <ul>
+          {properties.map(([name, value]) => (
+            <li key={name} data-depth={depth + 1}>
+              <div className="tree-row">
+                <span className="tree-twist-spacer" />
+                <span className="tree-name" title="Property">
+                  {name} : {value}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
 }
 
 function RulesGroup({
@@ -197,6 +296,114 @@ function RulesGroup({
   );
 }
 
+function RelationshipsGroup({
+  nodeId,
+  relationships,
+  depth,
+  selectedId,
+  expanded,
+  onToggle,
+  onSelect,
+}: {
+  nodeId: string;
+  relationships: ListedRelationshipKind[];
+  depth: number;
+  selectedId: string | null;
+  expanded: Set<string>;
+  onToggle: (id: string) => void;
+  onSelect: (id: string, ruleSlug?: string) => void;
+}) {
+  const relationshipsId = `${nodeId}::relationships`;
+  const isOpen = expanded.has(relationshipsId);
+  const count = relatedCount(relationships);
+  return (
+    <li data-depth={depth} data-testid="tree-relationships">
+      <div className="tree-row">
+        <button
+          type="button"
+          className="tree-twist"
+          data-testid="tree-expand-relationships"
+          aria-expanded={isOpen}
+          aria-label={`${isOpen ? 'Collapse' : 'Expand'} relationships`}
+          onClick={() => onToggle(relationshipsId)}
+        >
+          {isOpen ? '▼' : '▶'}
+        </button>
+        <button
+          type="button"
+          title="Relationships"
+          onClick={() => onToggle(relationshipsId)}
+        >
+          <KindMark kind="Relationships" isFile={false} />
+          <span className="tree-name">relationships</span>
+          <span className="tree-counts" data-testid="tree-relationship-counts">
+            ({count})
+          </span>
+        </button>
+      </div>
+      {isOpen && (
+        <ul>
+          {relationships.map((group) => {
+            const kindId = `${relationshipsId}::${group.kind}`;
+            const kindOpen = expanded.has(kindId);
+            return (
+              <li key={group.kind} data-depth={depth + 1} data-testid="tree-relationship-kind">
+                <div className="tree-row">
+                  <button
+                    type="button"
+                    className="tree-twist"
+                    data-testid="tree-expand-relationship-kind"
+                    aria-expanded={kindOpen}
+                    aria-label={`${kindOpen ? 'Collapse' : 'Expand'} ${group.kind}`}
+                    onClick={() => onToggle(kindId)}
+                  >
+                    {kindOpen ? '▼' : '▶'}
+                  </button>
+                  <button
+                    type="button"
+                    title="Relationship"
+                    onClick={() => onToggle(kindId)}
+                  >
+                    <KindMark kind="Relationship" isFile={false} />
+                    <span className="tree-name">{group.kind}</span>
+                    <span className="tree-counts">({group.targets.length})</span>
+                  </button>
+                </div>
+                {kindOpen && (
+                  <ul>
+                    {group.targets.map((target) => (
+                      <li key={target.node_id} data-depth={depth + 2}>
+                        <div className="tree-row">
+                          <span className="tree-twist-spacer" />
+                          <button
+                            type="button"
+                            title={kindLabel(target.semantic_type, false)}
+                            className={
+                              selectedId === target.node_id ? 'selected' : ''
+                            }
+                            data-testid="tree-relationship-target"
+                            onClick={() => onSelect(target.node_id)}
+                          >
+                            <KindMark
+                              kind={target.semantic_type}
+                              isFile={false}
+                            />
+                            <span className="tree-name">{target.name}</span>
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </li>
+  );
+}
+
 function TreeRow({
   node,
   depth,
@@ -215,7 +422,13 @@ function TreeRow({
   onSelect: (id: string, ruleSlug?: string) => void;
 }) {
   const rules = listedRules(node);
-  const hasChildren = node.children.length > 0 || rules.length > 0;
+  const properties = listedProperties(node);
+  const relationships = listedRelationships(node);
+  const hasChildren =
+    node.children.length > 0 ||
+    properties.length > 0 ||
+    rules.length > 0 ||
+    relationships.length > 0;
   const isOpen = expanded.has(node.node_id);
   return (
     <li data-depth={depth}>
@@ -268,6 +481,15 @@ function TreeRow({
               onSelect={onSelect}
             />
           ))}
+          {properties.length > 0 ? (
+            <PropertiesGroup
+              nodeId={node.node_id}
+              properties={properties}
+              depth={depth + 1}
+              expanded={expanded}
+              onToggle={onToggle}
+            />
+          ) : null}
           {rules.length > 0 ? (
             <RulesGroup
               nodeId={node.node_id}
@@ -275,6 +497,17 @@ function TreeRow({
               depth={depth + 1}
               selectedId={selectedId}
               selectedRule={selectedRule}
+              expanded={expanded}
+              onToggle={onToggle}
+              onSelect={onSelect}
+            />
+          ) : null}
+          {relationships.length > 0 ? (
+            <RelationshipsGroup
+              nodeId={node.node_id}
+              relationships={relationships}
+              depth={depth + 1}
+              selectedId={selectedId}
               expanded={expanded}
               onToggle={onToggle}
               onSelect={onSelect}

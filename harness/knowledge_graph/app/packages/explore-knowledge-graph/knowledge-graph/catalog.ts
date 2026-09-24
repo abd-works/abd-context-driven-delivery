@@ -36,6 +36,18 @@ export const RELATIONSHIP_KINDS = [
   'usedBy',
 ] as const;
 
+export const INVERSE_KIND: Record<string, string> = {
+  owns: 'belongsTo',
+  belongsTo: 'owns',
+  demonstrates: 'demonstratedThrough',
+  demonstratedThrough: 'demonstrates',
+  scopes: 'scopedBy',
+  scopedBy: 'scopes',
+  uses: 'usedBy',
+  usedBy: 'uses',
+  associates: 'associates',
+};
+
 /** Fidelity → stage from each practice markdown **Stage:** block. */
 export const STAGE_BY_FIDELITY: Record<string, string> = {
   modules: 'discovery',

@@ -61,7 +61,7 @@ Nav tags: [action]
     selected Node is blue, distinct from violating red
     a Node with a violating rule is red; every parent is red too
     (failed / total) sits beside the name at every level — subtree rollup
-    left = PracticeGraph tree (each child indented under its parent; classes live in their file/subfolder; a Node's rules sit under a collapsed rules child; hover the icon or name for the Node type: Package · Module · File · Class · Operation · Rule)
+    left = PracticeGraph tree (each child indented under its parent; classes live in their file/subfolder; a Node's properties, rules, and relationships sit under collapsed children; hover the icon or name for the Node type: Package · Module · File · Class · Operation · Rule · Property · Relationship)
     right = source for the selected Node (the function, class, or file range); rule problems sit below that excerpt
     folder Node: the right pane lists nested Nodes (classes, operations) and their rules
     operation / class / file Node: open the corresponding source range, then list its rules, then nested children and their rules
@@ -153,6 +153,13 @@ Explore Knowledge Graph
             when the Engineer follows the Relationship
             then the target Node is selected
                 and the target source file is shown when the target is a file
+        a Class lists Relationship kinds including demonstratedThrough
+            given a Class Node demonstrated through a stories Example
+            when the Engineer opens relationships on that Class
+            then every Relationship kind is listed
+                and demonstratedThrough lists the Example
+            when the Engineer follows demonstratedThrough to that Example
+            then the Example Node is selected
     Engineer --> Filter Graph
         tree lists only Nodes that match the filters
             given a KnowledgeGraph whose source includes a Node that passes keep-operations-small-focused

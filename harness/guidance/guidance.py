@@ -17,7 +17,7 @@ from harness.agent_tools.agent_tools import (
     instructions,
     toolsetCollection,
 )
-from installation.files import rules, skill
+from installation.files import command, rules, skill
 from prompt_echo.prompt_echo import echo
 from harness.mcp.mcp_server import mcp
 from harness.markdown import (
@@ -568,6 +568,7 @@ class FidelityGuidance(Guidance):
     @echo
     @mcp
     @skill
+    @command
     @agent_instructions
     def instructions(self) -> str:
         """overview"""

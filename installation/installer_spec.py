@@ -35,11 +35,10 @@ from agent_bdd.spec_helpers import repo_root_from
 from harness.agent_tools.agent_tools import AgentToolSet
 
 CAR = "practices.examples.car.car:Car"
-CAR_SKILL = ".cursor/skills/context_tools/car/car/SKILL.md"
-CAR_ROAD_STORY = ".cursor/skills/context_tools/car/car-road-story/SKILL.md"
-TRAVEL_TO = ".cursor/skills/actions/travel-to/SKILL.md"
-CAR_START = ".cursor/skills/context_tools/car/car-start/SKILL.md"
-CAR_INSPECT = ".cursor/skills/actions/car-inspect/SKILL.md"
+CAR_SKILL = ".cursor/skills/practices/examples/car/SKILL.md"
+CAR_ROAD_STORY = ".cursor/skills/practices/examples/car/car-road-story/SKILL.md"
+TRAVEL_TO = ".cursor/skills/actions/examples/car-story/travel-to/SKILL.md"
+CAR_INSPECT = ".cursor/skills/actions/examples/car-story/inspect-trip/SKILL.md"
 
 
 def stage_invoke_commands(repo_root: Path) -> None:
@@ -316,9 +315,14 @@ with description("a context tool module with fidelity sections registered for de
         shutil.rmtree(self._tmp, ignore_errors=True)
 
     with context("with a Cursor deploy output tree"):
-        with it("should write one fidelity command file per fidelity whose body is the overview"):
-            sketch = InstalledTree(self.tree).command_path("sample-tool-sketch").read_text(encoding="utf-8")
-            expect(sketch).to(contain("sketch guidance body only"))
+        with it("should write one fidelity skill file per fidelity"):
+            sketch = InstalledTree(self.tree).skill_path("sample-tool-sketch")
+            expect(sketch.is_file()).to(equal(True))
+            expect(sketch.read_text(encoding="utf-8")).to(contain("sample-tool-sketch()"))
+
+        with it("should write one fidelity command file per fidelity"):
+            sketch = InstalledTree(self.tree).command_path("sample-tool-sketch")
+            expect(sketch.is_file()).to(equal(True))
 
         with it("should list each fidelity MCP signature and a one-liner on the practice skill"):
             text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
@@ -348,6 +352,7 @@ with description("a context tool module with fidelities and assembly registered 
         with it("should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass"):
             expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
             expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).skill_path("sample-tool-sketch").is_file()).to(equal(True))
             expect(InstalledTree(self.tree).command_path("sample-tool-sketch").is_file()).to(equal(True))
             expect(InstalledTree(self.tree).rule_path("sample-tool-spec.mdc").is_file()).to(equal(True))
 
@@ -371,6 +376,89 @@ with description("practice guidance that has been deployed") as self:
                 for text in (skill, rule):
                     expect(text).not_to(contain("tools.ps1"))
                     expect(text).not_to(contain("toolset:"))
+
+
+with description("lifecycle actions registered for deploy") as self:
+    with before.each:
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+        from actions.document.document import Document
+        from actions.generate.generate import Generate
+        from actions.grill_context.grill_context import GrillContext
+        from actions.improvement.improvement import Improvement
+        from actions.iterate.iterate import Iterate
+        from actions.partition.partition import Partition
+        from actions.render.render import Render
+        from actions.satisfy.satisfy import Satisfy
+        from actions.sketch.sketch import Sketch
+        from actions.validate.validate import Validate
+
+        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+            [
+                Document(),
+                Generate(),
+                GrillContext(),
+                Improvement(),
+                Iterate(),
+                Partition(),
+                Render(),
+                Satisfy(),
+                Sketch(),
+                Validate(),
+            ]
+        )
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with context("with a Cursor deploy output tree"):
+        with it("should write a skill file for each skill-marked action"):
+            names = InstalledTree(self.tree).skill_names()
+            for name in (
+                "generate",
+                "sketch",
+                "document",
+                "satisfy",
+                "iterate",
+                "repair",
+                "verify-fix",
+                "partition",
+                "render",
+                "validate",
+                "create-rule",
+                "grill",
+            ):
+                expect(names).to(contain(name))
+
+        with it("should record mcp-published action operations"):
+            from installation.installer import Installer as LiveInstaller
+            from actions.generate.generate import Generate
+
+            installer = LiveInstaller(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+            mcp = installer.install([Generate()])
+            names = [op.mcp_name for op in mcp.mcp_operations]
+            expect(names).to(contain("generate.generate"))
+
+
+with description("clean engineering skills registered for deploy") as self:
+    with before.each:
+        from practices.clean_engineering.clean_engineering import CleanEngineering
+
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([CleanEngineering()])
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with context("with a Cursor deploy output tree"):
+        with it("should write kebab-case practice and fidelity skills"):
+            names = InstalledTree(self.tree).skill_names()
+            expect(names).to(contain("clean-engineering"))
+            expect(names).to(contain("clean-engineering-code"))
+            expect(names).to(contain("clean-engineering-model"))
+            expect(names).to(contain("clean-engineering-modules"))
+            expect("clean_engineering" in names).to(equal(False))
 
 
 with description("practice guidance that has been deployed for VS Code") as self:
@@ -399,8 +487,7 @@ with description("harness deploy for car invoke BDD"):
             skill = _REPO / CAR_SKILL
             expect(skill.is_file()).to(be_true)
             body = skill.read_text(encoding="utf-8")
-            expect("AskQuestion" in body).to(be_true)
-            expect("@car-road_story" in body or "road_story" in body).to(be_true)
+            expect("road_story" in body or "car-road-story" in body).to(be_true)
             expect("tools.ps1" in body).to(equal(False))
             expect("toolset:" in body).to(equal(False))
 
@@ -408,12 +495,11 @@ with description("harness deploy for car invoke BDD"):
             stage_invoke_commands(_REPO)
             expect((_REPO / CAR_ROAD_STORY).is_file()).to(be_true)
             expect((_REPO / TRAVEL_TO).is_file()).to(be_true)
-            expect((_REPO / CAR_START).is_file()).to(be_true)
             expect((_REPO / CAR_INSPECT).is_file()).to(be_true)
 
         with it("should not embed YAML CLI invoke fences in deployed command bodies"):
             stage_invoke_commands(_REPO)
-            for path in (CAR_ROAD_STORY, TRAVEL_TO, CAR_START, CAR_INSPECT):
+            for path in (CAR_ROAD_STORY, TRAVEL_TO, CAR_INSPECT):
                 text = (_REPO / path).read_text(encoding="utf-8")
                 expect("tools.ps1" in text).to(equal(False))
                 expect("toolset:" in text).to(equal(False))
@@ -851,7 +937,23 @@ with description("markdown skill paths for a kit with several skill operations")
         toolset = type("Kit", (), {"install_folder": Path("actions/grill_context"), "tools": tools})()
         expect(
             writer.relative_path("skill", toolset, tools["grill"].callable, "grill").as_posix()
-        ).to(equal("skills/actions/grill_context/grill/SKILL.md"))
+        ).to(equal("skills/actions/grill-context/grill/SKILL.md"))
+
+    with it("should kebab-case an underscored practice folder to match fidelity skill names"):
+        from installation.files import FileInstallation
+
+        writer = FileInstallation("Cursor", Path("."), "skill")
+        tools = {"instructions": _skill_tool("instructions")}
+        toolset = type(
+            "Practice",
+            (),
+            {"install_folder": Path("practices/clean_engineering"), "tools": tools},
+        )()
+        expect(
+            writer.relative_path(
+                "skill", toolset, tools["instructions"].callable, "instructions"
+            ).as_posix()
+        ).to(equal("skills/practices/clean-engineering/SKILL.md"))
 
 
 with description("markdown skill paths for a fidelity nested under a practice"):
@@ -876,6 +978,28 @@ with description("markdown skill paths for a fidelity nested under a practice"):
                 "skill", toolset, tools["instructions"].callable, "instructions"
             ).as_posix()
         ).to(equal("skills/practices/stories/stories-scenarios/SKILL.md"))
+
+    with it("should kebab-case the practice parent so it matches the fidelity leaf"):
+        from installation.files import FileInstallation
+
+        writer = FileInstallation("Cursor", Path("."), "skill")
+        tools = {"instructions": _skill_tool("instructions")}
+        practice = type("Practice", (), {"slug": "clean-engineering"})()
+        toolset = type(
+            "Fidelity",
+            (),
+            {
+                "install_folder": Path("practices/clean_engineering/code"),
+                "tools": tools,
+                "practice_guidance": practice,
+                "slug": "clean-engineering-code",
+            },
+        )()
+        expect(
+            writer.relative_path(
+                "skill", toolset, tools["instructions"].callable, "instructions"
+            ).as_posix()
+        ).to(equal("skills/practices/clean-engineering/clean-engineering-code/SKILL.md"))
 
 
 def _write_skill_tool(name: str, overview: str):

@@ -550,3 +550,62 @@ export function fileParkingLotGraph(): KnowledgeGraphDto {
     ],
   };
 }
+
+export function classDemonstratedThroughExampleGraph(): KnowledgeGraphDto {
+  return {
+    id: '11111111-1111-1111-1111-111111111111',
+    folder: 'workspace',
+    practice_graphs: [
+      {
+        id: 'practice:clean_engineering',
+        name: 'clean_engineering',
+        nodes: [
+          {
+            node_id: 'ce:OoadClass:Customer',
+            name: 'Customer',
+            practice: 'clean_engineering',
+            semantic_type: 'OoadClass',
+            properties: { folder: 'domain/customer' },
+            applicable_rules: [],
+            violations: [],
+            source: {
+              file: 'domain/customer/Customer.ts',
+              start_line: 1,
+              end_line: 20,
+              text: 'export class Customer {}',
+            },
+          },
+        ],
+        relationships: [],
+      },
+      {
+        id: 'practice:stories',
+        name: 'stories',
+        nodes: [
+          {
+            node_id: 'st:Example:adder',
+            name: 'adder',
+            practice: 'stories',
+            semantic_type: 'Example',
+            properties: {},
+            applicable_rules: [],
+            violations: [],
+            source: {
+              file: 'practices/stories/catalog-examples/adder.ts',
+              start_line: 1,
+              end_line: 8,
+              text: 'export const adder = { left: 1, right: 2 };',
+            },
+          },
+        ],
+        relationships: [
+          {
+            kind: 'demonstrates',
+            from_id: 'st:Example:adder',
+            to_id: 'ce:OoadClass:Customer',
+          },
+        ],
+      },
+    ],
+  };
+}

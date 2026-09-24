@@ -328,7 +328,8 @@ class Installer:
         for item in toolsets:
             try:
                 toolset = AgentToolSet.instantiate(item)
-            except Exception:  # noqa: BLE001
+            except Exception as error:  # noqa: BLE001
+                print(f"install skipped {item}: {error}", file=sys.stderr)
                 continue
             self._install_toolset(toolset)
             for child in toolset.child_toolsets():

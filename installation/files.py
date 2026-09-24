@@ -109,13 +109,40 @@ class FileInstallation(Installation):
             return Path("skills") / self._skill_folder(toolset, op) / "SKILL.md"
         if destination == "command":
             base = Path("prompts") if self.ide == "VS Code" else Path("commands")
-            return base / folder / f"{op}.md"
+            return base / self._command_folder(toolset, folder) / f"{self._command_stem(toolset, op)}.md"
         if destination == "rules":
-            return Path("rules") / folder.with_suffix(".mdc")
+            kebab = self._kebab_folder(folder)
+            if getattr(toolset, "practice_guidance", None) is not None:
+                stem = self._command_stem(toolset, kebab.name)
+                parent = kebab.parent if kebab.name else kebab
+                return Path("rules") / parent / f"{stem}.mdc"
+            return Path("rules") / kebab.with_suffix(".mdc")
         return folder / str(name)
 
     def _op_slug(self, name: str) -> str:
         return re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", name).replace("_", "-").lower()
+
+    def _kebab_folder(self, folder: Path) -> Path:
+        parts: list[str] = []
+        for part in folder.parts:
+            if part in {"/", "\\"} or (len(part) == 2 and part.endswith(":")):
+                parts.append(part)
+            else:
+                parts.append(self._op_slug(part))
+        return Path(*parts) if parts else folder
+
+    def _command_folder(self, toolset: Any, folder: Path) -> Path:
+        kebab = self._kebab_folder(folder)
+        if getattr(toolset, "practice_guidance", None) is not None:
+            return kebab.parent if kebab.name else kebab
+        return kebab
+
+    def _command_stem(self, toolset: Any, op: str) -> str:
+        if getattr(toolset, "practice_guidance", None) is not None:
+            slug = getattr(toolset, "slug", None)
+            if slug:
+                return self._op_slug(str(slug))
+        return op
 
     def _skill_ops(self, toolset: Any) -> list[str]:
         bag = getattr(toolset, "tools", None) or {}
@@ -128,15 +155,15 @@ class FileInstallation(Installation):
         return names
 
     def _skill_folder(self, toolset: Any, op: str) -> Path:
-        folder = self.folder_for(toolset)
+        folder = self._kebab_folder(self.folder_for(toolset))
         if getattr(toolset, "practice_guidance", None) is not None:
             slug = getattr(toolset, "slug", None)
             if slug:
                 parent = folder.parent if folder.name else folder
-                return parent / str(slug)
+                return parent / self._op_slug(str(slug))
         if op in {"instructions", "rules-markdown"}:
             return folder
-        last = folder.name.replace("_", "-").lower()
+        last = folder.name
         if len(self._skill_ops(toolset)) > 1:
             return folder / op
         if op == last:
@@ -198,8 +225,6 @@ class FileInstallation(Installation):
             if kind not in {"skill", "command", "rules"}:
                 return
         if not kind:
-            return
-        if kind == "skill" and getattr(tool.toolset, "practice_guidance", None) is not None:
             return
         member = tool.callable
         toolset = tool.toolset

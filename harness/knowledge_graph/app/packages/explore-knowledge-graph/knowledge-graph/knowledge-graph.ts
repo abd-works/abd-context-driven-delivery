@@ -10,6 +10,7 @@
  */
 import { z } from 'zod';
 import {
+  INVERSE_KIND,
   PRACTICES,
   RELATIONSHIP_KINDS,
   RULE_GUIDANCE,
@@ -110,14 +111,27 @@ export type CreateKnowledgeGraphInput = {
   practiceGraphs: PracticeGraphDto[];
 };
 
+export type ListedRelatedNode = {
+  node_id: string;
+  name: string;
+  semantic_type: string;
+};
+
+export type ListedRelationshipKind = {
+  kind: string;
+  targets: ListedRelatedNode[];
+};
+
 export type ListedTreeNode = {
   node_id: string;
   name: string;
   path: string;
   semantic_type: string;
   is_file: boolean;
+  properties: Record<string, string>;
   rule_statuses: Record<string, 'passing' | 'violating'>;
   rules: ListedRule[];
+  relationships: ListedRelationshipKind[];
   source: SourceRangeDto | null;
   origin: SourceRangeDto | null;
   failed: number;
@@ -310,6 +324,7 @@ export class KnowledgeGraph {
   private _treeOwns: Array<{ fromId: string; toId: string }> | null = null;
   private _edges: RelationshipDto[] | null = null;
   private _kinds: Map<string, Set<string>> | null = null;
+  private _related: Map<string, ListedRelationshipKind[]> | null = null;
 
   constructor(
     private readonly dto: KnowledgeGraphDto,
@@ -417,6 +432,7 @@ export class KnowledgeGraph {
     next._treeOwns = this._treeOwns;
     next._edges = this._edges;
     next._kinds = this._kinds;
+    next._related = this._related;
     return next;
   }
 
@@ -432,8 +448,10 @@ export class KnowledgeGraph {
       practice: node.practice,
       semantic_type: node.semanticType,
       is_file: node.isFile,
+      properties: node.properties,
       rule_statuses: node.rules.statuses(),
       rules,
+      relationships: this._listedRelationships(node),
       source: node.source,
       failed,
       total: failed,
@@ -474,6 +492,79 @@ export class KnowledgeGraph {
       return details;
     }
     return details.filter((rule) => slugs.includes(rule.slug));
+  }
+
+  private _listedRelationships(node: GraphNode): ListedRelationshipKind[] {
+    this._relatedByNode();
+    const groups = this._related?.get(node.nodeId) ?? [];
+    const kinds = listed(
+      this.view.filter.relationshipTypes,
+      this.view.filter.relationshipType || this.view.filter.connectorKind,
+    );
+    if (kinds === null) {
+      return groups;
+    }
+    return groups.filter((group) => kinds.includes(group.kind));
+  }
+
+  private _relatedByNode(): Map<string, ListedRelationshipKind[]> {
+    if (!this._related) {
+      const grouped = new Map<
+        string,
+        Map<string, Map<string, ListedRelatedNode>>
+      >();
+      const add = (nodeId: string, kind: string, other: GraphNode) => {
+        if (!kind || nodeId === other.nodeId) {
+          return;
+        }
+        let byKind = grouped.get(nodeId);
+        if (!byKind) {
+          byKind = new Map();
+          grouped.set(nodeId, byKind);
+        }
+        let byTarget = byKind.get(kind);
+        if (!byTarget) {
+          byTarget = new Map();
+          byKind.set(kind, byTarget);
+        }
+        byTarget.set(other.nodeId, {
+          node_id: other.nodeId,
+          name: this._treeLabel(other),
+          semantic_type: other.semanticType,
+        });
+      };
+      for (const edge of this._allEdges()) {
+        const from = this._nodeById(edge.from_id);
+        const to = this._nodeById(edge.to_id);
+        if (!from || !to) {
+          continue;
+        }
+        add(from.nodeId, edge.kind, to);
+        add(to.nodeId, INVERSE_KIND[edge.kind] ?? edge.kind, from);
+      }
+      const related = new Map<string, ListedRelationshipKind[]>();
+      for (const [nodeId, byKind] of grouped) {
+        const extra = [...byKind.keys()].filter(
+          (kind) => !(RELATIONSHIP_KINDS as readonly string[]).includes(kind),
+        );
+        related.set(nodeId, [
+          ...RELATIONSHIP_KINDS.map((kind) => ({
+            kind,
+            targets: [...(byKind.get(kind)?.values() ?? [])].sort((left, right) =>
+              left.name.localeCompare(right.name),
+            ),
+          })),
+          ...extra.sort().map((kind) => ({
+            kind,
+            targets: [...(byKind.get(kind)?.values() ?? [])].sort((left, right) =>
+              left.name.localeCompare(right.name),
+            ),
+          })),
+        ]);
+      }
+      this._related = related;
+    }
+    return this._related;
   }
 
   private _listedTree(): ListedTreeNode[] {
