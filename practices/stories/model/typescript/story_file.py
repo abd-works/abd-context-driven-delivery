@@ -30,7 +30,7 @@ import re
 from typing import List
 
 from practices.stories.model.code_story_map import to_pascal
-from practices.stories.model.helper_interface import build_helper_seam
+from practices.stories.model.helper_interface import HelperMethod
 from practices.stories.model.nodes import Story
 
 
@@ -114,7 +114,7 @@ def render_test_helper_file(
     fn = f"create{to_pascal(story.name)}Story"
     helper_iface = f"{to_pascal(story.name)}Helper"
     tier_class = f"{to_pascal(tier)}Helper"
-    methods, _ = build_helper_seam(story)
+    methods, _ = HelperMethod.from_story(story)
 
     lines: List[str] = [
         "/**",

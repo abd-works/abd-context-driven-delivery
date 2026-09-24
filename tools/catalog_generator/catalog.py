@@ -1,6 +1,7 @@
 """Catalog pages — HTML from each Guidance @markdown property."""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -25,7 +26,8 @@ class Catalog(HTML):
             try:
                 md = Markdown.from_label(guidance, "overview" if label == "context" else label)
                 page = md.html()
-            except Exception:
+            except Exception as error:
+                logging.debug("Skipping catalog page %s-%s: %s", slug, label, error)
                 continue
             if str(page).strip():
                 self.pages[f"{slug}-{label}"] = str(page)

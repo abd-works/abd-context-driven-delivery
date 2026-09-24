@@ -68,7 +68,7 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 	// afterAgentResponse holds only the dispatch command — Cursor runs the first entry only
 	// other events keep non-dispatch commands already in the file
 + standup(): HookServer
-	-> HookServer.standup
+	-> HookServer.from_handlers
 + diagnose(): dict
 	-> HookServer.diagnose
 
@@ -120,9 +120,9 @@ Fields Cursor reads back from the hook process.
 + from_handler(raw: dict | None): HookResult
 + with_description(description: str): HookResult
 	// prepends tool docstring onto agent_message
-+ merged(results: list[HookResult]): HookResult
-	// user_message and agent_message concatenate with newlines
-	// empty handler results are skipped
++ merge(other: HookResult): HookResult
+	// deny and continue false win; user_message and agent_message concatenate with newlines
+	// unique additional_context parts join with blank lines; last followup_message wins
 + as_dict(): dict
 
 ## HookHandler                                                    <!-- Md -->
@@ -150,12 +150,15 @@ One marked operation that may run for an event.
 
 Installed list of hook handlers. File is next to Cursor config: `{Installer.path}/hook-handlers.json`.
 
-+ HandlerCatalog(toolsets: list | None = None, repo_root: Path | None = None)
-	// given toolsets, or _refs_from_file, or _collect_refs — then AgentToolSet.load_toolsets
++ HandlerCatalog(toolsets: list | None = None, repo_root: Path | None = None, handlers: Path | None = None)
+	// given handlers file, given toolsets, or repo hook-handlers.json, or _collect_refs
 ------
 + << composition >> toolsets: list[AgentToolSet]
 + repo_root: Path | None
++ failures: list
 ----
++ refs_from_handlers(handlers: Path): tuple
++ ref_label(item): str
 - _refs_from_file(): list[str]
 	// .cursor/hook-handlers.json
 - _collect_refs(): list[str]
@@ -189,8 +192,7 @@ One hook handler was skipped so the hook server could finish standup.
 
 Cursor process for every hooked event. `hook_server.py` constructs `HookServer` and calls `run`.
 
-+ HookServer(repo_root: Path, toolsets: list | None = None)
-	// HandlerCatalog(toolsets, repo_root)
++ HookServer(repo_root: Path, catalog: HandlerCatalog | None = None)
 ------
 + << association >> catalog: HandlerCatalog
 + exceptions: list[HookIllegitimateHandler]
@@ -204,8 +206,12 @@ Cursor process for every hooked event. `hook_server.py` constructs `HookServer` 
 	-> HandlerCatalog.for_event
 	-> HookHandler.is_enabled
 	-> HookHandler.invoke
-	-> HookResult.merged
-+ standup(handlers: Path, repo: Path | None = None): HookServer
+	-> HookResult.merge
++ from_toolsets(repo_root: Path, toolsets: list | None = None): HookServer
+	-> HandlerCatalog
++ from_handlers(handlers: Path, repo: Path | None = None): HookServer
++ standup(): HookServer
+	// notify skipped handlers
 + diagnose(): dict
 	-> ping()
 	-> dispatch
@@ -213,6 +219,37 @@ Cursor process for every hooked event. `hook_server.py` constructs `HookServer` 
 	// "pong"
 - _append_debug(message: str): None
 	// dispatch.debug under the session logs folder
+
+## SessionLogs                                                    <!-- Md -->
+
+Active session name and hook log files under ``.sessions/{name}/logs/``.
+
++ SessionLogs(repo_root: Path)
+------
++ repo_root: Path
+----
++ write_active_session(name: str): None
++ clear_active_session(): None
++ active_session_name(): str
++ session_folder(name: str): Path
++ ensure_default_session(): Path
++ session_logs_dir(): Path
++ session_log_path(filename: str): Path
++ consolidate_logs_for_close(session_name: str): None
+
+## HookDaemon                                                     <!-- Md -->
+
+Local process that holds one HookServer and answers stdin over a socket.
+
++ HookDaemon(host: str = "127.0.0.1", port: int | None = None)
+------
++ host: str
++ port: int | None
+----
++ live_address(path: Path): tuple | None
++ call_handle_stdin(raw: bytes): dict
++ spawn(repo: Path, path: Path): None
++ serve(repo: Path, inner: HookServer | None = None): None
 
 ## PromptLog                                                      <!-- Md -->
 

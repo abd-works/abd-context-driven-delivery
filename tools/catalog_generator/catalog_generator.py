@@ -24,6 +24,7 @@ from __future__ import annotations
 import ast
 import importlib
 import inspect
+import logging
 import re
 import subprocess
 from dataclasses import dataclass, field
@@ -61,25 +62,23 @@ UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("sub_agent", "sub_agent.sub_agent", "SubAgent"),
 )
 
-def _toolset_name_of(cls: type) -> str:
-    """Match ``Toolset.toolset_name`` without needing an instance (that property
-    is instance-only; accessing it on the class returns the property object)."""
-    import re
-
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", cls.__name__).lower()
-
-@dataclass(frozen=True)
+@dataclass
 class RegistryEntry:
     """One resolved registry row - a real, importable class, not a stub."""
 
     display_name: str
     module_path: str
     class_name: str
-    cls: type
+    cls: type = type
 
-def _load_class(module_path: str, class_name: str) -> type:
-    module = importlib.import_module(module_path)
-    return getattr(module, class_name)
+    def _load_class(self) -> type:
+        module = importlib.import_module(self.module_path)
+        return getattr(module, self.class_name)
+
+    def toolset_name(self) -> str:
+        import re
+
+        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", self.cls.__name__).lower()
 
 def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
     """Resolve every context-tool and utility registry row to a real class.
@@ -88,14 +87,16 @@ def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
     (``ImportError`` / ``AttributeError``) immediately - "nothing missing"
     is a hard fail at discover time, not a silently dropped row.
     """
-    practices = [
-        RegistryEntry(name, module_path, class_name, _load_class(module_path, class_name))
-        for name, module_path, class_name in CONTEXT_TOOL_REGISTRY
-    ]
-    utilities = [
-        RegistryEntry(name, module_path, class_name, _load_class(module_path, class_name))
-        for name, module_path, class_name in UTILITY_REGISTRY
-    ]
+    practices: list[RegistryEntry] = []
+    for name, module_path, class_name in CONTEXT_TOOL_REGISTRY:
+        entry = RegistryEntry(name, module_path, class_name)
+        entry.cls = entry._load_class()
+        practices.append(entry)
+    utilities: list[RegistryEntry] = []
+    for name, module_path, class_name in UTILITY_REGISTRY:
+        entry = RegistryEntry(name, module_path, class_name)
+        entry.cls = entry._load_class()
+        utilities.append(entry)
     return practices, utilities
 
 # -- Fidelity scraping --------------------------------------------------------
@@ -131,7 +132,7 @@ _STAGE_FRONTMATTER_TOKENS: dict[str, tuple[str, ...]] = {
     "engineer": ("engineering", "engineer"),
 }
 
-@dataclass(frozen=True)
+@dataclass
 class FidelityGuidance:
     """One fidelity's key, default format, ``## {fidelity}`` body, and tool overview."""
 
@@ -139,6 +140,34 @@ class FidelityGuidance:
     default_format: str | None
     guidance: str
     overview: str = ""
+
+    def _frontmatter_tokens(self, text: str) -> set[str]:
+        self._frontmatter_blob = _template_frontmatter_blob(text).lower()
+        self._frontmatter_token_set: set[str] = set()
+        for key in ("fidelity", "artifact", "format"):
+            self._frontmatter_key = key
+            self._collect_frontmatter_key_tokens()
+        return self._frontmatter_token_set
+
+    def _collect_frontmatter_key_tokens(self) -> None:
+        blob = self._frontmatter_blob
+        key = self._frontmatter_key
+        listed = re.search(rf"{key}\s*:\s*\[([^\]]*)\]", blob)
+        if listed:
+            self._add_bracket_tokens(listed.group(1))
+            return
+        scalar = re.search(rf"{key}\s*:\s*([^\n]+)", blob)
+        if not scalar:
+            return
+        tok = scalar.group(1).strip().strip("\"'").lower()
+        if tok:
+            self._frontmatter_token_set.add(tok)
+
+    def _add_bracket_tokens(self, raw: str) -> None:
+        for part in raw.split(","):
+            tok = part.strip().strip("\"'").lower()
+            if tok:
+                self._frontmatter_token_set.add(tok)
 
 def _template_frontmatter_blob(text: str) -> str:
     """Return the leading frontmatter block (YAML or ``# ---`` comment form)."""
@@ -157,24 +186,6 @@ def _template_frontmatter_blob(text: str) -> str:
             blob.append(stripped[2:].lstrip() if stripped.startswith("#") else stripped)
         return "\n".join(blob)
     return ""
-
-def _frontmatter_tokens(text: str) -> set[str]:
-    blob = _template_frontmatter_blob(text).lower()
-    tokens: set[str] = set()
-    for key in ("fidelity", "artifact", "format"):
-        m = re.search(rf"{key}\s*:\s*\[([^\]]*)\]", blob)
-        if m:
-            for part in m.group(1).split(","):
-                tok = part.strip().strip("\"'").lower()
-                if tok:
-                    tokens.add(tok)
-        else:
-            m2 = re.search(rf"{key}\s*:\s*([^\n]+)", blob)
-            if m2:
-                tok = m2.group(1).strip().strip("\"'").lower()
-                if tok:
-                    tokens.add(tok)
-    return tokens
 
 def _slug_variants(domain_slug: str) -> list[str]:
     variants = [domain_slug]
@@ -255,7 +266,7 @@ def resolve_default_template(
                 text = path.read_text(encoding="utf-8")
             except OSError:
                 text = ""
-            tokens = _frontmatter_tokens(text) if text else set()
+            tokens = FidelityGuidance("", None, "")._frontmatter_tokens(text) if text else set()
             if fidelity.lower() in tokens or fidelity_kebab in tokens:
                 score += 50
             if stage_tokens & tokens:
@@ -354,7 +365,7 @@ def scrape_fidelities(cls: type) -> list[FidelityGuidance]:
     A fidelity with no matching heading resolves to a "Guidance missing"
     stub instead of failing the whole scrape.
     """
-    from harness.markdown import fidelity_format
+    from harness.markdown import Markdown
 
     fidelities: dict[str, str] | None = getattr(cls, "fidelities", None)
     if not fidelities:
@@ -367,7 +378,7 @@ def scrape_fidelities(cls: type) -> list[FidelityGuidance]:
     results: list[FidelityGuidance] = []
     for fidelity_key in fidelities.values():
         section = extract_heading_section(guide_text, fidelity_key) if guide_text else None
-        default_format = fidelity_format(section) if section else None
+        default_format = Markdown(None, "").fidelity_format(section) if section else None
         if not default_format:
             default_format = getattr(cls, "_fidelity_format_defaults", {}).get(fidelity_key)
         results.append(
@@ -389,24 +400,6 @@ def importlib_module_file(module_path: str) -> str:
 
 _ACTION_DECORATOR_NAME = "agent_instructions"
 
-@dataclass(frozen=True)
-class ActionResolution:
-    """One public lifecycle ``@agent_instructions``'s resolved delegate dir and same-instance calls."""
-
-    name: str
-    source_dir: Path
-    calls: list[str] = field(default_factory=list)
-
-def _decorator_names(node: ast.FunctionDef) -> set[str]:
-    names: set[str] = set()
-    for dec in node.decorator_list:
-        target = dec.func if isinstance(dec, ast.Call) else dec
-        if isinstance(target, ast.Name):
-            names.add(target.id)
-        elif isinstance(target, ast.Attribute):
-            names.add(target.attr)
-    return names
-
 # Plan: emit top-level lifecycle actions; skip override hooks.
 # ``generate_fixes_from_validate`` is a satisfy helper, not its own catalog action.
 # ``improve`` sits after ``repair`` — same peer kit (``tools/repair/``),
@@ -418,127 +411,6 @@ _LIFECYCLE_ACTION_SKIP = frozenset({
     "generate_fixes_from_validate",
 })
 
-def _public_action_methods(tree: ast.Module) -> list[ast.FunctionDef]:
-    methods: list[ast.FunctionDef] = []
-    for node in tree.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        for item in node.body:
-            if not isinstance(item, ast.FunctionDef):
-                continue
-            if item.name.startswith("_"):
-                continue
-            if item.name in _LIFECYCLE_ACTION_SKIP:
-                continue
-            if _ACTION_DECORATOR_NAME in _decorator_names(item):
-                methods.append(item)
-    return methods
-
-def _init_peer_kit_attrs(tree: ast.Module) -> dict[str, str]:
-    """Map ``self.<attr> = <ClassName>(...)`` assignments in ``__init__`` to
-    the class name assigned, for every peer-kit attribute."""
-    attr_to_class: dict[str, str] = {}
-    for node in tree.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        for item in node.body:
-            if not (isinstance(item, ast.FunctionDef) and item.name == "__init__"):
-                continue
-            for stmt in ast.walk(item):
-                if not isinstance(stmt, ast.Assign):
-                    continue
-                if len(stmt.targets) != 1:
-                    continue
-                target = stmt.targets[0]
-                if not (
-                    isinstance(target, ast.Attribute)
-                    and isinstance(target.value, ast.Name)
-                    and target.value.id == "self"
-                ):
-                    continue
-                value = stmt.value
-                call_func = value.func if isinstance(value, ast.Call) else None
-                if isinstance(call_func, ast.Name):
-                    attr_to_class[target.attr] = call_func.id
-    return attr_to_class
-
-def _import_module_for_class(tree: ast.Module, class_name: str) -> str | None:
-    """Find ``from <module> import <class_name>`` at module top level."""
-    for node in tree.body:
-        if isinstance(node, ast.ImportFrom) and node.module:
-            for alias in node.names:
-                if alias.name == class_name:
-                    return node.module
-    return None
-
-def _double_attr_calls(body: list[ast.stmt]) -> list[tuple[str, str]]:
-    """Every ``self.<attr>.<method>(...)`` call's ``(<attr>, <method>)`` pair,
-    in source order.
-
-    The pair - not the bare attribute - is the uniqueness unit: two actions
-    can each own a genuine, distinct delegate call on the *same* peer kit
-    (``repair`` -> ``self.repairer.repair(...)``, ``improve`` ->
-    ``self.repairer.improve()``) without either stealing the other's
-    delegate dir. What marks a call as shared infrastructure instead of a
-    delegate is two actions calling the exact same method on the exact same
-    attribute (``document`` and ``validate`` both calling
-    ``self.scanner.scan(...)``).
-    """
-    pairs: list[tuple[str, str]] = []
-    for stmt in body:
-        for node in ast.walk(stmt):
-            if not isinstance(node, ast.Call):
-                continue
-            func = node.func
-            if not isinstance(func, ast.Attribute):
-                continue
-            owner = func.value
-            if (
-                isinstance(owner, ast.Attribute)
-                and isinstance(owner.value, ast.Name)
-                and owner.value.id == "self"
-            ):
-                pairs.append((owner.attr, func.attr))
-    return pairs
-
-def _same_instance_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
-    """Every ``self.<method>()`` call where ``<method>`` is another public
-    action name, in source order, de-duplicated."""
-    calls: list[str] = []
-    for stmt in body:
-        for node in ast.walk(stmt):
-            if not isinstance(node, ast.Call):
-                continue
-            func = node.func
-            if (
-                isinstance(func, ast.Attribute)
-                and isinstance(func.value, ast.Name)
-                and func.value.id == "self"
-                and func.attr in action_names
-                and func.attr not in calls
-            ):
-                calls.append(func.attr)
-    return calls
-
-def _guidance_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
-    """``guidance.<method>()`` or ``Generate().generate(guidance=[guidance])`` action dispatch."""
-    calls: list[str] = []
-    for stmt in body:
-        for node in ast.walk(stmt):
-            if not isinstance(node, ast.Call):
-                continue
-            func = node.func
-            if not isinstance(func, ast.Attribute):
-                continue
-            if func.attr not in action_names or func.attr in calls:
-                continue
-            value = func.value
-            if isinstance(value, ast.Name) and value.id in {"guidance", "host"}:
-                calls.append(func.attr)
-            elif func.attr == "generate":
-                calls.append(func.attr)
-    return calls
-
 _LIFECYCLE_ACTIONS = frozenset({
     "generate",
     "document",
@@ -546,18 +418,6 @@ _LIFECYCLE_ACTIONS = frozenset({
     "satisfy",
     "createRule",
 })
-
-def _resolve_actions_from_source(
-    path: Path,
-    *,
-    action_names: frozenset[str] | None = None,
-) -> list[tuple[str, ast.FunctionDef]]:
-    """Return ``(name, method)`` for public ``@agent_instructions`` methods in ``path``."""
-    tree = ast.parse(path.read_text(encoding="utf-8"))
-    methods = _public_action_methods(tree)
-    if action_names is not None:
-        methods = [m for m in methods if m.name in action_names]
-    return [(m.name, m) for m in methods]
 
 _KIT_LIFECYCLE_SPECS: tuple[tuple[str, Path, str], ...] = (
         ("partition", _REPO_ROOT / "actions" / "partition" / "partition.py", "partition"),
@@ -571,6 +431,232 @@ _KIT_LIFECYCLE_SPECS: tuple[tuple[str, Path, str], ...] = (
         ("repair", _REPO_ROOT / "actions" / "improvement" / "improvement.py", "improvement"),
         ("createRule", _REPO_ROOT / "actions" / "validate" / "validate.py", "validate"),
     )
+
+class ActionResolution:
+    """One public lifecycle ``@agent_instructions``'s resolved delegate dir and same-instance calls."""
+
+    def __init__(
+        self,
+        name: str = "",
+        source_dir: Path | None = None,
+        calls: list[str] | None = None,
+    ) -> None:
+        self.name = name
+        self.source_dir = source_dir if source_dir is not None else Path()
+        self.calls = calls if calls is not None else []
+        self.tree: ast.Module | None = None
+        self.body: list[ast.stmt] = []
+        self.class_name = ""
+        self.action_names: set[str] = set()
+        self.node: ast.FunctionDef | None = None
+        self._peer_kit_attrs: dict[str, str] = {}
+        self._call_pairs: list[tuple[str, str]] = []
+        self._kit_name = ""
+        self._kit_path = Path()
+        self._kit_dir_name = ""
+        self._action_calls: list[str] = []
+
+    def _decorator_names(self) -> set[str]:
+        names: set[str] = set()
+        if self.node is None:
+            return names
+        for dec in self.node.decorator_list:
+            target = dec.func if isinstance(dec, ast.Call) else dec
+            if isinstance(target, ast.Name):
+                names.add(target.id)
+            elif isinstance(target, ast.Attribute):
+                names.add(target.attr)
+        return names
+
+    def _public_action_methods(self) -> list[ast.FunctionDef]:
+        methods: list[ast.FunctionDef] = []
+        if self.tree is None:
+            return methods
+        for node in self.tree.body:
+            self._append_public_actions(node, methods)
+        return methods
+
+    def _append_public_actions(self, node: ast.stmt, methods: list[ast.FunctionDef]) -> None:
+        if not isinstance(node, ast.ClassDef):
+            return
+        for item in node.body:
+            self._maybe_append_action(item, methods)
+
+    def _maybe_append_action(self, item: ast.stmt, methods: list[ast.FunctionDef]) -> None:
+        if not isinstance(item, ast.FunctionDef):
+            return
+        if item.name.startswith("_") or item.name in _LIFECYCLE_ACTION_SKIP:
+            return
+        self.node = item
+        if _ACTION_DECORATOR_NAME in self._decorator_names():
+            methods.append(item)
+
+    def _init_peer_kit_attrs(self) -> dict[str, str]:
+        """Map ``self.<attr> = <ClassName>(...)`` assignments in ``__init__``."""
+        self._peer_kit_attrs = {}
+        if self.tree is None:
+            return self._peer_kit_attrs
+        for node in self.tree.body:
+            if isinstance(node, ast.ClassDef):
+                self._collect_class_init_peer_kits(node)
+        return self._peer_kit_attrs
+
+    def _collect_class_init_peer_kits(self, class_node: ast.ClassDef) -> None:
+        for item in class_node.body:
+            if isinstance(item, ast.FunctionDef) and item.name == "__init__":
+                self._collect_init_assignments(item)
+
+    def _collect_init_assignments(self, init_fn: ast.FunctionDef) -> None:
+        for stmt in ast.walk(init_fn):
+            self._record_peer_kit_assignment(stmt)
+
+    def _record_peer_kit_assignment(self, stmt: ast.AST) -> None:
+        if not isinstance(stmt, ast.Assign) or len(stmt.targets) != 1:
+            return
+        target = stmt.targets[0]
+        if not self._is_self_attr(target):
+            return
+        call_func = stmt.value.func if isinstance(stmt.value, ast.Call) else None
+        if isinstance(call_func, ast.Name):
+            self._peer_kit_attrs[target.attr] = call_func.id
+
+    def _is_self_attr(self, target: ast.AST) -> bool:
+        return (
+            isinstance(target, ast.Attribute)
+            and isinstance(target.value, ast.Name)
+            and target.value.id == "self"
+        )
+
+    def _import_module_for_class(self) -> str | None:
+        """Find ``from <module> import <class_name>`` at module top level."""
+        if self.tree is None:
+            return None
+        for node in self.tree.body:
+            found = self._module_from_import(node)
+            if found is not None:
+                return found
+        return None
+
+    def _module_from_import(self, node: ast.stmt) -> str | None:
+        if not isinstance(node, ast.ImportFrom) or not node.module:
+            return None
+        for alias in node.names:
+            if alias.name == self.class_name:
+                return node.module
+        return None
+
+    def _double_attr_calls(self) -> list[tuple[str, str]]:
+        """Every ``self.<attr>.<method>(...)`` call's ``(<attr>, <method>)`` pair."""
+        self._call_pairs = []
+        for stmt in self.body:
+            self._collect_double_attr_from_stmt(stmt)
+        return self._call_pairs
+
+    def _collect_double_attr_from_stmt(self, stmt: ast.stmt) -> None:
+        for node in ast.walk(stmt):
+            self._record_double_attr_call(node)
+
+    def _record_double_attr_call(self, node: ast.AST) -> None:
+        if not isinstance(node, ast.Call):
+            return
+        func = node.func
+        if not isinstance(func, ast.Attribute):
+            return
+        owner = func.value
+        if (
+            isinstance(owner, ast.Attribute)
+            and isinstance(owner.value, ast.Name)
+            and owner.value.id == "self"
+        ):
+            self._call_pairs.append((owner.attr, func.attr))
+
+    def _same_instance_action_calls(self) -> list[str]:
+        """Every ``self.<method>()`` call that names another public action."""
+        self._action_calls = []
+        for stmt in self.body:
+            self._collect_same_instance_from_stmt(stmt)
+        return self._action_calls
+
+    def _collect_same_instance_from_stmt(self, stmt: ast.stmt) -> None:
+        for node in ast.walk(stmt):
+            self._record_same_instance_call(node)
+
+    def _record_same_instance_call(self, node: ast.AST) -> None:
+        if not isinstance(node, ast.Call):
+            return
+        func = node.func
+        if not isinstance(func, ast.Attribute):
+            return
+        if not isinstance(func.value, ast.Name) or func.value.id != "self":
+            return
+        if func.attr in self.action_names and func.attr not in self._action_calls:
+            self._action_calls.append(func.attr)
+
+    def _guidance_action_calls(self) -> list[str]:
+        """``guidance.<method>()`` or ``Generate().generate(...)`` dispatch."""
+        self._action_calls = []
+        for stmt in self.body:
+            self._collect_guidance_from_stmt(stmt)
+        return self._action_calls
+
+    def _collect_guidance_from_stmt(self, stmt: ast.stmt) -> None:
+        for node in ast.walk(stmt):
+            self._record_guidance_call(node)
+
+    def _record_guidance_call(self, node: ast.AST) -> None:
+        if not isinstance(node, ast.Call):
+            return
+        func = node.func
+        if not isinstance(func, ast.Attribute):
+            return
+        if func.attr not in self.action_names or func.attr in self._action_calls:
+            return
+        value = func.value
+        if isinstance(value, ast.Name) and value.id in {"guidance", "host"}:
+            self._action_calls.append(func.attr)
+        elif func.attr == "generate":
+            self._action_calls.append(func.attr)
+
+    def _example_value(self, name: str, type_str: str) -> object:
+        compact = type_str.replace(" ", "")
+        if compact.endswith("|None") or compact == "None":
+            return None
+        if compact.startswith("list["):
+            return []
+        return f"<{name}>"
+
+    def _resolve_actions_from_source(self, path: Path) -> list[tuple[str, ast.FunctionDef]]:
+        self.tree = ast.parse(path.read_text(encoding="utf-8"))
+        methods = self._public_action_methods()
+        if self.action_names:
+            methods = [m for m in methods if m.name in self.action_names]
+        return [(m.name, m) for m in methods]
+
+    def _resolve_kit_lifecycle_actions(self) -> list[ActionResolution]:
+        results: list[ActionResolution] = []
+        for name, path, dir_name in _KIT_LIFECYCLE_SPECS:
+            self._kit_name = name
+            self._kit_path = path
+            self._kit_dir_name = dir_name
+            resolution = self._resolution_for_kit()
+            if resolution is not None:
+                results.append(resolution)
+        return results
+
+    def _resolution_for_kit(self) -> ActionResolution | None:
+        self.action_names = {self._kit_name}
+        methods = self._resolve_actions_from_source(self._kit_path)
+        if not methods:
+            return None
+        _method_name, method = methods[0]
+        self.body = method.body
+        self.action_names = {"generate"}
+        return ActionResolution(
+            name=self._kit_name,
+            source_dir=_REPO_ROOT / "actions" / self._kit_dir_name,
+            calls=self._guidance_action_calls(),
+        )
+
 
 _LIFECYCLE_KIT_IMPORTS: tuple[tuple[str, str, str], ...] = (
     ("partition", "actions.partition.partition", "Partition"),
@@ -604,23 +690,9 @@ def resolve_lifecycle_action_owner() -> object:
     owner.agent_tools = actions
     return owner
 
-def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
-    """AST-walk kit-owned lifecycle actions (partition, grill, sketch, iterate,
-    generate, document, validate, satisfy, repair, createRule, scan)."""
-    results: list[ActionResolution] = []
-    for name, path, dir_name in _KIT_LIFECYCLE_SPECS:
-        methods = _resolve_actions_from_source(path, action_names=frozenset({name}))
-        if not methods:
-            continue
-        _method_name, method = methods[0]
-        source_dir = _REPO_ROOT / "actions" / dir_name
-        calls = _guidance_action_calls(method.body, {"generate"})
-        results.append(ActionResolution(name=name, source_dir=source_dir, calls=calls))
-    return results
-
 def resolve_lifecycle_actions() -> list[ActionResolution]:
     """Resolve lifecycle action source dirs and same-instance calls from action kits."""
-    kit_by_name = {r.name: r for r in _resolve_kit_lifecycle_actions()}
+    kit_by_name = {r.name: r for r in ActionResolution()._resolve_kit_lifecycle_actions()}
     order = (
         "partition",
         "grill",
@@ -655,7 +727,6 @@ def skill_slash_name(module_dir_name: str) -> str | None:
         if match:
             return match.group(1)
     return None
-\
 
 # -- Portability: git-URL source citations + CLI defaults --------------------
 
@@ -727,15 +798,6 @@ def write_page(out_root: Path, relative_path: str, html: str) -> Path:
 
 # -- Raw run-request YAML (from live toolset manifests) -----------------------
 
-def _example_value(name: str, type_str: str) -> object:
-    """Placeholder value for a manifest parameter type in a sample request."""
-    compact = type_str.replace(" ", "")
-    if compact.endswith("|None") or compact == "None":
-        return None
-    if compact.startswith("list["):
-        return []
-    return f"<{name}>"
-
 _LIFECYCLE_KITS = {
     "generate": "generate.generate:Generate",
     "validate": "validate.validate:Validate",
@@ -759,6 +821,7 @@ def build_run_request(
     live on the kits. A request for one of those actions on a context tool
     is rewritten to the kit with ``arguments.guidance`` carrying that Guidance.
     """
+    examples = ActionResolution()
     if action in _LIFECYCLE_KITS and getattr(cls, "_is_context", False):
         signature = cls.manifest.signature
         ctor_params = (signature.get("new") or {}).get("parameters") or {}
@@ -767,7 +830,7 @@ def build_run_request(
             if name == "fidelity" and fidelity is not None:
                 guidance_context[name] = fidelity
             else:
-                guidance_context[name] = _example_value(name, str(type_str))
+                guidance_context[name] = examples._example_value(name, str(type_str))
         return {
             "toolset": _LIFECYCLE_KITS[action],
             "action": action,
@@ -788,7 +851,7 @@ def build_run_request(
         if name == "fidelity" and fidelity is not None:
             context[name] = fidelity
         else:
-            context[name] = _example_value(name, str(type_str))
+            context[name] = examples._example_value(name, str(type_str))
 
     request: dict[str, object] = {
         "toolset": f"{cls.__module__}:{cls.__name__}",
@@ -797,7 +860,7 @@ def build_run_request(
     }
     if action_params:
         request["arguments"] = {
-            name: _example_value(name, str(type_str))
+            name: examples._example_value(name, str(type_str))
             for name, type_str in action_params.items()
         }
     return request
@@ -924,8 +987,8 @@ class CatalogTool:
             try:
                 href = git_blob_url_for_callable(self.repo_url, self.ref, func)
                 return f'<li><a href="{href}">{name}</a> <span class="tag">(tool, no page)</span></li>'
-            except (TypeError, OSError):
-                pass
+            except (TypeError, OSError) as error:
+                logging.debug("Skipping source citation for %s: %s", name, error)
         return f'<li>{name} <span class="tag">(tool, no page)</span></li>'
 
 class CatalogAction:
@@ -945,6 +1008,9 @@ class CatalogAction:
         self.ref = ref
         self.catalog_tool = catalog_tool
         self.action_page_hrefs = action_page_hrefs or {}
+        self.action: object | None = None
+        self.owner: object | None = None
+        self.source_dir = Path()
 
     def _calls_section(self, action: object, owner: object) -> str:
         tools = list(getattr(action, "signature_entry", {}).get("tools", []))
@@ -981,7 +1047,7 @@ class CatalogAction:
             return "<p>No module-context.md yet.</p>"
         return markdown_to_html(overview_path.read_text(encoding="utf-8"))
 
-    def generate_catalog(self, action: object, owner: object, source_dir: Path) -> str:
+    def generate_catalog(self) -> str:
         """Render one action detail body — fidelity-style dark callouts.
 
         Guide and ``.context/module-context.md`` render as HTML (same as fidelity
@@ -990,6 +1056,9 @@ class CatalogAction:
         """
         import html as html_mod
 
+        action = self.action
+        owner = self.owner
+        source_dir = self.source_dir
         name = getattr(action, "name", str(action))
         return (
             f'<header class="page-hero--detail fidelity-detail-header">'
@@ -1031,9 +1100,20 @@ class CatalogFidelity:
         self.ref = ref
         self.catalog_action = catalog_action
         self.lifecycle_actions = lifecycle_actions
+        self.skill_name = ""
+        self.fidelity_name = ""
+        self.toolset_name = ""
+        self.owner: object | None = None
+        self.guidance = ""
+        self.example_body: str | None = None
+        self.overview = ""
+        self.tool_display_name = ""
+        self.default_format: str | None = None
 
-    def _quick_invoke(self, skill_name: str, fidelity_name: str, toolset_name: str) -> str:
+    def _quick_invoke(self) -> str:
         """Invoke block — Foundry install-block chrome, sits under the board."""
+        skill_name = self.skill_name
+        fidelity_name = self.fidelity_name
         action_links = ", ".join(
             f'<a href="../actions/{r.name}.html">{r.name}</a>' for r in self.lifecycle_actions
         )
@@ -1046,10 +1126,10 @@ class CatalogFidelity:
             f"</section>"
         )
 
-    def _illustrated_example_panel(self, example_body: str | None) -> str:
+    def _illustrated_example_panel(self) -> str:
         from catalog_generator.foundry_chrome import fence
 
-        if example_body is None:
+        if self.example_body is None:
             return (
                 '<section class="skill-cr-single illustrated-example">'
                 "<h2>Illustrated example</h2>"
@@ -1058,20 +1138,18 @@ class CatalogFidelity:
         return (
             f'<section class="skill-cr-single illustrated-example">'
             f"<h2>Illustrated example</h2>"
-            f'{fence("text", example_body)}</section>'
+            f'{fence("text", self.example_body)}</section>'
         )
 
-    def _default_template_panel(
-        self,
-        owner: object,
-        fidelity_name: str,
-        default_format: str | None,
-    ) -> str:
+    def _default_template_panel(self) -> str:
         """Default-format template callout — sits above the illustrated example."""
         import html as html_mod
 
         from catalog_generator.foundry_chrome import fence
 
+        owner = self.owner
+        fidelity_name = self.fidelity_name
+        default_format = self.default_format
         module_dir = Path(getattr(owner, "module_dir", Path("."))).resolve()
         domain_slug = getattr(owner, "toolset_name", module_dir.name)
         fidelities = getattr(type(owner), "fidelities", None)
@@ -1086,21 +1164,9 @@ class CatalogFidelity:
                 f"<p>No template file for default format <code>{fmt}</code>.</p>"
                 "</section>"
             )
-        try:
-            body = path.read_text(encoding="utf-8")
-        except OSError:
-            body = ""
-        try:
-            rel = path.relative_to(module_dir).as_posix()
-        except ValueError:
-            rel = path.name
-        lang = path.suffix.lstrip(".") or "text"
-        if path.name.endswith(".py.tpl"):
-            lang = "python"
-        elif lang == "md":
-            lang = "markdown"
-        elif lang == "tpl":
-            lang = "text"
+        body = self._read_template_body(path)
+        rel = self._template_relpath(path, module_dir)
+        lang = self._template_lang(path)
         blob = git_blob_url(self.repo_url, self.ref, path)
         return (
             f'<section class="install-block fidelity-template" aria-label="Default template">'
@@ -1111,18 +1177,31 @@ class CatalogFidelity:
             f"</section>"
         )
 
-    def generate_catalog(
-        self,
-        fidelity_name: str,
-        owner: object,
-        skill_name: str,
-        guidance: str,
-        example_body: str | None = None,
-        actions_action_owner: object | None = None,
-        overview: str = "",
-        tool_display_name: str = "",
-        default_format: str | None = None,
-    ) -> str:
+    def _read_template_body(self, path: Path) -> str:
+        try:
+            return path.read_text(encoding="utf-8")
+        except OSError as error:
+            logging.debug("Could not read template %s: %s", path, error)
+            return ""
+
+    def _template_relpath(self, path: Path, module_dir: Path) -> str:
+        try:
+            return path.relative_to(module_dir).as_posix()
+        except ValueError as error:
+            logging.debug("Template %s is outside %s: %s", path, module_dir, error)
+            return path.name
+
+    def _template_lang(self, path: Path) -> str:
+        lang = path.suffix.lstrip(".") or "text"
+        if path.name.endswith(".py.tpl"):
+            return "python"
+        if lang == "md":
+            return "markdown"
+        if lang == "tpl":
+            return "text"
+        return lang
+
+    def generate_catalog(self) -> str:
         """Render everything under the board: title, invoke, guidance, template, example.
 
         Uses Foundry install-block chrome for invoke + guidance + default template
@@ -1132,11 +1211,15 @@ class CatalogFidelity:
 
         from catalog_generator.foundry_chrome import display_label, markdown_to_html
 
+        owner = self.owner
+        fidelity_name = self.fidelity_name
+        guidance = self.guidance
+        overview = self.overview
         label = display_label(fidelity_name)
-        tool_label = tool_display_name or getattr(owner, "toolset_name", "")
-        if default_format is None:
+        tool_label = self.tool_display_name or getattr(owner, "toolset_name", "")
+        if self.default_format is None:
             defaults = getattr(type(owner), "_fidelity_format_defaults", {})
-            default_format = defaults.get(fidelity_name)
+            self.default_format = defaults.get(fidelity_name)
         overview_html = markdown_to_html(overview) if overview.strip() else ""
         fid_md = f"## {label}\n\n{guidance}" if guidance else guidance
         guidance_html = markdown_to_html(fid_md)
@@ -1145,8 +1228,7 @@ class CatalogFidelity:
             preview_bits.append(f"<h2>Overview</h2>\n{overview_html}")
         preview_bits.append(guidance_html)
         preview = "\n".join(preview_bits)
-        toolset_name = _toolset_name_of(type(owner))
-        invoke = self._quick_invoke(skill_name, fidelity_name, toolset_name)
+        invoke = self._quick_invoke()
         return (
             f'<header class="page-hero--detail fidelity-detail-header">'
             f'<p class="s-name">{html_mod.escape(tool_label)} · fidelity</p>'
@@ -1157,12 +1239,12 @@ class CatalogFidelity:
             f'data-fidelity="{html_mod.escape(fidelity_name)}" '
             f'aria-label="Fidelity guidance">'
             f"{preview}</section>\n"
-            f"{self._default_template_panel(owner, fidelity_name, default_format)}\n"
-            f"{self._illustrated_example_panel(example_body)}\n"
+            f"{self._default_template_panel()}\n"
+            f"{self._illustrated_example_panel()}\n"
         )
 
-    def section_0_html(self, skill_name: str, fidelity_name: str, toolset_name: str | None = None) -> str:
-        return self._quick_invoke(skill_name, fidelity_name, toolset_name or skill_name)
+    def section_0_html(self) -> str:
+        return self._quick_invoke()
 
 class CatalogContextTool:
     """The context-tool page for one ``BaseContextTool`` instance - Stories,
@@ -1172,43 +1254,26 @@ class CatalogContextTool:
         self.repo_url = repo_url
         self.ref = ref
         self.catalog_fidelity = catalog_fidelity
+        self.owner: object | None = None
+        self.display_name = ""
+        self.skill_name = ""
+        self.guidances: list[FidelityGuidance] = []
 
-    def generate_catalog(
-        self,
-        owner: object,
-        display_name: str,
-        skill_name: str,
-        guidances: list[FidelityGuidance],
-        example_bodies: dict[str, str | None] | None = None,
-    ) -> str:
+    def generate_catalog(self) -> str:
         """Render one context-tool page body - badge, Purpose, fidelity cards
         (links only — never nest full fidelity pages)."""
         import html as html_mod
 
+        from catalog_generator.foundry_chrome import display_label, markdown_to_html
+
+        owner = self.owner
+        display_name = self.display_name
+        guidances = self.guidances
         purpose = (getattr(owner, "__doc__", "") or "").strip()
-        from catalog_generator.foundry_chrome import markdown_to_html
-
-        # Prefer tool guide overview over class docstring when available.
-        overview = ""
-        if guidances:
-            overview = guidances[0].overview
+        overview = guidances[0].overview if guidances else ""
         purpose_html = markdown_to_html(overview) if overview else f"<p>{html_mod.escape(purpose)}</p>"
-        fidelity_names = list(getattr(type(owner), "fidelities", {}).values())
-        from catalog_generator.foundry_chrome import display_label
-
-        slug = _toolset_name_of(type(owner))
-        # CDD's "fidelities" are the three stage columns already on the board —
-        # do not re-list them as empty Foundry skill cards (discovery/spec/engineer).
-        fidelities_section = ""
-        if slug != "cdd":
-            cards = "".join(
-                f'<a class="cap-card fidelity-card" href="../fidelities/{slug}-{name}.html">'
-                f'<p class="cap-card__title">{html_mod.escape(display_label(name))}</p>'
-                f'<p class="cap-card__label">Fidelity</p>'
-                f'<p class="cap-card__more">Open →</p></a>'
-                for name in fidelity_names
-            )
-            fidelities_section = f'  <section class="fidelities cap-grid">{cards}</section>\n'
+        slug = self._owner_slug()
+        fidelities_section = self._fidelity_cards()
         return (
             f'<article class="context-tool-page" data-tool="{html_mod.escape(display_name)}">\n'
             f'  <header><span class="badge">{html_mod.escape(display_name)}</span></header>\n'
@@ -1216,6 +1281,28 @@ class CatalogContextTool:
             f"{fidelities_section}"
             f"</article>"
         )
+
+    def _owner_slug(self) -> str:
+        return RegistryEntry("", "", "", type(self.owner)).toolset_name()
+
+    def _fidelity_cards(self) -> str:
+        import html as html_mod
+
+        from catalog_generator.foundry_chrome import display_label
+
+        owner = self.owner
+        slug = self._owner_slug()
+        if slug == "cdd":
+            return ""
+        fidelity_names = list(getattr(type(owner), "fidelities", {}).values())
+        cards = "".join(
+            f'<a class="cap-card fidelity-card" href="../fidelities/{slug}-{name}.html">'
+            f'<p class="cap-card__title">{html_mod.escape(display_label(name))}</p>'
+            f'<p class="cap-card__label">Fidelity</p>'
+            f'<p class="cap-card__more">Open →</p></a>'
+            for name in fidelity_names
+        )
+        return f'  <section class="fidelities cap-grid">{cards}</section>\n'
 
 class CatalogUtility:
     """The utility-row detail page for one plain-utility ``Toolset`` instance."""
@@ -1225,13 +1312,17 @@ class CatalogUtility:
         self.ref = ref
         self.catalog_tool = catalog_tool
         self.catalog_action = catalog_action
+        self.owner: object | None = None
+        self.display_name = ""
 
-    def generate_catalog(self, owner: object, display_name: str) -> str:
+    def generate_catalog(self) -> str:
         """Render one utility page body — fidelity-style dark callouts."""
         import html as html_mod
 
         from catalog_generator.foundry_chrome import markdown_to_html
 
+        owner = self.owner
+        display_name = self.display_name
         target_cls = owner if isinstance(owner, type) else type(owner)
         module_dir = Path(inspect.getfile(target_cls)).resolve().parent
         purpose = (
@@ -1267,18 +1358,6 @@ class CatalogUtility:
             f"</section>\n"
         )
 
-def _wire_catalog_renderers(
-    repo_url: str,
-    ref: str,
-) -> tuple[CatalogContextTool, CatalogAction, CatalogUtility]:
-    lifecycle_actions = resolve_lifecycle_actions()
-    catalog_tool = CatalogTool(repo_url, ref)
-    hrefs = {r.name: f"actions/{r.name}.html" for r in lifecycle_actions}
-    catalog_action = CatalogAction(repo_url, ref, catalog_tool, hrefs)
-    catalog_fidelity = CatalogFidelity(repo_url, ref, catalog_action, lifecycle_actions)
-    catalog_context_tool = CatalogContextTool(repo_url, ref, catalog_fidelity)
-    catalog_utility = CatalogUtility(repo_url, ref, catalog_tool, catalog_action)
-    return catalog_context_tool, catalog_action, catalog_utility
 
 @agent_toolset
 class Catalog:
@@ -1305,7 +1384,7 @@ class Catalog:
 
         self.brands_root = Path(brands_root) if brands_root is not None else _BRANDS_ROOT
         if catalog_context_tool is None or catalog_action is None or catalog_utility is None:
-            wired = _wire_catalog_renderers(self.repo_url, self.ref)
+            wired = self._wire_catalog_renderers()
             self.catalog_context_tool = catalog_context_tool or wired[0]
             self.catalog_action = catalog_action or wired[1]
             self.catalog_utility = catalog_utility or wired[2]
@@ -1313,81 +1392,89 @@ class Catalog:
             self.catalog_context_tool = catalog_context_tool
             self.catalog_action = catalog_action
             self.catalog_utility = catalog_utility
+        self._context_tool_entries: list[RegistryEntry] = []
+        self._utility_entries: list[RegistryEntry] = []
+        self._lifecycle_actions: list[ActionResolution] = []
+        self._action_owner: object | None = None
+        self._board_tools: list[dict] = []
+        self._action_dicts: list[dict] = []
+        self._utility_dicts: list[dict] = []
+        self._tool_bodies: list[str] = []
+        self._action_bodies: list[str] = []
+        self._utility_bodies: list[str] = []
+        self._current_entry: RegistryEntry | None = None
+        self._current_owner: object | None = None
+        self._current_skill_name = ""
+        self._kanban_path_prefix = "../"
+        self._kanban_highlight_tool = None
+        self._kanban_highlight_fidelity = None
+        self._kanban_initial_family = None
 
-    def _board_tool_entries(
-        self,
-        context_tool_entries: list[RegistryEntry],
-    ) -> list[dict]:
+    def _wire_catalog_renderers(self) -> tuple[CatalogContextTool, CatalogAction, CatalogUtility]:
+        lifecycle_actions = resolve_lifecycle_actions()
+        catalog_tool = CatalogTool(self.repo_url, self.ref)
+        hrefs = {r.name: f"actions/{r.name}.html" for r in lifecycle_actions}
+        catalog_action = CatalogAction(self.repo_url, self.ref, catalog_tool, hrefs)
+        catalog_fidelity = CatalogFidelity(
+            self.repo_url, self.ref, catalog_action, lifecycle_actions
+        )
+        catalog_context_tool = CatalogContextTool(self.repo_url, self.ref, catalog_fidelity)
+        catalog_utility = CatalogUtility(self.repo_url, self.ref, catalog_tool, catalog_action)
+        return catalog_context_tool, catalog_action, catalog_utility
+
+    def _board_tool_entries(self) -> list[dict]:
         from catalog_generator.foundry_chrome import STAGES
         from practices.cdd.cdd import _CONTEXT_TOOLS_BY_STAGE
 
         tools_on_stage: dict[str, set[str]] = {
-            stage: {_toolset_name_of(cls) for cls in classes}
+            stage: {RegistryEntry("", "", "", cls).toolset_name() for cls in classes}
             for stage, classes in _CONTEXT_TOOLS_BY_STAGE.items()
         }
+        self._board_stages = STAGES
+        self._tools_on_stage = tools_on_stage
+        return [self._board_row_for_entry(entry) for entry in self._context_tool_entries]
 
-        tools: list[dict] = []
-        for entry in context_tool_entries:
-            fidelities_by_stage = getattr(entry.cls, "fidelities", {}) or {}
-            tool_name = _toolset_name_of(entry.cls)
-            stage_map: dict[str, dict] = {}
-            for stage_key, _label in STAGES:
-                # CDD header row: cells from Cdd.fidelities (always on the board).
-                # Other tools: only when listed in Cdd._CONTEXT_TOOLS_BY_STAGE
-                # for that stage (plan: BDD discovery cell stays empty).
-                if tool_name != "cdd" and tool_name not in tools_on_stage.get(stage_key, set()):
-                    continue
-                fid_name = fidelities_by_stage.get(stage_key)
-                if fid_name:
-                    stage_map[stage_key] = {
-                        "key": fid_name,
-                        "href": f"fidelities/{tool_name}-{fid_name}.html",
-                    }
-            tools.append(
-                {
-                    "display_name": entry.display_name,
-                    "toolset_name": tool_name,
-                    "href": f"context-tools/{tool_name}.html",
-                    "fidelities": stage_map,
-                }
-            )
-        return tools
+    def _board_row_for_entry(self, entry: RegistryEntry) -> dict:
+        self._board_fidelities = getattr(entry.cls, "fidelities", {}) or {}
+        self._board_tool_name = entry.toolset_name()
+        self._board_stage_map: dict[str, dict] = {}
+        for stage_key, _label in self._board_stages:
+            self._board_stage_key = stage_key
+            self._fill_board_stage()
+        return {
+            "display_name": entry.display_name,
+            "toolset_name": self._board_tool_name,
+            "href": f"context-tools/{self._board_tool_name}.html",
+            "fidelities": self._board_stage_map,
+        }
+
+    def _fill_board_stage(self) -> None:
+        tool_name = self._board_tool_name
+        stage_key = self._board_stage_key
+        if tool_name != "cdd" and tool_name not in self._tools_on_stage.get(stage_key, set()):
+            return
+        fid_name = self._board_fidelities.get(stage_key)
+        if fid_name:
+            self._board_stage_map[stage_key] = {
+                "key": fid_name,
+                "href": f"fidelities/{tool_name}-{fid_name}.html",
+            }
 
     @mcp
     @skill
     @agent_tool
-    def generate_catalog(
-        self,
-        repo_url: str = "",
-        ref: str = "",
-        out_root: str = "",
-        brand: str = "",
-    ) -> str:
+    def generate_catalog(self, brand: str = "") -> str:
         """Render the whole catalog into ``out_root`` with Foundry chrome.
         No output is ever written outside ``out_root``.
         ``brand`` is a collection name under the brands folder, or a path to a
         brand folder; empty uses bundled abd-works."""
-        if repo_url:
-            self.repo_url = repo_url
-        if ref:
-            self.ref = ref
-        if out_root:
-            self.out_root = Path(out_root)
         from catalog_generator.foundry_chrome import resolve_brand
 
         self.brand = resolve_brand(brand, self.brands_root) if brand else None
-        if repo_url or ref:
-            (
-                self.catalog_context_tool,
-                self.catalog_action,
-                self.catalog_utility,
-            ) = _wire_catalog_renderers(self.repo_url, self.ref)
-        context_tool_entries, utility_entries = load_registry()
-        lifecycle_actions = resolve_lifecycle_actions()
-        action_owner = resolve_lifecycle_action_owner()
-        self._render_catalog(
-            context_tool_entries, utility_entries, lifecycle_actions, action_owner
-        )
+        self._context_tool_entries, self._utility_entries = load_registry()
+        self._lifecycle_actions = resolve_lifecycle_actions()
+        self._action_owner = resolve_lifecycle_action_owner()
+        self._render_catalog()
         return f"Catalog regenerated into {self.out_root} using {self.repo_url}@{self.ref}"
 
     @property
@@ -1412,153 +1499,225 @@ class Catalog:
         self.brand = dest
         return f"Applied brand {name} under {dest}"
 
-    def _render_catalog(
-        self,
-        context_tool_entries: list[RegistryEntry],
-        utility_entries: list[RegistryEntry],
-        lifecycle_actions: list[ActionResolution],
-        action_owner: object,
-    ) -> None:
+    def _render_catalog(self) -> None:
         """Write every catalog page under ``self.out_root``."""
-        from catalog_generator.foundry_chrome import (
-            cap_card,
-            copy_commons,
-            display_label,
-            page_shell,
-            render_hub_board,
-        )
+        from catalog_generator.foundry_chrome import copy_commons
 
         self.out_root.mkdir(parents=True, exist_ok=True)
         copy_commons(self.out_root, brand=self.brand)
-
-        board_tools = self._board_tool_entries(context_tool_entries)
-        action_dicts = [{"name": r.name, "href": f"actions/{r.name}.html"} for r in lifecycle_actions]
-        utility_dicts = [
-            {"name": e.display_name, "href": f"tools/{e.display_name}.html"}
-            for e in utility_entries
+        self._board_tools = self._board_tool_entries()
+        self._action_dicts = [
+            {"name": r.name, "href": f"actions/{r.name}.html"}
+            for r in self._lifecycle_actions
         ]
+        self._utility_dicts = [
+            {"name": e.display_name, "href": f"tools/{e.display_name}.html"}
+            for e in self._utility_entries
+        ]
+        self._tool_bodies = []
+        self._action_bodies = []
+        self._utility_bodies = []
+        self._write_context_tool_pages()
+        self._write_action_pages()
+        self._write_utility_pages()
+        self._write_hub()
+        self._write_workflow()
+        self._write_grid_pages()
 
-        # -- context-tool pages --
-        tool_bodies: list[str] = []
-        for entry in context_tool_entries:
-            owner = entry.cls()
-            skill_name = skill_slash_name(owner.toolset_name) or owner.toolset_name
-            guidances = scrape_fidelities(entry.cls)
-            body = self.catalog_context_tool.generate_catalog(
-                owner, entry.display_name, skill_name, guidances,
-            )
-            tool_bodies.append(body)
-            page = page_shell(
-                title=f"{entry.display_name} — CDD Catalog",
-                h1=entry.display_name,
-                tagline="Context tool",
-                body_inner=body,
-                commons_prefix="../commons/",
-                nav_prefix="../",
-                nav_current="context-tools",
-                kanban_embed=render_hub_board(
-                    board_tools, action_dicts, utility_dicts,
-                    highlight_tool=owner.toolset_name,
-                    path_prefix="../",
-                    initial_family=owner.toolset_name,
-                ),
-            )
-            write_page(self.out_root, f"context-tools/{owner.toolset_name}.html", page)
+    def _kanban_embed(self) -> str:
+        from catalog_generator.foundry_chrome import render_hub_board
 
-            # fidelity pages for this tool
-            for g in guidances:
-                fid_body = self.catalog_context_tool.catalog_fidelity.generate_catalog(
-                    g.key,
-                    owner,
-                    skill_name,
-                    g.guidance,
-                    overview=g.overview,
-                    tool_display_name=entry.display_name,
-                    default_format=g.default_format,
-                )
-                fid_page = page_shell(
-                    title=f"{display_label(g.key)} — {entry.display_name}",
-                    h1=display_label(g.key),
-                    tagline=f"{entry.display_name} · fidelity",
-                    body_inner=fid_body,
-                    commons_prefix="../commons/",
-                    nav_prefix="../",
-                    nav_current="fidelities",
-                    show_hero=False,
-                    body_wrap_class="skill-detail-page",
-                    kanban_embed=render_hub_board(
-                        board_tools, action_dicts, utility_dicts,
-                        highlight_tool=owner.toolset_name,
-                        highlight_fidelity=g.key,
-                        path_prefix="../",
-                        initial_family=owner.toolset_name,
-                    ),
-                )
-                write_page(
-                    self.out_root,
-                    f"fidelities/{owner.toolset_name}-{g.key}.html",
-                    fid_page,
-                )
+        return render_hub_board(
+            self._board_tools,
+            self._action_dicts,
+            self._utility_dicts,
+            path_prefix=self._kanban_path_prefix,
+            highlight_tool=self._kanban_highlight_tool,
+            highlight_fidelity=self._kanban_highlight_fidelity,
+            initial_family=self._kanban_initial_family,
+        )
 
-        # -- action pages --
-        action_bodies: list[str] = []
-        for resolution in lifecycle_actions:
-            action = action_owner.agent_tools[resolution.name]
-            body = self.catalog_action.generate_catalog(action, action_owner, resolution.source_dir)
-            action_bodies.append(body)
-            page = page_shell(
-                title=f"{resolution.name} — lifecycle action",
-                h1=resolution.name,
-                tagline="Lifecycle action",
-                body_inner=body,
-                commons_prefix="../commons/",
-                nav_prefix="../",
-                nav_current="actions",
-                show_hero=False,
-                body_wrap_class="skill-detail-page",
-                kanban_embed=render_hub_board(
-                    board_tools, action_dicts, utility_dicts,
-                    path_prefix="../",
-                ),
-            )
-            write_page(self.out_root, f"actions/{resolution.name}.html", page)
+    def _write_context_tool_pages(self) -> None:
+        for entry in self._context_tool_entries:
+            self._write_one_context_tool_page(entry)
 
-        # -- utility pages --
-        utility_bodies: list[str] = []
-        for entry in utility_entries:
-            try:
-                owner_u: object = entry.cls()
-            except TypeError:
-                owner_u = entry.cls
-            body = self.catalog_utility.generate_catalog(owner_u, entry.display_name)
-            utility_bodies.append(body)
-            page = page_shell(
-                title=f"{entry.display_name} — utility",
-                h1=entry.display_name,
-                tagline="Utility",
-                body_inner=body,
-                commons_prefix="../commons/",
-                nav_prefix="../",
-                nav_current="tools",
-                show_hero=False,
-                body_wrap_class="skill-detail-page",
-                kanban_embed=render_hub_board(
-                    board_tools, action_dicts, utility_dicts,
-                    path_prefix="../",
-                ),
-            )
-            write_page(self.out_root, f"tools/{entry.display_name}.html", page)
+    def _write_one_context_tool_page(self, entry: RegistryEntry) -> None:
+        from catalog_generator.foundry_chrome import page_shell
 
-        # -- hub --
+        owner = entry.cls()
+        skill_name = skill_slash_name(owner.toolset_name) or owner.toolset_name
+        guidances = scrape_fidelities(entry.cls)
+        context_tool = self.catalog_context_tool
+        context_tool.owner = owner
+        context_tool.display_name = entry.display_name
+        context_tool.skill_name = skill_name
+        context_tool.guidances = guidances
+        body = context_tool.generate_catalog()
+        self._tool_bodies.append(body)
+        self._current_entry = entry
+        self._current_owner = owner
+        self._current_skill_name = skill_name
+        self._prepare_tool_kanban()
+        page = page_shell(
+            title=f"{entry.display_name} — CDD Catalog",
+            h1=entry.display_name,
+            tagline="Context tool",
+            body_inner=body,
+            commons_prefix="../commons/",
+            nav_prefix="../",
+            nav_current="context-tools",
+            kanban_embed=self._kanban_embed(),
+        )
+        write_page(self.out_root, f"context-tools/{owner.toolset_name}.html", page)
+        self._write_fidelity_pages(guidances)
+
+    def _prepare_tool_kanban(self) -> None:
+        tool_name = self._current_owner.toolset_name
+        self._kanban_path_prefix = "../"
+        self._kanban_highlight_tool = tool_name
+        self._kanban_highlight_fidelity = None
+        self._kanban_initial_family = tool_name
+
+    def _write_fidelity_pages(self, guidances: list[FidelityGuidance]) -> None:
+        for guidance in guidances:
+            self._write_one_fidelity_page(guidance)
+
+    def _write_one_fidelity_page(self, guidance: FidelityGuidance) -> None:
+        from catalog_generator.foundry_chrome import display_label, page_shell
+
+        entry = self._current_entry
+        owner = self._current_owner
+        fidelity = self.catalog_context_tool.catalog_fidelity
+        fidelity.fidelity_name = guidance.key
+        fidelity.owner = owner
+        fidelity.skill_name = self._current_skill_name
+        fidelity.guidance = guidance.guidance
+        fidelity.overview = guidance.overview
+        fidelity.tool_display_name = entry.display_name
+        fidelity.default_format = guidance.default_format
+        fid_body = fidelity.generate_catalog()
+        self._prepare_fidelity_kanban(guidance.key)
+        fid_page = page_shell(
+            title=f"{display_label(guidance.key)} — {entry.display_name}",
+            h1=display_label(guidance.key),
+            tagline=f"{entry.display_name} · fidelity",
+            body_inner=fid_body,
+            commons_prefix="../commons/",
+            nav_prefix="../",
+            nav_current="fidelities",
+            show_hero=False,
+            body_wrap_class="skill-detail-page",
+            kanban_embed=self._kanban_embed(),
+        )
+        write_page(
+            self.out_root,
+            f"fidelities/{owner.toolset_name}-{guidance.key}.html",
+            fid_page,
+        )
+
+    def _prepare_plain_kanban(self) -> None:
+        self._kanban_path_prefix = "../"
+        self._kanban_highlight_tool = None
+        self._kanban_highlight_fidelity = None
+        self._kanban_initial_family = None
+
+    def _prepare_fidelity_kanban(self, fidelity_key: str) -> None:
+        tool_name = self._current_owner.toolset_name
+        self._kanban_path_prefix = "../"
+        self._kanban_highlight_tool = tool_name
+        self._kanban_highlight_fidelity = fidelity_key
+        self._kanban_initial_family = tool_name
+
+    def _write_action_pages(self) -> None:
+        self._prepare_plain_kanban()
+        for resolution in self._lifecycle_actions:
+            self._write_one_action_page(resolution)
+
+    def _write_one_action_page(self, resolution: ActionResolution) -> None:
+        from catalog_generator.foundry_chrome import page_shell
+
+        action = self._action_owner.agent_tools[resolution.name]
+        catalog_action = self.catalog_action
+        catalog_action.action = action
+        catalog_action.owner = self._action_owner
+        catalog_action.source_dir = resolution.source_dir
+        body = catalog_action.generate_catalog()
+        self._action_bodies.append(body)
+        page = page_shell(
+            title=f"{resolution.name} — lifecycle action",
+            h1=resolution.name,
+            tagline="Lifecycle action",
+            body_inner=body,
+            commons_prefix="../commons/",
+            nav_prefix="../",
+            nav_current="actions",
+            show_hero=False,
+            body_wrap_class="skill-detail-page",
+            kanban_embed=self._kanban_embed(),
+        )
+        write_page(self.out_root, f"actions/{resolution.name}.html", page)
+
+    def _write_utility_pages(self) -> None:
+        self._prepare_plain_kanban()
+        for entry in self._utility_entries:
+            self._write_one_utility_page(entry)
+
+    def _write_one_utility_page(self, entry: RegistryEntry) -> None:
+        from catalog_generator.foundry_chrome import page_shell
+
+        try:
+            owner_u: object = entry.cls()
+        except TypeError as error:
+            logging.debug("Utility %s is not constructible: %s", entry.display_name, error)
+            owner_u = entry.cls
+        self.catalog_utility.owner = owner_u
+        self.catalog_utility.display_name = entry.display_name
+        body = self.catalog_utility.generate_catalog()
+        self._utility_bodies.append(body)
+        page = page_shell(
+            title=f"{entry.display_name} — utility",
+            h1=entry.display_name,
+            tagline="Utility",
+            body_inner=body,
+            commons_prefix="../commons/",
+            nav_prefix="../",
+            nav_current="tools",
+            show_hero=False,
+            body_wrap_class="skill-detail-page",
+            kanban_embed=self._kanban_embed(),
+        )
+        write_page(self.out_root, f"tools/{entry.display_name}.html", page)
+
+    def _write_hub(self) -> None:
+        from catalog_generator.foundry_chrome import page_shell, render_hub_board
+
+        board = render_hub_board(self._board_tools, self._action_dicts, self._utility_dicts)
+        hub = page_shell(
+            title="The ABD Foundry — Context Driven Delivery",
+            h1='The ABD <span class="accent">Foundry</span>',
+            tagline=(
+                "The ABD Foundry — thirty years of product engineering experience "
+                "shared as agents, skills, and tools that anyone can use. Grab the repo "
+                '<a href="https://github.com/abd-works/abd-context-driven-delivery" '
+                'target="_blank" rel="noopener noreferrer">here</a>.'
+            ),
+            body_inner=self._hub_body(),
+            commons_prefix="commons/",
+            nav_prefix="",
+            nav_current="hub",
+            kanban_embed=board,
+        )
+        write_page(self.out_root, "index.html", hub)
+
+    def _hub_body(self) -> str:
         import html as html_mod
 
-        board = render_hub_board(board_tools, action_dicts, utility_dicts)
         harness_href = git_blob_url(
             self.repo_url,
             self.ref,
             _REPO_ROOT / "harness" / "harness" / "harness.py",
         )
-        hub_body = (
+        return (
             '<section class="catalog-workflow" aria-labelledby="catalog-workflow-heading">'
             '<h2 id="catalog-workflow-heading">'
             '<a href="workflow.html">CDD Workflow</a>'
@@ -1584,52 +1743,44 @@ class Catalog:
             "</ol>"
             "</section>\n"
         )
-        hub = page_shell(
-            title="The ABD Foundry — Context Driven Delivery",
-            h1='The ABD <span class="accent">Foundry</span>',
+
+    def _write_workflow(self) -> None:
+        from catalog_generator.foundry_chrome import markdown_to_html, page_shell
+
+        workflow_md_path = _REPO_ROOT / "catalog" / "workflow.md"
+        if not workflow_md_path.is_file():
+            return
+        workflow_md = workflow_md_path.read_text(encoding="utf-8")
+        workflow_body_md = re.sub(
+            r"^#\s+.*\n+", "", workflow_md.lstrip(), count=1, flags=re.MULTILINE
+        )
+        workflow_html = page_shell(
+            title="CDD Workflow — ABD Foundry",
+            h1="CDD Workflow",
             tagline=(
-                "The ABD Foundry — thirty years of product engineering experience "
-                "shared as agents, skills, and tools that anyone can use. Grab the repo "
-                '<a href="https://github.com/abd-works/abd-context-driven-delivery" '
-                'target="_blank" rel="noopener noreferrer">here</a>.'
+                "Scenario-based steps for using context tools, actions, and fidelities. "
+                '<a href="index.html">Back to catalog</a>.'
             ),
-            body_inner=hub_body,
+            body_inner=(
+                '<article class="catalog-workflow-page">'
+                + markdown_to_html(workflow_body_md, include_tables=True)
+                + "</article>"
+            ),
             commons_prefix="commons/",
             nav_prefix="",
             nav_current="hub",
-            kanban_embed=board,
         )
-        write_page(self.out_root, "index.html", hub)
+        write_page(self.out_root, "workflow.html", workflow_html)
 
-        # -- workflow manual (from catalog/workflow.md) --
-        from catalog_generator.foundry_chrome import markdown_to_html
+    def _write_grid_pages(self) -> None:
+        self._write_context_tools_grid()
+        self._write_actions_grid()
+        self._write_utilities_grid()
+        self._write_fidelities_grid()
 
-        workflow_md_path = _REPO_ROOT / "catalog" / "workflow.md"
-        if workflow_md_path.is_file():
-            workflow_md = workflow_md_path.read_text(encoding="utf-8")
-            # Drop the leading H1 — page_shell already provides the title.
-            workflow_body_md = re.sub(
-                r"^#\s+.*\n+", "", workflow_md.lstrip(), count=1, flags=re.MULTILINE
-            )
-            workflow_html = page_shell(
-                title="CDD Workflow — ABD Foundry",
-                h1="CDD Workflow",
-                tagline=(
-                    "Scenario-based steps for using context tools, actions, and fidelities. "
-                    '<a href="index.html">Back to catalog</a>.'
-                ),
-                body_inner=(
-                    '<article class="catalog-workflow-page">'
-                    + markdown_to_html(workflow_body_md, include_tables=True)
-                    + "</article>"
-                ),
-                commons_prefix="commons/",
-                nav_prefix="",
-                nav_current="hub",
-            )
-            write_page(self.out_root, "workflow.html", workflow_html)
+    def _write_context_tools_grid(self) -> None:
+        from catalog_generator.foundry_chrome import cap_card, page_shell
 
-        # -- flat grids --
         write_page(
             self.out_root,
             "context-tools.html",
@@ -1638,15 +1789,18 @@ class Catalog:
                 h1="Context tools",
                 tagline="Every context tool in the catalog",
                 body_inner='<div class="cap-grid">' + "".join(
-                    cap_card(e.display_name, f"context-tools/{_toolset_name_of(e.cls)}.html", e.display_name)
-                    for e in context_tool_entries
+                    cap_card(e.display_name, f"context-tools/{e.toolset_name()}.html", e.display_name)
+                    for e in self._context_tool_entries
                 ) + "</div>"
-                # keep CDD string findable for tests that scan the grid page
-                + f'<div hidden>{"".join(tool_bodies)}</div>',
+                + f'<div hidden>{"".join(self._tool_bodies)}</div>',
                 commons_prefix="commons/",
                 nav_current="context-tools",
             ),
         )
+
+    def _write_actions_grid(self) -> None:
+        from catalog_generator.foundry_chrome import cap_card, page_shell
+
         write_page(
             self.out_root,
             "actions.html",
@@ -1656,13 +1810,17 @@ class Catalog:
                 tagline="Lifecycle actions",
                 body_inner='<div class="cap-grid">' + "".join(
                     cap_card(r.name, f"actions/{r.name}.html", "Lifecycle action")
-                    for r in lifecycle_actions
+                    for r in self._lifecycle_actions
                 ) + "</div>"
-                + f'<div hidden>{"".join(action_bodies)}</div>',
+                + f'<div hidden>{"".join(self._action_bodies)}</div>',
                 commons_prefix="commons/",
                 nav_current="actions",
             ),
         )
+
+    def _write_utilities_grid(self) -> None:
+        from catalog_generator.foundry_chrome import cap_card, page_shell
+
         write_page(
             self.out_root,
             "tools.html",
@@ -1672,25 +1830,20 @@ class Catalog:
                 tagline="Foundational utilities",
                 body_inner='<div class="cap-grid">' + "".join(
                     cap_card(e.display_name, f"tools/{e.display_name}.html", "Utility")
-                    for e in utility_entries
+                    for e in self._utility_entries
                 ) + "</div>"
-                + f'<div hidden>{"".join(utility_bodies)}</div>',
+                + f'<div hidden>{"".join(self._utility_bodies)}</div>',
                 commons_prefix="commons/",
                 nav_current="tools",
             ),
         )
-        # fidelities grid
+
+    def _write_fidelities_grid(self) -> None:
+        from catalog_generator.foundry_chrome import cap_card, page_shell
+
         fid_cards = []
-        for entry in context_tool_entries:
-            for stage, fid_name in (getattr(entry.cls, "fidelities", {}) or {}).items():
-                fid_cards.append(
-                    cap_card(
-                        fid_name,
-                        f"fidelities/{_toolset_name_of(entry.cls)}-{fid_name}.html",
-                        f"{entry.display_name} · {stage}",
-                        label="Fidelity",
-                    )
-                )
+        for entry in self._context_tool_entries:
+            self._append_fidelity_cards(entry, fid_cards)
         write_page(
             self.out_root,
             "fidelities.html",
@@ -1703,3 +1856,17 @@ class Catalog:
                 nav_current="fidelities",
             ),
         )
+
+    def _append_fidelity_cards(self, entry: RegistryEntry, fid_cards: list) -> None:
+        from catalog_generator.foundry_chrome import cap_card
+
+        for stage, fid_name in (getattr(entry.cls, "fidelities", {}) or {}).items():
+            fid_cards.append(
+                cap_card(
+                    fid_name,
+                    f"fidelities/{entry.toolset_name()}-{fid_name}.html",
+                    f"{entry.display_name} · {stage}",
+                    label="Fidelity",
+                )
+            )
+

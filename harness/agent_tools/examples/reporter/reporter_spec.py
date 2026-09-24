@@ -13,18 +13,13 @@ for _cat in ("tools", "practices", "actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from harness.examples.reporter.reporter import Reporter
-
-
-def make_reporter(beat: str = "technology") -> Reporter:
-    """Minimal Reporter instance for tests."""
-    return Reporter(beat=beat)
+from harness.agent_tools.examples.reporter.reporter import Reporter
 
 
 with description("a Reporter"):
     with context("that has been created"):
         with before.each:
-            self.reporter = make_reporter("science")
+            self.reporter = Reporter.instance("science")
 
         with it("should expose the beat it was given"):
             # Act / Assert
@@ -36,7 +31,7 @@ with description("a Reporter"):
 
     with context("that has a note added"):
         with before.each:
-            self.reporter = make_reporter()
+            self.reporter = Reporter.instance()
 
         with it("should confirm the note was recorded"):
             # Act
@@ -54,13 +49,13 @@ with description("a Reporter"):
         with context("with no notes collected"):
             with it("should report no notes yet"):
                 # Arrange
-                reporter = make_reporter()
+                reporter = Reporter.instance()
                 # Act / Assert
                 expect(reporter.read_notes()).to(equal("No notes yet."))
 
         with context("with notes collected"):
             with before.each:
-                self.reporter = make_reporter()
+                self.reporter = Reporter.instance()
                 self.reporter.add_note("alpha")
                 self.reporter.add_note("beta")
 
@@ -73,7 +68,7 @@ with description("a Reporter"):
     with context("that clears notes"):
         with context("with notes present"):
             with before.each:
-                self.reporter = make_reporter()
+                self.reporter = Reporter.instance()
                 self.reporter.add_note("stale note")
 
             with it("should reset the note count to zero"):
@@ -84,25 +79,25 @@ with description("a Reporter"):
 
     with context("that exposes style guidance"):
         with before.each:
-            self.reporter = make_reporter()
+            self.reporter = Reporter.instance()
 
         with it("should return the Style section from reporter.md"):
             expect(self.reporter.style).to(contain("inverted-pyramid"))
 
     with context("that exposes house guidelines"):
         with before.each:
-            self.reporter = make_reporter()
+            self.reporter = Reporter.instance()
 
         with it("should return house-guidelines.md"):
             expect(self.reporter.guidelines).to(contain("attribute"))
 
     with context("that has its toolset manifest read"):
         with it("should register add_note, read_notes, and clear_notes as tools"):
-            reporter = make_reporter()
+            reporter = Reporter.instance()
             expect(set(reporter.operations)).to(
                 equal({"add_note", "read_notes", "clear_notes"})
             )
 
         with it("should register gather and file_report as agent instructions"):
-            reporter = make_reporter()
+            reporter = Reporter.instance()
             expect(set(reporter.instructions)).to(equal({"gather", "file_report"}))

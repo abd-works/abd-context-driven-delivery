@@ -34,20 +34,21 @@ from practices.stories.model.drawio.nodes import (
 )
 
 
-def _story_map_with_4_epics_and_3_sub_epics_and_1_story() -> StoryMap:
-    story_map = StoryMap()
-    for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
-    first_epic = story_map.epics[0]
-    for j in range(1, 4):
-        sub = SubEpic(f"SubEpic 1.{j}", j)
-        story = Story(f"Story 1.{j}.1", 1, StoryType.USER)
-        story.scenarios.append(
-            Scenario(name="scenario step", sequential_order=1)
-        )
-        sub.stories.append(story)
-        first_epic.sub_epics.append(sub)
-    return story_map
+class DrawIOStoryMapFixture:
+    def with_4_epics_and_3_sub_epics_and_1_story(self) -> StoryMap:
+        story_map = StoryMap()
+        for i in range(1, 5):
+            story_map.append_epic(Epic(f"Epic {i}", i))
+        first_epic = story_map.epics[0]
+        for j in range(1, 4):
+            sub = SubEpic(f"SubEpic 1.{j}", j)
+            story = Story(f"Story 1.{j}.1", 1, StoryType.USER)
+            story.scenarios.append(
+                Scenario(name="scenario step", sequential_order=1)
+            )
+            sub.stories.append(story)
+            first_epic.sub_epics.append(sub)
+        return story_map
 
 
 with description("a DrawIO Story Map") as self:
@@ -58,7 +59,7 @@ with description("a DrawIO Story Map") as self:
         "that holds a rendered diagram Story Map with 4 Epics and 3 SubEpics under the first Epic"
     ):
         with before.each:
-            self.source = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
             self.text = self.drawio.render(self.source)
 
         with it("should serialize as a valid DrawIO document"):
@@ -113,8 +114,8 @@ with description("a DrawIO Story Map") as self:
 
     with context("that has been edited in the DrawIO document and synced back"):
         with before.each:
-            self.canonical = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
-            edited = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.canonical = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
+            edited = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
             edited.epics[0].name = "Epic 1 (edited)"
             edited.append_epic(Epic("Epic 5", 5))
             edited_text = self.drawio.render(edited)
@@ -136,7 +137,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that has been rendered and parsed back without edits"):
         with before.each:
-            self.original = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.original = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
             self.parsed = self.drawio.parse(self.drawio.render(self.original))
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
@@ -159,7 +160,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("rendering the thin-slice view for a StoryMap with 2 increments"):
         with before.each:
-            self.source = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
             inc_a = Increment(name="Increment A - first outcome", sequential_order=1)
             inc_a.stories = ["Story 1.1.1", "Story 1.2.1"]
             inc_b = Increment(name="Increment B - second outcome", sequential_order=2)

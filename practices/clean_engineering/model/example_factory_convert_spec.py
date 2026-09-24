@@ -26,18 +26,22 @@ from practices.clean_engineering.model.python.python_class_model import (
 )
 
 
-def _family_model() -> CleanEngineeringModel:
-    model = CleanEngineeringModel(name="", sequential_order=1)
-    module = Module(name="checkout", sequential_order=1)
-    ensure_example_factory_family(module, "Cart")
-    model.modules.append(module)
-    return model
+class SpecFixture:
+    def family_model(self) -> CleanEngineeringModel:
+        model = CleanEngineeringModel(name="", sequential_order=1)
+        module = Module(name="checkout", sequential_order=1)
+        ensure_example_factory_family(module, "Cart")
+        model.modules.append(module)
+        return model
+
+
+fixture = SpecFixture()
 
 
 with description("a module that holds a Cart example-factory family") as self:
     with context("that has been rendered as Python"):
         with before.each:
-            self.text = PythonCleanEngineeringModel.render(_family_model())
+            self.text = PythonCleanEngineeringModel().render(fixture.family_model())
 
         with it("should declare ICart"):
             expect(self.text).to(contain("class ICart"))
@@ -55,7 +59,7 @@ with description("a module that holds a Cart example-factory family") as self:
 
     with context("that has been rendered as JavaScript"):
         with before.each:
-            self.text = JavaScriptCleanEngineeringModel.render(_family_model())
+            self.text = JavaScriptCleanEngineeringModel().render(fixture.family_model())
 
         with it("should declare ICart"):
             expect(self.text).to(contain("class ICart"))
@@ -74,7 +78,7 @@ with description("a module that holds a Cart example-factory family") as self:
 
     with context("that has been rendered as Markdown"):
         with before.each:
-            self.text = MarkdownCleanEngineeringModel.render(_family_model())
+            self.text = MarkdownCleanEngineeringModel().render(fixture.family_model())
 
         with it("should heading ICart"):
             expect(self.text).to(contain("ICart"))
@@ -87,9 +91,9 @@ with description("a module that holds a Cart example-factory family") as self:
 
     with context("that has been round-tripped through Markdown into Python"):
         with before.each:
-            md = MarkdownCleanEngineeringModel.render(_family_model())
-            parsed = MarkdownCleanEngineeringModel.parse(md)
-            self.py = PythonCleanEngineeringModel.render(parsed)
+            md = MarkdownCleanEngineeringModel().render(fixture.family_model())
+            parsed = MarkdownCleanEngineeringModel().parse(md)
+            self.py = PythonCleanEngineeringModel().render(parsed)
 
         with it("should still declare CartExampleFactory"):
             expect(self.py).to(contain("CartExampleFactory"))

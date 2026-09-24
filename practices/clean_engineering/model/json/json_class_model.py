@@ -74,47 +74,52 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
     # Uniform callable surface
     # ------------------------------------------------------------------
 
-    @classmethod
-    def parse(cls, text: str) -> "JsonCleanEngineeringModel":
+    def parse(self, text: str) -> "JsonCleanEngineeringModel":
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
             raise JsonParseError(f"Invalid JSON: {exc}") from exc
-        model = cls(name=data.get("name", ""))
-
+        model = type(self)(name=data.get("name", ""))
         if "modules" in data:
-            for i, md in enumerate(data["modules"], 1):
-                seam_terms = md.get("seamTerms") or md.get("seam_terms") or []
-                dependencies = md.get("dependencies") or []
-                if isinstance(seam_terms, str):
-                    seam_terms = [t.strip() for t in seam_terms.split(",") if t.strip()]
-                if isinstance(dependencies, str):
-                    dependencies = [t.strip() for t in dependencies.split(",") if t.strip()]
-                module = JsonModule(
-                    name=md.get("name", ""),
-                    sequential_order=md.get("sequentialOrder", i),
-                    description=md.get("description", ""),
-                    seam=md.get("seam", ""),
-                    constraint=md.get("constraint", ""),
-                    seam_terms=list(seam_terms),
-                    dependencies=list(dependencies),
-                )
-                for j, cd in enumerate(md.get("classes", []), 1):
-                    module.classes.append(cls._class_from_dict(cd, sequential_order=j))
-                model.modules.append(module)
+            self._load_modules(model, data["modules"])
         elif "classes" in data:
-            # Legacy schema - wrap all classes in a single unnamed module
-            module = JsonModule(name="", sequential_order=1)
-            for i, cd in enumerate(data["classes"], 1):
-                module.classes.append(cls._class_from_dict(cd, sequential_order=i))
-            if module.classes:
-                model.modules.append(module)
+            self._load_legacy_classes(model, data["classes"])
         else:
             raise JsonParseError("JSON must contain a 'modules' or 'classes' key")
         return model
 
-    @classmethod
-    def _class_from_dict(cls, d: dict, sequential_order: int) -> JsonOoadClass:
+    def _load_modules(self, model: "JsonCleanEngineeringModel", modules: list) -> None:
+        for i, md in enumerate(modules, 1):
+            module = self._module_from_dict(md, i)
+            for j, cd in enumerate(md.get("classes", []), 1):
+                module.classes.append(self._class_from_dict(cd, j))
+            model.modules.append(module)
+
+    def _load_legacy_classes(self, model: "JsonCleanEngineeringModel", classes: list) -> None:
+        module = JsonModule(name="", sequential_order=1)
+        for i, cd in enumerate(classes, 1):
+            module.classes.append(self._class_from_dict(cd, i))
+        if module.classes:
+            model.modules.append(module)
+
+    def _module_from_dict(self, md: dict, sequential_order: int) -> JsonModule:
+        seam_terms = md.get("seamTerms") or md.get("seam_terms") or []
+        dependencies = md.get("dependencies") or []
+        if isinstance(seam_terms, str):
+            seam_terms = [t.strip() for t in seam_terms.split(",") if t.strip()]
+        if isinstance(dependencies, str):
+            dependencies = [t.strip() for t in dependencies.split(",") if t.strip()]
+        return JsonModule(
+            name=md.get("name", ""),
+            sequential_order=md.get("sequentialOrder", sequential_order),
+            description=md.get("description", ""),
+            seam=md.get("seam", ""),
+            constraint=md.get("constraint", ""),
+            seam_terms=list(seam_terms),
+            dependencies=list(dependencies),
+        )
+
+    def _class_from_dict(self, d: dict, sequential_order: int) -> JsonOoadClass:
         props = [
             Property(
                 name=p["name"],
@@ -151,22 +156,20 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             collaborators=d.get("collaborators", []),
         )
 
-    @classmethod
-    def render(cls, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
         if canonical.modules:
             data = {
                 "name": canonical.name,
-                "modules": [cls._module_to_dict(m) for m in canonical.modules],
+                "modules": [self._module_to_dict(m) for m in canonical.modules],
             }
         else:
             data = {
                 "name": canonical.name,
-                "classes": [cls._class_to_dict(c) for c in canonical.classes],
+                "classes": [self._class_to_dict(c) for c in canonical.classes],
             }
         return json.dumps(data, indent=2)
 
-    @classmethod
-    def _module_to_dict(cls, module: Module) -> dict:
+    def _module_to_dict(self, module: Module) -> dict:
         return {
             "name": module.name,
             "sequentialOrder": module.sequential_order,
@@ -175,11 +178,10 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             "seamTerms": list(module.seam_terms),
             "dependencies": list(module.dependencies),
             "constraint": module.constraint,
-            "classes": [cls._class_to_dict(c) for c in module.classes],
+            "classes": [self._class_to_dict(c) for c in module.classes],
         }
 
-    @classmethod
-    def _class_to_dict(cls, oclass: OoadClass) -> dict:
+    def _class_to_dict(self, oclass: OoadClass) -> dict:
         return {
             "name": oclass.name,
             "sequentialOrder": oclass.sequential_order,
@@ -209,16 +211,15 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             "collaborators": oclass.collaborators,
         }
 
-    @classmethod
-    def sync(cls, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
-        return canonical.translate_from(cls.parse(text))
+    def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
+        return canonical.translate_from(self.parse(text))
 
     @classmethod
     def from_workspace(cls, root: Path) -> Optional["JsonCleanEngineeringModel"]:
         candidates = list(root.glob("**/CleanEngineering-model.json")) + list(root.glob("**/*.CleanEngineering.json"))
         for path in sorted(candidates):
             try:
-                return cls.parse(path.read_text(encoding="utf-8"))
+                return cls().parse(path.read_text(encoding="utf-8"))
             except (JsonParseError, KeyError):
                 continue
         return None

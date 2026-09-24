@@ -20,10 +20,9 @@ from installation.files import rules, skill
 from prompt_echo.prompt_echo import echo
 from harness.mcp.mcp_server import mcp
 from harness.markdown import (
+    AssetLocator,
     Markdown,
     MarkdownCollection,
-    class_file_directory,
-    fidelity_blocks,
     markdown,
     markdownCollection,
 )
@@ -48,7 +47,7 @@ class Guidance:
 
     @property
     def install_folder(self) -> Path:
-        return class_file_directory(self)
+        return AssetLocator(self, "").class_file_directory()
 
     @markdownCollection("shared rules")
     @rules
@@ -157,7 +156,7 @@ class PracticeGuidance(Guidance):
 
     @property
     def context_index_key(self) -> str:
-        return class_file_directory(self).name
+        return AssetLocator(self, "").class_file_directory().name
 
     @property
     def supported_formats(self) -> frozenset:
@@ -249,7 +248,7 @@ class PracticeGuidance(Guidance):
         """Fidelity children from the Fidelities section."""
 
     def domain_markdown_path(self) -> Path:
-        class_dir = class_file_directory(self)
+        class_dir = AssetLocator(self, "").class_file_directory()
         return class_dir / f"{class_dir.name}.md"
 
     @markdown
@@ -406,7 +405,9 @@ class PracticeGuidance(Guidance):
         ]
         md_path = self.domain_markdown_path()
         if md_path.is_file():
-            for name, body in fidelity_blocks(md_path.read_text(encoding="utf-8")):
+            for name, body in Markdown.from_label(self, "fidelities").fidelity_blocks(
+                md_path.read_text(encoding="utf-8")
+            ):
                 current = self.fidelities.current
                 current_name = getattr(current, "fidelity", None) or getattr(current, "name", None)
                 if current_name and name != current_name:
@@ -447,7 +448,7 @@ class FidelityGuidance(Guidance):
         practice = self.practice_guidance
         if practice is not None:
             return practice.context_index_key
-        return class_file_directory(self).name
+        return AssetLocator(self, "").class_file_directory().name
 
     @property
     def default_format(self) -> str:
@@ -485,7 +486,7 @@ class FidelityGuidance(Guidance):
     @property
     def install_folder(self) -> Path:
         practice = self.practice_guidance
-        base = practice.install_folder if practice is not None else class_file_directory(self)
+        base = practice.install_folder if practice is not None else AssetLocator(self, "").class_file_directory()
         leaf = (self.name or "").replace(" ", "-")
         return base / leaf if leaf else base
 

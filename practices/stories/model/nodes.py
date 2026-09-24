@@ -9,8 +9,9 @@ and override `load_xxx` to return their concrete backend types.
 
 from __future__ import annotations
 
+import re
 from enum import Enum
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Iterable, List
 
 from .story_node import StoryNode
 from .update_report import ChildCollectionPair
@@ -74,6 +75,41 @@ class Epic(StoryNode):
             "example_factories": list(self.example_factories),
             "estimate": self.estimate,
         }
+
+    def normalize_factory_name(self, name: str) -> str:
+        raw = (name or "").strip()
+        if not raw:
+            return ""
+        if raw.endswith("ExampleFactory"):
+            return raw
+        return f"{raw}ExampleFactory"
+
+    def collected_example_factories(self) -> List[str]:
+        self._factory_names: list[str] = []
+        self._factory_seen: set[str] = set()
+        self._factory_pattern = re.compile(r"^[A-Z][A-Za-z0-9]*ExampleFactory$")
+        self._add_factory_names(self)
+        self._walk_factory_subs(self.sub_epics)
+        return self._factory_names
+
+    def _add_factory_names(self, node: object) -> None:
+        for raw in getattr(node, "example_factories", None) or []:
+            self._remember_factory(raw)
+        for concept in getattr(node, "domain_concepts", None) or []:
+            if str(concept).endswith("ExampleFactory"):
+                self._remember_factory(str(concept))
+
+    def _remember_factory(self, raw: str) -> None:
+        name = self.normalize_factory_name(raw)
+        if not name or name in self._factory_seen or not self._factory_pattern.match(name):
+            return
+        self._factory_seen.add(name)
+        self._factory_names.append(name)
+
+    def _walk_factory_subs(self, subs: Iterable["SubEpic"]) -> None:
+        for sub in subs or []:
+            self._add_factory_names(sub)
+            self._walk_factory_subs(getattr(sub, "sub_epics", None) or [])
 
 
 class SubEpic(StoryNode):

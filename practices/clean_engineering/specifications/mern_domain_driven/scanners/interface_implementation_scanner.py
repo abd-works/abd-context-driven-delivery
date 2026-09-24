@@ -65,7 +65,7 @@ class InterfaceImplementationScanner(TypeScriptScanner):
                 )
             return violations
 
-        classes = self.get_classes(parsed_root)
+        classes = self.classes
         for cls in classes:
             if "Repository" not in cls.name:
                 continue
@@ -119,7 +119,7 @@ class InterfaceImplementationScanner(TypeScriptScanner):
         if parsed_root is None:
             return violations
 
-        classes = self.get_classes(parsed_root)
+        classes = self.classes
         content = server.read_text(encoding="utf-8", errors="replace")
         lines = content.splitlines()
         for cls in classes:
@@ -159,7 +159,7 @@ class InterfaceImplementationScanner(TypeScriptScanner):
             if parsed_root is None:
                 continue
 
-            for cls in self.get_classes(parsed_root):
+            for cls in self.classes:
                 name_lower = cls.name.lower()
                 if not any(kw in name_lower for kw in ("fake", "stub", "mock", "in_memory", "inmemory")):
                     continue

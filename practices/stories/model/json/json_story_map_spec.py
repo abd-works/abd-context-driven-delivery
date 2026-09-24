@@ -20,20 +20,24 @@ from practices.stories.model.story_map import StoryMap
 from practices.stories.model.json.nodes import JsonParseError, JsonStoryMap
 
 
-def _canonical_story_map() -> StoryMap:
-    story_map = StoryMap()
-    for i in range(1, 5):
-        story_map.epics.append(Epic(f"Epic {i}", i))
-    first = story_map.epics[0]
-    for j in range(1, 4):
-        sub = SubEpic(f"SubEpic 1.{j}", j)
-        story = Story(f"Story {j}", 1, StoryType.SYSTEM)
-        story.scenarios.append(
-            Scenario(name="scenario text", sequential_order=1)
-        )
-        sub.stories.append(story)
-        first.sub_epics.append(sub)
-    return story_map
+class SpecFixture:
+    def canonical_story_map(self) -> StoryMap:
+        story_map = StoryMap()
+        for i in range(1, 5):
+            story_map.epics.append(Epic(f"Epic {i}", i))
+        first = story_map.epics[0]
+        for j in range(1, 4):
+            sub = SubEpic(f"SubEpic 1.{j}", j)
+            story = Story(f"Story {j}", 1, StoryType.SYSTEM)
+            story.scenarios.append(
+                Scenario(name="scenario text", sequential_order=1)
+            )
+            sub.stories.append(story)
+            first.sub_epics.append(sub)
+        return story_map
+
+
+fixture = SpecFixture()
 
 
 with description("a story-graph.json document") as self:
@@ -49,7 +53,7 @@ with description("a story-graph.json document") as self:
         "that holds a serialized Story Map with 4 Epics and 3 SubEpics under the first Epic"
     ):
         with before.each:
-            self.source = _canonical_story_map()
+            self.source = fixture.canonical_story_map()
             self.text = self.json_map.render(self.source)
             self.payload = json_module.loads(self.text)
 
@@ -104,7 +108,7 @@ with description("a story-graph.json document") as self:
 
     with context("that is being read back into a JsonStoryMap"):
         with before.each:
-            source = _canonical_story_map()
+            source = fixture.canonical_story_map()
             self.text = self.json_map.render(source)
             self.reconstructed = self.json_map.parse(self.text)
 
@@ -122,8 +126,8 @@ with description("a story-graph.json document") as self:
 
     with context("that has been edited and synced back against a canonical Story Map"):
         with before.each:
-            self.canonical = _canonical_story_map()
-            edited = _canonical_story_map()
+            self.canonical = fixture.canonical_story_map()
+            edited = fixture.canonical_story_map()
             edited.epics[0].name = "Epic 1 (edited)"
             edited.append_epic(Epic("Epic 5", 5))
             edited_text = self.json_map.render(edited)

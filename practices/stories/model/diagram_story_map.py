@@ -30,8 +30,12 @@ class PlacementError(Exception):
 class DiagramStoryMap:
     """Wraps a canonical StoryMap and exposes positions/dimensions per node."""
 
-    def __init__(self, story_map: Optional[StoryMap] = None):
-        self._story_map = story_map if story_map is not None else StoryMap()
+    def __init__(self, story_map: StoryMap):
+        self._story_map = story_map
+
+    @classmethod
+    def create(cls) -> "DiagramStoryMap":
+        return cls(StoryMap())
 
     @property
     def story_map(self) -> StoryMap:
@@ -85,7 +89,8 @@ class DiagramStoryMap:
 
     def sub_epic_x(self, sub_epic: SubEpic) -> int:
         for epic in self._story_map.epics:
-            x = self._find_sub_epic_x(sub_epic, self.epic_x(epic), epic.sub_epics)
+            self._sub_epic_search_base_x = self.epic_x(epic)
+            x = self._find_sub_epic_x(sub_epic, epic.sub_epics)
             if x is not None:
                 return x
         raise KeyError(f"SubEpic {sub_epic.name!r} not part of this diagram")
@@ -95,7 +100,8 @@ class DiagramStoryMap:
 
     def sub_epic_depth(self, sub_epic: SubEpic) -> int:
         for epic in self._story_map.epics:
-            depth = self._depth_of(sub_epic, epic.sub_epics, current=0)
+            self._sub_epic_search_depth = 0
+            depth = self._depth_of(sub_epic, epic.sub_epics)
             if depth is not None:
                 return depth
         raise KeyError(f"SubEpic {sub_epic.name!r} not part of this diagram")
@@ -131,28 +137,30 @@ class DiagramStoryMap:
             return current
         return max(self._depth_from(s, current + 1) for s in sub_epic.sub_epics)
 
-    def _find_sub_epic_x(
-        self, target: SubEpic, base_x: int, siblings: List[SubEpic]
-    ) -> Optional[int]:
-        offset = base_x
+    def _find_sub_epic_x(self, target: SubEpic, siblings: List[SubEpic]) -> Optional[int]:
+        offset = self._sub_epic_search_base_x
         for sibling in siblings:
             if sibling is target:
                 return offset
-            inner = self._find_sub_epic_x(target, offset, sibling.sub_epics)
+            saved = self._sub_epic_search_base_x
+            self._sub_epic_search_base_x = offset
+            inner = self._find_sub_epic_x(target, sibling.sub_epics)
             if inner is not None:
                 return inner
+            self._sub_epic_search_base_x = saved
             offset += self.sub_epic_width(sibling)
         return None
 
-    def _depth_of(
-        self, target: SubEpic, siblings: List[SubEpic], current: int
-    ) -> Optional[int]:
+    def _depth_of(self, target: SubEpic, siblings: List[SubEpic]) -> Optional[int]:
+        depth = self._sub_epic_search_depth
         for sibling in siblings:
             if sibling is target:
-                return current
-            inner = self._depth_of(target, sibling.sub_epics, current + 1)
+                return depth
+            self._sub_epic_search_depth = depth + 1
+            inner = self._depth_of(target, sibling.sub_epics)
             if inner is not None:
                 return inner
+            self._sub_epic_search_depth = depth
         return None
 
     def _all_sub_epics_recursive(

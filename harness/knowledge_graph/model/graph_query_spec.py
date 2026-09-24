@@ -10,47 +10,32 @@ from .codeql import CodeQL, Rows
 
 def refine_rows(slug: str, rows: List[dict]) -> List[dict]:
     if slug == "keep-classes-single-responsibility":
-        from practices.clean_engineering.model.responsibilities import (
-            hits_for_keep_classes,
-        )
+        from practices.clean_engineering.model.responsibilities import Responsibilities
 
-        return hits_for_keep_classes(rows)
+        return Responsibilities().hits_for_keep_classes(rows)
     if slug == "verb-noun-format":
-        from practices.stories.model.story_names import rows_for_verb_noun
+        from practices.stories.model.story_names import StoryNames
 
-        return rows_for_verb_noun(rows)
+        return StoryNames().rows_for_verb_noun(rows)
     if slug == "story-name-captures-system-mechanic":
-        from practices.stories.model.story_names import rows_for_vague_mechanic
+        from practices.stories.model.story_names import StoryNames
 
-        return rows_for_vague_mechanic(rows)
+        return StoryNames().rows_for_vague_mechanic(rows)
     if slug == "domain-concepts-not-technical-names":
         from practices.ddd.model.technical_names import rows_for_technical_names
 
         return rows_for_technical_names(rows)
+    from practices.clean_engineering.model.module_context_files import ModuleContextFiles
+
+    files = ModuleContextFiles()
     if slug == "missing-module-context":
-        from practices.clean_engineering.model.module_context_files import (
-            rows_for_missing_module_context,
-        )
-
-        return rows_for_missing_module_context(rows)
+        return files.rows_for_missing_module_context(rows)
     if slug == "language-modules-one-section":
-        from practices.clean_engineering.model.module_context_files import (
-            rows_for_language_modules_one_section,
-        )
-
-        return rows_for_language_modules_one_section(rows)
+        return files.rows_for_language_modules_one_section(rows)
     if slug == "public-seam-only":
-        from practices.clean_engineering.model.module_context_files import (
-            rows_for_public_seam_only,
-        )
-
-        return rows_for_public_seam_only(rows)
+        return files.rows_for_public_seam_only(rows)
     if slug == "modules-not-model-blocks":
-        from practices.clean_engineering.model.module_context_files import (
-            rows_for_modules_not_model_blocks,
-        )
-
-        return rows_for_modules_not_model_blocks(rows)
+        return files.rows_for_modules_not_model_blocks(rows)
     return rows
 
 Refine = Callable[[str, List[dict]], List[dict]]

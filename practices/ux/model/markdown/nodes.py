@@ -14,7 +14,7 @@ class MarkdownUxMap(UxMap):
     @classmethod
     def parse(cls, content: str) -> UxMap:
         """Minimal parse: treat non-empty markdown as context notes on an empty map."""
-        ux_map = cls()
+        ux_map = cls.create()
         notes = [line.strip() for line in content.splitlines() if line.strip()]
         ux_map.context.notes = notes
         return ux_map

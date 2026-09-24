@@ -12,7 +12,7 @@ from practices.stories.model.python.nodes import (
     PythonStoryMap as _PythonStoryMap,
     PythonSubEpic,
 )
-from practices.stories.model.python.tree import render_py_tree
+from practices.stories.model.python.tree import PythonTree
 from practices.stories.model.nodes import Epic, Story, SubEpic
 from practices.stories.model.scenario import Scenario
 from practices.stories.model.story_map import StoryMap
@@ -36,7 +36,7 @@ class PythonStoryMap(CodeStoryMap):
         canonical: StoryMap,
         previous: Optional[Dict[str, str]] = None,
     ) -> Dict[str, str]:
-        tree = render_py_tree(canonical, tests_root=self.tests_root)
+        tree = PythonTree().render(canonical, self.tests_root)
         if previous:
             for path, body in list(tree.items()):
                 if path in previous and path.endswith(self.LEAF_EXTENSION):
@@ -55,7 +55,7 @@ class PythonStoryMap(CodeStoryMap):
         return None
 
     def _render_leaf_file(self, sub_epic: SubEpic, owning_epic: Epic) -> str:
-        raise NotImplementedError("PythonStoryMap.render uses render_py_tree")
+        raise NotImplementedError("PythonStoryMap.render uses PythonTree")
 
     def parse(self, external: Dict[str, str]) -> StoryMap:
         if not isinstance(external, dict):

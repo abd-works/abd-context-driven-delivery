@@ -166,7 +166,11 @@ def _hierarchy_violations(node: Node) -> str:
     if graph is None:
         return ""
     try:
-        hits = list(graph.violations_for(node))
+        stored = getattr(graph, "_violations_by_node", None)
+        if isinstance(stored, dict):
+            hits = list(stored.get(getattr(node, "node_id", ""), []))
+        else:
+            hits = list(graph.violations_for(node))
     except Exception as error:
         graph.record_partial_failure(
             f"violations {getattr(node, 'name', type(node).__name__)}",

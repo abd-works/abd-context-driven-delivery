@@ -5,38 +5,49 @@ from __future__ import annotations
 from typing import List, Sequence
 
 
+class JavaScriptExampleFactories:
+    def _pascal_to_camel(self, name: str) -> str:
+        if not name:
+            return name
+        return name[0].lower() + name[1:]
+
+    def render_imports(
+        self,
+        factories: Sequence[str],
+        ce_module: str = "../example-factories.js",
+    ) -> List[str]:
+        if not factories:
+            return []
+        names = ", ".join(factories)
+        return [
+            "// Example factories (clean_engineering) - adjust path to match CE layout",
+            f"import {{ {names} }} from '{ce_module}';",
+            "",
+        ]
+
+    def render_accessors(self, factories: Sequence[str]) -> List[str]:
+        if not factories:
+            return []
+        lines = [
+            "  // Example factories - imported by tier test-helpers to build real collaborators",
+            "",
+        ]
+        for name in factories:
+            method = self._pascal_to_camel(name)
+            lines.append(f"  {method}() {{")
+            lines.append(f"    return new {name}();")
+            lines.append("  }")
+            lines.append("")
+        return lines
+
+
 def render_js_factory_imports(
     factories: Sequence[str],
     *,
     ce_module: str = "../example-factories.js",
 ) -> List[str]:
-    if not factories:
-        return []
-    names = ", ".join(factories)
-    return [
-        "// Example factories (clean_engineering) - adjust path to match CE layout",
-        f"import {{ {names} }} from '{ce_module}';",
-        "",
-    ]
+    return JavaScriptExampleFactories().render_imports(factories, ce_module)
 
 
 def render_js_factory_accessors(factories: Sequence[str]) -> List[str]:
-    if not factories:
-        return []
-    lines = [
-        "  // Example factories - imported by tier test-helpers to build real collaborators",
-        "",
-    ]
-    for name in factories:
-        method = _pascal_to_camel(name)
-        lines.append(f"  {method}() {{")
-        lines.append(f"    return new {name}();")
-        lines.append("  }")
-        lines.append("")
-    return lines
-
-
-def _pascal_to_camel(name: str) -> str:
-    if not name:
-        return name
-    return name[0].lower() + name[1:]
+    return JavaScriptExampleFactories().render_accessors(factories)

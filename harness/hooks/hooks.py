@@ -133,38 +133,10 @@ class HookInstallation(Installation):
     def write_hooks_manifest(self) -> None:
         if not self._handlers:
             return
-        events = {item["event"] for item in self._handlers}
-        dispatch_cmd = self.dispatch_command
-        hooks: dict[str, list[dict[str, Any]]] = {}
         dest = self.path / "hooks.json"
-        if dest.is_file():
-            try:
-                existing = json.loads(dest.read_text(encoding="utf-8"))
-                hooks = dict(existing.get("hooks") or {})
-            except (OSError, json.JSONDecodeError):
-                hooks = {}
-
-        for event_name in list(hooks.keys()):
-            bucket = hooks[event_name]
-            kept = [item for item in bucket if item.get("command") != dispatch_cmd]
-            if kept:
-                hooks[event_name] = kept
-            else:
-                del hooks[event_name]
-
-        hook_def: dict[str, Any] = {
-            "command": dispatch_cmd,
-            "timeout": 30,
-            "failClosed": False,
-        }
-        for event in sorted(events):
-            if event == "afterAgentResponse":
-                hooks[event] = [dict(hook_def)]
-                continue
-            bucket = hooks.setdefault(event, [])
-            if not any(item.get("command") == dispatch_cmd for item in bucket):
-                bucket.append(dict(hook_def))
-
+        hooks = self._existing_hooks(dest)
+        self._strip_dispatch_command(hooks)
+        self._attach_dispatch_command(hooks)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(
             json.dumps({"version": 1, "hooks": hooks}, indent=2) + "\n",
@@ -172,10 +144,44 @@ class HookInstallation(Installation):
         )
         self.track_write(dest)
 
+    def _existing_hooks(self, dest: Path) -> dict[str, list[dict[str, Any]]]:
+        if not dest.is_file():
+            return {}
+        try:
+            existing = json.loads(dest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {}
+        return dict(existing.get("hooks") or {})
+
+    def _strip_dispatch_command(self, hooks: dict[str, list[dict[str, Any]]]) -> None:
+        dispatch_cmd = self.dispatch_command
+        for event_name in list(hooks.keys()):
+            kept = [item for item in hooks[event_name] if item.get("command") != dispatch_cmd]
+            if kept:
+                hooks[event_name] = kept
+            else:
+                del hooks[event_name]
+
+    def _attach_dispatch_command(self, hooks: dict[str, list[dict[str, Any]]]) -> None:
+        hook_def: dict[str, Any] = {
+            "command": self.dispatch_command,
+            "timeout": 30,
+            "failClosed": False,
+        }
+        for event in sorted({item["event"] for item in self._handlers}):
+            if event == "afterAgentResponse":
+                hooks[event] = [dict(hook_def)]
+                continue
+            bucket = hooks.setdefault(event, [])
+            if not any(item.get("command") == hook_def["command"] for item in bucket):
+                bucket.append(dict(hook_def))
+
     def standup(self) -> Any:
         from harness.hooks.hook_server import HookServer
 
-        self.server = HookServer.standup(self.path / "hook-handlers.json", repo=self.repo)
+        self.server = HookServer.from_handlers(
+            self.path / "hook-handlers.json", repo=self.repo
+        )
         return self.server
 
     def diagnose(self) -> dict[str, Any]:

@@ -1,12 +1,11 @@
-"""Minimal BaseContextTool subclass example for generator specs."""
+"""Minimal PracticeGuidance example for generator specs."""
 
 from __future__ import annotations
 
-from practices.base.base_context_tool import BaseContextTool
+from harness.agent_tools.agent_tools import agent_toolset
+from harness.guidance.guidance import PracticeGuidance
 
 
-class CarChronicle(BaseContextTool):
+@agent_toolset
+class CarChronicle(PracticeGuidance):
     """# Instructions"""
-
-    def __init__(self, path: str | None = None, session: str | None = None) -> None:
-        super().__init__(path=path, session=session)

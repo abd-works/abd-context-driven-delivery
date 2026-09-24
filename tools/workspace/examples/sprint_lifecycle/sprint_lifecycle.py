@@ -1,6 +1,6 @@
 """Example: open or resume a named sprint using Workspace.open_work_session."""
 
-from workspace.workspace import Workspace
+from workspace.legacy.workspace import Workspace
 
 
 class SprintLifecycle:

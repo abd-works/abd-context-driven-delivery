@@ -12,7 +12,7 @@ from practices.stories.model.nodes import Epic, Story, SubEpic
 from practices.stories.model.scenario import Scenario
 from practices.stories.model.source_location import SourceLocation
 from practices.stories.model.story_map import StoryMap
-from practices.stories.model.step_body import case_body_is_stub, unimplemented_steps_javascript
+from practices.stories.model.step_body import StepBody
 from practices.stories.model.test_file import Language, Test, TestCase, TestSuite, Tier, extract_bug_id
 
 _DESCRIBE = re.compile(r"\bdescribe\s*\(\s*[\"'`](?P<title>[^\"'`]+)[\"'`]")
@@ -76,7 +76,7 @@ class JavaScriptStoryMap(StoryMap):
     def _parse_file(cls, path: Path, root: Path) -> TestSuite:
         text = path.read_text(encoding="utf-8", errors="replace")
         rel = str(path.relative_to(root)).replace("\\", "/")
-        tier = cls._tier(path.name)
+        tier = cls()._tier(path.name)
         describe = m.group("title").strip() if (m := _DESCRIBE.search(text)) else ""
         cases: List[TestCase] = []
         for it in _IT.finditer(text):
@@ -88,7 +88,7 @@ class JavaScriptStoryMap(StoryMap):
                 tier=tier, name=title,
                 tests=[Test()], assertions_count=assertions,
                 has_real_assertion=assertions > 0,
-                has_unimplemented_body=case_body_is_stub(body),
+                has_unimplemented_body=StepBody().case_is_stub(body),
                 references_bug_id=extract_bug_id(body),
                 story_source=SourceLocation(rel, text.count("\n", 0, offset) + 1),
                 covers_scenario=title,
@@ -98,10 +98,9 @@ class JavaScriptStoryMap(StoryMap):
             name=describe, cases=cases,
             imports_real=True,
             source=SourceLocation(rel, 1),
-            unimplemented_steps=unimplemented_steps_javascript(text),
+            unimplemented_steps=StepBody().unimplemented_javascript(text),
         )
 
-    @staticmethod
-    def _tier(name: str) -> Tier:
+    def _tier(self, name: str) -> Tier:
         m = _TIER.search(name)
         return Tier(m.group("tier")) if m else Tier("")

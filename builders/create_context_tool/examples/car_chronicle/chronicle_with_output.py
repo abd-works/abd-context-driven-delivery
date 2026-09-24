@@ -2,23 +2,20 @@
 
 from __future__ import annotations
 
-from harness.agent_tools.agent_tools import agent_instructions
-from practices.base.base_context_tool import BaseContextTool
-from harness.agent_tools.agent_tools import agent_tool
+from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset
+from harness.guidance.guidance import PracticeGuidance
 
 
-class ChronicleWithOutput(BaseContextTool):
+@agent_toolset
+class ChronicleWithOutput(PracticeGuidance):
     """# Instructions"""
-
-    def __init__(self, path: str | None = None, session: str | None = None) -> None:
-        super().__init__(path=path, session=session)
 
     @property
     def toolset_name(self) -> str:
         return "car_chronicle"
 
     @agent_instructions
-    def generate_output(recipe) -> str:
+    def generate_output(self) -> str:
         """Append each trip entry to the driving log before validating."""
         self.add_epic()
         return "Chronicle entries saved."

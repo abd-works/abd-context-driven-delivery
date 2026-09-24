@@ -12,7 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from installation.installer import Installer
 
-Installer.ensure_import_path(_REPO_ROOT)
+Installer(repo=_REPO_ROOT).ensure_import_path()
 
 from expects import be_true, contain, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
@@ -63,80 +63,80 @@ with description("an operation annotated as a Cursor hook"):
 
     with context("that names an unknown event"):
         with it("should raise ValueError"):
-            def bad_decoration():
-                @Hook("notAnEvent")
-                def handler(self, payload: dict) -> dict:
-                    return {}
-
-            expect(bad_decoration).to(raise_error(ValueError))
+            expect(HookDecoration().unknown_event).to(raise_error(ValueError))
 
     with context("that omits the event"):
         with it("should raise ValueError"):
-            def bare_hook():
-                @Hook
-                def handler(self, payload: dict) -> dict:
-                    return {}
-
-            expect(bare_hook).to(raise_error(ValueError))
-
-# --- installation_spec.py ---
-def _skill_names(tree: Path) -> set[str]:
-    skills = tree / "skills"
-    if not skills.is_dir():
-        return set()
-    return {path.parent.name for path in skills.rglob("SKILL.md")}
+            expect(HookDecoration().omitted_event).to(raise_error(ValueError))
 
 
-def _command_names(tree: Path) -> set[str]:
-    folder = tree / "commands"
-    if not folder.is_dir():
-        return set()
-    return {path.stem for path in folder.rglob("*.md")}
+class HookDecoration:
+    def unknown_event(self) -> None:
+        @Hook("notAnEvent")
+        def handler(self, payload: dict) -> dict:
+            return {}
+
+    def omitted_event(self) -> None:
+        @Hook
+        def handler(self, payload: dict) -> dict:
+            return {}
 
 
-def _name_keys(name: str) -> set[str]:
-    return {name, name.replace("-", "_"), name.replace("_", "-")}
+class InstalledTree:
+    def __init__(self, tree: Path) -> None:
+        self.tree = tree
 
+    def skill_names(self) -> set[str]:
+        skills = self.tree / "skills"
+        if not skills.is_dir():
+            return set()
+        return {path.parent.name for path in skills.rglob("SKILL.md")}
 
-def _skill_path(tree: Path, operation: str) -> Path | None:
-    wanted = _name_keys(operation)
-    for path in tree.rglob("SKILL.md"):
-        if path.parent.name in wanted:
-            return path
-    return None
+    def command_names(self) -> set[str]:
+        folder = self.tree / "commands"
+        if not folder.is_dir():
+            return set()
+        return {path.stem for path in folder.rglob("*.md")}
 
+    def name_keys(self, name: str) -> set[str]:
+        return {name, name.replace("-", "_"), name.replace("_", "-")}
 
-def _command_path(tree: Path, stem: str) -> Path | None:
-    folder = tree / "commands"
-    if not folder.is_dir():
+    def skill_path(self, operation: str) -> Path | None:
+        wanted = self.name_keys(operation)
+        for path in self.tree.rglob("SKILL.md"):
+            if path.parent.name in wanted:
+                return path
         return None
-    wanted = _name_keys(stem)
-    for path in folder.rglob("*.md"):
-        if path.stem in wanted:
-            return path
-    return None
 
-
-def _rule_path(tree: Path, name: str) -> Path | None:
-    folder = tree / "rules"
-    if not folder.is_dir():
+    def command_path(self, stem: str) -> Path | None:
+        folder = self.tree / "commands"
+        if not folder.is_dir():
+            return None
+        wanted = self.name_keys(stem)
+        for path in folder.rglob("*.md"):
+            if path.stem in wanted:
+                return path
         return None
-    wanted = _name_keys(name)
-    for path in folder.rglob("*"):
-        if path.is_file() and path.name in wanted:
-            return path
-    return None
 
-
-def _prompt_path(tree: Path, stem: str) -> Path | None:
-    folder = tree / "prompts"
-    if not folder.is_dir():
+    def rule_path(self, name: str) -> Path | None:
+        folder = self.tree / "rules"
+        if not folder.is_dir():
+            return None
+        wanted = self.name_keys(name)
+        for path in folder.rglob("*"):
+            if path.is_file() and path.name in wanted:
+                return path
         return None
-    wanted = _name_keys(stem)
-    for path in folder.rglob("*.md"):
-        if path.stem in wanted:
-            return path
-    return None
+
+    def prompt_path(self, stem: str) -> Path | None:
+        folder = self.tree / "prompts"
+        if not folder.is_dir():
+            return None
+        wanted = self.name_keys(stem)
+        for path in folder.rglob("*.md"):
+            if path.stem in wanted:
+                return path
+        return None
 
 
 with description("a bare agentic toolset registered for deploy") as self:
@@ -151,28 +151,28 @@ with description("a bare agentic toolset registered for deploy") as self:
 
     with context("with a Cursor deploy output tree"):
         with it("should write one skill file per agent-instructions operation marked for skill"):
-            expect(_skill_names(self.tree)).to(contain("generate"))
+            expect(InstalledTree(self.tree).skill_names()).to(contain("generate"))
 
         with it("should write one command file per agent-instructions operation marked for command"):
-            expect(_command_names(self.tree)).to(contain("sketch"))
+            expect(InstalledTree(self.tree).command_names()).to(contain("sketch"))
 
         with it(
             "should write a skill or command for an agent-tool operation only when that operation is also marked skill or command"
         ):
-            expect(_skill_names(self.tree)).to(contain("listed"))
+            expect(InstalledTree(self.tree).skill_names()).to(contain("listed"))
             ping = list(self.tree.rglob("*ping*"))
             expect(ping).to(equal([]))
 
         with it("should not write a context guidance skill or fidelity commands"):
-            expect(_skill_names(self.tree)).not_to(contain("sample_tool"))
-            expect(_command_names(self.tree)).not_to(contain("sample-ops-behavior"))
+            expect(InstalledTree(self.tree).skill_names()).not_to(contain("sample_tool"))
+            expect(InstalledTree(self.tree).command_names()).not_to(contain("sample-ops-behavior"))
 
     with context("with a deploy output tree"):
         with it(
             "should render skill and command bodies from the tool docstring"
         ):
-            skill_text = _skill_path(self.tree, "generate").read_text(encoding="utf-8")
-            command_text = _command_path(self.tree, "sketch").read_text(encoding="utf-8")
+            skill_text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
+            command_text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
             tool = SampleAgenticOps()
             generate_body = tool.tools["generate"].docstring
             sketch_body = tool.tools["sketch"].docstring
@@ -193,29 +193,29 @@ with description("a bare agentic toolset with mcp-published operations registere
 
     with context("with a deployed skill file for an mcp-published agent-instructions operation"):
         with it("should still write the skill file so there is a slash command"):
-            expect(_skill_path(self.tree, "generate").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).skill_path("generate").is_file()).to(equal(True))
 
         with it("should put the tool docstring at the top of the file"):
-            text = _skill_path(self.tree, "generate").read_text(encoding="utf-8")
+            text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
             expect(text).to(contain("full generate instructions that must not appear"))
 
         with it("should place one MCP invoke tail after the docstring"):
-            text = _skill_path(self.tree, "generate").read_text(encoding="utf-8")
+            text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
             expect(text).to(contain("Use MCP tool:"))
 
         with it(
             "should name the tool as the toolset slug and operation with the method parameter signature in backticks"
         ):
-            text = _skill_path(self.tree, "generate").read_text(encoding="utf-8")
+            text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
             expect(text).to(contain("`sample-mcp.generate"))
 
         with it("should not append the CLI tools.ps1 invoke fence"):
-            text = _skill_path(self.tree, "generate").read_text(encoding="utf-8")
+            text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
             expect(text).not_to(contain("tools.ps1"))
 
     with context("with a deployed command file for an mcp-published command operation"):
         with it("should write the tool docstring plus MCP invoke tail"):
-            text = _command_path(self.tree, "sketch").read_text(encoding="utf-8")
+            text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
             expect(text).to(contain("Use MCP tool:"))
             expect(text).to(contain("full sketch instructions that must not appear"))
 
@@ -246,12 +246,12 @@ with description("context guidance registered for deploy") as self:
 
     with context("with a Cursor deploy output tree"):
         with it("should write a skill file whose body is the overview"):
-            skill = _skill_path(self.tree, "sample-tool")
+            skill = InstalledTree(self.tree).skill_path("sample-tool")
             expect(skill.is_file()).to(equal(True))
             expect(skill.read_text(encoding="utf-8")).to(contain("sample preamble"))
 
         with it("should write one rules file whose body is the rules section markdown"):
-            rule = _rule_path(self.tree, "sample-tool.mdc")
+            rule = InstalledTree(self.tree).rule_path("sample-tool.mdc")
             expect(rule.is_file()).to(equal(True))
             expect(rule.read_text(encoding="utf-8")).to(contain("sample rule one"))
 
@@ -268,7 +268,7 @@ with description("context guidance with mcp-published guidance registered for de
 
     with context("with a deployed practice skill when guidance is mcp-published"):
         with it("should write the overview plus MCP invoke tail"):
-            text = _skill_path(self.tree, "sample-tool").read_text(encoding="utf-8")
+            text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
             expect(text).to(contain("Use MCP tool:"))
             expect(text).to(contain("sample preamble"))
             expect(text).not_to(contain("active format template body for sample tool"))
@@ -295,12 +295,12 @@ with description("a context tool module with shared contexts format registered f
 
     with context("with a Cursor deploy output tree"):
         with it("should write a skill file whose body is the overview"):
-            text = _skill_path(self.tree, "sample-tool").read_text(encoding="utf-8")
+            text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
             expect(text).to(contain("sample preamble"))
 
         with it("should write one practice guidance rules file whose body is the shared rules section"):
-            expect(_rule_path(self.tree, "sample-tool.mdc").is_file()).to(equal(True))
-            expect(_rule_path(self.tree, "sample-tool.mdc").read_text(encoding="utf-8")).to(
+            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").read_text(encoding="utf-8")).to(
                 contain("sample rule one")
             )
 
@@ -317,11 +317,11 @@ with description("a context tool module with fidelity sections registered for de
 
     with context("with a Cursor deploy output tree"):
         with it("should write one fidelity command file per fidelity whose body is the overview"):
-            sketch = _command_path(self.tree, "sample-tool-sketch").read_text(encoding="utf-8")
+            sketch = InstalledTree(self.tree).command_path("sample-tool-sketch").read_text(encoding="utf-8")
             expect(sketch).to(contain("sketch guidance body only"))
 
         with it("should list each fidelity MCP signature and a one-liner on the practice skill"):
-            text = _skill_path(self.tree, "sample-tool").read_text(encoding="utf-8")
+            text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
             expect(text).to(contain("sample preamble"))
             expect(text).to(contain("sketch"))
             expect(text).to(contain("Use MCP tool:"))
@@ -329,7 +329,7 @@ with description("a context tool module with fidelity sections registered for de
             expect(text).not_to(contain("sketch guidance body only"))
 
         with it("should write one fidelity rules file whose body is that fidelity's rules section"):
-            sketch_rules = _rule_path(self.tree, "sample-tool-sketch.mdc")
+            sketch_rules = InstalledTree(self.tree).rule_path("sample-tool-sketch.mdc")
             expect(sketch_rules.is_file()).to(equal(True))
             expect(sketch_rules.read_text(encoding="utf-8")).to(contain("sketch rule body"))
 
@@ -346,10 +346,10 @@ with description("a context tool module with fidelities and assembly registered 
 
     with context("with a Cursor deploy output tree"):
         with it("should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass"):
-            expect(_skill_path(self.tree, "sample-tool").is_file()).to(equal(True))
-            expect(_rule_path(self.tree, "sample-tool.mdc").is_file()).to(equal(True))
-            expect(_command_path(self.tree, "sample-tool-sketch").is_file()).to(equal(True))
-            expect(_rule_path(self.tree, "sample-tool-spec.mdc").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).command_path("sample-tool-sketch").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).rule_path("sample-tool-spec.mdc").is_file()).to(equal(True))
 
 
 with description("practice guidance that has been deployed") as self:
@@ -366,8 +366,8 @@ with description("practice guidance that has been deployed") as self:
     with context("with members that are not annotated mcp"):
         with context("with deployed skill command and rules bodies"):
             with it("should not append a YAML CLI invoke fence"):
-                skill = _skill_path(self.tree, "sample-tool").read_text(encoding="utf-8")
-                rule = _rule_path(self.tree, "sample-tool.mdc").read_text(encoding="utf-8")
+                skill = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
+                rule = InstalledTree(self.tree).rule_path("sample-tool.mdc").read_text(encoding="utf-8")
                 for text in (skill, rule):
                     expect(text).not_to(contain("tools.ps1"))
                     expect(text).not_to(contain("toolset:"))
@@ -386,7 +386,7 @@ with description("practice guidance that has been deployed for VS Code") as self
 
     with context("with a VS Code deploy output tree"):
         with it("should write fidelity command files under github prompts not under cursor commands"):
-            expect(_prompt_path(self.tree, "sample-tool-sketch").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).prompt_path("sample-tool-sketch").is_file()).to(equal(True))
 
 
 _REPO = repo_root_from(__file__, parents=1)
@@ -681,7 +681,7 @@ with description("an installer that recorded files from a prior install") as sel
 
     with context("whose clean operation runs directly"):
         with it("should remove only files recorded in install state"):
-            prior_skill = _skill_path(self.tree, "generate")
+            prior_skill = InstalledTree(self.tree).skill_path("generate")
             expect(prior_skill is not None).to(equal(True))
             removed = Installer(ide="Cursor", path=self.tree).clean()
             expect(len(removed) > 0).to(be_true)
@@ -693,8 +693,8 @@ with description("an installer that recorded files from a prior install") as sel
             self.installer.install([SampleGuidance(format="markdown")])
 
         with it("should remove tracked files from the prior install before writing"):
-            expect(_skill_path(self.tree, "generate") is None).to(equal(True))
-            expect(_skill_path(self.tree, "sample-tool") is not None).to(equal(True))
+            expect(InstalledTree(self.tree).skill_path("generate") is None).to(equal(True))
+            expect(InstalledTree(self.tree).skill_path("sample-tool") is not None).to(equal(True))
 
         with it("should leave untracked orphans in place"):
             expect(self.orphan.is_file()).to(equal(True))
@@ -727,7 +727,7 @@ with description("the installer toolset installing itself") as self:
         shutil.rmtree(self._tmp, ignore_errors=True)
 
     with it("should write an install skill that names the MCP tool"):
-        text = _skill_path(self.tree, "install").read_text(encoding="utf-8")
+        text = InstalledTree(self.tree).skill_path("install").read_text(encoding="utf-8")
         expect(text).to(contain("Use MCP tool:"))
         expect(text).to(contain("installer.install"))
 
@@ -746,17 +746,18 @@ with description("the installer toolset installing itself") as self:
 with description("the installer import path") as self:
     with before.each:
         self.repo = Path(__file__).resolve().parents[1]
-        Installer.ensure_import_path(self.repo)
+        Installer(repo=self.repo).ensure_import_path()
 
     with it("should put catalog folders on sys.path so short catalog imports resolve"):
         import harness.agent_tools as agent_tools
         import harness.guidance_actions as guidance_actions
 
+        installer = Installer(repo=self.repo)
         expect("agent_toolset" in dir(agent_tools)).to(equal(True))
         expect(guidance_actions.GuidanceAction.__name__).to(equal("GuidanceAction"))
-        expect(Installer.pythonpath(self.repo)).to(contain("actions"))
-        expect(Installer.pythonpath(self.repo)).not_to(contain(str(self.repo / "installation") + os.sep))
-        expect(Installer.pythonpath(self.repo).split(os.pathsep)).not_to(
+        expect(installer.pythonpath()).to(contain("actions"))
+        expect(installer.pythonpath()).not_to(contain(str(self.repo / "installation") + os.sep))
+        expect(installer.pythonpath().split(os.pathsep)).not_to(
             contain(str(self.repo / "harness"))
         )
 
@@ -773,7 +774,7 @@ with description("the installer import path") as self:
             Installer(ide="Cursor", path=tmp, repo=self.repo).install([])
             after = shared.read_text(encoding="utf-8") if shared.is_file() else ""
             expect(after).to(equal(before))
-            expect(Installer._is_ephemeral_install_path(tmp)).to(equal(True))
+            expect(Installer(path=tmp, repo=self.repo)._is_ephemeral_install_path(tmp)).to(equal(True))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
@@ -888,7 +889,7 @@ with description("markdown skill front matter") as self:
 
         writer = FileInstallation("Cursor", self.tree, "skill")
         writer.write(_write_skill_tool("instructions", "sample preamble"))
-        text = _skill_path(self.tree, "sample-tool").read_text(encoding="utf-8")
+        text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
         front = text.split("---", 2)[1]
         expect(text.startswith("---\n")).to(equal(True))
         expect(front).to(contain("name: sample-tool"))

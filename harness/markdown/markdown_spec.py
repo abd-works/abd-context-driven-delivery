@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "harness", "tools", "actions"):
+for _cat in ("practices", "tools", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -18,7 +18,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SampleTool,
 )
-from harness.markdown import AssetLocator, HTML, Markdown, bind_yaml, canonical_format
+from harness.markdown import AssetLocator, HTML, Markdown, YamlBinder, canonical_format
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "practices" / "clean_engineering"
 _STORIES_DIR = _REPO_ROOT / "practices" / "stories"
@@ -170,8 +170,7 @@ with description("a markdown section containing a yaml fence"):
                 clean_engineering = ""
 
             self.instance = _YamlSubject()
-            bind_yaml(
-                self.instance,
+            YamlBinder(self.instance).bind_yaml(
                 """```yaml
 default_format: python
 stage: specification
@@ -202,11 +201,11 @@ with description("a docstring used as install prose"):
     with context("that is one word naming a markdown section"):
         with it("should extract that section from the Guidance markdown"):
             instance = SamplePracticeGuidance(format="markdown")
-            expect(Markdown.expand_docstring(instance, "overview")).to(contain("sample preamble"))
+            expect(Markdown.from_label(instance, "").expand_docstring("overview")).to(contain("sample preamble"))
 
     with context("that is ordinary prose"):
         with it("should keep the prose"):
             instance = SamplePracticeGuidance(format="markdown")
-            expect(Markdown.expand_docstring(instance, "plain install text")).to(
+            expect(Markdown.from_label(instance, "").expand_docstring("plain install text")).to(
                 equal("plain install text")
             )

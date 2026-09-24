@@ -886,13 +886,21 @@ class CodeQL:
         self._assign_module_names(class_rows)
         from practices.clean_engineering.model.codeql.codeql_model import (
             CleanEngineeringModel,
+            GraphMemberRows,
         )
         from practices.stories.model.codeql.codeql_model import StoryMap
 
-        CleanEngineeringModel.ensure(graph, class_rows, property_rows, operation_rows, parameter_rows)
-        CleanEngineeringModel.wire_calls(graph, call_rows)
+        model = CleanEngineeringModel("CleanEngineering", 1)
+        rows = GraphMemberRows(class_rows, property_rows)
+        rows.operations = operation_rows
+        rows.parameters = parameter_rows
+        model.ensure(
+            graph,
+            rows,
+        )
+        model.wire_calls(graph, call_rows)
         if raw:
-            StoryMap.ensure(graph, raw)
+            StoryMap().ensure(graph, raw)
 
     def _optional_json(self, results_path) -> Optional[dict]:
         path = self.results_path(Path(results_path) if results_path else None)

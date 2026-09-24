@@ -138,57 +138,68 @@ class StoryMap(StoryNode):
     def attach_test_suites(self, suites) -> None:
         """Attach each TestSuite to the SubEpic whose name slug appears in the suite's file path."""
         import re
-        subs_by_slug: dict = {}
+        self._subs_by_slug: dict = {}
         for sub in self.all_sub_epics():
             slug = re.sub(r"[^a-z0-9]+", "-", sub.name.strip().lower()).strip("-")
-            subs_by_slug.setdefault(slug, []).append(sub)
+            self._subs_by_slug.setdefault(slug, []).append(sub)
         for suite in suites:
-            if not (suite.source and suite.source.file):
-                continue
-            parts = re.split(r"[\\/]+", suite.source.file)
-            for part in parts:
-                slug = re.sub(r"[^a-z0-9]+", "-", part.strip().lower()).strip("-")
-                matches = subs_by_slug.get(slug)
-                if matches:
-                    for sub in matches:
-                        sub.test_suites.append(suite)
-                    break
+            self._attach_suite(suite)
         self.attach_test_cases(suites)
+
+    def _attach_suite(self, suite) -> None:
+        import re
+        if not (suite.source and suite.source.file):
+            return
+        for part in re.split(r"[\\/]+", suite.source.file):
+            slug = re.sub(r"[^a-z0-9]+", "-", part.strip().lower()).strip("-")
+            matches = self._subs_by_slug.get(slug)
+            if not matches:
+                continue
+            for sub in matches:
+                sub.test_suites.append(suite)
+            return
 
     def attach_test_cases(self, suites) -> None:
         """Copy TestCases onto Stories when names/paths match (language-agnostic)."""
-        import re
-
-        def _norm(text: str) -> str:
-            return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
-
-        stories = list(self.all_stories())
-        by_name = {_norm(s.name): s for s in stories}
+        self._stories = list(self.all_stories())
         for suite in suites:
-            path = (suite.source.file if suite.source else "") or ""
-            path_norm = _norm(path.replace("\\", "/"))
-            for case in suite.cases:
-                target = None
-                for story in stories:
-                    if _norm(story.name) and _norm(story.name) in path_norm:
-                        target = story
-                        break
-                if target is None:
-                    # Fall back: suite describe / class name contains story name
-                    suite_norm = _norm(suite.name)
-                    for story in stories:
-                        sn = _norm(story.name)
-                        if sn and sn in suite_norm:
-                            target = story
-                            break
-                if target is None and stories:
-                    # Last resort: only story under a matching sub-epic already holding this suite
-                    for sub in self.all_sub_epics():
-                        if suite in sub.test_suites and len(sub.stories) == 1:
-                            target = sub.stories[0]
-                            break
-                if target is not None:
-                    target.test_cases.append(case)
+            self._attach_suite_cases(suite)
+
+    def _normalized(self, text: str) -> str:
+        import re
+        return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+
+    def _attach_suite_cases(self, suite) -> None:
+        path = (suite.source.file if suite.source else "") or ""
+        path_norm = self._normalized(path.replace("\\", "/"))
+        for case in suite.cases:
+            target = self._story_for_case(suite, path_norm)
+            if target is not None:
+                target.test_cases.append(case)
+
+    def _story_for_case(self, suite, path_norm: str):
+        target = self._story_matching_text(path_norm)
+        if target is not None:
+            return target
+        target = self._story_matching_text(self._normalized(suite.name))
+        if target is not None:
+            return target
+        return self._sole_story_for_suite(suite)
+
+    def _story_matching_text(self, haystack: str):
+        for story in self._stories:
+            name = self._normalized(story.name)
+            if name and name in haystack:
+                return story
+        return None
+
+    def _sole_story_for_suite(self, suite):
+        if not self._stories:
+            return None
+        for sub in self.all_sub_epics():
+            if suite in sub.test_suites and len(sub.stories) == 1:
+                return sub.stories[0]
+        return None
 
     # -- tree traversal -------------------------------------------------------
 
@@ -214,7 +225,6 @@ class StoryMap(StoryNode):
 
     # -- helpers --------------------------------------------------------------
 
-    @staticmethod
-    def _renumber(nodes: List[StoryNode]) -> None:
+    def _renumber(self, nodes: List[StoryNode]) -> None:
         for i, node in enumerate(nodes, start=1):
             node.sequential_order = i

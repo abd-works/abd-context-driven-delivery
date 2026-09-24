@@ -65,7 +65,7 @@ class InterfaceImplementationScanner(TypeScriptScanner):
                 )
             return violations
 
-        classes = self.get_classes(parsed_root)
+        classes = self.classes
         for cls in classes:
             if "Repository" not in cls.name:
                 continue
@@ -121,7 +121,7 @@ class InterfaceImplementationScanner(TypeScriptScanner):
     def _concrete_repository_injections(self, server: Path, parsed_root) -> List[Violation]:
         lines = server.read_text(encoding="utf-8", errors="replace").splitlines()
         violations: List[Violation] = []
-        for cls in self.get_classes(parsed_root):
+        for cls in self.classes:
             if "Server" not in cls.name and "Service" not in cls.name:
                 continue
             ctor = next((m for m in cls.methods if m.name == "constructor"), None)
@@ -160,7 +160,7 @@ class InterfaceImplementationScanner(TypeScriptScanner):
         if parsed_root is None:
             return []
         violations: List[Violation] = []
-        for cls in self.get_classes(parsed_root):
+        for cls in self.classes:
             name_lower = cls.name.lower()
             if not any(kw in name_lower for kw in ("fake", "stub", "mock", "in_memory", "inmemory")):
                 continue

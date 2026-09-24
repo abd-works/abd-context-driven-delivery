@@ -26,13 +26,12 @@ class Example(SourceExample, Node):
     def demonstrates(self, cls: Node) -> None:
         self.relate(Kind.DEMONSTRATES, cls)
 
-    @classmethod
     def matching(
-        cls,
-        index: Dict[str, List["Example"]],
+        self,
         export_name: str,
         file_path: str,
     ) -> List["Example"]:
+        index = self._index
         export_lower = export_name.lower()
         if export_lower in index:
             return index[export_lower]
@@ -46,22 +45,25 @@ class Example(SourceExample, Node):
                     out.append(example)
         return out
 
-    @classmethod
-    def wire_demonstrates(cls, graph: "PracticeGraph", entries: List[dict]) -> None:
-        examples_by_name: Dict[str, List[Example]] = {}
+    def wire_demonstrates(self, graph: "PracticeGraph", entries: List[dict]) -> None:
+        self._index: Dict[str, List[Example]] = {}
         for example in graph.nodes_of_type(Example):
-            examples_by_name.setdefault(example.name.lower(), []).append(example)
+            self._index.setdefault(example.name.lower(), []).append(example)
         for entry in entries:
-            cls_names = entry.get("demonstrates") or []
-            if not cls_names:
-                continue
-            for example in cls.matching(
-                examples_by_name, entry.get("export_name") or "", entry.get("file") or ""
-            ):
-                for class_name in cls_names:
-                    owned = graph.class_named(class_name)
-                    if owned is not None:
-                        example.demonstrates(owned)
+            self._wire_demonstrates_entry(graph, entry)
+
+    def _wire_demonstrates_entry(self, graph: "PracticeGraph", entry: dict) -> None:
+        self._demonstrate_entry = entry
+        for class_name in entry.get("demonstrates") or []:
+            self._demonstrate_class(graph, class_name)
+
+    def _demonstrate_class(self, graph: "PracticeGraph", class_name: str) -> None:
+        owned = graph.class_named(class_name)
+        if owned is None:
+            return
+        entry = self._demonstrate_entry
+        for example in self.matching(entry.get("export_name") or "", entry.get("file") or ""):
+            example.demonstrates(owned)
 
 
 class Step(SourceStep, Node):
@@ -74,17 +76,28 @@ class Step(SourceStep, Node):
     def observes(self, target: Node) -> None:
         self.relate(Kind.OBSERVES, target)
 
-    def demonstrated_through(self, example: Example) -> None:
-        self.relate(Kind.DEMONSTRATED_THROUGH, example)
-
     @classmethod
-    def wire_calls(cls, graph: "PracticeGraph", story_calls: List[dict]) -> None:
+    def from_source(cls, source: SourceStep) -> "Step":
+        return cls(
+            text=source.text,
+            phase=source.phase,
+            sequential_order=source.sequential_order,
+            is_continuation=source.is_continuation,
+            keyword=getattr(source, "keyword", "") or "",
+            concepts=list(source.concepts),
+            values=list(source.values),
+            actor=source.actor,
+            source=source.source,
+            name=source.name,
+        )
+
+    def wire_calls(self, graph: "PracticeGraph", story_calls: List[dict]) -> None:
+        self._graph = graph
         for story_call in story_calls:
-            step = cls.at(
-                graph,
+            self._step_text = story_call.get("step_text") or ""
+            step = self.at(
                 story_call.get("story_file") or "",
                 int(story_call.get("line") or 0),
-                story_call.get("step_text") or "",
             )
             operation = graph.operation_named(
                 story_call.get("callee_class") or "",
@@ -94,52 +107,70 @@ class Step(SourceStep, Node):
                 continue
             step.invokes(operation)
 
-    @classmethod
-    def wire_observations(cls, graph: "PracticeGraph", observations: List[dict]) -> None:
+    def wire_observations(self, graph: "PracticeGraph", observations: List[dict]) -> None:
         from practices.clean_engineering.model.codeql.codeql_model import Operation, Property
 
+        self._graph = graph
+        self._step_text = ""
         for obs in observations:
-            step = cls.at(graph, obs.get("story_file") or "", int(obs.get("line") or 0), "")
+            step = self.at(obs.get("story_file") or "", int(obs.get("line") or 0))
             if step is None:
                 continue
             owned_class = graph.class_named(obs.get("target_class") or "")
             if owned_class is None:
                 continue
-            target = None
-            for owned in owned_class.related(Kind.OWNS):
-                if obs.get("member_kind") == "operation" and isinstance(owned, Operation):
-                    if owned.name == obs.get("target_member"):
-                        target = owned
-                        break
-                if obs.get("member_kind") == "property" and isinstance(owned, Property):
-                    if owned.name == obs.get("target_member"):
-                        target = owned
-                        break
+            self._owned_class = owned_class
+            self._observation = obs
+            self._operation_type = Operation
+            self._property_type = Property
+            target = self._owned_member()
             if target is not None:
                 step.observes(target)
 
-    @classmethod
-    def at(
-        cls,
-        graph: "PracticeGraph",
-        story_file: str,
-        line: int,
-        step_text: str = "",
-    ) -> Optional["Step"]:
-        normalized = story_file.replace("\\", "/").lstrip("./")
-        best: Tuple[int, Optional[Step]] = (1_000_000, None)
-        for step in graph.nodes_of_type(Step):
-            if step_text and step_text.lower() in step.text.lower():
+    def _owned_member(self):
+        for owned in self._owned_class.related(Kind.OWNS):
+            if self._is_observed_member(owned):
+                return owned
+        return None
+
+    def _is_observed_member(self, owned) -> bool:
+        kind = self._observation.get("member_kind")
+        name = self._observation.get("target_member")
+        if kind == "operation" and isinstance(owned, self._operation_type):
+            return owned.name == name
+        if kind == "property" and isinstance(owned, self._property_type):
+            return owned.name == name
+        return False
+
+    def at(self, story_file: str, line: int) -> Optional["Step"]:
+        self._lookup_file = story_file.replace("\\", "/").lstrip("./")
+        self._lookup_line = line
+        by_text = self._step_matching_text()
+        if by_text is not None:
+            return by_text
+        return self._step_near_line()
+
+    def _step_matching_text(self) -> Optional["Step"]:
+        step_text = self._step_text
+        if not step_text:
+            return None
+        for step in self._graph.nodes_of_type(Step):
+            if step_text.lower() in step.text.lower():
                 return step
+        return None
+
+    def _step_near_line(self) -> Optional["Step"]:
+        best: Tuple[int, Optional[Step]] = (1_000_000, None)
+        for step in self._graph.nodes_of_type(Step):
             src = getattr(step, "source", None)
             if src is None:
                 continue
             src_file = str(src.file).replace("\\", "/").lstrip("./")
-            if src_file != normalized and not src_file.endswith(normalized):
+            if src_file != self._lookup_file and not src_file.endswith(self._lookup_file):
                 continue
-            if line <= 0:
+            if self._lookup_line <= 0:
                 return step
-            delta = abs(int(src.line) - line)
+            delta = abs(int(src.line) - self._lookup_line)
             if delta < best[0]:
                 best = (delta, step)
         if best[1] is not None and best[0] <= 5:
@@ -152,7 +183,7 @@ class Background(SourceBackground, Node):
     _semantic_type_name = "Background"
 
     def load_step(self, source: SourceStep) -> Step:
-        return _step_from(source)
+        return Step.from_source(source)
 
 
 class Scenario(SourceScenario, Node):
@@ -163,21 +194,17 @@ class Scenario(SourceScenario, Node):
         return Background(source.name, source.sequential_order)
 
     def load_step(self, source: SourceStep) -> Step:
-        return _step_from(source)
+        return Step.from_source(source)
 
     def load_example(self, source: SourceExample) -> Example:
         return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
 
-    @classmethod
-    def owner_of(
-        cls,
-        entry: dict,
-        scenarios: Dict[Tuple[str, str, str], "Scenario"],
-        backgrounds: List[Tuple[dict, Background]],
-    ):
+    def owner_of(self, entry: dict):
+        scenarios = self._scenarios
+        backgrounds = self._backgrounds
         if entry.get("scenario"):
             key = (
-                _norm_file(entry.get("file") or ""),
+                StoryMap().normalized_file(entry.get("file") or ""),
                 Node().slug(entry.get("story") or ""),
                 (entry.get("scenario") or "").lower(),
             )
@@ -247,40 +274,40 @@ class StoryMap(SourceStoryMap, Node):
     def load_example(self, source: SourceExample) -> Example:
         return Example(source.name, source.sequential_order, dict(source.fields), source.scope)
 
-    def owner_of_example(
-        self,
-        entry: dict,
-        epics: Dict[str, Epic],
-        subs: Dict[Tuple[str, str], SubEpic],
-        stories: Dict[str, Story],
-    ):
+    def owner_of_example(self, entry: dict):
         kind = entry.get("owner_kind") or ""
         owner = entry.get("owner") or ""
         if kind == "story_map":
             return self
         if kind == "epic":
-            return epics.get(Node().slug(owner))
+            return self._example_epics.get(Node().slug(owner))
         if kind == "sub_epic":
-            for (_epic, sub_slug), sub in subs.items():
-                if sub_slug == Node().slug(owner):
-                    return sub
-            return None
+            return self._sub_epic_named(owner)
         if kind == "story":
-            return stories.get(Node().slug(owner))
-        owner_slug = Node().slug(owner) if owner else ""
-        if owner_slug in epics:
-            return epics[owner_slug]
-        for (_epic, sub_slug), sub in subs.items():
+            return self._example_stories.get(Node().slug(owner))
+        return self._example_owner_by_slug(owner)
+
+    def _sub_epic_named(self, owner: str):
+        owner_slug = Node().slug(owner)
+        for (_epic, sub_slug), sub in self._example_subs.items():
             if sub_slug == owner_slug:
                 return sub
+        return None
+
+    def _example_owner_by_slug(self, owner: str):
+        owner_slug = Node().slug(owner) if owner else ""
+        if owner_slug in self._example_epics:
+            return self._example_epics[owner_slug]
+        found = self._sub_epic_named(owner)
+        if found is not None:
+            return found
         if not owner_slug:
             return self
         return None
 
-    @classmethod
-    def ensure(cls, graph: "PracticeGraph", raw: dict) -> None:
+    def ensure(self, graph: "PracticeGraph", raw: dict) -> None:
         if graph.story_map is None:
-            graph.story_map = cls()
+            graph.story_map = StoryMap()
             graph.register(graph.story_map)
         story_map: StoryMap = graph.story_map
         epics: Dict[str, Epic] = {Node().slug(e.name): e for e in graph.nodes_of_type(Epic)}
@@ -294,8 +321,8 @@ class StoryMap(SourceStoryMap, Node):
             subs[(parent, Node().slug(sub.name))] = sub
         stories: Dict[str, Story] = {Node().slug(s.name): s for s in graph.nodes_of_type(Story)}
         for entry in raw.get("stories") or []:
-            epic_name = _display(entry.get("epic") or "") or "Stories"
-            sub_name = _display(entry.get("sub_epic") or "")
+            epic_name = self._display_name(entry.get("epic") or "") or "Stories"
+            sub_name = self._display_name(entry.get("sub_epic") or "")
             epic = epics.get(Node().slug(epic_name))
             if epic is None:
                 epic = story_map.load_epic(Epic(epic_name, len(epics) + 1))
@@ -345,7 +372,7 @@ class StoryMap(SourceStoryMap, Node):
             if story is None:
                 continue
             key = (
-                _norm_file(entry.get("file") or ""),
+                self.normalized_file(entry.get("file") or ""),
                 Node().slug(entry.get("story") or ""),
                 (entry.get("name") or "").lower(),
             )
@@ -359,10 +386,13 @@ class StoryMap(SourceStoryMap, Node):
             scenarios[key] = scenario
         created_steps: List[Tuple[dict, Step]] = []
         for entry in raw.get("steps") or []:
-            parent = Scenario.owner_of(entry, scenarios, backgrounds)
+            finder = Scenario()
+            finder._scenarios = scenarios
+            finder._backgrounds = backgrounds
+            parent = finder.owner_of(entry)
             if parent is None:
                 continue
-            phase = _phase_for(entry.get("phase") or "", entry.get("keyword") or "")
+            phase = self._phase_for(entry.get("phase") or "", entry.get("keyword") or "")
             is_continuation = entry.get("keyword") in {"And", "But"}
             order = len(parent.steps) + 1 if hasattr(parent, "steps") else 1
             step = parent.load_step(
@@ -379,38 +409,39 @@ class StoryMap(SourceStoryMap, Node):
             graph.register(step)
             parent.relate(Kind.OWNS, step)
             created_steps.append((entry, step))
-        story_map._ensure_examples(graph, raw.get("example_exports") or [], epics, subs, stories)
+        story_map._example_epics = epics
+        story_map._example_subs = subs
+        story_map._example_stories = stories
+        story_map._example_graph = graph
+        story_map._ensure_examples(raw.get("example_exports") or [])
         story_map._wire_demonstrated_through(graph, created_steps)
-        Step.wire_calls(graph, raw.get("story_calls") or [])
-        Step.wire_observations(graph, raw.get("story_observations") or [])
-        Example.wire_demonstrates(graph, raw.get("example_exports") or [])
+        Step().wire_calls(graph, raw.get("story_calls") or [])
+        Step().wire_observations(graph, raw.get("story_observations") or [])
+        Example().wire_demonstrates(graph, raw.get("example_exports") or [])
 
-    def _ensure_examples(
-        self,
-        graph: "PracticeGraph",
-        entries: List[dict],
-        epics: Dict[str, Epic],
-        subs: Dict[Tuple[str, str], SubEpic],
-        stories: Dict[str, Story],
-    ) -> None:
-        existing = {ex.name.lower(): ex for ex in graph.nodes_of_type(Example)}
+    def _ensure_examples(self, entries: List[dict]) -> None:
+        existing = {ex.name.lower(): ex for ex in self._example_graph.nodes_of_type(Example)}
         for entry in entries:
             name = entry.get("export_name") or ""
             example = existing.get(name.lower())
-            if example is None:
-                owner = self.owner_of_example(entry, epics, subs, stories)
-                order = len(getattr(owner, "examples", []) or []) + 1 if owner is not None else 1
-                if owner is not None and hasattr(owner, "load_example"):
-                    example = owner.load_example(
-                        Example(name, order, {}, scope=entry.get("owner_kind") or "story")
-                    )
-                else:
-                    example = Example(name, order, {}, scope=entry.get("owner_kind") or "story")
-                graph.register(example)
-                existing[name.lower()] = example
-                if owner is not None:
-                    owner.examples.append(example)
-                    owner.relate(Kind.SCOPES, example)
+            if example is not None:
+                continue
+            owner = self.owner_of_example(entry)
+            self._example_entry = entry
+            self._example_name = name
+            example = self._new_example(owner)
+            self._example_graph.register(example)
+            existing[name.lower()] = example
+            if owner is not None:
+                owner.examples.append(example)
+                owner.relate(Kind.SCOPES, example)
+
+    def _new_example(self, owner):
+        order = len(getattr(owner, "examples", []) or []) + 1 if owner is not None else 1
+        scope = self._example_entry.get("owner_kind") or "story"
+        if owner is not None and hasattr(owner, "load_example"):
+            return owner.load_example(Example(self._example_name, order, {}, scope=scope))
+        return Example(self._example_name, order, {}, scope=scope)
 
     def _wire_demonstrated_through(self, graph: "PracticeGraph", created_steps) -> None:
         by_name: Dict[str, Example] = {}
@@ -425,36 +456,19 @@ class StoryMap(SourceStoryMap, Node):
                 step.demonstrated_through(example)
 
 
-def _step_from(source: SourceStep) -> Step:
-    return Step(
-        text=source.text,
-        phase=source.phase,
-        sequential_order=source.sequential_order,
-        is_continuation=source.is_continuation,
-        keyword=getattr(source, "keyword", "") or "",
-        concepts=list(source.concepts),
-        values=list(source.values),
-        actor=source.actor,
-        source=source.source,
-        name=source.name,
-    )
+    def _display_name(self, name: str) -> str:
+        if not name:
+            return ""
+        if " " in name:
+            return name
+        return name.replace("-", " ").replace("_", " ").title()
 
+    def normalized_file(self, path: str) -> str:
+        return path.replace("\\", "/").lstrip("./")
 
-def _display(name: str) -> str:
-    if not name:
-        return ""
-    if " " in name:
-        return name
-    return name.replace("-", " ").replace("_", " ").title()
-
-
-def _norm_file(path: str) -> str:
-    return path.replace("\\", "/").lstrip("./")
-
-
-def _phase_for(phase: str, keyword: str) -> Phase:
-    value = (phase or keyword or "given").lower()
-    mapping = {"given": Phase.GIVEN, "when": Phase.WHEN, "then": Phase.THEN}
-    if value in {"and", "but"}:
-        return Phase.THEN
-    return mapping.get(value, Phase.GIVEN)
+    def _phase_for(self, phase: str, keyword: str) -> Phase:
+        value = (phase or keyword or "given").lower()
+        mapping = {"given": Phase.GIVEN, "when": Phase.WHEN, "then": Phase.THEN}
+        if value in {"and", "but"}:
+            return Phase.THEN
+        return mapping.get(value, Phase.GIVEN)

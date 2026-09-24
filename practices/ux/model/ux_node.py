@@ -49,13 +49,13 @@ class UxNode:
         return {}
 
     def _reconcile_collection(self, pair: ChildCollectionPair, report: UpdateReport) -> None:
-        consumed_ids: set = set()
+        self._consumed_ids: set = set()
         reconciled: List[UxNode] = []
 
         for source_child in pair.source_children:
-            match = self._find_match(source_child, pair.self_children, consumed_ids)
+            match = self._find_match(source_child, pair.self_children)
             if match is not None:
-                consumed_ids.add(id(match))
+                self._consumed_ids.add(id(match))
                 match.translate_from(source_child)
                 reconciled.append(match)
                 report.add_exact_match(match.name)
@@ -66,29 +66,27 @@ class UxNode:
                 report.add_new(new_child, parent_name=self.name)
 
         for existing in pair.self_children:
-            if id(existing) not in consumed_ids:
+            if id(existing) not in self._consumed_ids:
                 report.add_removed(existing, parent_name=self.name)
 
         pair.self_children[:] = reconciled
 
-    @staticmethod
     def _find_match(
+        self,
         source: "UxNode",
         candidates: List["UxNode"],
-        consumed_ids: set,
     ) -> Optional["UxNode"]:
         for candidate in candidates:
-            if id(candidate) not in consumed_ids and candidate.name == source.name:
+            if id(candidate) not in self._consumed_ids and candidate.name == source.name:
                 return candidate
         for candidate in candidates:
             if (
-                id(candidate) not in consumed_ids
+                id(candidate) not in self._consumed_ids
                 and candidate.sequential_order == source.sequential_order
             ):
                 return candidate
         return None
 
-    @staticmethod
-    def _renumber(nodes: List["UxNode"]) -> None:
+    def _renumber(self, nodes: List["UxNode"]) -> None:
         for index, node in enumerate(nodes):
             node.sequential_order = index

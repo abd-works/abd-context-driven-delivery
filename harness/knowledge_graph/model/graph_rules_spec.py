@@ -8,7 +8,7 @@ from types import ModuleType
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "harness", "tools"):
+for _cat in ("practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -68,6 +68,22 @@ class _Node:
 
     def semantic_type(self):
         return self._semantic
+
+    def matches_source(self, file, line):
+        src = self.source
+        if src is None or line <= 0:
+            return False
+        node_file = str(src.file or "").replace("\\", "/")
+        hit = str(file or "").replace("\\", "/")
+        if not (
+            node_file.endswith(hit)
+            or hit.endswith(node_file)
+            or node_file.split("/")[-1] == hit.split("/")[-1]
+        ):
+            return False
+        start = int(src.line or 0)
+        end = int(src.end_line or start)
+        return start > 0 and start <= line <= max(end, start)
 
 
 with description("Rows.entity_location"):

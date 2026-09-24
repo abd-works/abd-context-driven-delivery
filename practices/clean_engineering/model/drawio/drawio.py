@@ -28,6 +28,11 @@ class Drawio:
 
     def __init__(self, workspace=None) -> None:
         self.workspace = workspace
+        self.source_format = "markdown"
+        self.previous = ""
+        self.keep_positioning = False
+        self.scan_root = None
+        self.rule = None
 
     @property
     def module_dir(self) -> Path:
@@ -44,21 +49,26 @@ class Drawio:
     def examples(self) -> str: ...
 
     @agent_tool
-    def create_diagram(
-        self,
-        content: str,
-        path: str,
-        source_format: str = "markdown",
-        previous: str = "",
-        keep_positioning: bool = False,
-    ) -> str:
-        """Parse *content* from *source_format*, render Draw.io XML, write *path*.
+    def create_diagram(self, content: str, path: str) -> str:
+        """Parse *content*, render Draw.io XML, write *path*.
 
         When *keep_positioning* is true, look for an existing diagram at *path*
         (or use *previous* XML) and update class contents in place: existing
         classes keep their positions, existing relationships keep their routing,
         and only new classes/relationships are laid out. Returns the written path.
         """
+        model = self._parse_source(content)
+        out = Path(path)
+        prev = self._previous_xml(out)
+        channel = DrawIOCleanEngineeringModel()
+        channel.previous = prev or None
+        channel.keep_positioning = self.keep_positioning
+        rendered = channel.render(model)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(rendered, encoding="utf-8")
+        return str(out.resolve())
+
+    def _parse_source(self, content: str):
         from practices.clean_engineering.model.markdown.markdown_class_model import (
             MarkdownCleanEngineeringModel,
         )
@@ -68,37 +78,32 @@ class Drawio:
         from practices.clean_engineering.model.python.python_class_model import (
             PythonCleanEngineeringModel,
         )
-
         parsers: dict[str, type] = {
             "markdown": MarkdownCleanEngineeringModel,
             "json": JsonCleanEngineeringModel,
             "python": PythonCleanEngineeringModel,
             "drawio": DrawIOCleanEngineeringModel,
         }
-        if source_format not in parsers:
+        if self.source_format not in parsers:
             raise ValueError(
-                f"Unsupported source_format {source_format!r}. "
+                f"Unsupported source_format {self.source_format!r}. "
                 f"Choose from: {sorted(parsers)}"
             )
-        model = parsers[source_format].parse(content)
-        out = Path(path)
-        prev = previous
-        if keep_positioning and not prev and out.exists():
-            prev = out.read_text(encoding="utf-8")
-        rendered = DrawIOCleanEngineeringModel.render(
-            model,
-            previous=prev or None,
-            keep_positioning=keep_positioning,
-        )
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(rendered, encoding="utf-8")
-        return str(out.resolve())
+        return parsers[self.source_format](name="", sequential_order=1).parse(content)
+
+    def _previous_xml(self, out: Path) -> str:
+        prev = self.previous
+        if self.keep_positioning and not prev and out.exists():
+            return out.read_text(encoding="utf-8")
+        return prev
 
     @agent_tool
-    def scan(self, paths: list[str], root: str | None = None, rule: str | None = None) -> str:
+    def scan(self, paths: list[str]) -> str:
         """scan layout rules on `.drawio` paths (drawio.md rule slugs)."""
-        scan_root = root if root is not None else str(self.module_dir)
-        return str(DrawioScanner.run_report(paths, scan_root, rule))
+        scan_root = self.scan_root if self.scan_root is not None else str(self.module_dir)
+        scanner = DrawioScanner(self.rule)
+        scanner.workspace_root = scan_root
+        return str(scanner.run_report(paths))
 
     @agent_instructions
     def validate(self) -> str:
@@ -113,19 +118,13 @@ class Drawio:
         return "Repair {{asset}} until drawio validate/scan passes. Fix the layout generator — not a one-off diagram edit."
 
     @agent_instructions
-    def render(self,
+    def render(
+        self,
         content: str = "",
         path: str = "",
-        source_format: str = "markdown",
-        previous: str = "",
-        keep_positioning: bool = False,
     ) -> str:
         """render"""
-        tools(
-            self.create_diagram(
-                content, path, source_format, previous, keep_positioning
-            )
-        )
+        tools(self.create_diagram(content, path))
         instructions(self.validate)
         self.mode = "tool"
         instructions(self.repair)

@@ -55,10 +55,10 @@ with description("Workflow helpers"):
         expect(w._kebab("Add workflow package #87")).to(equal("add-workflow-package-87"))
 
     with it("should parse github issue references"):
-        expect(Ticket.parse_number("87")).to(equal(87))
-        expect(Ticket.parse_number("#87")).to(equal(87))
-        expect(Ticket.parse_number("demo-org/demo-repo#87")).to(equal(87))
-        expect(Ticket.parse_number("https://github.com/demo-org/demo-repo/issues/87")).to(
+        expect(Ticket.from_number("87")).to(equal(87))
+        expect(Ticket.from_number("#87")).to(equal(87))
+        expect(Ticket.from_number("demo-org/demo-repo#87")).to(equal(87))
+        expect(Ticket.from_number("https://github.com/demo-org/demo-repo/issues/87")).to(
             equal(87)
         )
 

@@ -13,10 +13,9 @@ from handoff.handoff import Handoff
 from installation.files import skill
 from harness.mcp.mcp_server import mcp
 from harness.agent_tools import agent_instructions, agent_toolset
-from sub_agent.sub_agent import sub_agent
 from harness.agent_tools.agent_tools import agent_tool
 from workflow.work_ticket import WorkTicket
-from workspace import Workspace
+from workspace.legacy.workspace import Workspace
 from workspace.workspace import Turn
 
 @dataclass(frozen=True)
@@ -42,7 +41,7 @@ class Workflow:
 
     def _repo_root(self, workspace: str = "") -> Path:
         start = workspace.strip() or self._workspace_path or "."
-        root = Repo.find_root(start)
+        root = Repo(start).find_root()
         if root is None:
             raise ValueError(f"not a git clone: {start!r}")
         return root
@@ -469,7 +468,7 @@ class Workflow:
         return "Ticket request completed."
 
     def parse_ticket(self, ticket: str) -> int:
-        return Ticket.parse_number(ticket)
+        return Ticket.from_number(ticket)
 
     def session_name_for_issue(self, title: str, number: int) -> str:
         return self._session_name_from_issue(title, number)
@@ -485,7 +484,7 @@ class Workflow:
         repo = self._repo(workspace)
         return repo.workflow_commit_message(
             subject,
-            Ticket.parse_number(ticket),
+            Ticket.from_number(ticket),
             workflow_state,
             reviewed_by=reviewed_by,
         )
@@ -595,7 +594,7 @@ class Workflow:
         ancestors = self._ticket_ancestors(repo, parent_issue)
         ultimate_parent = ancestors[-1]
         for issue in (child, *ancestors):
-            project.set_text_field(issue.number, "Ultimate Parent", ultimate_parent.title)
+            project.write_text_field(issue.number, ultimate_parent.title)
         return {
             **created,
             "parent": parent_issue.number,
@@ -909,7 +908,7 @@ class Workflow:
         if ticket.strip():
             message = self._repo(workspace).workflow_commit_message(
                 subject,
-                Ticket.parse_number(ticket),
+                Ticket.from_number(ticket),
                 "done",
                 reviewed_by=reviewed_by,
             )

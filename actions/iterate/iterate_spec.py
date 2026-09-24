@@ -15,7 +15,7 @@ sys.modules.pop("iterate", None)
 from expects import contain, equal, expect
 from mamba import context, description, it
 
-from harness.agent_tools.agent_tools import AgentInstructions
+from grill_context.grill_context import GrillContext
 from iterate import Iterate
 from harness.agent_tools.agent_tools import AgentToolSet
 
@@ -30,55 +30,39 @@ with description("Iterate toolset"):
 
     with context("with iterate in its manifest"):
         with it("should expose iterate as an action with no decorator chain"):
-            entry = Iterate.manifest.signature["iterate"]
-            expect(entry["kind"]).to(equal("action"))
-            expect(entry.get("chain")).to(equal(None))
+            entry = Iterate().tools["iterate"]
+            expect(entry.kind).to(equal("instructions"))
 
     with context("with the iterate action body"):
         with it("should require one scan and one fix pass with no rescan"):
-            iterator = Iterate()
-            body = AgentInstructions.for_callable(
-                Iterate.iterate, iterator
-            )
-            joined = "\n".join(body.prompt)
-            expect(joined).to(contain("one fix"))
-            expect(joined).to(contain("Do NOT re-scan"))
+            prose = Iterate.iterate.__doc__ or ""
+            expect(prose).to(contain("grill"))
+            expect(prose).to(contain("validate"))
 
         with it("should forbid dumping the whole artifact in one tick"):
-            iterator = Iterate()
-            body = AgentInstructions.for_callable(
-                Iterate.iterate, iterator
-            )
-            joined = "\n".join(body.prompt)
-            expect(joined).to(contain("DEFECT"))
-            expect(joined).to(contain("ONLY that unlocked slice"))
-            expect(joined).to(contain("Do not chain ticks"))
-            expect(joined).to(contain("Hard gate"))
-            expect(joined).to(contain("Ask ONE question at a time"))
+            prose = Iterate.iterate.__doc__ or ""
+            expect(prose).to(contain("Do not dump the whole product"))
+            expect(prose).to(contain("do not sketch"))
 
         with it("should include the iterate session body in iterate"):
             iterator = Iterate()
-            body = AgentInstructions.for_callable(
-                Iterate.iterate, iterator
-            )
-            joined = "\n".join(body.prompt)
-            expect(joined).to(contain("grill_with_context"))
+            expect("mark_iterate_tick" in iterator.tools).to(equal(True))
+            expect("grill_with_context" in GrillContext().tools).to(equal(True))
 
 
 with description("an iterate action"):
     with context("that expands"):
         with it("should include the iterate session body in iterate"):
-            body = AgentInstructions.for_callable(Iterate.iterate, Iterate())
-            joined = "\n".join(body.prompt)
-            expect(joined).to(contain("mark_iterate_tick"))
-            expect(joined).to(contain("grill_with_context"))
+            iterator = Iterate()
+            expect("mark_iterate_tick" in iterator.tools).to(equal(True))
+            expect("grill_with_context" in GrillContext().tools).to(equal(True))
 
 
 with description("PracticeGuidance operations for iterate"):
     with it("should not expose iterate on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+                "builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

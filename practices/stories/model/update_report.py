@@ -62,13 +62,13 @@ class NodeSnapshot:
     child_snapshots: List["NodeSnapshot"] = field(default_factory=list)
 
     @classmethod
-    def of(cls, node: "StoryNode") -> "NodeSnapshot":
+    def from_node(cls, node: "StoryNode") -> "NodeSnapshot":
         return cls(
             node_id=id(node),
             name=node.name,
             sequential_order=node.sequential_order,
             extra_fields=node.snapshot_fields(),
-            child_snapshots=[cls.of(child) for child in node.children()],
+            child_snapshots=[cls.from_node(child) for child in node.children()],
         )
 
     def restore_into(self, node: "StoryNode") -> None:
@@ -92,7 +92,7 @@ class UpdateReport:
     owning_node_id: Optional[int] = None
 
     def capture_snapshot(self, node: "StoryNode") -> None:
-        self.snapshot = NodeSnapshot.of(node)
+        self.snapshot = NodeSnapshot.from_node(node)
         self.owning_node_id = id(node)
 
     def add_exact_match(self, self_name: str, source_name: str) -> None:

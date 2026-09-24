@@ -422,7 +422,10 @@ export class KnowledgeGraph {
 
   private _listedLeaf(node: GraphNode) {
     const rules = this._listedRules(node);
-    const failed = rules.filter((rule) => rule.status === 'violating').length;
+    // Tree (failed/total) is a violation rollup. Counting every applicable
+    // rule here inflated Module/Operation parents into hundreds of thousands
+    // while leaves looked like zeros after most hits were cleared.
+    const failed = this._nodeViolationCount(node);
     return {
       node_id: node.nodeId,
       name: this._treeLabel(node),
@@ -433,8 +436,20 @@ export class KnowledgeGraph {
       rules,
       source: node.source,
       failed,
-      total: rules.length,
+      total: failed,
     };
+  }
+
+  private _nodeViolationCount(node: GraphNode): number {
+    const slugs = listed(this.view.filter.rules, this.view.filter.rule);
+    const seen = new Set<string>();
+    for (const hit of node.rules.violations) {
+      if (slugs !== null && !slugs.includes(hit.ruleSlug)) {
+        continue;
+      }
+      seen.add(hit.ruleSlug);
+    }
+    return seen.size;
   }
 
   private _listedRules(node: GraphNode): ListedRule[] {

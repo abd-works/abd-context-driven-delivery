@@ -7,16 +7,15 @@ Covers Increment 1 stories:
 
 All tests use a FakeEmbeddingProvider so no OpenAI API key is required.
 """
-import math
 import sys
 import tempfile
 from pathlib import Path
-from typing import List
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "harness", "practices"):
+import mcp.types  # SDK, before harness/mcp is on PYTHONPATH
+for _cat in ("tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -48,8 +47,7 @@ class FakeEmbeddingProvider:
     def embed_query(self, text: str) -> list:
         return self._vec(text)
 
-    @staticmethod
-    def _vec(text: str) -> list:
+    def _vec(self, text: str) -> list:
         import hashlib
         import math as _math
 
@@ -62,23 +60,28 @@ class FakeEmbeddingProvider:
         return [x / norm for x in floats]
 
 
-def _make_index() -> ContextIndex:
-    return ContextIndex(embedding_provider=FakeEmbeddingProvider())
+class SpecFixture:
+    def __init__(self) -> None:
+        self._root = Path()
+        self._name = ""
+        self._content = ""
+
+    def _make_index(self) -> ContextIndex:
+        return ContextIndex(embedding_provider=FakeEmbeddingProvider())
+
+    def _write_segment(self) -> Path:
+        path = self._root / self._name
+        path.write_text(self._content, encoding="utf-8")
+        return path
+
+    def _expanded_ask(self) -> str:
+        ci = self._make_index()
+        func = getattr(type(ci), "ask")
+        body = AgentInstructions.for_callable(func, ci)
+        return "\n".join(body.prompt)
 
 
-# ── helpers ───────────────────────────────────────────────────────────────────
-
-def _write_segment(tmp: Path, name: str, content: str) -> Path:
-    p = tmp / name
-    p.write_text(content, encoding="utf-8")
-    return p
-
-
-def _expanded_ask() -> str:
-    ci = _make_index()
-    func = getattr(type(ci), "ask")
-    body = AgentInstructions.for_callable(func, ci)
-    return "\n".join(body.prompt)
+fixture = SpecFixture()
 
 
 # ── spec ─────────────────────────────────────────────────────────────────────
@@ -86,7 +89,7 @@ def _expanded_ask() -> str:
 with description("a ContextIndex"):
     with context("that is created with a fake embedding provider"):
         with it("should be a ContextIndex instance"):
-            expect(_make_index()).to(be_a(ContextIndex))
+            expect(fixture._make_index()).to(be_a(ContextIndex))
 
     # ── Tool: Embed Chunks ────────────────────────────────────────────────────
 
@@ -94,13 +97,12 @@ with description("a ContextIndex"):
         with before.each:
             self._tmp = tempfile.TemporaryDirectory()
             self._root = Path(self._tmp.name)
-            seg = _write_segment(
-                self._root,
-                "intro-segment.md",
-                "---\nview: story\n---\n# Introduction\nThis is the intro segment.\n",
-            )
+            fixture._root = self._root
+            fixture._name = "intro-segment.md"
+            fixture._content = "---\nview: story\n---\n# Introduction\nThis is the intro segment.\n"
+            seg = fixture._write_segment()
             out = str(self._root / "rag")
-            self._result = _make_index().embed([str(seg)], out_path=out)
+            self._result = fixture._make_index().embed([str(seg)], out_path=out)
 
         with after.each:
             self._tmp.cleanup()
@@ -124,19 +126,16 @@ with description("a ContextIndex"):
         with before.each:
             self._tmp = tempfile.TemporaryDirectory()
             self._root = Path(self._tmp.name)
-            _write_segment(
-                self._root,
-                "story-seg.md",
-                "---\nview: story\n---\nUser story content.\n",
-            )
-            _write_segment(
-                self._root,
-                "domain-seg.md",
-                "---\nview: domain\n---\nDomain logic content.\n",
-            )
+            fixture._root = self._root
+            fixture._name = "story-seg.md"
+            fixture._content = "---\nview: story\n---\nUser story content.\n"
+            fixture._write_segment()
+            fixture._name = "domain-seg.md"
+            fixture._content = "---\nview: domain\n---\nDomain logic content.\n"
+            fixture._write_segment()
             segs = [str(self._root / "story-seg.md"), str(self._root / "domain-seg.md")]
             out = str(self._root / "rag")
-            self._result = _make_index().embed(segs, out_path=out)
+            self._result = fixture._make_index().embed(segs, out_path=out)
 
         with after.each:
             self._tmp.cleanup()
@@ -152,7 +151,7 @@ with description("a ContextIndex"):
         with before.each:
             self._tmp = tempfile.TemporaryDirectory()
             out = str(Path(self._tmp.name) / "rag")
-            self._result = _make_index().embed([], out_path=out)
+            self._result = fixture._make_index().embed([], out_path=out)
 
         with after.each:
             self._tmp.cleanup()
@@ -167,9 +166,12 @@ with description("a ContextIndex"):
         with before.each:
             self._tmp = tempfile.TemporaryDirectory()
             self._root = Path(self._tmp.name)
-            seg = _write_segment(self._root, "plain.md", "Plain content with no front matter.\n")
+            fixture._root = self._root
+            fixture._name = "plain.md"
+            fixture._content = "Plain content with no front matter.\n"
+            seg = fixture._write_segment()
             out = str(self._root / "rag")
-            self._result = _make_index().embed([str(seg)], out_path=out)
+            self._result = fixture._make_index().embed([str(seg)], out_path=out)
 
         with after.each:
             self._tmp.cleanup()
@@ -183,16 +185,17 @@ with description("a ContextIndex"):
         with before.each:
             self._tmp = tempfile.TemporaryDirectory()
             self._root = Path(self._tmp.name)
-            ci = _make_index()
-            # Build an index with three segments
+            fixture._root = self._root
+            ci = fixture._make_index()
             segs = []
-            for i, (name, text) in enumerate([
+            for name, text in [
                 ("alpha-segment.md", "---\nview: story\n---\n# Alpha\nAlpha content about users.\n"),
                 ("beta-segment.md",  "---\nview: domain\n---\n# Beta\nBeta content about rules.\n"),
                 ("gamma-segment.md", "---\nview: ux\n---\n# Gamma\nGamma content about screens.\n"),
-            ]):
-                p = _write_segment(self._root, name, text)
-                segs.append(str(p))
+            ]:
+                fixture._name = name
+                fixture._content = text
+                segs.append(str(fixture._write_segment()))
             out = str(self._root / "rag")
             ci.embed(segs, out_path=out)
             self._ci = ci
@@ -230,8 +233,11 @@ with description("a ContextIndex"):
         with before.each:
             self._tmp = tempfile.TemporaryDirectory()
             self._root = Path(self._tmp.name)
-            ci = _make_index()
-            seg = _write_segment(self._root, "only.md", "Just one segment.\n")
+            fixture._root = self._root
+            fixture._name = "only.md"
+            fixture._content = "Just one segment.\n"
+            ci = fixture._make_index()
+            seg = fixture._write_segment()
             out = str(self._root / "rag")
             ci.embed([str(seg)], out_path=out)
             self._ci = ci
@@ -248,17 +254,17 @@ with description("a ContextIndex"):
 
     with context("whose ask action is expanded"):
         with it("should list search as a tool to call"):
-            prose = _expanded_ask()
+            prose = fixture._expanded_ask()
             expect("search" in prose).to(be_true)
 
         with it("should instruct the AI to derive a semantic query"):
-            prose = _expanded_ask()
+            prose = fixture._expanded_ask()
             expect("query" in prose.lower() or "semantic" in prose.lower()).to(be_true)
 
         with it("should instruct the AI to cite source paths"):
-            prose = _expanded_ask()
+            prose = fixture._expanded_ask()
             expect("cit" in prose.lower()).to(be_true)
 
         with it("should mention weighting by view"):
-            prose = _expanded_ask()
+            prose = fixture._expanded_ask()
             expect("view" in prose.lower()).to(be_true)

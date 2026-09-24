@@ -65,6 +65,25 @@ class _FrameworkPlacement:
     allowed_tier: str
 
 
+@dataclass
+class _ImportSite:
+    path: Path
+    source: str
+    start_line: int
+
+
+@dataclass
+class _DeclaredDeps:
+    names: Set[str]
+
+    def is_undeclared(self, pkg: str) -> bool:
+        if pkg in _NODE_BUILTINS:
+            return False
+        scoped = pkg.startswith("@") and pkg.count("/") == 1
+        bare = not pkg.startswith("@")
+        return (scoped or bare) and pkg not in self.names
+
+
 class DependencyDeclarationsScanner(TypeScriptScanner):
     """Checks that every external import is declared in package.json."""
 
@@ -84,7 +103,7 @@ class DependencyDeclarationsScanner(TypeScriptScanner):
                     continue
                 tier_deps = self._load_all_deps(tier_dir / "package.json")
                 all_deps = root_deps | tier_deps
-                violations += self._check_tier_imports(tier_dir, all_deps)
+                violations += self._check_tier_imports(tier_dir, _DeclaredDeps(all_deps))
                 violations += self._check_tier_restrictions(
                     _TierScan(tier_dir, tier, domain_path.name)
                 )
@@ -131,39 +150,37 @@ class DependencyDeclarationsScanner(TypeScriptScanner):
     # Import vs. declaration cross-check                                   #
     # ------------------------------------------------------------------ #
 
-    def _check_tier_imports(self, tier_dir: Path, all_deps: Set[str]) -> List[Violation]:
+    def _check_tier_imports(self, tier_dir: Path, deps: _DeclaredDeps) -> List[Violation]:
         violations: List[Violation] = []
-        for ts_file in self.get_all_source_files(tier_dir):
-            violations.extend(self._undeclared_imports_in(ts_file, all_deps))
+        for ts_file in self.source_files(tier_dir):
+            violations.extend(self._undeclared_imports_in(ts_file, deps))
         return violations
 
-    def _undeclared_imports_in(self, ts_file: Path, all_deps: Set[str]) -> List[Violation]:
+    def _undeclared_imports_in(self, ts_file: Path, deps: _DeclaredDeps) -> List[Violation]:
         parsed_root = self.parse_file(ts_file)
         if parsed_root is None:
             return []
         violations: List[Violation] = []
-        for imp in self.get_imports(parsed_root):
-            hit = self._undeclared_package_hit(ts_file, imp, all_deps)
+        for imp in self.imports:
+            hit = self._undeclared_package_hit(
+                _ImportSite(ts_file, imp.source, imp.start_line), deps
+            )
             if hit is not None:
                 violations.append(hit)
         return violations
 
-    def _undeclared_package_hit(self, ts_file: Path, imp, all_deps: Set[str]):
-        pkg = self._extract_package_name(imp.source)
-        if pkg is None or pkg in _NODE_BUILTINS:
+    def _undeclared_package_hit(self, site: _ImportSite, deps: _DeclaredDeps):
+        pkg = self._extract_package_name(site.source)
+        if pkg is None or not deps.is_undeclared(pkg):
             return None
-        scoped = pkg.startswith("@") and pkg.count("/") == 1
-        bare = not pkg.startswith("@")
-        if not (scoped or bare) or pkg in all_deps:
-            return None
-        imported = imp.source if scoped else pkg
+        imported = site.source if pkg.startswith("@") else pkg
         return self.v(
-            f"'{ts_file.name}' imports '{imported}' but "
+            f"'{site.path.name}' imports '{imported}' but "
             f"'{pkg}' is not declared in any package.json. "
             "Add it to the appropriate package.json "
             "dependencies.",
-            str(ts_file),
-            imp.start_line,
+            str(site.path),
+            site.start_line,
         )
 
     def _extract_package_name(self, source: str) -> Optional[str]:
@@ -195,9 +212,9 @@ class DependencyDeclarationsScanner(TypeScriptScanner):
         self, scan: _TierScan, placement: _FrameworkPlacement
     ) -> List[Violation]:
         violations: List[Violation] = []
-        for ts_file in self.get_all_source_files(scan.directory):
+        for ts_file in self.source_files(scan.directory):
             parsed_root = self.parse_file(ts_file)
-            if parsed_root is None or not self.has_import_from(parsed_root, placement.package):
+            if parsed_root is None or not self.has_import_from(placement.package):
                 continue
             violations.append(
                 self.v(

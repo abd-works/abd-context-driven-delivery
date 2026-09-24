@@ -99,8 +99,7 @@ class OneJsonStorePerAggregateScanner(TypeScriptScanner):
                 )
         return violations
 
-    @staticmethod
-    def _path_names_aggregate(store_path: str, domain_name: str) -> bool:
+    def _path_names_aggregate(self, store_path: str, domain_name: str) -> bool:
         stem = Path(store_path).stem.lower()
         slug = domain_name.lower()
         singular = slug[:-1] if slug.endswith("s") else slug

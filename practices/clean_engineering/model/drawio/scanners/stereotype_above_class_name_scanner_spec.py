@@ -8,7 +8,7 @@ from mamba import context, description, it
 
 _HERE = Path(__file__).resolve().parent
 _REPO = Path(__file__).resolve().parents[5]
-for _p in (_REPO, _REPO / "harness", _REPO / "tools", _REPO / "practices"):
+for _p in (_REPO, _REPO / "tools", _REPO / "practices"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 sys.path.insert(0, str(_HERE))
@@ -16,12 +16,11 @@ sys.path.insert(0, str(_HERE))
 from stereotype_above_class_name_scanner import (  # noqa: E402
     StereotypeAboveClassNameScanner,
 )
-from _drawio_base import collect_drawio_files  # noqa: E402
 from practices.clean_engineering.model.base_class_model import (  # noqa: E402
     OoadClass,
 )
 from practices.clean_engineering.model.drawio.drawio_class_model import (  # noqa: E402
-    _build_class_html,
+    DrawIOCleanEngineeringModel,
 )
 
 _FAULTY = """\
@@ -57,29 +56,29 @@ _CLEAN = """\
 """
 
 
-def _scan(xml: str):
-    tmp = Path(tempfile.mkdtemp())
-    path = tmp / "model.drawio"
-    path.write_text(xml, encoding="utf-8")
-    scanner = StereotypeAboveClassNameScanner("stereotype-above-class-name")
-    files = collect_drawio_files(tmp)
-    return scanner.scan(tmp, files)
+class _ScannerExample(StereotypeAboveClassNameScanner):
+    def scan_xml(self, xml: str):
+        tmp = Path(tempfile.mkdtemp())
+        path = tmp / "model.drawio"
+        path.write_text(xml, encoding="utf-8")
+        files = self.collect_drawio_files(tmp)
+        return self.scan(tmp, files)
 
 
 with description("stereotype-above-class-name scanner"):
     with context("a class title that puts the stereotype inside the bold name"):
         with it("should report a violation"):
-            violations = _scan(_FAULTY)
+            violations = _ScannerExample("stereotype-above-class-name").scan_xml(_FAULTY)
             expect(len(violations) > 0).to(equal(True))
 
     with context("a class title with the stereotype on its own italic line above the name"):
         with it("should produce no violations"):
-            violations = _scan(_CLEAN)
+            violations = _ScannerExample("stereotype-above-class-name").scan_xml(_CLEAN)
             expect(violations).to(equal([]))
 
     with context("HTML emitted for a class whose name still carries tactical tags"):
         with it("should put stereotypes above the bold name"):
-            html = _build_class_html(
+            html = DrawIOCleanEngineeringModel()._build_class_html(
                 OoadClass("Catalog <<Aggregate Root>> <<Entity>>", sequential_order=1)
             )
             expect("&lt;&lt;Aggregate Root&gt;&gt;" in html).to(equal(True))

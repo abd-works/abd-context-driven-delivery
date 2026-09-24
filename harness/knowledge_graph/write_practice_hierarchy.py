@@ -31,7 +31,7 @@ from harness.knowledge_graph.model.codeql import (
     detach_query_server,
 )
 from harness.knowledge_graph.model.graph_rules import closest_fidelity
-from harness.mcp.codeql_query_daemon import ensure_query_server
+from harness.mcp.codeql_query_daemon import QueryServerClient
 from harness.knowledge_graph.model.dot_graph import (
     _hierarchy_line,
     _hierarchy_violations,
@@ -240,12 +240,13 @@ def _source_dto(node, folder: Path) -> dict | None:
     start = int(getattr(src, "line", 0) or 0)
     end = int(getattr(src, "end_line", 0) or start)
     text = str(getattr(src, "text", "") or "")
-    from practices.clean_engineering.model.codeql.codeql_model import read_source_span
+    from practices.clean_engineering.model.codeql.codeql_model import SourceLocation, SourceSpan
 
     if start > 0:
-        sliced_start, sliced_end, sliced = read_source_span(folder, file, start, end)
-        if sliced:
-            start, end, text = sliced_start, sliced_end, sliced
+        location = SourceSpan(folder).read(
+            SourceLocation(file=file, line=start, end_line=end, text=text)
+        )
+        start, end, text = location.line, location.end_line, location.text
     return {
         "file": file,
         "start_line": start,
@@ -371,7 +372,7 @@ def main(
     zero_hits_path = ctx / "knowledge-graph-zero-hit-rules.txt"
     server = None
     try:
-        server = ensure_query_server(workspace)
+        server = QueryServerClient().ensure_query_server(workspace)
         attach_query_server(server)
         print(
             f"query-server daemon pid={server.pid} port={server.port}",

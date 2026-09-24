@@ -255,227 +255,6 @@ class CallInfo:
     start_line: int
 
 
-def _txt(node) -> str:
-    if node is None:
-        return ""
-    b = node.text
-    return b.decode("utf-8", errors="replace") if isinstance(b, bytes) else str(b or "")
-
-
-def _find_all(node, *types: str) -> list:
-    results: list = []
-    if node.type in types:
-        results.append(node)
-    for child in node.children:
-        results.extend(_find_all(child, *types))
-    return results
-
-
-_MODIFIER_TYPES = frozenset(
-    {"public", "private", "protected", "abstract", "static", "readonly", "async", "override", "declare"}
-)
-
-
-def _get_modifiers(node) -> List[str]:
-    mods: List[str] = []
-    for child in node.children:
-        if child.type in _MODIFIER_TYPES:
-            mods.append(child.type)
-        elif child.type == "accessibility_modifier":
-            mods.append(_txt(child))
-    return mods
-
-
-def _parse_method_node(method_node) -> MethodInfo:
-    name_node = method_node.child_by_field_name("name")
-    name = _txt(name_node)
-    modifiers = _get_modifiers(method_node)
-    return_type_node = method_node.child_by_field_name("return_type")
-    return_type = _txt(return_type_node).lstrip(":").strip() if return_type_node else None
-    params_node = method_node.child_by_field_name("parameters")
-    param_count = 0
-    if params_node:
-        param_count = sum(1 for c in params_node.children if c.type not in (",", "(", ")", "comment"))
-    return MethodInfo(
-        name=name,
-        is_async="async" in modifiers,
-        is_static="static" in modifiers,
-        is_abstract="abstract" in modifiers,
-        modifiers=modifiers,
-        return_type=return_type,
-        param_count=param_count,
-        start_line=method_node.start_point[0] + 1,
-        end_line=method_node.end_point[0] + 1,
-    )
-
-
-def _parse_property_node(prop_node) -> PropertyInfo:
-    name_node = prop_node.child_by_field_name("name")
-    name = _txt(name_node)
-    modifiers = _get_modifiers(prop_node)
-    type_node = prop_node.child_by_field_name("type")
-    type_ann = _txt(type_node).lstrip(":").strip() if type_node else None
-    return PropertyInfo(
-        name=name,
-        type_annotation=type_ann,
-        modifiers=modifiers,
-        start_line=prop_node.start_point[0] + 1,
-    )
-
-
-def _parse_class_node(class_node, is_exported: bool = False) -> ClassInfo:
-    name_node = class_node.child_by_field_name("name")
-    name = _txt(name_node)
-    start_line = class_node.start_point[0] + 1
-    end_line = class_node.end_point[0] + 1
-    is_abstract = any(c.type == "abstract" for c in class_node.children)
-
-    implements: List[str] = []
-    extends: Optional[str] = None
-    for child in class_node.children:
-        if child.type == "class_heritage":
-            for clause in child.children:
-                if clause.type == "extends_clause":
-                    for item in clause.children:
-                        if item.type in ("type_identifier", "identifier"):
-                            extends = _txt(item)
-                            break
-                        elif item.type == "generic_type":
-                            inner = item.child_by_field_name("name")
-                            extends = _txt(inner) if inner else _txt(item)
-                            break
-                elif clause.type == "implements_clause":
-                    for item in clause.children:
-                        if item.type == "type_identifier":
-                            implements.append(_txt(item))
-                        elif item.type == "generic_type":
-                            inner = item.child_by_field_name("name")
-                            implements.append(_txt(inner) if inner else _txt(item))
-
-    methods: List[MethodInfo] = []
-    properties: List[PropertyInfo] = []
-    body = class_node.child_by_field_name("body")
-    if body:
-        for member in body.children:
-            if member.type in ("method_definition", "abstract_method_signature"):
-                methods.append(_parse_method_node(member))
-            elif member.type in ("public_field_definition", "field_definition"):
-                properties.append(_parse_property_node(member))
-
-    return ClassInfo(
-        name=name,
-        implements=implements,
-        extends=extends,
-        methods=methods,
-        properties=properties,
-        is_abstract=is_abstract,
-        is_exported=is_exported,
-        start_line=start_line,
-        end_line=end_line,
-    )
-
-
-def _parse_imports_from_root(root) -> List[ImportInfo]:
-    imports: List[ImportInfo] = []
-    for node in _find_all(root, "import_statement"):
-        start_line = node.start_point[0] + 1
-        source_node = node.child_by_field_name("source")
-        source = _txt(source_node).strip("\"'`") if source_node else ""
-        names: List[str] = []
-        default_name: Optional[str] = None
-        is_type_only = any(c.type == "type" for c in node.children)
-        for child in node.children:
-            if child.type == "import_clause":
-                for sub in child.children:
-                    if sub.type == "type":
-                        is_type_only = True
-                    elif sub.type == "identifier":
-                        default_name = _txt(sub)
-                    elif sub.type == "named_imports":
-                        for spec in sub.children:
-                            if spec.type == "import_specifier":
-                                nm = spec.child_by_field_name("name")
-                                if nm:
-                                    names.append(_txt(nm))
-        imports.append(
-            ImportInfo(
-                source=source,
-                names=names,
-                default_name=default_name,
-                is_type_only=is_type_only,
-                start_line=start_line,
-            )
-        )
-    return imports
-
-
-def _parse_interfaces_from_root(root) -> List[InterfaceInfo]:
-    interfaces: List[InterfaceInfo] = []
-
-    def _members(body) -> tuple[List[str], List[str]]:
-        method_names: List[str] = []
-        property_names: List[str] = []
-        if body:
-            for member in body.children:
-                if member.type == "method_signature":
-                    mn = member.child_by_field_name("name")
-                    if mn:
-                        method_names.append(_txt(mn))
-                elif member.type == "property_signature":
-                    pn = member.child_by_field_name("name")
-                    if pn:
-                        property_names.append(_txt(pn))
-        return method_names, property_names
-
-    for node in _find_all(root, "interface_declaration"):
-        name_node = node.child_by_field_name("name")
-        name = _txt(name_node)
-        is_exported = node.parent is not None and node.parent.type == "export_statement"
-        method_names, property_names = _members(node.child_by_field_name("body"))
-        interfaces.append(
-            InterfaceInfo(
-                name=name,
-                method_names=method_names,
-                property_names=property_names,
-                is_exported=is_exported,
-                start_line=node.start_point[0] + 1,
-            )
-        )
-
-    for node in _find_all(root, "export_statement"):
-        inner = node.child_by_field_name("declaration")
-        if inner and inner.type == "interface_declaration":
-            name_node = inner.child_by_field_name("name")
-            name = _txt(name_node)
-            if not any(i.name == name for i in interfaces):
-                method_names, property_names = _members(inner.child_by_field_name("body"))
-                interfaces.append(
-                    InterfaceInfo(
-                        name=name,
-                        method_names=method_names,
-                        property_names=property_names,
-                        is_exported=True,
-                        start_line=inner.start_point[0] + 1,
-                    )
-                )
-    return interfaces
-
-
-def _parse_calls_from_root(root) -> List[CallInfo]:
-    calls: List[CallInfo] = []
-    for node in _find_all(root, "call_expression"):
-        fn_node = node.child_by_field_name("function")
-        args_node = node.child_by_field_name("arguments")
-        calls.append(
-            CallInfo(
-                callee=_txt(fn_node) if fn_node else "",
-                args_text=_txt(args_node) if args_node else "",
-                start_line=node.start_point[0] + 1,
-            )
-        )
-    return calls
-
-
 class TypeScriptScanner(LERNScanner):
     """LERNScanner backed by tree-sitter TypeScript AST analysis.
 
@@ -487,65 +266,334 @@ class TypeScriptScanner(LERNScanner):
 
     TREE_SITTER_AVAILABLE: bool = _TREE_SITTER_AVAILABLE
 
+    def _txt(self, node) -> str:
+        if node is None:
+            return ""
+        b = node.text
+        return b.decode("utf-8", errors="replace") if isinstance(b, bytes) else str(b or "")
+
+
+    def _find_all(self, node, *types: str) -> list:
+        results: list = []
+        if node.type in types:
+            results.append(node)
+        for child in node.children:
+            results.extend(self._find_all(child, *types))
+        return results
+
+
+    _MODIFIER_TYPES = frozenset(
+        {"public", "private", "protected", "abstract", "static", "readonly", "async", "override", "declare"}
+    )
+
+
+    def _get_modifiers(self, node) -> List[str]:
+        mods: List[str] = []
+        for child in node.children:
+            if child.type in self._MODIFIER_TYPES:
+                mods.append(child.type)
+            elif child.type == "accessibility_modifier":
+                mods.append(self._txt(child))
+        return mods
+
+
+    def _parse_method_node(self, method_node) -> MethodInfo:
+        name_node = method_node.child_by_field_name("name")
+        name = self._txt(name_node)
+        modifiers = self._get_modifiers(method_node)
+        return_type_node = method_node.child_by_field_name("return_type")
+        return_type = self._txt(return_type_node).lstrip(":").strip() if return_type_node else None
+        params_node = method_node.child_by_field_name("parameters")
+        param_count = 0
+        if params_node:
+            param_count = sum(1 for c in params_node.children if c.type not in (",", "(", ")", "comment"))
+        return MethodInfo(
+            name=name,
+            is_async="async" in modifiers,
+            is_static="static" in modifiers,
+            is_abstract="abstract" in modifiers,
+            modifiers=modifiers,
+            return_type=return_type,
+            param_count=param_count,
+            start_line=method_node.start_point[0] + 1,
+            end_line=method_node.end_point[0] + 1,
+        )
+
+
+    def _parse_property_node(self, prop_node) -> PropertyInfo:
+        name_node = prop_node.child_by_field_name("name")
+        name = self._txt(name_node)
+        modifiers = self._get_modifiers(prop_node)
+        type_node = prop_node.child_by_field_name("type")
+        type_ann = self._txt(type_node).lstrip(":").strip() if type_node else None
+        return PropertyInfo(
+            name=name,
+            type_annotation=type_ann,
+            modifiers=modifiers,
+            start_line=prop_node.start_point[0] + 1,
+        )
+
+
+    def _type_name_from_item(self, item) -> str:
+        if item.type in ("type_identifier", "identifier"):
+            return self._txt(item)
+        if item.type == "generic_type":
+            inner = item.child_by_field_name("name")
+            return self._txt(inner) if inner else self._txt(item)
+        return ""
+
+
+    def _parse_class_node(self, class_node, is_exported: bool = False) -> ClassInfo:
+        extends, implements = self._class_heritage(class_node)
+        methods, properties = self._class_members(class_node)
+        return ClassInfo(
+            name=self._txt(class_node.child_by_field_name("name")),
+            implements=implements,
+            extends=extends,
+            methods=methods,
+            properties=properties,
+            is_abstract=any(c.type == "abstract" for c in class_node.children),
+            is_exported=is_exported,
+            start_line=class_node.start_point[0] + 1,
+            end_line=class_node.end_point[0] + 1,
+        )
+
+    def _class_members(self, class_node) -> tuple[List[MethodInfo], List[PropertyInfo]]:
+        body = class_node.child_by_field_name("body")
+        if body is None:
+            return [], []
+        methods = [
+            self._parse_method_node(member)
+            for member in body.children
+            if member.type in ("method_definition", "abstract_method_signature")
+        ]
+        properties = [
+            self._parse_property_node(member)
+            for member in body.children
+            if member.type in ("public_field_definition", "field_definition")
+        ]
+        return methods, properties
+
+
+    def _class_heritage(self, class_node) -> tuple[Optional[str], List[str]]:
+        extends: Optional[str] = None
+        implements: List[str] = []
+        for child in class_node.children:
+            if child.type != "class_heritage":
+                continue
+            for clause in child.children:
+                if clause.type == "extends_clause":
+                    extends = self._first_type_in_clause(clause) or extends
+                elif clause.type == "implements_clause":
+                    implements.extend(self._type_names_in_clause(clause))
+        return extends, implements
+
+
+    def _first_type_in_clause(self, clause) -> str:
+        for item in clause.children:
+            name = self._type_name_from_item(item)
+            if name:
+                return name
+        return ""
+
+
+    def _type_names_in_clause(self, clause) -> List[str]:
+        names: List[str] = []
+        for item in clause.children:
+            name = self._type_name_from_item(item)
+            if name:
+                names.append(name)
+        return names
+
+
+    def _named_import_names(self, clause) -> tuple[list[str], Optional[str], bool]:
+        names: List[str] = []
+        default_name: Optional[str] = None
+        is_type_only = False
+        for sub in clause.children:
+            if sub.type == "type":
+                is_type_only = True
+            elif sub.type == "identifier":
+                default_name = self._txt(sub)
+            elif sub.type == "named_imports":
+                names.extend(self._specifier_names(sub))
+        return names, default_name, is_type_only
+
+    def _specifier_names(self, named_imports) -> List[str]:
+        names: List[str] = []
+        for spec in named_imports.children:
+            if spec.type != "import_specifier":
+                continue
+            nm = spec.child_by_field_name("name")
+            if nm:
+                names.append(self._txt(nm))
+        return names
+
+    def _parse_imports_from_root(self, root) -> List[ImportInfo]:
+        imports: List[ImportInfo] = []
+        for node in self._find_all(root, "import_statement"):
+            source_node = node.child_by_field_name("source")
+            source = self._txt(source_node).strip("\"'`") if source_node else ""
+            names: List[str] = []
+            default_name: Optional[str] = None
+            is_type_only = any(c.type == "type" for c in node.children)
+            for child in node.children:
+                if child.type != "import_clause":
+                    continue
+                extra, default_name, typed = self._named_import_names(child)
+                names.extend(extra)
+                is_type_only = is_type_only or typed
+            imports.append(
+                ImportInfo(
+                    source=source,
+                    names=names,
+                    default_name=default_name,
+                    is_type_only=is_type_only,
+                    start_line=node.start_point[0] + 1,
+                )
+            )
+        return imports
+
+
+    def _interface_members(self, body) -> tuple[List[str], List[str]]:
+        method_names: List[str] = []
+        property_names: List[str] = []
+        if body is None:
+            return method_names, property_names
+        for member in body.children:
+            if member.type == "method_signature":
+                mn = member.child_by_field_name("name")
+                if mn:
+                    method_names.append(self._txt(mn))
+            elif member.type == "property_signature":
+                pn = member.child_by_field_name("name")
+                if pn:
+                    property_names.append(self._txt(pn))
+        return method_names, property_names
+
+    def _parse_interfaces_from_root(self, root) -> List[InterfaceInfo]:
+        interfaces: List[InterfaceInfo] = []
+        for node in self._find_all(root, "interface_declaration"):
+            name = self._txt(node.child_by_field_name("name"))
+            methods, properties = self._interface_members(node.child_by_field_name("body"))
+            interfaces.append(
+                InterfaceInfo(
+                    name=name,
+                    method_names=methods,
+                    property_names=properties,
+                    is_exported=node.parent is not None and node.parent.type == "export_statement",
+                    start_line=node.start_point[0] + 1,
+                )
+            )
+        self._append_exported_interfaces(root, interfaces)
+        return interfaces
+
+    def _append_exported_interfaces(self, root, interfaces: List[InterfaceInfo]) -> None:
+        for node in self._find_all(root, "export_statement"):
+            inner = node.child_by_field_name("declaration")
+            if inner is None or inner.type != "interface_declaration":
+                continue
+            name = self._txt(inner.child_by_field_name("name"))
+            if any(i.name == name for i in interfaces):
+                continue
+            methods, properties = self._interface_members(inner.child_by_field_name("body"))
+            interfaces.append(
+                InterfaceInfo(
+                    name=name,
+                    method_names=methods,
+                    property_names=properties,
+                    is_exported=True,
+                    start_line=inner.start_point[0] + 1,
+                )
+            )
+
+
+    def _parse_calls_from_root(self, root) -> List[CallInfo]:
+        calls: List[CallInfo] = []
+        for node in self._find_all(root, "call_expression"):
+            fn_node = node.child_by_field_name("function")
+            args_node = node.child_by_field_name("arguments")
+            calls.append(
+                CallInfo(
+                    callee=self._txt(fn_node) if fn_node else "",
+                    args_text=self._txt(args_node) if args_node else "",
+                    start_line=node.start_point[0] + 1,
+                )
+            )
+        return calls
+
     def parse_file(self, path: Path):
+        self._tree = None
         if not _TREE_SITTER_AVAILABLE:
             return None
         try:
             content = path.read_bytes()
             parser = _TSX_PARSER if path.suffix == ".tsx" else _TS_PARSER
-            return parser.parse(content).root_node
+            self._tree = parser.parse(content).root_node
+            return self._tree
         except Exception:
             return None
 
     def find_nodes(self, node, *types: str) -> list:
-        return _find_all(node, *types) if node is not None else []
+        return self._find_all(node, *types) if node is not None else []
 
     def node_text(self, node) -> str:
-        return _txt(node)
+        return self._txt(node)
 
-    def get_classes(self, root) -> List[ClassInfo]:
+    @property
+    def classes(self) -> List[ClassInfo]:
+        root = getattr(self, "_tree", None)
         if root is None:
             return []
+        return self._classes_from_tree(root)
+
+    def _classes_from_tree(self, root) -> List[ClassInfo]:
         classes: List[ClassInfo] = []
         seen_names: set = set()
-        for node in _find_all(root, "export_statement"):
+        for node in self._find_all(root, "export_statement"):
             inner = node.child_by_field_name("declaration")
             if inner and inner.type == "class_declaration":
-                ci = _parse_class_node(inner, is_exported=True)
+                ci = self._parse_class_node(inner, is_exported=True)
                 seen_names.add(ci.name)
                 classes.append(ci)
-        for node in _find_all(root, "class_declaration"):
+        for node in self._find_all(root, "class_declaration"):
             if node.parent is not None and node.parent.type == "export_statement":
                 continue
-            ci = _parse_class_node(node, is_exported=False)
+            ci = self._parse_class_node(node, is_exported=False)
             if ci.name not in seen_names:
                 classes.append(ci)
         return classes
 
-    def get_imports(self, root) -> List[ImportInfo]:
-        return _parse_imports_from_root(root) if root is not None else []
+    @property
+    def imports(self) -> List[ImportInfo]:
+        root = getattr(self, "_tree", None)
+        return self._parse_imports_from_root(root) if root is not None else []
 
-    def get_interfaces(self, root) -> List[InterfaceInfo]:
-        return _parse_interfaces_from_root(root) if root is not None else []
+    @property
+    def interfaces(self) -> List[InterfaceInfo]:
+        root = getattr(self, "_tree", None)
+        return self._parse_interfaces_from_root(root) if root is not None else []
 
-    def get_calls(self, root) -> List[CallInfo]:
-        return _parse_calls_from_root(root) if root is not None else []
+    @property
+    def calls(self) -> List[CallInfo]:
+        root = getattr(self, "_tree", None)
+        return self._parse_calls_from_root(root) if root is not None else []
 
-    def has_import_from(self, root, *sources: str) -> bool:
-        return any(imp.source in sources for imp in self.get_imports(root))
+    def has_import_from(self, source: str) -> bool:
+        return any(imp.source == source for imp in self.imports)
 
-    def imported_names_from(self, root, source: str) -> List[str]:
-        for imp in self.get_imports(root):
+    def imported_names_from(self, source: str) -> List[str]:
+        for imp in self.imports:
             if imp.source == source:
                 return imp.names
         return []
 
-    def calls_matching(self, root, *patterns: str) -> List[CallInfo]:
+    def calls_matching(self, *patterns: str) -> List[CallInfo]:
         import re
 
-        return [call for call in self.get_calls(root) if any(re.search(p, call.callee) for p in patterns)]
+        return [call for call in self.calls if any(re.search(p, call.callee) for p in patterns)]
 
-    def get_all_source_files(self, directory: Path) -> List[Path]:
+    def source_files(self, directory: Path) -> List[Path]:
         files: List[Path] = []
         for f in sorted(directory.rglob("*.ts")):
             if "node_modules" not in f.parts:

@@ -49,174 +49,221 @@ class Mcp(Destination):
 mcp = Mcp
 
 
-def host_pid_path(ide_path: Path | str) -> Path:
-    return Path(ide_path) / HOST_PID_NAME
+class HostPid:
+    """The MCP host pid file under an IDE path."""
 
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
-def user_cursor_mcp_json() -> Path:
-    """User-level Cursor mcp.json — the process Cursor actually spawns in a multi-root workspace."""
-    return Path.home() / ".cursor" / "mcp.json"
+    def __init__(self, pid_file: Path | str) -> None:
+        self._path = Path(pid_file)
 
+    @classmethod
+    def from_ide(cls, ide_path: Path | str) -> HostPid:
+        return cls(Path(ide_path) / HOST_PID_NAME)
 
-def _cdd_stdio_names(servers: Mapping[str, Any]) -> list[str]:
-    names: list[str] = []
-    for name, spec in servers.items():
-        if not isinstance(spec, dict):
-            continue
-        blob = " ".join(str(item) for item in spec.get("args") or [])
-        if "start_host.py" not in blob and "harness.mcp" not in blob:
-            continue
-        if name == "cdd" or str(name).startswith("cdd"):
-            names.append(str(name))
-    return names
-
-
-def _server_identity(spec: Mapping[str, Any]) -> tuple:
-    env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
-    return (
-        spec.get("command"),
-        tuple(str(item) for item in spec.get("args") or []),
-        spec.get("cwd"),
-        tuple(sorted((key, env[key]) for key in env if key != "CDD_HOST_NUDGE")),
-    )
-
-
-def _start_host_script(spec: Mapping[str, Any]) -> Path | None:
-    for item in spec.get("args") or []:
-        text = str(item)
-        if text.endswith("start_host.py"):
-            return Path(text)
-    return None
-
-
-def _host_repo(spec: Mapping[str, Any]) -> str:
-    env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
-    script = _start_host_script(spec)
-    if script is not None:
-        try:
-            return str(script.resolve().parents[3])
-        except (IndexError, OSError):
-            pass
-    return str(env.get("CDD_REPO") or spec.get("cwd") or "")
-
-
-def sync_user_cursor_server(server: Mapping[str, Any], *, canonical: bool = False) -> bool:
-    """Point user-level Cursor mcp.json at this checkout. Returns True if rewritten.
-
-    A temp-path install must not replace a same-repo host (that is how SampleMcpOps
-    wiped the real tool list). Same-repo toolset updates require the repo ``.cursor``.
-    """
-    path = user_cursor_mcp_json()
-    if not path.is_file():
-        return False
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return False
-    servers = data.get("mcpServers")
-    if not isinstance(servers, dict):
-        return False
-    stale = _cdd_stdio_names(servers)
-    if not stale:
-        return False
-    this_repo = _host_repo(server)
-    if not canonical and any(_host_repo(servers[name]) == this_repo for name in stale):
-        scripts = [_start_host_script(servers[name]) for name in stale]
-        if scripts and all(path is not None and path.is_file() for path in scripts):
+    def is_running(self) -> bool:
+        pid = self._read_pid()
+        if pid is None:
             return False
-    if all(_server_identity(servers[name]) == _server_identity(server) for name in stale):
-        return False
-    for name in stale:
-        servers.pop(name, None)
-    spec = dict(server)
-    env = dict(spec.get("env") or {})
-    env["CDD_HOST_NUDGE"] = str(time.time())
-    spec["env"] = env
-    servers["cdd"] = spec
-    data["mcpServers"] = servers
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    return True
+        return self._process_is_running(pid)
 
+    def claim(self) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(str(os.getpid()), encoding="utf-8")
+        atexit.register(self._release_this_pid)
 
-def _touch_mcp_manifest(path: Path, *, bump_env: bool = False) -> None:
-    if not path.is_file():
-        return
-    text = path.read_text(encoding="utf-8")
-    if "start_host.py" not in text and "harness.mcp" not in text:
-        return
-    if not bump_env:
-        path.write_text(text, encoding="utf-8")
-        return
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        path.write_text(text, encoding="utf-8")
-        return
-    servers = data.get("mcpServers") or {}
-    changed = False
-    for spec in servers.values():
-        if not isinstance(spec, dict):
-            continue
-        blob = " ".join(str(item) for item in spec.get("args") or [])
-        if "start_host.py" not in blob and "harness.mcp" not in blob:
-            continue
-        env = spec.setdefault("env", {})
-        if not isinstance(env, dict):
-            continue
-        env["CDD_HOST_NUDGE"] = str(time.time())
-        changed = True
-    if changed:
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-        return
-    path.write_text(text, encoding="utf-8")
+    def release(self, pid: int | None = None) -> None:
+        expected = str(pid if pid is not None else os.getpid())
+        try:
+            if self._path.is_file() and self._path.read_text(encoding="utf-8").strip() == expected:
+                self._path.unlink()
+        except OSError:
+            return
 
+    def _release_this_pid(self) -> None:
+        self.release(os.getpid())
 
-def host_pid_is_running(pid_file: Path | str) -> bool:
-    path = Path(pid_file)
-    if not path.is_file():
-        return False
-    try:
-        pid = int(path.read_text(encoding="utf-8").strip())
-    except (OSError, ValueError):
-        return False
-    if pid <= 0:
-        return False
-    if os.name == "nt":
+    def _read_pid(self) -> int | None:
+        if not self._path.is_file():
+            return None
+        try:
+            pid = int(self._path.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            return None
+        if pid <= 0:
+            return None
+        return pid
+
+    def _process_is_running(self, pid: int) -> bool:
+        if os.name == "nt":
+            return self._windows_process_is_running(pid)
+        return self._posix_process_is_running(pid)
+
+    def _windows_process_is_running(self, pid: int) -> bool:
         import ctypes
 
-        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        handle = ctypes.windll.kernel32.OpenProcess(
+            self.PROCESS_QUERY_LIMITED_INFORMATION, False, pid
+        )
         if not handle:
             return False
         ctypes.windll.kernel32.CloseHandle(handle)
         return True
-    try:
-        os.kill(pid, 0)
-    except PermissionError:
+
+    def _posix_process_is_running(self, pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+        except PermissionError:
+            return True
+        except OSError:
+            return False
         return True
-    except OSError:
-        return False
-    return True
 
 
-def claim_host_pid(pid_file: Path | str) -> None:
-    path = Path(pid_file)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(str(os.getpid()), encoding="utf-8")
+class CursorMcpJson:
+    """User- and project-level Cursor mcp.json entries for the CDD stdio host."""
 
-    def _release() -> None:
-        release_host_pid(path, os.getpid())
+    def user_cursor_mcp_json(self) -> Path:
+        return Path.home() / ".cursor" / "mcp.json"
 
-    atexit.register(_release)
+    def cdd_stdio_names(self, servers: Mapping[str, Any]) -> list[str]:
+        names: list[str] = []
+        for name, spec in servers.items():
+            if not isinstance(spec, dict):
+                continue
+            blob = " ".join(str(item) for item in spec.get("args") or [])
+            if "start_host.py" not in blob and "harness.mcp" not in blob:
+                continue
+            if name == "cdd" or str(name).startswith("cdd"):
+                names.append(str(name))
+        return names
 
+    def server_identity(self, spec: Mapping[str, Any]) -> tuple:
+        env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
+        return (
+            spec.get("command"),
+            tuple(str(item) for item in spec.get("args") or []),
+            spec.get("cwd"),
+            tuple(sorted((key, env[key]) for key in env if key != "CDD_HOST_NUDGE")),
+        )
 
-def release_host_pid(pid_file: Path | str, pid: int | None = None) -> None:
-    path = Path(pid_file)
-    expected = str(pid if pid is not None else os.getpid())
-    try:
-        if path.is_file() and path.read_text(encoding="utf-8").strip() == expected:
-            path.unlink()
-    except OSError:
-        return
+    def start_host_script(self, spec: Mapping[str, Any]) -> Path | None:
+        for item in spec.get("args") or []:
+            text = str(item)
+            if text.endswith("start_host.py"):
+                return Path(text)
+        return None
+
+    def host_repo(self, spec: Mapping[str, Any]) -> str:
+        env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
+        fallback = str(env.get("CDD_REPO") or spec.get("cwd") or "")
+        script = self.start_host_script(spec)
+        if script is None:
+            return fallback
+        try:
+            return str(script.resolve().parents[3])
+        except (IndexError, OSError) as error:
+            logger.debug("start_host script %s has no checkout parents: %s", script, error)
+            return fallback
+
+    def touch_mcp_manifest(self, path: Path, *, bump_env: bool = False) -> None:
+        if not path.is_file():
+            return
+        text = path.read_text(encoding="utf-8")
+        if "start_host.py" not in text and "harness.mcp" not in text:
+            return
+        if not bump_env:
+            path.write_text(text, encoding="utf-8")
+            return
+        self._rewrite_nudge(path, text)
+
+    def _rewrite_nudge(self, path: Path, text: str) -> None:
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            path.write_text(text, encoding="utf-8")
+            return
+        servers = data.get("mcpServers") or {}
+        if not self._nudge_cdd_servers(servers):
+            path.write_text(text, encoding="utf-8")
+            return
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+    def _nudge_cdd_servers(self, servers: Mapping[str, Any]) -> bool:
+        changed = False
+        for spec in servers.values():
+            if self._nudge_spec(spec):
+                changed = True
+        return changed
+
+    def _nudge_spec(self, spec: object) -> bool:
+        if not isinstance(spec, dict):
+            return False
+        blob = " ".join(str(item) for item in spec.get("args") or [])
+        if "start_host.py" not in blob and "harness.mcp" not in blob:
+            return False
+        env = spec.setdefault("env", {})
+        if not isinstance(env, dict):
+            return False
+        env["CDD_HOST_NUDGE"] = str(time.time())
+        return True
+
+    def sync_user_cursor_server(self, server: Mapping[str, Any], *, canonical: bool = False) -> bool:
+        """Point user-level Cursor mcp.json at this checkout. Returns True if rewritten.
+
+        A temp-path install must not replace a same-repo host (that is how SampleMcpOps
+        wiped the real tool list). Same-repo toolset updates require the repo ``.cursor``.
+        """
+        data = self._mcp_document(self.user_cursor_mcp_json())
+        if data is None:
+            return False
+        servers = data["mcpServers"]
+        if not self.cdd_stdio_names(servers):
+            return False
+        if not canonical and self._same_repo_scripts_exist(servers, server):
+            return False
+        if self._user_host_matches(servers, server):
+            return False
+        self._rewrite_user_cdd_server(data, server)
+        return True
+
+    def _mcp_document(self, path: Path) -> dict[str, Any] | None:
+        if not path.is_file():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(data.get("mcpServers"), dict):
+            return None
+        return data
+
+    def _same_repo_scripts_exist(self, servers: Mapping[str, Any], server: Mapping[str, Any]) -> bool:
+        this_repo = self.host_repo(server)
+        stale = self.cdd_stdio_names(servers)
+        if not any(self.host_repo(servers[name]) == this_repo for name in stale):
+            return False
+        scripts = [self.start_host_script(servers[name]) for name in stale]
+        return bool(scripts) and all(script is not None and script.is_file() for script in scripts)
+
+    def _user_host_matches(self, servers: Mapping[str, Any], server: Mapping[str, Any]) -> bool:
+        identity = self.server_identity(server)
+        return all(
+            self.server_identity(servers[name]) == identity
+            for name in self.cdd_stdio_names(servers)
+        )
+
+    def _rewrite_user_cdd_server(self, data: dict[str, Any], server: Mapping[str, Any]) -> None:
+        servers = data["mcpServers"]
+        for name in self.cdd_stdio_names(servers):
+            servers.pop(name, None)
+        spec = dict(server)
+        env = dict(spec.get("env") or {})
+        env["CDD_HOST_NUDGE"] = str(time.time())
+        spec["env"] = env
+        servers["cdd"] = spec
+        data["mcpServers"] = servers
+        self.user_cursor_mcp_json().write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
 class McpStandupFailed(Exception):
@@ -324,7 +371,7 @@ class McpInstallation(Installation):
                     "command": sys.executable,
                     "args": ["-u", str(host)],
                     "env": {
-                        "PYTHONPATH": Installer.pythonpath(repo),
+                        "PYTHONPATH": Installer(repo=repo).pythonpath(),
                         "PYTHONIOENCODING": "utf-8",
                     },
                 }
@@ -354,21 +401,24 @@ class McpInstallation(Installation):
         return self.diagnosis
 
     def cursor_host_is_running(self) -> bool:
-        return host_pid_is_running(host_pid_path(self.path))
+        return HostPid.from_ide(self.path).is_running()
 
     def ensure_cursor_host(self) -> str:
         manifest = self.path / "mcp.json"
-        spec = McpHost.server_entry_from_manifest(manifest)
+        spec = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo)).server_entry_from_manifest(
+            manifest
+        )
         repo_cursor = (Path(self.repo) / ".cursor").resolve() if self.repo is not None else None
         canonical = repo_cursor is not None and Path(self.path).resolve() == repo_cursor
-        if spec and sync_user_cursor_server(spec, canonical=canonical):
-            _touch_mcp_manifest(manifest)
+        cursor = CursorMcpJson()
+        if spec and cursor.sync_user_cursor_server(spec, canonical=canonical):
+            cursor.touch_mcp_manifest(manifest)
             return "nudged"
         if self.cursor_host_is_running():
             return "running"
         if not manifest.is_file():
             return "missing"
-        _touch_mcp_manifest(user_cursor_mcp_json(), bump_env=True)
+        cursor.touch_mcp_manifest(cursor.user_cursor_mcp_json(), bump_env=True)
         nudge_file = self.path / NUDGE_NAME
         now = time.time()
         try:
@@ -377,7 +427,7 @@ class McpInstallation(Installation):
             last = 0.0
         if now - last < NUDGE_MIN_SECONDS:
             return "waiting"
-        _touch_mcp_manifest(manifest)
+        cursor.touch_mcp_manifest(manifest)
         nudge_file.write_text(str(now), encoding="utf-8")
         return "nudged"
 
@@ -446,15 +496,18 @@ class McpServer:
         self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
         self.project = Path(project).resolve() if project is not None else self.repo
         self.venv = self.repo / ".venv"
-        from installation.installer import Installer
-
-        Installer.ensure_import_path(self.repo)
+        self._apply_catalog_import_path()
         self.mcp_installations: list[McpInstallation] = []
         self._tools: dict[str, McpTool] = {}
         self._prompts: dict[str, McpPrompt] = {}
         self.exceptions: list[McpIllegitimateTool] = []
         self._started = False
         self._session = None
+
+    def _apply_catalog_import_path(self) -> None:
+        from installation.installer import Installer
+
+        Installer(repo=self.repo).ensure_import_path()
 
     @property
     def session(self):
@@ -523,7 +576,7 @@ class McpServer:
         self.exceptions = []
         for ref in toolset_refs:
             try:
-                loaded = AgentToolSet.load_toolsets([ref], context=context)
+                loaded = AgentToolSet.from_items([ref], context=context)
             except Exception as error:
                 self.skip(str(ref), error)
                 continue
@@ -574,28 +627,14 @@ class McpHost:
         self._codeql_lock = threading.Lock()
         self._register_handlers()
 
-    @staticmethod
-    def input_schema_for_callable(callable: Callable[..., object]) -> dict[str, Any]:
-        function = getattr(callable, "__func__", callable)
-        try:
-            hints = get_type_hints(function)
-        except (NameError, TypeError, AttributeError):
-            hints = {}
+    def input_schema_for_callable(self, callable: Callable[..., object]) -> dict[str, Any]:
+        hints = self._callable_hints(callable)
         properties: dict[str, Any] = {}
         required: list[str] = []
         for name, param in inspect.signature(callable).parameters.items():
-            if name == "self":
+            if not self._is_schema_parameter(name, param):
                 continue
-            if param.kind not in (
-                inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                inspect.Parameter.KEYWORD_ONLY,
-            ):
-                continue
-            annotation = hints.get(name, param.annotation)
-            if annotation is inspect.Parameter.empty:
-                properties[name] = {"type": "string"}
-            else:
-                properties[name] = McpHost._annotation_schema(annotation)
+            properties[name] = self._parameter_schema(hints, name, param)
             if param.default is inspect.Parameter.empty:
                 required.append(name)
         result: dict[str, Any] = {"type": "object", "properties": properties}
@@ -603,26 +642,58 @@ class McpHost:
             result["required"] = required
         return result
 
-    @staticmethod
-    def _annotation_schema(annotation: object) -> dict[str, Any]:
+    def _callable_hints(self, callable: Callable[..., object]) -> dict[str, Any]:
+        function = getattr(callable, "__func__", callable)
+        try:
+            return get_type_hints(function)
+        except (NameError, TypeError, AttributeError):
+            return {}
+
+    def _is_schema_parameter(self, name: str, param: inspect.Parameter) -> bool:
+        if name == "self":
+            return False
+        return param.kind in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        )
+
+    def _parameter_schema(
+        self, hints: dict[str, Any], name: str, param: inspect.Parameter
+    ) -> dict[str, Any]:
+        annotation = hints.get(name, param.annotation)
+        if annotation is inspect.Parameter.empty:
+            return {"type": "string"}
+        return self._annotation_schema(annotation)
+
+    def _annotation_schema(self, annotation: object) -> dict[str, Any]:
         origin = get_origin(annotation)
         if origin in _UNION_ORIGINS:
-            variants = [McpHost._annotation_schema(arg) for arg in get_args(annotation)]
-            if len(variants) == 1:
-                return variants[0]
-            return {"anyOf": variants}
+            return self._union_schema(annotation)
         if annotation is list or origin in _ARRAY_ORIGINS:
-            args = get_args(annotation)
-            item_schema = (
-                McpHost._annotation_schema(args[0]) if args else {"type": "string"}
-            )
-            return {"type": "array", "items": item_schema}
+            return self._array_schema(annotation)
         if annotation is dict or origin in _OBJECT_ORIGINS:
-            args = get_args(annotation)
-            schema: dict[str, Any] = {"type": "object"}
-            if len(args) >= 2:
-                schema["additionalProperties"] = McpHost._annotation_schema(args[1])
-            return schema
+            return self._object_schema(annotation)
+        return self._scalar_schema(annotation)
+
+    def _union_schema(self, annotation: object) -> dict[str, Any]:
+        variants = [self._annotation_schema(arg) for arg in get_args(annotation)]
+        if len(variants) == 1:
+            return variants[0]
+        return {"anyOf": variants}
+
+    def _array_schema(self, annotation: object) -> dict[str, Any]:
+        args = get_args(annotation)
+        item_schema = self._annotation_schema(args[0]) if args else {"type": "string"}
+        return {"type": "array", "items": item_schema}
+
+    def _object_schema(self, annotation: object) -> dict[str, Any]:
+        args = get_args(annotation)
+        schema: dict[str, Any] = {"type": "object"}
+        if len(args) >= 2:
+            schema["additionalProperties"] = self._annotation_schema(args[1])
+        return schema
+
+    def _scalar_schema(self, annotation: object) -> dict[str, Any]:
         if inspect.isclass(annotation) and annotation not in (
             str,
             int,
@@ -790,10 +861,10 @@ class McpHost:
 
     def _start_codeql_server(self) -> None:
         from harness.knowledge_graph.model.codeql import attach_query_server
-        from harness.mcp.codeql_query_daemon import ensure_query_server
+        from harness.mcp.codeql_query_daemon import QueryServerClient
 
         try:
-            server = ensure_query_server(Path(self._runtime.repo))
+            server = QueryServerClient().ensure_query_server(Path(self._runtime.repo))
         except Exception:
             logger.exception("CodeQL query server did not start; queries will use the CLI")
             return
@@ -854,8 +925,7 @@ class McpHost:
         if text:
             print(text, file=sys.stderr)
 
-    @staticmethod
-    def _arg_after(args: list[str], flag: str) -> str:
+    def _arg_after(self, args: list[str], flag: str) -> str:
         if flag not in args:
             return ""
         index = args.index(flag)
@@ -863,58 +933,72 @@ class McpHost:
             return ""
         return str(args[index + 1])
 
-    @staticmethod
-    def server_key(repo: Path | str) -> str:
+    def server_key(self, repo: Path | str) -> str:
         return "cdd"
 
-    @staticmethod
-    def server_entry_from_manifest(servers: Mapping[str, Any] | Path | str) -> dict[str, Any]:
-        if isinstance(servers, (Path, str)):
-            path = Path(servers)
-            if not path.is_file():
-                return {}
-            raw = json.loads(path.read_text(encoding="utf-8")).get("mcpServers") or {}
-        else:
-            raw = servers
+    def server_entry_from_manifest(
+        self, servers: Mapping[str, Any] | Path | str
+    ) -> dict[str, Any]:
+        raw = self._mcp_servers(servers)
         if not isinstance(raw, Mapping):
             return {}
         preferred = raw.get("cdd")
         if isinstance(preferred, dict) and preferred:
             return preferred
+        named = self._named_cdd_server(raw)
+        if named:
+            return named
+        hosted = self._hosted_cdd_server(raw)
+        if hosted:
+            return hosted
+        first = next(iter(raw.values()), {})
+        return first if isinstance(first, dict) else {}
+
+    def _mcp_servers(self, servers: Mapping[str, Any] | Path | str) -> object:
+        if not isinstance(servers, (Path, str)):
+            return servers
+        path = Path(servers)
+        if not path.is_file():
+            return {}
+        return json.loads(path.read_text(encoding="utf-8")).get("mcpServers") or {}
+
+    def _named_cdd_server(self, raw: Mapping[str, Any]) -> dict[str, Any]:
         for name, spec in raw.items():
             if isinstance(spec, dict) and str(name).startswith("cdd"):
                 return spec
+        return {}
+
+    def _hosted_cdd_server(self, raw: Mapping[str, Any]) -> dict[str, Any]:
         for spec in raw.values():
             if not isinstance(spec, dict):
                 continue
             blob = " ".join(str(item) for item in spec.get("args") or [])
             if "start_host.py" in blob or "harness.mcp" in blob:
                 return spec
-        first = next(iter(raw.values()), {})
-        return first if isinstance(first, dict) else {}
+        return {}
 
-    @classmethod
-    def refs_from_manifest(cls, manifest: Path | str) -> tuple[str, ...]:
-        args = [str(item) for item in cls.server_entry_from_manifest(manifest).get("args") or []]
-        raw = cls._arg_after(args, "--toolsets")
+    def refs_from_manifest(self, manifest: Path | str) -> tuple[str, ...]:
+        args = [str(item) for item in self.server_entry_from_manifest(manifest).get("args") or []]
+        raw = self._arg_after(args, "--toolsets")
         return tuple(ref.strip() for ref in raw.split(",") if ref.strip())
 
     @classmethod
     def standup(cls, manifest: Path | str, *, repo: Path | str | None = None) -> McpHost:
-        path = Path(manifest)
-        refs = cls.refs_from_manifest(path)
         resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
+        refs = cls.from_refs((), repo=str(resolved), project=str(resolved)).refs_from_manifest(
+            Path(manifest)
+        )
         if not refs:
             from installation.installer import Installer
 
             refs = tuple(Installer(repo=resolved).collect_toolsets())
         try:
-            return cls.build(refs, repo=str(resolved), project=str(resolved))
+            return cls.from_refs(refs, repo=str(resolved), project=str(resolved))
         except Exception as error:
             raise McpStandupFailed("standup", None, str(error), error) from error
 
     @classmethod
-    def build(
+    def from_refs(
         cls,
         toolset_refs: tuple[str, ...],
         *,

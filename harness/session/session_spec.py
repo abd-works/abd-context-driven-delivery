@@ -20,7 +20,7 @@ from expects import be_a, equal, expect
 from mamba import before, context, description, it
 
 from harness.guidance.guidance import PracticeGuidance
-from harness.hooks.hook_server import HookPayload, HookServer
+from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.knowledge_graph.model.knowledge_graph import KnowledgeGraph
 from harness.mcp.mcp_server import McpServer
 from harness.session import Session
@@ -70,27 +70,27 @@ with description("a session"):
     with context("that the hook server holds"):
         with before.each:
             self.root = Path(tempfile.mkdtemp())
-            self.server = HookServer(self.root, toolsets=[])
+            self.server = HookServer(self.root, HandlerCatalog([], self.root))
             self.session = self.server.session
 
         with it("should live on the persistent hook server"):
             expect(self.session).to(be_a(Session))
 
         with it("should be the same object across hook runs"):
-            from harness.hooks.hook_daemon import serve
+            from harness.hooks.hook_daemon import HookDaemon
 
             marker = self.root / ".cursor" / "hook-server.json"
             original = HookServer.state_path
             HookServer.state_path = classmethod(lambda cls, repo: marker)
             try:
                 thread = threading.Thread(
-                    target=serve,
+                    target=HookDaemon().serve,
                     args=(self.root,),
                     kwargs={"inner": self.server},
                     daemon=True,
                 )
                 thread.start()
-                client = HookServer._wait_until_connected(self.root, marker)
+                client = HookServer(self.root)._wait_until_connected(marker)
                 first = self.server.session
                 client.handle_stdin(b'{"hook_event_name":"stop"}')
                 client.handle_stdin(b'{"hook_event_name":"stop"}')
@@ -114,7 +114,7 @@ with description("a session"):
 
     with context("that the mcp server holds"):
         with before.each:
-            self.hooks = HookServer(Path(tempfile.mkdtemp()), toolsets=[])
+            self.hooks = HookServer(Path(tempfile.mkdtemp()), HandlerCatalog([]))
             self.mcp = McpServer(repo=_REPO_ROOT, project=_REPO_ROOT)
 
         with it("should be a session"):

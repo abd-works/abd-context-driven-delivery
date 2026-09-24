@@ -3,18 +3,15 @@ from __future__ import annotations
 
 import ast
 import json
-import os
 import re
-import shutil
 import subprocess
 import sys
-import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypedDict
 
-from agent_bdd.yaml_fence import _fenced, load_fenced
+from agent_bdd.yaml_fence import YamlFence
 
 try:
     import yaml
@@ -122,6 +119,92 @@ class JudgeResult:
     def failed(self) -> bool:
         return self.verdict == "FAIL"
 
+    @classmethod
+    def from_stdout(cls, stdout: str, elapsed_seconds: float = 0.0) -> JudgeResult:
+        parsed = cls(verdict="ERROR", reason="")._parsed(stdout)
+        return cls(
+            verdict=parsed.verdict,
+            reason=parsed.reason,
+            elapsed_seconds=elapsed_seconds,
+        )
+
+    def _parsed(self, stdout: str) -> JudgeResult:
+        line_verdict = self._verdict_from_json_lines(stdout)
+        if line_verdict is not None:
+            return JudgeResult(verdict=line_verdict[0], reason=line_verdict[1])
+        embedded = self._preferred_embedded_verdict(stdout)
+        if embedded is not None:
+            return JudgeResult(verdict=embedded[0], reason=embedded[1])
+        return JudgeResult(
+            verdict="ERROR",
+            reason=f"no parseable verdict in output:\n{stdout[:500]}",
+        )
+
+    def _verdict_from_json_lines(self, stdout: str) -> tuple[str, str] | None:
+        last_fail: tuple[str, str] | None = None
+        for line in reversed(stdout.splitlines()):
+            parsed = self._parse_judge_json(line.strip())
+            if parsed is None:
+                continue
+            verdict, reason = parsed
+            if verdict == "PASS":
+                return verdict, reason
+            if verdict == "FAIL":
+                last_fail = (verdict, reason)
+        return last_fail
+
+    def _preferred_embedded_verdict(self, stdout: str) -> tuple[str, str] | None:
+        embedded = self._embedded_judge_verdicts(stdout)
+        for verdict, reason in reversed(embedded):
+            if verdict == "PASS":
+                return verdict, reason
+        for verdict, reason in reversed(embedded):
+            if verdict == "FAIL":
+                return verdict, reason
+        return None
+
+    def _parse_judge_json(self, text: str) -> tuple[str, str] | None:
+        if not text.startswith("{"):
+            return None
+        try:
+            obj = json.loads(text)
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(obj, dict):
+            return None
+        verdict = str(obj.get("verdict", "")).strip().upper()
+        reason = str(obj.get("reason", "")).strip()
+        if verdict not in {"PASS", "FAIL"}:
+            return None
+        return verdict, reason
+
+    def _embedded_judge_verdicts(self, text: str) -> list[tuple[str, str]]:
+        self._judge_text = text
+        self._decoder = json.JSONDecoder()
+        found: list[tuple[str, str]] = []
+        index = 0
+        while index < len(self._judge_text):
+            start = self._next_verdict_start(index)
+            if start < 0:
+                break
+            parsed, index = self._decode_embedded_verdict(start)
+            if parsed is not None:
+                found.append(parsed)
+        return found
+
+    def _next_verdict_start(self, index: int) -> int:
+        start = self._judge_text.find('{"verdict"', index)
+        if start >= 0:
+            return start
+        return self._judge_text.find('{"Verdict"', index)
+
+    def _decode_embedded_verdict(self, start: int) -> tuple[tuple[str, str] | None, int]:
+        try:
+            obj, end = self._decoder.raw_decode(self._judge_text, start)
+        except json.JSONDecodeError:
+            return None, start + 1
+        return self._parse_judge_json(json.dumps(obj)), end
+
 
 @dataclass(frozen=True)
 class RunResponse:
@@ -160,7 +243,7 @@ class RunResponse:
 
     @classmethod
     def from_cli_output(cls, text: str) -> RunResponse:
-        data = load_fenced(text)
+        data = YamlFence().load_fenced(text)
         if not isinstance(data, dict):
             raise AgentHarnessError(f"run output is not a mapping: {text[:200]!r}")
         return cls.from_dict(data)
@@ -178,6 +261,18 @@ _CHAT_ID_RE = re.compile(
 )
 
 
+class HarnessLog:
+    """Write timestamped harness progress to the original stdout stream."""
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+
+    def write(self, msg: str) -> None:
+        ts = time.strftime("%H:%M:%S")
+        sys.__stdout__.write(f"[{self._name} {ts}] {msg}\n")
+        sys.__stdout__.flush()
+
+
 @dataclass
 class AgentSession:
     """Persistent cursor-agent chat session backed by a JSON file."""
@@ -185,8 +280,11 @@ class AgentSession:
     chat_id: str
     session_file: Path
 
-    @staticmethod
-    def launcher() -> str | None:
+    def __post_init__(self) -> None:
+        self._log = HarnessLog("cursor_channel")
+
+    @classmethod
+    def launcher(cls) -> str | None:
         from cli_agent.cli_agent import CursorCli
 
         return CursorCli().launcher()
@@ -213,37 +311,51 @@ class AgentSession:
     def from_workspace(
         cls, session_file: Path, workspace: Path, *, fresh: bool = False
     ) -> AgentSession:
+        log = HarnessLog("cursor_channel")
         if not fresh:
             existing = cls.load(session_file)
             if existing is not None:
-                _log_harness(
-                    "cursor_channel",
-                    f"session resumed: {existing.chat_id} ({session_file.name})",
-                )
+                log.write(f"session resumed: {existing.chat_id} ({session_file.name})")
                 return existing
         from cli_agent.cli_agent import CursorCli
 
-        _log_harness(
-            "cursor_channel",
-            f"creating new session for {session_file.name} in {workspace} ...",
-        )
+        log.write(f"creating new session for {session_file.name} in {workspace} ...")
         chat_id = CursorCli().create_chat(str(workspace.resolve()))
         session = cls(chat_id=chat_id, session_file=session_file)
         session.save()
-        _log_harness("cursor_channel", f"session created: {session.chat_id}")
+        log.write(f"session created: {session.chat_id}")
         return session
 
     def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = 300) -> AgentResult:
         from cli_agent.cli_agent import CursorCli
 
-        _log_harness(
-            "cursor_channel",
-            f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)",
+        self._log.write(
+            f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)"
         )
         args = CursorCli(resume=self.chat_id).command(prompt, str(workspace.resolve()))
         started = time.perf_counter()
+        completed = self._run_cursor_cli(args, workspace, timeout_seconds)
+        elapsed = time.perf_counter() - started
+        if completed.stderr:
+            sys.__stderr__.write(completed.stderr)
+            sys.__stderr__.flush()
+        narrative = self._narrative_from_cli_stdout(completed.stdout or "")
+        text = narrative or (completed.stdout or "")
+        if text:
+            sys.__stdout__.write(text if text.endswith("\n") else text + "\n")
+            sys.__stdout__.flush()
+        return AgentResult(
+            exit_code=completed.returncode,
+            text=text,
+            stderr=completed.stderr or "",
+            elapsed_seconds=elapsed,
+        )
+
+    def _run_cursor_cli(
+        self, args: list[str], workspace: Path, timeout_seconds: int
+    ) -> subprocess.CompletedProcess[str]:
         try:
-            completed = subprocess.run(
+            return subprocess.run(
                 args,
                 capture_output=True,
                 text=True,
@@ -259,146 +371,166 @@ class AgentSession:
                 stdout=str(exc.stdout or ""),
                 stderr=str(exc.stderr or ""),
             ) from exc
-        elapsed = time.perf_counter() - started
-        if completed.stderr:
-            sys.__stderr__.write(completed.stderr)
-            sys.__stderr__.flush()
-        narrative = _narrative_from_cli_stdout(completed.stdout or "")
-        text = narrative or (completed.stdout or "")
-        if text:
-            sys.__stdout__.write(text if text.endswith("\n") else text + "\n")
-            sys.__stdout__.flush()
-        return AgentResult(
-            exit_code=completed.returncode,
-            text=text,
-            stderr=completed.stderr or "",
-            elapsed_seconds=elapsed,
-        )
 
+    def _narrative_from_cli_stdout(self, stdout: str) -> str:
+        narrative: list[str] = []
+        for raw in (stdout or "").splitlines():
+            event = self._json_event(raw)
+            if event is None:
+                continue
+            text = self._narrative_from_event(event)
+            if text:
+                narrative.append(text)
+        return "".join(narrative)
 
-def _narrative_from_cli_stdout(stdout: str) -> str:
-    """Pull assistant/result text out of cursor-agent stream-json stdout."""
-    narrative: list[str] = []
-    for raw in (stdout or "").splitlines():
+    def _json_event(self, raw: str) -> dict[str, Any] | None:
         try:
             event = json.loads(raw.strip())
         except json.JSONDecodeError:
-            continue
+            return None
+        return event if isinstance(event, dict) else None
+
+    def _narrative_from_event(self, event: dict[str, Any]) -> str:
         etype = event.get("type", "")
         if etype == "assistant":
-            for block in (event.get("message") or {}).get("content") or []:
-                if isinstance(block, dict) and block.get("type") == "text":
-                    text = str(block.get("text", ""))
-                    if text:
-                        narrative.append(text)
-        elif etype == "result":
-            text = str(event.get("result", ""))
-            if text:
-                narrative.append(text)
-    return "".join(narrative)
+            return self._assistant_text(event)
+        if etype == "result":
+            return str(event.get("result", "") or "")
+        return ""
+
+    def _assistant_text(self, event: dict[str, Any]) -> str:
+        parts: list[str] = []
+        for block in (event.get("message") or {}).get("content") or []:
+            if isinstance(block, dict) and block.get("type") == "text":
+                text = str(block.get("text", ""))
+                if text:
+                    parts.append(text)
+        return "".join(parts)
 
 
-def _log_harness(name: str, msg: str) -> None:
-    import time
+class ToolsRunYaml:
+    """Parse, replay, and fence toolset-run YAML from prompts and shell captures."""
 
-    ts = time.strftime("%H:%M:%S")
-    sys.__stdout__.write(f"[{name} {ts}] {msg}\n")
-    sys.__stdout__.flush()
+    def __init__(self, workspace: Path | None = None, prefix: str = "") -> None:
+        self._workspace = workspace
+        self._prefix = prefix
+        self._fence = YamlFence()
+
+    def looks_like_tools_run_output(self, text: str) -> bool:
+        has_ok_line = any(line.strip().startswith("ok:") for line in text.splitlines())
+        if not has_ok_line:
+            return False
+        return any(
+            line.strip().startswith(prefix)
+            for line in text.splitlines()
+            for prefix in ("resources:", "instructions:", "action:", "tool:")
+        )
+
+    def fenced_yaml_from_text(self, text: str) -> str | None:
+        if "ok:" not in text:
+            return None
+        for match in re.finditer(r"```(?:yaml)?\s*\n(.*?)```", text, re.DOTALL | re.IGNORECASE):
+            block = match.group(1)
+            if self.looks_like_tools_run_output(block):
+                return self._fence.fenced(block.strip())
+        return None
+
+    def extract_yaml_from_command(self, command: str) -> str | None:
+        powershell = re.search(r'@"\s*\r?\n(.*?)\"@', command, re.DOTALL)
+        if powershell:
+            return powershell.group(1).strip()
+        bash = re.search(r"<<-?\s*['\"]?(\w+)['\"]?\s*\r?\n(.*?)^\1", command, re.DOTALL | re.MULTILINE)
+        if bash:
+            return bash.group(2).strip()
+        return None
+
+    def yaml_from_prompt(self, prompt: str) -> str | None:
+        heredoc = self.extract_yaml_from_command(prompt)
+        if heredoc and heredoc.strip().startswith("toolset:"):
+            return self._sanitize_yaml_body(heredoc)
+        marker = re.search(
+            r"(?:stdin:|YAML on stdin:)\s*\n+(toolset:.*?)(?:\n\nIMPORTANT:|\Z)",
+            prompt,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if marker:
+            return self._sanitize_yaml_body(marker.group(1))
+        if "toolset:" not in prompt:
+            return None
+        return self._toolset_block_from_prompt(prompt)
+
+    def _toolset_block_from_prompt(self, prompt: str) -> str | None:
+        lines: list[str] = []
+        collecting = False
+        for line in prompt.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("toolset:"):
+                collecting = True
+            if not collecting:
+                continue
+            if stripped.startswith("IMPORTANT:") or stripped.startswith("Return the complete"):
+                break
+            if stripped == '"@' or stripped == '@"':
+                break
+            lines.append(line)
+        return "\n".join(lines).strip() or None
+
+    def _sanitize_yaml_body(self, body: str) -> str:
+        lines: list[str] = []
+        for line in body.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("IMPORTANT:"):
+                break
+            if stripped.startswith("Return the complete"):
+                break
+            lines.append(line)
+        return "\n".join(lines).strip()
+
+    def expected_run_fields_from_prompt(self, prompt: str) -> dict[str, str]:
+        body = self.yaml_from_prompt(prompt)
+        if not body:
+            return {}
+        expected: dict[str, str] = {}
+        for line in body.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("action:"):
+                expected["action"] = stripped.split(":", 1)[1].strip()
+            elif stripped.startswith("tool:"):
+                expected["tool"] = stripped.split(":", 1)[1].strip()
+        return expected
+
+    def run_request(self, yaml_body: str) -> str:
+        if yaml is None:
+            raise AgentHarnessError("PyYAML required to parse run request", prefix=self._prefix)
+        parsed = yaml.safe_load(yaml_body)
+        if not isinstance(parsed, dict):
+            raise AgentHarnessError("run request must be a mapping", prefix=self._prefix)
+        response = invoke_run_request(parsed)
+        return self._fence.fenced(self._fence.dump_manifest(response_to_dict(response)))
+
+    def replay(self, command: str) -> str | None:
+        if not _TOOLS_RUN.search(command):
+            return None
+        yaml_body = self.extract_yaml_from_command(command)
+        if not yaml_body:
+            return None
+        try:
+            return self.run_request(yaml_body)
+        except AgentHarnessError:
+            return None
 
 
 def looks_like_tools_run_output(text: str) -> bool:
     """True when text looks like a fenced spec invoke response (not arbitrary prose)."""
-    has_ok_line = any(line.strip().startswith("ok:") for line in text.splitlines())
-    if not has_ok_line:
-        return False
-    return any(
-        line.strip().startswith(prefix)
-        for line in text.splitlines()
-        for prefix in ("resources:", "instructions:", "action:", "tool:")
-    )
-
-
-def _fenced_yaml_from_text(text: str) -> str | None:
-    if "ok:" not in text:
-        return None
-    for match in re.finditer(r"```(?:yaml)?\s*\n(.*?)```", text, re.DOTALL | re.IGNORECASE):
-        block = match.group(1)
-        if looks_like_tools_run_output(block):
-            return _fenced(block.strip())
-    return None
-
-
-def _extract_yaml_from_command(command: str) -> str | None:
-    powershell = re.search(r'@"\s*\r?\n(.*?)\"@', command, re.DOTALL)
-    if powershell:
-        return powershell.group(1).strip()
-    bash = re.search(r"<<-?\s*['\"]?(\w+)['\"]?\s*\r?\n(.*?)^\1", command, re.DOTALL | re.MULTILINE)
-    if bash:
-        return bash.group(2).strip()
-    return None
+    return ToolsRunYaml().looks_like_tools_run_output(text)
 
 
 def yaml_from_prompt(prompt: str) -> str | None:
-    heredoc = _extract_yaml_from_command(prompt)
-    if heredoc and heredoc.strip().startswith("toolset:"):
-        return _sanitize_yaml_body(heredoc)
-    marker = re.search(
-        r"(?:stdin:|YAML on stdin:)\s*\n+(toolset:.*?)(?:\n\nIMPORTANT:|\Z)",
-        prompt,
-        re.DOTALL | re.IGNORECASE,
-    )
-    if marker:
-        return _sanitize_yaml_body(marker.group(1))
-    if "toolset:" not in prompt:
-        return None
-    return _toolset_block_from_prompt(prompt)
-
-
-def _toolset_block_from_prompt(prompt: str) -> str | None:
-    lines: list[str] = []
-    collecting = False
-    for line in prompt.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("toolset:"):
-            collecting = True
-        if not collecting:
-            continue
-        if stripped.startswith("IMPORTANT:") or stripped.startswith("Return the complete"):
-            break
-        if stripped == '"@' or stripped == '@"':
-            break
-        lines.append(line)
-    return "\n".join(lines).strip() or None
-
-
-def _sanitize_yaml_body(body: str) -> str:
-    lines: list[str] = []
-    for line in body.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("IMPORTANT:"):
-            break
-        if stripped.startswith("Return the complete"):
-            break
-        lines.append(line)
-    return "\n".join(lines).strip()
-
-
-def _expected_run_fields_from_prompt(prompt: str) -> dict[str, str]:
-    body = yaml_from_prompt(prompt)
-    if not body:
-        return {}
-    expected: dict[str, str] = {}
-    for line in body.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("action:"):
-            expected["action"] = stripped.split(":", 1)[1].strip()
-        elif stripped.startswith("tool:"):
-            expected["tool"] = stripped.split(":", 1)[1].strip()
-    return expected
+    return ToolsRunYaml().yaml_from_prompt(prompt)
 
 
 def cli_output_matches_prompt(cli_output: str, prompt: str) -> bool:
-    expected = _expected_run_fields_from_prompt(prompt)
+    expected = ToolsRunYaml().expected_run_fields_from_prompt(prompt)
     if not expected:
         return True
     try:
@@ -424,83 +556,96 @@ def reject_agent_deferral(agent_text: str) -> None:
             )
 
 
+class ToolsetInvoke:
+    """Expand an action or invoke a tool on a live toolset instance."""
+
+    def __init__(self, instance: Any, toolset_path: str) -> None:
+        self._instance = instance
+        self._toolset_path = toolset_path
+        self._context: dict[str, Any] = {}
+        self._arguments: dict[str, Any] = {}
+        self._action_name: str | None = None
+        self._tool_name: str | None = None
+
+    @classmethod
+    def create(cls, request: dict[str, Any]) -> ToolsetInvoke:
+        from harness.agent_tools.agent_tools import AgentToolSet
+
+        toolset_path = request.get("toolset")
+        if not toolset_path:
+            raise AgentHarnessError("request missing toolset")
+        session = request.get("session")
+        if session is not None:
+            from workspace import SessionLog
+
+            SessionLog.instance().set_session(str(session))
+        context = dict(request.get("context") or {})
+        arguments = dict(request.get("arguments") or {})
+        try:
+            instance = AgentToolSet.instantiate({"toolset": str(toolset_path), "context": context})
+        except TypeError as exc:
+            raise AgentHarnessError(str(exc)) from exc
+        invoke = cls(instance, str(toolset_path))
+        invoke._context = context
+        invoke._arguments = arguments
+        invoke._action_name = str(request["action"]) if request.get("action") else None
+        invoke._tool_name = str(request["tool"]) if request.get("tool") else None
+        return invoke
+
+    def response(self) -> RunResponse:
+        if self._action_name:
+            return self.expanded_action()
+        if not self._tool_name:
+            raise AgentHarnessError("request missing tool or action")
+        return self.invoked_tool()
+
+    def expanded_action(self) -> RunResponse:
+        try:
+            expanded = self._instance.instructions[self._action_name].expand(
+                self._context, self._arguments
+            )
+        except KeyError as exc:
+            raise AgentHarnessError(f"unknown action {self._action_name!r}") from exc
+        return RunResponse(
+            ok=True,
+            toolset=self._toolset_path,
+            action=self._action_name,
+            result=expanded.result,
+            instructions=expanded.instructions,
+            tools=list(expanded.tools),
+            arguments=self._arguments,
+            resources={},
+        )
+
+    def invoked_tool(self) -> RunResponse:
+        from harness.agent_tools.agent_tools import AgentOperation
+
+        member = self._instance.tools.get(self._tool_name)
+        if member is None:
+            raise AgentHarnessError(f"unknown tool {self._tool_name!r}")
+        try:
+            result = self._invoke_member(member)
+        except TypeError as exc:
+            raise AgentHarnessError(str(exc)) from exc
+        return RunResponse(
+            ok=True,
+            toolset=self._toolset_path,
+            tool=self._tool_name,
+            result=result,
+            resources={},
+        )
+
+    def _invoke_member(self, member: Any) -> Any:
+        from harness.agent_tools.agent_tools import AgentOperation
+
+        if isinstance(member, AgentOperation):
+            return member.invoke(self._arguments)
+        return getattr(self._instance, self._tool_name)(**self._arguments)
+
+
 def invoke_run_request(request: dict[str, Any]) -> RunResponse:
     """Load a toolset and expand or invoke the named member the same way production does."""
-    instance, toolset_path, context, arguments = _bound_toolset(request)
-    action_name = request.get("action")
-    if action_name:
-        return _expanded_action(instance, toolset_path, str(action_name), context, arguments)
-    tool_name = request.get("tool")
-    if not tool_name:
-        raise AgentHarnessError("request missing tool or action")
-    return _invoked_tool(instance, toolset_path, str(tool_name), arguments)
-
-
-def _bound_toolset(request: dict[str, Any]):
-    from harness.agent_tools.agent_tools import AgentToolSet
-
-    toolset_path = request.get("toolset")
-    if not toolset_path:
-        raise AgentHarnessError("request missing toolset")
-    context = dict(request.get("context") or {})
-    arguments = dict(request.get("arguments") or {})
-    session = request.get("session")
-    if session is not None:
-        from workspace import SessionLog
-
-        SessionLog.instance().set_session(str(session))
-    try:
-        instance = AgentToolSet.instantiate({"toolset": str(toolset_path), "context": context})
-    except TypeError as exc:
-        raise AgentHarnessError(str(exc)) from exc
-    return instance, str(toolset_path), context, arguments
-
-
-def _expanded_action(instance, toolset_path: str, action_name: str, context, arguments) -> RunResponse:
-    try:
-        expanded = instance.instructions[action_name].expand(context, arguments)
-    except KeyError as exc:
-        raise AgentHarnessError(f"unknown action {action_name!r}") from exc
-    return RunResponse(
-        ok=True,
-        toolset=toolset_path,
-        action=action_name,
-        result=expanded.result,
-        instructions=expanded.instructions,
-        tools=list(expanded.tools),
-        arguments=arguments,
-        resources={},
-    )
-
-
-def _invoked_tool(instance, toolset_path: str, tool_name: str, arguments) -> RunResponse:
-    from harness.agent_tools.agent_tools import AgentOperation
-
-    member = instance.tools.get(tool_name)
-    if member is None:
-        raise AgentHarnessError(f"unknown tool {tool_name!r}")
-    try:
-        result = member.invoke(arguments) if isinstance(member, AgentOperation) else getattr(instance, tool_name)(**arguments)
-    except TypeError as exc:
-        raise AgentHarnessError(str(exc)) from exc
-    return RunResponse(
-        ok=True,
-        toolset=toolset_path,
-        tool=tool_name,
-        result=result,
-        resources={},
-    )
-
-
-def _run_yaml_request(yaml_body: str, workspace: Path, *, prefix: str = "") -> str:
-    if yaml is None:
-        raise AgentHarnessError("PyYAML required to parse run request", prefix=prefix)
-    parsed = yaml.safe_load(yaml_body)
-    if not isinstance(parsed, dict):
-        raise AgentHarnessError("run request must be a mapping", prefix=prefix)
-    response = invoke_run_request(parsed)
-    body = _fenced(_dump_manifest(response_to_dict(response)))
-    return body
+    return ToolsetInvoke.create(request).response()
 
 
 def response_to_dict(response: RunResponse) -> dict[str, Any]:
@@ -520,105 +665,6 @@ def response_to_dict(response: RunResponse) -> dict[str, Any]:
     if response.arguments is not None:
         payload["arguments"] = response.arguments
     return payload
-
-
-def _dump_manifest(manifest_data: dict[str, Any]) -> str:
-    if yaml is None:
-        raise RuntimeError("PyYAML required to render YAML")
-    from agent_bdd.yaml_fence import _serialize_value
-
-    return yaml.safe_dump(
-        _serialize_value(manifest_data),
-        sort_keys=False,
-        default_flow_style=False,
-        allow_unicode=True,
-    ).strip()
-
-
-def _replay_tools_run(command: str, workspace: Path) -> str | None:
-    if not _TOOLS_RUN.search(command):
-        return None
-    yaml_body = _extract_yaml_from_command(command)
-    if not yaml_body:
-        return None
-    try:
-        return _run_yaml_request(yaml_body, workspace)
-    except AgentHarnessError:
-        return None
-
-
-def _parse_judge_result(stdout: str) -> tuple[str, str]:
-    line_verdict = _verdict_from_json_lines(stdout)
-    if line_verdict is not None:
-        return line_verdict
-    embedded = _preferred_embedded_verdict(stdout)
-    if embedded is not None:
-        return embedded
-    return "ERROR", f"no parseable verdict in output:\n{stdout[:500]}"
-
-
-def _verdict_from_json_lines(stdout: str) -> tuple[str, str] | None:
-    last_fail: tuple[str, str] | None = None
-    for line in reversed(stdout.splitlines()):
-        line = line.strip()
-        if not line.startswith("{"):
-            continue
-        parsed = _parse_judge_json(line)
-        if parsed is None:
-            continue
-        verdict, reason = parsed
-        if verdict == "PASS":
-            return verdict, reason
-        if verdict == "FAIL":
-            last_fail = (verdict, reason)
-    return last_fail
-
-
-def _preferred_embedded_verdict(stdout: str) -> tuple[str, str] | None:
-    embedded = _embedded_judge_verdicts(stdout)
-    for verdict, reason in reversed(embedded):
-        if verdict == "PASS":
-            return verdict, reason
-    for verdict, reason in reversed(embedded):
-        if verdict == "FAIL":
-            return verdict, reason
-    return None
-
-
-def _parse_judge_json(text: str) -> tuple[str, str] | None:
-    try:
-        obj = json.loads(text)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(obj, dict):
-        return None
-    verdict = str(obj.get("verdict", "")).strip().upper()
-    reason = str(obj.get("reason", "")).strip()
-    if verdict not in {"PASS", "FAIL"}:
-        return None
-    return verdict, reason
-
-
-def _embedded_judge_verdicts(text: str) -> list[tuple[str, str]]:
-    found: list[tuple[str, str]] = []
-    decoder = json.JSONDecoder()
-    index = 0
-    while index < len(text):
-        start = text.find('{"verdict"', index)
-        if start < 0:
-            start = text.find('{"Verdict"', index)
-        if start < 0:
-            break
-        try:
-            obj, end = decoder.raw_decode(text, start)
-        except json.JSONDecodeError:
-            index = start + 1
-            continue
-        parsed = _parse_judge_json(json.dumps(obj))
-        if parsed is not None:
-            found.append(parsed)
-        index = end
-    return found
 
 
 # ---------------------------------------------------------------------------
@@ -658,7 +704,9 @@ class AgentSpecManifest:
 def read_manifest(spec_path: Path) -> AgentSpecManifest:
     """Load manifest metadata from comment headers at the top of an agent spec file."""
     text = spec_path.read_text(encoding="utf-8")
-    command = _find_marker_command(text)
+    finder = AgentSpecRunbook()
+    finder._source = text
+    command = finder._find_marker_command()
     if command is None:
         raise ValueError(f"{spec_path}: missing {AGENT_SPEC_MARKER} comment")
     harness = _HARNESS_RE.search(text)
@@ -672,24 +720,6 @@ def read_manifest(spec_path: Path) -> AgentSpecManifest:
         session=session.group(1).strip() if session else None,
         chat_instruction=chat.group(1).strip() if chat else None,
     )
-
-
-def _find_marker_command(text: str) -> str | None:
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("#"):
-            if stripped and not stripped.startswith('"""') and not stripped.startswith("'''"):
-                break
-            continue
-        body = stripped.lstrip("#").strip()
-        if AGENT_SPEC_MARKER not in body:
-            continue
-        remainder = body.split(AGENT_SPEC_MARKER, 1)[1].strip()
-        if remainder.startswith(":"):
-            remainder = remainder[1:].strip()
-        if remainder:
-            return remainder
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -738,311 +768,404 @@ class _AgentSpecRunbookDocument(TypedDict):
 
 @dataclass
 class AgentSpecRunbook:
-    harness: str
-    workspace: str
-    spec_path: str
-    chat_instruction: str | None
-    scenarios: list[_RunbookScenario]
+    harness: str = ""
+    workspace: str = ""
+    spec_path: str = ""
+    chat_instruction: str | None = None
+    scenarios: list[_RunbookScenario] = field(default_factory=list)
 
     def to_dict(self) -> _AgentSpecRunbookDocument:
         return {
-            "harness": self.installer,
+            "harness": self.harness,
             "workspace": self.workspace,
             "spec_path": self.spec_path,
             "chat_instruction": self.chat_instruction,
-            "scenarios": [
+            "scenarios": [self._scenario_to_dict(scenario) for scenario in self.scenarios],
+        }
+
+    def _scenario_to_dict(self, scenario: _RunbookScenario) -> dict[str, Any]:
+        return {
+            "name": scenario.name,
+            "session": scenario.session,
+            "setup": [
                 {
-                    "name": scenario.name,
-                    "session": scenario.session,
-                    "setup": [
-                        {
-                            "kind": step.kind,
-                            "prompt": step.prompt,
-                            "save_as": step.save_as,
-                            "timeout_seconds": step.timeout_seconds,
-                        }
-                        for step in scenario.setup
-                    ],
-                    "assertions": [
-                        {"description": item.description, "expression": item.expression}
-                        for item in scenario.assertions
-                    ],
-                    "judges": [
-                        {
-                            "description": item.description,
-                            "output": item.output,
-                            "rubric": item.rubric,
-                        }
-                        for item in scenario.judges
-                    ],
+                    "kind": step.kind,
+                    "prompt": step.prompt,
+                    "save_as": step.save_as,
+                    "timeout_seconds": step.timeout_seconds,
                 }
-                for scenario in self.scenarios
+                for step in scenario.setup
+            ],
+            "assertions": [
+                {"description": item.description, "expression": item.expression}
+                for item in scenario.assertions
+            ],
+            "judges": [
+                {
+                    "description": item.description,
+                    "output": item.output,
+                    "rubric": item.rubric,
+                }
+                for item in scenario.judges
             ],
         }
 
+    @classmethod
+    def from_spec(cls, spec_path: Path, workspace: Path | None = None) -> AgentSpecRunbook:
+        runbook = cls()
+        runbook._assemble(spec_path, workspace)
+        return runbook
 
-def _infer_repo_root(start: Path) -> Path:
-    for parent in [start, *start.parents]:
-        if (parent / "harness").is_dir() and (parent / "contexts").is_dir():
-            return parent
-    return start.parent.parent
+    def _assemble(self, spec_path: Path, workspace: Path | None) -> None:
+        self._manifest = read_manifest(spec_path)
+        self._root_start = spec_path.resolve().parent
+        repo_root = workspace or self._infer_repo_root()
+        self._source = spec_path.read_text(encoding="utf-8")
+        self._tree = ast.parse(self._source)
+        self.harness = self._manifest.harness
+        self.workspace = str(repo_root.resolve())
+        self.spec_path = str(self._manifest.spec_path)
+        self.chat_instruction = self._manifest.chat_instruction
+        self.scenarios = self._extract_scenarios()
 
+    def _infer_repo_root(self) -> Path:
+        for parent in [self._root_start, *self._root_start.parents]:
+            if (parent / "harness").is_dir() and (parent / "contexts").is_dir():
+                return parent
+        return self._root_start.parent.parent
 
-def build_runbook(spec_path: Path, *, workspace: Path | None = None) -> AgentSpecRunbook:
-    manifest = read_manifest(spec_path)
-    repo_root = workspace or _infer_repo_root(spec_path.resolve().parent)
-    source = spec_path.read_text(encoding="utf-8")
-    tree = ast.parse(source)
-    scenarios = _extract_scenarios(tree, manifest, source)
-    return AgentSpecRunbook(
-        harness=manifest.harness,
-        workspace=str(repo_root.resolve()),
-        spec_path=str(manifest.spec_path),
-        chat_instruction=manifest.chat_instruction,
-        scenarios=scenarios,
-    )
+    def _find_marker_command(self) -> str | None:
+        for line in self._source.splitlines():
+            command = self._marker_command_from_line(line)
+            if command is not None:
+                return command
+            if self._stops_header_scan(line):
+                return None
+        return None
 
+    def _stops_header_scan(self, line: str) -> bool:
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            return False
+        if not stripped or stripped.startswith('"""') or stripped.startswith("'''"):
+            return False
+        return True
 
-def _extract_scenarios(
-    tree: ast.Module, manifest: AgentSpecManifest, source: str
-) -> list[_RunbookScenario]:
-    scenarios: list[_RunbookScenario] = []
-    current_name = "default"
-    current_session = manifest.session
-    setup_steps: list[_RunbookStep] = []
-    pending_it: str | None = None
+    def _marker_command_from_line(self, line: str) -> str | None:
+        stripped = line.strip()
+        if not stripped.startswith("#"):
+            return None
+        body = stripped.lstrip("#").strip()
+        if AGENT_SPEC_MARKER not in body:
+            return None
+        remainder = body.split(AGENT_SPEC_MARKER, 1)[1].strip()
+        if remainder.startswith(":"):
+            remainder = remainder[1:].strip()
+        return remainder or None
 
-    for node in ast.walk(tree):
+    def _extract_scenarios(self) -> list[_RunbookScenario]:
+        self._collected: list[_RunbookScenario] = []
+        self._current_name = "default"
+        self._current_session = self._manifest.session
+        self._setup_steps: list[_RunbookStep] = []
+        self._pending_it: str | None = None
+        for node in ast.walk(self._tree):
+            self._ingest_node(node)
+        self._append_remaining_setup()
+        return self._merged_scenarios()
+
+    def _ingest_node(self, node: ast.AST) -> None:
         if isinstance(node, ast.With):
-            context_name = _with_context_name(node)
-            if context_name:
-                if setup_steps or pending_it:
-                    scenarios.append(
-                        _RunbookScenario(
-                            name=current_name,
-                            session=current_session,
-                            setup=list(setup_steps),
-                        )
-                    )
-                    setup_steps = []
-                current_name = context_name
-                if "agent" in context_name.lower():
-                    current_session = manifest.session
+            self._ingest_with(node)
+        if isinstance(node, ast.Call):
+            self._ingest_call(node)
 
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            attr = node.func.attr
-            if attr in {"instruct", "instruct_use_tool"}:
-                prompt = _rb_prompt_arg(source, tree.body, node, 0)
-                if prompt:
-                    save_as = _rb_assignment_target(tree, node, source)
-                    timeout = _rb_keyword_int(node, "timeout_seconds")
-                    setup_steps.append(
-                        _RunbookStep(
-                            kind=attr,
-                            prompt=prompt,
-                            save_as=save_as,
-                            timeout_seconds=timeout,
-                        )
-                    )
-            elif attr == "ai_judge":
-                output = _rb_expression_source(source, node.args[0]) if node.args else ""
-                rubric = _rb_prompt_arg(source, tree.body, node, 1) or ""
-                scenarios.append(
-                    _RunbookScenario(
-                        name=current_name,
-                        session=current_session,
-                        setup=list(setup_steps),
-                        judges=[
-                            _RunbookJudge(
-                                description=pending_it or "ai_judge",
-                                output=output,
-                                rubric=rubric,
-                            )
-                        ],
-                    )
+    def _ingest_with(self, node: ast.With) -> None:
+        context_name = self._with_context_name(node)
+        if context_name:
+            self._begin_named_context(context_name)
+        it_desc = self._it_description(node)
+        if it_desc:
+            self._pending_it = it_desc
+
+    def _begin_named_context(self, context_name: str) -> None:
+        if self._setup_steps or self._pending_it:
+            self._collected.append(
+                _RunbookScenario(
+                    name=self._current_name,
+                    session=self._current_session,
+                    setup=list(self._setup_steps),
                 )
-                setup_steps = []
-                pending_it = None
+            )
+            self._setup_steps = []
+        self._current_name = context_name
+        if "agent" in context_name.lower():
+            self._current_session = self._manifest.session
 
-        if isinstance(node, ast.Call) and _rb_is_expect_call(node):
-            desc = pending_it or "assertion"
-            expression = _rb_expression_source(source, node)
-            if scenarios and scenarios[-1].name == current_name and not scenarios[-1].setup:
-                scenarios[-1].assertions.append(_RunbookAssertion(description=desc, expression=expression))
-            else:
-                scenario = next((s for s in scenarios if s.name == current_name), None)
-                if scenario is None:
-                    scenario = _RunbookScenario(
-                        name=current_name,
-                        session=current_session,
-                        setup=list(setup_steps),
-                    )
-                    scenarios.append(scenario)
-                scenario.assertions.append(_RunbookAssertion(description=desc, expression=expression))
-            pending_it = None
+    def _ingest_call(self, node: ast.Call) -> None:
+        if isinstance(node.func, ast.Attribute):
+            self._ingest_attribute_call(node)
+        if self._is_expect_call(node):
+            self._record_expect(node)
 
-        if isinstance(node, ast.With):
-            it_desc = _rb_it_description(node)
-            if it_desc:
-                pending_it = it_desc
+    def _ingest_attribute_call(self, node: ast.Call) -> None:
+        attr = node.func.attr
+        if attr in {"instruct", "instruct_use_tool"}:
+            self._record_instruct(node, attr)
+            return
+        if attr == "ai_judge":
+            self._record_judge(node)
 
-    if setup_steps:
-        scenarios.append(
-            _RunbookScenario(
-                name=current_name,
-                session=current_session,
-                setup=list(setup_steps),
+    def _record_instruct(self, node: ast.Call, attr: str) -> None:
+        prompt = self._prompt_arg(node, 0)
+        if not prompt:
+            return
+        self._setup_steps.append(
+            _RunbookStep(
+                kind=attr,
+                prompt=prompt,
+                save_as=self._assignment_target(node),
+                timeout_seconds=self._keyword_int(node, "timeout_seconds"),
             )
         )
 
-    merged = _rb_merge_scenarios(scenarios)
-    if not merged and manifest.session:
-        merged = [
-            _RunbookScenario(name="default", session=manifest.session, setup=setup_steps),
+    def _record_judge(self, node: ast.Call) -> None:
+        output = self._expression_source(node.args[0]) if node.args else ""
+        rubric = self._prompt_arg(node, 1) or ""
+        self._collected.append(
+            _RunbookScenario(
+                name=self._current_name,
+                session=self._current_session,
+                setup=list(self._setup_steps),
+                judges=[
+                    _RunbookJudge(
+                        description=self._pending_it or "ai_judge",
+                        output=output,
+                        rubric=rubric,
+                    )
+                ],
+            )
+        )
+        self._setup_steps = []
+        self._pending_it = None
+
+    def _record_expect(self, node: ast.Call) -> None:
+        desc = self._pending_it or "assertion"
+        expression = self._expression_source(node)
+        scenario = self._scenario_for_expect()
+        scenario.assertions.append(_RunbookAssertion(description=desc, expression=expression))
+        self._pending_it = None
+
+    def _scenario_for_expect(self) -> _RunbookScenario:
+        if self._collected and self._collected[-1].name == self._current_name and not self._collected[-1].setup:
+            return self._collected[-1]
+        for scenario in self._collected:
+            if scenario.name == self._current_name:
+                return scenario
+        scenario = _RunbookScenario(
+            name=self._current_name,
+            session=self._current_session,
+            setup=list(self._setup_steps),
+        )
+        self._collected.append(scenario)
+        return scenario
+
+    def _append_remaining_setup(self) -> None:
+        if not self._setup_steps:
+            return
+        self._collected.append(
+            _RunbookScenario(
+                name=self._current_name,
+                session=self._current_session,
+                setup=list(self._setup_steps),
+            )
+        )
+
+    def _merged_scenarios(self) -> list[_RunbookScenario]:
+        by_name: dict[str, _RunbookScenario] = {}
+        for scenario in self._collected:
+            self._merge_named_scenario(by_name, scenario)
+        merged = list(by_name.values())
+        if merged or not self._manifest.session:
+            return merged
+        return [
+            _RunbookScenario(name="default", session=self._manifest.session, setup=self._setup_steps),
         ]
-    return merged
 
-
-def _rb_merge_scenarios(scenarios: list[_RunbookScenario]) -> list[_RunbookScenario]:
-    by_name: dict[str, _RunbookScenario] = {}
-    for scenario in scenarios:
+    def _merge_named_scenario(
+        self, by_name: dict[str, _RunbookScenario], scenario: _RunbookScenario
+    ) -> None:
         existing = by_name.get(scenario.name)
         if existing is None:
             by_name[scenario.name] = scenario
-            continue
+            return
         existing.setup.extend(scenario.setup)
         existing.assertions.extend(scenario.assertions)
         existing.judges.extend(scenario.judges)
         if scenario.session:
             existing.session = scenario.session
-    return list(by_name.values())
 
-
-def _with_context_name(node: ast.With) -> str | None:
-    for item in node.items:
-        if isinstance(item.context_expr, ast.Call):
-            func = item.context_expr.func
-            if isinstance(func, ast.Name) and func.id == "context":
-                if item.context_expr.args and isinstance(item.context_expr.args[0], ast.Constant):
-                    return str(item.context_expr.args[0].value)
-            if isinstance(func, ast.Attribute) and func.attr == "context":
-                if item.context_expr.args and isinstance(item.context_expr.args[0], ast.Constant):
-                    return str(item.context_expr.args[0].value)
-    return None
-
-
-def _rb_it_description(node: ast.With) -> str | None:
-    for item in node.items:
-        if isinstance(item.context_expr, ast.Call):
-            func = item.context_expr.func
-            if isinstance(func, ast.Name) and func.id == "it":
-                if item.context_expr.args and isinstance(item.context_expr.args[0], ast.Constant):
-                    return str(item.context_expr.args[0].value)
-    return None
-
-
-def _rb_string_arg(node: ast.Call, index: int) -> str | None:
-    if len(node.args) <= index:
+    def _with_context_name(self, node: ast.With) -> str | None:
+        for item in node.items:
+            name = self._context_call_name(item.context_expr)
+            if name is not None:
+                return name
         return None
-    arg = node.args[index]
-    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-        return arg.value
-    return None
 
-
-def _rb_prompt_arg(source: str, module_body: list[ast.stmt], node: ast.Call, index: int) -> str | None:
-    literal = _rb_string_arg(node, index)
-    if literal is not None:
-        return literal
-    if len(node.args) <= index:
+    def _context_call_name(self, expr: ast.AST) -> str | None:
+        if not isinstance(expr, ast.Call):
+            return None
+        func = expr.func
+        named = isinstance(func, ast.Name) and func.id == "context"
+        attributed = isinstance(func, ast.Attribute) and func.attr == "context"
+        if not (named or attributed):
+            return None
+        if expr.args and isinstance(expr.args[0], ast.Constant):
+            return str(expr.args[0].value)
         return None
-    return _rb_resolve_string_expr(source, module_body, node.args[index])
 
+    def _it_description(self, node: ast.With) -> str | None:
+        for item in node.items:
+            name = self._it_call_name(item.context_expr)
+            if name is not None:
+                return name
+        return None
 
-def _rb_resolve_string_expr(source: str, module_body: list[ast.stmt], arg: ast.AST) -> str | None:
-    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-        return arg.value
-    if isinstance(arg, ast.JoinedStr):
+    def _it_call_name(self, expr: ast.AST) -> str | None:
+        if not isinstance(expr, ast.Call):
+            return None
+        func = expr.func
+        if not (isinstance(func, ast.Name) and func.id == "it"):
+            return None
+        if expr.args and isinstance(expr.args[0], ast.Constant):
+            return str(expr.args[0].value)
+        return None
+
+    def _string_arg(self, node: ast.Call, index: int) -> str | None:
+        if len(node.args) <= index:
+            return None
+        arg = node.args[index]
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            return arg.value
+        return None
+
+    def _prompt_arg(self, node: ast.Call, index: int) -> str | None:
+        literal = self._string_arg(node, index)
+        if literal is not None:
+            return literal
+        if len(node.args) <= index:
+            return None
+        return self._resolve_string_expr(node.args[index])
+
+    def _resolve_string_expr(self, arg: ast.AST) -> str | None:
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            return arg.value
+        if isinstance(arg, ast.JoinedStr):
+            return self._joined_string(arg)
+        segment = ast.get_source_segment(self._source, arg)
+        if segment is None:
+            return None
+        if (segment.startswith('"') and segment.endswith('"')) or (
+            segment.startswith("'") and segment.endswith("'")
+        ):
+            return ast.literal_eval(segment)
+        if segment.startswith('f"') or segment.startswith("f'"):
+            return None
+        return segment
+
+    def _joined_string(self, arg: ast.JoinedStr) -> str | None:
         parts: list[str] = []
         for piece in arg.values:
             if isinstance(piece, ast.Constant) and isinstance(piece.value, str):
                 parts.append(piece.value)
-            elif isinstance(piece, ast.FormattedValue):
-                resolved = _rb_resolve_formatted_value(source, module_body, piece)
-                if resolved is None:
-                    return None
-                parts.append(resolved)
+                continue
+            if not isinstance(piece, ast.FormattedValue):
+                return None
+            resolved = self._resolve_formatted_value(piece)
+            if resolved is None:
+                return None
+            parts.append(resolved)
         return "".join(parts)
-    segment = ast.get_source_segment(source, arg)
-    if segment is None:
-        return None
-    if (segment.startswith('"') and segment.endswith('"')) or (
-        segment.startswith("'") and segment.endswith("'")
-    ):
-        return ast.literal_eval(segment)
-    if segment.startswith('f"') or segment.startswith("f'"):
-        return None
-    return segment
 
+    def _resolve_formatted_value(self, piece: ast.FormattedValue) -> str | None:
+        value = piece.value
+        if isinstance(value, ast.Name):
+            return self._assigned_name_value(value.id)
+        if isinstance(value, ast.Constant):
+            return str(value.value)
+        return ast.get_source_segment(self._source, value)
 
-def _rb_resolve_formatted_value(
-    source: str, module_body: list[ast.stmt], piece: ast.FormattedValue
-) -> str | None:
-    value = piece.value
-    if isinstance(value, ast.Name):
-        for stmt in module_body:
+    def _assigned_name_value(self, name: str) -> str | None:
+        for stmt in self._tree.body:
             if not isinstance(stmt, ast.Assign):
                 continue
             for target in stmt.targets:
-                if isinstance(target, ast.Name) and target.id == value.id:
+                if isinstance(target, ast.Name) and target.id == name:
                     if isinstance(stmt.value, ast.Constant):
                         return str(stmt.value.value)
         return None
-    if isinstance(value, ast.Constant):
-        return str(value.value)
-    segment = ast.get_source_segment(source, value)
-    return segment
 
-
-def _rb_keyword_int(node: ast.Call, name: str) -> int | None:
-    for keyword in node.keywords:
-        if keyword.arg == name and isinstance(keyword.value, ast.Constant):
-            if isinstance(keyword.value.value, int):
-                return keyword.value.value
-    return None
-
-
-def _rb_is_expect_call(node: ast.Call) -> bool:
-    func = node.func
-    return isinstance(func, ast.Name) and func.id == "expect"
-
-
-def _rb_expression_source(source: str, node: ast.AST) -> str:
-    try:
-        return ast.get_source_segment(source, node) or ""
-    except (TypeError, ValueError):
-        return ""
-
-
-def _rb_assignment_target(tree: ast.Module, call_node: ast.Call, source: str) -> str | None:
-    call_line = getattr(call_node, "lineno", None)
-    if call_line is None:
+    def _keyword_int(self, node: ast.Call, name: str) -> int | None:
+        for keyword in node.keywords:
+            if keyword.arg == name and isinstance(keyword.value, ast.Constant):
+                if isinstance(keyword.value.value, int):
+                    return keyword.value.value
         return None
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
-            continue
-        if not isinstance(node.value, ast.Call):
-            continue
-        if node.value is call_node or (
-            getattr(node.value, "lineno", None) == call_line
-            and getattr(node.value, "col_offset", None) == getattr(call_node, "col_offset", None)
-        ):
-            if len(node.targets) == 1 and isinstance(node.targets[0], ast.Attribute):
-                target = node.targets[0]
-                if isinstance(target.value, ast.Name):
-                    return f"{target.value.id}.{target.attr}"
-            if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-                return node.targets[0].id
-    prompt = _rb_prompt_arg(source, tree.body, call_node, 0) or ""
-    slug = re.sub(r"[^a-z0-9]+", "_", prompt[:40].lower()).strip("_")
-    return slug or None
+
+    def _is_expect_call(self, node: ast.Call) -> bool:
+        func = node.func
+        return isinstance(func, ast.Name) and func.id == "expect"
+
+    def _expression_source(self, node: ast.AST) -> str:
+        try:
+            return ast.get_source_segment(self._source, node) or ""
+        except (TypeError, ValueError):
+            return ""
+
+    def _assignment_target(self, call_node: ast.Call) -> str | None:
+        named = self._assign_name_for_call(call_node)
+        if named is not None:
+            return named
+        prompt = self._prompt_arg(call_node, 0) or ""
+        slug = re.sub(r"[^a-z0-9]+", "_", prompt[:40].lower()).strip("_")
+        return slug or None
+
+    def _assign_name_for_call(self, call_node: ast.Call) -> str | None:
+        self._call_node = call_node
+        self._call_line = getattr(call_node, "lineno", None)
+        if self._call_line is None:
+            return None
+        for node in ast.walk(self._tree):
+            found = self._target_if_matching_assign(node)
+            if found is not None:
+                return found
+        return None
+
+    def _target_if_matching_assign(self, node: ast.AST) -> str | None:
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Call):
+            return None
+        if not self._assign_matches_call(node.value):
+            return None
+        if len(node.targets) != 1:
+            return None
+        return self._name_from_assign_target(node.targets[0])
+
+    def _assign_matches_call(self, value: ast.Call) -> bool:
+        if value is self._call_node:
+            return True
+        return (
+            getattr(value, "lineno", None) == self._call_line
+            and getattr(value, "col_offset", None) == getattr(self._call_node, "col_offset", None)
+        )
+
+    def _name_from_assign_target(self, target: ast.AST) -> str | None:
+        if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name):
+            return f"{target.value.id}.{target.attr}"
+        if isinstance(target, ast.Name):
+            return target.id
+        return None
+
+
+def build_runbook(spec_path: Path, *, workspace: Path | None = None) -> AgentSpecRunbook:
+    return AgentSpecRunbook.from_spec(spec_path, workspace)
+

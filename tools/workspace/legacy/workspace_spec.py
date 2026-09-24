@@ -79,7 +79,7 @@ with description("a context tool"):
                     self.workspace = Workspace(str(self.tmp))
                     self.tool = ContextTool(self.workspace, git=self.git)
                     self.tool.run_action("sprint-a")
-                    self.git.set_dirty(True)
+                    self.git.mark_dirty(True)
                     self.before_branch = self.git.current_branch
 
                 with it("should continue without switching branch"):
@@ -97,7 +97,7 @@ with description("a context tool"):
                             "sprint-a"
                         )
                         self.git.branch = "main"
-                        self.git.set_dirty(False)
+                        self.git.mark_dirty(False)
 
                     with it("should check out that session branch"):
                         ContextTool(self.workspace, git=self.git).run_action(
@@ -125,7 +125,7 @@ with description("a context tool"):
                     self.workspace = Workspace(str(self.tmp))
                     ContextTool(self.workspace, git=self.git).run_action("sprint-a")
                     self.git.branch = "main"
-                    self.git.set_dirty(True)
+                    self.git.mark_dirty(True)
                     self.tool = ContextTool(self.workspace, git=self.git)
 
                 with it("should refuse to switch branch"):
@@ -397,7 +397,7 @@ with description("a context tool"):
                             status="fixed",
                         )
                         self.correction = self.session.open_turn.correction
-                        self.git.set_dirty(True)
+                        self.git.mark_dirty(True)
                         self.session.open_turn.turn(message="fixed")
                         self.fix = self.git.current_commit
 
@@ -454,7 +454,7 @@ with description("a context tool"):
                     self.workspace = Workspace(str(self.tmp))
                     self.tool = ContextTool(self.workspace, git=self.git)
                     self.session = self.tool.run_action("sprint-a")
-                    self.git.set_dirty(True)
+                    self.git.mark_dirty(True)
                     self.tool.finish(result="agent done")
 
                 with it("should finish its turn for the action"):
@@ -474,7 +474,7 @@ with description("a context tool"):
                     self.tool.format = "python"
                     self.session = self.tool.run_action("sprint-a")
                     self.turn = self.session.open_turn
-                    self.git.set_dirty(True)
+                    self.git.mark_dirty(True)
                     self.commit = self.tool.finish(result="shipped")
 
                 with it("should record the action run on the session trail"):
@@ -523,7 +523,7 @@ with description("Turn"):
 
         with it("should commit from the current checkout without a work session"):
             git = NullGitRepo()
-            git.set_dirty(True)
+            git.mark_dirty(True)
             kit = Turn(root=str(git.root))
             commit = kit.turn(
                 context_tool="stories",
@@ -546,7 +546,7 @@ with description("Turn"):
 
         with it("should leave finish_turn as a legacy alias for turn"):
             git = NullGitRepo()
-            git.set_dirty(True)
+            git.mark_dirty(True)
             kit = Turn(root=str(git.root))
             commit = kit.finish_turn(result="legacy checkpoint")
             expect(commit).not_to(be_none)
@@ -584,7 +584,7 @@ with description("WorkSession"):
             from workspace.legacy.workspace import SessionModel, WorkSession
 
             git = NullGitRepo()
-            git.set_dirty(True)
+            git.mark_dirty(True)
             kit = WorkSession(workspace=".", session="")
             kit.name = ""
             kit.git = git

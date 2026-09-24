@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "harness", "tools"):
+for _cat in ("practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -75,7 +75,11 @@ with description("KnowledgeGraph.return_nodes"):
     with it("should advertise filter as a JSON object on MCP"):
         from harness.mcp.mcp_server import McpHost
 
-        schema = McpHost.input_schema_for_callable(KnowledgeGraph.return_nodes)
+        schema = McpHost.from_refs(
+            (),
+            repo=str(_REPO_ROOT),
+            project=str(_REPO_ROOT),
+        ).input_schema_for_callable(KnowledgeGraph.return_nodes)
         filt = schema["properties"]["filter"]
         types = [filt.get("type")] + [item.get("type") for item in filt.get("anyOf") or []]
         expect("object" in types).to(equal(True))

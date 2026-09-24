@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -12,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools import agent_toolset
+
+logger = logging.getLogger(__name__)
 
 
 class GitConnectError(RuntimeError):
@@ -60,13 +63,6 @@ GH_PROJECT_SCOPES_HINT = (
     "Run: gh auth refresh -h github.com -s read:project,project"
 )
 _ISSUE_NUMBER = re.compile(r"^\d+$")
-
-
-def _gh_project_scope_error(exc: GhConnectError) -> GhConnectError:
-    message = str(exc)
-    if "read:project" in message or "missing required scopes" in message:
-        return GhConnectError(f"{message} {GH_PROJECT_SCOPES_HINT}")
-    return exc
 
 
 def theme_slug(theme: str) -> str:
@@ -138,11 +134,12 @@ class Commit:
 
     @classmethod
     def from_message(cls, sha: str, message: str) -> Commit:
-        return cls(sha=sha, message=message, data=cls.trailers(message))
+        commit = cls(sha=sha, message=message)
+        commit.data = commit.trailers()
+        return commit
 
-    @classmethod
-    def trailers(cls, message: str) -> dict[str, str]:
-        lines = (message or "").splitlines()
+    def trailers(self) -> dict[str, str]:
+        lines = (self.message or "").splitlines()
         if not lines:
             return {}
         data: dict[str, str] = {}
@@ -157,10 +154,9 @@ class Commit:
     def note_text(cls, fields: dict[str, str]) -> str:
         return "\n".join(f"{key}: {value}" for key, value in fields.items())
 
-    @classmethod
-    def note_payload(cls, text: str) -> dict[str, str]:
+    def note_payload(self) -> dict[str, str]:
         out: dict[str, str] = {}
-        for line in (text or "").splitlines():
+        for line in (self.message or "").splitlines():
             if ": " not in line:
                 continue
             key, value = line.split(": ", 1)
@@ -302,23 +298,23 @@ class Ticket:
     def add_theme(self, theme: str) -> Ticket:
         """Apply theme on the issue label and the project board Theme field."""
         self.add_label(issue_theme_label(theme))
-        return self.set_project_theme(theme)
+        return self.write_project_theme(theme)
 
-    def set_project_theme(self, theme: str) -> Ticket:
-        """Set the GitHub project board Theme single-select field for this issue."""
+    def write_project_theme(self, theme: str) -> Ticket:
+        """Write the GitHub project board Theme single-select field for this issue."""
         slug = theme_slug(theme)
         if not slug:
             return self
         repo = self._repo
         if repo is None:
-            raise RuntimeError("Ticket.set_project_theme requires a repo")
+            raise RuntimeError("Ticket.write_project_theme requires a repo")
         project = repo.project
         if project is None:
             return self
         if repo._memory:
             repo._ticket_project_theme[self.number] = slug
             return self
-        project.set_ticket_theme(self.number, self.url, slug)
+        project.write_ticket_theme(self, slug)
         return self
 
     def set_type(self, name: str) -> Ticket:
@@ -347,12 +343,12 @@ class Ticket:
             repo._ticket_project_state[self.number] = state.name
             self.state = state
             return self
-        resolved = project.set_ticket_status(self.number, self.url, state.name)
+        resolved = project.write_ticket_status(self, state.name)
         self.state = project.state_named(resolved)
         return self
 
     @classmethod
-    def parse_number(cls, ref: str | int) -> int:
+    def from_number(cls, ref: str | int) -> int:
         if isinstance(ref, int):
             return ref
         cleaned = str(ref).strip()
@@ -404,39 +400,41 @@ class CliAgentBinding:
 
     @classmethod
     def from_message(cls, text: str) -> CliAgentBinding:
-        data = Commit.note_payload(text)
+        data = Commit(sha="", message=text).note_payload()
+        binding = cls()
         return cls(
             status=(data.get("status") or "closed").strip() or "closed",
             doer=(data.get("doer") or "").strip(),
-            doer_pid=_as_pid(data.get("doer_pid")),
+            doer_pid=binding._as_pid(data.get("doer_pid")),
             judge=(data.get("judge") or "").strip(),
-            judge_pid=_as_pid(data.get("judge_pid")),
+            judge_pid=binding._as_pid(data.get("judge_pid")),
         )
 
-    @staticmethod
-    def pid_is_alive(pid: int) -> bool:
+    def pid_is_alive(self, pid: int) -> bool:
         if pid <= 0:
             return False
         if os.name == "nt":
-            import ctypes
-
-            handle = ctypes.windll.kernel32.OpenProcess(0x1000, 0, int(pid))
-            if handle:
-                ctypes.windll.kernel32.CloseHandle(handle)
-                return True
-            return False
+            return self._windows_pid_is_alive(pid)
         try:
             os.kill(pid, 0)
         except OSError:
             return False
         return True
 
+    def _windows_pid_is_alive(self, pid: int) -> bool:
+        import ctypes
 
-def _as_pid(raw: str | None) -> int:
-    text = (raw or "").strip()
-    if not text.isdigit():
-        return 0
-    return int(text)
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, 0, int(pid))
+        if not handle:
+            return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+
+    def _as_pid(self, raw: str | None) -> int:
+        text = (raw or "").strip()
+        if not text.isdigit():
+            return 0
+        return int(text)
 
 
 class Branch:
@@ -478,13 +476,14 @@ class Branch:
 class Project:
     """GitHub Project board on a repo — owns ticket states."""
 
-    __slots__ = ("_repo", "owner", "number", "states")
+    __slots__ = ("_repo", "owner", "number", "states", "text_field_name")
 
     def __init__(self, repo: Repo, owner: str, number: int) -> None:
         self._repo = repo
         self.owner = owner
         self.number = number
         self.states = [TicketState(name) for name in DEFAULT_PROJECT_STATES]
+        self.text_field_name = "Ultimate Parent"
 
     def refresh_states(self) -> list[str]:
         """Load Status column names from GitHub and replace the in-memory state list."""
@@ -506,39 +505,13 @@ class Project:
 
     def status_option_names(self) -> list[str]:
         """Live GitHub Status field option names, or empty when listing fails."""
-        repo = self._repo
-        if repo._memory:
+        if self._repo._memory:
             return [state.name for state in self.states]
         try:
-            raw = repo._gh(
-                "project",
-                "field-list",
-                str(self.number),
-                "--owner",
-                self.owner,
-                "--format",
-                "json",
-            )
+            payload = self._field_list_payload()
         except GhConnectError as exc:
-            raise _gh_project_scope_error(exc) from exc
-        payload = json.loads(raw or "{}")
-        fields = payload
-        if isinstance(payload, dict):
-            fields = payload.get("fields") or payload.get("items") or []
-        names: list[str] = []
-        for field in fields or []:
-            if not isinstance(field, dict):
-                continue
-            if str(field.get("name") or "") != "Status":
-                continue
-            for option in field.get("options") or []:
-                if isinstance(option, dict):
-                    label = str(option.get("name") or "").strip()
-                else:
-                    label = str(option).strip()
-                if label:
-                    names.append(label)
-        return names
+            raise self._project_scope_error(exc) from exc
+        return self._option_names_for_field("Status", payload)
 
     def ticket_rows(self) -> list[dict[str, str | int]]:
         """Return project issues with their board status."""
@@ -558,60 +531,34 @@ class Project:
         payload = json.loads(raw or "{}")
         return self._ticket_rows_from_items(payload.get("items") or [])
 
-    def set_ticket_status(
-        self, ticket_number: int, ticket_url: str, state_name: str
-    ) -> str:
-        """Set the Status column for one issue; returns the GitHub option name sent."""
-        item_id = self._ensure_item_id(ticket_number, ticket_url)
+    def write_ticket_status(self, ticket: Ticket, state_name: str) -> str:
+        """Write the Status column for one issue; returns the GitHub option name sent."""
+        item_id = self._ensure_item_id(ticket)
         field_id, options = self._single_select_field("Status")
         option_names = [str(option.get("name") or "") for option in options]
         gh_value = resolve_github_status_option(state_name, option_names)
         option_id = self._option_id_for_name(options, gh_value)
-        self._repo._gh(
-            "project",
-            "item-edit",
-            "--id",
-            item_id,
-            "--project-id",
-            self._project_id(),
-            "--field-id",
-            field_id,
-            "--single-select-option-id",
-            option_id,
-        )
+        self._edit_single_select(item_id, field_id, option_id)
         return gh_value
 
-    def set_ticket_theme(
-        self, ticket_number: int, ticket_url: str, theme_slug: str
-    ) -> str:
-        """Set the Theme column for one issue; returns the GitHub option name sent."""
-        item_id = self._ensure_item_id(ticket_number, ticket_url)
+    def write_ticket_theme(self, ticket: Ticket, theme_slug: str) -> str:
+        """Write the Theme column for one issue; returns the GitHub option name sent."""
+        item_id = self._ensure_item_id(ticket)
         field_id, options = self._single_select_field("Theme")
         option_names = [str(option.get("name") or "") for option in options]
         gh_value = resolve_github_theme_option(theme_slug, option_names)
         option_id = self._option_id_for_name(options, gh_value)
-        self._repo._gh(
-            "project",
-            "item-edit",
-            "--id",
-            item_id,
-            "--project-id",
-            self._project_id(),
-            "--field-id",
-            field_id,
-            "--single-select-option-id",
-            option_id,
-        )
+        self._edit_single_select(item_id, field_id, option_id)
         return gh_value
 
-    def set_text_field(self, ticket_number: int, field_name: str, value: str) -> None:
-        """Set an arbitrary text field on one issue's project item."""
+    def write_text_field(self, ticket_number: int, value: str) -> None:
+        """Write this project's text field on one issue's project item."""
         if self._repo._memory:
             self._repo._ticket_project_fields.setdefault(ticket_number, {})[
-                field_name
+                self.text_field_name
             ] = value
             return
-        field_id = self._ensure_text_field(field_name)
+        field_id = self._ensure_text_field(self.text_field_name)
         item_id = self._item_id(ticket_number)
         project_id = self._project_id()
         self._repo._gh(
@@ -625,6 +572,20 @@ class Project:
             field_id,
             "--text",
             value,
+        )
+
+    def _edit_single_select(self, item_id: str, field_id: str, option_id: str) -> None:
+        self._repo._gh(
+            "project",
+            "item-edit",
+            "--id",
+            item_id,
+            "--project-id",
+            self._project_id(),
+            "--field-id",
+            field_id,
+            "--single-select-option-id",
+            option_id,
         )
 
     def archive_ticket(self, ticket_number: int) -> None:
@@ -697,11 +658,11 @@ class Project:
                     return option_id
         raise ValueError(f"unknown project option: {name!r}")
 
-    def _ensure_item_id(self, ticket_number: int, ticket_url: str) -> str:
+    def _ensure_item_id(self, ticket: Ticket) -> str:
         try:
-            return self._item_id(ticket_number)
+            return self._item_id(ticket.number)
         except ValueError:
-            pass
+            logger.info("adding missing project item for issue %s", ticket.number)
         item_raw = self._repo._gh(
             "project",
             "item-add",
@@ -709,7 +670,7 @@ class Project:
             "--owner",
             self.owner,
             "--url",
-            ticket_url,
+            ticket.url,
             "--format",
             "json",
         )
@@ -795,39 +756,55 @@ class Project:
 
     def theme_option_names(self) -> list[str]:
         """Live GitHub Theme field option names, or empty when listing fails."""
-        repo = self._repo
-        if repo._memory:
+        if self._repo._memory:
             return ["cli-agent", "workspace", "workflow", "tools"]
         try:
-            raw = repo._gh(
-                "project",
-                "field-list",
-                str(self.number),
-                "--owner",
-                self.owner,
-                "--format",
-                "json",
-            )
+            payload = self._field_list_payload()
         except GhConnectError:
             return []
-        payload = json.loads(raw or "{}")
+        return self._option_names_for_field("Theme", payload)
+
+    def _field_list_payload(self) -> object:
+        raw = self._repo._gh(
+            "project",
+            "field-list",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--format",
+            "json",
+        )
+        return json.loads(raw or "{}")
+
+    def _option_names_for_field(self, field_name: str, payload: object) -> list[str]:
         fields = payload
         if isinstance(payload, dict):
             fields = payload.get("fields") or payload.get("items") or []
         names: list[str] = []
         for field in fields or []:
-            if not isinstance(field, dict):
-                continue
-            if str(field.get("name") or "") != "Theme":
-                continue
-            for option in field.get("options") or []:
-                if isinstance(option, dict):
-                    label = str(option.get("name") or "").strip()
-                else:
-                    label = str(option).strip()
-                if label:
-                    names.append(label)
+            names.extend(self._labels_from_field(field, field_name))
         return names
+
+    def _labels_from_field(self, field: object, field_name: str) -> list[str]:
+        if not isinstance(field, dict):
+            return []
+        if str(field.get("name") or "") != field_name:
+            return []
+        names: list[str] = []
+        for option in field.get("options") or []:
+            if isinstance(option, dict):
+                label = str(option.get("name") or "").strip()
+            else:
+                label = str(option).strip()
+            if label:
+                names.append(label)
+        return names
+
+    def _project_scope_error(self, exc: GhConnectError) -> GhConnectError:
+        message = str(exc)
+        if "read:project" in message or "missing required scopes" in message:
+            return GhConnectError(f"{message} {GH_PROJECT_SCOPES_HINT}")
+        return exc
 
     def link_repository(self) -> None:
         """Attach this org project to the current GitHub repository."""
@@ -875,12 +852,12 @@ class Repo:
         self._ticket_comments: dict[int, list[str]] = {}
         self._closed_tickets: set[int] = set()
         self._archived_project_tickets: set[int] = set()
+        self._annotated_tag_target = "HEAD"
         if memory:
             self._init_memory_state()
 
-    @classmethod
-    def find_root(cls, start: str | Path) -> Path | None:
-        current = Path(start).resolve()
+    def find_root(self) -> Path | None:
+        current = self.root
         if current.is_file():
             current = current.parent
         for candidate in (current, *current.parents):
@@ -890,7 +867,7 @@ class Repo:
 
     @classmethod
     def open(cls, start: str | Path) -> Repo:
-        root = cls.find_root(start)
+        root = cls(start).find_root()
         if root is None:
             raise GitConnectError(f"not a git clone: {start!r}")
         return cls(root)
@@ -1018,22 +995,20 @@ class Repo:
         )
 
     def write_cli_agent_tag(self, branch: str, binding: CliAgentBinding) -> None:
+        self._annotated_tag_target = branch
         self.write_annotated_tag(
             self.cli_agent_tag_name(branch),
             binding.message(),
-            branch,
         )
 
-    def write_annotated_tag(
-        self, name: str, message: str, target: str = "HEAD"
-    ) -> None:
+    def write_annotated_tag(self, name: str, message: str) -> None:
         name = (name or "").strip()
         if not name:
             raise ValueError("annotated tag requires a name")
         if self._memory:
             self._annotated_tags[name] = message
             return
-        self._git("tag", "-f", "-a", name, "-m", message, target)
+        self._git("tag", "-f", "-a", name, "-m", message, self._annotated_tag_target)
 
     def read_annotated_tag(self, name: str) -> str:
         name = (name or "").strip()
@@ -1184,9 +1159,9 @@ class Repo:
         name = raw.split(" -> ")[-1].replace("\\", "/").strip()
         return Path(name).name == "events.log"
 
-    def set_dirty(self, dirty: bool = True) -> None:
+    def mark_dirty(self, dirty: bool = True) -> None:
         if not self._memory:
-            raise RuntimeError("set_dirty is only supported on Repo.memory()")
+            raise RuntimeError("mark_dirty is only supported on Repo.memory()")
         self._dirty = dirty
 
     def create_branch(self, name: str) -> None:
@@ -1261,22 +1236,38 @@ class Repo:
         path = ""
         branch = ""
         for line in self._git("worktree", "list", "--porcelain").splitlines():
-            if line.startswith("worktree "):
-                if path:
-                    trees.append(Worktree(Path(path), branch))
-                path = line[len("worktree ") :]
-                branch = ""
-            elif line.startswith("branch "):
-                ref = line[len("branch ") :]
-                branch = ref[len("refs/heads/") :] if ref.startswith("refs/heads/") else ref
-            elif line == "":
-                if path:
-                    trees.append(Worktree(Path(path), branch))
-                    path = ""
-                    branch = ""
-        if path:
-            trees.append(Worktree(Path(path), branch))
-        return trees
+            path, branch, trees = self._accumulate_worktree_line(
+                line, path, branch, trees
+            )
+        return self._flush_worktree(path, branch, trees)
+
+    def _accumulate_worktree_line(
+        self,
+        line: str,
+        path: str,
+        branch: str,
+        trees: list[Worktree],
+    ) -> tuple[str, str, list[Worktree]]:
+        if line.startswith("worktree "):
+            return line[len("worktree ") :], "", self._flush_worktree(path, branch, trees)
+        if line.startswith("branch "):
+            return path, self._branch_from_porcelain(line), trees
+        if line == "":
+            return "", "", self._flush_worktree(path, branch, trees)
+        return path, branch, trees
+
+    def _branch_from_porcelain(self, line: str) -> str:
+        ref = line[len("branch ") :]
+        if ref.startswith("refs/heads/"):
+            return ref[len("refs/heads/") :]
+        return ref
+
+    def _flush_worktree(
+        self, path: str, branch: str, trees: list[Worktree]
+    ) -> list[Worktree]:
+        if not path:
+            return trees
+        return trees + [Worktree(Path(path), branch)]
 
     def worktree_for(self, branch: str) -> Worktree | None:
         wanted = (branch or "").strip()
@@ -1312,20 +1303,21 @@ class Repo:
             return
         try:
             self._git("worktree", "remove", "--force", str(dest))
-        except GitConnectError:
+        except GitConnectError as exc:
+            logger.info("worktree remove failed; forcing directory delete: %s", exc)
             self._force_remove_directory_windows(dest)
         if dest.exists():
             shutil.rmtree(dest, ignore_errors=True)
         if dest.exists():
             self._force_remove_directory_windows(dest)
-        if not dest.exists():
-            try:
-                self._git("worktree", "prune")
-            except GitConnectError:
-                pass
+        if dest.exists():
+            return
+        try:
+            self._git("worktree", "prune")
+        except GitConnectError as exc:
+            logger.info("worktree prune failed: %s", exc)
 
-    @staticmethod
-    def _force_remove_directory_windows(path: Path) -> bool:
+    def _force_remove_directory_windows(self, path: Path) -> bool:
         """Last resort when git/shutil cannot delete a locked checkout (Windows only)."""
         if os.name != "nt":
             return False
@@ -1335,37 +1327,46 @@ class Repo:
         user = os.environ.get("USERNAME", "").strip()
         if not user:
             return False
+        self._take_windows_ownership(target, user)
+        self._rmtree_logged(target)
+        if target.exists():
+            self._powershell_remove_item(target)
+        return not target.exists()
+
+    def _take_windows_ownership(self, target: Path, user: str) -> None:
         for args in (
             ("takeown", "/f", str(target), "/r", "/d", "y"),
             ("icacls", str(target), "/grant", f"{user}:(F)", "/t"),
         ):
             try:
                 subprocess.run(list(args), capture_output=True, check=False)
-            except OSError:
-                pass
+            except OSError as exc:
+                logger.info("windows ownership command failed: %s", exc)
+
+    def _rmtree_logged(self, target: Path) -> None:
         try:
             shutil.rmtree(target, ignore_errors=True)
-        except OSError:
-            pass
-        if target.exists():
-            try:
-                subprocess.run(
-                    [
-                        "powershell",
-                        "-NoProfile",
-                        "-NonInteractive",
-                        "-Command",
-                        (
-                            f'Remove-Item -LiteralPath "{target}" '
-                            "-Recurse -Force -ErrorAction SilentlyContinue"
-                        ),
-                    ],
-                    capture_output=True,
-                    check=False,
-                )
-            except OSError:
-                pass
-        return not target.exists()
+        except OSError as exc:
+            logger.info("rmtree failed for %s: %s", target, exc)
+
+    def _powershell_remove_item(self, target: Path) -> None:
+        try:
+            subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    (
+                        f'Remove-Item -LiteralPath "{target}" '
+                        "-Recurse -Force -ErrorAction SilentlyContinue"
+                    ),
+                ],
+                capture_output=True,
+                check=False,
+            )
+        except OSError as exc:
+            logger.info("powershell Remove-Item failed for %s: %s", target, exc)
 
     def fetch(self) -> None:
         if self._memory:
@@ -1510,22 +1511,31 @@ class Repo:
             raw = self._git("notes", f"--ref={note_ref}", "show", sha)
         except GitConnectError:
             return {}
-        return Commit.note_payload(raw)
+        return Commit(sha="", message=raw).note_payload()
 
     def find_mistakes(
         self, entry_ids: list[str], *, ref: str | None = None
     ) -> list[dict[str, str]]:
         note_ref = ref or self.NOTES_REF
         wanted = set(entry_ids)
-        found: list[dict[str, str]] = []
         if self._memory:
-            for sha, payload in self._notes.items():
-                if payload.get("entry_id") in wanted:
-                    row = dict(payload)
-                    row.setdefault("introducing_commit", sha)
-                    found.append(row)
-            return found
-        listing = self._git( "notes", f"--ref={note_ref}", "list")
+            return self._memory_mistakes(wanted)
+        return self._listed_mistakes(note_ref, wanted)
+
+    def _memory_mistakes(self, wanted: set[str]) -> list[dict[str, str]]:
+        found: list[dict[str, str]] = []
+        for sha, payload in self._notes.items():
+            if payload.get("entry_id") in wanted:
+                row = dict(payload)
+                row.setdefault("introducing_commit", sha)
+                found.append(row)
+        return found
+
+    def _listed_mistakes(
+        self, note_ref: str, wanted: set[str]
+    ) -> list[dict[str, str]]:
+        found: list[dict[str, str]] = []
+        listing = self._git("notes", f"--ref={note_ref}", "list")
         for line in listing.splitlines():
             parts = line.split()
             if len(parts) < 2:
@@ -1539,7 +1549,7 @@ class Repo:
 
     def ticket(self, ref: str) -> Ticket | None:
         if self._memory:
-            number = Ticket.parse_number(ref)
+            number = Ticket.from_number(ref)
             ticket = self._tickets.get(number)
             if ticket is None:
                 return None
@@ -1551,7 +1561,7 @@ class Repo:
             ticket.sub_issue_numbers = list(self._ticket_children.get(number, []))
             ticket.parent_number = self._ticket_parents.get(number)
             return ticket
-        number = Ticket.parse_number(ref)
+        number = Ticket.from_number(ref)
         try:
             raw = self._gh(
                 "issue",

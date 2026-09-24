@@ -106,7 +106,7 @@ class FileInstallation(Installation):
         folder = self.folder_for(toolset)
         op = self._op_slug(name)
         if destination == "skill":
-            return Path("skills") / self._skill_folder(folder, op, toolset) / "SKILL.md"
+            return Path("skills") / self._skill_folder(toolset, op) / "SKILL.md"
         if destination == "command":
             base = Path("prompts") if self.ide == "VS Code" else Path("commands")
             return base / folder / f"{op}.md"
@@ -127,7 +127,8 @@ class FileInstallation(Installation):
             names.append(self._op_slug(getattr(tool, "deploy_name", None) or tool.name))
         return names
 
-    def _skill_folder(self, folder: Path, op: str, toolset: Any = None) -> Path:
+    def _skill_folder(self, toolset: Any, op: str) -> Path:
+        folder = self.folder_for(toolset)
         if getattr(toolset, "practice_guidance", None) is not None:
             slug = getattr(toolset, "slug", None)
             if slug:

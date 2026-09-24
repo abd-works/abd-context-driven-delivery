@@ -34,19 +34,6 @@ from public_seam_only_scanner import PublicSeamOnlyScanner  # noqa: E402
 from scan import Scan, ScannerCollection  # noqa: E402
 
 
-def _write(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-
-
-def _make_module(root: Path, name: str, context_body: str, files: dict[str, str]) -> Path:
-    folder = root / name
-    _write(folder / ".context" / "module-context.md", context_body)
-    for filename, content in files.items():
-        _write(folder / filename, content)
-    return folder
-
-
 _GOOD_CONTEXT = """
 # Cart
 
@@ -59,6 +46,52 @@ _GOOD_CONTEXT = """
 
 - `Cart` - running tally.
 """.strip()
+
+
+class Files:
+    def write(self, path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    def make_module(self, folder: "ModuleFolder") -> Path:
+        path = folder.root / folder.name
+        self.write(path / ".context" / "module-context.md", folder.context_body)
+        for filename, content in folder.files.items():
+            self.write(path / filename, content)
+        return path
+
+    def run(self, probe: "ScannerProbe"):
+        scanner = probe.scanner_class(probe.rule)
+        files = collect_module_files(probe.root)
+        return scanner.scan(probe.root, files)
+
+
+class ModuleFolder:
+    def __init__(self, root: Path, name: str) -> None:
+        self.root = root
+        self.name = name
+        self.context_body = _GOOD_CONTEXT
+        self.files: dict[str, str] = {}
+
+    def fill(self, files: dict[str, str]) -> "ModuleFolder":
+        self.files = files
+        return self
+
+    def with_context(self, body: str) -> "ModuleFolder":
+        self.context_body = body
+        return self
+
+
+class ScannerProbe:
+    def __init__(self, scanner_class, root: Path) -> None:
+        self.scanner_class = scanner_class
+        self.root = root
+        self.rule = ""
+
+    def named(self, rule: str) -> "ScannerProbe":
+        self.rule = rule
+        return self
+
 
 _MINIMAL_CONTEXT = "# Cart\n\nA cart.\n"
 
@@ -73,18 +106,12 @@ class _PhysicalFolderScan(Scan):
         )
 
 
-def _run(scanner_class, rule: str, root: Path):
-    scanner = scanner_class(rule)
-    files = collect_module_files(root)
-    return scanner.scan(root, files)
-
-
 with description("physical-folder scanner"):
     with context("a module with context file and Python content"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": "class Cart:\n    pass\n"})
+            Files().make_module(ModuleFolder(self.root, "cart").fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should produce no violations"):
             expect_scan_passes(
@@ -98,12 +125,12 @@ with description("physical-folder scanner"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            _make_module(self.root, "empty_module", _GOOD_CONTEXT, {})
-            _write(self.root / "empty_module" / "seed.py", "x = 1\n")
+            Files().make_module(ModuleFolder(self.root, "empty_module"))
+            Files().write(self.root / "empty_module" / "seed.py", "x = 1\n")
 
         with it("should flag the module when only test/junk files exist"):
             (self.root / "empty_module" / "seed.py").unlink()
-            violations = _run(PhysicalFolderScanner, "physical-folder", self.root)
+            violations = Files().run(ScannerProbe(PhysicalFolderScanner, self.root).named("physical-folder"))
             expect(len(violations) >= 1).to(be_true)
 
 
@@ -114,11 +141,11 @@ with description("physical-folder scanner"):
             self.session_mod = (
                 self.root / ".context" / "sessions" / "sprint" / "config"
             )
-            _write(
+            Files().write(
                 self.session_mod / ".context" / "module-context.md",
                 _GOOD_CONTEXT,
             )
-            _write(self.session_mod / "controller.py", "class Controller:\n    pass\n")
+            Files().write(self.session_mod / "controller.py", "class Controller:\n    pass\n")
 
         with it("should flag module-context written in the session folder"):
             expect_scan_fails(
@@ -134,29 +161,20 @@ with description("named-seam-and-constraint scanner"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": "class Cart:\n    pass\n"})
+            Files().make_module(ModuleFolder(self.root, "cart").fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should produce no violations"):
-            violations = _run(
-                NamedSeamAndConstraintScanner, "named-seam-and-constraint", self.root
-            )
+            violations = Files().run(ScannerProbe(NamedSeamAndConstraintScanner, self.root).named("named-seam-and-constraint"))
             expect(violations).to(equal([]))
 
     with context("a context file missing seam, constraint, and public api heading"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            _make_module(
-                self.root,
-                "cart",
-                _MINIMAL_CONTEXT,
-                {"cart.py": "class Cart:\n    pass\n"},
-            )
+            Files().make_module(ModuleFolder(self.root, "cart").with_context(_MINIMAL_CONTEXT).fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should flag seam and constraint when both are missing"):
-            violations = _run(
-                NamedSeamAndConstraintScanner, "named-seam-and-constraint", self.root
-            )
+            violations = Files().run(ScannerProbe(NamedSeamAndConstraintScanner, self.root).named("named-seam-and-constraint"))
             expect(len(violations)).to(equal(2))
 
 
@@ -166,10 +184,10 @@ with description("deep-module scanner"):
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
             body = "\n".join(f"class Public{i}:\n    pass\n" for i in range(8))
-            _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": body})
+            Files().make_module(ModuleFolder(self.root, "cart").fill({"cart.py": body}))
 
         with it("should flag the module"):
-            violations = _run(DeepModuleScanner, "deep-module", self.root)
+            violations = Files().run(ScannerProbe(DeepModuleScanner, self.root).named("deep-module"))
             expect(len(violations) >= 1).to(be_true)
 
     with context("a module with a small public seam and many internal helpers"):
@@ -179,10 +197,10 @@ with description("deep-module scanner"):
             body = "class Cart:\n    pass\n" + "\n".join(
                 f"class _Helper{i}:\n    pass\n" for i in range(7)
             )
-            _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": body})
+            Files().make_module(ModuleFolder(self.root, "cart").fill({"cart.py": body}))
 
         with it("should produce no violations"):
-            violations = _run(DeepModuleScanner, "deep-module", self.root)
+            violations = Files().run(ScannerProbe(DeepModuleScanner, self.root).named("deep-module"))
             expect(violations).to(equal([]))
 
 
@@ -192,22 +210,12 @@ with description("low-coupling scanner"):
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
             for i in range(10):
-                _make_module(
-                    self.root,
-                    f"sibling{i}",
-                    _GOOD_CONTEXT,
-                    {"__init__.py": "", f"m{i}.py": "value = 1\n"},
-                )
+                Files().make_module(ModuleFolder(self.root, f"sibling{i}").fill({"__init__.py": "", f"m{i}.py": "value = 1\n"}))
             imports = "\n".join(f"import sibling{i}" for i in range(10))
-            _make_module(
-                self.root,
-                "hub",
-                _GOOD_CONTEXT,
-                {"hub.py": f"{imports}\n\nclass Hub:\n    pass\n"},
-            )
+            Files().make_module(ModuleFolder(self.root, "hub").fill({"hub.py": f"{imports}\n\nclass Hub:\n    pass\n"}))
 
         with it("should flag the hub for excessive fan-out"):
-            violations = _run(LowCouplingScanner, "low-coupling", self.root)
+            violations = Files().run(ScannerProbe(LowCouplingScanner, self.root).named("low-coupling"))
             expect(any(v.rule == "low-coupling" for v in violations)).to(be_true)
 
 
@@ -221,12 +229,10 @@ with description("complexity-absorption scanner"):
                 "    def checkout(self, a, b, c, d, e):\n"
                 "        pass\n"
             )
-            _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": body})
+            Files().make_module(ModuleFolder(self.root, "cart").fill({"cart.py": body}))
 
         with it("should flag the method"):
-            violations = _run(
-                ComplexityAbsorptionScanner, "complexity-absorption", self.root
-            )
+            violations = Files().run(ScannerProbe(ComplexityAbsorptionScanner, self.root).named("complexity-absorption"))
             expect(len(violations) >= 1).to(be_true)
 
     with context("a public method with four required parameters"):
@@ -238,12 +244,10 @@ with description("complexity-absorption scanner"):
                 "    def checkout(self, a, b, c, d):\n"
                 "        pass\n"
             )
-            _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": body})
+            Files().make_module(ModuleFolder(self.root, "cart").fill({"cart.py": body}))
 
         with it("should produce no violations"):
-            violations = _run(
-                ComplexityAbsorptionScanner, "complexity-absorption", self.root
-            )
+            violations = Files().run(ScannerProbe(ComplexityAbsorptionScanner, self.root).named("complexity-absorption"))
             expect(violations).to(equal([]))
 
 
@@ -258,12 +262,10 @@ with description("use-typed-signatures scanner"):
                 "    def snapshot(self) -> dict[str, Any]:\n"
                 "        return {}\n"
             )
-            _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": body})
+            Files().make_module(ModuleFolder(self.root, "cart").fill({"cart.py": body}))
 
         with it("should flag the return type"):
-            violations = _run(
-                InformationHidingScanner, "use-typed-signatures", self.root
-            )
+            violations = Files().run(ScannerProbe(InformationHidingScanner, self.root).named("use-typed-signatures"))
             expect(len(violations) >= 1).to(be_true)
 
     with context("a public method returning a domain type"):
@@ -277,12 +279,10 @@ with description("use-typed-signatures scanner"):
                 "    def snapshot(self) -> Snapshot:\n"
                 "        return Snapshot()\n"
             )
-            _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": body})
+            Files().make_module(ModuleFolder(self.root, "cart").fill({"cart.py": body}))
 
         with it("should produce no violations"):
-            violations = _run(
-                InformationHidingScanner, "use-typed-signatures", self.root
-            )
+            violations = Files().run(ScannerProbe(InformationHidingScanner, self.root).named("use-typed-signatures"))
             expect(violations).to(equal([]))
 
 
@@ -362,15 +362,10 @@ with description("public-seam-only scanner"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            _make_module(
-                self.root,
-                "cart",
-                _LEAKY_CONTEXT,
-                {"cart.py": "class Cart:\n    pass\n"},
-            )
+            Files().make_module(ModuleFolder(self.root, "cart").with_context(_LEAKY_CONTEXT).fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should flag forbidden heading and private names"):
-            violations = _run(PublicSeamOnlyScanner, "public-seam-only", self.root)
+            violations = Files().run(ScannerProbe(PublicSeamOnlyScanner, self.root).named("public-seam-only"))
             expect(len(violations) >= 2).to(be_true)
             messages = " ".join(v.message for v in violations)
             expect("Internal design" in messages or "internal design" in messages.lower()).to(
@@ -384,30 +379,20 @@ with description("public-seam-only scanner"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            _make_module(
-                self.root,
-                "cart",
-                _PUBLIC_SEAM_CONTEXT,
-                {"cart.py": "class Cart:\n    pass\n"},
-            )
+            Files().make_module(ModuleFolder(self.root, "cart").with_context(_PUBLIC_SEAM_CONTEXT).fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should produce no violations"):
-            violations = _run(PublicSeamOnlyScanner, "public-seam-only", self.root)
+            violations = Files().run(ScannerProbe(PublicSeamOnlyScanner, self.root).named("public-seam-only"))
             expect(violations).to(equal([]))
 
     with context("a module-context that documents public _is_* authoring markers"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            _make_module(
-                self.root,
-                "tools",
-                _MARKER_OK_CONTEXT,
-                {"tools.py": "class Toolset:\n    pass\n"},
-            )
+            Files().make_module(ModuleFolder(self.root, "tools").with_context(_MARKER_OK_CONTEXT).fill({"tools.py": "class Toolset:\n    pass\n"}))
 
         with it("should allow _is_* markers under Extend"):
-            violations = _run(PublicSeamOnlyScanner, "public-seam-only", self.root)
+            violations = Files().run(ScannerProbe(PublicSeamOnlyScanner, self.root).named("public-seam-only"))
             expect(violations).to(equal([]))
 
 
@@ -420,12 +405,10 @@ with description("no-subtype-at-modules scanner"):
                 _GOOD_CONTEXT
                 + "\n\n### AgentOperation *is a type of* AgentTool\n\n## Child : Parent\n"
             )
-            _make_module(self.root, "cart", body, {"cart.py": "class Cart:\n    pass\n"})
+            Files().make_module(ModuleFolder(self.root, "cart").with_context(body).fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should flag is-a and Child : Parent"):
-            violations = _run(
-                NoSubtypeAtModulesScanner, "no-subtype-at-modules", self.root
-            )
+            violations = Files().run(ScannerProbe(NoSubtypeAtModulesScanner, self.root).named("no-subtype-at-modules"))
             expect(len(violations) >= 2).to(be_true)
 
 
@@ -439,12 +422,10 @@ with description("modules-not-model-blocks scanner"):
                 + "\n\n**Sources / context:** `cart.py`\n\n"
                 + "+ Cart()\n------\nLive instance: items\n"
             )
-            _make_module(self.root, "cart", body, {"cart.py": "class Cart:\n    pass\n"})
+            Files().make_module(ModuleFolder(self.root, "cart").with_context(body).fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should flag model dump, Sources, and Live instance"):
-            violations = _run(
-                ModulesNotModelBlocksScanner, "modules-not-model-blocks", self.root
-            )
+            violations = Files().run(ScannerProbe(ModulesNotModelBlocksScanner, self.root).named("modules-not-model-blocks"))
             expect(len(violations) >= 3).to(be_true)
 
 
@@ -457,14 +438,10 @@ with description("language-modules-one-section scanner"):
                 "## Language\n\n*Cart* is the tally.\n\n"
                 "## Modules\n\nBuild order: `cart`\n\n# cart\n"
             )
-            _make_module(self.root, "cart", body, {"cart.py": "class Cart:\n    pass\n"})
+            Files().make_module(ModuleFolder(self.root, "cart").with_context(body).fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should flag Language and Modules wrapper headings"):
-            violations = _run(
-                LanguageModulesOneSectionScanner,
-                "language-modules-one-section",
-                self.root,
-            )
+            violations = Files().run(ScannerProbe(LanguageModulesOneSectionScanner, self.root).named("language-modules-one-section"))
             expect(len(violations) >= 2).to(be_true)
 
     with context("a module-context with language on each # path"):
@@ -476,13 +453,9 @@ with description("language-modules-one-section scanner"):
                 "- **Purpose:** Owns checkout.\n"
                 "- **Seam (terms):** Cart\n"
             )
-            _make_module(self.root, "cart", body, {"cart.py": "class Cart:\n    pass\n"})
+            Files().make_module(ModuleFolder(self.root, "cart").with_context(body).fill({"cart.py": "class Cart:\n    pass\n"}))
 
         with it("should produce no violations"):
-            violations = _run(
-                LanguageModulesOneSectionScanner,
-                "language-modules-one-section",
-                self.root,
-            )
+            violations = Files().run(ScannerProbe(LanguageModulesOneSectionScanner, self.root).named("language-modules-one-section"))
             expect(violations).to(equal([]))
 

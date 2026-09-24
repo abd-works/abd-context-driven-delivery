@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import List, Sequence
 
-from practices.stories.model.example_factories import normalize_factory_name
+from practices.stories.model.example_factories import ExampleFactories
 
 
 def render_md_factory_line(factories: Sequence[str]) -> str:
@@ -21,7 +21,7 @@ def parse_md_factory_line(line: str) -> List[str]:
     if not m:
         return []
     return [
-        normalize_factory_name(part.strip().strip("`"))
+        ExampleFactories().normalize_factory_name(part.strip().strip("`"))
         for part in m.group(1).split(",")
         if part.strip()
     ]

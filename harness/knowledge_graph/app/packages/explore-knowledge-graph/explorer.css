@@ -596,9 +596,30 @@ ul.tree ul {
   z-index: 4;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-sm);
   margin: calc(-1 * var(--space-md)) calc(-1 * var(--space-md)) var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--surface);
+}
+
+.guidance-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.guidance-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .copy-prompt {

@@ -112,64 +112,65 @@ Shared base for all power effects.
 """
 
 
-def _extract_mermaid(svg_text: str) -> str:
-    """Pull the Mermaid source out of the canvas-composer SVG."""
-    root = ET.fromstring(
-        svg_text.split("\n", 1)[1] if svg_text.startswith("<?") else svg_text
-    )
-    for el in root.iter():
-        tag = el.tag.split("}")[-1] if "}" in el.tag else el.tag
-        if tag == "foreignObject" and el.get("data-type") == "diagram":
-            return (el.text or "").strip()
-    return ""
-
-
-def _extract_diagrams(svg_text: str):
-    """Return every Miro diagram widget and its Mermaid source."""
-    root = ET.fromstring(
-        svg_text.split("\n", 1)[1] if svg_text.startswith("<?") else svg_text
-    )
-    return [
-        (el, (el.text or "").strip())
-        for el in root.iter()
-        if el.tag.split("}")[-1] == "foreignObject"
-        and el.get("data-type") == "diagram"
-    ]
-
-
-def _shop_model(
-    extra_properties=None,
-    extra_class: Optional[OoadClass] = None,
-    extra_relationship: Optional[Relationship] = None,
-) -> CleanEngineeringModel:
-    model = CleanEngineeringModel(name="Shop", sequential_order=1)
-    module = Module(name="Shop", sequential_order=1)
-    cart_props = [Property(name="owner", type_hint="str")]
-    if extra_properties:
-        cart_props.extend(extra_properties)
-    cart_rels = [Relationship(target="Order", kind="association")]
-    if extra_relationship:
-        cart_rels.append(extra_relationship)
-    module.classes.append(
-        OoadClass(
-            name="Cart",
-            sequential_order=1,
-            properties=cart_props,
-            operations=[Operation(name="place_order", return_type="Order")],
-            relationships=cart_rels,
+class SpecFixture:
+    def extract_mermaid(self, svg_text: str) -> str:
+        root = ET.fromstring(
+            svg_text.split("\n", 1)[1] if svg_text.startswith("<?") else svg_text
         )
-    )
-    module.classes.append(
-        OoadClass(
-            name="Order",
-            sequential_order=2,
-            properties=[Property(name="total", type_hint="int")],
+        for el in root.iter():
+            tag = el.tag.split("}")[-1] if "}" in el.tag else el.tag
+            if tag == "foreignObject" and el.get("data-type") == "diagram":
+                return (el.text or "").strip()
+        return ""
+
+    def extract_diagrams(self, svg_text: str):
+        root = ET.fromstring(
+            svg_text.split("\n", 1)[1] if svg_text.startswith("<?") else svg_text
         )
-    )
-    if extra_class is not None:
-        module.classes.append(extra_class)
-    model.modules.append(module)
-    return model
+        return [
+            (el, (el.text or "").strip())
+            for el in root.iter()
+            if el.tag.split("}")[-1] == "foreignObject"
+            and el.get("data-type") == "diagram"
+        ]
+
+    def shop_model(
+        self,
+        extra_properties=None,
+        extra_class: Optional[OoadClass] = None,
+        extra_relationship: Optional[Relationship] = None,
+    ) -> CleanEngineeringModel:
+        model = CleanEngineeringModel(name="Shop", sequential_order=1)
+        module = Module(name="Shop", sequential_order=1)
+        cart_props = [Property(name="owner", type_hint="str")]
+        if extra_properties:
+            cart_props.extend(extra_properties)
+        cart_rels = [Relationship(target="Order", kind="association")]
+        if extra_relationship:
+            cart_rels.append(extra_relationship)
+        module.classes.append(
+            OoadClass(
+                name="Cart",
+                sequential_order=1,
+                properties=cart_props,
+                operations=[Operation(name="place_order", return_type="Order")],
+                relationships=cart_rels,
+            )
+        )
+        module.classes.append(
+            OoadClass(
+                name="Order",
+                sequential_order=2,
+                properties=[Property(name="total", type_hint="int")],
+            )
+        )
+        if extra_class is not None:
+            module.classes.append(extra_class)
+        model.modules.append(module)
+        return model
+
+
+fixture = SpecFixture()
 
 
 # ===========================================================================
@@ -193,8 +194,8 @@ with description("MiroCleanEngineeringModel modules fidelity") as self:
                 dependencies=["checks"],
             )
             model.modules.extend([checks, character])
-            self.svg = MiroCleanEngineeringModel.render(model)
-            self.mermaid = _extract_mermaid(self.svg)
+            self.svg = MiroCleanEngineeringModel().render(model)
+            self.mermaid = fixture.extract_mermaid(self.svg)
 
         with it("should produce a valid canvas-composer SVG with a diagram foreignObject"):
             root = ET.fromstring(
@@ -225,9 +226,9 @@ with description("MiroCleanEngineeringModel modules fidelity") as self:
 
     with context("round-trip markdown -> miro -> model"):
         with before.each:
-            parsed = MarkdownCleanEngineeringModel.parse(_MODULES_MD)
-            svg = MiroCleanEngineeringModel.render(parsed)
-            self.back = MiroCleanEngineeringModel.parse(svg)
+            parsed = MarkdownCleanEngineeringModel().parse(_MODULES_MD)
+            svg = MiroCleanEngineeringModel().render(parsed)
+            self.back = MiroCleanEngineeringModel().parse(svg)
 
         with it("should recover both modules"):
             expect(self.back.modules).to(have_len(2))
@@ -248,7 +249,7 @@ with description("MiroCleanEngineeringModel modules fidelity") as self:
 
     with context("parse nested Modules fidelity markdown section"):
         with before.each:
-            self.model = MarkdownCleanEngineeringModel.parse(_NESTED_MODULE_CONTEXT_MD)
+            self.model = MarkdownCleanEngineeringModel().parse(_NESTED_MODULE_CONTEXT_MD)
 
         with it("should parse the module path name"):
             expect(self.model.modules).to(have_len(1))
@@ -264,10 +265,10 @@ with description("MiroCleanEngineeringModel modules fidelity") as self:
 
     with context("path nesting renders as containment"):
         with before.each:
-            parsed = MarkdownCleanEngineeringModel.parse(_NESTED_POWERS_MD)
+            parsed = MarkdownCleanEngineeringModel().parse(_NESTED_POWERS_MD)
             parsed.name = "Heroes Handbook"
-            self.svg = MiroCleanEngineeringModel.render(parsed, previous=None)
-            self.mermaid = _extract_mermaid(self.svg)
+            self.svg = MiroCleanEngineeringModel().render(parsed, previous=None)
+            self.mermaid = fixture.extract_mermaid(self.svg)
 
         with it("should put the powers module in the Mermaid source"):
             expect("powers" in self.mermaid).to(be_true)
@@ -305,8 +306,8 @@ with description("MiroCleanEngineeringModel class fidelity") as self:
                 )
             )
             model.modules.append(module)
-            self.svg = MiroCleanEngineeringModel.render(model)
-            self.mermaid = _extract_mermaid(self.svg)
+            self.svg = MiroCleanEngineeringModel().render(model)
+            self.mermaid = fixture.extract_mermaid(self.svg)
 
         with it("should produce a Mermaid classDiagram"):
             expect(self.mermaid.startswith("classDiagram")).to(be_true)
@@ -320,9 +321,9 @@ with description("MiroCleanEngineeringModel class fidelity") as self:
 
     with context("round-trip class model -> miro -> model"):
         with before.each:
-            self.original = _shop_model()
-            svg = MiroCleanEngineeringModel.render(self.original)
-            self.back = MiroCleanEngineeringModel.parse(svg)
+            self.original = fixture.shop_model()
+            svg = MiroCleanEngineeringModel().render(self.original)
+            self.back = MiroCleanEngineeringModel().parse(svg)
 
         with it("should recover the Cart class"):
             all_classes = list(self.back.classes)
@@ -348,22 +349,22 @@ with description("MiroCleanEngineeringModel class fidelity") as self:
 
     with context("new relationship renders with the correct Mermaid arrow"):
         with before.each:
-            model = _shop_model(
+            model = fixture.shop_model(
                 extra_relationship=Relationship(target="Order", kind="composition")
             )
-            self.svg = MiroCleanEngineeringModel.render(model)
-            self.mermaid = _extract_mermaid(self.svg)
+            self.svg = MiroCleanEngineeringModel().render(model)
+            self.mermaid = fixture.extract_mermaid(self.svg)
 
         with it("should use the *-- composition arrow"):
             expect("*--" in self.mermaid).to(be_true)
 
     with context("inheritance relationship renders with the <|-- arrow"):
         with before.each:
-            model = _shop_model(
+            model = fixture.shop_model(
                 extra_relationship=Relationship(target="Order", kind="inheritance")
             )
-            self.svg = MiroCleanEngineeringModel.render(model)
-            self.mermaid = _extract_mermaid(self.svg)
+            self.svg = MiroCleanEngineeringModel().render(model)
+            self.mermaid = fixture.extract_mermaid(self.svg)
 
         with it("should use the <|-- inheritance arrow"):
             expect("<|--" in self.mermaid).to(be_true)
@@ -396,8 +397,8 @@ with description("MiroCleanEngineeringModel class fidelity") as self:
                 )
             )
             model.modules.extend([customer, prospect])
-            self.svg = MiroCleanEngineeringModel.render(model)
-            self.diagrams = _extract_diagrams(self.svg)
+            self.svg = MiroCleanEngineeringModel().render(model)
+            self.diagrams = fixture.extract_diagrams(self.svg)
             self.by_module = {
                 element.get("data-module"): mermaid
                 for element, mermaid in self.diagrams
@@ -454,7 +455,7 @@ with description("MiroCleanEngineeringModel class fidelity") as self:
             ).to(be_true)
 
         with it("should restore source module boundaries without imported duplicates"):
-            parsed = MiroCleanEngineeringModel.parse(self.svg)
+            parsed = MiroCleanEngineeringModel().parse(self.svg)
             expect([module.name for module in parsed.modules]).to(
                 equal(["Customer — abstract base", "Prospect — onboarding"])
             )

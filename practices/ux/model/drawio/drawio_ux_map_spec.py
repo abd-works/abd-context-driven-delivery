@@ -14,44 +14,48 @@ from practices.ux.model.drawio.nodes import DrawioUxMap
 from practices.ux.model.nodes import Region, Screen, Transition
 
 
-def _site_map() -> DrawioUxMap:
-    ux_map = DrawioUxMap()
-    ux_map.scope = "Play Core Mechanics"
-    ux_map.story_references = [
-        "../practices/stories/update_ability_rank_stories.js",
-    ]
-    ux_map.object_references = []
+class SpecFixture:
+    def site_map(self) -> DrawioUxMap:
+        ux_map = DrawioUxMap.create()
+        ux_map.scope = "Play Core Mechanics"
+        ux_map.story_references = [
+            "../practices/stories/update_ability_rank_stories.js",
+        ]
+        ux_map.object_references = []
 
-    sheet = Screen("Character Sheet", 0)
-    sheet.apply_layout("sidebar")
-    sheet.append_region(Region("panel", 0, "panel"))
-    sheet.append_region(Region("body", 1, "body"))
-    sheet.attach_story_name("Update Ability Rank")
-    sheet.attach_domain_term("Character")
+        sheet = Screen("Character Sheet", 0)
+        sheet.apply_layout("sidebar")
+        sheet.append_region(Region("panel", 0, "panel"))
+        sheet.append_region(Region("body", 1, "body"))
+        sheet.attach_story_name("Update Ability Rank")
+        sheet.attach_domain_term("Character")
 
-    abilities = Screen("Character Sheet - Abilities", 1, chrome_of="Character Sheet")
-    abilities.inactive_tabs = ["Identities", "Movements"]
+        abilities = Screen("Character Sheet - Abilities", 1, chrome_of="Character Sheet")
+        abilities.inactive_tabs = ["Identities", "Movements"]
 
-    ux_map.append_screen(sheet)
-    ux_map.append_screen(abilities)
-    ux_map.transitions.append(
-        Transition(
-            "selects Abilities tab",
-            0,
-            from_screen="Character Sheet",
-            to_screen="Character Sheet - Abilities",
-            trigger="selects Abilities tab",
-            nav_type="action",
+        ux_map.append_screen(sheet)
+        ux_map.append_screen(abilities)
+        ux_map.transitions.append(
+            Transition(
+                "selects Abilities tab",
+                0,
+                from_screen="Character Sheet",
+                to_screen="Character Sheet - Abilities",
+                trigger="selects Abilities tab",
+                nav_type="action",
+            )
         )
-    )
-    return ux_map
+        return ux_map
+
+
+fixture = SpecFixture()
 
 
 with description("DrawioUxMap"):
     with before.each:
-        self.source = _site_map()
-        self.rendered = DrawioUxMap.render(self.source)
-        self.parsed = DrawioUxMap.parse(self.rendered)
+        self.source = fixture.site_map()
+        self.rendered = DrawioUxMap.create().render(self.source)
+        self.parsed = DrawioUxMap.create().parse(self.rendered)
 
     with it("should emit drawio-ux two-page mxfile"):
         expect(self.rendered.startswith("<mxfile")).to(equal(True))

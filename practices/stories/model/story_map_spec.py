@@ -23,27 +23,27 @@ from practices.stories.model.story_map import StoryMap
 from practices.stories.model.thin_slice import Increment
 
 
-def _fresh_story_map_with_4_epics() -> StoryMap:
-    story_map = StoryMap()
-    for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
-    return story_map
+class SpecFixture:
+    def fresh_story_map_with_4_epics(self) -> StoryMap:
+        story_map = StoryMap()
+        for i in range(1, 5):
+            story_map.append_epic(Epic(f"Epic {i}", i))
+        return story_map
+
+    def fresh_sub_epics(self, count: int) -> list:
+        return [SubEpic(f"SubEpic {i}", i) for i in range(1, count + 1)]
+
+    def fresh_stories(self, count: int) -> list:
+        return [Story(f"Story {i}", i, StoryType.USER) for i in range(1, count + 1)]
+
+    def fresh_scenarios(self, count: int) -> list:
+        return [Scenario(f"Scenario {i}", i) for i in range(1, count + 1)]
+
+    def fresh_increments(self, count: int) -> list:
+        return [Increment(f"Increment {i}", i) for i in range(1, count + 1)]
 
 
-def _fresh_sub_epics(count: int) -> list:
-    return [SubEpic(f"SubEpic {i}", i) for i in range(1, count + 1)]
-
-
-def _fresh_stories(count: int) -> list:
-    return [Story(f"Story {i}", i, StoryType.USER) for i in range(1, count + 1)]
-
-
-def _fresh_scenarios(count: int) -> list:
-    return [Scenario(f"Scenario {i}", i) for i in range(1, count + 1)]
-
-
-def _fresh_increments(count: int) -> list:
-    return [Increment(f"Increment {i}", i) for i in range(1, count + 1)]
+fixture = SpecFixture()
 
 
 with description("a Story Map") as self:
@@ -57,7 +57,7 @@ with description("a Story Map") as self:
 
     with context("with 4 Epics in sequential order"):
         with before.each:
-            self.story_map = _fresh_story_map_with_4_epics()
+            self.story_map = fixture.fresh_story_map_with_4_epics()
 
         with it("should hold 4 Epics"):
             expect(self.story_map.epics).to(have_len(4))
@@ -80,7 +80,7 @@ with description("a Story Map") as self:
         with context("with the first Epic removed"):
             with before.each:
                 first_epic = self.story_map.epics[0]
-                first_epic.sub_epics.extend(_fresh_sub_epics(2))
+                first_epic.sub_epics.extend(fixture.fresh_sub_epics(2))
                 self.story_map.remove_epic("Epic 1")
 
             with it("should hold 3 Epics"):
@@ -121,7 +121,7 @@ with description("a Story Map") as self:
         with context("with the first Epic holding 3 SubEpics"):
             with before.each:
                 self.first_epic = self.story_map.epics[0]
-                self.first_epic.sub_epics.extend(_fresh_sub_epics(3))
+                self.first_epic.sub_epics.extend(fixture.fresh_sub_epics(3))
 
             with context("the first Epic"):
                 with it("should hold 3 SubEpics"):
@@ -137,7 +137,7 @@ with description("a Story Map") as self:
 
             with context("with the first SubEpic of the first Epic removed"):
                 with before.each:
-                    self.first_epic.sub_epics[0].stories.extend(_fresh_stories(2))
+                    self.first_epic.sub_epics[0].stories.extend(fixture.fresh_stories(2))
                     self.first_epic.sub_epics.pop(0)
 
                 with context("the first Epic"):
@@ -175,9 +175,9 @@ with description("a Story Map") as self:
                 "with the first SubEpic moved from the first Epic to the second Epic"
             ):
                 with before.each:
-                    self.first_epic.sub_epics[0].stories.extend(_fresh_stories(1))
+                    self.first_epic.sub_epics[0].stories.extend(fixture.fresh_stories(1))
                     self.first_epic.sub_epics[0].stories[0].scenarios.extend(
-                        _fresh_scenarios(1)
+                        fixture.fresh_scenarios(1)
                     )
                     self.second_epic = self.story_map.epics[1]
                     self.original_second_epic_size = len(self.second_epic.sub_epics)
@@ -203,7 +203,7 @@ with description("a Story Map") as self:
             with context("with the first SubEpic of the first Epic holding 2 Stories"):
                 with before.each:
                     self.first_sub_epic = self.first_epic.sub_epics[0]
-                    self.first_sub_epic.stories.extend(_fresh_stories(2))
+                    self.first_sub_epic.stories.extend(fixture.fresh_stories(2))
 
                 with context("the first SubEpic of the first Epic"):
                     with it("should hold 2 Stories"):
@@ -222,7 +222,7 @@ with description("a Story Map") as self:
                 with context("with the first Story of the first SubEpic removed"):
                     with before.each:
                         self.first_sub_epic.stories[0].scenarios.extend(
-                            _fresh_scenarios(2)
+                            fixture.fresh_scenarios(2)
                         )
                         self.first_sub_epic.stories.pop(0)
 
@@ -261,7 +261,7 @@ with description("a Story Map") as self:
                 ):
                     with before.each:
                         self.first_sub_epic.stories[0].scenarios.extend(
-                            _fresh_scenarios(1)
+                            fixture.fresh_scenarios(1)
                         )
                         self.second_sub_epic = self.first_epic.sub_epics[1]
                         self.original_second_sub_epic_stories = len(
@@ -289,7 +289,7 @@ with description("a Story Map") as self:
                 ):
                     with before.each:
                         self.first_story = self.first_sub_epic.stories[0]
-                        self.first_story.scenarios.extend(_fresh_scenarios(3))
+                        self.first_story.scenarios.extend(fixture.fresh_scenarios(3))
 
                     with context("the first Story of the first SubEpic"):
                         with it("should hold 3 Scenarios"):
@@ -405,7 +405,7 @@ with description("a Story Map") as self:
     with context("with 2 Increments in sequential order"):
         with before.each:
             self.story_map = StoryMap()
-            for inc in _fresh_increments(2):
+            for inc in fixture.fresh_increments(2):
                 self.story_map.append_increment(inc)
 
         with it("should hold 2 Increments"):

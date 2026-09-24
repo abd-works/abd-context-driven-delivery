@@ -71,14 +71,31 @@ class PromptEcho:
     _catalog: ClassVar[list[tuple[str, str]] | None] = None
     _echo_toolsets: ClassVar[list | None] = None
 
+    def __init__(self) -> None:
+        self.repo: Path | None = None
+        self.toast_roots: list | None = None
+        self.echo = ""
+        self.toast_stamp = ""
+        self.tool_name = ""
+        self.echo_kind = ""
+        self.echo_label = ""
+        self.skill_kind = ""
+        self.skill_found: dict[str, str] = {}
+        self._begin_tools: dict = {}
+        self._begin_toolset = None
+        self._toast_dest: Path | None = None
+
     @property
     def catalog(self) -> list[tuple[str, str]]:
         if type(self)._catalog is not None:
             return type(self)._catalog
         found: dict[str, str] = {}
         skills = _REPO_ROOT / ".cursor" / "skills"
-        self._walk_skill_tree(skills / "actions", "action", found)
-        self._walk_skill_tree(skills / "practices", "practice", found)
+        self.skill_found = found
+        self.skill_kind = "action"
+        self._walk_skill_tree(skills / "actions")
+        self.skill_kind = "practice"
+        self._walk_skill_tree(skills / "practices")
         self._walk_rule_tree(_REPO_ROOT / ".cursor" / "rules" / "practices", found)
         for name in _FALLBACK_ACTIONS:
             found.setdefault(name.replace("_", "-"), "action")
@@ -102,7 +119,10 @@ class PromptEcho:
         if not detected:
             return {"permission": "allow"}
         kind, label = detected
-        self._log_echo(str(tool_name), kind, label)
+        self.tool_name = str(tool_name)
+        self.echo_kind = kind
+        self.echo_label = label
+        self._log_echo()
         return {"permission": "allow", "user_message": f"{kind.title()}{_ARROW}{label}"}
 
     def detect_echo(
@@ -137,18 +157,15 @@ class PromptEcho:
             type(self)._echo_toolsets = loaded
         return loaded
 
-    def show_ide_toast(
-        self,
-        echo: str,
-        repo: Path | None = None,
-        roots: list | None = None,
-    ) -> Path:
-        dest = self._toast_path(repo)
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        message = self._burst_message(dest, echo, stamp)
-        notice = json.dumps({"message": message, "at": stamp}, ensure_ascii=False) + "\n"
+    def show_ide_toast(self, echo: str) -> Path:
+        dest = self._toast_path(self.repo)
+        self._toast_dest = dest
+        self.echo = echo
+        self.toast_stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        message = self._burst_message()
+        notice = json.dumps({"message": message, "at": self.toast_stamp}, ensure_ascii=False) + "\n"
         self._write_notice(dest, notice)
-        for path in self._toast_destinations(dest, roots):
+        for path in self._toast_destinations(dest):
             self._write_notice(path, notice)
         return dest
 
@@ -175,9 +192,11 @@ class PromptEcho:
                 return marked
         return self.detect(hook_payload)
 
-    def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
+    def _log_echo(self) -> None:
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        sys.stderr.write(f"{stamp} [prompt-echo] tool={tool_name} {kind}={label}\n")
+        sys.stderr.write(
+            f"{stamp} [prompt-echo] tool={self.tool_name} {self.echo_kind}={self.echo_label}\n"
+        )
 
     def _catalog_match(
         self, haystacks: list[str], action_names: set[str]
@@ -207,22 +226,24 @@ class PromptEcho:
             return self._echo_kind_label(match)
         if match.name == "instructions" and self._inherited_echo(toolset, "instructions"):
             return self._echo_kind_label(match)
-        return self._begin_echo(match, tools, toolset)
+        self._begin_tools = tools
+        self._begin_toolset = toolset
+        return self._begin_echo(match)
 
-    def _begin_echo(self, match, tools: dict, toolset) -> tuple[str, str] | None:
-        begin = tools.get("begin")
+    def _begin_echo(self, match) -> tuple[str, str] | None:
+        begin = self._begin_tools.get("begin")
         if begin is None or match.name in _SKIP_BEGIN_FALLBACK:
             return None
         if not self._has_echo(begin.callable):
             return None
-        return "action", str(getattr(toolset, "slug", match.name)).replace("_", "-")
+        return "action", str(getattr(self._begin_toolset, "slug", match.name)).replace("_", "-")
 
     def _load_echo_toolsets(self, repo: Path | None) -> list:
         from installation.installer import Installer
         from harness.agent_tools.agent_tools import AgentToolSet
 
         installer = Installer(repo=repo or _REPO_ROOT)
-        return AgentToolSet.load_toolsets(installer.collect_toolsets(), skip_errors=True)
+        return AgentToolSet.from_items(installer.collect_toolsets(), skip_errors=True)
 
     def _toast_path(self, repo: Path | None) -> Path:
         root = Path(repo) if repo is not None else _REPO_ROOT
@@ -232,10 +253,10 @@ class PromptEcho:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(notice, encoding="utf-8")
 
-    def _toast_destinations(self, primary: Path, roots: list | None) -> list[Path]:
+    def _toast_destinations(self, primary: Path) -> list[Path]:
         seen = {primary.resolve()}
         extra: list[Path] = []
-        for root in roots or []:
+        for root in self.toast_roots or []:
             dest = Path(str(root)) / TOAST_NOTICE
             try:
                 resolved = dest.resolve()
@@ -247,8 +268,11 @@ class PromptEcho:
             extra.append(dest)
         return extra
 
-    def _burst_message(self, dest: Path, echo: str, stamp: str) -> str:
-        if not dest.is_file():
+    def _burst_message(self) -> str:
+        dest = self._toast_dest
+        echo = self.echo
+        stamp = self.toast_stamp
+        if dest is None or not dest.is_file():
             return echo
         previous = self._read_toast(dest)
         prev_msg = str(previous.get("message") or "")
@@ -271,9 +295,11 @@ class PromptEcho:
         stepped = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", text)
         return re.sub(r"[^a-z0-9]+", "-", stepped.lower()).strip("-")
 
-    def _walk_skill_tree(self, root: Path, top_kind: str, found: dict[str, str]) -> None:
+    def _walk_skill_tree(self, root: Path) -> None:
         if not root.is_dir():
             return
+        found = self.skill_found
+        top_kind = self.skill_kind
         for child in root.iterdir():
             if not child.is_dir():
                 continue
@@ -281,9 +307,13 @@ class PromptEcho:
             found.setdefault(token, top_kind)
             if top_kind != "practice":
                 continue
-            for leaf in child.iterdir():
-                if leaf.is_dir():
-                    found.setdefault(leaf.name.replace("_", "-"), "fidelity")
+            self._walk_practice_leaves(child)
+
+    def _walk_practice_leaves(self, child: Path) -> None:
+        found = self.skill_found
+        for leaf in child.iterdir():
+            if leaf.is_dir():
+                found.setdefault(leaf.name.replace("_", "-"), "fidelity")
 
     def _walk_rule_tree(self, root: Path, found: dict[str, str]) -> None:
         if not root.is_dir():

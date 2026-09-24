@@ -29,9 +29,9 @@ def log_path() -> Path:
     override = os.environ.get("PROMPT_LOG_PATH")
     if override:
         return Path(override)
-    from harness.hooks.session_logs import session_log_path
+    from harness.hooks.session_logs import SessionLogs
 
-    return session_log_path(_REPO_ROOT, "prompt-log.txt")
+    return SessionLogs(_REPO_ROOT).session_log_path("prompt-log.txt")
 
 
 def _norm_path(path: str) -> str:

@@ -76,7 +76,7 @@ class UbiquitousLanguageScanner(TypeScriptScanner):
         if parsed_root is None:
             return violations
 
-        for cls in self.get_classes(parsed_root):
+        for cls in self.classes:
             named = _NamedClass(cls, ts_file, tier)
             violations += self._check_class_name(named)
             violations += self._check_method_names(named)

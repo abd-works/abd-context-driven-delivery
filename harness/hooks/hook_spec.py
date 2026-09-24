@@ -28,7 +28,8 @@ from installation.installer import Installer
 
 
 def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
-    return HookServer(_REPO_ROOT, toolsets).dispatch(HookPayload(payload)).as_dict()
+    catalog = HandlerCatalog(toolsets or [], _REPO_ROOT)
+    return HookServer(_REPO_ROOT, catalog).dispatch(HookPayload(payload)).as_dict()
 
 
 def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
@@ -57,7 +58,7 @@ def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
                 )
             }
 
-    server = HookServer(root, [_PracticeInject])
+    server = HookServer(root, HandlerCatalog([_PracticeInject], root))
     result = server.dispatch(
         HookPayload({"hook_event_name": "postToolUse", "tool_name": "Write"})
     )
@@ -272,14 +273,12 @@ with description("session hook logs"):
         with it("should create default session logs under .sessions/default/logs"):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
-                from harness.hooks.session_logs import (
-                    ensure_default_session,
-                    session_log_path,
-                )
+                from harness.hooks.session_logs import SessionLogs
 
-                folder = ensure_default_session(root)
+                logs = SessionLogs(root)
+                folder = logs.ensure_default_session()
                 expect(folder.is_dir()).to(be_true)
-                log = session_log_path(root, "prompt-log.txt")
+                log = logs.session_log_path("prompt-log.txt")
                 expect(log.parent.as_posix()).to(
                     equal((root / ".sessions/default/logs").as_posix())
                 )
@@ -292,7 +291,7 @@ with description("a hook server") as self:
     with context("that has stood up without a handlers file"):
         with before.each:
             self._tmp = tempfile.mkdtemp()
-            self.server = HookServer.standup(
+            self.server = HookServer.from_handlers(
                 Path(self._tmp) / "missing.json", repo=self._tmp
             )
 
@@ -321,7 +320,7 @@ with description("a hook server") as self:
                 + "\n",
                 encoding="utf-8",
             )
-            self.server = HookServer.standup(dest, repo=self._tmp)
+            self.server = HookServer.from_handlers(dest, repo=self._tmp)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -349,7 +348,7 @@ with description("a hook server") as self:
                 + "\n",
                 encoding="utf-8",
             )
-            self.server = HookServer.standup(dest, repo=self._tmp)
+            self.server = HookServer.from_handlers(dest, repo=self._tmp)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -376,7 +375,7 @@ with description("a hook server") as self:
                 def on_stop(self, payload: dict) -> dict:
                     raise RuntimeError("handler misconfigured")
 
-            self.server = HookServer(_REPO_ROOT, toolsets=[_RaisingFixture])
+            self.server = HookServer(_REPO_ROOT, HandlerCatalog([_RaisingFixture], _REPO_ROOT))
             self.server.dispatch(HookPayload({"hook_event_name": "stop"}))
 
         with it("should still allow the event"):
@@ -402,7 +401,7 @@ with description("the Cursor hook_server.py command"):
             input=b'{"hook_event_name":"sessionStart"}',
             cwd=str(_REPO_ROOT),
             capture_output=True,
-            env={**os.environ, "PYTHONPATH": Installer.pythonpath(_REPO_ROOT)},
+            env={**os.environ, "PYTHONPATH": Installer(repo=_REPO_ROOT).pythonpath()},
         )
         expect(proc.returncode).to(equal(0))
         expect(json.loads(proc.stdout.decode("utf-8"))["permission"]).to(equal("allow"))

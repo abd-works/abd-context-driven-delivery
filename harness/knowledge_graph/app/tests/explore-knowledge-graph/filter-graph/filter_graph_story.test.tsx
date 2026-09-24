@@ -232,7 +232,7 @@ story('Filter Graph', () => {
       const presented = KnowledgeGraph.fromDto(violatingClassWithPassingOps())
         .selectNode('ce:OoadClass:GraphClass')
         .present();
-      const { getByTestId } = render(
+      const { getByTestId, getByText } = render(
         <SelectedNodePane
           selectedNode={presented.selected_node}
           selectedTree={presented.selected_tree}
@@ -240,6 +240,7 @@ story('Filter Graph', () => {
           sourceFile={presented.source_file}
         />,
       );
+      expect(getByText('Copy pane to prompt')).toBeTruthy();
       fireEvent.click(getByTestId('copy-pane-to-prompt'));
       const copied = String(writeText.mock.calls[0][0]);
       expect(copied).toContain('keep-classes-single-responsibility');
@@ -248,7 +249,46 @@ story('Filter Graph', () => {
       expect(copied).toContain('Fidelity: code');
       expect(copied).toContain('5 public operations');
       expect(copied).toContain('too_long is 40 lines');
+      expect(copied).toContain('Fix the following violations, follow this process');
+      expect(copied).toContain('save the below as a violation task list');
+      expect(copied).toContain('use a non-blocking sub agent if available to you');
+      expect(copied).toContain('fix each violation as a separate turn');
+      expect(copied).toContain('ignore violations that are marked as fixed');
+      expect(copied).toContain('[ ] done');
       expect(copied).not.toContain('Source:');
+    });
+  });
+  scenario('guidance off leaves only violation lines', ({ given, when, then }) => {
+    given('a violating class is open with rule guidance and source', () => {});
+    when('the Engineer turns guidance off', () => {});
+    then('the pane hides guidance body and source and keeps the violation', () => {
+      const presented = KnowledgeGraph.fromDto(violatingClassWithPassingOps())
+        .selectNode('ce:OoadClass:GraphClass')
+        .present();
+      const { getByTestId, queryByText, queryAllByText, container } = render(
+        <SelectedNodePane
+          selectedNode={presented.selected_node}
+          selectedTree={presented.selected_tree}
+          selectedRule={null}
+          sourceFile={presented.source_file}
+        />,
+      );
+      expect(
+        queryAllByText(/Keep each operation short enough to read as one thought/i)
+          .length,
+      ).toBeGreaterThan(0);
+      fireEvent.click(getByTestId('toggle-guidance').querySelector('input')!);
+      expect(
+        queryAllByText(/Keep each operation short enough to read as one thought/i),
+      ).toHaveLength(0);
+      expect(container.querySelector('[data-testid="source-excerpt"]')).toBeNull();
+      expect(container.querySelector('[data-testid="nested-source"]')).toBeNull();
+      expect(queryByText(/5 public operations/i)).not.toBeNull();
+      expect(queryByText(/too_long is 40 lines/i)).not.toBeNull();
+      expect(queryByText('load_property')).toBeNull();
+      expect(container.querySelectorAll('[data-testid="copy-info-to-prompt"]').length).toBe(
+        2,
+      );
     });
   });
 });

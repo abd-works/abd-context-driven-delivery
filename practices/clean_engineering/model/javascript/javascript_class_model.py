@@ -34,23 +34,6 @@ from practices.clean_engineering.model.base_class_model import (
 from practices.clean_engineering.model.update_report import UpdateReport
 
 
-def _camel(name: str) -> str:
-    """snake_case / plain -> camelCase for JS members and params."""
-    raw = (name or "").strip()
-    if not raw:
-        return raw
-    # Drop type annotations if a converter left "name: Type" in parameters.
-    raw = raw.split(":", 1)[0].strip()
-    parts = re.split(r"_+", raw.lstrip("_"))
-    if not parts:
-        return raw
-    return parts[0] + "".join(p[:1].upper() + p[1:] for p in parts[1:] if p)
-
-
-def _camel_params(parameters: List[str]) -> str:
-    return ", ".join(_camel(p) for p in parameters if p and p.strip())
-
-
 class JavaScriptOoadClass(OoadClass):
     pass
 
@@ -64,38 +47,45 @@ class JavaScriptCleanEngineeringModel(CleanEngineeringModel):
     # Uniform callable surface
     # ------------------------------------------------------------------
 
-    @classmethod
-    def parse(cls, text: str) -> "JavaScriptCleanEngineeringModel":
-        from practices.clean_engineering.model.c_family_parse import parse_c_family
+    def parse(self, text: str) -> "JavaScriptCleanEngineeringModel":
+        from practices.clean_engineering.model.c_family_parse import CFamilyParse
 
-        return parse_c_family(
-            text,
-            model_factory=lambda: cls(name="", sequential_order=1),
+        return CFamilyParse(
+            model_factory=lambda: type(self)(name="", sequential_order=1),
             class_factory=lambda **kw: JavaScriptOoadClass(**kw),
-        )
+        ).parse(text)
 
-    @classmethod
-    def parse_detailed(cls, text: str):
+    def parse_detailed(self, text: str):
         from practices.clean_engineering.model.python.python_class_model import ParsedPython
 
-        model = cls.parse(text)
+        model = self.parse(text)
         return ParsedPython(model=model, content=text, lines=text.split("\n"), tree=None)
 
-    @classmethod
-    def parse_file(cls, path: Path):
+    def parse_file(self, path: Path):
         try:
-            return cls.parse_detailed(path.read_text(encoding="utf-8"))
+            return self.parse_detailed(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError):
             return None
 
-    @classmethod
-    def render(cls, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
         known = [c.name for c in canonical.classes]
-        parts = [cls._render_class(c, known_names=known) for c in canonical.classes]
+        parts = [self._render_class(c, known_names=known) for c in canonical.classes]
         return "\n\n".join(parts) + "\n"
 
-    @classmethod
-    def _render_class(cls, oclass: OoadClass, known_names: List[str] | None = None) -> str:
+    def _camel(self, name: str) -> str:
+        raw = (name or "").strip()
+        if not raw:
+            return raw
+        raw = raw.split(":", 1)[0].strip()
+        parts = re.split(r"_+", raw.lstrip("_"))
+        if not parts:
+            return raw
+        return parts[0] + "".join(p[:1].upper() + p[1:] for p in parts[1:] if p)
+
+    def _camel_params(self, parameters: List[str]) -> str:
+        return ", ".join(self._camel(p) for p in parameters if p and p.strip())
+
+    def _render_class(self, oclass: OoadClass, known_names: List[str] | None = None) -> str:
         known_names = known_names or []
         lines: List[str] = []
         if oclass.intent:
@@ -110,7 +100,7 @@ class JavaScriptCleanEngineeringModel(CleanEngineeringModel):
             for op in oclass.operations:
                 if op.name.startswith("_"):
                     continue
-                lines.append(f"  {_camel(op.name)}({_camel_params(op.parameters)}) {{ }}")
+                lines.append(f"  {self._camel(op.name)}({self._camel_params(op.parameters)}) {{ }}")
             lines.append("}")
             return "\n".join(lines)
 
@@ -120,7 +110,7 @@ class JavaScriptCleanEngineeringModel(CleanEngineeringModel):
                 lines.append(f"// implements {iface}")
             lines.append(f"class {oclass.name} {{")
             for op in oclass.operations:
-                lines.append(f"  {_camel(op.name)}({_camel_params(op.parameters)}) {{ }}")
+                lines.append(f"  {self._camel(op.name)}({self._camel_params(op.parameters)}) {{ }}")
             if not oclass.operations and not oclass.properties:
                 lines.append("  // load{ExampleKey}() - examples[{example_key}] multi-type bundle")
             lines.append("}")
@@ -142,18 +132,17 @@ class JavaScriptCleanEngineeringModel(CleanEngineeringModel):
             lines.append(f"// implements {iface}")
 
         lines.append(f"class {oclass.name} {{")
-        params = ", ".join(_camel(p.name) for p in oclass.properties)
+        params = ", ".join(self._camel(p.name) for p in oclass.properties)
         lines.append(f"  constructor({params}) {{")
         for prop in oclass.properties:
-            lines.append(f"    this.{_camel(prop.name)} = {_camel(prop.name)};")
+            lines.append(f"    this.{self._camel(prop.name)} = {self._camel(prop.name)};")
         lines.append("  }")
         for op in oclass.operations:
             access = "#" if op.name.startswith("_") else ""
             lines.append("")
-            lines.append(f"  {access}{_camel(op.name)}({_camel_params(op.parameters)}) {{ }}")
+            lines.append(f"  {access}{self._camel(op.name)}({self._camel_params(op.parameters)}) {{ }}")
         lines.append("}")
         return "\n".join(lines)
 
-    @classmethod
-    def sync(cls, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
-        return canonical.translate_from(cls.parse(text))
+    def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
+        return canonical.translate_from(self.parse(text))

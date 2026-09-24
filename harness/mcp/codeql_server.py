@@ -16,15 +16,20 @@ _PHASES = {"Compiling", "Running", "Writing", "Shutting"}
 class CodeQLQueryServer:
     """One `codeql execute query-server2` process for the life of the host."""
 
-    def __init__(self, repo: Path | str) -> None:
+    def __init__(self, repo: Path | str, codeql: CodeQL) -> None:
         self.repo = Path(repo)
-        self._codeql = CodeQL(self.repo)
+        self._codeql = codeql
         self._process: subprocess.Popen | None = None
         self._next_id = 1
         self._registered: set[str] = set()
         self._lock = threading.Lock()
         self._last_progress = ""
         self._on_line = None
+
+    @classmethod
+    def from_repo(cls, repo: Path | str) -> CodeQLQueryServer:
+        root = Path(repo)
+        return cls(root, CodeQL(root))
 
     @property
     def alive(self) -> bool:
@@ -230,8 +235,7 @@ class CodeQLQueryServer:
             remaining -= len(chunk)
         return json.loads(b"".join(chunks))
 
-    @staticmethod
-    def _kill_tree(pid: int) -> None:
+    def _kill_tree(self, pid: int) -> None:
         if sys.platform == "win32":
             subprocess.run(
                 ["taskkill", "/F", "/T", "/PID", str(pid)],
@@ -242,4 +246,6 @@ class CodeQLQueryServer:
         try:
             os.kill(pid, 9)
         except OSError:
+            logger = __import__("logging").getLogger(__name__)
+            logger.debug("process %s already gone", pid)
             return

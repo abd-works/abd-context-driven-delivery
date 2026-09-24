@@ -126,7 +126,8 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
                     body.append(transformed)
 
         if story_givens:
-            body = self._inject_story_givens(body, story_givens, node)
+            self._inject_node = node
+            body = self._inject_story_givens(body, story_givens)
 
         return ast.copy_location(
             ast.ClassDef(
@@ -173,7 +174,6 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
         self,
         body: list[ast.stmt],
         givens: list[list[ast.stmt]],
-        node: ast.AST,
     ) -> list[ast.stmt]:
         extra: list[ast.stmt] = [stmt for block in givens for stmt in block]
         for index, stmt in enumerate(body):
@@ -199,7 +199,7 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
                     body=extra,
                     decorator_list=[],
                 ),
-                node,
+                self._inject_node,
             ),
         )
         return body
@@ -310,9 +310,11 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
 class StoryExampleCollector(ExampleCollector):
     STORY_SUFFIXES = (".e2e.py", ".front-end.py", ".back-end.py")
 
-    def __init__(self, paths: list[str]) -> None:
+    def __init__(
+        self, paths: list[str], node_transformer: StoryNodeTransformer
+    ) -> None:
         super().__init__(paths)
-        self._node_transformer = StoryNodeTransformer()
+        self._node_transformer = node_transformer
 
     def _collect_files_containing_examples(self) -> list[str]:
         collected: list[str] = []
@@ -342,7 +344,7 @@ class StoryExampleCollector(ExampleCollector):
 
 
 def load_story_module(path: str) -> types.ModuleType:
-    collector = StoryExampleCollector([path])
+    collector = StoryExampleCollector([path], StoryNodeTransformer())
     modules = collector.modules()
     if not modules:
         raise RuntimeError(f"No story examples found in {path}")
@@ -350,7 +352,7 @@ def load_story_module(path: str) -> types.ModuleType:
 
 
 def iter_story_modules(paths: list[str]) -> Iterator[types.ModuleType]:
-    collector = StoryExampleCollector(paths)
+    collector = StoryExampleCollector(paths, StoryNodeTransformer())
     yield from collector.modules()
 
 

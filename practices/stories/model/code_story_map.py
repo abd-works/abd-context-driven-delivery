@@ -81,18 +81,6 @@ def to_camel(name: str) -> str:
     return first + rest
 
 
-def strip_tests_root_prefix(parts: list[str], tests_root: str) -> list[str] | None:
-    """Drop the workspace-relative deploy prefix from a rendered file path."""
-    if not tests_root:
-        return parts
-    root_parts = [p for p in tests_root.split("/") if p]
-    if not root_parts:
-        return parts
-    if len(parts) < len(root_parts) or parts[: len(root_parts)] != root_parts:
-        return None
-    return parts[len(root_parts) :]
-
-
 class CodeStoryMap:
     """Abstract base for source-tree backends of a Story Map."""
 
@@ -101,6 +89,17 @@ class CodeStoryMap:
 
     def __init__(self, tests_root: str | None = None):
         self._tests_root = ("tests" if tests_root is None else tests_root).strip("/")
+
+    def strip_tests_root_prefix(self, parts: list[str]) -> list[str] | None:
+        """Drop the workspace-relative deploy prefix from a rendered file path."""
+        if not self._tests_root:
+            return parts
+        root_parts = [p for p in self._tests_root.split("/") if p]
+        if not root_parts:
+            return parts
+        if len(parts) < len(root_parts) or parts[: len(root_parts)] != root_parts:
+            return None
+        return parts[len(root_parts) :]
 
     @property
     def tests_root(self) -> str:
@@ -169,11 +168,9 @@ class CodeStoryMap:
                 current_sub_epic = existing
 
             if current_sub_epic is not None:
-                self._hydrate_leaf_sub_epic_from_content(
-                    current_sub_epic=current_sub_epic,
-                    file_name=_file_name,
-                    content=external[path],
-                )
+                self._leaf_file_name = _file_name
+                self._leaf_content = external[path]
+                self._hydrate_leaf_sub_epic_from_content(current_sub_epic)
 
         if not story_map.epics and external:
             raise CodeStoryMapError(
@@ -193,9 +190,7 @@ class CodeStoryMap:
         """Factory - overridden by concrete subclasses to return format-typed SubEpic."""
         return SubEpic(name, order)
 
-    def _hydrate_leaf_sub_epic_from_content(
-        self, current_sub_epic: SubEpic, file_name: str, content: str
-    ) -> None:
+    def _hydrate_leaf_sub_epic_from_content(self, current_sub_epic: SubEpic) -> None:
         # WHY: language backends override this to reconstruct story and scenario
         # structure when parsing generated source trees back into StoryMap.
         return None

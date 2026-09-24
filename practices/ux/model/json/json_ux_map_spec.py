@@ -17,7 +17,7 @@ from practices.ux.model.ux_map import UxMap
 
 with description("JsonUxMap"):
     with before.each:
-        self.source = UxMap(name="demo")
+        self.source = UxMap.create(name="demo")
         self.source.scope = "Place New Order"
         screen = Screen("Catalog", 0, "catalog")
         screen.apply_layout("stack")
@@ -34,8 +34,8 @@ with description("JsonUxMap"):
                 nav_type="action",
             )
         )
-        self.rendered = JsonUxMap.render(self.source)
-        self.parsed = JsonUxMap.parse(self.rendered)
+        self.rendered = JsonUxMap.create().render(self.source)
+        self.parsed = JsonUxMap.create().parse(self.rendered)
 
     with it("should round-trip scope and screen names"):
         expect(self.parsed.scope).to(equal("Place New Order"))

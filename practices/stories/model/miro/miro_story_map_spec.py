@@ -37,36 +37,40 @@ from practices.stories.model.miro.nodes import (
 # Shared fixture factory (identical to drawio_story_map_spec.py)
 # ---------------------------------------------------------------------------
 
-def _story_map_with_4_epics_and_3_sub_epics_and_1_story() -> StoryMap:
-    story_map = StoryMap()
-    for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
-    first_epic = story_map.epics[0]
-    for j in range(1, 4):
-        sub = SubEpic(f"SubEpic 1.{j}", j)
-        story = Story(f"Story 1.{j}.1", 1, StoryType.USER)
-        story.scenarios.append(Scenario(name="scenario step", sequential_order=1))
-        sub.stories.append(story)
-        first_epic.sub_epics.append(sub)
-    return story_map
+class SpecFixture:
+    def story_map_with_4_epics_and_3_sub_epics_and_1_story(self) -> StoryMap:
+        story_map = StoryMap()
+        for i in range(1, 5):
+            story_map.append_epic(Epic(f"Epic {i}", i))
+        first_epic = story_map.epics[0]
+        for j in range(1, 4):
+            sub = SubEpic(f"SubEpic 1.{j}", j)
+            story = Story(f"Story 1.{j}.1", 1, StoryType.USER)
+            story.scenarios.append(Scenario(name="scenario step", sequential_order=1))
+            sub.stories.append(story)
+            first_epic.sub_epics.append(sub)
+        return story_map
+
+    def svg_rects_with_role(self, text: str) -> list:
+        root = ET.fromstring(text.split("\n", 1)[1] if text.startswith("<?") else text)
+        return list(self._gather_rects(root))
+
+    def _gather_rects(self, element):
+        tag = element.tag.split("}")[-1] if "}" in element.tag else element.tag
+        if tag == "rect" and element.get("data-role"):
+            yield element
+        for child in element:
+            yield from self._gather_rects(child)
+
+    def rects_by_role(self, text: str, role_prefix: str) -> list:
+        return [
+            el
+            for el in self.svg_rects_with_role(text)
+            if el.get("data-role", "").startswith(role_prefix)
+        ]
 
 
-def _svg_rects_with_role(text: str) -> list:
-    """Return all rect elements carrying a data-role attribute."""
-    root = ET.fromstring(text.split("\n", 1)[1] if text.startswith("<?") else text)
-
-    def _gather(el):
-        tag = el.tag.split("}")[-1] if "}" in el.tag else el.tag
-        if tag == "rect" and el.get("data-role"):
-            yield el
-        for child in el:
-            yield from _gather(child)
-
-    return list(_gather(root))
-
-
-def _rects_by_role(text: str, role_prefix: str) -> list:
-    return [el for el in _svg_rects_with_role(text) if el.get("data-role", "").startswith(role_prefix)]
+fixture = SpecFixture()
 
 
 # ===========================================================================
@@ -81,7 +85,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
         "that holds a rendered diagram Story Map with 4 Epics and 3 SubEpics under the first Epic"
     ):
         with before.each:
-            self.source = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.source = fixture.story_map_with_4_epics_and_3_sub_epics_and_1_story()
             self.text = self.miro.render(self.source)
 
         with it("should serialize as a valid SVG document"):
@@ -94,7 +98,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
         with context("every node"):
             with it("should appear as a rect with data-role in the SVG"):
                 # 4 epics + 3 sub-epics + 3 stories = 10
-                expect(_svg_rects_with_role(self.text)).to(have_len(10))
+                expect(fixture.svg_rects_with_role(self.text)).to(have_len(10))
 
         with context("with an Epic appended and the SVG re-rendered"):
             with before.each:
@@ -106,7 +110,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
                     "should contain one additional Epic rect carrying the new Epic's name"
                 ):
                     expect("Epic 5" in self.new_text).to(be_true)
-                    epic_rects = _rects_by_role(self.new_text, "epic")
+                    epic_rects = fixture.rects_by_role(self.new_text, "epic")
                     expect(epic_rects).to(have_len(5))
 
         with context("with the first Epic renamed and the SVG re-rendered"):
@@ -132,8 +136,8 @@ with description("a Miro Story Map (story-map fidelity)") as self:
 
     with context("that has been edited on the Miro board and synced back"):
         with before.each:
-            self.canonical = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
-            edited = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.canonical = fixture.story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            edited = fixture.story_map_with_4_epics_and_3_sub_epics_and_1_story()
             edited.epics[0].name = "Epic 1 (edited)"
             edited.append_epic(Epic("Epic 5", 5))
             edited_text = self.miro.render(edited)
@@ -155,7 +159,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
 
     with context("that has been rendered and parsed back without edits"):
         with before.each:
-            self.original = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.original = fixture.story_map_with_4_epics_and_3_sub_epics_and_1_story()
             self.parsed = self.miro.parse(self.miro.render(self.original))
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
@@ -190,15 +194,15 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             )
 
         with it("should place depth-0 sub-epics above depth-1 children"):
-            d0 = [el for el in _svg_rects_with_role(self.text) if el.get("data-role") == "subepic:0"]
-            d1 = [el for el in _svg_rects_with_role(self.text) if el.get("data-role") == "subepic:1"]
+            d0 = [el for el in fixture.svg_rects_with_role(self.text) if el.get("data-role") == "subepic:0"]
+            d1 = [el for el in fixture.svg_rects_with_role(self.text) if el.get("data-role") == "subepic:1"]
             expect(len(d0) > 0).to(be_true)
             expect(len(d1) > 0).to(be_true)
             expect(float(d0[0].get("y", 0)) < float(d1[0].get("y", 0))).to(be_true)
 
         with it("should place depth-1 sub-epics above depth-2 children"):
-            d1 = [el for el in _svg_rects_with_role(self.text) if el.get("data-role") == "subepic:1"]
-            d2 = [el for el in _svg_rects_with_role(self.text) if el.get("data-role") == "subepic:2"]
+            d1 = [el for el in fixture.svg_rects_with_role(self.text) if el.get("data-role") == "subepic:1"]
+            d2 = [el for el in fixture.svg_rects_with_role(self.text) if el.get("data-role") == "subepic:2"]
             expect(len(d1) > 0).to(be_true)
             expect(len(d2) > 0).to(be_true)
             expect(float(d1[0].get("y", 0)) < float(d2[0].get("y", 0))).to(be_true)
@@ -229,34 +233,34 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             epic.sub_epics.append(capability)
             self.source.append_epic(epic)
             self.text = self.miro.render(self.source)
-            self.rects = _svg_rects_with_role(self.text)
+            self.rects = fixture.svg_rects_with_role(self.text)
 
         with it("should place story cards in distinct left-to-right columns"):
-            stories = _rects_by_role(self.text, "story:")
+            stories = fixture.rects_by_role(self.text, "story:")
             expect([int(story.get("x")) for story in stories]).to(
                 equal([35, 95, 155])
             )
 
         with it("should use compact square story cards like the DrawIO map"):
-            stories = _rects_by_role(self.text, "story:")
+            stories = fixture.rects_by_role(self.text, "story:")
             expect(
                 [(int(story.get("width")), int(story.get("height"))) for story in stories]
             ).to(equal([(50, 50), (50, 50), (50, 50)]))
 
         with it("should span the capability and Epic across their story columns"):
-            epic = _rects_by_role(self.text, "epic")[0]
-            capability = _rects_by_role(self.text, "subepic:0")[0]
+            epic = fixture.rects_by_role(self.text, "epic")[0]
+            capability = fixture.rects_by_role(self.text, "subepic:0")[0]
             expect((int(epic.get("x")), int(epic.get("width")))).to(equal((20, 180)))
             expect((int(capability.get("x")), int(capability.get("width")))).to(
                 equal((30, 170))
             )
 
         with it("should place actor cards above each change of actor"):
-            actors = _rects_by_role(self.text, "actor")
+            actors = fixture.rects_by_role(self.text, "actor")
             expect([actor.get("data-content") for actor in actors]).to(
                 equal(["Prospect", "System"])
             )
-            story_y = int(_rects_by_role(self.text, "story:")[0].get("y"))
+            story_y = int(fixture.rects_by_role(self.text, "story:")[0].get("y"))
             expect(all(int(actor.get("y")) < story_y for actor in actors)).to(be_true)
 
         with it("should give every rendered card a unique hierarchy-based identity"):
@@ -281,7 +285,7 @@ with description("a Miro Story Map (thin-slice fidelity)") as self:
 
     with context("rendering the thin-slice view for a StoryMap with 2 increments"):
         with before.each:
-            self.source = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.source = fixture.story_map_with_4_epics_and_3_sub_epics_and_1_story()
             inc_a = Increment(name="Increment A - first outcome", sequential_order=1)
             inc_a.stories = ["Story 1.1.1", "Story 1.2.1"]
             inc_b = Increment(name="Increment B - second outcome", sequential_order=2)
@@ -318,7 +322,7 @@ with description("a Miro Story Map (thin-slice fidelity)") as self:
 
     with context("parsing the thin-slice SVG back into increment nodes"):
         with before.each:
-            self.source = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
+            self.source = fixture.story_map_with_4_epics_and_3_sub_epics_and_1_story()
             inc_a = Increment(name="Increment A", sequential_order=1)
             inc_a.stories = ["Story 1.1.1"]
             inc_b = Increment(name="Increment B", sequential_order=2)

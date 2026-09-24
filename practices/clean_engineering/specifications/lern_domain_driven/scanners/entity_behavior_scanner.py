@@ -75,7 +75,7 @@ class EntityBehaviorScanner(TypeScriptScanner):
         if parsed_root is None:
             return []
         violations: List[Violation] = []
-        for cls in self.get_classes(parsed_root):
+        for cls in self.classes:
             if self._is_exempt_class(cls):
                 continue
             violations.extend(self._check_entity_methods(cls, ts_file))
@@ -164,7 +164,7 @@ class EntityBehaviorScanner(TypeScriptScanner):
         _LOWDB_IMPORT_RE = re.compile(r"from\s+['\"]lowdb(?:/node)?['\"]")
         parsed_root = self.parse_file(server)
         has_lowdb = bool(_LOWDB_IMPORT_RE.search(content))
-        if parsed_root and self.has_import_from(parsed_root, "lowdb", "lowdb/node"):
+        if parsed_root and (self.has_import_from("lowdb") or self.has_import_from("lowdb/node")):
             has_lowdb = True
 
         if not has_lowdb:

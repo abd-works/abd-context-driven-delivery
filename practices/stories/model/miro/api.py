@@ -43,12 +43,17 @@ class MiroApiClient:
 
     def __init__(self, token: Optional[str] = None) -> None:
         self.token = token or self._resolve_token()
-        if not self.token:
-            raise MiroAuthError(
-                "Miro API token not found. "
-                "Set MIRO_TOKEN env var, create ~/.miro-token, "
-                "or get a PAT at https://miro.com/app/settings/user-profile/apps"
-            )
+
+    @classmethod
+    def create(cls, token: Optional[str] = None) -> "MiroApiClient":
+        client = cls(token)
+        if client.token:
+            return client
+        raise MiroAuthError(
+            "Miro API token not found. "
+            "Set MIRO_TOKEN env var, create ~/.miro-token, "
+            "or get a PAT at https://miro.com/app/settings/user-profile/apps"
+        )
 
     # ------------------------------------------------------------------
     # Board shape CRUD
@@ -75,7 +80,7 @@ class MiroApiClient:
         """
         shape_type = "round_rectangle" if rx > 0 else "rectangle"
         payload: dict[str, Any] = {
-            "data": {"shape": shape_type, "content": f"<p>{_html_escape(content)}</p>"},
+            "data": {"shape": shape_type, "content": f"<p>{self._html_escape(content)}</p>"},
             "style": {
                 "fillColor": fill,
                 "fillOpacity": "1.0",
@@ -92,12 +97,12 @@ class MiroApiClient:
             "geometry": {"width": w, "height": h},
             "position": {"x": x, "y": y},
         }
-        return self._request("POST", f"/boards/{_encode(board_id)}/shapes", payload)
+        return self._request("POST", f"/boards/{self._encode(board_id)}/shapes", payload)
 
     def delete_shape(self, board_id: str, shape_id: str) -> None:
         """Delete one shape. Silently ignores 404 (already gone)."""
         try:
-            self._request("DELETE", f"/boards/{_encode(board_id)}/shapes/{shape_id}")
+            self._request("DELETE", f"/boards/{self._encode(board_id)}/shapes/{shape_id}")
         except MiroApiError as exc:
             if exc.status != 404:
                 raise
@@ -109,7 +114,7 @@ class MiroApiClient:
             params: dict[str, Any] = {"limit": 50}
             if cursor:
                 params["cursor"] = cursor
-            page = self._request("GET", f"/boards/{_encode(board_id)}/shapes", params=params)
+            page = self._request("GET", f"/boards/{self._encode(board_id)}/shapes", params=params)
             for item in page.get("data", []):
                 yield item
             cursor = page.get("cursor")
@@ -158,8 +163,7 @@ class MiroApiClient:
                 return self._request(method, path, body, params, retries + 1)
             raise MiroApiError(status, raw_body) from exc
 
-    @staticmethod
-    def _resolve_token() -> Optional[str]:
+    def _resolve_token(self) -> Optional[str]:
         tok = os.environ.get("MIRO_TOKEN", "").strip()
         if tok:
             return tok
@@ -173,14 +177,13 @@ class MiroApiClient:
         return None
 
 
-def _encode(board_id: str) -> str:
-    return urllib.parse.quote(board_id, safe="")
+    def _encode(self, board_id: str) -> str:
+        return urllib.parse.quote(board_id, safe="")
 
-
-def _html_escape(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    def _html_escape(self, text: str) -> str:
+        return (
+            text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )

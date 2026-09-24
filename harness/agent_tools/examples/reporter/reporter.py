@@ -21,6 +21,11 @@ class Reporter:
         self._notes: list[str] = []
         super().__init__()
 
+    @classmethod
+    def instance(cls, beat: str = "technology") -> Reporter:
+        """Minimal Reporter instance for tests and examples."""
+        return cls(beat=beat)
+
     @property
     def module_dir(self) -> Path:
         return Path(inspect.getfile(type(self))).resolve().parent

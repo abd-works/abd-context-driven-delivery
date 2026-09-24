@@ -27,7 +27,7 @@ from harness.agent_tools.agent_tools import AgentToolSet
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _STORIES_TOOLSET = "practices.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Hard fail"
@@ -55,10 +55,12 @@ with description("Partition kit on hosts"):
 with description("a partition action"):
     with context("that expands"):
         with it("should include the partition_corpus body in partition"):
-            body = AgentInstructions.for_callable(Partition.partition, Partition())
+            body = AgentInstructions.for_callable(
+                Partition.partition_corpus, Partition()
+            )
             joined = "\n".join(body.prompt)
             expect("Hard fail" in joined or "partition" in joined.lower()).to(be_true)
-            expect("index" in body.tool_steps or "segment" in body.tool_steps).to(be_true)
+            expect("index" in body.tools or "segment" in body.tools).to(be_true)
 
 
 # ---------------------------------------------------------------------------

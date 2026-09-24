@@ -13,7 +13,7 @@ for _p in [
     str(_REPO_ROOT),
     *[
         str(_REPO_ROOT / c)
-        for c in ("practices", "harness", "tools", "actions")
+        for c in ("practices", "tools", "actions")
     ],
 ]:
     if _p not in sys.path:
@@ -39,9 +39,13 @@ def _kit_prose(action: str, kit_dir: Path) -> str:
     return (kit_dir / f"{action}.md").read_text(encoding="utf-8")
 
 
-def _load_agent_bdd(*, format_name: str = "python") -> AgentToolSet:
-    toolset_cls = type(AgentToolSet.instantiate(_AGENT_BDD_TOOLSET))
-    return toolset_cls(format=format_name)
+class _AgentBddSpecFixture:
+    def __init__(self, format_name: str = "python") -> None:
+        self._format_name = format_name
+
+    def load(self) -> AgentToolSet:
+        toolset_cls = type(AgentToolSet.instantiate(_AGENT_BDD_TOOLSET))
+        return toolset_cls(format=self._format_name)
 
 
 def _expand_action(
@@ -64,7 +68,7 @@ def _assert_text_inlined(instructions: str, source: str) -> None:
 with description("AgentBdd action expansion"):
     with context("an AgentBdd generator with format python"):
         with before.all:
-            self.bdd = _load_agent_bdd()
+            self.bdd = _AgentBddSpecFixture().load()
             self.contexts = Markdown.from_label(self.bdd, "overview").extract()
             self.bdd_contexts = Markdown.from_label(Bdd(), "overview").extract()
 

@@ -24,11 +24,7 @@ from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from installation.files import skill
 from harness.mcp.mcp_server import mcp
 from harness.hooks.hooks import hook, hooks
-from harness.hooks.session_logs import (
-    clear_active_session,
-    consolidate_logs_for_close,
-    write_active_session,
-)
+from harness.hooks.session_logs import SessionLogs
 
 @dataclass
 class PathOverride:
@@ -48,37 +44,31 @@ class SessionPaths:
     same folder.
     """
 
-    @staticmethod
-    def repository_root(path: str | Path) -> Path:
+    def repository_root(self, path: str | Path) -> Path:
         """Git primary clone root for *path*, or *path* itself when not in a repo."""
-        found = Repo.find_root(path)
+        found = Repo(path).find_root()
         if found is not None:
             return Path(found)
         return Path(path)
 
-    @staticmethod
-    def sessions_root(working_path: str | Path) -> Path:
+    def sessions_root(self, working_path: str | Path) -> Path:
         """Active session folders: ``{repository_root}/.sessions/``."""
-        return SessionPaths.repository_root(working_path) / ".sessions"
+        return self.repository_root(working_path) / ".sessions"
 
-    @staticmethod
-    def legacy_sessions_root(working_path: str | Path) -> Path:
+    def legacy_sessions_root(self, working_path: str | Path) -> Path:
         """Pre-migration session root: ``{repository_root}/.context/sessions/``."""
-        return SessionPaths.repository_root(working_path) / ".context" / "sessions"
+        return self.repository_root(working_path) / ".context" / "sessions"
 
-    @staticmethod
-    def is_session_folder(destination: str | Path) -> bool:
+    def is_session_folder(self, destination: str | Path) -> bool:
         dest = Path(destination)
         if not dest.name or dest.name == "closed":
             return False
         parent = dest.parent
         if parent.name == ".sessions":
             return True
-        # Legacy: ``.context/sessions/{name}``
         return parent.name == "sessions" and parent.parent.name == ".context"
 
-    @staticmethod
-    def docs_dir(destination: str | Path) -> Path:
+    def docs_dir(self, destination: str | Path) -> Path:
         """Durable artifact dir: ``{path}/.context/`` (sketches, generate, grill-answers).
 
         Never returns a session folder. If *destination* is already ``.context``, a
@@ -89,17 +79,16 @@ class SessionPaths:
         if dest.name == ".context":
             return dest
         if dest.name == ".sessions":
-            return SessionPaths.repository_root(dest) / ".context"
+            return self.repository_root(dest) / ".context"
         if dest.name == "sessions" and dest.parent.name == ".context":
             return dest.parent
-        if SessionPaths.is_session_folder(dest):
-            return SessionPaths.repository_root(dest) / ".context"
+        if self.is_session_folder(dest):
+            return self.repository_root(dest) / ".context"
         if dest.parent.name == ".context" and dest.name not in ("sessions", ".sessions"):
             return dest.parent
         return dest / ".context"
 
-    @staticmethod
-    def session_dir(working_path: str | Path, name: str = "") -> Path:
+    def session_dir(self, working_path: str | Path, name: str = "") -> Path:
         """Session temp dir: ``{repository_root}/.sessions/{name}/``.
 
         *working_path* is the active checkout (primary clone or worktree).
@@ -107,27 +96,26 @@ class SessionPaths:
         is required.
         """
         dest = Path(working_path)
-        if SessionPaths.is_session_folder(dest):
+        if self.is_session_folder(dest):
             return dest
         slug = (name or "").strip()
         if not slug:
             raise ValueError(
                 "session name is required when destination is not a session folder"
             )
-        return SessionPaths.sessions_root(dest) / slug
+        return self.sessions_root(dest) / slug
 
-    @staticmethod
-    def migrate_legacy_session_folder(repo_root: Path, name: str, dest: Path) -> bool:
+    def migrate_legacy_session_folder(self, repo_root: Path, dest: Path) -> bool:
         """Move ``.context/sessions/{name}/`` to ``.sessions/{name}/`` when present."""
-        legacy = SessionPaths.legacy_sessions_root(repo_root) / name
+        legacy = self.legacy_sessions_root(repo_root) / dest.name
         if not legacy.is_dir() or dest.exists():
             return False
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(legacy), str(dest))
         return True
 
-docs_dir = SessionPaths.docs_dir
-session_dir = SessionPaths.session_dir
+docs_dir = SessionPaths().docs_dir
+session_dir = SessionPaths().session_dir
 
 class SessionModel:
     """Persist the preferred Cursor/IDE model under ``{repository_root}/.sessions/{name}/model``.
@@ -145,20 +133,20 @@ class SessionModel:
         "inherit",
     )
 
-    @classmethod
-    def session_slug(cls, name: str = "") -> str:
+    def __init__(self, workspace: str | Path = ".") -> None:
+        self._workspace = workspace
+
+    def session_slug(self, name: str = "") -> str:
         slug = (name or "").strip()
         if slug.startswith("session/"):
             slug = slug[len("session/") :]
-        return slug or cls.DEFAULT_SESSION
+        return slug or self.DEFAULT_SESSION
 
-    @classmethod
-    def file_path(cls, workspace: str | Path, session: str = "") -> Path:
-        return SessionPaths.session_dir(workspace, cls.session_slug(session)) / cls.FILENAME
+    def file_path(self, session: str = "") -> Path:
+        return SessionPaths().session_dir(self._workspace, self.session_slug(session)) / self.FILENAME
 
-    @classmethod
-    def read(cls, workspace: str | Path, session: str = "") -> str:
-        path = cls.file_path(workspace, session)
+    def read(self, session: str = "") -> str:
+        path = self.file_path(session)
         if not path.is_file():
             return ""
         try:
@@ -166,30 +154,23 @@ class SessionModel:
         except OSError:
             return ""
 
-    @classmethod
-    def write(cls, workspace: str | Path, model: str, session: str = "") -> Path:
+    def write(self, model: str, session: str = "") -> Path:
         value = (model or "").strip()
         if not value:
             raise ValueError("model is required")
-        path = cls.file_path(workspace, session)
+        path = self.file_path(session)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(value + "\n", encoding="utf-8")
         return path
 
-    @classmethod
-    def copy_into(
-        cls,
-        dest_folder: str | Path,
-        source_workspace: str | Path,
-        session: str = "",
-    ) -> Path | None:
+    def copy_into(self, dest_folder: str | Path, session: str = "") -> Path | None:
         """Copy model into *dest_folder* when missing — session first, then default."""
-        dest = Path(dest_folder) / cls.FILENAME
+        dest = Path(dest_folder) / self.FILENAME
         if dest.is_file():
             return None
-        slug = cls.session_slug(session)
-        for candidate in (slug, cls.DEFAULT_SESSION):
-            src = cls.file_path(source_workspace, candidate)
+        slug = self.session_slug(session)
+        for candidate in (slug, self.DEFAULT_SESSION):
+            src = self.file_path(candidate)
             if not src.is_file():
                 continue
             try:
@@ -203,8 +184,7 @@ class SessionModel:
             return dest
         return None
 
-    @classmethod
-    def list_available(cls) -> list[str]:
+    def list_available(self) -> list[str]:
         """Prefer ``cursor-agent --list-models``; fall back to known Cursor model ids."""
         found: list[str] = []
         try:
@@ -228,7 +208,7 @@ class SessionModel:
             pass
         if found:
             return found
-        return list(cls._FALLBACK_MODELS)
+        return list(self._FALLBACK_MODELS)
 
 @dataclass
 class ToolCall:
@@ -368,7 +348,7 @@ class Turn:
 
     def _git(self) -> GitRepo | None:
         start = self._root or "."
-        root = Repo.find_root(start)
+        root = Repo(start).find_root()
         if root is None:
             return None
         return GitRepo(root)
@@ -449,10 +429,10 @@ class Turn:
         expansion or run entry in the session events.log. Falls back to
         empty strings when no log is available.
         """
-        from harness.hooks.session_logs import session_logs_dir, active_session_name
+        from harness.hooks.session_logs import SessionLogs
 
         root = Path(__file__).resolve().parents[2]
-        log_file = session_logs_dir(root) / "events.log"
+        log_file = SessionLogs(root).session_logs_dir() / "events.log"
         if not log_file.is_file():
             return "", "", ""
         try:
@@ -877,11 +857,11 @@ class WorkSession:
             parent = workspace
         else:
             root = (workspace or "").strip() or "."
-            found = Repo.find_root(root)
+            found = Repo(root).find_root()
             parent = Workspace(str(found) if found is not None else root)
         name = (name or session).strip()
         if not name:
-            git_root = Repo.find_root(parent.path)
+            git_root = Repo(parent.path).find_root()
             if git_root is not None:
                 branch = GitRepo(git_root).current_branch
                 if isinstance(branch, str) and branch.startswith("session/"):
@@ -925,7 +905,7 @@ class WorkSession:
         self.isolate = isolate
 
     def _default_git(self) -> GitRepo:
-        root = Repo.find_root(self.workspace.path)
+        root = Repo(self.workspace.path).find_root()
         if root is None:
             return NullGitRepo(self.workspace.path)
         return GitRepo(root)
@@ -978,7 +958,7 @@ class WorkSession:
     @property
     def docs_dir(self) -> Path:
         """Durable artifacts: sketches, generated files, grill-answers — ``{path}/.context/``."""
-        return SessionPaths.docs_dir(self.path)
+        return SessionPaths().docs_dir(self.path)
 
     @property
     def folder(self) -> Path:
@@ -988,7 +968,7 @@ class WorkSession:
                 "session name is not set - confirm working path and session slug with the "
                 "user, then call open before grill/sketch/handoff"
             )
-        return SessionPaths.session_dir(self.path, self.name)
+        return SessionPaths().session_dir(self.path, self.name)
 
     @property
     def log(self) -> Path:
@@ -1006,6 +986,7 @@ class WorkSession:
     def model_file(self) -> Path:
         return self.folder / SessionModel.FILENAME
 
+    @property
     def session_model(self) -> str:
         """Preferred IDE/CLI model for this session, or empty when unset."""
         if self.model_file.is_file():
@@ -1013,11 +994,11 @@ class WorkSession:
                 return self.model_file.read_text(encoding="utf-8").strip()
             except OSError:
                 return ""
-        return SessionModel.read(self.path or self.workspace.path, self.name)
+        return SessionModel(self.path or self.workspace.path).read(self.name)
 
     def set_session_model(self, model: str) -> str:
         """Persist *model* under this session folder and return the value written."""
-        path = SessionModel.write(self.path or self.workspace.path, model, self.name)
+        path = SessionModel(self.path or self.workspace.path).write(model, self.name)
         return path.read_text(encoding="utf-8").strip()
 
     def _inherit_session_model(self) -> None:
@@ -1033,7 +1014,7 @@ class WorkSession:
                 primary = None
         if primary is None:
             primary = Path(self.workspace.path)
-        SessionModel.copy_into(self.folder, primary, self.name)
+        SessionModel(primary).copy_into(self.folder, self.name)
 
     def load_cli_sessions(self) -> None:
         binding = self.cli_agent_binding
@@ -1308,7 +1289,7 @@ class WorkSession:
         primary = Path(primary)
         self._retarget_git(tree)
         self.folder.mkdir(parents=True, exist_ok=True)
-        SessionModel.copy_into(self.folder, primary, self.name)
+        SessionModel(primary).copy_into(self.folder, self.name)
         self._try_fetch_pull()
 
     def _ensure_worktree_venv(self) -> None:
@@ -1423,10 +1404,10 @@ class WorkSession:
         git = self.git
         if not getattr(git, "_memory", False):
             try:
-                return SessionPaths.repository_root(git.primary_root())
+                return SessionPaths().repository_root(git.primary_root())
             except (AttributeError, TypeError, ValueError):
                 pass
-        return SessionPaths.repository_root(
+        return SessionPaths().repository_root(
             self.workspace_root or self.path or self.workspace.path
         )
 
@@ -1618,7 +1599,7 @@ class WorkSession:
 
     def _consolidate_session_for_archive(self) -> None:
         root = Path(self.path or self.git.root)
-        consolidate_logs_for_close(root, self.name)
+        SessionLogs(root).consolidate_logs_for_close(self.name)
         self.folder.mkdir(parents=True, exist_ok=True)
         self.log.mkdir(parents=True, exist_ok=True)
 
@@ -1643,7 +1624,7 @@ class WorkSession:
         if not slug:
             return
         root = Path(self.path or self.git.root)
-        session_path = SessionPaths.sessions_root(root) / slug
+        session_path = SessionPaths().sessions_root(root) / slug
         if session_path.is_dir():
             return
         try:
@@ -1681,7 +1662,7 @@ class WorkSession:
 
     def _bind_active_session_logs(self) -> None:
         root = Path(self.path or self.git.root)
-        write_active_session(root, self.name or SessionModel.DEFAULT_SESSION)
+        SessionLogs(root).write_active_session(self.name or SessionModel.DEFAULT_SESSION)
 
     def _remove_empty_checkout_dir(self) -> None:
         root = Path(self.path)
@@ -1703,8 +1684,8 @@ class WorkSession:
     ) -> Path:
         if not self.name:
             raise ValueError("session name is required to create a sprint folder")
-        SessionPaths.migrate_legacy_session_folder(
-            self._repository_root(), self.name, self.folder
+        SessionPaths().migrate_legacy_session_folder(
+            self._repository_root(), self.folder
         )
         self._ensure_session_worktree()
         self._restore_closed_session_if_needed()
@@ -1827,7 +1808,7 @@ class WorkSession:
         path: str = "",
     ) -> str:
         effective_path = path.strip() or self.path
-        effective_name = SessionModel.session_slug(name.strip() or (self.name or ""))
+        effective_name = SessionModel().session_slug(name.strip() or (self.name or ""))
         loaded = type(self).load(effective_path, effective_name)
         if loaded.session_md.is_file():
             self._take_from(loaded)
@@ -1862,7 +1843,8 @@ class WorkSession:
         ]
         if text not in existing:
             existing.append(text)
-        self.git.write_annotated_tag(self.chat_tag_name(), "\n".join(existing), target)
+        self.git._annotated_tag_target = target
+        self.git.write_annotated_tag(self.chat_tag_name(), "\n".join(existing))
 
     def chats(self) -> list[str]:
         return [
@@ -2006,7 +1988,7 @@ class WorkSession:
         archived = self._archive_session_folder()
         self._commit_closed_archive(archived)
         self._commit_active_session_removal()
-        clear_active_session(Path(self.path or self.git.root))
+        SessionLogs(Path(self.path or self.git.root)).clear_active_session()
         if not self.sync_only_close:
             self._land_on_default_branch()
             self._remove_session_worktree_if_clean()
@@ -2308,10 +2290,10 @@ class Workspace:
 
     def load(self) -> None:
         self.path_overrides = self._read_overrides()
-        sessions_root = SessionPaths.sessions_root(self.path)
+        sessions_root = SessionPaths().sessions_root(self.path)
         if not sessions_root.is_dir():
             return
-        repo_root = str(SessionPaths.repository_root(self.path))
+        repo_root = str(SessionPaths().repository_root(self.path))
         known = {s.name for s in self.work_sessions}
         for folder in sorted(sessions_root.iterdir()):
             if (
@@ -2370,17 +2352,16 @@ class Workspace:
     def _model_session_name(self, session: str = "") -> str:
         slug = (session or "").strip()
         if slug:
-            return SessionModel.session_slug(slug)
+            return SessionModel().session_slug(slug)
         current = self.current_work_session
         if current is not None and current.name:
             return current.name
         return SessionModel.DEFAULT_SESSION
 
-    @agent_tool
-    def get_session_model(self, session: str = "", workspace: str = "") -> str:
+    @property
+    def session_model(self) -> str:
         """Return the persisted session model id, or empty when unset."""
-        root = (workspace or "").strip() or self.path
-        return SessionModel.read(root, self._model_session_name(session))
+        return SessionModel(self.path).read(self._model_session_name())
 
     @agent_tool
     def set_session_model(
@@ -2389,7 +2370,7 @@ class Workspace:
         """Persist {model} under ``.sessions/{session}/model`` (default session when none)."""
         root = (workspace or "").strip() or self.path
         slug = self._model_session_name(session)
-        path = SessionModel.write(root, model, slug)
+        path = SessionModel(root).write(model, slug)
         current = self.current_work_session
         if current is not None and current.name == slug:
             current.path = current.path or root
@@ -2398,7 +2379,7 @@ class Workspace:
     @agent_tool
     def list_session_models(self) -> list[str]:
         """List available Cursor/IDE model ids for AskQuestion choices."""
-        return SessionModel.list_available()
+        return SessionModel().list_available()
 
     @mcp
     @skill
@@ -2435,7 +2416,7 @@ class Workspace:
         isolate: bool = True,
     ) -> WorkSession:
         """Open the workspace if it is not already open. The work session's turn and decision records hang off it."""
-        effective_name = SessionModel.session_slug(
+        effective_name = SessionModel().session_slug(
             name
             or (getattr(tool, "_session_name", None) if tool is not None else None)
             or ""

@@ -212,10 +212,10 @@ class GraphRule(Rule):
         from .graph_query_spec import refine_rows
 
         hits = refine_rows(self.slug, hits)
-        return self.hits_from_query(graph, hits)
+        return self.hits_from_query(graph, hits, by_name=by_name)
 
-    def hits_from_query(self, graph, hits) -> List[RuleViolation]:
-        names = graph.named_nodes()
+    def hits_from_query(self, graph, hits, by_name=None) -> List[RuleViolation]:
+        names = by_name if by_name is not None else graph.named_nodes()
         violations: List[RuleViolation] = []
         for (name, file, line), payload in self._group_query_hits(hits).items():
             kind = str(payload.get("kind") or "")
@@ -351,9 +351,9 @@ def _practice_slug(parent: Any) -> str:
         practice = parent
     if practice is None:
         return ""
-    from harness.markdown import class_file_directory
+    from harness.markdown import AssetLocator
 
-    return class_file_directory(practice).name
+    return AssetLocator(practice, "").class_file_directory().name
 
 
 class GraphRulesCollection(RulesCollection):

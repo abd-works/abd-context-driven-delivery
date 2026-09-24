@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from workspace import SessionPaths, Workspace
+from workspace.legacy.workspace import SessionPaths, Workspace
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
 from installation.files import skill
@@ -31,7 +31,7 @@ class Handoff:
         active = self.workspace.current_work_session
         if active is not None:
             return active.folder
-        sessions = SessionPaths.sessions_root(self.workspace.path)
+        sessions = SessionPaths().sessions_root(self.workspace.path)
         if sessions.is_dir():
             candidates = [p for p in sessions.iterdir() if p.is_dir() and p.name != "closed"]
             if candidates:

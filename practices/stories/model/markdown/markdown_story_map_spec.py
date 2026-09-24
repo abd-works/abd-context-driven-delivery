@@ -22,21 +22,25 @@ from practices.stories.model.markdown.nodes import (
 )
 
 
-def _canonical_story_map_4_epics_3_sub_epics() -> StoryMap:
-    story_map = StoryMap()
-    for i in range(1, 5):
-        epic = Epic(f"Epic {i}", i)
-        story_map.epics.append(epic)
-    first = story_map.epics[0]
-    for j in range(1, 4):
-        sub = SubEpic(f"SubEpic 1.{j}", j)
-        story = Story(f"Story {j}", 1, StoryType.USER)
-        story.scenarios.append(
-            Scenario(name=f"AC text {j}.1", sequential_order=1)
-        )
-        sub.stories.append(story)
-        first.sub_epics.append(sub)
-    return story_map
+class SpecFixture:
+    def canonical_story_map_4_epics_3_sub_epics(self) -> StoryMap:
+        story_map = StoryMap()
+        for i in range(1, 5):
+            epic = Epic(f"Epic {i}", i)
+            story_map.epics.append(epic)
+        first = story_map.epics[0]
+        for j in range(1, 4):
+            sub = SubEpic(f"SubEpic 1.{j}", j)
+            story = Story(f"Story {j}", 1, StoryType.USER)
+            story.scenarios.append(
+                Scenario(name=f"AC text {j}.1", sequential_order=1)
+            )
+            sub.stories.append(story)
+            first.sub_epics.append(sub)
+        return story_map
+
+
+fixture = SpecFixture()
 
 
 with description("a Markdown document") as self:
@@ -52,7 +56,7 @@ with description("a Markdown document") as self:
         "that holds a rendered Story Map with 4 Epics and 3 SubEpics under the first Epic"
     ):
         with before.each:
-            self.source = _canonical_story_map_4_epics_3_sub_epics()
+            self.source = fixture.canonical_story_map_4_epics_3_sub_epics()
             self.text = self.markdown.render(self.source)
 
         with it("should contain 4 top-level headings"):
@@ -158,7 +162,7 @@ with description("a Markdown document") as self:
 
     with context("that is being read back into a MarkdownStoryMap"):
         with before.each:
-            self.source = _canonical_story_map_4_epics_3_sub_epics()
+            self.source = fixture.canonical_story_map_4_epics_3_sub_epics()
             self.text = self.markdown.render(self.source)
             self.reconstructed = self.markdown.parse(self.text)
 
@@ -176,8 +180,8 @@ with description("a Markdown document") as self:
 
     with context("that has been edited and synced back against a canonical Story Map"):
         with before.each:
-            self.canonical = _canonical_story_map_4_epics_3_sub_epics()
-            edited = _canonical_story_map_4_epics_3_sub_epics()
+            self.canonical = fixture.canonical_story_map_4_epics_3_sub_epics()
+            edited = fixture.canonical_story_map_4_epics_3_sub_epics()
             edited.epics[0].name = "Epic 1 (edited)"
             edited.append_epic(Epic("Epic 5", 5))
             self.edited_text = self.markdown.render(edited)

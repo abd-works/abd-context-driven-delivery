@@ -81,14 +81,14 @@ class StoryNode:
     def _reconcile_collection(
         self, pair: ChildCollectionPair, report: UpdateReport
     ) -> None:
-        consumed_ids: set = set()
+        self._consumed_ids: set = set()
         reconciled: List[StoryNode] = []
 
         for source_child in pair.source_children:
-            match = self._find_match(source_child, pair.self_children, consumed_ids)
+            match = self._find_match(source_child, pair.self_children)
             if match is not None:
                 old_name = match.name
-                consumed_ids.add(id(match))
+                self._consumed_ids.add(id(match))
                 match.translate_from(source_child)
                 reconciled.append(match)
                 if old_name == source_child.name:
@@ -102,10 +102,10 @@ class StoryNode:
                 report.add_new(new_child, parent_name=self.name)
 
         for existing in pair.self_children:
-            if id(existing) not in consumed_ids:
+            if id(existing) not in self._consumed_ids:
                 report.add_removed(existing, parent_name=self.name)
 
-        previous_kept_order = [c for c in pair.self_children if id(c) in consumed_ids]
+        previous_kept_order = [c for c in pair.self_children if id(c) in self._consumed_ids]
         for i, node in enumerate(reconciled):
             if i >= len(previous_kept_order):
                 break
@@ -115,19 +115,18 @@ class StoryNode:
 
         pair.self_children[:] = reconciled
 
-    @staticmethod
     def _find_match(
+        self,
         source_child: "StoryNode",
         candidates: List["StoryNode"],
-        consumed_ids: set,
     ) -> Optional["StoryNode"]:
         for candidate in candidates:
-            if id(candidate) in consumed_ids:
+            if id(candidate) in self._consumed_ids:
                 continue
             if candidate.name == source_child.name:
                 return candidate
         for candidate in candidates:
-            if id(candidate) in consumed_ids:
+            if id(candidate) in self._consumed_ids:
                 continue
             if candidate.sequential_order == source_child.sequential_order:
                 return candidate

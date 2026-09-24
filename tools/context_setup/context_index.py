@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Protocol, Sequence
+
+_log = logging.getLogger(__name__)
 
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
@@ -103,7 +106,7 @@ class ContextIndex:
         for seg_path in segments_paths:
             p = Path(seg_path)
             content = p.read_text(encoding="utf-8") if p.exists() else ""
-            view = _extract_view(content)
+            view = self._extract_view(content)
             views_covered.add(view)
             texts.append(content)
             metas.append({"path": str(p), "view": view, "section": p.stem})
@@ -181,17 +184,15 @@ class ContextIndex:
         Do not include information that does not appear in the retrieved chunks."""
         return "Answer composed with citations."
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _extract_view(content: str) -> str:
-    """Read the 'view:' field from YAML front matter; fall back to 'general'."""
-    if not content.startswith("---"):
-        return "general"
-    try:
-        end = content.index("---", 3)
+    def _extract_view(self, content: str) -> str:
+        if not content.startswith("---"):
+            return "general"
+        try:
+            end = content.index("---", 3)
+        except ValueError:
+            _log.exception("Segment front matter is not closed")
+            return "general"
         for line in content[3:end].splitlines():
             if line.startswith("view:"):
                 return line.split(":", 1)[1].strip()
-    except ValueError:
-        pass
-    return "general"
+        return "general"

@@ -44,18 +44,22 @@ class _MinimalCodeBackend(CodeStoryMap):
         return "\n".join(lines) + "\n"
 
 
-def _story_map_with_4_epics_and_3_leaf_sub_epics() -> StoryMap:
-    story_map = StoryMap()
-    for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
-    first = story_map.epics[0]
-    for j in range(1, 4):
-        sub = SubEpic(f"SubEpic 1.{j}", j)
-        story = Story(f"Story {j}", 1, StoryType.USER)
-        story.scenarios.append(Scenario(name=f"scenario {j}", sequential_order=1))
-        sub.stories.append(story)
-        first.sub_epics.append(sub)
-    return story_map
+class SpecFixture:
+    def story_map_with_4_epics_and_3_leaf_sub_epics(self) -> StoryMap:
+        story_map = StoryMap()
+        for i in range(1, 5):
+            story_map.append_epic(Epic(f"Epic {i}", i))
+        first = story_map.epics[0]
+        for j in range(1, 4):
+            sub = SubEpic(f"SubEpic 1.{j}", j)
+            story = Story(f"Story {j}", 1, StoryType.USER)
+            story.scenarios.append(Scenario(name=f"scenario {j}", sequential_order=1))
+            sub.stories.append(story)
+            first.sub_epics.append(sub)
+        return story_map
+
+
+fixture = SpecFixture()
 
 
 with description("a code Story Map") as self:
@@ -173,7 +177,7 @@ with description("a code Story Map") as self:
 
         with context("with the first Epic holding 3 leaf SubEpics"):
             with before.each:
-                self.canonical = _story_map_with_4_epics_and_3_leaf_sub_epics()
+                self.canonical = fixture.story_map_with_4_epics_and_3_leaf_sub_epics()
                 self.first_epic = self.canonical.epics[0]
                 self.tree = self.code_map.render(self.canonical)
 
@@ -293,7 +297,7 @@ with description("a code Story Map") as self:
         "that holds hand-written regions in a leaf file outside the generated Story blocks"
     ):
         with before.each:
-            self.canonical = _story_map_with_4_epics_and_3_leaf_sub_epics()
+            self.canonical = fixture.story_map_with_4_epics_and_3_leaf_sub_epics()
             first_leaf_path = f"{self.code_map.tests_root}/{to_kebab('Epic 1')}/{to_kebab('SubEpic 1.1')}/{to_kebab('SubEpic 1.1')}{self.code_map.LEAF_EXTENSION}"
             initial_tree = self.code_map.render(self.canonical)
             hand_written = (

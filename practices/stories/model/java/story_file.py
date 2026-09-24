@@ -39,7 +39,7 @@ from __future__ import annotations
 from typing import List
 
 from practices.stories.model.code_story_map import to_pascal
-from practices.stories.model.helper_interface import build_helper_seam
+from practices.stories.model.helper_interface import HelperMethod
 from practices.stories.model.nodes import Story
 
 
@@ -47,7 +47,7 @@ def render_story_file(story: Story) -> str:
     class_name = f"{to_pascal(story.name)}Story"
     helper_iface = f"{to_pascal(story.name)}Helper"
     actor = (story.users[0] if story.users else "").strip()
-    methods, method_for = build_helper_seam(story)
+    methods, method_for = HelperMethod.from_story(story)
 
     lines: List[str] = [f"/** Story: {story.name} (scenario fidelity - tier-neutral)."]
     if actor:
@@ -109,7 +109,7 @@ def render_test_helper_file(story: Story, *, tier: str) -> str:
     story_class = f"{to_pascal(story.name)}Story"
     helper_iface = f"{to_pascal(story.name)}Helper"
     tier_class = f"{story_class}TestHelper{to_pascal(tier)}"
-    methods, _ = build_helper_seam(story)
+    methods, _ = HelperMethod.from_story(story)
 
     lines: List[str] = [
         f"/** Tier: {tier} - implements {helper_iface} for {story.name}. */",

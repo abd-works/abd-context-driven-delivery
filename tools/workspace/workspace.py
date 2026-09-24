@@ -51,7 +51,7 @@ class WorkSession:
     ) -> None:
         # / create a new folder in .sessions/{name}
         self._name = name
-        self._root = Repo.find_root(Path.cwd())
+        self._root = Repo(Path.cwd()).find_root()
         if self._root is None:
             raise GitConnectError("work session lives at the repository root")
         self.folder.mkdir(parents=True, exist_ok=True)
@@ -595,7 +595,7 @@ class Turn:
         session = self.work_session
         if session is not None:
             return session.git
-        root = Repo.find_root(Path.cwd())
+        root = Repo(Path.cwd()).find_root()
         if root is None:
             raise GitConnectError("work session lives at the repository root")
         return GitRepo(root)

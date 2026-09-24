@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "harness", "tools"):
+for _cat in ("practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -91,73 +91,72 @@ _PREDICATES = {
 }
 
 
-def _write_match_all_filter() -> None:
-    (_PACK / "subject_filter.qll").write_text(
-        "import python\n\n"
-        'predicate subjectFilterPrefix(string prefix) { prefix = "" }\n\n'
-        "predicate inSubject(AstNode n) { exists(n.getLocation()) }\n\n"
-        "predicate inSubjectFilter(Class cls) { inSubject(cls) }\n\n"
-        "predicate inSubjectPath(string path) { exists(File f | path = f.getRelativePath()) }\n",
-        encoding="utf-8",
-    )
+class ExamplesQuery:
+    def write_match_all_filter(self) -> None:
+        (_PACK / "subject_filter.qll").write_text(
+            "import python\n\n"
+            'predicate subjectFilterPrefix(string prefix) { prefix = "" }\n\n'
+            "predicate inSubject(AstNode n) { exists(n.getLocation()) }\n\n"
+            "predicate inSubjectFilter(Class cls) { inSubject(cls) }\n\n"
+            "predicate inSubjectPath(string path) { exists(File f | path = f.getRelativePath()) }\n",
+            encoding="utf-8",
+        )
 
+    def ensure(self) -> Path:
+        codeql = CodeQL(_EXAMPLES)
+        import subprocess
 
-def _ensure_examples_db() -> Path:
-    codeql = CodeQL(_EXAMPLES)
-    import subprocess
-
-    _write_match_all_filter()
-    if codeql._database_ready(_DB):
+        self.write_match_all_filter()
+        if codeql._database_ready(_DB):
+            return _DB
+        _DB.parent.mkdir(parents=True, exist_ok=True)
+        run = subprocess.run(
+            [
+                codeql.executable(),
+                "database",
+                "create",
+                str(_DB),
+                "--language=python",
+                f"--source-root={_EXAMPLES}",
+                "--command=echo skip",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if run.returncode != 0 or not codeql._database_ready(_DB):
+            raise RuntimeError(run.stderr or run.stdout)
         return _DB
-    _DB.parent.mkdir(parents=True, exist_ok=True)
-    run = subprocess.run(
-        [
-            codeql.executable(),
-            "database",
-            "create",
-            str(_DB),
-            "--language=python",
-            f"--source-root={_EXAMPLES}",
-            "--command=echo skip",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if run.returncode != 0 or not codeql._database_ready(_DB):
-        raise RuntimeError(run.stderr or run.stdout)
-    return _DB
 
-
-def _hit(rows, expected: str) -> bool:
-    for row in rows:
-        blob = " ".join(str(row.get(key) or "") for key in ("name", "message"))
-        if expected in blob:
-            return True
-    return False
+    def hit(self, rows, expected: str) -> bool:
+        for row in rows:
+            blob = " ".join(str(row.get(key) or "") for key in ("name", "message"))
+            if expected in blob:
+                return True
+        return False
 
 
 with description("Clean Engineering graphQuery rules"):
     with it("should hit each rule example"):
-        db = _ensure_examples_db()
+        db = ExamplesQuery().ensure()
         misses = []
         for slug, expected in _RULES.items():
             rows = CodeQL(_EXAMPLES).run(_PACK / f"{slug}.ql", database=db)
-            if not _hit(rows, expected):
+            if not ExamplesQuery().hit(rows, expected):
                 misses.append(f"{slug} expected {expected}")
         expect(misses).to(equal([]))
 
     with it("should hit each shared predicate example"):
-        db = _ensure_examples_db()
+        db = ExamplesQuery().ensure()
         misses = []
         for predicate, expected in _PREDICATES.items():
             rows = CodeQL(_EXAMPLES).run(_TESTS / f"{predicate}.ql", database=db)
-            if not _hit(rows, expected):
+            if not ExamplesQuery().hit(rows, expected):
                 misses.append(f"{predicate} expected {expected}")
         expect(misses).to(equal([]))
 
     with it("should not treat two collaborating resources as a service-plus-bag"):
-        db = _ensure_examples_db()
+        db = ExamplesQuery().ensure()
         rows = CodeQL(_EXAMPLES).run(
             _PACK / "shape-classes-around-resources.ql",
             database=db,
@@ -171,7 +170,7 @@ with description("Clean Engineering graphQuery rules"):
         expect("GraphCleanEngineeringModel" in blob).to(equal(False))
 
     with it("should not flag an operation that reads its own private attribute"):
-        db = _ensure_examples_db()
+        db = ExamplesQuery().ensure()
         rows = CodeQL(_EXAMPLES).run(_PACK / "hide-inner-details.ql", database=db)
         blob = " ".join(
             str(row.get(key) or "")
@@ -179,3 +178,4 @@ with description("Clean Engineering graphQuery rules"):
             for key in ("name", "message")
         )
         expect("size" in blob).to(equal(False))
+        expect("tally" in blob).to(equal(False))

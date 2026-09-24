@@ -14,6 +14,14 @@ from .graph_filter import Filter
 from .graph_node import Kind
 from .practice_graph import PracticeGraph
 
+_VIOLATION_TASK_PROCESS = (
+    "Fix the following violations, follow this process\n"
+    "- save the below as a violation task list.\n"
+    "- use a non-blocking sub agent if available to you\n"
+    "- fix each violation as a separate turn, check off each fix as you do so\n"
+    "- ignore violations that are marked as fixed"
+)
+
 
 @agent_toolset
 class KnowledgeGraph:
@@ -162,12 +170,12 @@ class KnowledgeGraph:
     @mcp
     @Skill
     @agent_instructions
-    def fix_violations(
+    def get_fix_violation_instructions(
         self,
         filter: Filter | None = None,
         root: str | None = None,
     ) -> str:
-        """Fix Knowledge Graph rule violations under a node and its children. Always includes the node and its children. Only nodes that have violations are included. Optional root is a folder that already has .codeql/results/practice-graph.json."""
+        """Return copy-to-prompt instructions together with Knowledge Graph rule violations under a node and its children. This does not fix anything. If you already have the violations, do not call this method. Always includes the node and its children. Only nodes that have violations are included. Optional root is a folder that already has .codeql/results/practice-graph.json."""
         return self._violation_prompt_text(Filter.from_value(filter), root)
 
     def _graphs(self) -> List[PracticeGraph]:
@@ -297,7 +305,12 @@ class KnowledgeGraph:
             for graph in self._graphs()
             for prompt in self._graph_violation_prompts(graph, filt)
         ]
-        return "\n\n---\n\n".join(prompts)
+        return self._violation_task_list(prompts)
+
+    def _violation_task_list(self, prompts: list[str]) -> str:
+        if not prompts:
+            return ""
+        return "\n\n---\n\n".join([_VIOLATION_TASK_PROCESS, *prompts])
 
     def _graph_violation_prompts(self, graph, filt: Filter) -> list[str]:
         kept = self._violation_subtree_ids(graph, filt)
@@ -320,7 +333,7 @@ class KnowledgeGraph:
         seeds = {
             node.node_id
             for node in graph.nodes.values()
-            if filt.matches(node)
+            if scope.matches(node)
         }
         return filt.subtree_ids(seeds, graph)
 
@@ -341,7 +354,8 @@ class KnowledgeGraph:
         return "\n".join(
             line
             for line in (
-                "Fix this Knowledge Graph rule violation.",
+                "Fix this Violation.",
+                "[ ] done",
                 f"Node: {self._dotted_path(node)} ({node.semantic_type()})",
                 f"File: {file}" if file else "",
                 f"Rule: {hit.rule_slug}",

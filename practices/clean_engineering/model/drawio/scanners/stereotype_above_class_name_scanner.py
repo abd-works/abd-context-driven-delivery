@@ -6,7 +6,6 @@ import re
 from pathlib import Path
 
 from _drawio_base import DrawioScanner
-from practices.clean_engineering.model.drawio.drawio_tools import unescape
 
 RULE = "stereotype-above-class-name"
 _STEREOTYPE = re.compile(r"<<[^>]+>>|«[^»]+»")
@@ -15,7 +14,7 @@ _STEREOTYPE = re.compile(r"<<[^>]+>>|«[^»]+»")
 class StereotypeAboveClassNameScanner(DrawioScanner):
     RULE = RULE
 
-    def scan_page(self, file_path: Path, page_name: str, page_root) -> list:
+    def scan_page(self, page_root) -> list:
         violations = []
         for cell in page_root.iter("mxCell"):
             if cell.get("vertex") != "1":
@@ -23,7 +22,7 @@ class StereotypeAboveClassNameScanner(DrawioScanner):
             raw = cell.get("value") or ""
             if not raw:
                 continue
-            text = unescape(html.unescape(raw))
+            text = self._unescape(html.unescape(raw))
             match = re.search(r"<b[^>]*>(.*?)</b>", text, re.IGNORECASE | re.DOTALL)
             if not match:
                 continue
@@ -31,14 +30,14 @@ class StereotypeAboveClassNameScanner(DrawioScanner):
             if _STEREOTYPE.search(title):
                 violations.append(
                     self.violation(
-                        f"[{page_name}] Stereotype sits on the same line as the "
+                        f"[{self._scan_page_name}] Stereotype sits on the same line as the "
                         f"class name inside <b>: "
                         f"{re.sub(r'<[^>]+>', '', title)[:80]!r}",
-                        location=str(file_path),
+                        location=str(self._scan_file_path),
                     )
                 )
         return violations
 
 
 if __name__ == "__main__":
-    raise SystemExit(StereotypeAboveClassNameScanner.run_main())
+    raise SystemExit(StereotypeAboveClassNameScanner().run_main())

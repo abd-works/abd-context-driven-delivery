@@ -24,8 +24,8 @@ class HtmlUxMap(UxMap):
         if marker in content:
             start = content.index(marker) + len(marker)
             end = content.index("-->", start)
-            return JsonUxMap.parse(content[start:end].strip())
-        ux_map = cls()
+            return JsonUxMap.create().parse(content[start:end].strip())
+        ux_map = cls.create()
         ux_map.context.notes.append("html parse stub - structural DOM parser later")
         return ux_map
 
@@ -75,7 +75,7 @@ class HtmlUxMap(UxMap):
             "".join(f"<li>{name}</li>" for name in story_names)
             or "<li>(waiting for story JS modules)</li>"
         )
-        model_json = JsonUxMap.render(ux_map).replace("-->", "")
+        model_json = JsonUxMap.create().render(ux_map).replace("-->", "")
         transitions_js = ",\n".join(
             f'    {{from: "{t.from_screen}", to: "{t.to_screen}", '
             f'trigger: "{t.trigger}"}}'

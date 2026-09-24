@@ -37,51 +37,64 @@ class Workspace:
     @classmethod
     def load(cls, root: Path) -> "Workspace":
         """Discover and parse every artifact kind under *root*."""
+        return cls._from_root(Path(root).resolve())
+
+    @classmethod
+    def _from_root(cls, root: Path) -> "Workspace":
+        loader = cls(root=root, story_map=StoryMap())
+        story_map = loader._discover_story_map(root)
+        scenarios = loader._load_scenarios(root, story_map)
+        test_suites = loader._load_test_suites(root, story_map)
+        return cls(
+            root=root,
+            story_map=story_map,
+            scenarios=scenarios,
+            test_suites=test_suites,
+            story_contexts=StoryContext.from_workspace(root),
+        )
+
+    def _discover_story_map(self, root: Path) -> StoryMap:
+        from practices.stories.model.json.nodes import JsonStoryMap
+        from practices.stories.model.markdown.nodes import MarkdownStoryMap
+
+        story_map_root = root.parent if root.is_file() else root
+        story_map_file = self._story_map_markdown_path(story_map_root)
+        if story_map_file:
+            loaded = MarkdownStoryMap.from_workspace(story_map_file)
+            if loaded:
+                return loaded
+        return (
+            JsonStoryMap.from_workspace(story_map_root)
+            or MarkdownStoryMap.from_workspace(story_map_root)
+            or StoryMap()
+        )
+
+    def _story_map_markdown_path(self, story_map_root: Path) -> Path | None:
+        story_map_dir = story_map_root
+        while story_map_dir and story_map_dir != story_map_dir.parent:
+            candidate = story_map_dir / "story-map.md"
+            if candidate.exists():
+                return candidate
+            story_map_dir = story_map_dir.parent
+        return None
+
+    def _load_scenarios(self, root: Path, story_map: StoryMap) -> List[Scenario]:
+        from practices.stories.model.markdown.nodes import MarkdownIncrement, MarkdownScenario
+
+        scenarios = MarkdownScenario.from_workspace(root)
+        story_map.attach_scenarios(scenarios)
+        if not story_map.increments:
+            for inc in MarkdownIncrement.from_workspace(root):
+                story_map.increments.append(inc)
+        return scenarios
+
+    def _load_test_suites(self, root: Path, story_map: StoryMap) -> List[TestSuite]:
         from practices.stories.model.java.nodes import JavaStoryMap
         from practices.stories.model.javascript.nodes import JavaScriptStoryMap
         from practices.stories.model.python.nodes import PythonStoryMap
         from practices.stories.model.typescript.nodes import TypeScriptStoryMap
-        from practices.stories.model.json.nodes import JsonStoryMap
-        from practices.stories.model.markdown.nodes import (
-            MarkdownIncrement,
-            MarkdownScenario,
-            MarkdownStoryMap,
-        )
 
-        root = Path(root).resolve()
-
-        # If root is a file, find the story map by searching upwards from its parent directory
-        story_map_root = root.parent if root.is_file() else root
-        story_map_dir = story_map_root
-        story_map_file = None
-        while story_map_dir and story_map_dir != story_map_dir.parent:
-            if (story_map_dir / "story-map.md").exists():
-                story_map_file = story_map_dir / "story-map.md"
-                break
-            story_map_dir = story_map_dir.parent
-
-        story_map: StoryMap = None
-        if story_map_file:
-            story_map = MarkdownStoryMap.from_workspace(story_map_file)
-
-        if not story_map:
-            story_map = (
-                JsonStoryMap.from_workspace(story_map_root)
-                or MarkdownStoryMap.from_workspace(story_map_root)
-                or StoryMap()
-            )
-
-        scenarios = MarkdownScenario.from_workspace(root)
-        story_map.attach_scenarios(scenarios)
-
-        # Increments may already be present if loaded from story-graph.json.
-        # Only fall back to markdown if JSON did not supply them.
-        if not story_map.increments:
-            for inc in MarkdownIncrement.from_workspace(root):
-                story_map.increments.append(inc)
-
-        # Every code language channel contributes TestSuites; scanners stay language-agnostic.
-        test_suites = []
+        test_suites: List[TestSuite] = []
         for channel in (
             TypeScriptStoryMap,
             JavaScriptStoryMap,
@@ -90,14 +103,7 @@ class Workspace:
         ):
             test_suites.extend(channel.from_workspace(root))
         story_map.attach_test_suites(test_suites)
-
-        return cls(
-            root=root,
-            story_map=story_map,
-            scenarios=scenarios,
-            test_suites=test_suites,
-            story_contexts=StoryContext.from_workspace(root),
-        )
+        return test_suites
 
     # -- canonical guards ----------------------------------------------------
 

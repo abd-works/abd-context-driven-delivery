@@ -77,17 +77,17 @@ with description("an agent spec file"):
         with it("should strip prose after embedded run-request YAML in instruct_use_tool prompts"):
             prompt = (
                 "Invoke this request:\n"
-                "toolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
                 "Return the complete response.\n"
             )
             body = yaml_from_prompt(prompt)
-            expect(body).to(equal("toolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
+            expect(body).to(equal("toolset: builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
 
         with it("should reject captured CLI output when action does not match prompt YAML"):
             prompt = (
                 "Pipe this YAML on stdin:\n"
-                "toolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
             )
             wrong = "```yaml\nok: true\naction: generate\ninstructions: test\n```"

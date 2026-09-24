@@ -1,7 +1,6 @@
 """Diagnose toolset - launch the disciplined bug-fixing loop as a non-blocking sub-agent."""
 from __future__ import annotations
 
-from sub_agent.sub_agent import sub_agent
 from harness.agent_tools import agent_tool, agent_toolset
 from installation.files import skill
 from harness.mcp.mcp_server import mcp
@@ -14,7 +13,6 @@ class Diagnose:
     Reproduce -> minimise -> hypothesise -> instrument -> fix -> regression-test.
     """
 
-    @sub_agent
     @mcp
     @skill
     @agent_tool

@@ -42,9 +42,9 @@ class AppliesTo:
 
     @classmethod
     def from_markdown(cls, text: str) -> AppliesTo:
-        from harness.markdown.markdown import yaml_fields
+        from harness.markdown.markdown import YamlBinder
 
-        return cls.from_value(yaml_fields(text))
+        return cls.from_value(YamlBinder().yaml_fields(text))
 
     @classmethod
     def strip_fence(cls, text: str) -> str:
@@ -131,9 +131,10 @@ class RulesCollection(MarkdownCollection):
         if not parts:
             return {}
         body = "\n\n".join(parts)
-        PromptEcho().show_ide_toast(
+        echo = PromptEcho()
+        echo.toast_roots = hook_payload.get("workspace_roots")
+        echo.show_ide_toast(
             PromptEcho().inject_rules_toast("chat edit", labels),
-            roots=hook_payload.get("workspace_roots"),
         )
         return {"additional_context": body}
 

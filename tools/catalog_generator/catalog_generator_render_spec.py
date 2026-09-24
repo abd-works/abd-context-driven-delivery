@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "harness", "tools"):
+for _cat in ("practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -45,7 +45,10 @@ with description("Render Action Page With Fixed Sections"):
             self.catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             resolution = self.resolutions["repair"]
             action = self.owner.agent_tools["repair"]
-            self.page = self.catalog_action.generate_catalog(action, self.owner, resolution.source_dir)
+            self.catalog_action.action = action
+            self.catalog_action.owner = self.owner
+            self.catalog_action.source_dir = resolution.source_dir
+            self.page = self.catalog_action.generate_catalog()
 
         with it("carries the Lifecycle action badge and a one-line used-as note"):
             expect("Lifecycle action" in self.page).to(be_true)
@@ -76,11 +79,13 @@ with description("Render Fidelity Page With Quick-Invoke And Illustrated Example
             self.catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.resolutions)
             guidances = scrape_fidelities(Ddd)
             tactics = next(g for g in guidances if g.key == "tactics")
+            self.catalog_fidelity.skill_name = "ddd"
+            self.catalog_fidelity.fidelity_name = "tactics"
+            self.catalog_fidelity.owner = self.owner
+            self.catalog_fidelity.guidance = tactics.guidance
             self.page = (
-                self.catalog_fidelity.section_0_html("ddd", "tactics")
-                + self.catalog_fidelity.generate_catalog(
-                    "tactics", self.owner, "ddd", tactics.guidance,
-                )
+                self.catalog_fidelity.section_0_html()
+                + self.catalog_fidelity.generate_catalog()
             )
 
         with it("opens with the /{skill} <action> {fidelity} command line (HTML-escaped for a real browser)"):
@@ -115,9 +120,11 @@ with description("Render Context Tool Page"):
             catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.resolutions)
             self.catalog_context_tool = CatalogContextTool(_REPO_URL, _REF, catalog_fidelity)
             guidances = scrape_fidelities(Ddd)
-            self.page = self.catalog_context_tool.generate_catalog(
-                self.owner, "Domain-Driven Design", "ddd", guidances,
-            )
+            self.catalog_context_tool.owner = self.owner
+            self.catalog_context_tool.display_name = "Domain-Driven Design"
+            self.catalog_context_tool.skill_name = "ddd"
+            self.catalog_context_tool.guidances = guidances
+            self.page = self.catalog_context_tool.generate_catalog()
 
         with it("shows the tool's badge and Purpose prose"):
             expect("Domain-Driven Design" in self.page).to(be_true)
@@ -140,7 +147,9 @@ with description("Render Utility Page"):
             hrefs = {r.name: f"actions/{r.name}.html" for r in resolutions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             self.catalog_utility = CatalogUtility(_REPO_URL, _REF, catalog_tool, catalog_action)
-            self.page = self.catalog_utility.generate_catalog(Diagnose(), "diagnose")
+            self.catalog_utility.owner = Diagnose()
+            self.catalog_utility.display_name = "diagnose"
+            self.page = self.catalog_utility.generate_catalog()
 
         with it("shows the utility's Purpose/Seam prose"):
             expect("diagnose" in self.page).to(be_true)
@@ -160,12 +169,19 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             catalog_context_tool = CatalogContextTool(_REPO_URL, _REF, catalog_fidelity)
             catalog_utility = CatalogUtility(_REPO_URL, _REF, catalog_tool, catalog_action)
             self.catalog = Catalog(
-                _REPO_URL, _REF, str(self.tmp), catalog_context_tool, catalog_action, catalog_utility,
+                repo_url=_REPO_URL,
+                ref=_REF,
+                out_root=str(self.tmp),
+                catalog_context_tool=catalog_context_tool,
+                catalog_action=catalog_action,
+                catalog_utility=catalog_utility,
             )
             self.action_owner = resolve_lifecycle_action_owner()
-            self.catalog._render_catalog(
-                context_tool_entries, utility_entries, lifecycle_actions, self.action_owner,
-            )
+            self.catalog._context_tool_entries = context_tool_entries
+            self.catalog._utility_entries = utility_entries
+            self.catalog._lifecycle_actions = lifecycle_actions
+            self.catalog._action_owner = self.action_owner
+            self.catalog._render_catalog()
             self.index_html = (self.tmp / "index.html").read_text(encoding="utf-8")
 
         with it("writes index.html with the CDD header row on top"):
@@ -228,12 +244,19 @@ with description("Render Flat Grid Pages"):
             catalog_context_tool = CatalogContextTool(_REPO_URL, _REF, catalog_fidelity)
             catalog_utility = CatalogUtility(_REPO_URL, _REF, catalog_tool, catalog_action)
             self.catalog = Catalog(
-                _REPO_URL, _REF, str(self.tmp), catalog_context_tool, catalog_action, catalog_utility,
+                repo_url=_REPO_URL,
+                ref=_REF,
+                out_root=str(self.tmp),
+                catalog_context_tool=catalog_context_tool,
+                catalog_action=catalog_action,
+                catalog_utility=catalog_utility,
             )
             self.action_owner = resolve_lifecycle_action_owner()
-            self.catalog._render_catalog(
-                context_tool_entries, utility_entries, lifecycle_actions, self.action_owner,
-            )
+            self.catalog._context_tool_entries = context_tool_entries
+            self.catalog._utility_entries = utility_entries
+            self.catalog._lifecycle_actions = lifecycle_actions
+            self.catalog._action_owner = self.action_owner
+            self.catalog._render_catalog()
 
         with it("lists every context tool, action, and utility card on its own grid page"):
             for page_name, expected in (

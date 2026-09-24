@@ -41,6 +41,9 @@ class Installation:
         self.repo = Path(repo).resolve() if repo is not None else None
         self._install_tracker: InstallTracker | None = None
 
+    def bind_tracker(self, tracker: InstallTracker) -> None:
+        self._install_tracker = tracker
+
     def track_write(self, dest: Path) -> None:
         if self._install_tracker is not None:
             self._install_tracker(dest)

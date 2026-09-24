@@ -72,7 +72,7 @@ class EntityBehaviorScanner(TypeScriptScanner):
             if parsed_root is None:
                 continue
 
-            for cls in self.get_classes(parsed_root):
+            for cls in self.classes:
                 if self._is_exempt_class(cls):
                     continue
                 violations.extend(self._check_entity_methods(cls, ts_file))
@@ -174,7 +174,7 @@ class EntityBehaviorScanner(TypeScriptScanner):
                 break
 
             parsed_root = self.parse_file(repo_file)
-            if parsed_root and self.has_import_from(parsed_root, "mongodb"):
+            if parsed_root and self.has_import_from("mongodb"):
                 has_mongo_import = True
                 break
 

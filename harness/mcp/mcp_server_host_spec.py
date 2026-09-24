@@ -53,16 +53,44 @@ _PYTHONPATH = ";".join(
 def _run_async(coro):
     return asyncio.run(coro)
 
-def _host_params(toolsets: str) -> StdioServerParameters:
-    return StdioServerParameters(
-        command=str(_PYTHON),
-        args=["-m", "harness.mcp", "--toolsets", toolsets],
-        cwd=str(_REPO_ROOT),
-        env={**__import__("os").environ, "PYTHONPATH": _PYTHONPATH},
-    )
+
+class StdioHostProbe:
+    def host_params(self, toolsets: str) -> StdioServerParameters:
+        return StdioServerParameters(
+            command=str(_PYTHON),
+            args=["-m", "harness.mcp", "--toolsets", toolsets],
+            cwd=str(_REPO_ROOT),
+            env={**__import__("os").environ, "PYTHONPATH": _PYTHONPATH},
+        )
+
+    async def increment_then_read_twice(self, session):
+        await session.call_tool(
+            "hosting-demo.increment", arguments={"step": 4}
+        )
+        first = await session.call_tool(
+            "hosting-demo.read_count", arguments={}
+        )
+        await session.call_tool(
+            "hosting-demo.increment", arguments={"step": 1}
+        )
+        second = await session.call_tool(
+            "hosting-demo.read_count", arguments={}
+        )
+        return _text(first), _text(second)
+
+    async def exercise(self, session):
+        await session.call_tool(
+            "hosting-demo.plan_work",
+            arguments={"concept": "widgets"},
+        )
+        read_count = await session.call_tool(
+            "hosting-demo.read_count", arguments={}
+        )
+        return _text(read_count)
+
 
 async def _with_session(toolsets: str, action):
-    async with stdio_client(_host_params(toolsets)) as (read_stream, write_stream):
+    async with stdio_client(StdioHostProbe().host_params(toolsets)) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             return await action(session)
@@ -120,21 +148,12 @@ with description("an MCP host over stdio"):
             )
 
         with it("should retain toolset state across calls in one process"):
-            async def exercise(session):
-                await session.call_tool(
-                    "hosting-demo.increment", arguments={"step": 4}
+            first, second = _run_async(
+                _with_session(
+                    _HOSTING_DEMO,
+                    StdioHostProbe().increment_then_read_twice,
                 )
-                first = await session.call_tool(
-                    "hosting-demo.read_count", arguments={}
-                )
-                await session.call_tool(
-                    "hosting-demo.increment", arguments={"step": 1}
-                )
-                second = await session.call_tool(
-                    "hosting-demo.read_count", arguments={}
-                )
-                return _text(first), _text(second)
-            first, second = _run_async(_with_session(_HOSTING_DEMO, exercise))
+            )
             expect(first).to(equal("4"))
             expect(second).to(equal("5"))
 
@@ -154,16 +173,9 @@ with description("an MCP host over stdio"):
                 expect(payload["count"]).to(equal(2))
 
             with it("should advance toolset state from orchestrated @agent_tool calls"):
-                async def exercise(session):
-                    await session.call_tool(
-                        "hosting-demo.plan_work",
-                        arguments={"concept": "widgets"},
-                    )
-                    read_count = await session.call_tool(
-                        "hosting-demo.read_count", arguments={}
-                    )
-                    return _text(read_count)
-                expect(_run_async(_with_session(_HOSTING_DEMO, exercise))).to(equal("2"))
+                expect(
+                    _run_async(_with_session(_HOSTING_DEMO, StdioHostProbe().exercise))
+                ).to(equal("2"))
 
     with context("that has started with the Echo toolset"):
         with it("should invoke a real @agent_tool through the MCP wire"):

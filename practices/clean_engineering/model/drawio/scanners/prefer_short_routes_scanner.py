@@ -4,21 +4,20 @@ from __future__ import annotations
 from pathlib import Path
 
 from _drawio_base import DrawioScanner
-from practices.clean_engineering.model.drawio import drawio_tools
 
 
 class PreferShortRoutesScanner(DrawioScanner):
     RULE = "prefer-short-routes"
 
-    def scan_page(self, file_path: Path, page_name: str, page_root) -> list:
+    def scan_page(self, page_root) -> list:
         return [
             self.violation(
-                f"[{page_name}] {desc}: {reason}",
-                location=str(file_path),
+                f"[{self._scan_page_name}] {desc}: {reason}",
+                location=str(self._scan_file_path),
             )
-            for desc, reason in drawio_tools.check_prefer_short_routes(page_root)
+            for desc, reason in self._check_prefer_short_routes(page_root)
         ]
 
 
 if __name__ == "__main__":
-    raise SystemExit(PreferShortRoutesScanner.run_main())
+    raise SystemExit(PreferShortRoutesScanner().run_main())

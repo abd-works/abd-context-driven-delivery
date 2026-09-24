@@ -65,14 +65,27 @@ def __getattr__(name: str) -> Any:
         return getattr(spec_helpers, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-_local = threading.local()
+
+class AgentBlockLocal:
+    """Thread-local holder for the active `with agent(...)` block."""
+
+    def __init__(self) -> None:
+        self._local = threading.local()
+
+    def current(self) -> Any:
+        block = getattr(self._local, "block", None)
+        if block is None:
+            raise RuntimeError("instruct/instruct_use_tool/ai_judge called outside of `with agent(...)`")
+        return block
+
+    def use(self, block: object) -> None:
+        self._local.block = block
+
+    def clear(self) -> None:
+        self._local.block = None
 
 
-def _current() -> Any:
-    block = getattr(_local, "block", None)
-    if block is None:
-        raise RuntimeError("instruct/instruct_use_tool/ai_judge called outside of `with agent(...)`")
-    return block
+_agent_blocks = AgentBlockLocal()
 
 
 @contextmanager
@@ -86,26 +99,26 @@ def agent(
     if in_chat is None:
         in_chat = _in_chat_from_env()
     if in_chat:
-        from agent_bdd.agent_chat_bdd import _chat_agent as chat_agent
-        with chat_agent(workspace, session_file) as block:
-            _local.block = block
+        from agent_bdd.agent_chat_bdd import _ChatAgentBlock
+        with _ChatAgentBlock.opened(workspace, session_file) as block:
+            _agent_blocks.use(block)
             try:
                 yield block
             finally:
-                _local.block = None
+                _agent_blocks.clear()
         return
-    from agent_bdd.agent_cli_bdd import _cli_agent
-    with _cli_agent(workspace, session_file) as block:
-        _local.block = block
+    from agent_bdd.agent_cli_bdd import _ToolAgentBlock
+    with _ToolAgentBlock.opened(workspace, session_file) as block:
+        _agent_blocks.use(block)
         try:
             yield block
         finally:
-            _local.block = None
+            _agent_blocks.clear()
 
 
 def instruct(prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
     """Send a natural-language instruct to the current agent block."""
-    return _current().instruct(prompt, timeout_seconds=timeout_seconds)
+    return _agent_blocks.current().instruct(prompt, timeout_seconds=timeout_seconds)
 
 
 def instruct_use_tool(
@@ -115,7 +128,7 @@ def instruct_use_tool(
     require_agent_shell: bool = False,
 ) -> RunResponse:
     """Parse a toolset run request from the prompt and invoke it in-process."""
-    return _current().instruct_use_tool(
+    return _agent_blocks.current().instruct_use_tool(
         prompt,
         timeout_seconds=timeout_seconds,
         require_agent_shell=require_agent_shell,
@@ -124,7 +137,7 @@ def instruct_use_tool(
 
 def ai_judge(output: str, rubric: str, *, timeout_seconds: int = 180) -> None:
     """Assert that output passes the rubric; raises AssertionError(reason) if the judge returns FAIL."""
-    result = _current().ai_judge(output, rubric, timeout_seconds=timeout_seconds)
+    result = _agent_blocks.current().ai_judge(output, rubric, timeout_seconds=timeout_seconds)
     if result.failed():
         raise AssertionError(f"ai_judge FAIL - {result.reason}")
 

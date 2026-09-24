@@ -24,11 +24,15 @@ from practices.stories.model.thin_slice import Increment
 from practices.stories.model.update_report import ChangeKind, TranslationError
 
 
-def _epic_with_children(name: str, order: int, sub_epic_names: list) -> Epic:
-    epic = Epic(name, order)
-    for i, sub_name in enumerate(sub_epic_names, start=1):
-        epic.sub_epics.append(SubEpic(sub_name, i))
-    return epic
+class SpecFixture:
+    def epic_with_children(self, name: str, order: int, sub_epic_names: list) -> Epic:
+        epic = Epic(name, order)
+        for i, sub_name in enumerate(sub_epic_names, start=1):
+            epic.sub_epics.append(SubEpic(sub_name, i))
+        return epic
+
+
+fixture = SpecFixture()
 
 
 with description("a StoryNode") as self:
@@ -36,8 +40,8 @@ with description("a StoryNode") as self:
         "that has been translated from a source of the same semantic type with no differences"
     ):
         with before.each:
-            self.target = _epic_with_children("Epic 1", 1, ["SubEpic 1", "SubEpic 2"])
-            self.source = _epic_with_children("Epic 1", 1, ["SubEpic 1", "SubEpic 2"])
+            self.target = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1", "SubEpic 2"])
+            self.source = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1", "SubEpic 2"])
             self.report = self.target.translate_from(self.source)
 
         with context("the UpdateReport"):
@@ -71,8 +75,8 @@ with description("a StoryNode") as self:
 
     with context("that has been translated from a source with an added child"):
         with before.each:
-            self.target = _epic_with_children("Epic 1", 1, ["SubEpic 1"])
-            self.source = _epic_with_children(
+            self.target = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1"])
+            self.source = fixture.epic_with_children(
                 "Epic 1", 1, ["SubEpic 1", "SubEpic 2"]
             )
             self.report = self.target.translate_from(self.source)
@@ -100,10 +104,10 @@ with description("a StoryNode") as self:
 
     with context("that has been translated from a source with a removed child"):
         with before.each:
-            self.target = _epic_with_children(
+            self.target = fixture.epic_with_children(
                 "Epic 1", 1, ["SubEpic 1", "SubEpic 2"]
             )
-            self.source = _epic_with_children("Epic 1", 1, ["SubEpic 1"])
+            self.source = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1"])
             self.report = self.target.translate_from(self.source)
 
         with context("the target"):
@@ -119,8 +123,8 @@ with description("a StoryNode") as self:
 
     with context("that has been translated from a source with a renamed child"):
         with before.each:
-            self.target = _epic_with_children("Epic 1", 1, ["SubEpic 1"])
-            self.source = _epic_with_children("Epic 1", 1, ["SubEpic 1 (renamed)"])
+            self.target = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1"])
+            self.source = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1 (renamed)"])
             self.report = self.target.translate_from(self.source)
 
         with context("the target child"):
@@ -135,7 +139,7 @@ with description("a StoryNode") as self:
 
     with context("that has been translated from a source with reordered children"):
         with before.each:
-            self.target = _epic_with_children(
+            self.target = fixture.epic_with_children(
                 "Epic 1", 1, ["SubEpic 1", "SubEpic 2", "SubEpic 3"]
             )
             source = Epic("Epic 1", 1)
@@ -162,7 +166,7 @@ with description("a StoryNode") as self:
         with before.each:
             # WHY: model move as two independent parent reconciliations - old parent
             # sees a removal, new parent sees an addition. The BDD leaf verifies both.
-            self.old_parent = _epic_with_children("Epic 1", 1, ["SubEpic 1"])
+            self.old_parent = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1"])
             self.new_parent = Epic("Epic 2", 2)
             old_source = Epic("Epic 1", 1)
             new_source = Epic("Epic 2", 2)
@@ -190,7 +194,7 @@ with description("a StoryNode") as self:
         "that has been translated from a source whose children include a mix of matches, renames, and additions"
     ):
         with before.each:
-            self.target = _epic_with_children(
+            self.target = fixture.epic_with_children(
                 "Epic 1", 1, ["SubEpic Alpha", "SubEpic Bravo"]
             )
             self.target_children_before = list(self.target.sub_epics)
@@ -236,10 +240,10 @@ with description("a StoryNode") as self:
 
     with context("that has been reversed against the UpdateReport it produced"):
         with before.each:
-            self.target = _epic_with_children(
+            self.target = fixture.epic_with_children(
                 "Epic 1", 1, ["SubEpic 1", "SubEpic 2"]
             )
-            source = _epic_with_children(
+            source = fixture.epic_with_children(
                 "Epic 1 (renamed)", 1, ["SubEpic 1 (renamed)", "SubEpic 2"]
             )
             self.report = self.target.translate_from(source)
@@ -259,8 +263,8 @@ with description("a StoryNode") as self:
         "that has been asked to reverse against a report produced by a different node"
     ):
         with it("should reject the reverse"):
-            producer = _epic_with_children("Epic 1", 1, ["SubEpic 1"])
-            source = _epic_with_children("Epic 1", 1, ["SubEpic 1", "SubEpic 2"])
+            producer = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1"])
+            source = fixture.epic_with_children("Epic 1", 1, ["SubEpic 1", "SubEpic 2"])
             report = producer.translate_from(source)
 
             foreign = Epic("Epic 2", 2)

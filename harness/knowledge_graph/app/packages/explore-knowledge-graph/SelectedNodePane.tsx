@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ListedRule, ListedTreeNode, SourceRangeDto } from './knowledge-graph';
 import { SourceSnippetEditor } from './SourceSnippetEditor';
 
@@ -22,6 +23,7 @@ export function SelectedNodePane({
   sourceFile: SourceRangeDto | null;
   violations?: boolean;
 }) {
+  const [showGuidance, setShowGuidance] = useState(true);
   const sections = selectedTree
     ? flattenSections(selectedTree, violations)
     : selectedNode
@@ -47,8 +49,16 @@ export function SelectedNodePane({
   const panePrompt = paneCopyText(sections, violations);
   return (
     <div className="selected-node-pane" data-testid="selected-subtree">
-      {panePrompt ? (
-        <div className="pane-actions">
+      <div className="pane-actions">
+        <label className="guidance-toggle" data-testid="toggle-guidance">
+          guidance
+          <input
+            type="checkbox"
+            checked={showGuidance}
+            onChange={(event) => setShowGuidance(event.target.checked)}
+          />
+        </label>
+        {panePrompt ? (
           <button
             type="button"
             className="copy-prompt"
@@ -57,8 +67,8 @@ export function SelectedNodePane({
           >
             Copy pane to prompt
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
       {sections.map((section, index) => (
         <NodeSection
           key={section.node_id}
@@ -71,6 +81,7 @@ export function SelectedNodePane({
           }
           source={section.source}
           origin={section.origin}
+          showGuidance={showGuidance}
         />
       ))}
     </div>
@@ -120,6 +131,7 @@ function NodeSection({
   rules,
   source,
   origin,
+  showGuidance = true,
 }: {
   nested?: boolean;
   name: string;
@@ -128,8 +140,14 @@ function NodeSection({
   rules: ListedRule[];
   source: SourceRangeDto | null;
   origin: SourceRangeDto | null;
+  showGuidance?: boolean;
 }) {
-  const shown = source?.text ? source : nested ? null : origin?.text ? origin : null;
+  const shown =
+    showGuidance && (source?.text ? source : nested ? null : origin?.text ? origin : null);
+  const listed = showGuidance ? rules : violatingRules(rules);
+  if (!showGuidance && listed.length === 0) {
+    return null;
+  }
   return (
     <div
       className="node-report"
@@ -140,20 +158,20 @@ function NodeSection({
       {shown ? (
         <SourceSnippetEditor source={shown} excerpt={!nested} />
       ) : null}
-      {rules.length > 0 ? (
+      {listed.length > 0 ? (
         <div className="rule-report" data-testid="rule-report">
-          {rules.map((entry) => (
+          {listed.map((entry) => (
             <article key={entry.slug} className={`rule-card ${entry.status}`}>
               <h3>
                 {entry.slug}{' '}
                 <span className={`rule-status ${entry.status}`}>{entry.status}</span>
               </h3>
-              {entry.practice || entry.fidelity ? (
+              {showGuidance && (entry.practice || entry.fidelity) ? (
                 <p className="report-meta">
                   {[entry.practice, entry.fidelity].filter(Boolean).join(' · ')}
                 </p>
               ) : null}
-              {entry.body ? <p>{entry.body}</p> : null}
+              {showGuidance && entry.body ? <p>{entry.body}</p> : null}
               {entry.message ? <p className="violation">{entry.message}</p> : null}
               {entry.status === 'violating' || entry.message ? (
                 <button
@@ -186,6 +204,14 @@ function violatingRules(rules: ListedRule[]): ListedRule[] {
   return rules.filter((rule) => rule.status === 'violating');
 }
 
+const VIOLATION_TASK_PROCESS = [
+  'Fix the following violations, follow this process',
+  '- save the below as a violation task list.',
+  '- use a non-blocking sub agent if available to you',
+  '- fix each violation as a separate turn, check off each fix as you do so',
+  '- ignore violations that are marked as fixed',
+].join('\n');
+
 function paneCopyText(
   sections: Array<{
     path: string;
@@ -214,7 +240,10 @@ function paneCopyText(
       );
     }
   }
-  return prompts.join('\n\n---\n\n');
+  if (prompts.length === 0) {
+    return '';
+  }
+  return [VIOLATION_TASK_PROCESS, ...prompts].join('\n\n---\n\n');
 }
 
 function violationPrompt({
@@ -234,7 +263,8 @@ function violationPrompt({
       : source.file
     : '';
   return [
-    `Fix this Knowledge Graph rule violation.`,
+    `Fix this Violation.`,
+    `[ ] done`,
     `Node: ${path} (${semanticType})`,
     file ? `File: ${file}` : '',
     `Rule: ${rule.slug}`,

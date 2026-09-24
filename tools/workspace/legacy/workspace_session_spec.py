@@ -26,10 +26,10 @@ _git = Repo.git
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _CHRONICLE_WITH_OUTPUT_TOOLSET = (
-    "practices.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
+    "builders.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
 )
 
 def _section(name: str) -> str:
@@ -273,7 +273,7 @@ with description("a WorkSession that is started in a git working area"):
         started_on = GitRepo(tmp).current_branch
         session = Workspace(str(tmp)).open_work_session("started-sprint")
         session.ensure_started()
-        expect(Repo.find_root(tmp)).to(equal(tmp.resolve()))
+        expect(Repo(tmp).find_root()).to(equal(tmp.resolve()))
         expect(GitRepo(tmp).current_branch).to(equal(started_on))
         expect(session.git.current_branch).to(equal("session/started-sprint"))
         expect(session.git.root.resolve()).not_to(equal(tmp.resolve()))
@@ -529,11 +529,11 @@ with description("a WorkSession that is closed"):
             recorded.append((list(paths), message))
             sha = real_commit(paths, message)
             if message != "close":
-                git.set_dirty(True)
+                git.mark_dirty(True)
             return sha
 
         git.commit = capture_commit  # type: ignore[method-assign]
-        git.set_dirty(True)
+        git.mark_dirty(True)
         session.close(outcome="done", handoff="")
         close_commits = [entry for entry in recorded if entry[1] == "close"]
         expect(close_commits).not_to(equal([]))
@@ -646,12 +646,12 @@ with description("a WorkSession that is closed in a git worktree"):
 
         tmp = Path(tempfile.mkdtemp(prefix="session_close_git_clean_"))
         git = NullGitRepo(tmp)
-        git.set_dirty(False)
+        git.mark_dirty(False)
         session = Workspace(str(tmp)).open_work_session("tracked-close", git=git)
         session.ensure_started()
         session_md = session.folder / "session.md"
         git.commit([str(session_md)], "track session.md")
-        git.set_dirty(False)
+        git.mark_dirty(False)
         session.close(outcome="done", handoff="")
         expect(git.is_dirty(untracked=False)).to(be_false)
         shutil.rmtree(tmp, ignore_errors=True)
@@ -773,7 +773,7 @@ with description("a WorkSession that is closed in a git worktree"):
         git = NullGitRepo(tmp)
         session = Workspace(str(tmp)).open_work_session("close-turn", git=git)
         session.ensure_started()
-        git.set_dirty(True)
+        git.mark_dirty(True)
         session.open_turn = Turn(root=str(git.root))
         session.open_turn.action = "forgotten-turn"
         session.close(outcome="done", handoff="")
@@ -976,34 +976,34 @@ with description("docs_dir"):
         from workspace.legacy.workspace import SessionPaths
         sprint = Path("/work/.sessions/my-sprint")
         # Act / Assert
-        expect(SessionPaths.docs_dir(sprint)).to(equal(Path("/work/.context")))
+        expect(SessionPaths().docs_dir(sprint)).to(equal(Path("/work/.context")))
 
     with it("should return path/.context for a working area path"):
         from workspace.legacy.workspace import SessionPaths
         working = Path("/work/sandbox")
         # Act / Assert
-        expect(SessionPaths.docs_dir(working)).to(equal(working / ".context"))
+        expect(SessionPaths().docs_dir(working)).to(equal(working / ".context"))
 
     with it("should not nest .context when destination is already .context"):
         from workspace.legacy.workspace import SessionPaths
         ctx = Path("/work/sandbox/.context")
-        expect(SessionPaths.docs_dir(ctx)).to(equal(ctx))
+        expect(SessionPaths().docs_dir(ctx)).to(equal(ctx))
 
     with it("should treat a sibling under .context as the durable docs dir"):
         from workspace.legacy.workspace import SessionPaths
         invented = Path("/work/sandbox/.context/my-sprint")
-        expect(SessionPaths.docs_dir(invented)).to(equal(Path("/work/sandbox/.context")))
+        expect(SessionPaths().docs_dir(invented)).to(equal(Path("/work/sandbox/.context")))
 
 with description("session_dir"):
     with it("should return a sprint folder unchanged"):
         from workspace.legacy.workspace import SessionPaths
         sprint = Path("/work/.sessions/my-sprint")
-        expect(SessionPaths.session_dir(sprint)).to(equal(sprint))
+        expect(SessionPaths().session_dir(sprint)).to(equal(sprint))
 
     with it("should build .sessions/{name} under the repository root"):
         from workspace.legacy.workspace import SessionPaths
         working = Path("/work/sandbox")
-        expect(SessionPaths.session_dir(working, "my-sprint")).to(
+        expect(SessionPaths().session_dir(working, "my-sprint")).to(
             equal(working / ".sessions" / "my-sprint")
         )
 
@@ -1033,25 +1033,25 @@ with description("SessionModel"):
         from workspace.legacy.workspace import SessionModel
 
         tmp = Path(tempfile.mkdtemp(prefix="session_model_"))
-        path = SessionModel.write(tmp, "composer-2.5-fast", "ticket-25")
+        path = SessionModel(tmp).write("composer-2.5-fast", "ticket-25")
         expect(path).to(equal(tmp / ".sessions" / "ticket-25" / "model"))
-        expect(SessionModel.read(tmp, "ticket-25")).to(equal("composer-2.5-fast"))
+        expect(SessionModel(tmp).read("ticket-25")).to(equal("composer-2.5-fast"))
 
     with it("should use sessions/default when session name is empty"):
         from workspace.legacy.workspace import SessionModel
 
         tmp = Path(tempfile.mkdtemp(prefix="session_model_default_"))
-        SessionModel.write(tmp, "kimi-k3-max", "")
-        expect(SessionModel.read(tmp, "")).to(equal("kimi-k3-max"))
-        expect(SessionModel.read(tmp, "default")).to(equal("kimi-k3-max"))
+        SessionModel(tmp).write("kimi-k3-max", "")
+        expect(SessionModel(tmp).read("")).to(equal("kimi-k3-max"))
+        expect(SessionModel(tmp).read("default")).to(equal("kimi-k3-max"))
 
     with it("should copy session model into a new folder falling back to default"):
         from workspace.legacy.workspace import SessionModel
 
         tmp = Path(tempfile.mkdtemp(prefix="session_model_copy_"))
-        SessionModel.write(tmp, "cursor-grok-4.6-medium", "default")
+        SessionModel(tmp).write("cursor-grok-4.6-medium", "default")
         dest = tmp / ".sessions" / "new-ticket"
-        copied = SessionModel.copy_into(dest, tmp, "new-ticket")
+        copied = SessionModel(tmp).copy_into(dest, "new-ticket")
         expect(copied is not None).to(be_true)
         expect((dest / "model").read_text(encoding="utf-8").strip()).to(
             equal("cursor-grok-4.6-medium")
@@ -1064,7 +1064,7 @@ with description("Workspace /model"):
 
         ws = Workspace()
         expect("set_session_model" in ws.tools).to(be_true)
-        expect("get_session_model" in ws.tools).to(be_true)
+        expect(hasattr(ws, "session_model")).to(be_true)
         expect("list_session_models" in ws.tools).to(be_true)
         expect("model" in getattr(ws, "prompts", {}) or "model" in ws.tools or hasattr(ws, "model")).to(
             be_true
@@ -1077,7 +1077,7 @@ with description("Workspace /model"):
         ws = Workspace(str(tmp))
         written = ws.set_session_model("composer-2.5-fast", session="sprint-a")
         expect(written).to(equal("composer-2.5-fast"))
-        expect(ws.get_session_model(session="sprint-a")).to(equal("composer-2.5-fast"))
+        expect(SessionModel(str(tmp)).read("sprint-a")).to(equal("composer-2.5-fast"))
         prose = (type(ws).model.__doc__ or "") + "\n".join(
             getattr(type(ws).model, "__doc__", "") or ""
         )
@@ -1098,10 +1098,10 @@ with description("a WorkSession that inherits a model"):
         from workspace.legacy.workspace import SessionModel, Workspace, WorkSession
 
         tmp = Path(tempfile.mkdtemp(prefix="session_inherit_model_"))
-        SessionModel.write(tmp, "composer-2.5-fast", "default")
+        SessionModel(tmp).write("composer-2.5-fast", "default")
         session = WorkSession(Workspace(str(tmp)), "child-sprint", git=NullGitRepo(tmp))
         session.ensure_started(goal="inherit model")
-        expect(session.session_model()).to(equal("composer-2.5-fast"))
+        expect(session.session_model).to(equal("composer-2.5-fast"))
 
 
 with description("default work session when none is set"):
@@ -1144,7 +1144,7 @@ with description("default work session when none is set"):
 
         tmp = Path(tempfile.mkdtemp(prefix="ws-default-close-"))
         git = NullGitRepo(tmp)
-        git.set_dirty(True)
+        git.mark_dirty(True)
         ws = Workspace(str(tmp))
         session = ws.open_work_session(
             SessionModel.DEFAULT_SESSION,

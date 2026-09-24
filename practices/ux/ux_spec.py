@@ -21,13 +21,14 @@ from practices.ux.model.nodes import Screen
 from practices.ux.model.ux_map import UxMap
 
 
-def _sample_json() -> str:
-    ux_map = UxMap(name="demo")
-    ux_map.scope = "Place New Order"
-    screen = Screen("Catalog", 0)
-    screen.apply_layout("stack")
-    ux_map.append_screen(screen)
-    return JsonUxMap.render(ux_map)
+class UxJsonSample:
+    def render(self) -> str:
+        ux_map = UxMap.create(name="demo")
+        ux_map.scope = "Place New Order"
+        screen = Screen("Catalog", 0)
+        screen.apply_layout("stack")
+        ux_map.append_screen(screen)
+        return JsonUxMap.create().render(ux_map)
 
 
 with description("Ux fidelity and format defaults"):
@@ -70,7 +71,7 @@ with description("Ux transform tool"):
             self.ux = Ux(fidelity="ia")
             self.result = self.ux.render(
                 format="markdown",
-                content=_sample_json(),
+                content=UxJsonSample().render(),
                 source="json",
             )
 

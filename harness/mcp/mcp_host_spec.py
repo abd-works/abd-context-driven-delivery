@@ -27,15 +27,19 @@ from harness.mcp.examples.illegitimate_name.illegitimate_name import (
 )
 
 
-def _sorted_any_of_types(schema: dict) -> list[str]:
-    return sorted(variant["type"] for variant in schema["anyOf"])
+class JsonSchemaAnyOf:
+    def sorted_types(self, schema: dict) -> list[str]:
+        return sorted(variant["type"] for variant in schema["anyOf"])
 
 
 with description("an MCP host input schema"):
 
+    with before.each:
+        self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
+
     with context("that has been derived from a ParameterTypes echo operation"):
         with before.each:
-            self.schema = McpHost.input_schema_for_callable(ParameterTypes().echo)
+            self.schema = self.host.input_schema_for_callable(ParameterTypes().echo)
             self.properties = self.schema["properties"]
 
         with context("with a string parameter"):
@@ -151,25 +155,25 @@ with description("an MCP host input schema"):
 
         with context("with an optional string parameter"):
             with it("should advertise anyOf string and null"):
-                expect(_sorted_any_of_types(self.properties["optional_text"])).to(
+                expect(JsonSchemaAnyOf().sorted_types(self.properties["optional_text"])).to(
                     equal(["null", "string"])
                 )
 
         with context("with an optional integer parameter"):
             with it("should advertise anyOf integer and null"):
-                expect(_sorted_any_of_types(self.properties["optional_count"])).to(
+                expect(JsonSchemaAnyOf().sorted_types(self.properties["optional_count"])).to(
                     equal(["integer", "null"])
                 )
 
         with context("with an optional boolean parameter"):
             with it("should advertise anyOf boolean and null"):
-                expect(_sorted_any_of_types(self.properties["optional_flag"])).to(
+                expect(JsonSchemaAnyOf().sorted_types(self.properties["optional_flag"])).to(
                     equal(["boolean", "null"])
                 )
 
         with context("with an optional float parameter"):
             with it("should advertise anyOf number and null"):
-                expect(_sorted_any_of_types(self.properties["optional_ratio"])).to(
+                expect(JsonSchemaAnyOf().sorted_types(self.properties["optional_ratio"])).to(
                     equal(["null", "number"])
                 )
 
@@ -193,7 +197,7 @@ with description("an MCP host input schema"):
 
         with context("with a string-or-integer union parameter"):
             with it("should advertise anyOf string and integer"):
-                expect(_sorted_any_of_types(self.properties["text_or_count"])).to(
+                expect(JsonSchemaAnyOf().sorted_types(self.properties["text_or_count"])).to(
                     equal(["integer", "string"])
                 )
 
@@ -216,7 +220,7 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_sequence operation"):
         with context("with a Sequence of strings parameter"):
             with it("should advertise JSON Schema array of string"):
-                schema = McpHost.input_schema_for_callable(ParameterTypes().echo_sequence)
+                schema = self.host.input_schema_for_callable(ParameterTypes().echo_sequence)
                 expect(schema["properties"]["value"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
@@ -224,7 +228,7 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_mapping operation"):
         with context("with a Mapping of integer values parameter"):
             with it("should advertise JSON Schema object with integer additionalProperties"):
-                schema = McpHost.input_schema_for_callable(ParameterTypes().echo_mapping)
+                schema = self.host.input_schema_for_callable(ParameterTypes().echo_mapping)
                 expect(schema["properties"]["value"]).to(
                     equal(
                         {
@@ -237,13 +241,13 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_unannotated operation"):
         with context("with an unannotated parameter"):
             with it("should advertise JSON Schema string"):
-                schema = McpHost.input_schema_for_callable(ParameterTypes().echo_unannotated)
+                schema = self.host.input_schema_for_callable(ParameterTypes().echo_unannotated)
                 expect(schema["properties"]["value"]).to(equal({"type": "string"}))
 
     with context("that has been derived from iterate.iterate"):
         with context("with a tools list parameter"):
             with it("should advertise JSON Schema array of string"):
-                schema = McpHost.input_schema_for_callable(Iterate.iterate)
+                schema = self.host.input_schema_for_callable(Iterate.iterate)
                 expect(schema["properties"]["tools"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
@@ -262,7 +266,7 @@ with description("an MCP host") as self:
 
     with context("that has enrolled a turn toolset"):
         with before.each:
-            self.host = McpHost.build(
+            self.host = McpHost.from_refs(
                 ("tools.workspace.workspace:Turn",),
                 repo=str(_REPO_ROOT),
                 project=str(_REPO_ROOT),
@@ -284,7 +288,7 @@ with description("an MCP host") as self:
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
         with before.each:
-            self.host = McpHost.build(
+            self.host = McpHost.from_refs(
                 (IllegitimateName().registration_name,),
                 repo=str(_REPO_ROOT),
                 project=str(_REPO_ROOT),
@@ -306,7 +310,7 @@ with description("an MCP host") as self:
 
     with context("that has stood up with a toolset that cannot be loaded"):
         with before.each:
-            self.host = McpHost.build(
+            self.host = McpHost.from_refs(
                 (
                     "missing.module:Nope",
                     "harness.guidance.fixtures.agentic_ops.agentic_ops:SampleMcpOps",
@@ -337,7 +341,7 @@ with description("an MCP host") as self:
             expect(self.host.diagnose()["tools"]).to(contain("generate.generate"))
 
         with it("should not bake toolset refs into mcp.json"):
-            expect(McpHost.refs_from_manifest(self.tree / "mcp.json")).to(equal(()))
+            expect(self.host.refs_from_manifest(self.tree / "mcp.json")).to(equal(()))
 
 
 with description("an MCP host Cursor has stopped spawning") as self:

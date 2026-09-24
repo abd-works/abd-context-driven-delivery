@@ -9,7 +9,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 import mcp.types  # SDK, before harness/mcp is on PYTHONPATH
-for _cat in ("practices", "harness", "tools"):
+for _cat in ("practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -103,21 +103,30 @@ with description("CodeQL report runner"):
         expect(rows[0]["end_line"]).to(equal(300))
 
     with it("should expand a class header to the whole class body"):
-        from practices.clean_engineering.model.codeql.codeql_model import read_source_span
+        from practices.clean_engineering.model.codeql.codeql_model import SourceLocation, SourceSpan
 
-        start, end, text = read_source_span(
-            _REPO_ROOT,
-            "harness/knowledge_graph/model/codeql.py",
-            25,
-            25,
+        path = "harness/knowledge_graph/model/codeql.py"
+        lines = (_REPO_ROOT / path).read_text(encoding="utf-8").splitlines()
+        class_line = next(
+            index
+            for index, line in enumerate(lines, 1)
+            if line.startswith("class CodeQLRunError")
         )
+        location = SourceSpan(_REPO_ROOT).read(
+            SourceLocation(
+                file=path,
+                line=class_line,
+                end_line=class_line,
+            )
+        )
+        start, end, text = location.line, location.end_line, location.text
         expect("class CodeQLRunError" in text).to(equal(True))
         expect('"""' in text).to(equal(True))
         expect(end > start).to(equal(True))
         expect("class QueryServerDown" in text).to(equal(False))
 
     with it("should expand a multi-line def header through the body"):
-        from practices.clean_engineering.model.codeql.codeql_model import read_source_span
+        from practices.clean_engineering.model.codeql.codeql_model import SourceLocation, SourceSpan
 
         path = "harness/knowledge_graph/model/codeql.py"
         lines = (_REPO_ROOT / path).read_text(encoding="utf-8").splitlines()
@@ -126,7 +135,8 @@ with description("CodeQL report runner"):
             for index, line in enumerate(lines, 1)
             if line.startswith("    def populate(")
         )
-        start, end, text = read_source_span(_REPO_ROOT, path, lo, lo)
+        location = SourceSpan(_REPO_ROOT).read(SourceLocation(file=path, line=lo, end_line=lo))
+        start, end, text = location.line, location.end_line, location.text
         expect("self._apply_fact_batch" in text).to(equal(True))
         expect("def load_existing_facts" in text).to(equal(False))
         expect(end - start + 1 < 43).to(equal(True))

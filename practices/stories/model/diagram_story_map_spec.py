@@ -35,29 +35,32 @@ from practices.stories.model.diagram_story_map import (
 )
 
 
-def _four_epics_diagram() -> DiagramStoryMap:
-    story_map = StoryMap()
-    for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
-    return DiagramStoryMap(story_map)
+class SpecFixture:
+    def four_epics_diagram(self) -> DiagramStoryMap:
+        story_map = StoryMap()
+        for i in range(1, 5):
+            story_map.append_epic(Epic(f"Epic {i}", i))
+        return DiagramStoryMap(story_map)
+
+    def first_epic_with_3_sub_epics_diagram(self) -> DiagramStoryMap:
+        diagram = self.four_epics_diagram()
+        first = diagram.epics[0]
+        for j in range(1, 4):
+            first.sub_epics.append(SubEpic(f"SubEpic 1.{j}", j))
+        return diagram
 
 
-def _first_epic_with_3_sub_epics_diagram() -> DiagramStoryMap:
-    diagram = _four_epics_diagram()
-    first = diagram.epics[0]
-    for j in range(1, 4):
-        first.sub_epics.append(SubEpic(f"SubEpic 1.{j}", j))
-    return diagram
+fixture = SpecFixture()
 
 
 with description("a diagram Story Map") as self:
     with it("should hold no Epics"):
-        diagram = DiagramStoryMap()
+        diagram = DiagramStoryMap.create()
         expect(diagram.epics).to(have_len(0))
 
     with context("with 4 Epics in sequential order"):
         with before.each:
-            self.diagram = _four_epics_diagram()
+            self.diagram = fixture.four_epics_diagram()
 
         with it("should hold 4 Epics"):
             expect(self.diagram.epics).to(have_len(4))
@@ -167,7 +170,7 @@ with description("a diagram Story Map") as self:
 
         with context("with the first Epic holding 3 SubEpics"):
             with before.each:
-                self.diagram = _first_epic_with_3_sub_epics_diagram()
+                self.diagram = fixture.first_epic_with_3_sub_epics_diagram()
                 self.first_epic = self.diagram.epics[0]
 
             with context("the first Epic"):
@@ -440,7 +443,7 @@ with description("a diagram Story Map") as self:
 
     with context("that has been asked to place a SubEpic as a parent of an Epic"):
         with it("should reject the placement"):
-            diagram = DiagramStoryMap()
+            diagram = DiagramStoryMap.create()
             expect(
                 lambda: diagram.place_child_under_parent(
                     Epic("New", 1), SubEpic("Parent", 1)
@@ -449,7 +452,7 @@ with description("a diagram Story Map") as self:
 
     with context("that has been asked to place a Story as a parent of a SubEpic"):
         with it("should reject the placement"):
-            diagram = DiagramStoryMap()
+            diagram = DiagramStoryMap.create()
             expect(
                 lambda: diagram.place_child_under_parent(
                     SubEpic("New", 1), Story("Parent", 1, StoryType.USER)
@@ -458,7 +461,7 @@ with description("a diagram Story Map") as self:
 
     with context("that has been asked to place any child under a Story"):
         with it("should reject the placement"):
-            diagram = DiagramStoryMap()
+            diagram = DiagramStoryMap.create()
             expect(
                 lambda: diagram.place_child_under_parent(
                     Story("Child", 1, StoryType.USER),
@@ -468,7 +471,7 @@ with description("a diagram Story Map") as self:
 
     with context("that has been asked to give an Epic any parent"):
         with it("should reject the parent"):
-            diagram = DiagramStoryMap()
+            diagram = DiagramStoryMap.create()
             expect(
                 lambda: diagram.place_child_under_parent(
                     Epic("Child", 1), SubEpic("Parent", 1)

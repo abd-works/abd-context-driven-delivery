@@ -149,11 +149,11 @@ class PackageNamesScanner(TypeScriptScanner):
             search_dirs.append(tests_dir)
 
         for search_dir in search_dirs:
-            for ts_file in self.get_all_source_files(search_dir):
+            for ts_file in self.source_files(search_dir):
                 parsed_root = self.parse_file(ts_file)
                 if parsed_root is None:
                     continue
-                for imp in self.get_imports(parsed_root):
+                for imp in self.imports:
                     src = imp.source
                     if not src.startswith("@"):
                         continue

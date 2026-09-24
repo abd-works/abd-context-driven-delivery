@@ -189,7 +189,7 @@ with description("GrillContext toolset"):
         with before.each:
             self.gc = GrillContext()
             self.body = AgentInstructions.for_callable(
-                GrillContext.grill, self.gc
+                GrillContext.grill_with_context, self.gc
             )
 
         with it("should include the grill_with_context body in grill"):
@@ -218,7 +218,9 @@ with description("GrillContext toolset"):
 with description("a grill action"):
     with context("that expands"):
         with it("should include grill_with_context in grill"):
-            body = AgentInstructions.for_callable(GrillContext.grill, GrillContext())
+            body = AgentInstructions.for_callable(
+                GrillContext.grill_with_context, GrillContext()
+            )
             joined = "\n".join(body.prompt)
             expect(joined).to(contain("AskQuestion"))
 
@@ -227,7 +229,7 @@ with description("PracticeGuidance operations for grill"):
     with it("should not expose grill on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+                "builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

@@ -12,7 +12,7 @@ from practices.stories.model.nodes import Epic, Story, SubEpic
 from practices.stories.model.scenario import Scenario
 from practices.stories.model.source_location import SourceLocation
 from practices.stories.model.story_map import StoryMap
-from practices.stories.model.step_body import case_body_is_stub, unimplemented_steps_typescript
+from practices.stories.model.step_body import StepBody
 from practices.stories.model.test_file import Language, Test, TestCase, TestSuite, Tier, extract_bug_id
 
 _DESCRIBE = re.compile(
@@ -67,7 +67,7 @@ class TypeScriptStoryMap(StoryMap):
         root = Path(root).resolve()
         if root.is_file():
             if root.suffix in (".ts", ".tsx"):
-                return [cls._parse_file(root, root.parent)]
+                return [cls()._parse_file(root, root.parent)]
             return []
         seen: set = set()
         suites: List[TestSuite] = []
@@ -76,14 +76,13 @@ class TypeScriptStoryMap(StoryMap):
                 if p in seen or not p.is_file():
                     continue
                 seen.add(p)
-                suites.append(cls._parse_file(p, root))
+                suites.append(cls()._parse_file(p, root))
         return suites
 
-    @classmethod
-    def _parse_file(cls, path: Path, root: Path) -> TestSuite:
+    def _parse_file(self, path: Path, root: Path) -> TestSuite:
         text = path.read_text(encoding="utf-8", errors="replace")
         rel = str(path.relative_to(root)).replace("\\", "/")
-        tier = cls._tier(path.name)
+        tier = self._tier(path.name)
         describe = m.group("title").strip() if (m := _DESCRIBE.search(text)) else ""
         scenario_spans: list[tuple[int, str]] = [
             (m.start(), m.group("title").strip()) for m in _SCENARIO.finditer(text)
@@ -109,7 +108,7 @@ class TypeScriptStoryMap(StoryMap):
                 tier=tier, name=title,
                 tests=[Test()], assertions_count=assertions,
                 has_real_assertion=assertions > 0,
-                has_unimplemented_body=case_body_is_stub(body),
+                has_unimplemented_body=StepBody().case_is_stub(body),
                 references_bug_id=extract_bug_id(body),
                 story_source=SourceLocation(rel, text.count("\n", 0, offset) + 1),
                 covers_scenario=covered,
@@ -117,13 +116,12 @@ class TypeScriptStoryMap(StoryMap):
         return TestSuite(
             tier=tier, language=Language("ts"),
             name=describe, cases=cases,
-            imports_real=cls._imports_real(text),
+            imports_real=self._imports_real(text),
             source=SourceLocation(rel, 1),
-            unimplemented_steps=unimplemented_steps_typescript(text),
+            unimplemented_steps=StepBody().unimplemented_typescript(text),
         )
 
-    @staticmethod
-    def _tier(name: str) -> Tier:
+    def _tier(self, name: str) -> Tier:
         m = _TIER_TEST.search(name)
         if m:
             return Tier(m.group("tier"))
@@ -135,8 +133,7 @@ class TypeScriptStoryMap(StoryMap):
             return Tier(m.group("tier"))
         return Tier("")
 
-    @staticmethod
-    def _imports_real(text: str) -> bool:
+    def _imports_real(self, text: str) -> bool:
         for line in text.splitlines():
             m = re.match(r"^\s*import\s.+from\s+['\"](?P<mod>[^'\"]+)['\"]", line)
             if not m:

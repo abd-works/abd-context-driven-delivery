@@ -65,13 +65,12 @@ class JavaCleanEngineeringModel(CleanEngineeringModel):
 
     @classmethod
     def parse(cls, text: str) -> "JavaCleanEngineeringModel":
-        from practices.clean_engineering.model.c_family_parse import parse_c_family
+        from practices.clean_engineering.model.c_family_parse import CFamilyParse
 
-        return parse_c_family(
-            text,
+        return CFamilyParse(
             model_factory=lambda: cls(name="", sequential_order=1),
             class_factory=lambda **kw: JavaOoadClass(**kw),
-        )
+        ).parse(text)
 
     @classmethod
     def parse_detailed(cls, text: str):

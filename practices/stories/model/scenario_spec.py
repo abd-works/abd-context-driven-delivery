@@ -25,21 +25,22 @@ from practices.stories.model.scenario import (
 from practices.stories.model.update_report import TranslationError
 
 
-def _clause(text: str, phase: Phase) -> Clause:
-    is_cont = text.startswith("And ") or text.startswith("But ")
-    return Clause(text=text, phase=phase, is_continuation=is_cont)
+class SpecFixture:
+    def clause(self, text: str, phase: Phase) -> Clause:
+        is_cont = text.startswith("And ") or text.startswith("But ")
+        return Clause(text=text, phase=phase, is_continuation=is_cont)
+
+    def given(self, text: str) -> Clause:
+        return self.clause(text, Phase.GIVEN)
+
+    def when(self, text: str) -> Clause:
+        return self.clause(text, Phase.WHEN)
+
+    def then(self, text: str) -> Clause:
+        return self.clause(text, Phase.THEN)
 
 
-def _given(text: str) -> Clause:
-    return _clause(text, Phase.GIVEN)
-
-
-def _when(text: str) -> Clause:
-    return _clause(text, Phase.WHEN)
-
-
-def _then(text: str) -> Clause:
-    return _clause(text, Phase.THEN)
+fixture = SpecFixture()
 
 
 with description("a Scenario") as self:
@@ -57,16 +58,16 @@ with description("a Scenario") as self:
     ):
         with before.each:
             source = Scenario("Original name", 1, story_name="My Story")
-            source.given = [_given("a funded Account DDA-001")]
+            source.given = [fixture.given("a funded Account DDA-001")]
             source.interactions = [
                 Interaction(
-                    when=[_when("the Treasurer submits a Transfer")],
-                    then=[_then("a Confirmation Number is returned")],
+                    when=[fixture.when("the Treasurer submits a Transfer")],
+                    then=[fixture.then("a Confirmation Number is returned")],
                 )
             ]
             source.is_outline = True
             source.example_rows = [{"amount": "10000 USD"}]
-            source.background = [_given("the system is available")]
+            source.background = [fixture.given("the system is available")]
             source.evidence = ["ref #3"]
 
             self.target = Scenario("placeholder", 99)
@@ -105,22 +106,22 @@ with description("a Scenario") as self:
                 "should be a value copy - mutating the source's interactions after "
                 "translation should not affect the target"
             ):
-                self.source.interactions[0].when.append(_when("extra step"))
+                self.source.interactions[0].when.append(fixture.when("extra step"))
                 # Target's when list must not grow
                 expect(self.target.interactions[0].when).to(have_len(1))
 
     with context("that carries multiple interactions"):
         with before.each:
             self.scenario = Scenario("multi-interaction", 1)
-            self.scenario.given = [_given("initial state")]
+            self.scenario.given = [fixture.given("initial state")]
             self.scenario.interactions = [
                 Interaction(
-                    when=[_when("first action")],
-                    then=[_then("first outcome"), _then("And second outcome")],
+                    when=[fixture.when("first action")],
+                    then=[fixture.then("first outcome"), fixture.then("And second outcome")],
                 ),
                 Interaction(
-                    when=[_when("second action"), _when("And follow-up")],
-                    then=[_then("final outcome")],
+                    when=[fixture.when("second action"), fixture.when("And follow-up")],
+                    then=[fixture.then("final outcome")],
                 ),
             ]
 
@@ -156,10 +157,10 @@ with description("a Scenario") as self:
 
     with context('whose given clauses include an "And " continuation'):
         with before.each:
-            self.cont_clause = _given("And the daily Limit is 5000000 USD")
+            self.cont_clause = fixture.given("And the daily Limit is 5000000 USD")
             scenario = Scenario("outline", 1)
             scenario.given = [
-                _given("a Treasurer Jane Doe"),
+                fixture.given("a Treasurer Jane Doe"),
                 self.cont_clause,
             ]
             self.scenario = scenario
@@ -175,13 +176,13 @@ with description("a Scenario") as self:
 
     with context('whose interaction contains a "But " continuation in its then clauses'):
         with before.each:
-            self.but_clause = _then("But the Cart contents are preserved for retry")
+            self.but_clause = fixture.then("But the Cart contents are preserved for retry")
             scenario = Scenario("rejection", 1)
             scenario.interactions = [
                 Interaction(
-                    when=[_when("the Customer submits the Order")],
+                    when=[fixture.when("the Customer submits the Order")],
                     then=[
-                        _then("the Order is rejected with reason payment_declined"),
+                        fixture.then("the Order is rejected with reason payment_declined"),
                         self.but_clause,
                     ],
                 )

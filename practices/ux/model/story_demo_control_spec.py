@@ -31,7 +31,7 @@ with description("StoryDemoControl"):
         expect(control.story_steps[0]["kind"]).to(equal("when"))
 
     with it("should round-trip story_steps through JSON"):
-        ux_map = UxMap()
+        ux_map = UxMap.create()
         ux_map.name = "demo"
         screen = Screen("character sheet", 0, "character-sheet")
         region = Region("verb row", 0, "body")
@@ -48,7 +48,7 @@ with description("StoryDemoControl"):
         screen.append_region(region)
         ux_map.append_screen(screen)
 
-        parsed = JsonUxMap.parse(JsonUxMap.render(ux_map))
+        parsed = JsonUxMap.create().parse(JsonUxMap.create().render(ux_map))
         control = parsed.screens[0].regions[0].controls[0]
         expect(control).to(be_a(StoryDemoControl))
         expect(control.story_steps[0]["label"]).to(
@@ -110,7 +110,7 @@ with description("StoryDemoControl"):
         expect('type="number"' in html).to(equal(True))
 
     with it("should round-trip set_input and item_story_steps through JSON"):
-        ux_map = UxMap()
+        ux_map = UxMap.create()
         ux_map.name = "demo"
         screen = Screen("catalog", 0, "catalog")
         region = Region("list", 0, "body")
@@ -130,7 +130,7 @@ with description("StoryDemoControl"):
         )
         screen.append_region(region)
         ux_map.append_screen(screen)
-        parsed = JsonUxMap.parse(JsonUxMap.render(ux_map))
+        parsed = JsonUxMap.create().parse(JsonUxMap.create().render(ux_map))
         control = parsed.screens[0].regions[0].controls[0]
         expect(control).to(be_a(StoryDemoControl))
         expect(control.set_input).to(equal("product"))

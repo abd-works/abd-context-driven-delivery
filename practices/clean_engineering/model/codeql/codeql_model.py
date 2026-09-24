@@ -217,118 +217,96 @@ class File(_Members, OoadNode, Node):
         return []
 
 
-def _file_owner_name(name: str) -> bool:
-    text = (name or "").replace("\\", "/")
-    return "/" in text or text.endswith(".py")
+class SourceSpan:
+    def __init__(self, root: Path | None) -> None:
+        self._root = root
 
+    def bind(self, node: Node, row: dict) -> None:
+        file = str(row.get("file") or "").replace("\\", "/")
+        start = int(row.get("line") or 0)
+        end = int(row.get("end_line") or start)
+        if not file:
+            return
+        text = str(row.get("text") or "")
+        location = SourceLocation(file=file, line=start, end_line=end or start, text=text)
+        if self._root is not None and start > 0:
+            location = self.read(location)
+        node.source = location
 
-def _module_for_path(
-    modules: Dict[str, Module],
-    path: str,
-    model: "CleanEngineeringModel",
-    order: int,
-) -> tuple[Module, int]:
-    normalized = path.replace("\\", "/")
-    matches = [
-        mod
-        for mod in modules.values()
-        if normalized == mod.name.replace(".", "/")
-        or normalized.startswith(mod.name.replace(".", "/") + "/")
-        or normalized.startswith(mod.name + "/")
-    ]
-    if matches:
-        return max(matches, key=lambda mod: len(mod.name)), order
-    folder = str(Path(normalized).parent).replace("\\", "/")
-    if folder in (".", ""):
-        folder = normalized
-    key = folder.lower()
-    if key not in modules:
-        modules[key] = model.module_named(folder, order=order)
-        order += 1
-    return modules[key], order
+    def read(self, location: SourceLocation) -> SourceLocation:
+        start, end, text = self._read_span(location)
+        if not text:
+            return SourceLocation(
+                file=location.file,
+                line=location.line,
+                end_line=location.end_line or location.line,
+                text=location.text,
+            )
+        return SourceLocation(file=location.file, line=start, end_line=end, text=text)
 
+    def _read_span(self, location: SourceLocation) -> tuple[int, int, str]:
+        path = Path(self._root) / location.file
+        if not path.is_file():
+            return location.line, location.end_line or location.line, ""
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lo = max(location.line, 1)
+        hi = max(location.end_line or lo, lo)
+        if lo > len(lines):
+            return lo, hi, ""
+        if location.file.endswith(".py"):
+            hi = max(hi, self._python_block_end(lines, lo - 1) + 1)
+        elif location.file.endswith((".ts", ".tsx", ".js", ".jsx")):
+            hi = max(hi, self._brace_block_end(lines, lo - 1) + 1)
+        hi = min(hi, len(lines))
+        return lo, hi, "\n".join(lines[lo - 1 : hi])
 
-def bind_source(node: Node, row: dict, root: Path | None = None) -> None:
-    file = str(row.get("file") or "").replace("\\", "/")
-    start = int(row.get("line") or 0)
-    end = int(row.get("end_line") or start)
-    if not file:
-        return
-    text = str(row.get("text") or "")
-    if root is not None and start > 0:
-        sliced_start, sliced_end, sliced = read_source_span(root, file, start, end)
-        if sliced:
-            start, end, text = sliced_start, sliced_end, sliced
-        else:
-            end = end or start
-    node.source = SourceLocation(file=file, line=start, end_line=end or start, text=text)
-
-
-def read_source_span(
-    root: Path, relative: str, start: int, end: int
-) -> tuple[int, int, str]:
-    path = Path(root) / relative
-    if not path.is_file():
-        return start, end or start, ""
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    lo = max(start, 1)
-    hi = max(end or lo, lo)
-    if lo > len(lines):
-        return lo, hi, ""
-    if relative.endswith(".py"):
-        hi = max(hi, _python_block_end(lines, lo - 1) + 1)
-    elif relative.endswith((".ts", ".tsx", ".js", ".jsx")):
-        hi = max(hi, _brace_block_end(lines, lo - 1) + 1)
-    hi = min(hi, len(lines))
-    return lo, hi, "\n".join(lines[lo - 1 : hi])
-
-
-def _python_block_end(lines: list[str], start_index: int) -> int:
-    header = lines[start_index]
-    matched = re.match(r"^(\s*)(?:async\s+)?(?:class|def)\b", header)
-    if not matched:
-        return start_index
-    indent = len(matched.group(1))
-    end = _signature_end(lines, start_index)
-    for index in range(end + 1, len(lines)):
-        line = lines[index]
-        if line.strip() == "":
+    def _python_block_end(self, lines: list[str], start_index: int) -> int:
+        header = lines[start_index]
+        matched = re.match(r"^(\s*)(?:async\s+)?(?:class|def)\b", header)
+        if not matched:
+            return start_index
+        indent = len(matched.group(1))
+        end = self._signature_end(lines, start_index)
+        for index in range(end + 1, len(lines)):
+            line = lines[index]
+            if line.strip() == "":
+                end = index
+                continue
+            if len(line) - len(line.lstrip(" ")) <= indent:
+                break
             end = index
-            continue
-        if len(line) - len(line.lstrip(" ")) <= indent:
-            break
-        end = index
-    return end
+        return end
+
+    def _signature_end(self, lines: list[str], start_index: int) -> int:
+        depth = 0
+        for index in range(start_index, len(lines)):
+            line = lines[index]
+            depth += line.count("(") - line.count(")")
+            if depth <= 0 and ":" in line:
+                return index
+        return start_index
+
+    def _brace_block_end(self, lines: list[str], start_index: int) -> int:
+        depth = 0
+        seen = False
+        for index in range(start_index, len(lines)):
+            for ch in lines[index]:
+                if ch == "{":
+                    depth += 1
+                    seen = True
+                elif ch == "}":
+                    depth -= 1
+                    if seen and depth == 0:
+                        return index
+        return start_index
 
 
-def _signature_end(lines: list[str], start_index: int) -> int:
-    depth = 0
-    for index in range(start_index, len(lines)):
-        line = lines[index]
-        depth += line.count("(") - line.count(")")
-        if depth <= 0 and ":" in line:
-            return index
-    return start_index
-
-
-def _brace_block_end(lines: list[str], start_index: int) -> int:
-    depth = 0
-    seen = False
-    for index in range(start_index, len(lines)):
-        for ch in lines[index]:
-            if ch == "{":
-                depth += 1
-                seen = True
-            elif ch == "}":
-                depth -= 1
-                if seen and depth == 0:
-                    return index
-    return start_index
-
-
-def _read_span(root: Path, relative: str, start: int, end: int) -> str:
-    _lo, _hi, text = read_source_span(root, relative, start, end)
-    return text
+class GraphMemberRows:
+    def __init__(self, classes: List[dict], properties: List[dict]) -> None:
+        self.classes = classes
+        self.properties = properties
+        self.operations: List[dict] = []
+        self.parameters: List[dict] = []
 
 
 class CleanEngineeringModel(SourceModel, Node):
@@ -353,109 +331,115 @@ class CleanEngineeringModel(SourceModel, Node):
         self.relate(Kind.OWNS, mod)
         return mod
 
-    @classmethod
-    def ensure(
-        cls,
-        graph: "PracticeGraph",
-        class_rows: List[dict],
-        property_rows: List[dict],
-        operation_rows: List[dict],
-        parameter_rows: List[dict] | None = None,
-    ) -> None:
-        if graph.ce_model is None and (class_rows or property_rows or operation_rows):
-            graph.ce_model = cls("CleanEngineering", 1)
+
+    def ensure(self, graph: "PracticeGraph", rows: GraphMemberRows) -> None:
+        self._rows = rows
+        self._graph = graph
+        if graph.ce_model is None and (rows.classes or rows.properties or rows.operations):
+            graph.ce_model = type(self)("CleanEngineering", 1)
             graph.register(graph.ce_model)
-        model: CleanEngineeringModel = graph.ce_model
-        modules: Dict[str, Module] = {mod.name.lower(): mod for mod in graph.nodes_of_type(Module)}
+        self._model = graph.ce_model
+        self._modules = {mod.name.lower(): mod for mod in graph.nodes_of_type(Module)}
+        self._classes, self._files = self._indexed_types()
+        self._order = 1
+        self._span = SourceSpan(getattr(graph, "root", None))
+        self._ensure_classes()
+        self._ensure_properties()
+        self._ensure_operations()
+
+    def _indexed_types(self) -> tuple[Dict[str, OoadClass], Dict[str, File]]:
         classes: Dict[str, OoadClass] = {}
         files: Dict[str, File] = {}
-        for node in graph.nodes.values():
+        for node in self._graph.nodes.values():
             if isinstance(node, OoadClass):
                 classes[node.name.lower()] = node
             if isinstance(node, File):
                 files[node.name.replace("\\", "/").lower()] = node
-        order = 1
-        root = getattr(graph, "root", None)
-        for entry in class_rows:
+        return classes, files
+
+    def _ensure_classes(self) -> None:
+        for entry in self._rows.classes:
             module_name = entry.get("module") or ""
             name = entry.get("name") or ""
             if not name or not module_name:
                 continue
-            mod = modules.get(module_name.lower())
+            mod = self._modules.get(module_name.lower())
             if mod is None:
-                mod = model.module_named(module_name, order=order)
-                order += 1
-                modules[module_name.lower()] = mod
-            if name.lower() in classes:
-                bind_source(classes[name.lower()], entry, root)
+                mod = self._model.module_named(module_name, order=self._order)
+                self._order += 1
+                self._modules[module_name.lower()] = mod
+            if name.lower() in self._classes:
+                self._span.bind(self._classes[name.lower()], entry)
                 continue
-            classes[name.lower()] = mod.accept_class(name, entry.get("stereotypes") or [])
-            bind_source(classes[name.lower()], entry, root)
+            self._classes[name.lower()] = mod.accept_class(name, entry.get("stereotypes") or [])
+            self._span.bind(self._classes[name.lower()], entry)
 
-        def member_owner(row: dict):
-            nonlocal order
-            class_name = str(row.get("class_name") or "").replace("\\", "/")
-            owned = classes.get(class_name.lower())
-            if owned is not None:
-                return owned
-            if not _file_owner_name(class_name):
-                return None
-            key = class_name.lower()
-            if key not in files:
-                file_path = str(row.get("file") or class_name).replace("\\", "/")
-                mod, order = _module_for_path(modules, file_path, model, order)
-                files[key] = mod.accept_file(file_path)
-                bind_source(
-                    files[key],
-                    {"file": file_path, "line": 1, "end_line": 1},
-                    root,
-                )
-            return files[key]
-
-        for prop in property_rows:
-            class_name = str(prop.get("class_name") or "").replace("\\", "/")
-            owned = classes.get(class_name.lower())
+    def _ensure_properties(self) -> None:
+        for prop in self._rows.properties:
+            owned = self._classes.get(str(prop.get("class_name") or "").replace("\\", "/").lower())
             if owned is None:
                 continue
             owned.accept_property(prop.get("name") or "", prop.get("type_hint") or "")
-            node = next(
-                (p for p in owned.property_nodes if p.name == (prop.get("name") or "")),
-                None,
-            )
+            node = next((p for p in owned.property_nodes if p.name == (prop.get("name") or "")), None)
             if node is not None:
-                bind_source(node, prop, root)
-        for op in operation_rows:
-            owned = member_owner(op)
+                self._span.bind(node, prop)
+
+    def _ensure_operations(self) -> None:
+        for op in self._rows.operations:
+            owned = self._member_owner(op)
             if owned is None:
                 continue
-            owned.accept_operation(
-                op.get("name") or "",
-                op.get("return_type") or "",
-                op.get("parameters") or [],
-            )
-            node = next(
-                (o for o in owned.operation_nodes if o.name == (op.get("name") or "")),
-                None,
-            )
+            owned.accept_operation(op.get("name") or "", op.get("return_type") or "", op.get("parameters") or [])
+            node = next((o for o in owned.operation_nodes if o.name == (op.get("name") or "")), None)
             if node is not None:
-                bind_source(node, op, root)
-        for row in parameter_rows or []:
-            owned = member_owner(row)
+                self._span.bind(node, op)
+        for row in self._rows.parameters:
+            owned = self._member_owner(row)
             if owned is None:
                 continue
             operation = next((o for o in owned.operation_nodes if o.name == row.get("operation")), None)
             if operation is None:
                 continue
             operation.accept_parameter(row.get("name") or "")
-            param = next(
-                (p for p in operation.parameters if p.name == (row.get("name") or "")),
-                None,
-            )
+            param = next((p for p in operation.parameters if p.name == (row.get("name") or "")), None)
             if param is not None:
-                bind_source(param, row, root)
+                self._span.bind(param, row)
 
-    @classmethod
-    def wire_calls(cls, graph: "PracticeGraph", calls: List[dict]) -> None:
+    def _member_owner(self, row):
+        class_name = str(row.get("class_name") or "").replace("\\", "/")
+        owned = self._classes.get(class_name.lower())
+        if owned is not None:
+            return owned
+        if "/" not in class_name and not class_name.endswith(".py"):
+            return None
+        key = class_name.lower()
+        if key not in self._files:
+            file_path = str(row.get("file") or class_name).replace("\\", "/")
+            self._files[key] = self._module_for_path(file_path).accept_file(file_path)
+            self._span.bind(self._files[key], {"file": file_path, "line": 1, "end_line": 1})
+        return self._files[key]
+
+    def _module_for_path(self, path: str):
+        normalized = path.replace("\\", "/")
+        matches = [
+            mod
+            for mod in self._modules.values()
+            if normalized == mod.name.replace(".", "/")
+            or normalized.startswith(mod.name.replace(".", "/") + "/")
+            or normalized.startswith(mod.name + "/")
+        ]
+        if matches:
+            return max(matches, key=lambda mod: len(mod.name))
+        folder = str(Path(normalized).parent).replace("\\", "/")
+        if folder in (".", ""):
+            folder = normalized
+        key = folder.lower()
+        if key not in self._modules:
+            self._modules[key] = self._model.module_named(folder, order=self._order)
+            self._order += 1
+        return self._modules[key]
+
+    def wire_calls(self, graph: "PracticeGraph", calls: List[dict]) -> None:
         seen: set[tuple] = set()
         for call in calls:
             key = (

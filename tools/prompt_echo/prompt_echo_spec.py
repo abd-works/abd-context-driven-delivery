@@ -22,8 +22,12 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 _prompt_echo = PromptEcho()
 
 
-def _echo(hook_payload: dict) -> str:
-    return str(_prompt_echo.handle(hook_payload).get("user_message") or "")
+class SpecFixture:
+    def _echo(self, hook_payload: dict) -> str:
+        return str(_prompt_echo.handle(hook_payload).get("user_message") or "")
+
+
+_spec = SpecFixture()
 
 
 with description("prompt echo detection"):
@@ -149,19 +153,19 @@ with description("prompt echo detection"):
     with context("that echoes a detected MCP action"):
         with it("should include the kind and label in the user message"):
             expect(
-                _echo({"tool_name": "scan.scan", "tool_input": {"paths": ["src"]}})
+                _spec._echo({"tool_name": "scan.scan", "tool_input": {"paths": ["src"]}})
             ).to(contain("Action \u2192 scan"))
 
         with it("should put that echo in the IDE toast notice"):
             expect(
-                _prompt_echo.toast_notice(_echo({"tool_name": "scan.scan", "tool_input": {}}))["message"]
+                _prompt_echo.toast_notice(_spec._echo({"tool_name": "scan.scan", "tool_input": {}}))["message"]
             ).to(contain("Action \u2192 scan"))
 
         with it("should write that echo to the workspace toast notice"):
             with TemporaryDirectory() as tmp:
+                _prompt_echo.repo = Path(tmp)
                 dest = _prompt_echo.show_ide_toast(
-                    _echo({"tool_name": "scan.scan", "tool_input": {}}),
-                    repo=Path(tmp),
+                    _spec._echo({"tool_name": "scan.scan", "tool_input": {}}),
                 )
                 expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
                     contain("Action \u2192 scan")
@@ -173,10 +177,10 @@ with description("prompt echo detection"):
                 other = Path(tmp) / "app"
                 repo.mkdir()
                 other.mkdir()
+                _prompt_echo.repo = repo
+                _prompt_echo.toast_roots = [str(other)]
                 dest = _prompt_echo.show_ide_toast(
                     "chat edit \u2192 rules : code",
-                    repo=repo,
-                    roots=[str(other)],
                 )
                 copied = other / ".cursor" / "prompt-echo-toast.json"
                 expect(dest.is_file()).to(equal(True))
@@ -188,16 +192,15 @@ with description("prompt echo detection"):
         with it("should keep both inject toasts from the same burst"):
             with TemporaryDirectory() as tmp:
                 repo = Path(tmp)
+                _prompt_echo.repo = repo
                 _prompt_echo.show_ide_toast(
                     _prompt_echo.inject_rules_toast("chat edit", ["agent bdd"]),
-                    repo=repo,
                 )
                 dest = _prompt_echo.show_ide_toast(
                     _prompt_echo.inject_rules_toast(
                         "chat edit",
                         ["clean engineering code", "ddd tactics"],
                     ),
-                    repo=repo,
                 )
                 message = json.loads(dest.read_text(encoding="utf-8"))["message"]
                 expect(message).to(

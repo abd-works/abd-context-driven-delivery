@@ -99,11 +99,9 @@ class CasingTransformScanner(TypeScriptScanner):
                 )
         return violations
 
-    @staticmethod
-    def _to_camel(snake: str) -> str:
+    def _to_camel(self, snake: str) -> str:
         parts = snake.split("_")
         return parts[0] + "".join(p.capitalize() for p in parts[1:])
 
-    @staticmethod
-    def _to_snake(camel: str) -> str:
+    def _to_snake(self, camel: str) -> str:
         return re.sub(r"([A-Z])", r"_\1", camel).lower().lstrip("_")

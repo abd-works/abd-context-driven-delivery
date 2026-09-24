@@ -10,17 +10,18 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import description, it
 
-from practices.clean_engineering.model.responsibilities import hits_for_keep_classes
+from practices.clean_engineering.model.responsibilities import Responsibilities
 
 
-def _hits(class_name: str, operations: dict[str, list[str]]) -> list[dict]:
-    hits = []
-    for operation, tokens in operations.items():
-        for token in tokens:
-            hits.append(
-                {"name": class_name, "contributor": operation, "message": token}
-            )
-    return hits
+class ResponsibilityHits:
+    def from_operations(self, class_name: str, operations: dict[str, list[str]]) -> list[dict]:
+        hits = []
+        for operation, tokens in operations.items():
+            for token in tokens:
+                hits.append(
+                    {"name": class_name, "contributor": operation, "message": token}
+                )
+        return hits
 
 
 _CART = {
@@ -51,10 +52,10 @@ _GRAPH_RULE = {
 
 with description("hits_for_keep_classes"):
     with it("should flag a class whose public operations name four jobs"):
-        flagged = hits_for_keep_classes(_hits("CartManager", _CART))
+        flagged = Responsibilities().hits_for_keep_classes(ResponsibilityHits().from_operations("CartManager", _CART))
         expect(len(flagged) > 0).to(equal(True))
         expect("CartManager" in flagged[0]["message"]).to(equal(True))
 
     with it("should not flag a graph Rule whose operations share query language"):
-        flagged = hits_for_keep_classes(_hits("GraphRule", _GRAPH_RULE))
+        flagged = Responsibilities().hits_for_keep_classes(ResponsibilityHits().from_operations("GraphRule", _GRAPH_RULE))
         expect(flagged).to(equal([]))

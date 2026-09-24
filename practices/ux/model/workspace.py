@@ -36,7 +36,7 @@ class Workspace:
             or HtmlUxMap.from_workspace(root)
             or DrawioUxMap.from_workspace(root)
             or MarkdownUxMap.from_workspace(root)
-            or UxMap()
+            or UxMap.create()
         )
         return cls(
             root=root,

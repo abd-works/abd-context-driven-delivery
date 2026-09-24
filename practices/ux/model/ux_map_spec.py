@@ -17,7 +17,7 @@ from practices.ux.model.ux_map import UxMap
 with description("a UxMap"):
     with context("that has screens appended"):
         with before.each:
-            self.ux_map = UxMap(name="orders")
+            self.ux_map = UxMap.create(name="orders")
             self.ux_map.append_screen(Screen("Catalog", 0))
             self.ux_map.append_screen(Screen("Cart", 1))
 
@@ -36,7 +36,7 @@ with description("a UxMap"):
 
     with context("that holds story references and screen story names"):
         with before.each:
-            self.ux_map = UxMap()
+            self.ux_map = UxMap.create()
             self.ux_map.story_references = ["stories/place_order.js"]
             sheet = Screen("Catalog", 0)
             sheet.attach_story_name("Browse Product Catalog")

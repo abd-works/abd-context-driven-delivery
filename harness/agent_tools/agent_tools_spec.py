@@ -16,7 +16,7 @@ import yaml
 from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from harness.agent_tools.examples.car import Car
+from practices.examples.car.car import Car
 from harness.agent_tools.agent_tools import (
     AgentInstructions,
     collect,
@@ -44,14 +44,17 @@ from agent_bdd.yaml_fence import load_fenced
 from harness.agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tools, instructions
 
 
-def car_instance(*, running: bool = False) -> Car:
-    car = Car("Toyota", "Camry", 2024, "cheerful companion named Sunny")
-    if running:
-        car.start()
-    return car
+class CarInstance:
+    """Build a Car for agent_tools specs."""
+
+    def __new__(cls, *, running: bool = False):
+        car = Car("Toyota", "Camry", 2024, "cheerful companion named Sunny")
+        if running:
+            car.start()
+        return car
 
 
-_CAR_TOOLSET_PATH = "agent_tools.examples.car:Car"
+_CAR_TOOLSET_PATH = "practices.examples.car.car:Car"
 
 
 @agent_toolset
@@ -177,7 +180,7 @@ class _PropertyCallerAgent:
         return "orchestrated"
 
 
-_CAR_TOOLSET = "practices.car.car:Car"
+_CAR_TOOLSET = "practices.examples.car.car:Car"
 _CAR_STORY_TOOLSET = "actions.examples.car_story.car_story:CarStory"
 
 
@@ -258,12 +261,9 @@ with description("an action"):
 
         with context("with a missing {{name}}"):
             with it("should fail expand/run"):
-                def _missing():
-                    AgentInstructions.substitute_template("Go to {{destination}}", {}, {"destination"})
-
                 raised = False
                 try:
-                    _missing()
+                    AgentInstructions.substitute_template("Go to {{destination}}", {}, {"destination"})
                 except ValueError as error:
                     raised = True
                     expect("destination" in str(error)).to(be_true)
@@ -331,18 +331,26 @@ with description("AgentToolSet"):
     with context("on a live Car example instance"):
         with context("with a class-level description"):
             with it("should expose description matching the class docstring"):
-                car = car_instance()
-                expect(car.description).to(
-                    equal("Operate a car \u2014 start, stop, and read current state.")
-                )
+                car = CarInstance()
+                expect("Example context tool" in car.description).to(be_true)
 
         with context("with methods marked as @agent_tool"):
             with before.each:
-                self.car = car_instance()
+                self.car = CarInstance()
 
             with it("should register every marked method in operations"):
                 expect(set(self.car.operations.keys())).to(
-                    equal({"start", "stop", "drive", "accelerate", "decelerate", "speak"})
+                    equal(
+                        {
+                            "start",
+                            "stop",
+                            "drive",
+                            "accelerate",
+                            "decelerate",
+                            "speak",
+                            "wrap_story",
+                        }
+                    )
                 )
 
             with it("should expose operation descriptions from method docstrings"):
@@ -358,7 +366,7 @@ with description("AgentToolSet"):
 
         with context("with observable state on the example Car"):
             with it("should expose current values on the instance"):
-                car = car_instance()
+                car = CarInstance()
                 expect(car.make).to(equal("Toyota"))
                 expect(car.model).to(equal("Camry"))
                 expect(car.year).to(equal(2024))
@@ -367,12 +375,12 @@ with description("AgentToolSet"):
 
     with context("when a marked @agent_tool is invoked"):
         with it("should invoke start on a constructed Car"):
-            car = car_instance()
+            car = CarInstance()
             car.operations["start"].invoke({})
             expect(car.running).to(equal(True))
 
         with it("should require tool arguments declared on the operation"):
-            car = car_instance(running=True)
+            car = CarInstance(running=True)
             raised = False
             try:
                 car.operations["drive"].invoke({})
@@ -380,13 +388,10 @@ with description("AgentToolSet"):
                 raised = True
             expect(raised).to(be_true)
 
-        with it("should require constructor arguments on Car"):
-            raised = False
-            try:
-                Car()
-            except TypeError:
-                raised = True
-            expect(raised).to(be_true)
+        with it("should construct Car with default make and model"):
+            car = Car()
+            expect(car.make).to(equal("Dodge"))
+            expect(car.model).to(equal("Charger"))
 
     with context("the mode resource"):
         with it("should default to 'instructions'"):
@@ -867,10 +872,10 @@ with description("AgentToolSet destination catalog"):
                 equal(["on_stop"])
             )
 
-    with context("load_toolsets"):
+    with context("from_items"):
 
         with it("should instantiate a class once per type"):
-            loaded = AgentToolSet.load_toolsets([_DestinationFixture, _DestinationFixture()])
+            loaded = AgentToolSet.from_items([_DestinationFixture, _DestinationFixture()])
             expect(len(loaded)).to(equal(1))
             expect(type(loaded[0])).to(equal(_DestinationFixture))
 

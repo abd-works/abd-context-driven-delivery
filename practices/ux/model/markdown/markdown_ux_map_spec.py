@@ -16,7 +16,7 @@ from practices.ux.model.ux_map import UxMap
 
 with description("MarkdownUxMap"):
     with before.each:
-        self.source = UxMap(name="notes")
+        self.source = UxMap.create(name="notes")
         self.source.scope = "Place New Order"
         self.source.context.notes = ["Keep chrome shared across tabs"]
         self.source.context.invariants = ["Tab states are separate screens"]

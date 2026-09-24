@@ -68,7 +68,7 @@ class StoryContext:
         ctx = cls(
             folder=rel_folder or ".",
             source=SourceLocation(rel_path, 1),
-            is_leaf_folder=cls._is_leaf_folder(path.parent),
+            is_leaf_folder=cls()._is_leaf_folder(path.parent),
         )
 
         in_stories_in_scope = False
@@ -99,8 +99,7 @@ class StoryContext:
 
         return ctx
 
-    @staticmethod
-    def _is_leaf_folder(folder: Path) -> bool:
+    def _is_leaf_folder(self, folder: Path) -> bool:
         try:
             return not any(child.is_dir() for child in folder.iterdir())
         except OSError:

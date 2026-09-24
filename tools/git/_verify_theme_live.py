@@ -20,19 +20,32 @@ for part in ("", "tools", "harness", "practices"):
 from git.git import Repo  # noqa: E402
 
 
-def _theme_from_item(item: dict) -> str | None:
-    top = item.get("theme")
-    if top:
-        return str(top).strip()
-    field_values = item.get("fieldValues") or {}
-    nodes = field_values.get("nodes") if isinstance(field_values, dict) else field_values
-    for field in nodes or []:
+class ProjectItem:
+    def __init__(self, item: dict) -> None:
+        self.item = item
+
+    def theme(self) -> str | None:
+        top = self.item.get("theme")
+        if top:
+            return str(top).strip()
+        return self._theme_from_field_values()
+
+    def _theme_from_field_values(self) -> str | None:
+        field_values = self.item.get("fieldValues") or {}
+        nodes = field_values.get("nodes") if isinstance(field_values, dict) else field_values
+        for field in nodes or []:
+            name = self._theme_field_name(field)
+            if name is not None:
+                return name
+        return None
+
+    def _theme_field_name(self, field: object) -> str | None:
         if not isinstance(field, dict):
-            continue
+            return None
         field_meta = field.get("field") or {}
-        if str(field_meta.get("name") or "") == "Theme":
-            return str(field.get("name") or field.get("text") or "").strip() or None
-    return None
+        if str(field_meta.get("name") or "") != "Theme":
+            return None
+        return str(field.get("name") or field.get("text") or "").strip() or None
 
 
 def main() -> int:
@@ -70,7 +83,7 @@ def main() -> int:
     for item in items:
         content = item.get("content") or {}
         if content.get("number") == num:
-            theme_value = _theme_from_item(item)
+            theme_value = ProjectItem(item).theme()
             break
 
     print(f"BOARD_THEME={theme_value!r}")

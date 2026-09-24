@@ -177,9 +177,10 @@ class GuidanceAction:
             return {}
         body = "\n\n".join(parts)
         action = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", type(self).__name__).lower()
-        PromptEcho().show_ide_toast(
+        echo = PromptEcho()
+        echo.toast_roots = data.get("workspace_roots")
+        echo.show_ide_toast(
             PromptEcho().inject_rules_toast(action, labels),
-            roots=data.get("workspace_roots"),
         )
         return {"additional_context": body}
 

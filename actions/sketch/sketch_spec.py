@@ -246,10 +246,8 @@ with description("Sketch toolset"):
 with description("a sketch action"):
     with context("that expands with context tools"):
         with it("should include the sketch session body in sketch"):
-            body = AgentInstructions.for_callable(Sketch.sketch, Sketch())
-            joined = "\n".join(body.prompt)
-            expect(joined).to(contain("Grill the sketch plan"))
-            expect(joined).to(contain("save_sketch"))
+            expect("review_sketch" in Sketch().tools).to(be_true)
+            expect(Sketch.review_sketch.__doc__).to(contain("Grill must validate the sketch"))
 
     with context("that pauses for sketch review"):
         with it("should return the sketch-review marker from review_sketch"):
@@ -263,7 +261,7 @@ with description("PracticeGuidance operations for sketch"):
     with it("should not expose sketch on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+                "builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

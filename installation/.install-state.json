@@ -21,7 +21,7 @@
     "skills/harness/knowledge_graph/model/reload-working-copy/SKILL.md",
     "skills/harness/knowledge_graph/model/return-nodes/SKILL.md",
     "skills/harness/knowledge_graph/model/update-working-copy/SKILL.md",
-    "skills/harness/knowledge_graph/model/fix-violations/SKILL.md",
+    "skills/harness/knowledge_graph/model/get-fix-violation-instructions/SKILL.md",
     "skills/installation/clean/SKILL.md",
     "skills/installation/install/SKILL.md",
     "rules/practices/agent_bdd.mdc",

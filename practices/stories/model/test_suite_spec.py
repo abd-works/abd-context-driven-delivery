@@ -30,8 +30,12 @@ from practices.stories.model.test_file import (
 )
 
 
-def _source(path: str) -> SourceLocation:
-    return SourceLocation(file=path, line=1)
+class SpecFixture:
+    def source(self, path: str) -> SourceLocation:
+        return SourceLocation(file=path, line=1)
+
+
+fixture = SpecFixture()
 
 
 with description("a SubEpic") as self:
@@ -54,13 +58,13 @@ with description("a SubEpic") as self:
                     tier=Tier("server"),
                     language=Language("ts"),
                     name="route-transfer-before-cutoff",
-                    source=_source("tests/route-transfer-before-cutoff-server.test.ts"),
+                    source=fixture.source("tests/route-transfer-before-cutoff-server.test.ts"),
                 ),
                 TestSuite(
                     tier=Tier("domain"),
                     language=Language("ts"),
                     name="route-transfer-before-cutoff",
-                    source=_source("tests/route-transfer-before-cutoff-domain.test.ts"),
+                    source=fixture.source("tests/route-transfer-before-cutoff-domain.test.ts"),
                 ),
             ]
 
@@ -97,7 +101,7 @@ with description("a SubEpic") as self:
                     tier=Tier("server"),
                     language=Language("ts"),
                     name="submit-order",
-                    source=_source("tests/submit-order-server.test.ts"),
+                    source=fixture.source("tests/submit-order-server.test.ts"),
                 )
             ]
             self.target = SubEpic("Target SubEpic", 2)
@@ -132,10 +136,10 @@ with description("a Story") as self:
     ):
         with before.each:
             self.story = Story("Route transfer before cutoff", 1)
-            story_src = _source(
+            story_src = fixture.source(
                 "tests/route-transfer-before-cutoff/route-transfer-before-cutoff-stories.ts"
             )
-            scen_src = _source(
+            scen_src = fixture.source(
                 "tests/route-transfer-before-cutoff/route-transfer-before-cutoff-stories.ts"
             )
             self.story.test_cases = [
@@ -190,13 +194,13 @@ with description(
                 tier=Tier("server"),
                 language=Language("ts"),
                 name="submit-order",
-                source=_source("tests/submit-order-server.test.ts"),
+                source=fixture.source("tests/submit-order-server.test.ts"),
             ),
             TestSuite(
                 tier=Tier("server"),
                 language=Language("py"),
                 name="submit_order",
-                source=_source("tests/test_submit_order_server.py"),
+                source=fixture.source("tests/test_submit_order_server.py"),
             ),
         ]
 

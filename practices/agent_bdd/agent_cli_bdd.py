@@ -6,7 +6,6 @@ import re
 import subprocess
 import sys
 import threading
-import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,25 +20,20 @@ from agent_bdd.agent_bdd_common import (
     AgentHarnessError,
     AgentJudgeError,
     AgentResult,
+    AgentSession,
+    HarnessLog,
     JudgeResult,
     RunResponse,
+    ToolsRunYaml,
     _ShellCapture,
-    _log_harness,
-    _parse_judge_result,
-    _run_yaml_request,
     yaml_from_prompt,
 )
-from agent_bdd import yaml_fence
-from agent_bdd.agent_bdd_common import AgentSession
+from agent_bdd.yaml_fence import YamlFence
 
 _TOOLS_RUN = re.compile(
     r"(?:python\s+-m\s+tools\s+run|tools\.ps1\s+run|tools\s+run\b)",
     re.IGNORECASE,
 )
-
-
-def _log(msg: str) -> None:
-    _log_harness("agent_cli_bdd", msg)
 
 
 class _StreamBuckets:
@@ -55,6 +49,7 @@ class _StreamBuckets:
         self.stdout = ""
         self.stderr = ""
         self.exit_code = 0
+        self._tools_run_yaml = ToolsRunYaml()
 
     def drain(self, proc: subprocess.Popen, timeout_seconds: int) -> tuple[str, str, int]:
         self._stdout_thread = threading.Thread(target=lambda: self._read_stdout(proc), daemon=True)
@@ -108,9 +103,7 @@ class _StreamBuckets:
                     event = json.loads(raw.strip())
                 except json.JSONDecodeError:
                     continue
-                _collect_shell_capture(
-                    event, self.pending_shell_commands, self.shell_captures, self.narrative
-                )
+                self.collect_shell_capture(event)
         except Exception as exc:  # noqa: BLE001
             self.thread_errors.append(f"stdout: {exc}")
 
@@ -121,6 +114,158 @@ class _StreamBuckets:
         except Exception as exc:  # noqa: BLE001
             self.thread_errors.append(f"stderr: {exc}")
 
+    def collect_shell_capture(self, event: dict[str, Any]) -> None:
+        etype = event.get("type")
+        if etype == "assistant":
+            self._collect_assistant(event)
+            return
+        if etype == "tool_result":
+            self._collect_tool_result(event)
+            return
+        if etype == "tool_call":
+            self._collect_tool_call(event)
+            return
+        if etype == "result":
+            self._collect_result(event)
+
+    def _collect_assistant(self, event: dict[str, Any]) -> None:
+        for block in (event.get("message") or {}).get("content") or []:
+            if not isinstance(block, dict):
+                continue
+            self._collect_assistant_block(block)
+
+    def _collect_assistant_block(self, block: dict[str, Any]) -> None:
+        if block.get("type") == "text":
+            text = str(block.get("text", ""))
+            if text:
+                self.narrative.append(text)
+            return
+        if block.get("type") != "tool_use":
+            return
+        command = self.shell_command_from_tool_use(block)
+        if command:
+            self.pending_shell_commands.append(command)
+
+    def _collect_tool_result(self, event: dict[str, Any]) -> None:
+        output = self.extract_shell_output(event, event)
+        command = self.pending_shell_commands.pop(0) if self.pending_shell_commands else ""
+        if output:
+            self.shell_captures.append(_ShellCapture(command=command, output=output))
+
+    def _collect_tool_call(self, event: dict[str, Any]) -> None:
+        subtype = str(event.get("subtype") or event.get("state") or "")
+        tool_call = event.get("tool_call") or {}
+        if not isinstance(tool_call, dict):
+            tool_call = {}
+        if subtype in ("started", "start", "running", "pending"):
+            self._note_started_command(tool_call)
+            return
+        if subtype in ("completed", "complete", "succeeded", "success", "finished"):
+            self._note_completed_command(tool_call, event)
+
+    def _note_started_command(self, tool_call: dict[str, Any]) -> None:
+        command = self.shell_command_from_tool_call(tool_call)
+        if command:
+            self.pending_shell_commands.append(command)
+
+    def _note_completed_command(self, tool_call: dict[str, Any], event: dict[str, Any]) -> None:
+        output = self.extract_shell_output(tool_call, event)
+        command = self.shell_command_from_tool_call(tool_call) or ""
+        if not output and command and _TOOLS_RUN.search(command):
+            output = command
+        command = self._resolve_pending_command(command)
+        if output:
+            self.shell_captures.append(_ShellCapture(command=command, output=output))
+
+    def _resolve_pending_command(self, command: str) -> str:
+        if not self.pending_shell_commands:
+            return command
+        if not command:
+            return self.pending_shell_commands.pop(0)
+        self.pending_shell_commands.pop(0)
+        return command
+
+    def _collect_result(self, event: dict[str, Any]) -> None:
+        text = str(event.get("result", ""))
+        if text:
+            self.narrative.append(text)
+
+    def shell_command_from_tool_call(self, tool_call: dict[str, Any]) -> str | None:
+        if not tool_call:
+            return None
+        nested = self._command_from_nested_tool_call(tool_call)
+        if nested:
+            return nested
+        command = tool_call.get("command") or tool_call.get("cmd")
+        return str(command) if command else None
+
+    def _command_from_nested_tool_call(self, tool_call: dict[str, Any]) -> str | None:
+        for key in (
+            "shellToolCall",
+            "ShellToolCall",
+            "runTerminalCommandToolCall",
+            "terminalToolCall",
+        ):
+            if key not in tool_call or not isinstance(tool_call[key], dict):
+                continue
+            inner = tool_call[key]
+            args = inner.get("args") if isinstance(inner.get("args"), dict) else inner
+            command = args.get("command") or args.get("cmd")
+            if command:
+                return str(command)
+        return None
+
+    def shell_command_from_tool_use(self, block: dict[str, Any]) -> str | None:
+        name = str(block.get("name", ""))
+        if "shell" not in name.lower() and "terminal" not in name.lower():
+            return None
+        tool_input = block.get("input")
+        if not isinstance(tool_input, dict):
+            return None
+        command = tool_input.get("command") or tool_input.get("cmd")
+        return str(command) if command else None
+
+    def extract_shell_output(self, tool_call: dict[str, Any], event: dict[str, Any] | None = None) -> str | None:
+        for root in (tool_call, event or {}):
+            found = self._shell_output_in(root)
+            if found and (self._tools_run_yaml.looks_like_tools_run_output(found) or "error" in found.lower()):
+                return found
+        return None
+
+    def _shell_output_in(self, node: object) -> str | None:
+        if isinstance(node, str):
+            return self._shell_output_from_text(node)
+        if not isinstance(node, dict):
+            return None
+        from_keys = self._shell_output_from_keys(node)
+        if from_keys:
+            return from_keys
+        return self._shell_output_from_nested(node)
+
+    def _shell_output_from_text(self, node: str) -> str | None:
+        stripped = node.strip()
+        if not stripped:
+            return None
+        if _TOOLS_RUN.search(stripped) and not self._tools_run_yaml.looks_like_tools_run_output(stripped):
+            return None
+        return stripped
+
+    def _shell_output_from_keys(self, node: dict[str, Any]) -> str | None:
+        for key in ("stdout", "stderr", "output", "text", "content"):
+            value = node.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
+    def _shell_output_from_nested(self, node: dict[str, Any]) -> str | None:
+        for key, value in node.items():
+            if key in ("command", "cmd", "args", "input"):
+                continue
+            found = self._shell_output_in(value)
+            if found:
+                return found
+        return None
+
 
 class _ToolAgentBlock:
     """One cursor-agent session - multiple instructs share the same chat."""
@@ -129,7 +274,8 @@ class _ToolAgentBlock:
         self._workspace = workspace.resolve()
         self._session_file = session_file
         self._session: AgentSession | None = None
-        self._yaml = yaml_fence
+        self._yaml = YamlFence()
+        self._log = HarnessLog("agent_cli_bdd")
         self._log_dir = session_file.parent / "logs" / session_file.stem
         self._instruct_count = 0
         self.last_shell_captures: list[_ShellCapture] = []
@@ -145,8 +291,7 @@ class _ToolAgentBlock:
         self._instruct_count += 1
         return f"instruct-{self._instruct_count:03d}-{label}"
 
-    @staticmethod
-    def assert_authenticated() -> None:
+    def assert_authenticated(self) -> None:
         exe = AgentSession.launcher()
         if exe is None:
             raise RuntimeError("cursor-agent not found on PATH")
@@ -156,7 +301,7 @@ class _ToolAgentBlock:
 
     def instruct(self, prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
         prefix = self._next_instruct_prefix("setup")
-        _log(f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
+        self._log.write(f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         session = self._require_session()
         capture = self._run_capture(
@@ -171,7 +316,7 @@ class _ToolAgentBlock:
         for index, shell in enumerate(capture.shell_captures, start=1):
             self._write_artifact(f"{prefix}-shell-{index:02d}-cmd.txt", shell.command)
             self._write_artifact(f"{prefix}-shell-{index:02d}-out.txt", shell.output)
-        _log(f"{prefix} response: {len(result.text)} chars -> {self._log_dir / f'{prefix}-response.txt'}")
+        self._log.write(f"{prefix} response: {len(result.text)} chars -> {self._log_dir / f'{prefix}-response.txt'}")
         return result
 
     def instruct_use_tool(
@@ -190,7 +335,7 @@ class _ToolAgentBlock:
         prefix = self._next_instruct_prefix("run")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
-        cli_output = _run_yaml_request(request_yaml, self._workspace, prefix=prefix)
+        cli_output = ToolsRunYaml(self._workspace, prefix).run_request(request_yaml)
         return self._finalize_run_response(prefix, None, cli_output)
 
     def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
@@ -210,7 +355,7 @@ class _ToolAgentBlock:
             self.session_shell_captures.extend(capture.shell_captures)
         self._write_artifact(
             f"{prefix}-ai-response.yaml",
-            self._yaml._dump_manifest(
+            self._yaml.dump_manifest(
                 {k: v for k, v in {
                     "ok": ai_response.ok,
                     "toolset": ai_response.toolset,
@@ -227,10 +372,10 @@ class _ToolAgentBlock:
         return ai_response
 
     def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 180) -> JudgeResult:
-        _log("judge rubric:")
+        self._log.write("judge rubric:")
         sys.__stdout__.write(rubric + "\n")
         sys.__stdout__.flush()
-        _log("judge output:")
+        self._log.write("judge output:")
         sys.__stdout__.write(output + "\n")
         sys.__stdout__.flush()
         self._write_artifact("judge-rubric.txt", rubric)
@@ -259,18 +404,18 @@ class _ToolAgentBlock:
                 stderr=result.stderr,
                 log_dir=self._log_dir,
             )
-        verdict, reason = _parse_judge_result(result.text)
-        self._write_artifact("judge-verdict.txt", f"{verdict}\n\n{reason}\n")
-        if verdict == "ERROR":
+        parsed = JudgeResult.from_stdout(result.text, result.elapsed_seconds)
+        self._write_artifact("judge-verdict.txt", f"{parsed.verdict}\n\n{parsed.reason}\n")
+        if parsed.verdict == "ERROR":
             raise AgentJudgeError(
-                f"judge returned no parseable JSON verdict: {reason}",
+                f"judge returned no parseable JSON verdict: {parsed.reason}",
                 prefix="judge",
                 stdout=result.text,
                 stderr=result.stderr,
                 log_dir=self._log_dir,
             )
-        _log(f"judge verdict: {verdict} - {reason}")
-        return JudgeResult(verdict=verdict, reason=reason, elapsed_seconds=result.elapsed_seconds)
+        self._log.write(f"judge verdict: {parsed.verdict} - {parsed.reason}")
+        return parsed
 
     def _require_session(self) -> AgentSession:
         if self._session is None:
@@ -320,6 +465,17 @@ class _ToolAgentBlock:
             prompt, str(self._workspace)
         )
 
+    @classmethod
+    @contextmanager
+    def opened(cls, workspace: Path, session_file: Path) -> Iterator["_ToolAgentBlock"]:
+        """Establish one cursor-agent session for nested agent-instruct calls."""
+        block = cls(workspace, session_file)
+        block.assert_authenticated()
+        block._session = AgentSession.from_workspace(
+            block._session_file, block._workspace, fresh=False
+        )
+        yield block
+
 
 @dataclass
 class _AgentRunCapture:
@@ -328,145 +484,47 @@ class _AgentRunCapture:
     raw_lines: list[str]
     workspace: Path
 
+    def tools_run_output(self) -> str | None:
+        from_shell = self._output_from_shell_captures()
+        if from_shell:
+            return from_shell
+        from_text = self._output_from_agent_text()
+        if from_text:
+            return from_text
+        return self._output_from_raw_lines()
 
-@contextmanager
-def _cli_agent(workspace: Path, session_file: Path) -> Iterator[_ToolAgentBlock]:
-    """Establish one cursor-agent session for nested agent-instruct calls."""
-    _ToolAgentBlock.assert_authenticated()
-    block = _ToolAgentBlock(workspace, session_file)
-    block._session = AgentSession.from_workspace(
-        block._session_file, block._workspace, fresh=False
-    )
-    yield block
-
-
-def _tools_run_output_from_capture(capture: _AgentRunCapture) -> str | None:
-    for shell in reversed(capture.shell_captures):
-        if looks_like_tools_run_output(shell.output):
-            return shell.output
-        for candidate in (shell.command, shell.output):
-            if _TOOLS_RUN.search(candidate):
-                replayed = _replay_tools_run(candidate, capture.workspace)
-                if replayed:
-                    return replayed
-    for text in (capture.agent_result.text, "".join(capture.raw_lines)):
-        found = _fenced_yaml_from_text(text)
-        if found:
-            return found
-    for raw in reversed(capture.raw_lines):
-        found = _fenced_yaml_from_text(raw)
-        if found:
-            return found
-    return None
-
-
-def _collect_shell_capture(
-    event: dict[str, Any],
-    pending_shell_commands: list[str],
-    shell_captures: list[_ShellCapture],
-    narrative: list[str],
-) -> None:
-    etype = event.get("type")
-    if etype == "assistant":
-        for block in (event.get("message") or {}).get("content") or []:
-            if not isinstance(block, dict):
-                continue
-            if block.get("type") == "text":
-                text = str(block.get("text", ""))
-                if text:
-                    narrative.append(text)
-            elif block.get("type") == "tool_use":
-                command = _shell_command_from_tool_use(block)
-                if command:
-                    pending_shell_commands.append(command)
-    elif etype == "tool_result":
-        output = _extract_shell_output(event, event)
-        command = pending_shell_commands.pop(0) if pending_shell_commands else ""
-        if output:
-            shell_captures.append(_ShellCapture(command=command, output=output))
-    elif etype == "tool_call":
-        subtype = str(event.get("subtype") or event.get("state") or "")
-        tool_call = event.get("tool_call") or {}
-        if not isinstance(tool_call, dict):
-            tool_call = {}
-        if subtype in ("started", "start", "running", "pending"):
-            command = _shell_command_from_tool_call(tool_call)
-            if command:
-                pending_shell_commands.append(command)
-        elif subtype in ("completed", "complete", "succeeded", "success", "finished"):
-            output = _extract_shell_output(tool_call, event)
-            command = _shell_command_from_tool_call(tool_call) or ""
-            if not output and command and _TOOLS_RUN.search(command):
-                output = command
-            if pending_shell_commands and not command:
-                command = pending_shell_commands.pop(0)
-            elif pending_shell_commands and command == pending_shell_commands[0]:
-                pending_shell_commands.pop(0)
-            elif pending_shell_commands:
-                pending_shell_commands.pop(0)
-            if output:
-                shell_captures.append(_ShellCapture(command=command, output=output))
-    elif etype == "result":
-        text = str(event.get("result", ""))
-        if text:
-            narrative.append(text)
-
-
-def _shell_command_from_tool_call(tool_call: dict[str, Any]) -> str | None:
-    if not tool_call:
-        return None
-    for key in (
-        "shellToolCall",
-        "ShellToolCall",
-        "runTerminalCommandToolCall",
-        "terminalToolCall",
-    ):
-        if key in tool_call and isinstance(tool_call[key], dict):
-            inner = tool_call[key]
-            args = inner.get("args") if isinstance(inner.get("args"), dict) else inner
-            command = args.get("command") or args.get("cmd")
-            if command:
-                return str(command)
-    command = tool_call.get("command") or tool_call.get("cmd")
-    return str(command) if command else None
-
-
-def _shell_command_from_tool_use(block: dict[str, Any]) -> str | None:
-    name = str(block.get("name", ""))
-    if "shell" not in name.lower() and "terminal" not in name.lower():
-        return None
-    tool_input = block.get("input")
-    if not isinstance(tool_input, dict):
-        return None
-    command = tool_input.get("command") or tool_input.get("cmd")
-    return str(command) if command else None
-
-
-def _extract_shell_output(tool_call: dict[str, Any], event: dict[str, Any] | None = None) -> str | None:
-    def _walk(node: object) -> str | None:
-        if isinstance(node, str):
-            stripped = node.strip()
-            if not stripped:
-                return None
-            if _TOOLS_RUN.search(stripped) and not looks_like_tools_run_output(stripped):
-                return None
-            return stripped
-        if not isinstance(node, dict):
-            return None
-        for key in ("stdout", "stderr", "output", "text", "content"):
-            value = node.get(key)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-        for key, value in node.items():
-            if key in ("command", "cmd", "args", "input"):
-                continue
-            found = _walk(value)
+    def _output_from_shell_captures(self) -> str | None:
+        yaml_run = ToolsRunYaml(self.workspace)
+        for shell in reversed(self.shell_captures):
+            found = self._output_from_shell(yaml_run, shell)
             if found:
                 return found
         return None
 
-    for root in (tool_call, event or {}):
-        found = _walk(root)
-        if found and (looks_like_tools_run_output(found) or "error" in found.lower()):
-            return found
-    return None
+    def _output_from_shell(self, yaml_run: ToolsRunYaml, shell: _ShellCapture) -> str | None:
+        if yaml_run.looks_like_tools_run_output(shell.output):
+            return shell.output
+        for candidate in (shell.command, shell.output):
+            if not _TOOLS_RUN.search(candidate):
+                continue
+            replayed = yaml_run.replay(candidate)
+            if replayed:
+                return replayed
+        return None
+
+    def _output_from_agent_text(self) -> str | None:
+        yaml_run = ToolsRunYaml(self.workspace)
+        for text in (self.agent_result.text, "".join(self.raw_lines)):
+            found = yaml_run.fenced_yaml_from_text(text)
+            if found:
+                return found
+        return None
+
+    def _output_from_raw_lines(self) -> str | None:
+        yaml_run = ToolsRunYaml(self.workspace)
+        for raw in reversed(self.raw_lines):
+            found = yaml_run.fenced_yaml_from_text(raw)
+            if found:
+                return found
+        return None
+

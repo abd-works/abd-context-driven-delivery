@@ -26,7 +26,7 @@ class RepositoryOwnsAggregateLifecycleScanner(TypeScriptScanner):
                 continue
             repo_ifaces = [
                 iface
-                for iface in self.get_interfaces(parsed)
+                for iface in self.interfaces
                 if iface.name.endswith("Repository")
             ]
             if not repo_ifaces:

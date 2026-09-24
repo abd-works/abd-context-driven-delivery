@@ -221,15 +221,75 @@ predicate privateAttributeRead(Function f, Attribute attr) {
   not ownPrivateRead(f, attr)
 }
 
+/** Nested class, or the class itself. */
+predicate enclosingClass(Class inner, Class outer) {
+  inner.getScope() = outer
+  or
+  enclosingClass(inner.getScope(), outer)
+}
+
+predicate ownClassOfObject(Class methodClass, Class objectClass) {
+  methodClass = objectClass
+  or
+  enclosingClass(methodClass, objectClass)
+}
+
+predicate annotationClass(Expr ann, Class typ) {
+  inSource(typ) and
+  (
+    ann.(Name).getId() = typ.getName()
+    or
+    ann.(Attribute).getName() = typ.getName()
+    or
+    ann.(StringLiteral).getText() = typ.getName()
+  )
+}
+
+predicate assignmentToSelfField(Function init, Attribute lhs, Name src) {
+  exists(Assign assign |
+    assign.getScope() = init and
+    lhs = assign.getATarget() and
+    lhs.getObject().(Name).getId() = "self" and
+    src = assign.getValue()
+  )
+}
+
+predicate instanceFieldClass(Class owner, string field, Class typ) {
+  exists(Function init, Parameter p, Attribute lhs, Name src |
+    ownerClass(init, owner) and
+    init.getName() = "__init__" and
+    p = init.getAnArg() and
+    annotationClass(p.getAnnotation(), typ) and
+    assignmentToSelfField(init, lhs, src) and
+    lhs.getName() = field and
+    src.getId() = p.getName()
+  )
+}
+
+predicate exprHasClass(Expr obj, Class typ) {
+  exists(Name n | n = obj |
+    (
+      n.getId() = "self" or
+      n.getId() = "cls" or
+      n.getId() = "this"
+    ) and
+    ownerClass(n.getScope(), typ)
+    or
+    n.getId() = typ.getName()
+  )
+  or
+  exists(Attribute field, Class owner |
+    obj = field and
+    exprHasClass(field.getObject(), owner) and
+    instanceFieldClass(owner, field.getName(), typ)
+  )
+}
+
 predicate ownPrivateRead(Function f, Attribute attr) {
-  exists(string receiver | receiver = attr.getObject().(Name).getId() |
-    receiver = "self"
-    or
-    receiver = "cls"
-    or
-    receiver = "this"
-    or
-    exists(Class owner | ownerClass(f, owner) and receiver = owner.getName())
+  exists(Class methodClass, Class objectClass |
+    ownerClass(f, methodClass) and
+    exprHasClass(attr.getObject(), objectClass) and
+    ownClassOfObject(methodClass, objectClass)
   )
 }
 

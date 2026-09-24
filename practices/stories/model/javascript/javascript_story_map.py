@@ -18,7 +18,7 @@ import re
 from typing import Dict, List, Optional
 
 from practices.stories.model.code_story_map import CodeStoryMap, CodeStoryMapError, to_kebab
-from practices.stories.model.javascript.tree import render_js_tree
+from practices.stories.model.javascript.tree import JavaScriptTree
 from practices.stories.model.javascript.nodes import (
     JavaScriptEpic,
     JavaScriptStoryMap as _JavaScriptStoryMap,
@@ -47,7 +47,7 @@ class JavaScriptStoryMap(CodeStoryMap):
         canonical: StoryMap,
         previous: Optional[Dict[str, str]] = None,
     ) -> Dict[str, str]:
-        tree = render_js_tree(canonical, tests_root=self.tests_root, include_shared=True)
+        tree = JavaScriptTree().render(canonical, self.tests_root)
         if previous:
             for path, body in list(tree.items()):
                 if path in previous and path.endswith(self.LEAF_EXTENSION):
@@ -67,7 +67,7 @@ class JavaScriptStoryMap(CodeStoryMap):
         return None
 
     def _render_leaf_file(self, sub_epic: SubEpic, owning_epic: Epic) -> str:
-        raise NotImplementedError("JavaScriptStoryMap.render uses render_js_tree")
+        raise NotImplementedError("JavaScriptStoryMap.render uses JavaScriptTree")
 
     def parse(self, external: Dict[str, str]) -> StoryMap:
         if not isinstance(external, dict):

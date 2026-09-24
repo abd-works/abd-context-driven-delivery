@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "harness", "tools"):
+for _cat in ("practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -37,10 +37,11 @@ with description("Build Git-URL Source Citation For Every Reference"):
             expect("c:" in url.lower()).to(equal(False))
 
         with it("renders a line-anchored citation for a callable's own definition"):
-            def _sample() -> None:
-                return None
+            class SpecFixture:
+                def sample(self) -> None:
+                    return None
 
-            url = git_blob_url_for_callable("https://github.com/org/repo", "abc123", _sample)
+            url = git_blob_url_for_callable("https://github.com/org/repo", "abc123", SpecFixture().sample)
             expect("#L" in url).to(be_true)
             expect(url.startswith("https://github.com/org/repo/blob/abc123/tools/catalog_generator/")).to(be_true)
 

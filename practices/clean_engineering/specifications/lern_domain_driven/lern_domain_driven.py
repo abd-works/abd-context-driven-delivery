@@ -27,7 +27,10 @@ class LernDomainDriven(PracticeGuidance):
             Scan,
         )
 
-        self.scanner = Scan.bound_to(self)
+        self.scanner = Scan.from_guidance(self)
+
+    def scanner_collection(self):
+        return self._scanner_collection()
 
     def _scanner_collection(self):
         from practices.clean_engineering.specifications.lern_domain_driven.scanners._scan_base import (

@@ -1,11 +1,8 @@
 fidelity: discovery / modules / bounded_context / behavior
-scope: Transformer is one mix-in (like Node). model/transformation/ copies model/codeql/. A template pack is an argument to transform, not a second type. LERN templates are the first pack.
-status: copy codeql mix-in and KnowledgeGraph agent marks (mcp, Skill, agent_tool)
+scope: Transformer is the mix-in (like Node). Transformers is the agent toolset (like KnowledgeGraph). model/transformation/ copies model/codeql/ as {Source}Transformer types listed by family. Transformers.transform sketch -> practiceModels[] (family roots and nested transformers). transform logic writes files the pack names. A template pack is an argument to transform logic, not a second type. LERN templates are the first pack.
+status: copy codeql types as TypeTransformer; put KnowledgeGraph agent marks on Transformers only
 source: practices/*/model/codeql/codeql_model.py; harness/knowledge_graph/model/graph_node.py Node; harness/knowledge_graph/model/knowledge_graph.py KnowledgeGraph; harness/guidance/rule.py Rule; practices/clean_engineering/specifications/lern_domain_driven/templates
 
-=========
-theme: Discover Solution
----------
 stories:
 Discover Solution
     * approx 12-16 total stories
@@ -14,241 +11,26 @@ Discover Solution
     Agent --> Write Clean Engineering Sketch
     Agent --> Write Ddd Sketch
     Agent --> Write Bdd Sketch
-    Transformer --> Scaffold Story Map
-    Transformer --> Scaffold Modules
-    Transformer --> Scaffold Bounded Context
-    Transformer --> Scaffold Bdd Behavior
-
-ce:
-harness/
-  knowledge_graph                  // Node mix-in; KnowledgeGraph agent toolset
-  transformers                     // Transformer mix-in and agent toolset
-practices/
-  stories/
-    model
-      codeql                       // StoryMap : SourceStoryMap, Node  (and Epic, SubEpic, Story, …)
-      transformation               // StoryMap : SourceStoryMap, Transformer  (same types as codeql)
-  clean_engineering/
-    model
-      codeql                       // CleanEngineeringModel : SourceModel, Node  (and Module, OoadClass, Operation, Property, Parameter, File)
-      transformation               // CleanEngineeringModel : SourceModel, Transformer  (same types as codeql)
-    specifications/
-      lern_domain_driven           // templates/ passed into transform
-  bdd/
-    model
-      codeql                       // Description : SourceDescription, Node  (and Context, Observation)
-      transformation               // Description : SourceDescription, Transformer
-  ddd/
-    model
-      codeql                       // BoundedContext : SourceBoundedContext, Node  (and Aggregate, Entity, …)
-      transformation               // BoundedContext : SourceBoundedContext, Transformer
-
-KnowledgeGraph
-  refresh_master
-  reload_working_copy
-  create_database root
-  update_working_copy paths
-  return_nodes filter root
-  fix_violations filter root
-  // @agent_toolset domain_slug knowledge-graph
-  // return_nodes: mcp Skill agent_tool
-  // fix_violations: mcp Skill agent_instructions
-
-  ----
- Transformer
-      transform model
-      transform model templates
-          -> templates.render
-      // harness/transformers — mix-in like Node; toolset like KnowledgeGraph
-      // mixed only in model/transformation/, never on canonical model/ types
-      // mcp Skill agent_tool on transform — same marks as return_nodes
-      // templates argument is the pack — like Node.join graph
-      // must not hardcode lern server, client, or view as operations
-      // Node members are not a toolset — Module does not install mcp
-
-  ----
- CleanEngineeringModel : SourceModel, Transformer
-      transform model
-      // practices/clean_engineering/model/transformation/ — copy codeql_model.py
-      // same names as codeql: Module, OoadClass, Operation, Property, Parameter, File
-      // each is (SourceType, Transformer)
-
-  ----
- StoryMap : SourceStoryMap, Transformer
-      transform model
-
-  ----
- Description : SourceDescription, Transformer
-      transform model
-
-  ----
- BoundedContext : SourceBoundedContext, Transformer
-      transform model
-
-  ----
- LernDomainDriven : PracticeGuidance
-      templates
-      // first architecture pack — pass templates into Transformer.transform
-
-bdd:
-a practice model
-  that mixes transformer
-    it should transform that model
-    it should not invent a parallel sketch type
-  that has been given templates
-    it should run those templates against domain logic from any practice
-a transformer
-  that mixes mcp skill and agent tool
-    it should expose transform the way knowledge graph exposes return nodes
-
-ddd:
-Guidance
-  vendor: custom
-  aggregates:
-    PracticeGuidance
-      members:
-        - StoryMap
-        - CleanEngineeringModel
-        - Description
-        - BoundedContext
-      refs:
-        - Transformer (by mix-in)
-        - LernDomainDriven
-
-=========
-theme: Specify Solution
----------
-stories:
+    Transformers --> Scaffold Story Map
+    Transformers --> Scaffold Modules
+    Transformers --> Scaffold Bounded Context
+    Transformers --> Scaffold Bdd Behavior
 Specify Solution
-    Transformer --> Scaffold Story Scenarios
-    Transformer --> Scaffold Model
-    Transformer --> Scaffold Building Blocks
-    Transformer --> Scaffold Bdd Signatures
-
-ce:
-StoryMap : SourceStoryMap, Transformer
-  transform model
-  // markdown python typescript java javascript json drawio miro stay format channels
-  // this mix-in is only in model/transformation/
-
-  ----
- CleanEngineeringModel : SourceModel, Transformer
-      transform model
-
-  ----
- Description : SourceDescription, Transformer
-      transform model
-
-  ----
- BoundedContext : SourceBoundedContext, Transformer
-      transform model
-
-  ----
- Transformer
-      transform model
-      // mcp Skill agent_tool — same marks as KnowledgeGraph.return_nodes
-      // must keep names from the model
-      // must not invent domain semantics
-
-bdd:
-a practice model
-  that has mixed transformer
-    it should scaffold the next fidelity from that model
-    it should keep the names from the model
-
-ddd:
-Guidance
-  vendor: custom
-  aggregates:
-    PracticeGuidance
-      refs:
-        - StoryMap
-        - CleanEngineeringModel
-        - Description
-        - BoundedContext
-
-=========
-theme: Implement Logic
----------
-stories:
+    Transformers --> Scaffold Story Scenarios
+    Transformers --> Scaffold Model
+    Transformers --> Scaffold Building Blocks
+    Transformers --> Scaffold Bdd Signatures
 Implement Logic
-    Transformer --> Scaffold Story Acceptance Tests
-    Transformer --> Scaffold Domain Code
+    Transformers --> Scaffold Story Acceptance Tests
+    Transformers --> Scaffold Domain Code
     Agent --> Fill Domain Bodies
-    Transformer --> Scaffold Tactics
-    Transformer --> Scaffold Bdd Development
+    Transformers --> Scaffold Tactics
+    Transformers --> Scaffold Bdd Development
     Agent --> Fill Specs
-
-ce:
-Transformer
-  transform model
-  // practice templates live in model/transformation/ — like .ql in model/codeql/
-  // domain code skeleton has empty bodies
-  // agent fills bodies — must not rename operations from the model
-  // design error revises the practice sketch then regenerates
-
-bdd:
-a domain skeleton
-  that the practice model has transformed
-    it should leave operation bodies unimplemented
-  that the agent has filled
-    it should keep the public operations from the model
-
-ddd:
-Guidance
-  vendor: custom
-  aggregates:
-    PracticeGuidance
-
-=========
-theme: Implement Tech Stack
----------
-stories:
 Implement Tech Stack
     Author --> Pass Lern Templates
-    Transformer --> Run Tech Stack Templates
+    Transformers --> Run Tech Stack Templates
     Agent --> Fill Tech Stack Bodies
-
-ce:
-Transformer
-  transform model templates
-      -> templates.render
-  // mcp Skill agent_tool — same marks as KnowledgeGraph.return_nodes
-  // model is domain logic from any practice
-  // templates are the pack — lern templates create {epicSlug}/, {domainName}.ts, {domainName}-server.ts, {domainName}-client.tsx, {EpicName}View.tsx, tests/
-  // transformer does not decide those paths — the templates do
-
-  ----
- LernDomainDriven : PracticeGuidance
-      templates
-      rules
-      // templates consume domain logic and emit the lern target state
-
-bdd:
-a practice model
-  that mixes transformer
-    with lern templates
-      it should run every given template
-      it should write the files and folders those templates name
-      it should keep domain operation names across the emitted layers
-
-ddd:
-Guidance
-  vendor: custom
-  aggregates:
-    PracticeGuidance
-      refs:
-        - LernDomainDriven
-      depends:
-        Guidance:
-          pattern: Shared Kernel
-          crosses: Transformer
-          integrate: Transformer.transform model templates
-
-=========
-theme: Create Tech Stack Rules And Transformers
----------
-stories:
 Create Tech Stack Rules And Transformers
     Author --> Describe Lern Architecture
     Author --> Write Lern Predicates
@@ -256,10 +38,132 @@ Create Tech Stack Rules And Transformers
     Author --> Improve Ddd Sketch Template
 
 ce:
-Rule
-  validate
-  // harness/guidance — same Rule the graph already loads
-  // new architecture rules add predicates or scanners — reuse existing UL rules when they already name the constraint
+harness/
+  knowledge_graph                  // Node mix-in; KnowledgeGraph agent toolset
+  transformers                     // Transformer mix-in; Transformers agent toolset
+practices/
+  stories/
+    model
+      codeql                       // StoryMap, Epic, SubEpic, Story, Scenario, Background, Step, Example : Source, Node
+      transformation               // StoryMapTransformer, EpicTransformer, SubEpicTransformer, StoryTransformer, ScenarioTransformer, BackgroundTransformer, StepTransformer, ExampleTransformer
+  clean_engineering/
+    model
+      codeql                       // CleanEngineeringModel, Module, File, OoadClass, Operation, Property, Parameter : Source, Node
+      transformation               // CleanEngineeringTransformer, ModuleTransformer, FileTransformer, OoadClassTransformer, OperationTransformer, PropertyTransformer, ParameterTransformer
+    specifications/
+      lern_domain_driven           // templates/ passed into Transformers.transform logic
+  bdd/
+    model
+      codeql                       // Description, Context, Observation : Source, Node
+      transformation               // DescriptionTransformer, ContextTransformer, ObservationTransformer
+  ddd/
+    model
+      codeql                       // BoundedContext, Aggregate, Entity, EntityRoot, ValueObject, Repository, DomainEvent, DomainService : Source, Node
+      transformation               // BoundedContextTransformer, AggregateTransformer, EntityTransformer, EntityRootTransformer, ValueObjectTransformer, RepositoryTransformer, DomainEventTransformer, DomainServiceTransformer
+
+KnowledgeGraph
+  refresh_master
+  reload_working_copy
+  create_database root
+  update_working_copy paths
+  return_nodes filter root
+  get_fix_violation_instructions filter root
+  // @agent_toolset domain_slug knowledge-graph
+  // return_nodes: mcp Skill agent_tool
+  // get_fix_violation_instructions: mcp Skill agent_instructions
+
+  ----
+ Transformer
+      // harness/transformers — mix-in like Node.join; no mcp Skill agent_tool
+      // mixed only onto *Transformer types in model/transformation/, never on canonical model/ types
+      // the node is the data a template binds — name, members, children
+      // *Transformer members are not a toolset — ModuleTransformer does not install mcp
+
+  ----
+ Transformers
+      transform sketch -> practiceModels[]
+      transform logic templates
+          -> templates.render
+      // @agent_toolset domain_slug like KnowledgeGraph
+      // both operations: mcp Skill agent_tool — same marks as return_nodes
+      // theme Discover Solution — starts
+      // practiceModels[] family roots when those sections are in the sketch:
+      //   StoryMapTransformer, CleanEngineeringTransformer, DescriptionTransformer, BoundedContextTransformer
+      // nested transformers belong on those roots — not a second bag of “practice models”
+      // theme Specify Solution
+      // must keep names from the sketch
+      // must not invent domain semantics
+      // start at the given node — do not require the whole model
+      // theme Implement Logic
+      // practice templates live in model/transformation/ — like .ql in model/codeql/
+      // OoadClassTransformer operations become domain skeleton with empty bodies
+      // agent fills bodies — must not rename operations from CleanEngineeringTransformer
+      // design error revises the practice sketch then regenerates
+      // theme Implement Tech Stack
+      // transform logic writes the files and folders the pack names
+      // logic is filled domain from CleanEngineeringTransformer, start at the given node
+      // templates are the pack — lern templates create {epicSlug}/, {domainName}.ts, {domainName}-server.ts, {domainName}-client.tsx, {EpicName}View.tsx, tests/
+      // Transformers does not decide those paths — the templates do
+      // theme Implement Tech Stack — ends
+      // templates argument is the pack — like Node.join graph
+      // must not hardcode lern server, client, or view as operations
+
+  ----
+ StoryMapTransformer : StoryMap, Transformer
+      EpicTransformer
+      SubEpicTransformer
+      StoryTransformer
+      ScenarioTransformer
+      BackgroundTransformer
+      StepTransformer
+      ExampleTransformer
+      // practices/stories/model/transformation/ — wrap each stories/model/codeql type
+      // these are the transformer objects, not StoryMap / Epic without the suffix
+      // theme Discover Solution — starts
+      // theme Specify Solution
+      // markdown python typescript java javascript json drawio miro stay format channels
+      // theme Specify Solution — ends
+
+  ----
+ CleanEngineeringTransformer : CleanEngineeringModel, Transformer
+      ModuleTransformer
+      FileTransformer
+      OoadClassTransformer
+      OperationTransformer
+      PropertyTransformer
+      ParameterTransformer
+      // practices/clean_engineering/model/transformation/ — wrap each clean_engineering/model/codeql type
+      // these are the transformer objects, not CleanEngineeringModel / Module / OoadClass
+      // theme Discover Solution — starts
+      // theme Implement Logic
+      // OoadClassTransformer operations are the domain skeleton
+      // theme Implement Tech Stack
+      // filled logic is the start node for transform logic
+      // theme Implement Tech Stack — ends
+
+  ----
+ DescriptionTransformer : Description, Transformer
+      ContextTransformer
+      ObservationTransformer
+      // practices/bdd/model/transformation/ — wrap each bdd/model/codeql type
+      // theme Discover Solution — starts
+      // theme Specify Solution — signatures stay on DescriptionTransformer / ContextTransformer / ObservationTransformer
+      // theme Specify Solution — ends
+
+  ----
+ BoundedContextTransformer : BoundedContext, Transformer
+      AggregateTransformer
+      EntityTransformer
+      EntityRootTransformer
+      ValueObjectTransformer
+      RepositoryTransformer
+      DomainEventTransformer
+      DomainServiceTransformer
+      // practices/ddd/model/transformation/ — wrap each ddd/model/codeql type
+      // EntityTransformer owns OperationTransformer PropertyTransformer like codeql Entity uses CE members
+      // theme Discover Solution — starts
+      // theme Specify Solution — building blocks stay on these types
+      // theme Specify Solution — ends
 
   ----
  LernDomainDriven : PracticeGuidance
@@ -268,13 +172,87 @@ Rule
       describe architecture
           -> templates
           -> rules
-      // templates are the guts Transformer.transform runs
+      // theme Discover Solution — first architecture pack — pass templates into Transformers.transform logic
+      // theme Implement Tech Stack — templates consume domain logic and emit the lern target state
+      // theme Create Tech Stack Rules And Transformers — templates are the guts Transformers.transform logic runs
       // predicates hang as Rule like other practice rules
 
+  ----
+ Rule
+      validate
+      // theme Create Tech Stack Rules And Transformers
+      // harness/guidance — same Rule the graph already loads
+      // new architecture rules add predicates or scanners — reuse existing UL rules when they already name the constraint
+
 bdd:
+a story map transformer
+  that comes from a stories sketch
+    it should include an epic transformer
+    it should include a sub epic transformer
+    it should include a story transformer
+    it should include a scenario transformer
+    it should include a background transformer
+    it should include a step transformer
+    it should include an example transformer
+    it should not be an agent tool
+  that has been specified
+    it should keep names from the sketch
+    it should be among the models transform sketch returns
+
+a clean engineering transformer
+  that comes from a clean engineering sketch
+    it should include a module transformer
+    it should include a file transformer
+    it should include a class transformer
+    it should include an operation transformer
+    it should include a property transformer
+    it should include a parameter transformer
+    it should not be an agent tool
+  that has been specified
+    it should keep names from the sketch
+    it should be among the models transform sketch returns
+  that has filled domain logic
+    with lern templates
+      it should run every given template
+      it should write the files and folders those templates name
+      it should keep class operation names across the emitted layers
+
+a description transformer
+  that comes from a bdd sketch
+    it should include a context transformer
+    it should include an observation transformer
+    it should not be an agent tool
+  that has been specified
+    it should be among the models transform sketch returns
+
+a bounded context transformer
+  that comes from a ddd sketch
+    it should include an aggregate transformer
+    it should include an entity transformer
+    it should include an entity root transformer
+    it should include a value object transformer
+    it should include a repository transformer
+    it should include a domain event transformer
+    it should include a domain service transformer
+    it should not be an agent tool
+  that has been specified
+    it should be among the models transform sketch returns
+
+transformers
+  that an agent can invoke
+    it should transform a sketch into the transformer family roots from that sketch
+    it should transform filled logic with a template pack
+    it should start at the given node
+
+a domain skeleton
+  that a clean engineering transformer produced
+    it should leave operation bodies unimplemented
+  that the agent has filled
+    it should keep the public operations from the class transformer
+
 lern templates
   that describe the tech stack
-    it should be runnable by transformer
+    it should be runnable when transforming filled logic
     it should bind predicates as rules on the specification
 
 ddd:
@@ -282,8 +260,22 @@ Guidance
   vendor: custom
   aggregates:
     PracticeGuidance
+      members:
+        - StoryMapTransformer
+        - CleanEngineeringTransformer
+        - DescriptionTransformer
+        - BoundedContextTransformer
+      refs:
+        - Transformer (by mix-in)
+        - Transformers
+        - LernDomainDriven
+      depends:
+        Guidance:
+          pattern: Shared Kernel
+          crosses: Transformers
+          integrate: Transformers.transform logic templates
     Rule
       refs:
         - LernDomainDriven
 
-~> Increment 1: Mix Transformer in model/transformation/ (copy codeql types) and pass LERN templates into transform: Write Clean Engineering Sketch, Scaffold Model, Scaffold Domain Code, Pass Lern Templates, Run Tech Stack Templates, Write Lern Transform Templates, Write Lern Predicates
+~> Increment 1: Mix Transformer onto *Transformer types in model/transformation/ (copy every codeql type in each family); Transformers.transform sketch -> practiceModels[] of those family roots; Transformers.transform logic with LERN templates writes those template paths: Write Clean Engineering Sketch, Scaffold Model, Scaffold Domain Code, Pass Lern Templates, Run Tech Stack Templates, Write Lern Transform Templates, Write Lern Predicates

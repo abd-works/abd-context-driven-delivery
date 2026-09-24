@@ -30,3 +30,11 @@ class Example(StoryNode):
 
     def child_collections(self, source: "Example") -> List[ChildCollectionPair]:
         return []
+
+    def value_for(self, field_name: str) -> str:
+        return self.fields.get(field_name, "")
+
+    def matches_export(self, export_name: str) -> bool:
+        export_lower = (export_name or "").lower()
+        name_lower = self.name.lower()
+        return export_lower in name_lower or name_lower in export_lower

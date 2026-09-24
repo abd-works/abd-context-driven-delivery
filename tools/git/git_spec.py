@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "harness", "practices"):
+for _cat in ("tools", "practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -27,7 +27,6 @@ from git.git import (
     Repo,
     Ticket,
     TicketState,
-    _gh_project_scope_error,
     issue_theme_label,
     resolve_github_status_option,
     resolve_github_theme_option,
@@ -36,9 +35,9 @@ from git.git import (
 
 with description("a Ticket"):
     with it("should parse github issue references"):
-        expect(Ticket.parse_number("87")).to(equal(87))
-        expect(Ticket.parse_number("#87")).to(equal(87))
-        expect(Ticket.parse_number("demo-org/demo-repo#87")).to(equal(87))
+        expect(Ticket.from_number("87")).to(equal(87))
+        expect(Ticket.from_number("#87")).to(equal(87))
+        expect(Ticket.from_number("demo-org/demo-repo#87")).to(equal(87))
 
     with it("should format its github ref"):
         expect(Ticket.github_ref("demo-org", "demo-repo", 87)).to(
@@ -173,7 +172,8 @@ with description("GitHub project status names"):
         original = GhConnectError(
             "gh project field-list failed: missing required scopes [read:project]"
         )
-        expect(str(_gh_project_scope_error(original))).to(contain(GH_PROJECT_SCOPES_HINT))
+        project = Repo.memory("/tmp/demo-clone").attach_project("demo-org", 3)
+        expect(str(project._project_scope_error(original))).to(contain(GH_PROJECT_SCOPES_HINT))
 
     with it("should refresh Project.states from the live Status field"):
         repo = Repo.memory("/tmp/demo-clone")
@@ -340,7 +340,7 @@ with description("a Repo worktree"):
                     with patch.dict(os.environ, {"USERNAME": "tester"}):
                         with patch("git.git.shutil.rmtree"):
                             with patch("git.git.subprocess.run", side_effect=fake_run):
-                                Repo._force_remove_directory_windows(target)
+                                self.repo._force_remove_directory_windows(target)
                 expect(calls[0][0]).to(equal("takeown"))
                 expect(calls[1][0]).to(equal("icacls"))
                 expect(any("Remove-Item" in " ".join(c) for c in calls)).to(be_true)

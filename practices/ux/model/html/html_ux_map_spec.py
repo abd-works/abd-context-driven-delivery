@@ -17,7 +17,7 @@ from practices.ux.model.html.nodes import HtmlUxMap
 
 with description("HtmlUxMap"):
     with before.each:
-        self.source = UxMap(name="demo")
+        self.source = UxMap.create(name="demo")
         self.source.scope = "Place New Order"
         self.source.story_references = ["stories/place_order.js"]
         screen = Screen("Catalog", 0, "catalog")

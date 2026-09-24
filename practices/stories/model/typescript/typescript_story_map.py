@@ -8,7 +8,6 @@ from typing import Dict, List, Optional
 from practices.stories.model.code_story_map import (
     CodeStoryMap,
     CodeStoryMapError,
-    strip_tests_root_prefix,
     to_kebab,
 )
 from practices.stories.model.typescript.nodes import (
@@ -25,22 +24,6 @@ _SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
 
 
 _STORY_TEST_SUFFIX = "_story.test.ts"
-
-
-def _is_gwt_leaf(path: str) -> bool:
-    name = path.replace("\\", "/").rsplit("/", 1)[-1]
-    if name in _SKIP_NAMES or name.endswith("-helper.ts"):
-        return False
-    if "/examples/" in path.replace("\\", "/"):
-        return False
-    return name.endswith(_STORY_TEST_SUFFIX)
-
-
-def _story_slug_from_filename(name: str) -> str | None:
-    if not name.endswith(_STORY_TEST_SUFFIX):
-        return None
-    stem = name[: -len(_STORY_TEST_SUFFIX)]
-    return stem.replace("_", "-")
 
 
 class TypeScriptStoryMap(CodeStoryMap):
@@ -65,12 +48,26 @@ class TypeScriptStoryMap(CodeStoryMap):
         tree = render_ts_tree(canonical, tests_root=self.tests_root, include_shared=True)
         if previous:
             for path, body in list(tree.items()):
-                if path in previous and _is_gwt_leaf(path):
+                if path in previous and self._is_gwt_leaf(path):
                     tree[path] = self._preserve_hand_written(previous[path], body)
         return tree
 
     def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(p for p in tree if _is_gwt_leaf(p))
+        return sorted(p for p in tree if self._is_gwt_leaf(p))
+
+    def _is_gwt_leaf(self, path: str) -> bool:
+        name = path.replace("\\", "/").rsplit("/", 1)[-1]
+        if name in _SKIP_NAMES or name.endswith("-helper.ts"):
+            return False
+        if "/examples/" in path.replace("\\", "/"):
+            return False
+        return name.endswith(_STORY_TEST_SUFFIX)
+
+    def _story_slug_from_filename(self, name: str) -> str | None:
+        if not name.endswith(_STORY_TEST_SUFFIX):
+            return None
+        stem = name[: -len(_STORY_TEST_SUFFIX)]
+        return stem.replace("_", "-")
 
     def _render_leaf_file(self, sub_epic: SubEpic, owning_epic: Epic) -> str:
         raise NotImplementedError("TypeScriptStoryMap.render uses render_ts_tree")
@@ -81,17 +78,17 @@ class TypeScriptStoryMap(CodeStoryMap):
         story_map = self._make_story_map()
         seen: set[tuple[str, ...]] = set()
         for path, content in sorted(external.items()):
-            if not _is_gwt_leaf(path):
+            if not self._is_gwt_leaf(path):
                 continue
             parts = path.strip("/").replace("\\", "/").split("/")
-            stripped = strip_tests_root_prefix(parts, self.tests_root)
+            stripped = self.strip_tests_root_prefix(parts)
             if stripped is None:
                 continue
             parts = stripped
             if len(parts) < 3:
                 continue
             filename = parts[-1]
-            story_slug = _story_slug_from_filename(filename)
+            story_slug = self._story_slug_from_filename(filename)
             if not story_slug:
                 continue
             epic_slug, sub_slugs = parts[0], parts[1:-1]

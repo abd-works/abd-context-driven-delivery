@@ -21,7 +21,7 @@ Usage
     from practices.stories.model.markdown.nodes import MarkdownStoryMap
 
     canonical = MarkdownStoryMap().parse(open("story-map.md").read())
-    client = MiroApiClient()          # reads MIRO_TOKEN env var or ~/.miro-token
+    client = MiroApiClient.create()          # reads MIRO_TOKEN env var or ~/.miro-token
     uploader = MiroUploader(client)
     result = uploader.upload(canonical, board_id="uXjVHuiSsAA=")
     print(result["shape_count"], "shapes created")

@@ -7,7 +7,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 from installation.destination import Installation
 from harness.agent_tools.agent_tools import (
@@ -88,16 +88,14 @@ class Installer:
             self._state_file = self.path / self._STATE_NAME
         else:
             self._state_file = shared_state
-        from harness.hooks.hooks import HookInstallation
         from harness.mcp.mcp_server import McpInstallation
 
-        self.ensure_import_path(self.repo)
+        self.ensure_import_path()
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
-        self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
+        self._hook: Any = None
         self._installed_paths: list[str] = []
 
-    @classmethod
-    def _is_ephemeral_install_path(cls, path: Path | str) -> bool:
+    def _is_ephemeral_install_path(self, path: Path | str) -> bool:
         try:
             resolved = Path(path).resolve()
             temp = Path(tempfile.gettempdir()).resolve()
@@ -105,24 +103,21 @@ class Installer:
         except OSError:
             return False
 
-    @classmethod
-    def import_path_entries(cls, repo: Path | str) -> list[str]:
+    def import_path_entries(self, repo: Path | str | None = None) -> list[str]:
         """Repo root plus tools, practices, and actions. Never ``installation/`` or ``harness/`` (those shadow the MCP SDK)."""
-        root = Path(repo).resolve()
+        root = Path(repo).resolve() if repo is not None else self.repo
         entries = [str(root)]
-        for name in cls._CATALOG_DIRS:
+        for name in self._CATALOG_DIRS:
             folder = root / name
             if folder.is_dir():
                 entries.append(str(folder))
         return entries
 
-    @classmethod
-    def pythonpath(cls, repo: Path | str) -> str:
-        return os.pathsep.join(cls.import_path_entries(repo))
+    def pythonpath(self, repo: Path | str | None = None) -> str:
+        return os.pathsep.join(self.import_path_entries(repo))
 
-    @classmethod
-    def ensure_import_path(cls, repo: Path | str) -> None:
-        entries = cls.import_path_entries(repo)
+    def ensure_import_path(self, repo: Path | str | None = None) -> None:
+        entries = self.import_path_entries(repo)
         root = entries[0]
         if root not in sys.path:
             sys.path.insert(0, root)
@@ -134,31 +129,36 @@ class Installer:
         """Parse the repo for toolset classes whose members carry install annotations."""
         root = (repo or self.repo).resolve()
         self.ensure_import_path(root)
-        toolsets: list[Any] = []
         seen: set[str] = set()
+        toolsets: list[Any] = []
         for py_file in sorted(root.rglob("*.py")):
             if self._skip_collect_path(py_file):
                 continue
-            try:
-                tree_ast = ast.parse(py_file.read_text(encoding="utf-8"))
-            except (OSError, SyntaxError, UnicodeDecodeError):
-                continue
-            module = self._module_name(py_file, root)
-            if not module:
-                continue
-            for node in tree_ast.body:
-                if not isinstance(node, ast.ClassDef):
-                    continue
-                if node.name in self._SKIP_ROOT_TOOLSET_NAMES:
-                    continue
-                if not self._class_is_installable(node):
-                    continue
-                ref = f"{module}:{node.name}"
+            for ref in self._toolset_refs_in_file(py_file, root):
                 if ref in seen:
                     continue
                 seen.add(ref)
                 toolsets.append(ref)
         return toolsets
+
+    def _toolset_refs_in_file(self, py_file: Path, root: Path) -> list[str]:
+        try:
+            tree_ast = ast.parse(py_file.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeDecodeError):
+            return []
+        module = self._module_name(py_file, root)
+        if not module:
+            return []
+        refs: list[str] = []
+        for node in tree_ast.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name in self._SKIP_ROOT_TOOLSET_NAMES:
+                continue
+            if not self._class_is_installable(node):
+                continue
+            refs.append(f"{module}:{node.name}")
+        return refs
 
     def _skip_collect_path(self, py_file: Path) -> bool:
         try:
@@ -217,7 +217,7 @@ class Installer:
             self._installed_paths.append(normalized)
 
     def _bind_install_tracker(self, installation: Installation) -> None:
-        installation._install_tracker = self._track_write
+        installation.bind_tracker(self._track_write)
 
     def _load_state(self) -> dict[str, Any]:
         if not self._state_file.is_file():
@@ -247,7 +247,7 @@ class Installer:
                 break
             parent = parent.parent
 
-    def get_installations(self, tool: Any) -> list[Installation]:
+    def installations_for(self, tool: Any) -> list[Installation]:
         destinations = tool.destinations
         installations: list[Installation] = []
         mcp_mode = InstallDestination.MCP in destinations
@@ -276,7 +276,7 @@ class Installer:
 
     def _install_toolset(self, toolset: Any) -> None:
         for tool in toolset.tools.values():
-            for installation in self.get_installations(tool):
+            for installation in self.installations_for(tool):
                 installation.install(tool)
 
     @Mcp
@@ -305,14 +305,24 @@ class Installer:
     @agent_tool
     def install(self, toolsets: Iterable[Any] | None = None) -> Any:
         """Install annotated toolsets into the IDE path — skills, commands, rules, MCP, and hooks. Runs clean first."""
+        self.clean()
+        self._installed_paths = []
+        self.ensure_import_path()
+        self._reset_channels()
+        self._install_all(toolsets)
+        self._save_state()
+        self._standup_channels()
+        self.ensure_mcp_host()
+        return self._mcp
+
+    def _reset_channels(self) -> None:
         from harness.hooks.hooks import HookInstallation
         from harness.mcp.mcp_server import McpInstallation
 
-        self.clean()
-        self._installed_paths = []
-        self.ensure_import_path(self.repo)
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
+
+    def _install_all(self, toolsets: Iterable[Any] | None) -> None:
         if toolsets is None:
             toolsets = self.collect_toolsets()
         for item in toolsets:
@@ -323,19 +333,17 @@ class Installer:
             self._install_toolset(toolset)
             for child in toolset.child_toolsets():
                 self._install_toolset(child)
-        self._save_state()
+
+    def _standup_channels(self) -> None:
         self._mcp.standup()
-        diagnosis = self._mcp.diagnose()
+        self._print_channel_notice(self._mcp.diagnose())
+        self._hook.standup()
+        self._print_channel_notice(self._hook.diagnose())
+
+    def _print_channel_notice(self, diagnosis: dict[str, Any]) -> None:
         notice = diagnosis.get("notice") or ""
         if notice:
             print(notice, file=sys.stderr)
-        self._hook.standup()
-        hook_diagnosis = self._hook.diagnose()
-        hook_notice = hook_diagnosis.get("notice") or ""
-        if hook_notice:
-            print(hook_notice, file=sys.stderr)
-        self.ensure_mcp_host()
-        return self._mcp
 
     def ensure_mcp_host(self, payload: dict[str, Any] | None = None) -> str:
         from harness.mcp.mcp_server import McpInstallation

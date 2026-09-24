@@ -21,6 +21,7 @@ class CleanEngineering(PracticeGuidance):
         self,
         fidelity: str = "modules",
         format: str | None = None,
+        drawio=None,
     ) -> None:
         super().__init__(
             format=format,
@@ -36,11 +37,8 @@ class CleanEngineering(PracticeGuidance):
                 "drawio": DrawIOCleanEngineeringModel,
             },
         )
-        self.drawio = None
-        if self.format == "drawio":
-            from practices.clean_engineering.model.drawio.drawio import Drawio
-
-            self.drawio = Drawio(workspace=self.workspace)
+        self.drawio = drawio
+        if self.drawio is not None:
             self.drawio.mode = "tool"
 
     @agent_instructions

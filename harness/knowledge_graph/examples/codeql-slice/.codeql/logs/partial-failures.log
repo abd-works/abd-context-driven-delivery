@@ -235,3 +235,671 @@ A fatal error occurred: The CodeQL database is not compatible with a QL library 
 Are you sure the database is for the same language as the query?
 
 
+run-queries codeql: CodeQLRunError: codeql failed: WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\stories\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 358, in _evaluate_pack
+    batch = self._rule_rows()
+            ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 425, in _rule_rows
+    batch.update(self._combined_rule_rows())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 451, in _combined_rule_rows
+    return self._codeql.run_rules(pack / "rules.ql", self._combined_slugs, database=db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 505, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 461, in run_queries
+    raise self._failed_codeql(run)
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql failed: WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\stories\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+run-queries codeql: CodeQLRunError: codeql failed: WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\ux\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\ux\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 358, in _evaluate_pack
+    batch = self._rule_rows()
+            ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 425, in _rule_rows
+    batch.update(self._combined_rule_rows())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 451, in _combined_rule_rows
+    return self._codeql.run_rules(pack / "rules.ql", self._combined_slugs, database=db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 505, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 461, in run_queries
+    raise self._failed_codeql(run)
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql failed: WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\ux\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\ux\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+
+rule verb-noun-format: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 17, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule story-name-captures-system-mechanic: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 21, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule verb-noun-format: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 17, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule story-name-captures-system-mechanic: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 21, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule verb-noun-format: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 17, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule story-name-captures-system-mechanic: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 21, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule verb-noun-format: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 17, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule story-name-captures-system-mechanic: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 21, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule verb-noun-format: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 17, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule story-name-captures-system-mechanic: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 21, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule verb-noun-format: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 17, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule story-name-captures-system-mechanic: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 21, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+run-queries codeql: CodeQLRunError: codeql failed: WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\stories\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 358, in _evaluate_pack
+    batch = self._rule_rows()
+            ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 425, in _rule_rows
+    batch.update(self._combined_rule_rows())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 451, in _combined_rule_rows
+    return self._codeql.run_rules(pack / "rules.ql", self._combined_slugs, database=db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 505, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 461, in run_queries
+    raise self._failed_codeql(run)
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql failed: WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\stories\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+run-queries codeql: CodeQLRunError: codeql failed: WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\ux\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\ux\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 358, in _evaluate_pack
+    batch = self._rule_rows()
+            ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 425, in _rule_rows
+    batch.update(self._combined_rule_rows())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 451, in _combined_rule_rows
+    return self._codeql.run_rules(pack / "rules.ql", self._combined_slugs, database=db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 505, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 461, in run_queries
+    raise self._failed_codeql(run)
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql failed: WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\ux\model\codeql\rules.ql:1,1-9,4)
+A fatal error occurred: The CodeQL database is not compatible with a QL library referenced by the query you are trying to run.
+	CodeQL database location: harness\knowledge_graph\examples\codeql-slice\.codeql\python-working-copy
+	Query location: practices\ux\model\codeql\rules.ql
+Are you sure the database is for the same language as the query?
+
+
+rule verb-noun-format: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 17, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule story-name-captures-system-mechanic: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 21, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule verb-noun-format: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 17, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule story-name-captures-system-mechanic: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 21, in refine_rows
+    from practices.stories.model.story_names import StoryNames
+  File "C:\dev\abd-context-driven-delivery\practices\stories\model\story_names.py", line 11, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+
+rule keep-classes-single-responsibility: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 13, in refine_rows
+    from practices.clean_engineering.model.responsibilities import Responsibilities
+  File "C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\responsibilities.py", line 13, in <module>
+    from nltk.corpus import wordnet as wn
+ModuleNotFoundError: No module named 'nltk'
+
+rule domain-concepts-not-technical-names: ModuleNotFoundError: No module named 'nltk'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 398, in _map_pack_hits
+    hits = rule.evaluate(
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_rules.py", line 214, in evaluate
+    hits = refine_rows(self.slug, hits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\graph_query_spec.py", line 25, in refine_rows
+    from practices.ddd.model.technical_names import rows_for_technical_names
+  File "C:\dev\abd-context-driven-delivery\practices\ddd\model\technical_names.py", line 13, in <module>
+    from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\vocabulary_helper.py", line 14, in <module>
+    import nltk
+ModuleNotFoundError: No module named 'nltk'
+

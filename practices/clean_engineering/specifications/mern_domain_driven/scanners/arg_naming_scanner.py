@@ -17,38 +17,36 @@ _METHOD_WITH_PARAMS_RE = re.compile(r"(?:async\s+)?(\w+)\s*\(([^)]*)\)\s*(?::\s*
 _PARAM_NAME_RE = re.compile(r"(\w+)\s*[?:]")
 
 
-def _extract_param_names(params_str: str) -> List[str]:
-    """Extract parameter names from a TypeScript method signature."""
-    names = []
-    for part in params_str.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        m = _PARAM_NAME_RE.match(part)
-        if m:
-            names.append(m.group(1))
-    return names
-
-
-def _extract_methods_with_params(path: Path) -> Dict[str, List[str]]:
-    """Map method name -> list of param names for a file."""
-    result: Dict[str, List[str]] = {}
-    try:
-        content = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return result
-    for m in _METHOD_WITH_PARAMS_RE.finditer(content):
-        name = m.group(1)
-        if name == "constructor" or name[0].isupper():
-            continue
-        params = _extract_param_names(m.group(2))
-        if params:
-            result[name] = params
-    return result
-
-
 class ArgNamingScanner(TypeScriptScanner):
     """Check that argument names are preserved across shared/controller/service."""
+
+    RULE = "preserve-arg-names-across-layers"
+
+    def _extract_param_names(self, params_str: str) -> List[str]:
+        names = []
+        for part in params_str.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            m = _PARAM_NAME_RE.match(part)
+            if m:
+                names.append(m.group(1))
+        return names
+
+    def _extract_methods_with_params(self, path: Path) -> Dict[str, List[str]]:
+        result: Dict[str, List[str]] = {}
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return result
+        for m in _METHOD_WITH_PARAMS_RE.finditer(content):
+            name = m.group(1)
+            if name == "constructor" or name[0].isupper():
+                continue
+            params = self._extract_param_names(m.group(2))
+            if params:
+                result[name] = params
+        return result
 
     RULE = "preserve-arg-names-across-layers"
 
@@ -72,11 +70,11 @@ class ArgNamingScanner(TypeScriptScanner):
         for ts_file in shared_dir.glob("*.ts"):
             if ts_file.name in ("index.ts",) or ts_file.name.endswith(".schema.ts"):
                 continue
-            shared_methods.update(_extract_methods_with_params(ts_file))
+            shared_methods.update(self._extract_methods_with_params(ts_file))
 
         service_methods: Dict[str, List[str]] = {}
         for ts_file in server_dir.glob("*.service.ts"):
-            service_methods.update(_extract_methods_with_params(ts_file))
+            service_methods.update(self._extract_methods_with_params(ts_file))
 
         for method_name, shared_params in shared_methods.items():
             if method_name in service_methods:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
 
@@ -20,14 +20,5 @@ class CreateAgentToolset(PracticeGuidance):
         session: str | None = None,
         workspace: str | None = None,
     ) -> None:
-        super().__init__(
-            format=format,
-            path=path,
-            session=session,
-            workspace=workspace,
-        )
-
-    @agent_instructions
-    def guidance(recipe) -> str:
-        """Provide guidance for scaffolding a decorated AgentToolSet."""
-        return super().guidance()
+        super().__init__(format=format)
+        self._attach_workspace(path=path, session=session, workspace=workspace)

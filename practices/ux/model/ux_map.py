@@ -14,16 +14,40 @@ from .ux_node import UxNode
 class UxMap(UxNode):
     _semantic_type_name = "UxMap"
 
-    def __init__(self, name: str = "UxMap", sequential_order: int = 0) -> None:
+    def __init__(
+        self,
+        name: str = "UxMap",
+        sequential_order: int = 0,
+        *,
+        content_types: ContentTypes,
+        transitions: Transitions,
+        nav_components: NavComponents,
+        story_references: ReferencePaths,
+        object_references: ReferencePaths,
+        context: UxContext,
+    ) -> None:
         super().__init__(name, sequential_order)
         self.scope: str = ""
-        self._story_references = ReferencePaths()
-        self._object_references = ReferencePaths()
+        self._story_references = story_references
+        self._object_references = object_references
         self.screens: List[Screen] = []
-        self.transitions = Transitions()
-        self.content_types = ContentTypes()
-        self.nav_components = NavComponents()
-        self.context: UxContext = UxContext()
+        self.transitions = transitions
+        self.content_types = content_types
+        self.nav_components = nav_components
+        self.context = context
+
+    @classmethod
+    def create(cls, name: str = "UxMap", sequential_order: int = 0) -> "UxMap":
+        return cls(
+            name,
+            sequential_order,
+            content_types=ContentTypes(),
+            transitions=Transitions(),
+            nav_components=NavComponents(),
+            story_references=ReferencePaths(),
+            object_references=ReferencePaths(),
+            context=UxContext(),
+        )
 
     @property
     def story_references(self) -> ReferencePaths:

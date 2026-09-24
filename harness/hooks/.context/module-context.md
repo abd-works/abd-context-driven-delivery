@@ -29,7 +29,7 @@ Build order: `installation` → `harness/hooks`
 
 # harness/hooks
 - **Purpose:** Mark a member `@Hook("event")` so Cursor stdin events run that Python and return one merged result.
-- **Seam (terms):** Hook, Hooks, HookInstallation, HookServer
+- **Seam (terms):** Hook, Hooks, HookInstallation, HookServer, SessionLogs, HookDaemon
 - **Dependencies (one-way):** `installation` (*Destination*, *Installation*), `harness/agent_tools`
 
 ## Constraint
