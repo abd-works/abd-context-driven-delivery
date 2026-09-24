@@ -610,7 +610,9 @@ predicate skippedModulePath(string path) {
   (
     path.matches("%/examples/%") or
     path.matches("%_spec.py") or
-    path.regexpMatch("(^|/)test_[^/]+\\.py$")
+    path.matches("%.spec.py") or
+    path.regexpMatch("(^|/)test_[^/]+\\.py$") or
+    path.matches("%_test.py")
   )
 }
 
@@ -689,10 +691,14 @@ predicate shallowModule(Module m) {
 
 predicate moduleDependsOn(Module caller, Module callee) {
   caller != callee and
+  not skippedModulePath(normalizedPath(caller.getFile())) and
+  not skippedModulePath(normalizedPath(callee.getFile())) and
   (
     exists(Function callerFn, Function calleeFn |
       inSource(callerFn) and
       inSource(calleeFn) and
+      not skippedModulePath(normalizedPath(callerFn.getLocation().getFile())) and
+      not skippedModulePath(normalizedPath(calleeFn.getLocation().getFile())) and
       callerFn.getEnclosingModule() = caller and
       calleeFn.getEnclosingModule() = callee and
       exists(Call call |
@@ -703,6 +709,7 @@ predicate moduleDependsOn(Module caller, Module callee) {
     or
     exists(Import imp |
       imp.getScope() = caller and
+      not skippedModulePath(normalizedPath(imp.getLocation().getFile())) and
       callee.getFile().getBaseName() = imp.getAnImportedModuleName() + ".py"
     )
   )

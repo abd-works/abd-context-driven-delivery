@@ -34,6 +34,12 @@ with description("CodeQL report runner"):
     with it("should evaluate the query batch on every core"):
         expect("--threads=0" in _RUN_QUERIES_FLAGS).to(equal(True))
 
+    with it("should drop catalog prefix harness and keep inner modules"):
+        prefixes = CodeQL(_REPO_ROOT)._first_class_module_prefixes(_REPO_ROOT)
+        expect("harness" in prefixes).to(equal(False))
+        expect("harness/knowledge_graph" in prefixes).to(equal(True))
+        expect("harness/guidance" in prefixes).to(equal(True))
+
     with it("should not rewrite subject_filter.qll when the generated text already matches"):
         codeql = CodeQL(_KG)
         codeql._write_subject_filter(_PACK, path_root=_REPO_ROOT)

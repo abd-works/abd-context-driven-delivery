@@ -623,7 +623,57 @@ class CodeQL:
             prefix = self._module_prefix_from_context(context, path_root)
             if prefix and prefix not in prefixes:
                 prefixes.append(prefix)
-        return prefixes
+        return self._without_catalog_prefixes(prefixes, path_root)
+
+    def _without_catalog_prefixes(
+        self, prefixes: List[str], path_root: Path
+    ) -> List[str]:
+        catalogs = {
+            prefix
+            for prefix in prefixes
+            if self._is_catalog_prefix(prefix, prefixes, path_root)
+        }
+        promoted = list(prefixes)
+        for catalog in catalogs:
+            for child in self._child_package_prefixes(path_root / catalog, catalog):
+                if child not in promoted:
+                    promoted.append(child)
+        return [prefix for prefix in promoted if prefix not in catalogs]
+
+    def _is_catalog_prefix(
+        self, prefix: str, prefixes: List[str], path_root: Path
+    ) -> bool:
+        nested = any(
+            other.startswith(f"{prefix}/") for other in prefixes if other != prefix
+        )
+        if not nested:
+            return False
+        folder = path_root / prefix
+        if not folder.is_dir():
+            return True
+        return not any(self._is_own_python_file(child) for child in folder.iterdir())
+
+    def _is_own_python_file(self, path: Path) -> bool:
+        return (
+            path.is_file()
+            and path.suffix == ".py"
+            and path.name != "__init__.py"
+            and not path.name.endswith("_spec.py")
+            and not path.name.startswith("test_")
+        )
+
+    def _child_package_prefixes(self, folder: Path, prefix: str) -> List[str]:
+        skip = {"examples", "node_modules", ".git", "__pycache__", ".venv", "venv"}
+        if not folder.is_dir():
+            return []
+        children: List[str] = []
+        for child in sorted(folder.iterdir()):
+            if not child.is_dir() or child.name in skip or child.name.startswith("."):
+                continue
+            if not any(self._is_own_python_file(path) for path in child.iterdir()):
+                continue
+            children.append(f"{prefix}/{child.name}")
+        return children
 
     def _module_prefix_from_context(self, context: Path, path_root: Path) -> str:
         skip = {"examples", "node_modules", ".git", "__pycache__", ".venv", "venv"}

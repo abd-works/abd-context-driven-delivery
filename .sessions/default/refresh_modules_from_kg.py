@@ -101,6 +101,8 @@ def write_queries() -> None:
             from Module caller, Module callee, string callerPrefix, string calleePrefix
             where
               moduleDependsOn(caller, callee) and
+              not skippedModulePath(normalizedPath(caller.getFile())) and
+              not skippedModulePath(normalizedPath(callee.getFile())) and
               callerPrefix = enclosingFirstClassPrefix(normalizedPath(caller.getFile())) and
               calleePrefix = enclosingFirstClassPrefix(normalizedPath(callee.getFile())) and
               callerPrefix != calleePrefix
@@ -161,26 +163,17 @@ def render_module(prefix: str, seams: dict[str, list[str]], deps: dict[str, list
     heading = dotted(prefix)
     classes = seams.get(prefix, [])
     callees = deps.get(prefix, [])
-    lines = [f"## {heading}", "### Public Seam"]
+    lines = [f"## {heading}"]
     if classes:
+        lines.append("### Public Seam")
         for name in classes:
             lines.append(f"#### {name}")
             lines.append("")
-    else:
-        lines.append("")
-        lines.append("*(no public classes in the graph)*")
-        lines.append("")
-    lines.append("### Dependencies")
     if callees:
+        lines.append("### Dependencies")
         for callee in callees:
             lines.append(f" - `{dotted(callee)}` — moduleDependsOn")
-    else:
-        lines.append(" - *(none in the graph)*")
     lines.append("---")
-    lines.append("")
-    lines.append("### Constraint")
-    lines.append("")
-    lines.append("*(none in the graph)*")
     lines.append("")
     return "\n".join(lines)
 
@@ -208,16 +201,17 @@ def main() -> None:
     for prefix in prefixes:
         print(f"  {prefix}")
     write_subject_filter(prefixes)
-    write_queries()
-    SESSION.mkdir(parents=True, exist_ok=True)
-    database = ROOT / ".codeql" / "python-master"
     seam_csv = SESSION / "public-seam.csv"
     deps_csv = SESSION / "module-deps.csv"
-    run_query(SEAM_QL, SESSION / "public-seam.bqrs", seam_csv, database)
-    run_query(DEPS_QL, SESSION / "module-deps.bqrs", deps_csv, database)
+    if not (seam_csv.exists() and deps_csv.exists()):
+        write_queries()
+        SESSION.mkdir(parents=True, exist_ok=True)
+        database = ROOT / ".codeql" / "python-master"
+        run_query(SEAM_QL, SESSION / "public-seam.bqrs", seam_csv, database)
+        run_query(DEPS_QL, SESSION / "module-deps.bqrs", deps_csv, database)
+        SEAM_QL.unlink(missing_ok=True)
+        DEPS_QL.unlink(missing_ok=True)
     write_document(prefixes, load_seams(seam_csv), load_deps(deps_csv))
-    SEAM_QL.unlink(missing_ok=True)
-    DEPS_QL.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

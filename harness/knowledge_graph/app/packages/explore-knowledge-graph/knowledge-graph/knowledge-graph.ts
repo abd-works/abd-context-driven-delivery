@@ -417,7 +417,9 @@ export class KnowledgeGraph {
   }
 
   static fromDto(dto: KnowledgeGraphDto): KnowledgeGraph {
-    return new KnowledgeGraph(ensureFolderPackages(dropClonedOperationHits(dto)));
+    return new KnowledgeGraph(
+      ensureFolderPackages(dropClonedOperationHits(dropCatalogModules(dto))),
+    );
   }
 
   private _withView(view: {

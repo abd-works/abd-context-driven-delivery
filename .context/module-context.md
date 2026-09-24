@@ -15,48 +15,27 @@
 #### Validate
 
 ### Dependencies
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
  - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
  - `practices.ux.model.drawio` — moduleDependsOn
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## builders
-### Public Seam
-
-*(no public classes in the graph)*
-
-### Dependencies
- - *(none in the graph)*
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## harness
 ### Public Seam
@@ -116,7 +95,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -139,10 +117,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## installation
 ### Public Seam
@@ -176,7 +150,6 @@
  - `harness.knowledge_graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -197,20 +170,11 @@
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
- - `tools.prompt_log` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## practices
-### Public Seam
-
-*(no public classes in the graph)*
-
 ### Dependencies
  - `actions` — moduleDependsOn
  - `actions.partition` — moduleDependsOn
@@ -243,10 +207,6 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## actions.grill_context
 ### Public Seam
 #### GrillContext
@@ -256,9 +216,6 @@
  - `actions.iterate` — moduleDependsOn
  - `actions.sketch` — moduleDependsOn
  - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `practices` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
@@ -266,36 +223,24 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## actions.improvement
 ### Public Seam
 #### Improvement
 
 ### Dependencies
- - `actions.sketch` — moduleDependsOn
  - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## actions.iterate
 ### Public Seam
@@ -306,22 +251,14 @@
  - `actions.grill_context` — moduleDependsOn
  - `actions.sketch` — moduleDependsOn
  - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## actions.partition
 ### Public Seam
@@ -337,14 +274,11 @@
 
 ### Dependencies
  - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
@@ -354,10 +288,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## actions.sketch
 ### Public Seam
@@ -377,7 +307,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -396,10 +325,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## builders.create_agent_toolset
 ### Public Seam
@@ -417,7 +342,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -429,7 +353,6 @@
  - `practices.ux.model` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
@@ -437,10 +360,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## builders.create_context_tool
 ### Public Seam
@@ -458,7 +377,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -477,10 +395,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## harness.agent_tools
 ### Public Seam
@@ -532,7 +446,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -548,7 +461,6 @@
  - `practices.ux.model.markdown` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
@@ -556,10 +468,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## harness.hooks
 ### Public Seam
@@ -601,7 +509,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -621,10 +528,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## harness.knowledge_graph
 ### Public Seam
@@ -786,7 +689,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -802,7 +704,6 @@
  - `practices.ux.model.markdown` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
@@ -810,10 +711,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## harness.markdown
 ### Public Seam
@@ -841,7 +738,6 @@
  - `harness.agent_tools` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
@@ -849,10 +745,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## harness.mcp
 ### Public Seam
@@ -898,7 +790,6 @@
  - `harness.knowledge_graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -918,10 +809,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.agent_bdd
 ### Public Seam
@@ -970,7 +857,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
@@ -985,7 +871,6 @@
  - `practices.ux.model.markdown` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
@@ -993,10 +878,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.bdd
 ### Public Seam
@@ -1021,7 +902,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
@@ -1039,10 +919,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.clean_engineering
 ### Public Seam
@@ -1138,7 +1014,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
@@ -1153,7 +1028,6 @@
  - `practices.ux.model.markdown` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
@@ -1161,10 +1035,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.ddd
 ### Public Seam
@@ -1209,7 +1079,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -1228,22 +1097,8 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## practices.kanban
-### Public Seam
-
-*(no public classes in the graph)*
-
-### Dependencies
- - *(none in the graph)*
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.stories
 ### Public Seam
@@ -1405,15 +1260,11 @@
 
 #### StoryContext
 
-#### StoryExampleCollector
-
 #### StoryMap
 
 #### StoryNames
 
 #### StoryNode
-
-#### StoryNodeTransformer
 
 #### StoryType
 
@@ -1460,7 +1311,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -1475,7 +1325,6 @@
  - `practices.ux.model.markdown` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
@@ -1483,10 +1332,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.ux
 ### Public Seam
@@ -1505,7 +1350,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -1527,10 +1371,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.catalog_generator
 ### Public Seam
@@ -1579,7 +1419,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -1594,7 +1433,6 @@
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
@@ -1602,10 +1440,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.context_setup
 ### Public Seam
@@ -1639,58 +1473,32 @@
 
 ### Dependencies
  - `actions.partition` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## tools.diagnose
 ### Public Seam
 #### Diagnose
 
-### Dependencies
- - `harness.hooks` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.echo
 ### Public Seam
 #### Echo
 
 ### Dependencies
- - `harness.agent_tools` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.git
 ### Public Seam
@@ -1735,7 +1543,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -1754,10 +1561,6 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## tools.handoff
 ### Public Seam
 #### Handoff
@@ -1765,7 +1568,6 @@
 ### Dependencies
  - `harness.knowledge_graph` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
@@ -1773,10 +1575,6 @@
  - `tools.git` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.plan
 ### Public Seam
@@ -1809,13 +1607,11 @@
 ### Dependencies
  - `actions.partition` — moduleDependsOn
  - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
@@ -1824,10 +1620,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.prompt_echo
 ### Public Seam
@@ -1853,7 +1645,6 @@
  - `installation` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
@@ -1861,10 +1652,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.prompt_log
 ### Public Seam
@@ -1879,27 +1666,16 @@
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.record_decisions
 ### Public Seam
 #### RecordDecisions
 
 ### Dependencies
- - `harness.agent_tools` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.workflow
 ### Public Seam
@@ -1911,12 +1687,8 @@
 
 ### Dependencies
  - `actions.partition` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
@@ -1924,16 +1696,11 @@
  - `practices.ux.model` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## tools.workspace
 ### Public Seam
@@ -1992,7 +1759,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -2011,10 +1777,6 @@
  - `tools.record_decisions` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.clean_engineering.model
 ### Public Seam
@@ -2149,7 +1911,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -2164,7 +1925,6 @@
  - `practices.ux.model.markdown` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
@@ -2172,10 +1932,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.ux.model
 ### Public Seam
@@ -2238,7 +1994,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -2261,15 +2016,7 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## practices.ux.scripts
-### Public Seam
-
-*(no public classes in the graph)*
-
 ### Dependencies
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
@@ -2284,22 +2031,8 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## practices.ux.story-demo
-### Public Seam
-
-*(no public classes in the graph)*
-
-### Dependencies
- - *(none in the graph)*
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.clean_engineering.model.drawio
 ### Public Seam
@@ -2352,7 +2085,6 @@
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -2375,17 +2107,12 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## practices.ux.model.drawio
 ### Public Seam
 #### DrawioUxMap
 
 ### Dependencies
  - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
  - `harness.knowledge_graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
@@ -2393,7 +2120,6 @@
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
  - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
  - `practices.ux.model.html` — moduleDependsOn
@@ -2405,10 +2131,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.ux.model.html
 ### Public Seam
@@ -2425,7 +2147,6 @@
  - `practices.clean_engineering.model` — moduleDependsOn
  - `practices.clean_engineering.model.drawio` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
  - `practices.ux.model.drawio` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
@@ -2436,16 +2157,11 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## practices.ux.model.json
 ### Public Seam
 #### JsonUxMap
 
 ### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
@@ -2460,10 +2176,6 @@
  - `tools.workflow` — moduleDependsOn
  - `tools.workspace` — moduleDependsOn
 ---
-
-### Constraint
-
-*(none in the graph)*
 
 ## practices.ux.model.markdown
 ### Public Seam
@@ -2485,19 +2197,5 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-### Constraint
-
-*(none in the graph)*
-
 ## practices.ux.story-demo.play-dual-runner
-### Public Seam
-
-*(no public classes in the graph)*
-
-### Dependencies
- - *(none in the graph)*
 ---
-
-### Constraint
-
-*(none in the graph)*

@@ -259,8 +259,6 @@
 "practices/stories","StoryContext"
 "practices/stories","NodeSnapshot"
 "practices/stories","ChangeKind"
-"practices/stories","StoryNodeTransformer"
-"practices/stories","StoryExampleCollector"
 "practices/stories","TypeScriptTree"
 "practices/stories","JavaTree"
 "practices/stories","Change"
