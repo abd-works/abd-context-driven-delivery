@@ -41,6 +41,17 @@ class CleanEngineering(PracticeGuidance):
         if self.drawio is not None:
             self.drawio.mode = "tool"
 
+    @property
+    def model(self):
+        from practices.clean_engineering.model.transformation.clean_engineering_transformer import (
+            CleanEngineeringTransformer,
+        )
+
+        class CleanEngineeringPracticeModel:
+            transformer = CleanEngineeringTransformer
+
+        return CleanEngineeringPracticeModel()
+
     @agent_instructions
     def generate_output(self) -> str:
         """Write the fidelity artifact under the session.

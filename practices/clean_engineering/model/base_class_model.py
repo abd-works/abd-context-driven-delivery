@@ -332,6 +332,7 @@ class Module(OoadNode):
         self.constraint = constraint
         self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
+        self.modules: List["Module"] = []
         self.classes: List[OoadClass] = []
 
     def as_record(self) -> dict:
@@ -364,6 +365,9 @@ class Module(OoadNode):
         self.seam_terms = list(source.seam_terms)
         self.dependencies = list(source.dependencies)
 
+    def load_module(self, source: "Module") -> "Module":
+        return Module(name=source.name, sequential_order=source.sequential_order)
+
     def load_class(self, source: OoadClass) -> OoadClass:
         return OoadClass(name=source.name, sequential_order=source.sequential_order)
 
@@ -371,10 +375,15 @@ class Module(OoadNode):
         assert isinstance(source, Module)
         return [
             ChildCollectionPair(
+                self_children=self.modules,
+                source_children=source.modules,
+                load=self.load_module,
+            ),
+            ChildCollectionPair(
                 self_children=self.classes,
                 source_children=source.classes,
                 load=self.load_class,
-            )
+            ),
         ]
 
 

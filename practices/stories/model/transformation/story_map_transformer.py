@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from jinja2 import Environment
 
 from harness.transformers.transformer import Transformer
@@ -26,6 +28,8 @@ _SKIP_PREFIXES = ("given ", "when ", "then ", "and ", "but ")
 
 
 class StoryMapTransformer(SourceStoryMap, Transformer):
+    logical_template_root = Path(__file__).resolve().parent / "logical" / "python"
+
     @classmethod
     def load(cls, sketch: str) -> "StoryMapTransformer":
         parsed = MarkdownStoryMap().parse(_stories_outline(sketch))
