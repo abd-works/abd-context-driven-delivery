@@ -13,10 +13,17 @@ for _cat in ("practices", "tools", "actions"):
 from expects import contain, expect
 from mamba import before, context, description, it
 
+from harness.agent_tools.agent_tools import AgentInstructions
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
 from validate.validate import Validate
+
+
+def _expanded_validate(action, arguments):
+    return AgentInstructions.for_callable(Validate.validate, action).expand(
+        {}, arguments
+    ).instructions
 
 
 with description("a validate action on practice guidance") as self:
@@ -26,9 +33,15 @@ with description("a validate action on practice guidance") as self:
 
     with context("with no rule passed"):
         with it("should return validate instructions for every rule in one shot"):
-            expect(self.action.validate([self.guidance])).to(contain("sample-rule-one"))
+            prose = _expanded_validate(
+                self.action, {"guidance": [self.guidance]}
+            )
+            expect(prose).to(contain("sample-rule-one"))
 
     with context("with one rule passed"):
         with it("should return validate instructions for that rule only"):
             rule = self.guidance.rules.entries["sample-rule-one"]
-            expect(self.action.validate([self.guidance], rule)).to(contain("sample-rule-one"))
+            prose = _expanded_validate(
+                self.action, {"guidance": [self.guidance], "rule": rule}
+            )
+            expect(prose).to(contain("sample-rule-one"))

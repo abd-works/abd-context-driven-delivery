@@ -19,6 +19,7 @@ from expects import contain, equal, expect
 from mamba import before, context, description, it
 
 from actions.render.render import Render
+from harness.agent_tools.agent_tools import AgentInstructions
 from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
@@ -140,7 +141,12 @@ with description("a practice"):
                 self.practice = Bdd(fidelity="behavior")
 
             with it("should include that companion's instructions"):
-                expect(self.practice.guidance).to(contain("Design the object model"))
+                prose = "\n".join(
+                    AgentInstructions.for_callable(
+                        type(self.practice).guidance, self.practice
+                    ).prompt
+                )
+                expect(prose).to(contain("Design the object model"))
 
             with it("should include that companion's instructions on the fidelity"):
                 expect(self.practice.fidelities["behavior"].instructions).to(
@@ -152,7 +158,12 @@ with description("a practice"):
                 self.practice = CleanEngineering(fidelity="model")
 
             with it("should not include Clean Engineering instructions"):
-                expect(self.practice.guidance).not_to(contain("Behavior-driven development"))
+                prose = "\n".join(
+                    AgentInstructions.for_callable(
+                        type(self.practice).guidance, self.practice
+                    ).prompt
+                )
+                expect(prose).not_to(contain("Behavior-driven development"))
 
     with context("that has been asked to render"):
         with context("with no format folders"):
