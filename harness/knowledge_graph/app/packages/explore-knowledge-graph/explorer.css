@@ -585,7 +585,7 @@ ul.tree ul {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: var(--space-sm);
-  padding-bottom: calc(var(--space-sm) + 1.75rem);
+  padding-bottom: calc(var(--space-sm) + 2.5rem);
   margin-bottom: var(--space-sm);
   background: var(--raised);
 }
@@ -636,10 +636,17 @@ ul.tree ul {
   cursor: pointer;
 }
 
-.rule-card .copy-prompt {
+.rule-card .copy-prompt-actions {
   position: absolute;
   right: var(--space-sm);
   bottom: var(--space-sm);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2xs);
+}
+
+.rule-card .copy-prompt {
   padding: 0.15rem 0.45rem;
 }
 

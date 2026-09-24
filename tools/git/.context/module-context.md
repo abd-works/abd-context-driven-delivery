@@ -44,11 +44,11 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `GH_PROJECT_SCOPES_HINT` — `gh auth refresh -h github.com -s read:project,project` when board API calls fail
 - `Ticket.set_status(state)` / `Ticket.parse_number(ref)` / `Ticket.github_ref(...)` / `Ticket.close()`
 - `Ticket.add_label(name)` / `Ticket.add_theme(theme)` / `issue_theme_label(theme)` — issue-sidebar `theme:<slug>` (filter/group; not a Status column)
-- `Ticket.set_type(name)` — apply an org issue Type name (WorkTicket owns defect / small change / feature mapping)
+- `Ticket.write_type(name)` — apply an org issue Type name (WorkTicket owns defect / small change / feature mapping)
 - `Repo.list_issue_types()` / `Repo.ensure_issue_type(name, description=, color=)` — org issue types for the repo owner
 - `Ticket` — `number`, `title`, `body`, `url`, `state`, `issue_type`, `labels`, open `data` map
 - `TicketState` — column name (`Backlog`, `In Progress`, `Done`)
-- `resolve_github_status_option(name, options)` — exact GitHub Status match first, then aliases (`Backlog` ↔ `Todo`)
+- `Project.github_status_option(state_name, option_names)` / `Project.github_theme_option(theme, option_names)` — exact GitHub field match first, then Status aliases (`Backlog` ↔ `Todo`)
 - `Repo.ticket(ref)` / `Repo.create_ticket(title, body)`
 - `Repo.workflow_commit_message(subject, issue_number, workflow_state, reviewed_by=...)`
 - Flat legacy surface on `Repo` for workspace: `checkout_or_create`, `commit`, `push`,

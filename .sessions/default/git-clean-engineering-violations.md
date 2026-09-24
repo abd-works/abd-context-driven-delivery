@@ -1,0 +1,40 @@
+# Clean Engineering violations — `tools/git/git.py`
+
+Process: fix each remaining item, check it off when done. Ignore items already marked fixed.
+
+- [x] Branch.assign_cli_agent — put-logic-on-the-owning-resource (`binding`)
+- [x] Project._edit_single_select — hide-inner-details (`_gh`)
+- [x] Project._edit_single_select — limit-operation-parameters (3)
+- [x] Project._ensure_item_id — put-logic-on-the-owning-resource (`ticket`)
+- [x] Project._ensure_item_id — hide-inner-details (`_gh`)
+- [x] Project._ensure_text_field — hide-inner-details (`_gh`)
+- [x] Project._item_id — hide-inner-details (`_gh`)
+- [x] Project._memory_ticket_rows — hide-inner-details (`_tickets`)
+- [x] Project._project_id — hide-inner-details (`_gh`)
+- [x] Project.archive_ticket — hide-inner-details (`_memory`)
+- [x] Project.link_repository — hide-inner-details (`_memory`)
+- [x] Project.write_text_field — hide-inner-details (`_memory`)
+- [x] Project.write_ticket_status — put-logic-on-the-owning-resource (`ticket`)
+- [x] Project.write_ticket_theme — put-logic-on-the-owning-resource (`ticket`)
+- [x] Repo._flush_worktree — limit-operation-parameters (3)
+- [x] Repo.create_ticket — limit-operation-parameters (7 / Workflow.create_ticket)
+- [x] Repo.ticket — hide-inner-details (`_repo`)
+- [x] Repo.ticket — keep-operations-small-focused (25 statements)
+- [x] Repo.write_cli_agent_tag — put-logic-on-the-owning-resource (`binding`)
+- [x] Ticket.set_type — use-property-not-accessor
+- [x] Ticket.add_child — hide-inner-details (`_memory`)
+- [x] Ticket.add_label — hide-inner-details (`_memory`)
+- [x] Ticket.close — hide-inner-details (`_memory`)
+- [x] Ticket.close — keep-operations-small-focused (WorkSession.close)
+- [x] Ticket.close — never-swallow-exceptions (WorkSession.close)
+- [x] Ticket.comment — hide-inner-details (`_memory`)
+- [x] Ticket.remove_label — hide-inner-details (`_memory`)
+- [x] Ticket.set_status — hide-inner-details (`_memory`)
+- [x] Ticket.update — hide-inner-details (`_memory`)
+- [x] Ticket.write_project_theme — hide-inner-details (`_memory`)
+- [x] TicketState.backlog — hide-inner-details (`_render_handoff_markdown`)
+- [x] TicketState.backlog — limit-operation-parameters (6 / Workflow.backlog)
+- [x] resolve_github_status_option — prefer-class-operations
+- [x] resolve_github_status_option — avoid-vague-parameter-names (`options`)
+- [x] resolve_github_theme_option — prefer-class-operations
+- [x] resolve_github_theme_option — avoid-vague-parameter-names (`options`)

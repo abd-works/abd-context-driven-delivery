@@ -5,6 +5,12 @@ class Cart:
     def size(self):
         return len(self._items)
 
+    def cached_size(self):
+        return type(self)._items
+
+    def class_size(self):
+        return self.__class__._items
+
     class _Tally:
         def __init__(self, host: "Cart"):
             self._host = host

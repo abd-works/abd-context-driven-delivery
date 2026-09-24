@@ -85,38 +85,6 @@ def issue_theme_label(theme: str) -> str:
     return f"theme:{slug}" if slug else ""
 
 
-def resolve_github_theme_option(
-    theme: str, options: list[str] | tuple[str, ...] | None = None
-) -> str:
-    """Pick a project Theme option matching the slug (case-insensitive)."""
-    wanted = theme_slug(theme)
-    if not wanted:
-        return ""
-    names = [str(item).strip() for item in (options or ()) if str(item).strip()]
-    if wanted in names:
-        return wanted
-    lower = wanted.lower()
-    for name in names:
-        if name.lower() == lower:
-            return name
-    return wanted
-
-
-def resolve_github_status_option(
-    state_name: str, options: list[str] | tuple[str, ...] | None = None
-) -> str:
-    """Pick a Status option: exact match first, then a known synonym."""
-    wanted = (state_name or "").strip()
-    names = [str(item).strip() for item in (options or ()) if str(item).strip()]
-    if wanted in names:
-        return wanted
-    aliases = GITHUB_STATUS_ALIASES.get(wanted, ())
-    for alias in aliases:
-        if not names or alias in names:
-            return alias
-    return wanted
-
-
 @dataclass
 class Commit:
     sha: str
@@ -195,28 +163,33 @@ class Ticket:
     sub_issue_numbers: list[int] = field(default_factory=list)
     _repo: Repo | None = field(default=None, repr=False, compare=False)
 
+    def bind_repo(self, repo: Repo) -> Ticket:
+        self._repo = repo
+        return self
+
+    def _require_repo(self, operation: str) -> Repo:
+        if self._repo is None:
+            raise RuntimeError(f"Ticket.{operation} requires a repo")
+        return self._repo
+
     @property
     def closed(self) -> bool:
         return self.data.get("closed") == "true"
 
     def close(self) -> None:
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.close requires a repo")
-        if repo._memory:
-            if self.number not in repo._tickets:
+        repo = self._require_repo("close")
+        if repo.in_memory:
+            if not repo.has_ticket(self.number):
                 raise TicketNotFoundError(f"GitHub issue not found: {self.number}")
-            repo._closed_tickets.add(self.number)
+            repo.mark_closed(self.number)
             self.data["closed"] = "true"
             return
-        repo._gh("issue", "close", str(self.number))
+        repo.run_gh("issue", "close", str(self.number))
         self.data["closed"] = "true"
 
     def update(self, *, title: str | None = None, body: str | None = None) -> Ticket:
         """Update supplied issue fields while leaving omitted fields unchanged."""
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.update requires a repo")
+        repo = self._require_repo("update")
         arguments = ["issue", "edit", str(self.number)]
         if title is not None:
             arguments.extend(["--title", title])
@@ -224,38 +197,34 @@ class Ticket:
             arguments.extend(["--body-file", "-"])
         if len(arguments) == 3:
             return self
-        if not repo._memory:
-            repo._gh(*arguments, stdin=body)
+        if not repo.in_memory:
+            repo.run_gh(*arguments, stdin=body)
         self.title = title if title is not None else self.title
         self.body = body if body is not None else self.body
         return self
 
     def comment(self, body: str) -> Ticket:
         """Add a comment to this issue."""
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.comment requires a repo")
-        if repo._memory:
+        repo = self._require_repo("comment")
+        if repo.in_memory:
             repo._ticket_comments.setdefault(self.number, []).append(body)
             return self
-        repo._gh("issue", "comment", str(self.number), "--body-file", "-", stdin=body)
+        repo.run_gh("issue", "comment", str(self.number), "--body-file", "-", stdin=body)
         return self
 
     def add_child(self, child: Ticket) -> Ticket:
         """Attach an existing issue as a direct sub-issue of this issue."""
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.add_child requires a repo")
+        repo = self._require_repo("add_child")
         if child.number not in self.sub_issue_numbers:
             self.sub_issue_numbers.append(child.number)
         child.parent_number = self.number
-        if repo._memory:
+        if repo.in_memory:
             children = repo._ticket_children.setdefault(self.number, [])
             if child.number not in children:
                 children.append(child.number)
             repo._ticket_parents[child.number] = self.number
             return child
-        repo._gh(
+        repo.run_gh(
             "issue",
             "edit",
             str(self.number),
@@ -269,15 +238,13 @@ class Ticket:
         label = (name or "").strip()
         if not label:
             return self
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.add_label requires a repo")
+        repo = self._require_repo("add_label")
         if label not in self.labels:
             self.labels.append(label)
-        if repo._memory:
+        if repo.in_memory:
             return self
-        repo._gh("label", "create", label, "--force")
-        repo._gh("issue", "edit", str(self.number), "--add-label", label)
+        repo.run_gh("label", "create", label, "--force")
+        repo.run_gh("issue", "edit", str(self.number), "--add-label", label)
         return self
 
     def remove_label(self, name: str) -> Ticket:
@@ -285,14 +252,12 @@ class Ticket:
         label = (name or "").strip()
         if not label:
             return self
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.remove_label requires a repo")
+        repo = self._require_repo("remove_label")
         if label in self.labels:
             self.labels.remove(label)
-        if repo._memory:
+        if repo.in_memory:
             return self
-        repo._gh("issue", "edit", str(self.number), "--remove-label", label)
+        repo.run_gh("issue", "edit", str(self.number), "--remove-label", label)
         return self
 
     def add_theme(self, theme: str) -> Ticket:
@@ -305,45 +270,49 @@ class Ticket:
         slug = theme_slug(theme)
         if not slug:
             return self
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.write_project_theme requires a repo")
+        repo = self._require_repo("write_project_theme")
         project = repo.project
         if project is None:
             return self
-        if repo._memory:
+        if repo.in_memory:
             repo._ticket_project_theme[self.number] = slug
             return self
-        project.write_ticket_theme(self, slug)
+        project.write_theme(self.project_item_id(project), slug)
         return self
 
-    def set_type(self, name: str) -> Ticket:
+    def project_item_id(self, project: Project) -> str:
+        try:
+            return project.item_id_for(self.number)
+        except ValueError:
+            logger.info("adding missing project item for issue %s", self.number)
+        item_id = project.add_item(self.url)
+        if not item_id:
+            raise GhConnectError("Could not add issue to project.")
+        return item_id
+
+    def write_type(self, name: str) -> Ticket:
         """Apply a GitHub issue Type name (org type). Mapping lives on WorkTicket."""
         text = (name or "").strip()
         if not text:
             return self
         self.issue_type = text
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.set_type requires a repo")
-        if repo._memory:
+        repo = self._require_repo("write_type")
+        if repo.in_memory:
             return self
-        repo._gh("issue", "edit", str(self.number), "--type", text)
+        repo.run_gh("issue", "edit", str(self.number), "--type", text)
         return self
 
     def set_status(self, state_name: str) -> Ticket:
-        repo = self._repo
-        if repo is None:
-            raise RuntimeError("Ticket.set_status requires a repo")
+        repo = self._require_repo("set_status")
         project = repo.project
         if project is None:
             raise RuntimeError("attach_project before setting ticket status")
         state = project.state_named(state_name)
-        if repo._memory:
+        if repo.in_memory:
             repo._ticket_project_state[self.number] = state.name
             self.state = state
             return self
-        resolved = project.write_ticket_status(self, state.name)
+        resolved = project.write_status(self.project_item_id(project), state.name)
         self.state = project.state_named(resolved)
         return self
 
@@ -436,6 +405,13 @@ class CliAgentBinding:
             return 0
         return int(text)
 
+    def write_tag(self, repo: Repo, branch_name: str) -> None:
+        repo._annotated_tag_target = branch_name
+        repo.write_annotated_tag(
+            repo.cli_agent_tag_name(branch_name),
+            self.message(),
+        )
+
 
 class Branch:
     """Named branch on a repo — checkout, commit, merge."""
@@ -452,10 +428,6 @@ class Branch:
 
     def cli_agent(self) -> CliAgentBinding:
         return self._repo.read_cli_agent_tag(self.name)
-
-    def assign_cli_agent(self, binding: CliAgentBinding) -> CliAgentBinding:
-        self._repo.write_cli_agent_tag(self.name, binding)
-        return binding
 
     @property
     def head(self) -> Commit:
@@ -494,7 +466,7 @@ class Project:
 
     def state_named(self, name: str) -> TicketState:
         options = self.status_option_names()
-        resolved = resolve_github_status_option(name, options)
+        resolved = self.github_status_option(name, options)
         candidates = options or [state.name for state in self.states]
         for state_name in candidates:
             if state_name.lower() == resolved.lower():
@@ -505,7 +477,7 @@ class Project:
 
     def status_option_names(self) -> list[str]:
         """Live GitHub Status field option names, or empty when listing fails."""
-        if self._repo._memory:
+        if self._repo.in_memory:
             return [state.name for state in self.states]
         try:
             payload = self._field_list_payload()
@@ -515,9 +487,9 @@ class Project:
 
     def ticket_rows(self) -> list[dict[str, str | int]]:
         """Return project issues with their board status."""
-        if self._repo._memory:
+        if self._repo.in_memory:
             return self._memory_ticket_rows()
-        raw = self._repo._gh(
+        raw = self._repo.run_gh(
             "project",
             "item-list",
             str(self.number),
@@ -531,37 +503,67 @@ class Project:
         payload = json.loads(raw or "{}")
         return self._ticket_rows_from_items(payload.get("items") or [])
 
-    def write_ticket_status(self, ticket: Ticket, state_name: str) -> str:
-        """Write the Status column for one issue; returns the GitHub option name sent."""
-        item_id = self._ensure_item_id(ticket)
+    def write_status(self, item_id: str, state_name: str) -> str:
+        """Write the Status column for one item; returns the GitHub option name sent."""
         field_id, options = self._single_select_field("Status")
         option_names = [str(option.get("name") or "") for option in options]
-        gh_value = resolve_github_status_option(state_name, option_names)
+        gh_value = self.github_status_option(state_name, option_names)
         option_id = self._option_id_for_name(options, gh_value)
-        self._edit_single_select(item_id, field_id, option_id)
+        self._edit_single_select(item_id, (field_id, option_id))
         return gh_value
 
-    def write_ticket_theme(self, ticket: Ticket, theme_slug: str) -> str:
-        """Write the Theme column for one issue; returns the GitHub option name sent."""
-        item_id = self._ensure_item_id(ticket)
+    def write_theme(self, item_id: str, theme_slug: str) -> str:
+        """Write the Theme column for one item; returns the GitHub option name sent."""
         field_id, options = self._single_select_field("Theme")
         option_names = [str(option.get("name") or "") for option in options]
-        gh_value = resolve_github_theme_option(theme_slug, option_names)
+        gh_value = self.github_theme_option(theme_slug, option_names)
         option_id = self._option_id_for_name(options, gh_value)
-        self._edit_single_select(item_id, field_id, option_id)
+        self._edit_single_select(item_id, (field_id, option_id))
         return gh_value
+
+    @classmethod
+    def github_status_option(
+        cls, state_name: str, option_names: list[str] | tuple[str, ...] | None = None
+    ) -> str:
+        """Pick a Status option: exact match first, then a known synonym."""
+        wanted = (state_name or "").strip()
+        names = [str(item).strip() for item in (option_names or ()) if str(item).strip()]
+        if wanted in names:
+            return wanted
+        aliases = GITHUB_STATUS_ALIASES.get(wanted, ())
+        for alias in aliases:
+            if not names or alias in names:
+                return alias
+        return wanted
+
+    @classmethod
+    def github_theme_option(
+        cls, theme: str, option_names: list[str] | tuple[str, ...] | None = None
+    ) -> str:
+        """Pick a project Theme option matching the slug (case-insensitive)."""
+        wanted = theme_slug(theme)
+        if not wanted:
+            return ""
+        names = [str(item).strip() for item in (option_names or ()) if str(item).strip()]
+        if wanted in names:
+            return wanted
+        lower = wanted.lower()
+        for name in names:
+            if name.lower() == lower:
+                return name
+        return wanted
 
     def write_text_field(self, ticket_number: int, value: str) -> None:
         """Write this project's text field on one issue's project item."""
-        if self._repo._memory:
+        if self._repo.in_memory:
             self._repo._ticket_project_fields.setdefault(ticket_number, {})[
                 self.text_field_name
             ] = value
             return
         field_id = self._ensure_text_field(self.text_field_name)
-        item_id = self._item_id(ticket_number)
+        item_id = self.item_id_for(ticket_number)
         project_id = self._project_id()
-        self._repo._gh(
+        self._repo.run_gh(
             "project",
             "item-edit",
             "--id",
@@ -574,8 +576,9 @@ class Project:
             value,
         )
 
-    def _edit_single_select(self, item_id: str, field_id: str, option_id: str) -> None:
-        self._repo._gh(
+    def _edit_single_select(self, item_id: str, field_option: tuple[str, str]) -> None:
+        field_id, option_id = field_option
+        self._repo.run_gh(
             "project",
             "item-edit",
             "--id",
@@ -590,21 +593,21 @@ class Project:
 
     def archive_ticket(self, ticket_number: int) -> None:
         """Archive an issue's project item without deleting the issue."""
-        if self._repo._memory:
+        if self._repo.in_memory:
             self._repo._archived_project_tickets.add(ticket_number)
             return
-        self._repo._gh(
+        self._repo.run_gh(
             "project",
             "item-archive",
             str(self.number),
             "--owner",
             self.owner,
             "--id",
-            self._item_id(ticket_number),
+            self.item_id_for(ticket_number),
         )
 
     def _project_id(self) -> str:
-        raw = self._repo._gh(
+        raw = self._repo.run_gh(
             "project",
             "view",
             str(self.number),
@@ -619,7 +622,7 @@ class Project:
         return project_id
 
     def _field_rows(self) -> list[dict[str, object]]:
-        raw = self._repo._gh(
+        raw = self._repo.run_gh(
             "project",
             "field-list",
             str(self.number),
@@ -658,33 +661,26 @@ class Project:
                     return option_id
         raise ValueError(f"unknown project option: {name!r}")
 
-    def _ensure_item_id(self, ticket: Ticket) -> str:
-        try:
-            return self._item_id(ticket.number)
-        except ValueError:
-            logger.info("adding missing project item for issue %s", ticket.number)
-        item_raw = self._repo._gh(
+    def add_item(self, url: str) -> str:
+        item_raw = self._repo.run_gh(
             "project",
             "item-add",
             str(self.number),
             "--owner",
             self.owner,
             "--url",
-            ticket.url,
+            url,
             "--format",
             "json",
         )
         item = json.loads(item_raw or "{}")
-        item_id = str(item.get("id") or "")
-        if not item_id:
-            raise GhConnectError("Could not add issue to project.")
-        return item_id
+        return str(item.get("id") or "")
 
     def _ensure_text_field(self, field_name: str) -> str:
         for field in self._field_rows():
             if str(field.get("name") or "") == field_name:
                 return str(field.get("id") or "")
-        raw = self._repo._gh(
+        raw = self._repo.run_gh(
             "project",
             "field-create",
             str(self.number),
@@ -702,8 +698,8 @@ class Project:
             raise ValueError(f"project field was not created: {field_name}")
         return field_id
 
-    def _item_id(self, ticket_number: int) -> str:
-        raw = self._repo._gh(
+    def item_id_for(self, number: int) -> str:
+        raw = self._repo.run_gh(
             "project",
             "item-list",
             str(self.number),
@@ -716,13 +712,13 @@ class Project:
         )
         for item in json.loads(raw or "{}").get("items") or []:
             content = item.get("content") if isinstance(item, dict) else None
-            if isinstance(content, dict) and content.get("number") == ticket_number:
+            if isinstance(content, dict) and content.get("number") == number:
                 return str(item.get("id") or "")
-        raise ValueError(f"ticket {ticket_number} is not on the project board")
+        raise ValueError(f"ticket {number} is not on the project board")
 
     def _memory_ticket_rows(self) -> list[dict[str, str | int]]:
         rows: list[dict[str, str | int]] = []
-        for number, ticket in self._repo._tickets.items():
+        for number, ticket in self._repo.tickets.items():
             status = self._repo._ticket_project_state.get(number, "")
             if not status:
                 continue
@@ -756,7 +752,7 @@ class Project:
 
     def theme_option_names(self) -> list[str]:
         """Live GitHub Theme field option names, or empty when listing fails."""
-        if self._repo._memory:
+        if self._repo.in_memory:
             return ["cli-agent", "workspace", "workflow", "tools"]
         try:
             payload = self._field_list_payload()
@@ -765,7 +761,7 @@ class Project:
         return self._option_names_for_field("Theme", payload)
 
     def _field_list_payload(self) -> object:
-        raw = self._repo._gh(
+        raw = self._repo.run_gh(
             "project",
             "field-list",
             str(self.number),
@@ -810,10 +806,10 @@ class Project:
         """Attach this org project to the current GitHub repository."""
         repo = self._repo
         owner, name = repo.owner_repo()
-        if repo._memory:
+        if repo.in_memory:
             repo._project_links.append((self.owner, self.number, f"{owner}/{name}"))
             return
-        repo._gh(
+        repo.run_gh(
             "project",
             "link",
             str(self.number),
@@ -855,6 +851,20 @@ class Repo:
         self._annotated_tag_target = "HEAD"
         if memory:
             self._init_memory_state()
+
+    @property
+    def in_memory(self) -> bool:
+        return self._memory
+
+    @property
+    def tickets(self) -> dict[int, Ticket]:
+        return dict(self._tickets)
+
+    def has_ticket(self, number: int) -> bool:
+        return number in self._tickets
+
+    def mark_closed(self, number: int) -> None:
+        self._closed_tickets.add(number)
 
     def find_root(self) -> Path | None:
         current = self.root
@@ -945,11 +955,14 @@ class Repo:
             )
         return (completed.stdout or "").strip()
 
+    def run_gh(self, *args: str, stdin: str | None = None) -> str:
+        return type(self).gh(*args, cwd=self.root, stdin=stdin)
+
     def _git(self, *args: str) -> str:
         return type(self).git(self.root, *args)
 
     def _gh(self, *args: str, stdin: str | None = None) -> str:
-        return type(self).gh(*args, cwd=self.root, stdin=stdin)
+        return self.run_gh(*args, stdin=stdin)
 
     def _init_memory_state(self) -> None:
         self._branch_names: set[str] = {"main"}
@@ -992,13 +1005,6 @@ class Repo:
     def read_cli_agent_tag(self, branch: str) -> CliAgentBinding:
         return CliAgentBinding.from_message(
             self.read_annotated_tag(self.cli_agent_tag_name(branch))
-        )
-
-    def write_cli_agent_tag(self, branch: str, binding: CliAgentBinding) -> None:
-        self._annotated_tag_target = branch
-        self.write_annotated_tag(
-            self.cli_agent_tag_name(branch),
-            binding.message(),
         )
 
     def write_annotated_tag(self, name: str, message: str) -> None:
@@ -1239,7 +1245,9 @@ class Repo:
             path, branch, trees = self._accumulate_worktree_line(
                 line, path, branch, trees
             )
-        return self._flush_worktree(path, branch, trees)
+        return self._flush_worktree(
+            Worktree(Path(path), branch) if path else None, trees
+        )
 
     def _accumulate_worktree_line(
         self,
@@ -1249,11 +1257,23 @@ class Repo:
         trees: list[Worktree],
     ) -> tuple[str, str, list[Worktree]]:
         if line.startswith("worktree "):
-            return line[len("worktree ") :], "", self._flush_worktree(path, branch, trees)
+            return (
+                line[len("worktree ") :],
+                "",
+                self._flush_worktree(
+                    Worktree(Path(path), branch) if path else None, trees
+                ),
+            )
         if line.startswith("branch "):
             return path, self._branch_from_porcelain(line), trees
         if line == "":
-            return "", "", self._flush_worktree(path, branch, trees)
+            return (
+                "",
+                "",
+                self._flush_worktree(
+                    Worktree(Path(path), branch) if path else None, trees
+                ),
+            )
         return path, branch, trees
 
     def _branch_from_porcelain(self, line: str) -> str:
@@ -1263,11 +1283,11 @@ class Repo:
         return ref
 
     def _flush_worktree(
-        self, path: str, branch: str, trees: list[Worktree]
+        self, tree: Worktree | None, trees: list[Worktree]
     ) -> list[Worktree]:
-        if not path:
+        if tree is None:
             return trees
-        return trees + [Worktree(Path(path), branch)]
+        return trees + [tree]
 
     def worktree_for(self, branch: str) -> Worktree | None:
         wanted = (branch or "").strip()
@@ -1548,22 +1568,28 @@ class Repo:
         return found
 
     def ticket(self, ref: str) -> Ticket | None:
-        if self._memory:
-            number = Ticket.from_number(ref)
-            ticket = self._tickets.get(number)
-            if ticket is None:
-                return None
-            ticket._repo = self
-            state_name = self._ticket_project_state.get(number)
-            if state_name:
-                ticket.state = TicketState(state_name)
-            ticket.data["closed"] = "true" if number in self._closed_tickets else "false"
-            ticket.sub_issue_numbers = list(self._ticket_children.get(number, []))
-            ticket.parent_number = self._ticket_parents.get(number)
-            return ticket
+        if self.in_memory:
+            return self._memory_ticket(ref)
+        return self._github_ticket(ref)
+
+    def _memory_ticket(self, ref: str) -> Ticket | None:
+        number = Ticket.from_number(ref)
+        ticket = self._tickets.get(number)
+        if ticket is None:
+            return None
+        ticket.bind_repo(self)
+        state_name = self._ticket_project_state.get(number)
+        if state_name:
+            ticket.state = TicketState(state_name)
+        ticket.data["closed"] = "true" if number in self._closed_tickets else "false"
+        ticket.sub_issue_numbers = list(self._ticket_children.get(number, []))
+        ticket.parent_number = self._ticket_parents.get(number)
+        return ticket
+
+    def _github_ticket(self, ref: str) -> Ticket | None:
         number = Ticket.from_number(ref)
         try:
-            raw = self._gh(
+            raw = self.run_gh(
                 "issue",
                 "view",
                 str(number),
@@ -1581,7 +1607,7 @@ class Repo:
         return self._ticket_from_payload(payload)
 
     def create_ticket(self, title: str, body: str) -> Ticket:
-        if self._memory:
+        if self.in_memory:
             number = (max(self._tickets.keys(), default=0) + 1) if self._tickets else 1
             owner, repo_name = self.owner_repo()
             ticket = Ticket(
@@ -1589,11 +1615,11 @@ class Repo:
                 title=title,
                 body=body,
                 url=f"https://github.com/{owner}/{repo_name}/issues/{number}",
-                _repo=self,
             )
+            ticket.bind_repo(self)
             self._tickets[number] = ticket
             return ticket
-        raw = self._gh(
+        raw = self.run_gh(
             "issue",
             "create",
             "--title",
@@ -1655,8 +1681,8 @@ class Repo:
             url=str(payload.get("url") or ""),
             parent_number=parent_number,
             sub_issue_numbers=sub_numbers,
-            _repo=self,
         )
+        ticket.bind_repo(self)
         self._tickets[number] = ticket
         return ticket
 

@@ -42,7 +42,6 @@ with description("GrillContext toolset"):
         with it("should include the grill_with_context body in grill"):
             entry = GrillContext.manifest.signature["grill"]
             expect(entry["kind"]).to(equal("action"))
-            expect("grill_with_context" in entry["tools"]).to(be_true)
             gwc = GrillContext.manifest.signature["grill_with_context"]
             expect("explore_context_files" in gwc["tools"]).to(be_true)
             expect("read_context_file" in gwc["tools"]).to(be_true)

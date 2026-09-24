@@ -278,6 +278,9 @@ class StoryMap(SourceStoryMap, Node):
         kind = entry.get("owner_kind") or ""
         owner = entry.get("owner") or ""
         if kind == "story_map":
+            graph = getattr(self, "_example_graph", None)
+            if graph is not None and graph.story_map is not None:
+                return graph.story_map
             return self
         if kind == "epic":
             return self._example_epics.get(Node().slug(owner))
@@ -306,6 +309,10 @@ class StoryMap(SourceStoryMap, Node):
         return None
 
     def ensure(self, graph: "PracticeGraph", raw: dict) -> None:
+        self._example_epics = getattr(self, "_example_epics", {}) or {}
+        self._example_subs = getattr(self, "_example_subs", {}) or {}
+        self._example_stories = getattr(self, "_example_stories", {}) or {}
+        self._example_graph = graph
         if graph.story_map is None:
             graph.story_map = StoryMap()
             graph.register(graph.story_map)
@@ -343,7 +350,7 @@ class StoryMap(SourceStoryMap, Node):
                 parent = sub
             if Node().slug(entry.get("name") or "") in stories:
                 story = stories[Node().slug(entry.get("name") or "")]
-            elif isinstance(parent, SubEpic):
+            elif hasattr(parent, "load_story"):
                 story = parent.load_story(Story(entry.get("name") or "", len(parent.stories) + 1))
                 story.source = SourceLocation(entry.get("file") or "", int(entry.get("line") or 0))
                 parent.stories.append(story)
@@ -412,12 +419,16 @@ class StoryMap(SourceStoryMap, Node):
         story_map._example_epics = epics
         story_map._example_subs = subs
         story_map._example_stories = stories
-        story_map._example_graph = graph
-        story_map._ensure_examples(raw.get("example_exports") or [])
-        story_map._wire_demonstrated_through(graph, created_steps)
-        Step().wire_calls(graph, raw.get("story_calls") or [])
-        Step().wire_observations(graph, raw.get("story_observations") or [])
-        Example().wire_demonstrates(graph, raw.get("example_exports") or [])
+        self._example_epics = epics
+        self._example_subs = subs
+        self._example_stories = stories
+        self._example_graph = graph
+        self._ensure_examples(raw.get("example_exports") or [])
+        self._wire_demonstrated_through(graph, created_steps)
+        calls = Step("", Phase.GIVEN, 0)
+        calls.wire_calls(graph, raw.get("story_calls") or [])
+        calls.wire_observations(graph, raw.get("story_observations") or [])
+        Example("", 0).wire_demonstrates(graph, raw.get("example_exports") or [])
 
     def _ensure_examples(self, entries: List[dict]) -> None:
         existing = {ex.name.lower(): ex for ex in self._example_graph.nodes_of_type(Example)}
@@ -427,12 +438,16 @@ class StoryMap(SourceStoryMap, Node):
             if example is not None:
                 continue
             owner = self.owner_of_example(entry)
+            if owner is None:
+                owner = self._example_graph.story_map
             self._example_entry = entry
             self._example_name = name
             example = self._new_example(owner)
             self._example_graph.register(example)
             existing[name.lower()] = example
             if owner is not None:
+                if getattr(owner, "_graph", None) is None:
+                    self._example_graph.register(owner)
                 owner.examples.append(example)
                 owner.relate(Kind.SCOPES, example)
 

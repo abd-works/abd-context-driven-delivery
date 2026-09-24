@@ -117,3 +117,19 @@ with description("a shared rules section containing scanner bullets") as self:
         with it("should return every child rule's validate instructions in one shot"):
             text = self.guidance.rules.validate
             expect(text).to(contain("sample-rule-one"))
+
+    with context("with markdown_block read on the rules collection"):
+        with it("should return the original shared rules markdown"):
+            expect(self.guidance.rules.markdown_block).to(contain("sample-rule-one"))
+
+        with it("should return the original fidelity rules markdown for Bdd"):
+            from practices.bdd.bdd import Bdd
+
+            block = Bdd(fidelity="behavior").rules.markdown_block
+            expect(block).to(contain("observable-behavior"))
+            expect(block).to(contain("no-implementation"))
+
+        with it("should not return a graph query"):
+            from practices.bdd.bdd import Bdd
+
+            expect(Bdd(fidelity="behavior").rules.markdown_block).not_to(contain(".ql"))

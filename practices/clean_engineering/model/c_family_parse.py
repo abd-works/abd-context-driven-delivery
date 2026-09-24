@@ -57,7 +57,7 @@ class CFamilyParse:
         self._text = text
         self._narration, self._commented = self._comment_issues(text)
         model = self._model_factory()
-        module = Module(name="", sequential_order=1)
+        module = model.load_module(Module(name="", sequential_order=1))
         self._append_classes(module)
         self._attach_top_level(module)
         if module.classes:
@@ -88,7 +88,9 @@ class CFamilyParse:
             )
             oclass.narration_comment_lines = list(self._narration)
             oclass.commented_code_lines = list(self._commented)
-            oclass.operations = self._methods_from_body(body, match.group(1))
+            oclass.operations = [
+                self._loaded_operation(oclass, filled) for filled in self._methods_from_body(body, match.group(1))
+            ]
             self._prepend_constructors(oclass, body)
             module.classes.append(oclass)
             class_order += 1
@@ -100,7 +102,7 @@ class CFamilyParse:
                 continue
             op = Operation(name="constructor", parameters=self._split_params(ctor.group(1)))
             op.line = self._line_at(self._text, self._body_start + ctor.start())
-            oclass.operations.insert(0, self._operation_from_body(op, ctor_body))
+            oclass.operations.insert(0, self._loaded_operation(oclass, self._operation_from_body(op, ctor_body)))
 
     def _attach_top_level(self, module: Module) -> None:
         top_ops = self._top_level_functions()
@@ -110,10 +112,12 @@ class CFamilyParse:
             holder = self._class_factory(name="_module", sequential_order=1)
             holder.narration_comment_lines = list(self._narration)
             holder.commented_code_lines = list(self._commented)
-            holder.operations = top_ops
+            holder.operations = [self._loaded_operation(holder, op) for op in top_ops]
             module.classes.append(holder)
             return
-        module.classes[0].operations.extend(top_ops)
+        module.classes[0].operations.extend(
+            self._loaded_operation(module.classes[0], op) for op in top_ops
+        )
 
     def _top_level_functions(self) -> list[Operation]:
         ops: list[Operation] = []
@@ -128,6 +132,12 @@ class CFamilyParse:
             op.line = self._line_at(self._text, match.start())
             ops.append(self._operation_from_body(op, body))
         return ops
+
+    def _loaded_operation(self, oclass: OoadClass, operation: Operation) -> Operation:
+        load = getattr(oclass, "load_operation_field", None)
+        if load is None:
+            return operation
+        return load(operation)
 
     def _class_spans(self) -> list[tuple[int, int]]:
         spans: list[tuple[int, int]] = []

@@ -182,9 +182,14 @@ class HookHandler:
         return result.with_description(self.tool.docstring)
 
     def _bound_operation(self, toolset: Any) -> Any:
+        own = getattr(type(toolset), self.operation, None)
+        if callable(own) and getattr(own, "_hook", False):
+            bound_own = getattr(toolset, self.operation, None)
+            if bound_own is not None:
+                return bound_own
         if self.operation == "inject_rules":
             rules = getattr(toolset, "rules", None)
-            bound = getattr(rules, "inject_rules", None)
+            bound = getattr(rules, "inject_rules", None) if rules is not None else None
             if bound is not None:
                 return bound
         return getattr(toolset, self.operation, None) or self.tool.callable

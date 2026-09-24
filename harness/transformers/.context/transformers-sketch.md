@@ -1,6 +1,6 @@
-fidelity: discovery / modules / bounded_context / behavior
-scope: Transformer is the mix-in (like Node). Transformers is the agent toolset (like KnowledgeGraph). model/transformation/ copies model/codeql/ as {Source}Transformer types listed by family. Transformers.transform sketch -> practiceModels[] (family roots and nested transformers). transform logic writes files the pack names. A template pack is an argument to transform logic, not a second type. LERN templates are the first pack.
-status: copy codeql types as TypeTransformer; put KnowledgeGraph agent marks on Transformers only
+fidelity: discovery / modules / behavior
+scope: Transformer is the mix-in (like Node). Transformers is the agent toolset (like KnowledgeGraph). model/transformation/ wraps each codeql type as {Source}Transformer — bind to a logical Jinja template and recurse, not a second iterator. Transformers.transform sketch loads that channel from the sketch then render "logical" on the loaded root. Transformers.transform logic renders a passed pack (LERN first) against filled logic.
+status: wrap codeql types as TypeTransformer; Transformers holds the agent marks; Transformer.render looks up templates
 source: practices/*/model/codeql/codeql_model.py; harness/knowledge_graph/model/graph_node.py Node; harness/knowledge_graph/model/knowledge_graph.py KnowledgeGraph; harness/guidance/rule.py Rule; practices/clean_engineering/specifications/lern_domain_driven/templates
 
 stories:
@@ -59,7 +59,7 @@ practices/
   ddd/
     model
       codeql                       // BoundedContext, Aggregate, Entity, EntityRoot, ValueObject, Repository, DomainEvent, DomainService : Source, Node
-      transformation               // BoundedContextTransformer, AggregateTransformer, EntityTransformer, EntityRootTransformer, ValueObjectTransformer, RepositoryTransformer, DomainEventTransformer, DomainServiceTransformer
+      transformation               // BoundedContextTransformer, AggregateTransformer, EntityTransformer, EntityRootTransformer, ValueObjectTransformer, RepositoryTransformer, DomainEventTransformer, DomainServiceTransformer, SpecificationTransformer, FactoryTransformer
 
 KnowledgeGraph
   refresh_master
@@ -74,39 +74,40 @@ KnowledgeGraph
 
   ----
  Transformer
-      // harness/transformers — mix-in like Node.join; no mcp Skill agent_tool
-      // mixed only onto *Transformer types in model/transformation/, never on canonical model/ types
-      // the node is the data a template binds — name, members, children
-      // *Transformer members are not a toolset — ModuleTransformer does not install mcp
+      children
+      getTemplatesFor kind
+      render kind
+          -> templates = getTemplatesFor kind
+          -> if templates
+              -> for each template
+                  -> template.render this
+          -> else keep rendering
+      // mix-in on *Transformer types in model/transformation/ — not an agent toolset
+      // this practice's tree is enough — signatures come from this sketch, not from related practices
+      // only place that looks up templates that hang on this node
+      // templates call children; child.render kind if that child has templates for kind, else the template keeps rendering
+      // template.render this: this node is the Jinja context
 
   ----
  Transformers
       transform sketch -> practiceModels[]
+          -> Jinja LoadEnvironment
+          -> practices = determinePracticesFrom sketch
+          -> for each practice
+              -> transformerNode = practice.model.transformer.load(sketch)
+              -> transformerNode.render "logical"
       transform logic templates
-          -> templates.render
+          -> start at filled logic node
+          -> for each template
+              -> template.render filled logic node
       // @agent_toolset domain_slug like KnowledgeGraph
-      // both operations: mcp Skill agent_tool — same marks as return_nodes
-      // theme Discover Solution — starts
-      // practiceModels[] family roots when those sections are in the sketch:
-      //   StoryMapTransformer, CleanEngineeringTransformer, DescriptionTransformer, BoundedContextTransformer
-      // nested transformers belong on those roots — not a second bag of “practice models”
-      // theme Specify Solution
-      // must keep names from the sketch
-      // must not invent domain semantics
-      // start at the given node — do not require the whole model
-      // theme Implement Logic
-      // practice templates live in model/transformation/ — like .ql in model/codeql/
-      // OoadClassTransformer operations become domain skeleton with empty bodies
-      // agent fills bodies — must not rename operations from CleanEngineeringTransformer
-      // design error revises the practice sketch then regenerates
-      // theme Implement Tech Stack
-      // transform logic writes the files and folders the pack names
-      // logic is filled domain from CleanEngineeringTransformer, start at the given node
-      // templates are the pack — lern templates create {epicSlug}/, {domainName}.ts, {domainName}-server.ts, {domainName}-client.tsx, {EpicName}View.tsx, tests/
-      // Transformers does not decide those paths — the templates do
-      // theme Implement Tech Stack — ends
-      // templates argument is the pack — like Node.join graph
-      // must not hardcode lern server, client, or view as operations
+      // transform sketch, transform logic: mcp Skill agent_tool — same marks as return_nodes
+      // Jinja LoadEnvironment once
+      // practice.model.transformer.load(sketch): that practice's transformer channel parses the sketch — same seam as markdown/python parse
+      // transform sketch starts render "logical" on that loaded root — getTemplatesFor stays on Transformer
+      // transform logic: LERN pack is the argument — those templates are not on the node, so Transformers renders the pack against the filled node
+      // practiceModels[] is the loaded transformerNode roots
+      // cross-practice joins deferred
 
   ----
  StoryMapTransformer : StoryMap, Transformer
@@ -118,7 +119,7 @@ KnowledgeGraph
       StepTransformer
       ExampleTransformer
       // practices/stories/model/transformation/ — wrap each stories/model/codeql type
-      // these are the transformer objects, not StoryMap / Epic without the suffix
+      // EpicTransformer: folder template; StoryTransformer: language file; ScenarioTransformer BackgroundTransformer StepTransformer ExampleTransformer: no file — story template keeps rendering
       // theme Discover Solution — starts
       // theme Specify Solution
       // markdown python typescript java javascript json drawio miro stay format channels
@@ -133,12 +134,12 @@ KnowledgeGraph
       PropertyTransformer
       ParameterTransformer
       // practices/clean_engineering/model/transformation/ — wrap each clean_engineering/model/codeql type
-      // these are the transformer objects, not CleanEngineeringModel / Module / OoadClass
+      // ModuleTransformer: folder; FileTransformer OoadClassTransformer: language file; OperationTransformer PropertyTransformer ParameterTransformer: no file unless it has a logical template — parent keeps rendering
       // theme Discover Solution — starts
       // theme Implement Logic
       // OoadClassTransformer operations are the domain skeleton
       // theme Implement Tech Stack
-      // filled logic is the start node for transform logic
+      // filled logic is the start node for transform logic — pack argument, not getTemplatesFor
       // theme Implement Tech Stack — ends
 
   ----
@@ -146,6 +147,7 @@ KnowledgeGraph
       ContextTransformer
       ObservationTransformer
       // practices/bdd/model/transformation/ — wrap each bdd/model/codeql type
+      // DescriptionTransformer: language file; ContextTransformer ObservationTransformer: no file — description template keeps rendering
       // theme Discover Solution — starts
       // theme Specify Solution — signatures stay on DescriptionTransformer / ContextTransformer / ObservationTransformer
       // theme Specify Solution — ends
@@ -159,7 +161,15 @@ KnowledgeGraph
       RepositoryTransformer
       DomainEventTransformer
       DomainServiceTransformer
+      SpecificationTransformer
+      FactoryTransformer
       // practices/ddd/model/transformation/ — wrap each ddd/model/codeql type
+      // BoundedContextTransformer: module annotated as bounded context
+      // AggregateTransformer: module folder — not a class named Aggregate
+      // that folder holds the root entity, its entities and value objects, and the repository
+      // DomainEventTransformer DomainServiceTransformer SpecificationTransformer FactoryTransformer optional in that folder
+      // EntityRootTransformer: <<Aggregate Root>> <<Entity>> and identifier; EntityTransformer: <<Entity>> and identifier
+      // RepositoryTransformer: <<Repository>> in the aggregate folder, named for the root — add remove update, search only by identity, plus find by / new / search from the sketch
       // EntityTransformer owns OperationTransformer PropertyTransformer like codeql Entity uses CE members
       // theme Discover Solution — starts
       // theme Specify Solution — building blocks stay on these types
@@ -185,97 +195,273 @@ KnowledgeGraph
       // new architecture rules add predicates or scanners — reuse existing UL rules when they already name the constraint
 
 bdd:
-a story map transformer
-  that comes from a stories sketch
-    it should include an epic transformer
-    it should include a sub epic transformer
-    it should include a story transformer
-    it should include a scenario transformer
-    it should include a background transformer
-    it should include a step transformer
-    it should include an example transformer
-    it should not be an agent tool
-  that has been specified
-    it should keep names from the sketch
-    it should be among the models transform sketch returns
+a sketch
+  that has been transformed
+    with clean engineering
+      it should return a clean engineering transformer
+      it should keep names from the sketch
+    with stories
+      it should return a story map transformer
+    with bdd
+      it should return a description transformer
+    with domain driven design
+      it should return a bounded context transformer
 
-a clean engineering transformer
-  that comes from a clean engineering sketch
-    it should include a module transformer
-    it should include a file transformer
-    it should include a class transformer
-    it should include an operation transformer
-    it should include a property transformer
-    it should include a parameter transformer
-    it should not be an agent tool
-  that has been specified
-    it should keep names from the sketch
-    it should be among the models transform sketch returns
-  that has filled domain logic
-    with lern templates
-      it should run every given template
-      it should write the files and folders those templates name
-      it should keep class operation names across the emitted layers
+shared_examples "story map from the sketch"
+  it should create the epics from the sketch
+  with nested sub epics
+    it should nest the sub epics in those epics
+    with stories
+      it should nest the stories in those sub epics
+      with nested stories
+        it should nest the nested stories in those stories
+      with backgrounds
+        it should nest the backgrounds in those stories
+      with scenarios
+        it should nest the scenarios in those stories
+        with nested scenarios
+          it should nest the nested scenarios in those scenarios
+        with steps
+          it should nest the steps in those scenarios
+        with examples
+          it should nest the examples in those scenarios
+  with stories
+    it should nest the stories in those epics
 
-a description transformer
-  that comes from a bdd sketch
-    it should include a context transformer
-    it should include an observation transformer
-    it should not be an agent tool
-  that has been specified
-    it should be among the models transform sketch returns
+a story map
+  that a story map transformer produced
+    in markdown
+      it_behaves_like "story map from the sketch"
+      it should transform to markdown
+    in python
+      it_behaves_like "story map from the sketch"
+      it should transform to python
+    in typescript
+      it_behaves_like "story map from the sketch"
+      it should transform to typescript
+    in java
+      it_behaves_like "story map from the sketch"
+      it should transform to java
+    in javascript
+      it_behaves_like "story map from the sketch"
+      it should transform to javascript
+    in json
+      it_behaves_like "story map from the sketch"
+      it should transform to json
+    in drawio
+      it_behaves_like "story map from the sketch"
+      it should transform to drawio
+    in miro
+      it_behaves_like "story map from the sketch"
+      it should transform to miro
 
-a bounded context transformer
-  that comes from a ddd sketch
-    it should include an aggregate transformer
-    it should include an entity transformer
-    it should include an entity root transformer
-    it should include a value object transformer
-    it should include a repository transformer
-    it should include a domain event transformer
-    it should include a domain service transformer
-    it should not be an agent tool
-  that has been specified
-    it should be among the models transform sketch returns
+shared_examples "clean engineering model from the sketch"
+  it should create the modules from the sketch
+  with files
+    it should nest the files in those modules
+  with ooad classes
+    it should nest the ooad classes in those modules
+    with operations
+      it should nest the operations in those ooad classes
+      with parameters
+        it should nest the parameters in those operations
+      with return types
+        it should nest the return types in those operations
+      it should leave those operation bodies unimplemented
+    with properties
+      it should nest the properties in those ooad classes
+  with nested modules
+    it should nest the nested modules in those modules
+    with nested modules
+      it should nest the nested modules in those nested modules
+    with ooad classes
+      it should nest the ooad classes in those nested modules
+      with operations
+        it should nest the operations in those ooad classes
+        with parameters
+          it should nest the parameters in those operations
+        with return types
+          it should nest the return types in those operations
+        it should leave those operation bodies unimplemented
+      with properties
+        it should nest the properties in those ooad classes
 
-transformers
-  that an agent can invoke
-    it should transform a sketch into the transformer family roots from that sketch
-    it should transform filled logic with a template pack
-    it should start at the given node
-
-a domain skeleton
+a clean engineering model
   that a clean engineering transformer produced
-    it should leave operation bodies unimplemented
+    in markdown
+      it_behaves_like "clean engineering model from the sketch"
+      it should transform to markdown
+    in python
+      it_behaves_like "clean engineering model from the sketch"
+      it should transform to python
+    in typescript
+      it_behaves_like "clean engineering model from the sketch"
+      it should transform to typescript
+    in java
+      it_behaves_like "clean engineering model from the sketch"
+      it should transform to java
+    in javascript
+      it_behaves_like "clean engineering model from the sketch"
+      it should transform to javascript
+    in json
+      it_behaves_like "clean engineering model from the sketch"
+      it should transform to json
+    in drawio
+      it_behaves_like "clean engineering model from the sketch"
+      it should transform to drawio
+    in miro
+      it_behaves_like "clean engineering model from the sketch"
+      it should transform to miro
   that the agent has filled
-    it should keep the public operations from the class transformer
+    it should keep those ooad class transformer operation names
+  that is a domain sketch
+    it_behaves_like "bounded contexts from the sketch"
 
-lern templates
-  that describe the tech stack
-    it should be runnable when transforming filled logic
+shared_examples "bounded contexts from the sketch"
+  it should create the bounded contexts from the sketch
+  it should express those bounded contexts as modules
+  it should annotate those modules as bounded contexts
+  it should keep the vendor on those bounded contexts
+  with nested bounded contexts
+    it should nest the nested bounded contexts in those bounded contexts
+  with aggregates
+    it should nest the aggregates in those bounded contexts
+    it should express those aggregates as modules
+    with nested aggregates
+      it should nest the nested aggregates in those aggregates
+    with a root entity
+      it should nest the root entity in those aggregate modules
+      it should annotate those classes as aggregate root
+      it should annotate those classes as entity
+      it should tag the unique identifier on those classes
+    with entities
+      it should nest the entities in those aggregate modules
+      it should annotate those classes as entity
+      it should tag the unique identifier on those entities
+      with nested entities
+        it should nest the nested entities in those entities
+    with value objects
+      it should nest the value objects in those aggregate modules
+      it should annotate those classes as value object
+    with repositories
+      it should nest the repositories in those aggregate modules
+      it should annotate those classes as repository
+      it should name those repositories after the aggregate root
+      it should serve only the aggregate root from those repositories
+      it should search those repositories only by identity
+      it should nest add on those repositories
+      it should nest remove on those repositories
+      it should nest update on those repositories
+      with find by criteria from the sketch
+        it should nest those find by operations on those repositories
+      with new from the sketch
+        it should nest those new operations on those repositories
+      with search from the sketch
+        it should nest those search operations on those repositories
+    without an independent lookup
+      it should omit a repository
+    with domain events
+      it should nest the domain events in those aggregate modules
+      it should annotate those classes as domain event
+      it should keep past tense names on those domain events
+      it should nest the consumers from the sketch on those domain events
+    with domain services
+      it should nest the domain services in those aggregate modules
+      it should annotate those classes as domain service
+    with specifications
+      it should nest the specifications in those aggregate modules
+    with factories
+      it should nest the factories in those aggregate modules
+    with emits from the sketch
+      it should nest those events on those aggregates
+    with consumes from the sketch
+      it should nest those events on those aggregates
+    with depends from the sketch
+      it should nest those dependencies on those aggregates
+    with refs from the sketch
+      it should nest those refs by identity on those aggregates
+    with invariants from the sketch
+      it should nest those invariants on those classes
+  with an event map
+    it should keep the event map from the sketch
+  it should classify every named type from the sketch
+
+a bounded context
+  that a bounded context transformer produced
+    in markdown
+      it_behaves_like "bounded contexts from the sketch"
+      it should transform to markdown
+    in python
+      it_behaves_like "bounded contexts from the sketch"
+      it should transform to python
+    in typescript
+      it_behaves_like "bounded contexts from the sketch"
+      it should transform to typescript
+    in java
+      it_behaves_like "bounded contexts from the sketch"
+      it should transform to java
+    in javascript
+      it_behaves_like "bounded contexts from the sketch"
+      it should transform to javascript
+    in json
+      it_behaves_like "bounded contexts from the sketch"
+      it should transform to json
+    in drawio
+      it_behaves_like "bounded contexts from the sketch"
+      it should transform to drawio
+    in miro
+      it_behaves_like "bounded contexts from the sketch"
+      it should transform to miro
+
+shared_examples "description from the sketch"
+  it should create the contexts from the sketch
+  with nested contexts
+    it should nest the nested contexts in those contexts
+    with observations
+      it should nest the observations in those nested contexts
+  with observations
+    it should nest the observations in those contexts
+
+a description
+  that a description transformer produced
+    in markdown
+      it_behaves_like "description from the sketch"
+      it should transform to markdown
+    in python
+      it_behaves_like "description from the sketch"
+      it should transform to python
+    in typescript
+      it_behaves_like "description from the sketch"
+      it should transform to typescript
+    in java
+      it_behaves_like "description from the sketch"
+      it should transform to java
+    in javascript
+      it_behaves_like "description from the sketch"
+      it should transform to javascript
+    in json
+      it_behaves_like "description from the sketch"
+      it should transform to json
+    in drawio
+      it_behaves_like "description from the sketch"
+      it should transform to drawio
+    in miro
+      it_behaves_like "description from the sketch"
+      it should transform to miro
+
+filled domain logic
+  with lern templates
+    that has been transformed
+      it should write the epic slug folder those templates name
+      it should write the domain typescript those templates name
+      it should write the domain server those templates name
+      it should write the domain client those templates name
+      it should write the view those templates name
+      it should write the tests folder those templates name
+      it should keep ooad class transformer operation names across the emitted layers
+
+templates that describe the tech stack
+  that have been written
     it should bind predicates as rules on the specification
 
-ddd:
-Guidance
-  vendor: custom
-  aggregates:
-    PracticeGuidance
-      members:
-        - StoryMapTransformer
-        - CleanEngineeringTransformer
-        - DescriptionTransformer
-        - BoundedContextTransformer
-      refs:
-        - Transformer (by mix-in)
-        - Transformers
-        - LernDomainDriven
-      depends:
-        Guidance:
-          pattern: Shared Kernel
-          crosses: Transformers
-          integrate: Transformers.transform logic templates
-    Rule
-      refs:
-        - LernDomainDriven
-
-~> Increment 1: Mix Transformer onto *Transformer types in model/transformation/ (copy every codeql type in each family); Transformers.transform sketch -> practiceModels[] of those family roots; Transformers.transform logic with LERN templates writes those template paths: Write Clean Engineering Sketch, Scaffold Model, Scaffold Domain Code, Pass Lern Templates, Run Tech Stack Templates, Write Lern Transform Templates, Write Lern Predicates
+~> Increment 1: Mix Transformer onto *Transformer types in model/transformation/; Transformers.transform sketch loads each practice transformer from the sketch and render "logical": Write Stories Sketch, Write Clean Engineering Sketch, Write Bdd Sketch, Write Ddd Sketch, Scaffold Story Map, Scaffold Modules, Scaffold Bounded Context, Scaffold Bdd Behavior

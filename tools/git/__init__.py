@@ -16,7 +16,6 @@ from git.git import (
     TicketState,
     Worktree,
     issue_theme_label,
-    resolve_github_status_option,
 )
 
 NullGitRepo = Repo.memory
@@ -38,5 +37,4 @@ __all__ = [
     "TicketState",
     "Worktree",
     "issue_theme_label",
-    "resolve_github_status_option",
 ]

@@ -27,23 +27,24 @@ fidelity: modules
   its `- **Purpose:**` block — no blank line between them.
 -->
 
-## Language
+## Modules
 
 *{Root}* is {the job a caller hires it for — then what it holds and does.
 This paragraph IS the definition. Identity and purpose. Not a decorator or merge.}
-
-### {Concept}
+### Public Seam
+#### {Concept}
 
 - {why a caller uses this (the outcome), then the mark they type if there is one}
 - {as many bullets as the concept warrants}
 - **Invariant:** {rule that must always hold — only when one exists}
 
-### {AnotherConcept}
+#### {AnotherConcept}
 
 - {why a caller uses this — same shape as any other concept}
 
-Build order: `{first}` → `{second}`
 
+#### {Dependencies}
+ - {what is the dependecy, what kind of dependency is it}
 ---
 
 # {module_path}

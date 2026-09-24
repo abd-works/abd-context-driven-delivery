@@ -10,7 +10,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools",):
+for _cat in ("tools", "practices", "actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -387,6 +387,86 @@ with description("a hook server") as self:
             expect(self.server.diagnose()["exceptions"][0]["tool"]).to(
                 contain("on_stop")
             )
+
+
+with description("inject_rules hook dispatch"):
+
+    with context("that receives a Write payload for a sketch markdown path"):
+
+        with it("should inject BDD bags that glob sketches"):
+            from practices.bdd.bdd import Bdd
+
+            out = _dispatch(
+                {
+                    "hook_event_name": "postToolUse",
+                    "tool_name": "Write",
+                    "tool_input": {
+                        "path": "harness/transformers/.context/transformers-sketch.md"
+                    },
+                },
+                toolsets=[Bdd()],
+            )
+            expect(out.get("additional_context") or "").to(contain("observable-behavior"))
+
+        with it("should inject clean engineering bags that glob sketches"):
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+
+            out = _dispatch(
+                {
+                    "hook_event_name": "postToolUse",
+                    "tool_name": "Write",
+                    "tool_input": {
+                        "path": "harness/transformers/.context/transformers-sketch.md"
+                    },
+                },
+                toolsets=[CleanEngineering()],
+            )
+            expect(out.get("additional_context") or "").to(
+                contain("honor-every-rule-in-the-artifact")
+            )
+
+    with context("that receives a sketch action payload with listed BDD"):
+
+        with it("should inject listed BDD rules without a matching path"):
+            from sketch.sketch import Sketch
+
+            out = _dispatch(
+                {
+                    "hook_event_name": "postToolUse",
+                    "tool_name": "sketch.sketch",
+                    "tool_input": {"guidance": ["practices.bdd.bdd:Bdd"]},
+                },
+                toolsets=[Sketch()],
+            )
+            expect(out.get("additional_context") or "").to(contain("observable-behavior"))
+
+    with context("that receives an action payload on a toolset that also has rules"):
+
+        with it("should keep listed-guidance inject instead of the collection glob"):
+            from types import SimpleNamespace
+
+            from harness.guidance_actions.guidance_actions import GuidanceAction
+            from harness.guidance.fixtures.sample_tool.sample_tool_host import (
+                SampleGuidance,
+            )
+
+            @agent_toolset
+            class _ListedInjectAction(GuidanceAction):
+                @property
+                def rules(self):
+                    return SimpleNamespace(
+                        inject_rules=lambda payload: {"additional_context": "STOLEN"}
+                    )
+
+            out = _dispatch(
+                {
+                    "hook_event_name": "postToolUse",
+                    "tool_name": "_listed_inject_action",
+                    "tool_input": {"guidance": [SampleGuidance(format="markdown")]},
+                },
+                toolsets=[_ListedInjectAction()],
+            )
+            expect(out.get("additional_context") or "").to(contain("sample rule one"))
 
 
 with description("the Cursor hook_server.py command"):

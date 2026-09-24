@@ -24,9 +24,9 @@ from satisfy.satisfy import Satisfy
 from validate.validate import Validate
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "practices" / "clean_engineering"
-_GENERATE_DIR = _REPO_ROOT / "practices" / "actions" / "generate"
-_VALIDATE_DIR = _REPO_ROOT / "practices" / "actions" / "validate"
-_SATISFY_DIR = _REPO_ROOT / "practices" / "actions" / "satisfy"
+_GENERATE_DIR = _REPO_ROOT / "actions" / "generate"
+_VALIDATE_DIR = _REPO_ROOT / "actions" / "validate"
+_SATISFY_DIR = _REPO_ROOT / "actions" / "satisfy"
 _CLEAN_ENGINEERING_TOOLSET = "practices.clean_engineering.clean_engineering:CleanEngineering"
 _VALIDATE_TOOLSET = "validate.validate:Validate"
 _SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
@@ -46,13 +46,18 @@ class CleanEngineeringKit:
         return toolset_cls(fidelity=self.fidelity, format=self.format_name)
 
     def expand(self, instance: AgentToolSet) -> Any:
-        return instance.instructions[self.action_name].expand(self.context, self.arguments)
+        from harness.agent_tools.agent_tools import AgentInstructions
+
+        func = getattr(type(instance), self.action_name)
+        return AgentInstructions.for_callable(func, instance).expand(
+            self.context, self.arguments
+        )
 
     def action_prose(self) -> str:
         return (self.kit_dir / f"{self.action_name}.md").read_text(encoding="utf-8")
 
     def contexts_section(self) -> str:
-        return Markdown.from_label(self.load(), "overview").extract()
+        return self.load().scoped_markdown()
 
     def examples(self) -> str:
         return Markdown.from_label(self.load(), "examples").extract()
@@ -190,7 +195,7 @@ with description("clean_engineering content helpers"):
         with it("should return non-empty text containing the word Contexts"):
             result = CleanEngineeringKit().contexts_section()
             expect(len(result) > 0).to(be_true)
-            expect(result).to(contain("Contexts"))
+            expect(result).to(contain("Overview"))
 
     with context("load_examples"):
         with it("should return non-empty text"):

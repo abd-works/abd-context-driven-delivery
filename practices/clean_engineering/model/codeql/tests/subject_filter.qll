@@ -4,11 +4,11 @@ predicate subjectFilterPrefix(string prefix) { prefix = "" }
 
 predicate firstClassModulePrefix(string prefix) {
   prefix = "deep-module" or
+  prefix = "extensions-live-with-the-domain/domain" or
+  prefix = "extensions-live-with-the-domain/framework" or
   prefix = "language-modules-one-section" or
   prefix = "modules-not-model-blocks" or
-  prefix = "public-seam-only" or
-  prefix = "extensions-live-with-the-domain/framework" or
-  prefix = "extensions-live-with-the-domain/domain"
+  prefix = "public-seam-only"
 }
 
 predicate inSubject(AstNode n) {

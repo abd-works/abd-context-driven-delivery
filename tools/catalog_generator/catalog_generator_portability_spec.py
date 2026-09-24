@@ -16,21 +16,13 @@ for _cat in ("practices", "tools"):
 from expects import be_true, contain, equal, expect
 from mamba import before, description, it
 
-from catalog_generator.catalog_generator import (
-    git_blob_url,
-    git_blob_url_for_callable,
-    normalize_repo_url,
-    resolve_repo_remote,
-    write_page,
-)
+from catalog_generator.catalog_generator import CatalogPage, GitCitation
 
 
 with description("Build Git-URL Source Citation For Every Reference"):
     with description("given the repo's resolved remote URL and ref"):
         with it("renders a code-file citation as {repo_url}/blob/{ref}/{path}"):
-            url = git_blob_url(
-                "https://github.com/org/repo",
-                "abc123",
+            url = GitCitation("https://github.com/org/repo", "abc123").blob_url(
                 _REPO_ROOT / "tools" / "catalog_generator" / "catalog_generator.py",
             )
             expect(url).to(equal("https://github.com/org/repo/blob/abc123/tools/catalog_generator/catalog_generator.py"))
@@ -41,13 +33,15 @@ with description("Build Git-URL Source Citation For Every Reference"):
                 def sample(self) -> None:
                     return None
 
-            url = git_blob_url_for_callable("https://github.com/org/repo", "abc123", SpecFixture().sample)
+            url = GitCitation("https://github.com/org/repo", "abc123").blob_url_for_callable(
+                SpecFixture().sample
+            )
             expect("#L" in url).to(be_true)
             expect(url.startswith("https://github.com/org/repo/blob/abc123/tools/catalog_generator/")).to(be_true)
 
         with it("normalizes an SSH remote and a trailing .git into a plain https URL"):
-            expect(normalize_repo_url("git@github.com:org/repo.git")).to(equal("https://github.com/org/repo"))
-            expect(normalize_repo_url("https://github.com/org/repo.git")).to(equal("https://github.com/org/repo"))
+            expect(GitCitation.normalize("git@github.com:org/repo.git")).to(equal("https://github.com/org/repo"))
+            expect(GitCitation.normalize("https://github.com/org/repo.git")).to(equal("https://github.com/org/repo"))
 
 
 with description("Embed Local Assets And Content Into Generated HTML"):
@@ -56,7 +50,9 @@ with description("Embed Local Assets And Content Into Generated HTML"):
             self.tmp = Path(tempfile.mkdtemp())
 
         with it("writes the literal content into the generated HTML with no runtime fetch"):
-            target = write_page(self.tmp, "actions/repair.html", "<article>literal content here</article>")
+            target = CatalogPage(self.tmp).write(
+                "actions/repair.html", "<article>literal content here</article>"
+            )
             expect(target.is_file()).to(be_true)
             written = target.read_text(encoding="utf-8")
             expect("literal content here" in written).to(be_true)
@@ -67,6 +63,6 @@ with description("Embed Local Assets And Content Into Generated HTML"):
 with description("Regenerate Catalog Via CLI With Default And Override Flags"):
     with description("given the bare command with no flags"):
         with it("resolves repo_url and ref from git remote origin and current HEAD"):
-            repo_url, ref = resolve_repo_remote(_REPO_ROOT)
-            expect(repo_url.startswith("https://")).to(be_true)
-            expect(len(ref)).to(equal(40))
+            citation = GitCitation.from_checkout(_REPO_ROOT)
+            expect(citation.repo_url.startswith("https://")).to(be_true)
+            expect(len(citation.ref)).to(equal(40))

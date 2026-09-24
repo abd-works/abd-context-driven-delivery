@@ -162,7 +162,8 @@ predicate instanceCreationName(string name) {
   name = "getInstance" or
   name = "shared" or
   name = "create" or
-  name.matches("from_%")
+  name.matches("from_%") or
+  name.matches("load_%")
 }
 
 predicate returnsNewOwner(Function f) {
@@ -266,6 +267,40 @@ predicate instanceFieldClass(Class owner, string field, Class typ) {
   )
 }
 
+predicate typeCallFunc(Expr func) {
+  func.(Name).getId() = "type"
+  or
+  func.(Attribute).getName() = "type"
+}
+
+predicate typeOfReceiver(Expr obj, Expr inner) {
+  exists(Call typeCall |
+    obj = typeCall and
+    typeCallFunc(typeCall.getFunc()) and
+    inner = typeCall.getArg(0)
+  )
+  or
+  exists(Attribute classAttr |
+    obj = classAttr and
+    classAttr.getName() = "__class__" and
+    inner = classAttr.getObject()
+  )
+}
+
+predicate ownReceiver(Expr obj, Function f) {
+  exists(Name n |
+    n = obj and
+    n.getScope() = f and
+    (
+      n.getId() = "self" or
+      n.getId() = "cls" or
+      n.getId() = "this"
+    )
+  )
+  or
+  exists(Expr inner | typeOfReceiver(obj, inner) and ownReceiver(inner, f))
+}
+
 predicate exprHasClass(Expr obj, Class typ) {
   exists(Name n | n = obj |
     (
@@ -278,6 +313,8 @@ predicate exprHasClass(Expr obj, Class typ) {
     n.getId() = typ.getName()
   )
   or
+  exists(Expr inner | typeOfReceiver(obj, inner) and exprHasClass(inner, typ))
+  or
   exists(Attribute field, Class owner |
     obj = field and
     exprHasClass(field.getObject(), owner) and
@@ -286,6 +323,8 @@ predicate exprHasClass(Expr obj, Class typ) {
 }
 
 predicate ownPrivateRead(Function f, Attribute attr) {
+  ownReceiver(attr.getObject(), f)
+  or
   exists(Class methodClass, Class objectClass |
     ownerClass(f, methodClass) and
     exprHasClass(attr.getObject(), objectClass) and
@@ -401,11 +440,143 @@ predicate usesSelfField(Function f, Expr e) {
   )
 }
 
-predicate envies(Function f, Parameter p) {
+predicate expressionInOperation(Expr e, Function f) {
+  e.getScope() = f
+  or
+  e.getScope().getEnclosingScope+() = f
+}
+
+predicate inheritsNamedPlus(Class child, Class parent) {
+  inheritsNamed(child, parent)
+  or
+  exists(Class mid |
+    inheritsNamed(child, mid) and
+    inheritsNamedPlus(mid, parent)
+  )
+}
+
+predicate ownerWrapsResource(Class owner, Class resource) {
+  owner = resource
+  or
+  inheritsNamedPlus(owner, resource)
+  or
+  instanceFieldClass(owner, _, resource)
+}
+
+predicate producedClass(Function f, Class produced) {
+  inSource(produced) and
+  exists(Return ret, Call call |
+    ret.getScope() = f and
+    call = ret.getValue() and
+    call.getFunc().(Name).getId() = produced.getName()
+  )
+}
+
+predicate factoryFromResource(Function f, Class resource) {
+  instanceCreationMethod(f)
+  or
+  exists(Class produced |
+    producedClass(f, produced) and
+    (
+      produced = resource
+      or
+      inheritsNamedPlus(produced, resource)
+      or
+      ownerClass(f, produced)
+    )
+  )
+}
+
+predicate typedResourceMemberCount(Function f, Parameter p, int n) {
+  n =
+    count(Attribute attr |
+      expressionInOperation(attr, f) and
+      dataAttribute(attr) and
+      attr.getObject().(Name).getId() = p.getName()
+    )
+}
+
+bindingset[name]
+string nameToken(string name) {
+  result = name.toLowerCase().regexpFind("[a-z][a-z0-9]*", _, _)
+  or
+  result = name.regexpFind("[A-Z][a-z0-9]*", _, _).toLowerCase()
+}
+
+bindingset[left, right]
+predicate sameConcept(string left, string right) {
+  left.length() >= 4 and
+  right.length() >= 4 and
+  (
+    left = right
+    or
+    left.matches(right + "%")
+    or
+    right.matches(left + "%")
+  )
+}
+
+bindingset[name]
+predicate namesResource(string name, Class resource) {
+  exists(string nameTok, string classTok |
+    nameTok = nameToken(name) and
+    classTok = nameToken(resource.getName()) and
+    sameConcept(nameTok, classTok)
+  )
+}
+
+predicate namesTypedResource(Function f, Parameter p, Class resource) {
+  annotatedResource(p, resource) and
+  namesResource(f.getName(), resource)
+}
+
+predicate annotatedResource(Parameter p, Class resource) {
+  annotationClass(p.getAnnotation(), resource)
+}
+
+predicate ownerIgnoresAnnotatedResource(Class owner, Parameter p, Class resource) {
+  annotatedResource(p, resource) and
+  not ownerWrapsResource(owner, resource) and
+  not exists(Class wrapped |
+    annotatedResource(p, wrapped) and
+    ownerWrapsResource(owner, wrapped)
+  )
+}
+
+predicate typedResourceWork(Function f, Parameter p, Class resource) {
+  namesTypedResource(f, p, resource)
+  or
+  exists(int n | typedResourceMemberCount(f, p, n) and n >= 2)
+}
+
+predicate typedResourceEnvy(Function f, Parameter p, Class resource) {
+  f.getName() != "__init__" and
+  not factoryFromResource(f, resource) and
   domainParameter(f, p) and
+  exists(Class owner |
+    ownerClass(f, owner) and
+    ownerIgnoresAnnotatedResource(owner, p, resource)
+  ) and
+  typedResourceWork(f, p, resource)
+}
+
+predicate computationalEnvy(Function f, Parameter p) {
+  domainParameter(f, p) and
+  not passThrough(f) and
+  not exists(Class owner, Class wrapped |
+    ownerClass(f, owner) and
+    annotatedResource(p, wrapped) and
+    ownerWrapsResource(owner, wrapped)
+  ) and
   count(Expr e | usesParameterField(f, p, e) and inComputation(e)) >= 2 and
   count(Expr e | usesParameterField(f, p, e) and inComputation(e)) >=
     count(Expr e | usesSelfField(f, e))
+}
+
+predicate envies(Function f, Parameter p) {
+  computationalEnvy(f, p)
+  or
+  typedResourceEnvy(f, p, _)
 }
 
 predicate untypedPublicParameter(Function f, Parameter p) {

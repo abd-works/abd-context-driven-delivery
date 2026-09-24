@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from expects import equal, expect
-from mamba import context, description, it
+from mamba import before, context, description, it
 
 _HERE = Path(__file__).resolve().parent
 _REPO = Path(__file__).resolve().parents[5]
@@ -16,12 +16,7 @@ sys.path.insert(0, str(_HERE))
 from stereotype_above_class_name_scanner import (  # noqa: E402
     StereotypeAboveClassNameScanner,
 )
-from practices.clean_engineering.model.base_class_model import (  # noqa: E402
-    OoadClass,
-)
-from practices.clean_engineering.model.drawio.drawio_class_model import (  # noqa: E402
-    DrawIOCleanEngineeringModel,
-)
+from practices.clean_engineering.model.drawio.diagram_node import DrawIOClass
 
 _FAULTY = """\
 <mxfile host="test">
@@ -77,10 +72,16 @@ with description("stereotype-above-class-name scanner"):
             expect(violations).to(equal([]))
 
     with context("HTML emitted for a class whose name still carries tactical tags"):
-        with it("should put stereotypes above the bold name"):
-            html = DrawIOCleanEngineeringModel()._build_class_html(
-                OoadClass("Catalog <<Aggregate Root>> <<Entity>>", sequential_order=1)
-            )
-            expect("&lt;&lt;Aggregate Root&gt;&gt;" in html).to(equal(True))
-            expect("<b>Catalog</b>" in html).to(equal(True))
-            expect("<b>Catalog &lt;&lt;Aggregate Root&gt;&gt;" in html).to(equal(False))
+        with before.each:
+            self.html = DrawIOClass(
+                name="Catalog <<Aggregate Root>> <<Entity>>", sequential_order=1
+            ).html()
+
+        with it("should include the Aggregate Root stereotype"):
+            expect("&lt;&lt;Aggregate Root&gt;&gt;" in self.html).to(equal(True))
+
+        with it("should put the class name in its own bold tag"):
+            expect("<b>Catalog</b>" in self.html).to(equal(True))
+
+        with it("should not put stereotypes inside the bold name"):
+            expect("<b>Catalog &lt;&lt;Aggregate Root&gt;&gt;" in self.html).to(equal(False))

@@ -221,7 +221,14 @@ class AgentToolSetOrigin:
 
     @property
     def name(self) -> str:
+        stored = getattr(self, "_name", None)
+        if isinstance(stored, str) and stored:
+            return stored
         return self._slugify_class_name(type(self).__name__)
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
 
     @property
     def slug(self) -> str:
@@ -370,6 +377,8 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
     def _rehost_collection_tools(self, collection: Any, prefix: str) -> dict[str, AgentTool]:
         found: dict[str, AgentTool] = {}
         for name, tool in (getattr(collection, "tools", None) or {}).items():
+            if prefix and name == "inject_rules":
+                continue
             found[f"{prefix}{name}"] = AgentTool(
                 name=name,
                 callable=getattr(tool, "callable", None) or getattr(collection, name),
@@ -521,6 +530,9 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute):
                 if isinstance(arg.func.value, ast.Name) and arg.func.value.id in self._loop_vars:
                     return True
+            if isinstance(arg, ast.Attribute) and isinstance(arg.value, ast.Name):
+                if arg.value.id in self._loop_vars:
+                    return True
             member = self._instructions.self_member_name(arg)
             if member is not None:
                 self._check_member(member)
@@ -604,19 +616,24 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         node: ast.AST,
         roots: frozenset[str] = frozenset({"self"}),
     ) -> tuple[str, str] | None:
-        """Match ``<root>.<provider>().<member>()`` or ``<root>.<provider>.<member>()``."""
-        if not isinstance(node, ast.Call):
+        """Match ``<root>.<provider>().<member>()``, ``<root>.<provider>.<member>()``,
+        or the same chains as a property (no trailing call)."""
+        member, provider_node = self._cross_member_and_provider(node)
+        if member is None:
             return None
-        if not isinstance(node.func, ast.Attribute):
-            return None
-        member = node.func.attr
-        provider_node = node.func.value
         provider_attr = provider_node.func if isinstance(provider_node, ast.Call) else provider_node
         if not isinstance(provider_attr, ast.Attribute):
             return None
         if not isinstance(provider_attr.value, ast.Name) or provider_attr.value.id not in roots:
             return None
         return provider_attr.attr, member
+
+    def _cross_member_and_provider(self, node: ast.AST) -> tuple[str | None, ast.AST | None]:
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            return node.func.attr, node.func.value
+        if isinstance(node, ast.Attribute):
+            return node.attr, node.value
+        return None, None
 
     def _cross_instance_call(self, node: ast.AST) -> tuple[str, str] | None:
         return self.provider_cross_call(node, frozenset({"self"}))
@@ -966,7 +983,9 @@ class AgentInstructions(AgentTool):
         instance: AgentToolSet | None = None,
     ) -> AgentInstructions:
         if instance is not None:
-            return instance.instructions[callable.__name__]
+            if isinstance(callable, property):
+                callable = callable.fget
+            return instance._discover_instruction_members()[callable.__name__]
         return cls(
             name=callable.__name__,
             callable=callable,
@@ -1033,6 +1052,7 @@ class AgentInstructions(AgentTool):
             self._seen_prompt = set()
             self._loop_item_modes = {}
             self._execution_locals = dict(self._scan_arguments or {})
+            self._bind_parameter_defaults()
         self._defining_class = self._scan_defining_class
         self._mode = self._read_mode(self.toolset)
         self._visited = self._check_and_advance_visited(
@@ -1046,6 +1066,24 @@ class AgentInstructions(AgentTool):
             self._walk_super()
         else:
             self._walk_statements(function_def)
+
+    def _bind_parameter_defaults(self) -> None:
+        try:
+            signature = inspect.signature(self.callable)
+        except (TypeError, ValueError):
+            return
+        for parameter in signature.parameters.values():
+            if parameter.name in {"self", "cls"} or parameter.name in self._execution_locals:
+                continue
+            if parameter.kind in (
+                inspect.Parameter.VAR_POSITIONAL,
+                inspect.Parameter.VAR_KEYWORD,
+            ):
+                continue
+            default = parameter.default
+            self._execution_locals[parameter.name] = (
+                None if default is inspect.Parameter.empty else default
+            )
 
     def _scan_nested(self, nested: AgentInstructions, defining_class: type | None = None) -> None:
         nested.scan_with_visited(self._visited, defining_class)
@@ -1169,10 +1207,23 @@ class AgentInstructions(AgentTool):
     def _is_ellipsis_expr(node: ast.AST) -> bool:
         return isinstance(node, ast.Constant) and node.value is Ellipsis
 
+    def _is_empty_return(self, statement: ast.Return) -> bool:
+        if statement.value is None:
+            return True
+        if isinstance(statement.value, ast.Constant) and statement.value.value in ("", None):
+            return True
+        return False
+
     def _is_empty_action_body(self, function_def: ast.FunctionDef) -> bool:
         skipped_docstring = False
+        saw_ellipsis = False
+        saw_valued_return = False
         for statement in function_def.body:
-            if isinstance(statement, (ast.Pass, ast.Return)):
+            if isinstance(statement, ast.Pass):
+                continue
+            if isinstance(statement, ast.Return):
+                if not self._is_empty_return(statement):
+                    saw_valued_return = True
                 continue
             if isinstance(statement, ast.Expr):
                 expr_value = statement.value
@@ -1180,8 +1231,11 @@ class AgentInstructions(AgentTool):
                     skipped_docstring = True
                     continue
                 if self._is_ellipsis_expr(expr_value):
+                    saw_ellipsis = True
                     continue
                 return False
+            return False
+        if saw_valued_return and not saw_ellipsis:
             return False
         return True
 
@@ -1255,7 +1309,7 @@ class AgentInstructions(AgentTool):
         if self._effective_mode(target_instance) == "tool":
             self._tools.append(member)
             return
-        nested = target_instance.instructions[member]
+        nested = AgentToolSet._discover_instruction_members(target_instance)[member]
         self._scan_nested(nested)
         self._merge_from(nested)
 
@@ -1312,8 +1366,6 @@ class AgentInstructions(AgentTool):
         return None
 
     def _expand_cross_arg(self, arg: ast.AST) -> bool:
-        if not isinstance(arg, ast.Call):
-            return False
         loop_var = self._loop_var
         roots = frozenset({loop_var}) if loop_var else frozenset({"self"})
         owner = self._loop_item if loop_var else self.toolset
@@ -1321,6 +1373,8 @@ class AgentInstructions(AgentTool):
         if cross is None:
             return False
         provider_name, member = cross
+        if owner is None:
+            return True
         try:
             target = self._resolve_provider(owner, provider_name)
         except Exception as exc:  # noqa: BLE001
@@ -1330,9 +1384,34 @@ class AgentInstructions(AgentTool):
         self._expand_target_member(member, target)
         return True
 
-    def _expand_instructions_cross(self, arg: ast.AST) -> bool:
-        if not isinstance(arg, ast.Call):
+    def _attr_chain(self, node: ast.AST) -> list[str]:
+        names: list[str] = []
+        current = node
+        while isinstance(current, ast.Attribute):
+            names.append(current.attr)
+            current = current.value
+        if isinstance(current, ast.Name):
+            names.append(current.id)
+            names.reverse()
+            return names
+        return []
+
+    def _loop_item_instructions(self, arg: ast.AST) -> bool:
+        if self._loop_item is None or self._loop_var is None:
             return False
+        names = self._attr_chain(arg)
+        if not names or names[0] != self._loop_var:
+            return False
+        target: Any = self._loop_item
+        for name in names[1:-1]:
+            target = getattr(target, name, None)
+            if target is None:
+                return False
+        member = names[-1]
+        self._expand_target_member(member, target)
+        return True
+
+    def _expand_instructions_cross(self, arg: ast.AST) -> bool:
         cross = self.toolset.provider_cross_call(arg, frozenset({"self"}))
         if cross is None:
             return False
@@ -1398,6 +1477,12 @@ class AgentInstructions(AgentTool):
             if isinstance(arg.func.value, ast.Name) and arg.func.value.id == var_name:
                 self._expand_target_member(arg.func.attr, target_item)
                 return True
+        if isinstance(arg, ast.Attribute) and isinstance(arg.value, ast.Name):
+            if arg.value.id == var_name:
+                self._expand_target_member(arg.attr, target_item)
+                return True
+        if self._loop_item_instructions(arg):
+            return True
         return self._expand_cross_arg(arg)
 
     def _is_companion_for(self, stmt: ast.For) -> bool:
@@ -1422,6 +1507,9 @@ class AgentInstructions(AgentTool):
             "tools": self._expander_stub_tools,
             "instructions": self._expander_stub_instructions,
         }
+        module = inspect.getmodule(self.callable)
+        if module is not None:
+            env.update(vars(module))
         env.update(self._execution_locals)
         return env
 
@@ -1454,6 +1542,11 @@ class AgentInstructions(AgentTool):
             return
         if isinstance(value, str) and value.strip():
             self._add_prompt(value.strip())
+            return
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                if isinstance(item, str) and item.strip():
+                    self._add_prompt(item.strip())
 
     def _dispatch_for_body(
         self,
@@ -1510,11 +1603,20 @@ class AgentInstructions(AgentTool):
         if isinstance(arg, ast.JoinedStr):
             self._add_prompt(self._joined_string(arg))
             return True
+        if self._loop_item_instructions(arg):
+            return True
         if self._expand_instructions_cross(arg):
             return True
         member = self._wrapped_member_name(arg)
         if member and member in self.toolset.instruction_names(type(self.toolset)):
             self._expand_member(member, self.toolset)
+            return True
+        try:
+            value = self._eval_expr(arg)
+        except Exception:
+            value = None
+        if isinstance(value, str) and value.strip():
+            self._add_prompt(value.strip())
             return True
         return False
 
@@ -1522,6 +1624,9 @@ class AgentInstructions(AgentTool):
         value = statement.value
         if isinstance(value, ast.Constant) and isinstance(value.value, str):
             self._add_prompt(value.value.strip())
+            return
+        if self._super_call_name(value) is not None:
+            self._walk_super()
             return
         if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
             arg = value.args[0] if value.args else None
@@ -1531,10 +1636,24 @@ class AgentInstructions(AgentTool):
             if value.func.id == "instructions":
                 if self._dispatch_instructions_arg(arg):
                     return
-        if self._super_call_name(value) is not None:
-            self._walk_super()
+        if isinstance(value, ast.Call):
+            self._expand_call_member(value)
             return
         self._run_expr(value)
+
+    def _expand_call_member(self, value: ast.Call) -> None:
+        member = self._wrapped_member_name(value)
+        if not member:
+            self._run_expr(value)
+            return
+        target = self.toolset
+        if isinstance(value.func, ast.Attribute) and isinstance(value.func.value, ast.Call):
+            provider = self.self_member_name(value.func.value)
+            if provider:
+                target = self._resolve_provider(self.toolset, provider)
+        self._expand_target_member(member, target)
+        if member in self.toolset.marked_tool_names(type(target)):
+            self._run_expr(value)
 
     def _dispatch_if_statement(self, statement: ast.If) -> None:
         try:
@@ -1609,11 +1728,19 @@ class AgentInstructions(AgentTool):
         skipped_docstring = False
         for statement in function_def.body:
             if isinstance(statement, ast.Return):
+                if statement.value is not None:
+                    try:
+                        value = self._eval_expr(statement.value)
+                    except Exception:
+                        value = self._expression_text(statement.value)
+                    if isinstance(value, str) and value.strip():
+                        self._add_prompt(value.strip())
                 continue
             if isinstance(statement, ast.Expr) and self._is_ellipsis_expr(statement.value):
                 continue
             if self._is_leading_docstring(statement, skipped_docstring):
                 skipped_docstring = True
+                self._add_prompt(statement.value.value.strip())
                 continue
             self._dispatch_statement(statement)
 
@@ -1724,6 +1851,38 @@ class AgentInstructionsMark:
         return self.annotate(fn)
 
 
+class ToolsetManifest:
+    """Class-level signature over marked tools and instructions."""
+
+    def __init__(self, toolset_cls: type | None = None) -> None:
+        self._toolset_cls = toolset_cls
+
+    def __get__(self, instance: Any, owner: type | None = None) -> "ToolsetManifest":
+        cls = owner if owner is not None else self._toolset_cls
+        if cls is None:
+            return self
+        bound = ToolsetManifest(cls)
+        return bound
+
+    @property
+    def signature(self) -> dict[str, dict[str, Any]]:
+        if self._toolset_cls is None:
+            return {}
+        instance = self._toolset_cls()
+        signature: dict[str, dict[str, Any]] = {}
+        for name, tool in instance.tools.items():
+            kind = "action" if tool.kind == "instructions" else tool.kind
+            entry: dict[str, Any] = {"kind": kind}
+            nested = getattr(tool, "tools", None)
+            if nested:
+                entry["tools"] = list(nested)
+            prompt = getattr(tool, "prompt", None)
+            if prompt:
+                entry["instructions"] = "\n".join(prompt)
+            signature[name] = entry
+        return signature
+
+
 class AgentToolSetMark:
     """Mark a class as an agent toolset — @agent_tool and @agent_instructions."""
 
@@ -1759,6 +1918,7 @@ class AgentToolSetMark:
         merged.__module__ = toolset_cls.__module__
         merged.__qualname__ = toolset_cls.__qualname__
         setattr(merged, "_is_agent_toolset", True)
+        merged.manifest = ToolsetManifest(merged)
         AgentToolSet()._validate_toolset(merged)
         return merged
 

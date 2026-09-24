@@ -83,6 +83,9 @@ class SessionPaths:
         if dest.name == "sessions" and dest.parent.name == ".context":
             return dest.parent
         if self.is_session_folder(dest):
+            parent = dest.parent
+            if parent.name == "sessions" and parent.parent.name == ".context":
+                return parent.parent
             return self.repository_root(dest) / ".context"
         if dest.parent.name == ".context" and dest.name not in ("sessions", ".sessions"):
             return dest.parent
@@ -821,6 +824,7 @@ class Repairs:
     def __len__(self) -> int:
         return len(self._by_theme)
 
+@agent_toolset
 class WorkSession:
     """One named work session — owns openTurn, turns, repairs, git; session.md kit."""
 
@@ -1123,9 +1127,6 @@ class WorkSession:
         from git.git import CliAgentBinding
 
         git = self.git
-        writer = getattr(git, "write_cli_agent_tag", None)
-        if writer is None:
-            return
         binding = CliAgentBinding(
             status=status if (self.cli_doer or self.cli_judge) else "closed",
             doer=self.cli_doer,
@@ -1136,7 +1137,7 @@ class WorkSession:
         if status == "closed":
             binding.status = "closed"
         try:
-            writer(self.session_branch, binding)
+            binding.write_tag(git, self.session_branch)
         except Exception:
             return
 

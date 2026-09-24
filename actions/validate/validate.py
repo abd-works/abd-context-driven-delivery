@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, instructions
 from installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 from harness.guidance.rule import Rule
+
+_VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
 
 @agent_toolset
 class Validate(GuidanceAction):
@@ -17,6 +21,7 @@ class Validate(GuidanceAction):
     @agent_instructions
     def validate(self, guidance: GuidanceArg, rule: Rule | None = None) -> str:
         """Check artifacts against rules. Pass a string to validate that text once. Pass a list of Guidance to walk each Guidance's rules. Pass a single Rule to check only that rule."""
+        instructions(_VALIDATE_MARKDOWN)
         def on(item) -> str:
             if rule is not None:
                 return rule.validate()
@@ -26,7 +31,7 @@ class Validate(GuidanceAction):
 
         parts = [part for part in self.run(guidance, on, action="validate") if part]
         report = "Validation report for artifacts under {session.path}/."
-        return "\n\n".join(parts + [report])
+        return "\n\n".join([_VALIDATE_MARKDOWN, *parts, report])
 
     @Mcp
     @Skill

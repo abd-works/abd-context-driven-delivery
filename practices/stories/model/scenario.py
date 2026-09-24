@@ -56,7 +56,7 @@ class Scenario(StoryNode):
 
     def __init__(
         self,
-        name: str,
+        name: str = "",
         sequential_order: int = 0,
         story_name: str = "",
     ) -> None:

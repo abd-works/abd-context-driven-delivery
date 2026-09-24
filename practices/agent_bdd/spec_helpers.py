@@ -28,7 +28,7 @@ def sessions_dir(spec_file: str | Path, *, folder: str = ".agent_bdd_sessions") 
     return Path(spec_file).resolve().parent / ".context" / folder
 
 
-CAR = "practices.car.car:Car"
+CAR = "practices.examples.car.car:Car"
 CAR_CTX = {
     "fidelity": "road_story",
     "make": "Dodge",

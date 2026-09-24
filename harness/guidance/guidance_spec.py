@@ -82,6 +82,14 @@ with description("context guidance"):
             expect(guidance.tools["inject_rules"].install_to_hook).to(equal(True))
             expect("inject_rules" in guidance.rules.tools).to(equal(True))
 
+        with it("should rehost inject_rules on the practice so install enrolls CleanEngineering"):
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+
+            guidance = CleanEngineering()
+            expect(type(guidance.tools["inject_rules"].toolset).__name__).to(
+                equal("CleanEngineering")
+            )
+
         with it("should inject the matching fidelity rules when a practice file is written"):
             from practices.clean_engineering.clean_engineering import CleanEngineering
             from prompt_echo.prompt_echo import TOAST_NOTICE
@@ -343,15 +351,15 @@ with description("practice and fidelity template files"):
         with it("should load the practice-named template"):
             from practices.clean_engineering.clean_engineering import CleanEngineering
 
-            text = CleanEngineering(fidelity="modules", format="markdown").templates
+            text = CleanEngineering(fidelity="model", format="markdown").templates
             expect(text).to(contain("clean_engineering markdown template"))
 
         with it("should load that same practice-named template for every fidelity"):
             from practices.clean_engineering.clean_engineering import CleanEngineering
 
-            modules = CleanEngineering(fidelity="modules", format="markdown").templates
+            code = CleanEngineering(fidelity="code", format="markdown").templates
             model = CleanEngineering(fidelity="model", format="markdown").templates
-            expect(model).to(equal(modules))
+            expect(model).to(equal(code))
 
     with context("with no fidelity-named file and no practice-named template"):
         with it("should return no template"):

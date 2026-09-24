@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
 
-from .codeql import CodeQL, Rows
+from harness.knowledge_graph.model.codeql import CodeQL, Rows
 
 
 def refine_rows(slug: str, rows: List[dict]) -> List[dict]:

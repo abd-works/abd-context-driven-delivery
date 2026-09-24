@@ -23,10 +23,10 @@ from catalog_generator.catalog_generator import (
     CatalogFidelity,
     CatalogTool,
     CatalogUtility,
+    CatalogFidelityGuidance,
     load_registry,
-    resolve_lifecycle_action_owner,
+    ActionResolution,
     resolve_lifecycle_actions,
-    scrape_fidelities,
 )
 from practices.ddd.ddd import Ddd
 from diagnose.diagnose import Diagnose
@@ -39,7 +39,7 @@ with description("Render Action Page With Fixed Sections"):
     with description("given an action's own name, tools-called list, guide, and module overview"):
         with before.all:
             self.resolutions = {r.name: r for r in resolve_lifecycle_actions()}
-            self.owner = resolve_lifecycle_action_owner()
+            self.owner = ActionResolution.live_owner()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
             hrefs = {name: f"actions/{name}.html" for name in self.resolutions}
             self.catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
@@ -77,7 +77,7 @@ with description("Render Fidelity Page With Quick-Invoke And Illustrated Example
             hrefs = {r.name: f"../actions/{r.name}.html" for r in self.resolutions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             self.catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.resolutions)
-            guidances = scrape_fidelities(Ddd)
+            guidances = CatalogFidelityGuidance.scrape(Ddd)
             tactics = next(g for g in guidances if g.key == "tactics")
             self.catalog_fidelity.skill_name = "ddd"
             self.catalog_fidelity.fidelity_name = "tactics"
@@ -119,7 +119,7 @@ with description("Render Context Tool Page"):
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.resolutions)
             self.catalog_context_tool = CatalogContextTool(_REPO_URL, _REF, catalog_fidelity)
-            guidances = scrape_fidelities(Ddd)
+            guidances = CatalogFidelityGuidance.scrape(Ddd)
             self.catalog_context_tool.owner = self.owner
             self.catalog_context_tool.display_name = "Domain-Driven Design"
             self.catalog_context_tool.skill_name = "ddd"
@@ -176,7 +176,7 @@ with description("Render Hub Board With Actions And Utilities Rows"):
                 catalog_action=catalog_action,
                 catalog_utility=catalog_utility,
             )
-            self.action_owner = resolve_lifecycle_action_owner()
+            self.action_owner = ActionResolution.live_owner()
             self.catalog._context_tool_entries = context_tool_entries
             self.catalog._utility_entries = utility_entries
             self.catalog._lifecycle_actions = lifecycle_actions
@@ -251,7 +251,7 @@ with description("Render Flat Grid Pages"):
                 catalog_action=catalog_action,
                 catalog_utility=catalog_utility,
             )
-            self.action_owner = resolve_lifecycle_action_owner()
+            self.action_owner = ActionResolution.live_owner()
             self.catalog._context_tool_entries = context_tool_entries
             self.catalog._utility_entries = utility_entries
             self.catalog._lifecycle_actions = lifecycle_actions

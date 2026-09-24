@@ -349,6 +349,8 @@ with description("AgentToolSet"):
                             "decelerate",
                             "speak",
                             "wrap_story",
+                            "render",
+                            "rules",
                         }
                     )
                 )
@@ -728,6 +730,52 @@ with description("a for-each action over companion toolsets"):
 
         with it("should list scan from var.scanner.scan"):
             expect("scan" in self.body.tools).to(be_true)
+
+
+@agent_toolset
+class _RulesPropertyHost:
+    @property
+    @agent_instructions
+    def markdown_block(self) -> str:
+        """NESTED_RULES_MARKER: original rules markdown."""
+        return "NESTED_RULES_BODY"
+
+
+@agent_toolset
+class _PracticeWithRules:
+    def __init__(self) -> None:
+        super().__init__()
+        self.rules = _RulesPropertyHost()
+
+
+@agent_toolset
+class _NestedRulesCaller:
+    def listed(self) -> list:
+        return [_PracticeWithRules()]
+
+    @agent_instructions
+    def sketchish(self) -> str:
+        """Walk listed practices."""
+        "NESTED_CALLER_MARKER: walk listed practices."
+        for item in self.listed():
+            instructions(item.rules.markdown_block)
+        return "sketched"
+
+
+with description("a for-each action over nested instruction properties"):
+    with context("when the loop names item.rules.markdown_block"):
+        with before.each:
+            self.body = AgentInstructions.for_callable(
+                _NestedRulesCaller.sketchish, _NestedRulesCaller()
+            )
+            self.joined = "\n".join(self.body.prompt)
+
+        with it("should keep the caller marker"):
+            expect("NESTED_CALLER_MARKER" in self.joined).to(be_true)
+
+        with it("should inline the nested markdown_block"):
+            expect("NESTED_RULES_MARKER" in self.joined).to(be_true)
+            expect("NESTED_RULES_BODY" in self.joined).to(be_true)
 
 
 @agent_toolset

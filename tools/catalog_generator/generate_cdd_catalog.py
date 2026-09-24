@@ -23,7 +23,7 @@ for _cat in ("practices", "harness", "tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from catalog_generator.catalog_generator import Catalog, resolve_repo_remote
+from catalog_generator.catalog_generator import Catalog, GitCitation
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -48,9 +48,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
 
-    default_repo_url, default_ref = resolve_repo_remote(_REPO_ROOT)
-    repo_url = args.repo_url or default_repo_url
-    ref = args.ref or default_ref
+    citation = GitCitation.from_checkout(_REPO_ROOT)
+    repo_url = args.repo_url or citation.repo_url
+    ref = args.ref or citation.ref
     out_root = _REPO_ROOT / args.out
 
     catalog = Catalog(

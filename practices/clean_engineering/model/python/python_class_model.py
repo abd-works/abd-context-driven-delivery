@@ -285,7 +285,7 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
 
 
     def _has_calculation(self, func: ast.AST) -> bool:
-        return any(isinstance(child, _CALC_OPS) for child in ast.walk(func))
+        return any(isinstance(child, type(self)._CALC_OPS) for child in ast.walk(func))
 
 
     def _has_validation(self, func: ast.AST) -> bool:

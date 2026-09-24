@@ -37,77 +37,59 @@ _SOURCES = re.compile(r"^\s*\*\*Sources\s*/\s*context:\*\*", re.MULTILINE | re.I
 _LIVE_INSTANCE = re.compile(r"Live instance:", re.IGNORECASE)
 
 
-class ModuleContextFiles:
-    def rows_for_missing_module_context(self, rows: Iterable[dict]) -> List[dict]:
-        refined: List[dict] = []
-        seen: set[str] = set()
-        for row in rows:
-            py_file = self._py_file(row)
-            if py_file.suffix.lower() != ".py":
-                continue
-            folder = self._module_folder(py_file)
-            key = str(folder)
-            if key in seen or self._context_file(py_file).is_file():
-                continue
-            seen.add(key)
-            refined.append(
-                self._hit(
-                    row,
-                    f"Module folder '{folder.name}' defines classes but has no "
-                    f".context/module-context.md. "
-                    f"Add one with at minimum: Purpose, Seam, Dependencies.",
-                )
-            )
-        return refined
+class ModuleContext:
+    def __init__(self, py_file: Path) -> None:
+        self.py_file = py_file
+        self.folder = py_file.parent
+        self.path = self.folder / ".context" / "module-context.md"
 
-    def rows_for_language_modules_one_section(self, rows: Iterable[dict]) -> List[dict]:
-        refined: List[dict] = []
-        seen: set[str] = set()
-        for row in rows:
-            context = self._context_file(self._py_file(row))
-            key = str(context)
-            if key in seen or not context.is_file():
-                continue
-            seen.add(key)
-            if _MODULES_HEADING.search(self._read(context)):
-                refined.append(
-                    self._hit(
-                        row,
-                        f"Module '{context.parent.parent.name}' module-context has a "
-                        f"'Modules' heading. Language and modules are one ## Language "
-                        f"section — drop ## Modules.",
-                    )
-                )
-        return refined
+    def exists(self) -> bool:
+        return self.path.is_file()
 
-    def rows_for_public_seam_only(self, rows: Iterable[dict]) -> List[dict]:
-        refined: List[dict] = []
-        seen: set[str] = set()
-        for row in rows:
-            context = self._context_file(self._py_file(row))
-            key = str(context)
-            if key in seen or not context.is_file():
-                continue
-            seen.add(key)
-            refined.extend(self._public_seam_hits(row, context))
-        return refined
+    def as_record(self) -> dict:
+        return {
+            "path": str(self.path),
+            "folder": self.folder.name,
+            "exists": self.exists(),
+        }
 
-    def rows_for_modules_not_model_blocks(self, rows: Iterable[dict]) -> List[dict]:
-        refined: List[dict] = []
-        seen: set[str] = set()
-        for row in rows:
-            context = self._context_file(self._py_file(row))
-            key = str(context)
-            if key in seen or not context.is_file():
-                continue
-            seen.add(key)
-            refined.extend(self._model_block_hits(row, context))
-        return refined
+    def update_self(self, source: "ModuleContext") -> None:
+        self.py_file = source.py_file
+        self.folder = source.folder
+        self.path = source.path
 
-    def _public_seam_hits(self, row: dict, context: Path) -> List[dict]:
+    def read(self) -> str:
+        try:
+            return self.path.read_text(encoding="utf-8")
+        except OSError:
+            return ""
+
+    def missing_hit(self, row: dict) -> dict | None:
+        if self.py_file.suffix.lower() != ".py" or self.exists():
+            return None
+        return _hit(
+            row,
+            f"Module folder '{self.folder.name}' defines classes but has no "
+            f".context/module-context.md. "
+            f"Add one with at minimum: Purpose, Seam, Dependencies.",
+        )
+
+    def modules_heading_hit(self, row: dict) -> dict | None:
+        if not self.exists() or not _MODULES_HEADING.search(self.read()):
+            return None
+        return _hit(
+            row,
+            f"Module '{self.path.parent.parent.name}' module-context has a "
+            f"'Modules' heading. Language and modules are one ## Language "
+            f"section — drop ## Modules.",
+        )
+
+    def public_seam_hits(self, row: dict) -> List[dict]:
+        if not self.exists():
+            return []
         hits: List[dict] = []
-        content = self._read(context)
-        folder = context.parent.parent.name
+        content = self.read()
+        folder = self.path.parent.parent.name
         for line in content.splitlines():
             match = _HEADING.match(line)
             if not match:
@@ -116,7 +98,7 @@ class ModuleContextFiles:
             key_heading = heading.lower()
             if key_heading in _FORBIDDEN_HEADINGS or "internal" in key_heading:
                 hits.append(
-                    self._hit(
+                    _hit(
                         row,
                         f"Module '{folder}' module-context heading '{heading}' is "
                         f"not part of the public seam.",
@@ -124,46 +106,92 @@ class ModuleContextFiles:
                 )
         for match in _PRIVATE_NAME.finditer(content):
             hits.append(
-                self._hit(
+                _hit(
                     row,
                     f"Module '{folder}' module-context names private '{match.group(1)}'.",
                 )
             )
         return hits
 
-    def _model_block_hits(self, row: dict, context: Path) -> List[dict]:
+    def model_block_hits(self, row: dict) -> List[dict]:
+        if not self.exists():
+            return []
         hits: List[dict] = []
-        content = self._read(context)
-        folder = context.parent.parent.name
+        content = self.read()
+        folder = self.path.parent.parent.name
         for pattern, detail in (
             (_SIX_DASHES, "typed `------` member dump"),
             (_SOURCES, "**Sources / context** that lists this folder's own files"),
             (_LIVE_INSTANCE, "'Live instance:' name inventory"),
         ):
             if pattern.search(content):
-                hits.append(
-                    self._hit(row, f"Module '{folder}' module-context has {detail}")
-                )
+                hits.append(_hit(row, f"Module '{folder}' module-context has {detail}"))
         return hits
 
-    def _py_file(self, row: dict) -> Path:
-        return Path(str(row.get("message") or ""))
 
-    def _module_folder(self, py_file: Path) -> Path:
-        return py_file.parent
+class ModuleContextFiles:
+    def rows_for_missing_module_context(self, rows: Iterable[dict]) -> List[dict]:
+        refined: List[dict] = []
+        seen: set[str] = set()
+        for row in rows:
+            context = ModuleContext(_py_file(row))
+            key = str(context.folder)
+            if key in seen:
+                continue
+            hit = context.missing_hit(row)
+            if hit is None:
+                continue
+            seen.add(key)
+            refined.append(hit)
+        return refined
 
-    def _context_file(self, py_file: Path) -> Path:
-        return self._module_folder(py_file) / ".context" / "module-context.md"
+    def rows_for_language_modules_one_section(self, rows: Iterable[dict]) -> List[dict]:
+        refined: List[dict] = []
+        seen: set[str] = set()
+        for row in rows:
+            context = ModuleContext(_py_file(row))
+            key = str(context.path)
+            if key in seen:
+                continue
+            hit = context.modules_heading_hit(row)
+            if hit is None:
+                continue
+            seen.add(key)
+            refined.append(hit)
+        return refined
 
-    def _read(self, path: Path) -> str:
-        try:
-            return path.read_text(encoding="utf-8")
-        except OSError:
-            return ""
+    def rows_for_public_seam_only(self, rows: Iterable[dict]) -> List[dict]:
+        refined: List[dict] = []
+        seen: set[str] = set()
+        for row in rows:
+            context = ModuleContext(_py_file(row))
+            key = str(context.path)
+            if key in seen:
+                continue
+            seen.add(key)
+            refined.extend(context.public_seam_hits(row))
+        return refined
 
-    def _hit(self, row: dict, message: str) -> dict:
-        return {
-            "name": row.get("name") or "",
-            "message": message,
-            "contributor": row.get("contributor") or "",
-        }
+    def rows_for_modules_not_model_blocks(self, rows: Iterable[dict]) -> List[dict]:
+        refined: List[dict] = []
+        seen: set[str] = set()
+        for row in rows:
+            context = ModuleContext(_py_file(row))
+            key = str(context.path)
+            if key in seen:
+                continue
+            seen.add(key)
+            refined.extend(context.model_block_hits(row))
+        return refined
+
+
+def _py_file(row: dict) -> Path:
+    return Path(str(row.get("message") or ""))
+
+
+def _hit(row: dict, message: str) -> dict:
+    return {
+        "name": row.get("name") or "",
+        "message": message,
+        "contributor": row.get("contributor") or "",
+    }

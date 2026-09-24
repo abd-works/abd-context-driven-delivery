@@ -98,14 +98,9 @@ class PracticeGraph:
         codeql_results: str | Path | None = None,
         populate: bool = True,
     ) -> "PracticeGraph":
-        graph = cls(Path(path))
-        from .codeql import CodeQL
+        from .loader import GraphLoader
 
-        CodeQL(graph.root).populate(
-            graph, results_path=codeql_results, populate=populate
-        )
-        graph.evaluate_rules()
-        return graph
+        return GraphLoader(path, codeql_results).load(evaluate=populate)
 
     def register(self, node: Node, node_id: Optional[str] = None) -> Node:
         node.join(self, node_id)
@@ -351,6 +346,10 @@ class PracticeGraph:
         pack = self._pack
         pack_rules = self._pack_rules
         if not pack_rules:
+            return
+        database = self._rule_database or self._codeql._ready_database()
+        if database is None:
+            print(f"skip {pack.name} (no codeql database)", flush=True)
             return
         print(f"run-queries {pack.name} ({len(pack_rules)} rules) ...", flush=True)
         started = time.perf_counter()

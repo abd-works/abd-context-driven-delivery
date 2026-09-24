@@ -24,7 +24,7 @@ _PML = Path(os.environ.get("PML_DOMAINMODEL", r"C:\dev\paradise-mobile\pml-domai
 
 with description("PracticeGraph dot_graph"):
     with it("should expose a DOT digraph from the stories root"):
-        graph = PracticeGraph.load(_CATALOG)
+        graph = PracticeGraph.load(_CATALOG, populate=False)
         expect(graph.story_map is not None).to(equal(True))
         dot = graph.story_map.dot_graph
         expect(dot).to(contain("digraph"))
@@ -34,7 +34,7 @@ with description("PracticeGraph dot_graph"):
         expect(dot).to(contain(f'[label="{Kind.OWNS}"]'))
 
     with it("should include owned descendants on any graph node"):
-        graph = PracticeGraph.load(_CATALOG)
+        graph = PracticeGraph.load(_CATALOG, populate=False)
         epic = next(
             node
             for node in graph.nodes_of_type(Epic)
@@ -47,7 +47,7 @@ with description("PracticeGraph dot_graph"):
         expect(dot).to(contain("Step"))
 
     with it("should merge practice roots on PracticeGraph.dot_graph"):
-        graph = PracticeGraph.load(_CATALOG)
+        graph = PracticeGraph.load(_CATALOG, populate=False)
         dot = graph.dot_graph
         expect(dot).to(contain("StoryMap"))
         expect(dot.count("->") > 0).to(equal(True))
@@ -56,7 +56,7 @@ with description("PracticeGraph dot_graph"):
 if _PML.is_dir():
     with description("PracticeGraph dot_graph on pml-domainmodel"):
         with it("should load stories hierarchy from the Paradise workspace"):
-            graph = PracticeGraph.load(_PML)
+            graph = PracticeGraph.load(_PML, populate=False)
             expect(graph.story_map is not None).to(equal(True))
             dot = graph.story_map.dot_graph
             expect(dot).to(contain("digraph"))
@@ -65,12 +65,12 @@ if _PML.is_dir():
             expect(dot.count("->") > 0).to(equal(True))
 
         with it("should include create-customer stories in the stories dot graph"):
-            graph = PracticeGraph.load(_PML)
+            graph = PracticeGraph.load(_PML, populate=False)
             dot = graph.story_map.dot_graph.lower()
             expect("create-customer" in dot or "create_customer" in dot).to(equal(True))
 
         with it("should print the complete story graph hierarchy"):
-            graph = PracticeGraph.load(_PML)
+            graph = PracticeGraph.load(_PML, populate=False)
             text = graph.story_map.hierarchy_text
             print(text)
             expect(text).to(contain("StoryMap"))
@@ -81,7 +81,7 @@ if _PML.is_dir():
             expect(len(graph.story_map.hierarchy) > 1).to(equal(True))
 
         with it("should label steps with Given When Then And or But"):
-            graph = PracticeGraph.load(_PML)
+            graph = PracticeGraph.load(_PML, populate=False)
             keywords = {step.keyword for step in graph.nodes_of_type(Step)}
             expect("Given" in keywords).to(equal(True))
             expect("When" in keywords).to(equal(True))
@@ -96,7 +96,7 @@ if _PML.is_dir():
             expect(text).to(contain("Step: But"))
 
         with it("should include story examples in the hierarchy"):
-            graph = PracticeGraph.load(_PML)
+            graph = PracticeGraph.load(_PML, populate=False)
             examples = graph.nodes_of_type(Example)
             expect(len(examples) > 0).to(equal(True))
             text = graph.story_map.hierarchy_text

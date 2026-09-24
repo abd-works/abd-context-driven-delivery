@@ -139,64 +139,59 @@ def family_perspective(toolset_name: str) -> str:
     return _FAM_LABEL.get(toolset_name, "other")
 
 
-def brand_folders(root: Path | None = None) -> dict[str, Path]:
-    """Named brand directories. Bundled abd-works plus each child of ``root``."""
-    folders = {"abd-works": _DEFAULT_BRAND}
-    collection = Path(root) if root is not None else _BRANDS_ROOT
-    if not collection.is_dir():
+class Brand:
+    """Named brand overlay for catalog commons."""
+
+    def __init__(
+        self,
+        collection: Path | None = None,
+        folder: Path | None = None,
+    ) -> None:
+        self.collection = Path(collection) if collection is not None else _BRANDS_ROOT
+        self.folder = Path(folder) if folder is not None else None
+
+    def folders(self) -> dict[str, Path]:
+        folders = {"abd-works": _DEFAULT_BRAND}
+        if not self.collection.is_dir():
+            return folders
+        for child in sorted(self.collection.iterdir()):
+            if child.is_dir() and not child.name.startswith("."):
+                folders[child.name] = child
         return folders
-    for child in sorted(collection.iterdir()):
-        if child.is_dir() and not child.name.startswith("."):
-            folders[child.name] = child
-    return folders
 
+    def resolve(self, name: str) -> Path | None:
+        if not name:
+            return None
+        candidate = Path(name)
+        if candidate.is_dir():
+            return candidate
+        folders = self.folders()
+        if name in folders:
+            return folders[name]
+        known = ", ".join(sorted(folders))
+        raise ValueError(f"Unknown brand {name!r}. Known brands: {known}")
 
-def resolve_brand(name: str, root: Path | None = None) -> Path | None:
-    if not name:
-        return None
-    candidate = Path(name)
-    if candidate.is_dir():
-        return candidate
-    folders = brand_folders(root)
-    if name in folders:
-        return folders[name]
-    known = ", ".join(sorted(folders))
-    raise ValueError(f"Unknown brand {name!r}. Known brands: {known}")
+    def apply(self, commons_dest: Path) -> Path:
+        source = self.folder if self.folder is not None else _DEFAULT_BRAND
+        dest = Path(commons_dest) / "brand"
+        dest.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(source, dest, dirs_exist_ok=True)
+        return dest
 
+    def apply_named(self, out_root: Path, name: str) -> Path:
+        commons = Path(out_root) / "commons"
+        commons.mkdir(parents=True, exist_ok=True)
+        self.folder = self.resolve(name)
+        return self.apply(commons)
 
-def apply_brand(commons_dest: Path, brand: Path | None = None) -> Path:
-    """Copy brand assets into ``commons_dest/brand``.
-
-    Default is the bundled abd.works folder under ``templates/commons/brand``.
-    Pass another directory to overlay a different brand (wordmarks, etc.).
-    """
-    source = Path(brand) if brand is not None else _DEFAULT_BRAND
-    dest = Path(commons_dest) / "brand"
-    dest.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source, dest, dirs_exist_ok=True)
-    return dest
-
-
-def apply_named_brand(
-    out_root: Path,
-    name: str,
-    brands_root: Path | None = None,
-) -> Path:
-    """Overlay a collection name or brand path onto ``{out_root}/commons/brand``."""
-    commons = Path(out_root) / "commons"
-    commons.mkdir(parents=True, exist_ok=True)
-    return apply_brand(commons, resolve_brand(name, brands_root))
-
-
-def copy_commons(out_root: Path, brand: Path | None = None) -> Path:
-    """Copy Foundry commons + catalog CSS into ``{out_root}/commons/``."""
-    dest = out_root / "commons"
-    dest.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(_COMMONS_SRC, dest, dirs_exist_ok=True)
-    shutil.copy2(_FOUNDRY_CSS_SRC, dest / "foundry-catalog.css")
-    shutil.copy2(_TEMPLATES / "cdd-board.css", dest / "cdd-board.css")
-    apply_brand(dest, brand)
-    return dest
+    def copy_commons(self, out_root: Path) -> Path:
+        dest = out_root / "commons"
+        dest.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(_COMMONS_SRC, dest, dirs_exist_ok=True)
+        shutil.copy2(_FOUNDRY_CSS_SRC, dest / "foundry-catalog.css")
+        shutil.copy2(_TEMPLATES / "cdd-board.css", dest / "cdd-board.css")
+        self.apply(dest)
+        return dest
 
 
 def page_shell(

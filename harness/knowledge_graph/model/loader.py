@@ -118,7 +118,7 @@ class GraphLoader:
         loader._stack = []
         return loader
 
-    def load(self) -> PracticeGraph:
+    def load(self, *, evaluate: bool = True) -> PracticeGraph:
         workspace = Workspace.load(self.root)
         story_map = self._resolve_story_map(workspace.story_map)
         self.graph.story_map = self._load_story_map(story_map)
@@ -134,9 +134,8 @@ class GraphLoader:
         populate_from_codeql(self.graph, self.root, results_path=self._codeql_results)
         self._derive_cross_module_dependencies()
         self._load_bdd_descriptions()
-        from .evaluate_rules import evaluate_rules
-
-        evaluate_rules(self.graph, self.root, codeql_results=self._codeql_results)
+        if evaluate:
+            self.graph.evaluate_rules(codeql_results=self._codeql_results)
         return self.graph
 
     def attach(self, paths: list[Path]) -> None:

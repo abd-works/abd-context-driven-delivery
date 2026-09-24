@@ -63,9 +63,11 @@ _PREDICATES = {
     "calledOnlyFrom": "_extended_price",
     "staticUtilityMethod": "is_noun",
     "privateAttributeRead": "total",
+    "ownPrivateRead": "size",
     "doerOnBag": "PaymentService",
     "proceduralDoer": "PaymentService",
     "envies": "validate_last_transaction",
+    "typedResourceEnvy": "catalog_html",
     "untypedPublicParameter": "checkout",
     "numberedParameter": "split_items",
     "shallowModule": "faultyAsset.py",
@@ -179,3 +181,21 @@ with description("Clean Engineering graphQuery rules"):
         )
         expect("size" in blob).to(equal(False))
         expect("tally" in blob).to(equal(False))
+        expect("cached_size" in blob).to(equal(False))
+        expect("class_size" in blob).to(equal(False))
+
+    with it("should hit typed resource html without flagging a wrapper factory"):
+        db = ExamplesQuery().ensure()
+        rows = CodeQL(_EXAMPLES).run(
+            _PACK / "put-logic-on-the-owning-resource.ql",
+            database=db,
+        )
+        blob = " ".join(
+            str(row.get(key) or "")
+            for row in rows
+            for key in ("name", "message")
+        )
+        expect("catalog_html" in blob).to(equal(True))
+        expect("shelf_height" in blob).to(equal(True))
+        expect("_shelf_header_height" in blob).to(equal(True))
+        expect("from_catalog" in blob).to(equal(False))

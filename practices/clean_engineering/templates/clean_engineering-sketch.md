@@ -9,29 +9,29 @@ This template is the clean_engineering notation for a section of the engagement 
 Sketch **nested modules** when children share a base seam. Paths are domain nouns (`powers/attack`).
 
 ```
-powers/                              <-- parent sub-system (has shared seam)
-  effect                             <-- parent-owned shared base module
-  attack -> effect                   <-- child; depends on base, not on siblings
-  control -> effect
-  defense -> effect
-  movement -> effect
-  sensory -> effect
-  general -> effect
-  extras -> effect                   <-- modifiers nest with powers when they only apply to effects
-  flaws -> effect
+powers/                              //public seams only, express anouns / resources
+  control 
+  effect                             
+  defense 
+  movement 
+  sensory 
+  general 
+  extras                  
+  flaws  
 
-conflicts/
-  turns                              <-- sequence; stub actions
-  actions                            <-- maneuvers; stub turns
-  conditions                         <-- damage/recovery; uses checks
+  
+
+conflicts/                           //nested modules where it makes sense 
+  turns/       < -- characters       //note dependecies on a module <-> module basis             
+  actions/     <- checks                        
+  conditions/  <- checks                     
 
 gear/
   equipment
   headquarters
   vehicles
 
-checks/                              <-- flat top-level OK when no shared parent seam
-abilities/
+checks/                              
 ```
 
 **Hard rules:** nest only when there is a **shared base** or clear sub-system; children implement independently with siblings stubbed; shared mechanics live once under the parent (e.g. `powers/effect`), not copy-pasted.

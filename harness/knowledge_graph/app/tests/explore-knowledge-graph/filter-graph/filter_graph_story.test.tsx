@@ -223,6 +223,36 @@ story('Filter Graph', () => {
       expect(copied).not.toContain('Source:');
     });
   });
+  scenario('copy this rule is wrong prompt copies a fix-the-rule request', ({ given, when, then }) => {
+    given('a violating operation is open in the source pane', () => {});
+    when('the Engineer copies this rule is wrong prompt', () => {});
+    then('the clipboard asks to fix the rule and includes the rule text', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { clipboard: { writeText } });
+      const presented = KnowledgeGraph.fromDto(violatingClassWithPassingOps())
+        .selectNode('ce:Operation:too_long')
+        .present();
+      const { getByTestId, getByText } = render(
+        <SelectedNodePane
+          selectedNode={presented.selected_node}
+          selectedTree={presented.selected_tree}
+          selectedRule={null}
+          sourceFile={presented.source_file}
+        />,
+      );
+      expect(getByText('Copy this rule is wrong prompt')).toBeTruthy();
+      fireEvent.click(getByTestId('copy-this-rule-is-wrong-prompt'));
+      const copied = String(writeText.mock.calls[0][0]);
+      expect(copied).toContain(
+        'The following rule is wrong. We need to fix the rule. I will explain why the rule is wrong.',
+      );
+      expect(copied).toContain(`Rule: ${KEEP_OPERATIONS_SMALL_FOCUSED}`);
+      expect(copied).toContain('Practice: clean_engineering');
+      expect(copied).toContain('Fidelity: code');
+      expect(copied).toContain('too_long is 40 lines');
+      expect(copied).not.toContain('Fix this Violation.');
+    });
+  });
   scenario('copy pane to prompt joins every copyable card', ({ given, when, then }) => {
     given('a violating class and nested violating operation are open', () => {});
     when('the Engineer copies the pane to prompt', () => {});

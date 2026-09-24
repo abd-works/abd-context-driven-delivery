@@ -9,6 +9,8 @@ from harness.guidance.rule import AppliesTo, Rule, RulesCollection
 from git.git import GitConnectError, GitRepo, Repo
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown import markdownCollection
+from harness.agent_tools.agent_tools import agent_tool, agent_toolset
+from harness.mcp.mcp_server import Mcp
 
 
 class TurnCommit:
@@ -62,6 +64,10 @@ class WorkSession:
     @property
     def name(self) -> str:
         return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
 
     @property
     def folder(self) -> Path:
@@ -556,6 +562,7 @@ class WorkSessionRule(Rule):
         return "\n".join(lines)
 
 
+@agent_toolset
 class Turn:
     """An announced work-session turn."""
 
@@ -571,6 +578,8 @@ class Turn:
     def work_session(self) -> WorkSession | None:
         return self._work_session
 
+    @Mcp
+    @agent_tool
     def turn(self) -> TurnCommit | None:
         # /turn commits the current checkout
         # -> self._commit

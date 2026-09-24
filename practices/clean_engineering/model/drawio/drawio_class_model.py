@@ -34,13 +34,23 @@ _repo = Path(__file__).resolve().parents[4]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation, Property, Relationship
+from practices.clean_engineering.model.diagram.diagram_node import (
+    ContainmentForest,
+    DiagramClass,
+    is_modules_view,
+    module_tab_label,
+    path_parent,
+)
+from practices.clean_engineering.model.diagram.geometry import CELL_WIDTH, Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
+from practices.clean_engineering.model.drawio.diagram_node import (
+    DrawIOClass,
+    DrawIOModule,
+    ImportedClass,
+    MODULE_CHILD_STYLE,
+    MODULE_STYLE,
+    Page,
+)
 from practices.clean_engineering.model.update_report import UpdateReport
-CELL_WIDTH = 260
-CELL_MIN_HEIGHT = 80
-LINE_HEIGHT = 16
-SECTION_PAD = 8
-CLASS_STYLE = 'verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;'
-IMPORTED_CLASS_STYLE = CLASS_STYLE + 'dashed=1;dashPattern=8 8;strokeColor=#666666;'
 EDGE_STYLES = {'inheritance': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;endSize=16;endFill=0;html=1;', 'composition': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;', 'aggregation': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;', 'association': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;'}
 DEFAULT_EDGE_STYLE = EDGE_STYLES['association']
 CLUSTER_GAP_X = 360
@@ -56,12 +66,6 @@ START_Y = 40
 ROUTE_CLEARANCE = 24
 ROUTE_LANE_STEP = 10
 OVERLAP_GAP = 24
-MODULE_CELL_WIDTH = 280
-MODULE_CELL_MIN_HEIGHT = 100
-MODULE_LINE_HEIGHT = 16
-MODULE_HEADER_HEIGHT = 48
-MODULE_MAX_SEAM_BULLETS = 6
-MODULE_PURPOSE_MAX_CHARS = 90
 MODULE_COL_GAP = 48
 MODULE_ROW_GAP = 32
 MODULE_START_X = 40
@@ -70,21 +74,11 @@ MODULE_CHILD_PAD_X = 16
 MODULE_CHILD_PAD_Y = 12
 MODULE_CHILD_GAP = 12
 MODULE_CHILD_COLS = 2
-MODULE_STYLE = 'rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;'
-MODULE_CHILD_STYLE = 'rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=2;'
 MODULE_DEP_EDGE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=classic;html=1;strokeWidth=2;fontSize=10;'
 MODULE_TITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;'
 MODULE_SUBTITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;'
 _MODULE_MARKER = 'fillColor=#1a3a6e'
 _MODULE_CHILD_MARKER = 'fillColor=#dae8fc'
-
-class DrawIOOoadClass(OoadClass):
-    pass
-
-class DrawIOModule(Module):
-
-    def load_class(self, source: OoadClass) -> DrawIOOoadClass:
-        return DrawIOOoadClass(name=source.name, sequential_order=source.sequential_order)
 
 class DrawIOCleanEngineeringModel(CleanEngineeringModel):
 
@@ -121,7 +115,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         self._entry_x = None
         self._entry_y = None
         self._waypoints: List[Tuple[float, float]] = []
-        self._forest: Optional[_ContainmentForest] = None
+        self._forest: Optional[ContainmentForest] = None
         self._layout: Optional[_ContainmentLayout] = None
         self._abs_x = 0.0
         self._abs_y = 0.0
@@ -153,10 +147,24 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         self._fan_count = 6
 
     def load_module(self, source: Module) -> DrawIOModule:
-        return DrawIOModule(name=source.name, sequential_order=source.sequential_order)
+        loaded = DrawIOModule(name=source.name, sequential_order=source.sequential_order)
+        loaded.update_self(source)
+        loaded.classes = list(source.classes)
+        return loaded
 
-    def load_class(self, source: OoadClass) -> DrawIOOoadClass:
-        return DrawIOOoadClass(name=source.name, sequential_order=source.sequential_order)
+    def load_class(self, source: OoadClass) -> DrawIOClass:
+        loaded = DrawIOClass(name=source.name, sequential_order=source.sequential_order)
+        loaded.update_self(source)
+        return loaded
+
+    def _imported_class(self, source: OoadClass, from_module: str = '') -> ImportedClass:
+        loaded = ImportedClass(
+            name=source.name,
+            sequential_order=source.sequential_order,
+            from_module=from_module,
+        )
+        loaded.update_self(source)
+        return loaded
 
     def parse(self, text: str) -> 'DrawIOCleanEngineeringModel':
         model = DrawIOCleanEngineeringModel(name='', sequential_order=1)
@@ -190,7 +198,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             if not self._is_module_style(style):
                 continue
             value = cell.get('value', '')
-            name, purpose, terms = self._parse_module_html(value)
+            name, purpose, terms = DrawIOModule(name='', sequential_order=0).parse_html(value)
             if not name:
                 continue
             cell_id = cell.get('id', '')
@@ -235,7 +243,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             name, props, ops = self._parse_class_html(value)
             if not name:
                 continue
-            oclass = DrawIOOoadClass(name=name, sequential_order=order, properties=props, operations=ops)
+            oclass = DrawIOClass(name=name, sequential_order=order, properties=props, operations=ops)
             module.classes.append(oclass)
             id_to_class[cell.get('id', '')] = oclass
             order += 1
@@ -293,7 +301,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             if plain in self._seen_names:
                 continue
             self._seen_names.add(plain)
-            oclass = DrawIOOoadClass(name=name, sequential_order=len(module.classes) + 1, properties=props, operations=ops)
+            oclass = DrawIOClass(name=name, sequential_order=len(module.classes) + 1, properties=props, operations=ops)
             module.classes.append(oclass)
             self._id_to_class[cell_id] = oclass
 
@@ -525,19 +533,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         return canonical.translate_from(self.parse(text))
 
     def _is_modules_view(self, canonical: CleanEngineeringModel) -> bool:
-        """True when the model is module-boundary detail only (no typed class members)."""
-        if not canonical.modules:
-            return False
-        for oclass in canonical.classes:
-            if oclass.properties or oclass.operations:
-                return False
-            if any((r.kind for r in oclass.relationships)):
-                return False
-        if any((m.dependencies or m.seam_terms for m in canonical.modules)):
-            return True
-        if not canonical.classes:
-            return True
-        return all((not c.properties and (not c.operations) and (not c.relationships) for c in canonical.classes))
+        return is_modules_view(canonical)
 
     def _looks_like_modules_diagram(self, mxcells: List[ET.Element]) -> bool:
         module_cells, class_cells = self._count_diagram_cell_kinds(mxcells)
@@ -578,49 +574,16 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         return re.sub('\\W+', '-', name).lower().strip('-')
 
     def _plain_class_name(self, name: str) -> str:
-        """Extract the bare identifier from a CE OOAD class name.
-
-    Strips Markdown bold markers (**), UML stereotype annotations (<<...>>), and
-    trailing ``extends Base`` clauses so that
-    "**Subscriber** <<Aggregate Root>> <<Entity>> extends Customer" becomes
-    "Subscriber". Used to build name aliases that let relationship targets
-    (which use the plain name) resolve to the correct DrawIO cell.
-    """
-        n = re.sub('\\*+', '', name)
-        n = re.sub('<<[^>]+>>', '', n)
-        n = re.sub('\\s+extends\\s+.+$', '', n, flags=re.IGNORECASE)
-        return n.strip()
+        return DiagramClass(name=name, sequential_order=1).display_name()
 
     def _extends_base_name(self, name: str) -> Optional[str]:
-        """Return the base type from an ``extends Base`` clause on a class heading, if any."""
-        n = re.sub('\\*+', '', name)
-        n = re.sub('<<[^>]+>>', '', n)
-        m = re.search('\\bextends\\s+([A-Z]\\w*)', n, flags=re.IGNORECASE)
-        return m.group(1) if m else None
+        return DiagramClass(name=name, sequential_order=1).extends_base_name()
 
     def _is_module_style(self, style: str) -> bool:
         return _MODULE_MARKER in style or _MODULE_CHILD_MARKER in style or 'fillColor=#1a3a6e' in style or ('fillColor=#dae8fc' in style)
 
     def _path_parent(self, name: str) -> Optional[str]:
-        if '/' not in name:
-            return None
-        return name.rsplit('/', 1)[0]
-
-    def _class_height(self, oclass: OoadClass) -> int:
-        n_content = len(oclass.properties) + len(oclass.operations)
-        return max(CELL_MIN_HEIGHT, 30 + n_content * LINE_HEIGHT + 2 * SECTION_PAD)
-
-    def _module_header_height(self, module: Module) -> int:
-        terms = module.public_terms()
-        if not terms:
-            return MODULE_HEADER_HEIGHT + MODULE_LINE_HEIGHT
-        n = min(MODULE_MAX_SEAM_BULLETS, len(terms))
-        if len(terms) > MODULE_MAX_SEAM_BULLETS:
-            n += 1
-        return max(MODULE_CELL_MIN_HEIGHT, MODULE_HEADER_HEIGHT + n * MODULE_LINE_HEIGHT + 24)
-
-    def _module_height(self, module: Module) -> int:
-        return self._module_header_height(module)
+        return path_parent(name)
 
     def _set_graph_attrs(self, el) -> None:
         page_width = self._page_width or '1654'
@@ -628,52 +591,17 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         for k, v in [('dx', '1200'), ('dy', '800'), ('grid', '1'), ('gridSize', '10'), ('guides', '1'), ('tooltips', '1'), ('connect', '1'), ('arrows', '1'), ('fold', '1'), ('page', '1'), ('pageScale', '1'), ('pageWidth', page_width), ('pageHeight', page_height), ('math', '0'), ('shadow', '0')]:
             el.set(k, v)
 
-    def _containment_forest(self, modules: List[Module]) -> _ContainmentForest:
-        by_name: Dict[str, Module] = {m.name: m for m in modules}
-        synthetic = self._add_synthetic_parents(by_name)
-        return self._link_containment_children(by_name, synthetic)
-
-    def _add_synthetic_parents(self, by_name: Dict[str, Module]) -> set:
-        synthetic: set = set()
-        needed: List[str] = []
-        for name in list(by_name):
-            p = self._path_parent(name)
-            while p:
-                if p not in by_name:
-                    needed.append(p)
-                p = self._path_parent(p)
-        for prefix in sorted(set(needed), key=lambda s: s.count('/')):
-            by_name[prefix] = Module(name=prefix, sequential_order=0, description='nested modules', seam_terms=[])
-            synthetic.add(prefix)
-        return synthetic
-
-    def _link_containment_children(self, by_name: Dict[str, Module], synthetic: set) -> _ContainmentForest:
-        children_of: Dict[str, List[str]] = {n: [] for n in by_name}
-        roots: List[str] = []
-        for name in by_name:
-            parent = self._path_parent(name)
-            if parent and parent in by_name:
-                children_of[parent].append(name)
-            else:
-                roots.append(name)
-        for parent in children_of:
-            children_of[parent].sort(key=lambda n: (by_name[n].sequential_order or 0, n))
-        roots.sort(key=lambda n: (by_name[n].sequential_order or 0, n))
-        return _ContainmentForest(by_name, children_of, roots, synthetic)
-
-    def _external_deps(self, module: Module) -> List[str]:
-        """Dependencies that are not the path-parent (containment handles that)."""
-        parent = self._path_parent(module.name)
-        return [d for d in module.dependencies if d != parent]
+    def _containment_forest(self, modules: List[Module]) -> ContainmentForest:
+        return ContainmentForest.build(modules, synthesize_parents=True)
 
     def _module_dep_depth(self, name: str) -> int:
         return self._forest.module_dep_depth(name)
 
-    def _size_subtree(self, name: str, forest: _ContainmentForest) -> Tuple[float, float]:
+    def _size_subtree(self, name: str, forest: ContainmentForest) -> Tuple[float, float]:
         """Return (width, height) for a module cell including nested children."""
         module = forest.by_name[name]
         kids = forest.children_of.get(name, [])
-        header_h = float(self._module_header_height(module))
+        header_h = float(self.load_module(module).header_height())
         if not kids:
             return (float(MODULE_CELL_WIDTH), max(float(MODULE_CELL_MIN_HEIGHT), header_h))
         child_sizes = [self._size_subtree(c, forest) for c in kids]
@@ -712,7 +640,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         layout = self._layout
         module = forest.by_name[name]
         kids = forest.children_of.get(name, [])
-        header_h = float(self._module_header_height(module))
+        header_h = float(self.load_module(module).header_height())
         cols = min(MODULE_CHILD_COLS, len(kids))
         child_sizes = [self._size_subtree(c, forest) for c in kids]
         col_widths, row_heights = self._child_grid_extents(child_sizes, cols)
@@ -739,7 +667,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             row_heights[r] = max(row_heights[r], ch)
         return (col_widths, row_heights)
 
-    def _module_containment_layout(self, forest: _ContainmentForest) -> _ContainmentLayout:
+    def _module_containment_layout(self, forest: ContainmentForest) -> _ContainmentLayout:
         """Layer roots by dependency depth; nest path children inside parents."""
         self._forest = forest
         layout = _ContainmentLayout()
@@ -860,7 +788,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         for cid, oclass in id_to_oclass.items():
             if cid in previous_positions:
                 x, y = previous_positions[cid]
-                placements[cid] = (x, y, float(CELL_WIDTH), float(self._class_height(oclass)))
+                placements[cid] = (x, y, float(CELL_WIDTH), float(self.load_class(oclass).height()))
             else:
                 new_ids.append(cid)
         return (placements, new_ids)
@@ -878,38 +806,15 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         self._previous_positions = saved_prev
         return new_placements
 
-    def _build_module_html(self, module: Module) -> str:
-        name_html = html.escape(module.name)
-        purpose = module.description.strip() or '{one-line purpose}'
-        purpose_line = purpose.splitlines()[0].strip()
-        if len(purpose_line) > MODULE_PURPOSE_MAX_CHARS:
-            purpose_line = purpose_line[:MODULE_PURPOSE_MAX_CHARS - 1].rstrip() + '...'
-        purpose_html = html.escape(purpose_line)
-        terms = module.public_terms()
-        if terms:
-            shown = terms[:MODULE_MAX_SEAM_BULLETS]
-            bullets = '<br>'.join((f'\u2022 {html.escape(t)}' for t in shown))
-            if len(terms) > MODULE_MAX_SEAM_BULLETS:
-                bullets += '<br>\u2022 ...'
-            return f'<b style="font-size: 14px;">{name_html}</b><br><i>{purpose_html}</i><hr>{bullets}'
-        return f'<b style="font-size: 14px;">{name_html}</b><br><i>{purpose_html}</i>'
-
     def _create_module_cell(self, root_el, module) -> ET.Element:
-        cell = ET.SubElement(root_el, 'mxCell')
-        cell.set('id', self._cell_id)
-        cell.set('value', self._build_module_html(module))
-        cell.set('style', self._cell_style)
-        cell.set('vertex', '1')
-        cell.set('parent', self._cell_parent_id)
-        geo = ET.SubElement(cell, 'mxGeometry')
-        geo.set('x', str(int(self._cell_x)))
-        geo.set('y', str(int(self._cell_y)))
+        node = self.load_module(module)
+        node.cell_id = self._cell_id
+        node.parent_id = self._cell_parent_id
+        node.nested = self._cell_style == MODULE_CHILD_STYLE
         width = self._cell_width if self._cell_width is not None else MODULE_CELL_WIDTH
-        height = self._cell_height if self._cell_height is not None else self._module_height(module)
-        geo.set('width', str(int(width)))
-        geo.set('height', str(int(height)))
-        geo.set('as', 'geometry')
-        return cell
+        height = self._cell_height if self._cell_height is not None else node.height()
+        node.geometry = Geometry(float(self._cell_x), float(self._cell_y), float(width), float(height))
+        return Page('', root_el).place(node)
 
     def _create_module_edge(self, root_el) -> ET.Element:
         cell = ET.SubElement(root_el, 'mxCell')
@@ -925,75 +830,19 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         geo.set('as', 'geometry')
         return cell
 
-    def _parse_module_html(self, value: str) -> Tuple[Optional[str], str, List[str]]:
-        text = html.unescape(value)
-        m = re.search('<b[^>]*>([^<]+)</b>', text, re.IGNORECASE)
-        name = m.group(1).strip() if m else None
-        if not name:
-            return (None, '', [])
-        purpose = ''
-        im = re.search('<i[^>]*>([^<]*)</i>', text, re.IGNORECASE)
-        if im:
-            purpose = im.group(1).strip()
-        terms: List[str] = []
-        for bullet in re.findall('[\u2022\\-]\\s*([^<]+)', text):
-            term = bullet.strip()
-            if term and (not term.startswith('{')):
-                terms.append(term)
-            elif term.startswith('{') and term.endswith('}'):
-                continue
-            elif term:
-                terms.append(term)
-        if not terms:
-            for li in re.findall('<li[^>]*>(?:<[^>]+>)*([^<]+)', text, re.IGNORECASE):
-                term = li.strip()
-                if term and 'stack' not in term.lower():
-                    terms.append(term)
-        return (name, purpose, terms)
-
-    def _tactical_stereotypes(self, name: str) -> list[str]:
-        n = re.sub('\\*+', '', name)
-        return [s.strip() for s in re.findall('<<[^>]+>>', n)]
-
-    def _display_class_name(self, name: str) -> str:
-        """Plain class title. Stereotypes render above the name, not in it."""
-        return self._plain_class_name(name)
-
-    def _stereotype_html(self, name: str) -> str:
-        stereotypes = self._tactical_stereotypes(name)
-        if not stereotypes:
-            return ''
-        label = ' '.join(stereotypes)
-        return f'<i style="font-size:9px;color:#888;">{html.escape(label)}</i><br/>'
-
-    def _build_class_html(self, oclass: OoadClass) -> str:
-        name_html = html.escape(self._display_class_name(oclass.name))
-        props_html = ''.join((f"+ {html.escape(p.name)}{(': ' + html.escape(p.type_hint) if p.type_hint else '')}<br/>" for p in oclass.properties)) or '<br/>'
-        ops_html = ''.join((f"{('- ' if op.name.startswith('_') else '+ ')}{html.escape(op.name)}({', '.join(op.parameters)}){(': ' + html.escape(op.return_type) if op.return_type else '')}<br/>" for op in oclass.operations)) or '<br/>'
-        return f'<p style="margin:0px;margin-top:4px;text-align:center;">{self._stereotype_html(oclass.name)}<b>{name_html}</b></p><hr size="1"/><p style="margin:0px;margin-left:4px;font-size:10px;">{props_html}</p><hr size="1"/><p style="margin:0px;margin-left:4px;font-size:10px;">{ops_html}</p>'
-
     def _create_class_cell(self, root_el, oclass) -> ET.Element:
-        cell = ET.SubElement(root_el, 'mxCell')
-        cell.set('id', self._cell_id)
-        cell.set('value', self._build_class_html(oclass))
-        cell.set('style', CLASS_STYLE)
-        cell.set('vertex', '1')
-        cell.set('parent', '1')
-        geo = ET.SubElement(cell, 'mxGeometry')
-        geo.set('x', str(self._cell_x))
-        geo.set('y', str(self._cell_y))
-        geo.set('width', str(CELL_WIDTH))
-        geo.set('height', str(self._class_height(oclass)))
-        geo.set('as', 'geometry')
-        return cell
+        node = self.load_class(oclass)
+        node.cell_id = self._cell_id
+        node.geometry = Geometry(
+            float(self._cell_x),
+            float(self._cell_y),
+            float(CELL_WIDTH),
+            float(node.height()),
+        )
+        return Page('', root_el).place(node)
 
     def _module_tab_label(self, module_name: str) -> str:
-        """Short label for «from: …» (leading part of an H1 heading)."""
-        name = module_name.strip()
-        for sep in (' — ', ' – ', ' - ', '—', '–'):
-            if sep in name:
-                return name.split(sep, 1)[0].strip()
-        return name
+        return module_tab_label(module_name)
 
     def _class_module_labels(self, modules: List[Module]) -> dict[str, str]:
         """Map class cell id → owning module short label for import stereotypes."""
@@ -1055,32 +904,16 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             return False
         return self._id_to_module.get(src, '') != self._import_local_label
 
-    def _build_imported_class_html(self, oclass: OoadClass, from_module: str) -> str:
-        """Compact imported card: «from: Module», name, key properties only."""
-        name_html = html.escape(self._display_class_name(oclass.name))
-        from_html = html.escape(f'«from: {from_module}»')
-        key_props = oclass.properties[:4]
-        props_html = ''.join((f"+ {html.escape(p.name)}{(': ' + html.escape(p.type_hint) if p.type_hint else '')}<br/>" for p in key_props)) or '<br/>'
-        return f'<p style="margin:0px;margin-top:2px;text-align:center;font-size:10px;"><i>{from_html}</i></p><p style="margin:0px;text-align:center;">{self._stereotype_html(oclass.name)}<b>{name_html}</b></p><hr size="1"/><p style="margin:0px;margin-left:4px;font-size:10px;">{props_html}</p><hr size="1"/><p style="margin:0px;margin-left:4px;font-size:10px;"><br/></p>'
-
-    def _imported_class_height(self, oclass: OoadClass) -> int:
-        n = min(4, len(oclass.properties)) + 2
-        return max(CELL_MIN_HEIGHT - 10, 30 + n * LINE_HEIGHT + 2 * SECTION_PAD)
-
     def _create_imported_class_cell(self, root_el, oclass) -> ET.Element:
-        cell = ET.SubElement(root_el, 'mxCell')
-        cell.set('id', self._cell_id)
-        cell.set('value', self._build_imported_class_html(oclass, self._from_module))
-        cell.set('style', IMPORTED_CLASS_STYLE)
-        cell.set('vertex', '1')
-        cell.set('parent', '1')
-        geo = ET.SubElement(cell, 'mxGeometry')
-        geo.set('x', str(self._cell_x))
-        geo.set('y', str(self._cell_y))
-        geo.set('width', str(CELL_WIDTH))
-        geo.set('height', str(self._imported_class_height(oclass)))
-        geo.set('as', 'geometry')
-        return cell
+        node = self._imported_class(oclass, self._from_module)
+        node.cell_id = self._cell_id
+        node.geometry = Geometry(
+            float(self._cell_x),
+            float(self._cell_y),
+            float(CELL_WIDTH),
+            float(node.height()),
+        )
+        return Page('', root_el).place(node)
 
     def _layout_page_with_imports(self, local_ids) -> Dict[str, Tuple[float, float, float, float]]:
         """Pack locals tightly; inheritance imports above, others beside linkers."""
@@ -1130,14 +963,14 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         return (inheritance_parents, inheritance_children, beside_ids)
 
     def _place_inheritance_parents(self, inheritance_parents: List[str]) -> None:
-        band_h = max((float(self._imported_class_height(self._id_to_oclass[i])) for i in inheritance_parents)) + INNER_ROW_GAP * 2
+        band_h = max((float(self._imported_class(self._id_to_oclass[i]).height()) for i in inheritance_parents)) + INNER_ROW_GAP * 2
         self._placements = {cid: (x, y + band_h, w, h) for cid, (x, y, w, h) in self._placements.items()}
         used: List[Tuple[float, float, float, float]] = []
         for iid in inheritance_parents:
             used.append(self._place_one_inheritance_parent(iid, used))
 
     def _place_one_inheritance_parent(self, iid: str, used: List) -> Tuple[float, float, float, float]:
-        h = float(self._imported_class_height(self._id_to_oclass[iid]))
+        h = float(self._imported_class(self._id_to_oclass[iid]).height())
         links = self._linkers_for(iid)
         primary = min((lid for lid, _k in links), key=lambda lid: (self._placements[lid][1], self._placements[lid][0]))
         x = self._placements[primary][0]
@@ -1154,7 +987,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
     def _place_inheritance_children(self, inheritance_children: List[str]) -> None:
         child_slots: dict[str, int] = {}
         for iid in inheritance_children:
-            h = float(self._imported_class_height(self._id_to_oclass[iid]))
+            h = float(self._imported_class(self._id_to_oclass[iid]).height())
             links = self._linkers_for(iid)
             primary = min((lid for lid, _k in links), key=lambda lid: (self._placements[lid][1], self._placements[lid][0]))
             px, py, _pw, ph = self._placements[primary]
@@ -1179,7 +1012,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             by_hub[primary].append(iid)
         self._fan_imports_by_hub(by_hub)
         for iid in orphan_imports:
-            h = float(self._imported_class_height(self._id_to_oclass[iid]))
+            h = float(self._imported_class(self._id_to_oclass[iid]).height())
             self._placements[iid] = (float(START_X), float(START_Y), float(CELL_WIDTH), h)
 
     def _fan_imports_by_hub(self, by_hub) -> None:
@@ -1191,7 +1024,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
                 self._place_fanned_import(iid)
 
     def _place_fanned_import(self, iid) -> None:
-        h = float(self._imported_class_height(self._id_to_oclass[iid]))
+        h = float(self._imported_class(self._id_to_oclass[iid]).height())
         col = self._fan_idx % self._fan_cols
         row = self._fan_idx // self._fan_cols
         hx, hy = self._fan_hx, self._fan_hy
@@ -1755,7 +1588,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             for cid in cids:
                 if cid in placed:
                     continue
-                h = float(self._class_height(id_to_oclass[cid]))
+                h = float(self.load_class(id_to_oclass[cid]).height())
                 if col >= row_cols:
                     x = origin_x
                     row_y += row_h + INNER_ROW_GAP
@@ -1773,7 +1606,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             nonlocal max_x
             if owner in placed:
                 return y
-            oh = float(self._class_height(id_to_oclass[owner]))
+            oh = float(self.load_class(id_to_oclass[owner]).height())
             placements[owner] = (origin_x, y, float(CELL_WIDTH), oh)
             placed.add(owner)
             max_x = max(max_x, origin_x + CELL_WIDTH)
@@ -1795,7 +1628,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
                         continue
                     if (kind or '').lower() != 'aggregation' or 'repository' not in src:
                         continue
-                    rh = float(self._class_height(id_to_oclass[src]))
+                    rh = float(self.load_class(id_to_oclass[src]).height())
                     placements[src] = (repo_x, y, float(CELL_WIDTH), rh)
                     placed.add(src)
                     max_x = max(max_x, repo_x + CELL_WIDTH)
@@ -1809,7 +1642,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
                     continue
                 if (kind or '').lower() != 'aggregation' or 'repository' not in src:
                     continue
-                rh = float(self._class_height(id_to_oclass[src]))
+                rh = float(self.load_class(id_to_oclass[src]).height())
                 placements[src] = (repo_x, y, float(CELL_WIDTH), rh)
                 placed.add(src)
                 max_x = max(max_x, repo_x + CELL_WIDTH)
@@ -1843,7 +1676,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
                             row_h = 0.0
                             col = 0
                         continue
-                    kh = float(self._class_height(id_to_oclass[kid]))
+                    kh = float(self.load_class(id_to_oclass[kid]).height())
                     if col >= leaf_cols:
                         x = origin_x
                         row_y = bottom + INNER_ROW_GAP
@@ -1869,7 +1702,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             nonlocal max_x
             if owner in placed:
                 return y
-            oh = float(self._class_height(id_to_oclass[owner]))
+            oh = float(self.load_class(id_to_oclass[owner]).height())
             placements[owner] = (x, y, float(CELL_WIDTH), oh)
             placed.add(owner)
             max_x = max(max_x, x + CELL_WIDTH)
@@ -1884,7 +1717,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             bottom = y + oh
             cx = x + CELL_WIDTH + INNER_COL_GAP
             for kid in leaves:
-                kh = float(self._class_height(id_to_oclass[kid]))
+                kh = float(self.load_class(id_to_oclass[kid]).height())
                 placements[kid] = (cx, y, float(CELL_WIDTH), kh)
                 placed.add(kid)
                 max_x = max(max_x, cx + CELL_WIDTH)
@@ -1906,7 +1739,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             if src not in member_set or src in placed or tgt not in placements:
                 continue
             tx, ty, _tw, _th = placements[tgt]
-            rh = float(self._class_height(id_to_oclass[src]))
+            rh = float(self.load_class(id_to_oclass[src]).height())
             rx = tx + CELL_WIDTH + INNER_COL_GAP
             candidate = (rx, ty, float(CELL_WIDTH), rh)
             guard = 0
@@ -1976,7 +1809,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             if cid not in previous_positions:
                 return None
             x, y = previous_positions[cid]
-            h = float(self._class_height(self._id_to_oclass[cid]))
+            h = float(self.load_class(self._id_to_oclass[cid]).height())
             trial[cid] = (x, y, float(CELL_WIDTH), h)
         if self._trial_has_overlap(trial):
             return None
@@ -2485,60 +2318,6 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         if 'startFill=0' in style and 'diamondThin' in style:
             return 'aggregation'
         return 'association'
-
-class _ContainmentForest:
-
-    def __init__(self, by_name: Dict[str, Module], children_of: Dict[str, List[str]], roots: List[str], synthetic: set) -> None:
-        self.by_name = by_name
-        self.children_of = children_of
-        self.roots = roots
-        self.synthetic = synthetic
-        self._depth_cache: Dict[str, int] = {}
-        self._visiting: set = set()
-
-    def _path_parent(self, name: str) -> Optional[str]:
-        if '/' not in name:
-            return None
-        return name.rsplit('/', 1)[0]
-
-    def _external_deps(self, module: Module) -> List[str]:
-        parent = self._path_parent(module.name)
-        return [d for d in module.dependencies if d != parent]
-
-    def _dep_names_for(self, name: str) -> List[str]:
-        module = self.by_name[name]
-        dep_names = list(self._external_deps(module))
-        if name in self.synthetic or (self.children_of.get(name) and (not module.public_terms()) and (not module.dependencies)):
-            for child in self.children_of.get(name, []):
-                dep_names.extend(self._external_deps(self.by_name[child]))
-        return dep_names
-
-    def _root_of(self, dep: str) -> Optional[str]:
-        if dep not in self.by_name:
-            return None
-        cur = dep
-        while True:
-            parent = self._path_parent(cur)
-            if not parent or parent not in self.by_name:
-                break
-            cur = parent
-        if cur in self.roots:
-            return cur
-        return None
-
-    def module_dep_depth(self, name: str) -> int:
-        if name in self._depth_cache:
-            return self._depth_cache[name]
-        if name in self._visiting:
-            self._depth_cache[name] = 0
-            return 0
-        self._visiting.add(name)
-        root_deps = [self._root_of(dep) for dep in self._dep_names_for(name)]
-        depths = [self.module_dep_depth(dep) for dep in root_deps if dep and dep != name]
-        self._visiting.discard(name)
-        d = 0 if not depths else 1 + max(depths)
-        self._depth_cache[name] = d
-        return d
 
 class _ContainmentLayout:
 

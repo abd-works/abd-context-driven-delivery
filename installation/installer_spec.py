@@ -34,7 +34,7 @@ from harness.mcp.mcp_server import McpServer
 from agent_bdd.spec_helpers import repo_root_from
 from harness.agent_tools.agent_tools import AgentToolSet
 
-CAR = "practices.car.car:Car"
+CAR = "practices.examples.car.car:Car"
 CAR_SKILL = ".cursor/skills/context_tools/car/car/SKILL.md"
 CAR_ROAD_STORY = ".cursor/skills/context_tools/car/car-road-story/SKILL.md"
 TRAVEL_TO = ".cursor/skills/actions/travel-to/SKILL.md"
@@ -664,6 +664,38 @@ with description("a Cursor hooks config") as self:
         with it("should leave hooks manifest unchanged from a prior full deploy"):
             text = (self.tree / "hooks.json").read_text(encoding="utf-8")
             expect(text).to(contain("keep-me"))
+
+
+with description("a Cursor hooks config that installed practice inject_rules") as self:
+    with before.each:
+        from practices.bdd.bdd import Bdd
+        from practices.clean_engineering.clean_engineering import CleanEngineering
+
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+            [Bdd(), CleanEngineering()]
+        )
+        self.handlers = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
+        self.inject_refs = [
+            item["ref"]
+            for item in self.handlers.get("handlers") or []
+            if item.get("operation") == "inject_rules"
+            and item.get("event") == "postToolUse"
+        ]
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with it("should write one Bdd inject_rules handler"):
+        expect(self.inject_refs.count("practices.bdd.bdd:Bdd")).to(equal(1))
+
+    with it("should write one CleanEngineering inject_rules handler"):
+        expect(
+            self.inject_refs.count(
+                "practices.clean_engineering.clean_engineering:CleanEngineering"
+            )
+        ).to(equal(1))
 
 
 with description("an installer that recorded files from a prior install") as self:

@@ -16,6 +16,7 @@ from expects import equal, expect, have_length
 from mamba import description, it
 
 from harness.knowledge_graph.model import CodeQL, Kind, PracticeGraph
+from harness.knowledge_graph.model.nodes import GraphStep
 from practices.clean_engineering.model.codeql.codeql_model import (
     CleanEngineeringModel,
     GraphMemberRows,
@@ -150,4 +151,4 @@ with description("CodeQL populate on PracticeGraph"):
         catalog = _REPO_ROOT / "practices" / "stories" / "catalog-examples"
         graph = PracticeGraph.load(catalog, codeql_results=_EXPORT)
         expect(graph.operation_named("CustomerRepository", "load") is not None).to(equal(True))
-        expect(len(graph.nodes_of_type(Step)) > 0).to(equal(True))
+        expect(len(graph.nodes_of_type(GraphStep)) > 0).to(equal(True))

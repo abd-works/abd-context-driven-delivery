@@ -21,7 +21,9 @@ class GrillContext(GuidanceAction):
         ``root`` may be ``session.path``, ``session.docs_dir``, or ``session.folder``
         — all resolve to the same ``.context`` file.
         """
-        return Path(root) / ".context" / "grill-answers.md"
+        from workspace.legacy.workspace import SessionPaths
+
+        return SessionPaths().docs_dir(root) / "grill-answers.md"
 
     def _appended_answers_content(self, existing: str | None, heading: str, body: str) -> str:
         """Compose the full grill-answers document after appending one entry (pure).
@@ -98,7 +100,7 @@ class GrillContext(GuidanceAction):
 
     @agent_instructions
     def grill_with_context(self, plan: str) -> str:
-        """Conduct a relentless grilling interview about {plan} - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Prefer contextual thinking questions over syntax trivia. When a sketch exists for this plan, use grilling to validate what the sketch claimed — sketch and grill must not run disconnected. Batch very similar questions into one AskQuestion so the loop does not run forever. Stage-specific show/persist/review cadence belongs to the wrapping stage (sketch, iterate, ...)."""
+        """Conduct a relentless grilling interview about {plan} - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Prefer thinking/context questions over syntax trivia. When a sketch exists for this plan, use grilling to validate what the sketch claimed — sketch and grill must not run disconnected. Batch similar questions into one AskQuestion so the loop does not run forever. Stage-specific show/persist/review cadence belongs to the wrapping stage (sketch, iterate, ...)."""
         """Step 0 - Resolve roots: explore under session.path; write grill-answers under session.docs_dir ({path}/.context/grill-answers.md). If no sprint exists yet, confirm path with the user, suggest a kebab slug from goal/context, open, then continue. Do not invent a divergent root."""
         """Step 1 - Context discovery: call explore_context_files(root=session.path) and any folders referenced in the plan. Prefer-read any active *-sketch.md for this plan so later questions can validate the sketch's thinking."""
         self.explore_context_files()

@@ -12,7 +12,7 @@ Each channel class exposes `parse(text) -> CleanEngineeringModel` and `render(mo
 
 `CleanEngineeringModel`, `Module`, `OoadClass`, `Property`, `Operation`, `Relationship`, `UpdateReport`; channel classes (`MarkdownCleanEngineeringModel`, `PythonCleanEngineeringModel`, `DrawIOCleanEngineeringModel`, …); example-factory helpers on the base model.
 
-Draw.io lives under `class_model/drawio/`: channel (`drawio_class_model.py`), miniature kit `Drawio` (`drawio.py` — render / scan / repair), rules (`drawio.md`), scanners, and `examples/evals/` fixtures.
+Draw.io lives under `class_model/drawio/` and Miro under `class_model/miro/`. Shared positioning, ordering, and layout live in `class_model/diagram/` (`Geometry`, `DiagramNode`, `DiagramClass`, `DiagramModule`, `ContainmentForest`). Each channel only writes its format (mxCell vs Mermaid/SVG).
 
 ## Dependencies
 

@@ -22,11 +22,7 @@ for _cat in ("practices", "tools", "actions"):
 from expects import equal, expect
 from mamba import description, it
 
-_GQS = _REPO_ROOT / "harness" / "knowledge_graph" / "model" / "graph_query_spec.py"
-_spec = importlib.util.spec_from_file_location("graph_query_spec", _GQS)
-_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)
-assert_pack_hits = _mod.assert_pack_hits
+from harness.knowledge_graph.model.graph_query_spec import assert_pack_hits
 
 _PACK = Path(__file__).resolve().parent
 _EXAMPLES = Path(__file__).resolve().parents[2] / "examples"

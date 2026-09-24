@@ -14,6 +14,7 @@ from harness.agent_tools.agent_tools import (
     agent_instructions,
     agent_tool,
     agent_toolset,
+    instructions,
     toolsetCollection,
 )
 from installation.files import rules, skill
@@ -48,6 +49,13 @@ class Guidance:
     @property
     def install_folder(self) -> Path:
         return AssetLocator(self, "").class_file_directory()
+
+    @property
+    def module_dir(self) -> Path:
+        try:
+            return Path(inspect.getfile(type(self))).resolve().parent
+        except (TypeError, OSError):
+            return Path(".")
 
     @markdownCollection("shared rules")
     @rules
@@ -104,11 +112,13 @@ class GuidanceCollection(MarkdownCollection, Guidance):
         MarkdownCollection.__init__(self, entries, parent=parent)
         Guidance.__init__(self)
         self.current: Guidance | None = None
-        self.stage: dict[str, Guidance] = {
-            key: child
-            for child in self.entries.values()
-            if (key := getattr(child, "stage", "") or "")
-        }
+
+    def child_for_stage(self, stage: str) -> Guidance:
+        values = self.entries.values() if isinstance(self.entries, dict) else self.entries
+        for child in values:
+            if getattr(child, "stage", "") == stage:
+                return child
+        raise KeyError(stage)
 
     @classmethod
     def child(cls, name: str, body: str = "") -> FidelityGuidance:
@@ -160,20 +170,25 @@ class PracticeGuidance(Guidance):
 
     @property
     def supported_formats(self) -> frozenset:
-        own = self.formats
+        own = dict(getattr(self, "_formats", None) or {})
         if own:
             return frozenset(own)
-        companion = self.clean_engineering_companion
-        owner = companion.practice_guidance if companion is not None else None
-        if owner is not None and owner is not self:
-            return frozenset(owner.formats)
         return frozenset()
     
     ## workspace integration to move
 
     def _activate(self, fidelity: str | None = None, stage: str | None = None) -> None:
+        if getattr(self, "_activating", False):
+            return
+        self._activating = True
+        try:
+            self._activate_fidelity(fidelity, stage)
+        finally:
+            self._activating = False
+
+    def _activate_fidelity(self, fidelity: str | None, stage: str | None) -> None:
         if stage is not None:
-            child = self.fidelities.stage[stage]
+            child = self.fidelities.child_for_stage(stage)
             fidelity = getattr(child, "name", None) or fidelity
         if fidelity is not None:
             names = sorted(self.fidelities.entries)
@@ -188,6 +203,13 @@ class PracticeGuidance(Guidance):
         if self.format:
             self.format = self._canonical_format(self.format)
         supported = self.supported_formats
+        if not supported and not getattr(self, "_formats", None) and self.format:
+            allowed = {
+                self._canonical_format(child.default_format)
+                for child in self.fidelities.entries.values()
+                if getattr(child, "default_format", None)
+            }
+            supported = frozenset(allowed)
         if supported and self.format and self.format not in supported:
             raise ValueError(
                 f"Unsupported format {self.format!r}. Choose from: {sorted(supported)}"
@@ -223,10 +245,27 @@ class PracticeGuidance(Guidance):
     @property
     @agent_instructions
     def guidance(self) -> str:
-        text = Markdown.from_label(self, "guidance").extract()
+        examples = str(self.examples or "").strip()
+        templates = str(self.templates or "").strip()
+        scoped = self.scoped_markdown().strip()
+        if scoped:
+            instructions(scoped)
+        if examples:
+            instructions(examples)
+        if templates:
+            instructions(templates)
+        return "\n\n".join(part for part in self._guidance_parts() if part)
+
+    def _guidance_parts(self) -> list[str]:
+        parts = [Markdown.from_label(self, "guidance").extract().strip()]
+        current = self.fidelities.current
+        if current is not None:
+            parts.append(Markdown.from_label(current, "guidance").extract().strip())
         companion = self.clean_engineering_companion
         extra = companion.instructions if companion is not None else ""
-        return "\n\n".join(part for part in (text, extra) if part)
+        if isinstance(extra, str):
+            parts.append(extra.strip())
+        return parts
 
 
     @property
@@ -236,10 +275,11 @@ class PracticeGuidance(Guidance):
     @agent_instructions
     def instructions(self) -> str:
         """overview"""
-        parts = [super().instructions]
-        if self.fidelities.entries:
-            parts.append(self.fidelities.instructions)
-        return "\n\n".join(part for part in parts if part)
+        parent_text = Guidance.instructions.fget(self)
+        extra = self.fidelities.instructions if self.fidelities.entries else ""
+        return "\n\n".join(
+            part for part in (parent_text, extra, self.scoped_markdown()) if part
+        )
 
 
     @toolsetCollection
@@ -378,6 +418,12 @@ class PracticeGuidance(Guidance):
         adapter = self._format_adapter(format_name)
         if not inspect.isclass(adapter):
             return adapter
+        create = getattr(adapter, "create", None)
+        if callable(create):
+            try:
+                return create()
+            except TypeError:
+                pass
         try:
             return adapter(tests_root=self.default_workspace_folder)
         except TypeError:
@@ -405,15 +451,22 @@ class PracticeGuidance(Guidance):
         ]
         md_path = self.domain_markdown_path()
         if md_path.is_file():
+            current = self.fidelities.current
+            current_name = getattr(current, "fidelity", None) or getattr(current, "name", None)
             for name, body in Markdown.from_label(self, "fidelities").fidelity_blocks(
                 md_path.read_text(encoding="utf-8")
             ):
-                current = self.fidelities.current
-                current_name = getattr(current, "fidelity", None) or getattr(current, "name", None)
-                if current_name and name != current_name:
+                if self._skip_inactive_fidelity(current_name, name):
                     continue
                 parts.append(f"### {name}\n\n{body}")
         return "\n\n".join(part for part in parts if part.strip())
+
+    def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
+        if not current_name:
+            return False
+        left = str(current_name).casefold().replace("-", "_")
+        right = str(name).casefold().replace("-", "_")
+        return left != right
 
 
 @agent_toolset
@@ -438,10 +491,9 @@ class FidelityGuidance(Guidance):
     @property
     def practice_guidance(self) -> PracticeGuidance | None:
         parent = getattr(self, "parent", None)
-        if parent is None:
-            return None
-        owner = getattr(parent, "parent", None)
-        return owner if owner is not None else parent
+        while parent is not None and not isinstance(parent, PracticeGuidance):
+            parent = getattr(parent, "parent", None)
+        return parent
 
     @property
     def context_index_key(self) -> str:
@@ -470,6 +522,14 @@ class FidelityGuidance(Guidance):
         from practices.clean_engineering.clean_engineering import CleanEngineering
 
         companion = CleanEngineering().fidelities[stored]
+        host = self.practice_guidance
+        practice = companion.practice_guidance
+        if (
+            host is not None
+            and practice is not None
+            and getattr(host, "format", None) in getattr(host, "_code_formats", ())
+        ):
+            practice.format = host.format
         self._clean_engineering = companion
         return companion
 

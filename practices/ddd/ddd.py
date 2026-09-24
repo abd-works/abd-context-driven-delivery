@@ -27,3 +27,7 @@ class Ddd(PracticeGuidance):
         )
         if stage is not None:
             self._activate(stage=stage)
+
+    def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
+        del current_name, name
+        return False

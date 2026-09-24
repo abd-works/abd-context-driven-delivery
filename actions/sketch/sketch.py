@@ -9,7 +9,7 @@ from pathlib import Path
 
 from grill_context.grill_context import GrillContext
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, instructions
 from harness.agent_tools.agent_tools import agent_tool
 from installation.files import Skill
 from harness.mcp.mcp_server import Mcp
@@ -26,7 +26,12 @@ class Sketch(GuidanceAction):
 
     def _sketch_path(self, destination: str, slug: str) -> Path:
         """Resolve sketch path under the destination docs dir (pure)."""
-        return Path(destination) / ".context" / f"{slug}-sketch.md"
+        from workspace.legacy.workspace import SessionPaths
+
+        docs = SessionPaths().docs_dir(destination)
+        if docs.name == ".context":
+            return docs / f"{slug}-sketch.md"
+        return docs / ".context" / f"{slug}-sketch.md"
 
     @property
     def sketch_template(self) -> str:
@@ -107,8 +112,11 @@ class Sketch(GuidanceAction):
     @Skill
     @agent_instructions
     def sketch(self, guidance: GuidanceArg) -> str:
-        """Grill the plan with grill: ask short framed questions and wait for answers. After each small batch of answers, sketch only what those answers unlocked, save it, and get user feedback before asking more. Work in short cycles until the sketch is agreed. Then generate the formal artifact from that sketch — do not generate the full product during the sketch loop. Pass a string to sketch that text once."""
+        """Grill the sketch plan with grill_with_context: ask short framed questions and wait for answers. After each small batch of answers, sketch only what those answers unlocked, save_sketch, then review_sketch, and get user feedback before asking more. Carry forward named review mistakes into the next sketch; do not regenerate as if those mistakes never happened. Regenerating as if named mistakes never happened is a defect. Asking another grill question before review_sketch confirms correct is a defect. Never defer persistence or review to the end of the grill. Work in short cycles until the sketch is agreed. Then generate the formal artifact from that sketch — do not generate the full product during the sketch loop. Check the sketch against each listed practice's rules.markdown_block (original Rules markdown for the practice and the active fidelity). That check is an AI evaluation of the vanilla Rules block — not a graph .ql query. *Fix all violations before presenting the sketch to the user.*
+        Pass a string to sketch that text once."""
         self.begin(guidance, action="sketch")
+        for item in self.listed():
+            instructions(item.rules.markdown_block)
         self._grill_context().grill_with_context()
         self.find_template()
         self.save_sketch()

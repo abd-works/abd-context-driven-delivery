@@ -286,7 +286,7 @@ class WorkTicket:
         name = self.resolve_type(category)
         self._type = name
         if name and self._issue is not None:
-            self._issue.set_type(name)
+            self._issue.write_type(name)
         return self
 
     def set_theme(self, theme: str) -> WorkTicket:

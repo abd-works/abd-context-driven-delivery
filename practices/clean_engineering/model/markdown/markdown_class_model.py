@@ -54,22 +54,114 @@ from practices.clean_engineering.model.update_report import ChildCollectionPair,
 
 
 class MarkdownOoadClass(OoadClass):
-    pass
+    def load_property_field(self, source: Property) -> Property:
+        loaded = Property(name=source.name)
+        loaded.update_self(source)
+        return loaded
+
+    def load_operation_field(self, source: Operation) -> Operation:
+        loaded = Operation(name=source.name)
+        loaded.update_self(source)
+        return loaded
+
+    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
+        assert isinstance(source, OoadClass)
+        return [
+            ChildCollectionPair(self.properties, source.properties, self.load_property_field),
+            ChildCollectionPair(self.operations, source.operations, self.load_operation_field),
+            ChildCollectionPair(self.relationships, source.relationships, self.load_relationship),
+        ]
+
+    def update_self(self, source: OoadNode) -> None:
+        assert isinstance(source, OoadClass)
+        self.intent = source.intent
+        self.collaborators = list(source.collaborators)
+
+    def render(self, known_names: Optional[List[str]] = None) -> str:
+        names = known_names or []
+        heading = self.name
+        iface = companion_interface_name(self.name, names)
+        if iface:
+            heading = f"{self.name} : {iface}"
+        lines: List[str] = [f"## {heading}", ""]
+        if self.intent:
+            lines.append(self.intent)
+            lines.append("")
+        params = ", ".join(
+            f"{property_row.name}: {property_row.type_hint}" if property_row.type_hint else property_row.name
+            for property_row in self.properties
+        )
+        if self.properties or self.operations:
+            lines.append(f"{self.name}({params})")
+            lines.append("------")
+            for property_row in self.properties:
+                lines.append(property_row.render())
+            lines.append("----")
+            for operation in self.operations:
+                if is_interface_name(self.name) and operation.name.startswith("_"):
+                    continue
+                lines.append(operation.render())
+        lines.append("")
+        return "\n".join(lines)
+
+    @classmethod
+    def parse_body(cls, name: str, body: str, sequential_order: int) -> "MarkdownOoadClass":
+        host = MarkdownCleanEngineeringModel(name="", sequential_order=1)
+        host._class_order = sequential_order
+        parsed = host._parse_class(name, body)
+        loaded = cls(name=parsed.name, sequential_order=sequential_order)
+        loaded.intent = parsed.intent
+        loaded.properties = parsed.properties
+        loaded.operations = parsed.operations
+        loaded.relationships = parsed.relationships
+        loaded.collaborators = list(parsed.collaborators)
+        return loaded
 
 
 class MarkdownModule(Module):
     def load_class(self, source: OoadClass) -> MarkdownOoadClass:
-        return MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
+        loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
+        loaded.update_self(source)
+        return loaded
+
+    def render(self) -> str:
+        lines: List[str] = [f"# {self.name}", ""]
+        if self.description:
+            lines.append(self.description)
+            lines.append("")
+        terms = self.public_terms()
+        modules_only = bool(self.dependencies or self.seam_terms) and not any(
+            loaded.properties or loaded.operations for loaded in self.classes
+        )
+        if modules_only or (terms and not self.classes):
+            if self.description:
+                lines.append(f"- **Purpose:** {self.description.splitlines()[0].strip()}")
+            if terms:
+                lines.append(f"- **Seam (terms):** {', '.join(terms)}")
+            if self.dependencies:
+                lines.append(
+                    f"- **Dependencies (one-way):** {', '.join(self.dependencies)}"
+                )
+            elif modules_only:
+                lines.append("- **Dependencies (one-way):** *(none)*")
+            lines.append("")
+        known = [loaded.name for loaded in self.classes]
+        for loaded in self.classes:
+            lines.append(loaded.render(known_names=known))
+        return "\n".join(lines)
 
 
 class MarkdownCleanEngineeringModel(CleanEngineeringModel):
 
     def load_module(self, source: Module) -> MarkdownModule:
-        return MarkdownModule(name=source.name, sequential_order=source.sequential_order)
+        loaded = MarkdownModule(name=source.name, sequential_order=source.sequential_order)
+        loaded.update_self(source)
+        return loaded
 
-    # ------------------------------------------------------------------
-    # Uniform callable surface
-    # ------------------------------------------------------------------
+    def load_class(self, source: OoadClass) -> MarkdownOoadClass:
+        loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
+        loaded.update_self(source)
+        return loaded
 
     def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
         model = type(self)(name="", sequential_order=1)
@@ -124,15 +216,19 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 continue
             if " : " in class_name:
                 class_name = class_name.split(" : ", 1)[0].strip()
-            self._class_order = class_order
-            module.classes.append(self._parse_class(class_name, class_block[heading.end():].lstrip("\n")))
+            module.classes.append(
+                MarkdownOoadClass.parse_body(
+                    class_name,
+                    class_block[heading.end():].lstrip("\n"),
+                    class_order,
+                )
+            )
             class_order += 1
 
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
-        parts: List[str] = []
-        for module in canonical.modules:
-            parts.append(self._render_module(module))
-        return "\n".join(parts)
+    def render(self, canonical: Optional[CleanEngineeringModel] = None, previous: Optional[str] = None) -> str:
+        if canonical is not None:
+            self.translate_from(canonical)
+        return "\n".join(module.render() for module in self.modules)
 
     def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
         return canonical.translate_from(self.parse(text))
@@ -144,36 +240,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             if "practices.clean_engineering.clean_engineering:CleanEngineering" in text and "@toolset-manifest" in text:
                 return cls().parse(text)
         return None
-
-
-
-    def _render_module(self, module: Module) -> str:
-        lines: List[str] = [f"# {module.name}", ""]
-        if module.description:
-            lines.append(module.description)
-            lines.append("")
-        terms = module.public_terms()
-        # Modules-fidelity structured fields when present (and no typed class bodies yet)
-        modules_only = bool(module.dependencies or module.seam_terms) and not any(
-            c.properties or c.operations for c in module.classes
-        )
-        if modules_only or (terms and not module.classes):
-            if module.description:
-                lines.append(f"- **Purpose:** {module.description.splitlines()[0].strip()}")
-            if terms:
-                lines.append(f"- **Seam (terms):** {', '.join(terms)}")
-            if module.dependencies:
-                lines.append(
-                    f"- **Dependencies (one-way):** {', '.join(module.dependencies)}"
-                )
-            elif modules_only:
-                lines.append("- **Dependencies (one-way):** *(none)*")
-            lines.append("")
-        known = [c.name for c in module.classes]
-        for oclass in module.classes:
-            lines.append(self._render_class(oclass, known_names=known))
-        return "\n".join(lines)
-
 
     _MODULE_META_HEADINGS = frozenset({
         "seam",
@@ -283,41 +349,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 module.dependencies = self._parse_term_list(first)
         elif key == "purpose":
             module.description = body.strip()
-
-
-    def _render_class(self, oclass: OoadClass, known_names: List[str] | None = None) -> str:
-        known_names = known_names or []
-        heading = oclass.name
-        iface = companion_interface_name(oclass.name, known_names)
-        if iface:
-            heading = f"{oclass.name} : {iface}"
-        elif is_interface_name(oclass.name):
-            heading = oclass.name
-        lines: List[str] = [f"## {heading}", ""]
-        if oclass.intent:
-            lines.append(oclass.intent)
-            lines.append("")
-        params = ", ".join(
-            f"{p.name}: {p.type_hint}" if p.type_hint else p.name
-            for p in oclass.properties
-        )
-        if oclass.properties or oclass.operations:
-            lines.append(f"{oclass.name}({params})")
-            lines.append("------")
-            for prop in oclass.properties:
-                lines.append(f"{prop.name}: {prop.type_hint}" if prop.type_hint else prop.name)
-            lines.append("----")
-            for op in oclass.operations:
-                if is_interface_name(oclass.name) and op.name.startswith("_"):
-                    continue
-                op_params = ", ".join(op.parameters)
-                ret = f": {op.return_type}" if op.return_type else ""
-                prefix = "- " if op.name.startswith("_") else ""
-                lines.append(f"{prefix}{op.name}({op_params}){ret}")
-        lines.append("")
-        return "\n".join(lines)
-
-
 
     def _parse_class(self, name: str, body: str) -> OoadClass:
         parts6 = re.split(r"(?m)^-{6}\s*$", body, maxsplit=1)

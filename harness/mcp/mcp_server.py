@@ -411,14 +411,13 @@ class McpInstallation(Installation):
         repo_cursor = (Path(self.repo) / ".cursor").resolve() if self.repo is not None else None
         canonical = repo_cursor is not None and Path(self.path).resolve() == repo_cursor
         cursor = CursorMcpJson()
-        if spec and cursor.sync_user_cursor_server(spec, canonical=canonical):
-            cursor.touch_mcp_manifest(manifest)
+        if canonical and spec and cursor.sync_user_cursor_server(spec, canonical=True):
+            cursor.touch_mcp_manifest(manifest, bump_env=True)
             return "nudged"
         if self.cursor_host_is_running():
             return "running"
         if not manifest.is_file():
             return "missing"
-        cursor.touch_mcp_manifest(cursor.user_cursor_mcp_json(), bump_env=True)
         nudge_file = self.path / NUDGE_NAME
         now = time.time()
         try:
@@ -427,7 +426,7 @@ class McpInstallation(Installation):
             last = 0.0
         if now - last < NUDGE_MIN_SECONDS:
             return "waiting"
-        cursor.touch_mcp_manifest(manifest)
+        cursor.touch_mcp_manifest(manifest, bump_env=True)
         nudge_file.write_text(str(now), encoding="utf-8")
         return "nudged"
 
@@ -602,10 +601,13 @@ class McpServer:
         """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
         if name in self._tools or name in self._prompts:
             return name
+        as_dots = name.replace("_", ".")
+        if as_dots in self._tools or as_dots in self._prompts:
+            return as_dots
         if name == BUILTIN_PING_TOOL.replace(".", "_", 1):
             return BUILTIN_PING_TOOL
         for enrolled in (*self._tools, *self._prompts):
-            if enrolled.replace(".", "_", 1) == name:
+            if enrolled.replace(".", "_") == name or enrolled.replace(".", "_", 1) == name:
                 return enrolled
         return name
 

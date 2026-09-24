@@ -147,7 +147,7 @@ with description("Node.rules on PracticeGraph"):
         expect("publicCount > 10" in rule.load_graph_query()).to(equal(True))
 
     with it("should evaluate rules on full catalog load"):
-        graph = PracticeGraph.load(_CATALOG)
+        graph = PracticeGraph.load(_CATALOG, populate=False)
         steps = graph.nodes_of_type(Step)
         expect(len(steps) > 0).to(equal(True))
         expect(len(graph.rule_registry.rules) > 0).to(equal(True))

@@ -218,7 +218,7 @@ with description("Sketch toolset"):
 
         with it("instructs carrying named review mistakes into the next sketch"):
             joined = "\n".join(self.body.prompt)
-            expect(joined).to(contain("carried forward"))
+            expect(joined).to(contain("Carry forward"))
             expect(joined).to(
                 contain("do not regenerate as if those mistakes never happened")
             )
@@ -228,12 +228,12 @@ with description("Sketch toolset"):
 
         with it("instructs grilling to validate the sketch rather than run disconnected"):
             joined = "\n".join(self.body.prompt)
-            expect(joined).to(contain("validates what the sketch claimed"))
+            expect(joined).to(contain("validate what the sketch claimed"))
             expect(joined).to(contain("must not run disconnected"))
 
         with it("instructs batching similar questions so the loop does not run forever"):
             joined = "\n".join(self.body.prompt)
-            expect(joined).to(contain("Batch very similar questions"))
+            expect(joined).to(contain("Batch similar questions"))
             expect(joined).to(contain("does not run forever"))
 
         with it("includes the grill_with_context body in sketch"):
@@ -241,6 +241,18 @@ with description("Sketch toolset"):
             expect(joined).to(contain("(Recommended)"))
             expect(joined).to(contain("save_sketch"))
             expect(joined).to(contain("Grill the sketch plan"))
+
+        with it("inlines each listed practice's rules markdown_block"):
+            from practices.bdd.bdd import Bdd
+
+            sketcher = Sketch()
+            sketcher.begin([Bdd(fidelity="behavior")], action="sketch")
+            joined = "\n".join(
+                AgentInstructions.for_callable(Sketch.sketch, sketcher).prompt
+            )
+            expect(joined).to(contain("observable-behavior"))
+            expect(joined).to(contain("no-implementation"))
+            expect(joined).to(contain("not a graph .ql query"))
 
 
 with description("a sketch action"):

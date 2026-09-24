@@ -8,16 +8,16 @@ alwaysApply: true
 
 ## Architecture contract (never break)
 
-1. **Same base classes, different output.** `MiroCleanEngineeringModel` extends `CleanEngineeringModel`. `MiroModule` extends `Module`. `MiroOoadClass` extends `OoadClass`. Mirror the DrawIO equivalents exactly — same factory chain, same `load_*` pattern.
+1. **Same base classes, different output.** `MiroClass` extends shared `DiagramClass` (`OoadClass` + `DiagramNode`). `MiroModule` extends shared `DiagramModule` (`Module` + `DiagramNode`). Mirror Draw.io: `load_module` / `load_class` copy onto the subtype with `update_self`.
 2. **Do not touch `base_class_model.py`.** That is shared by all backends. Never replicate its node types or graph semantics.
-3. **Do not copy layout logic from `drawio_class_model.py`.** The layout for the Miro class diagram is expressed as Mermaid; positioning coordinates are implicit in Mermaid's auto-layout.
+3. **Positioning, ordering, and layout live in `model/diagram`.** Geometry, `DiagramNode.keep_or_place`, containment forest, module/class height, path nesting, and `is_modules_view` are shared. This channel only writes Mermaid and canvas-composer SVG.
 4. **`UpdateReport` is imported from `practices.clean_engineering.model.update_report`, never redefined.**
 
 ## Output format
 
 5. **Both views render as SVG** in the Miro canvas-composer DSL (`canvas_create_from_svg` format).
-6. **Modules view:** a single `<foreignObject data-type="diagram">` with Mermaid `flowchart LR` body. Each module = one node labelled `**name**<br/>purpose<br/>---<br/>• term…`. Each dependency = one directed edge `A --> B`. Nested paths rendered as parent-child grouping via Mermaid `subgraph`.
-7. **Class view:** a single `<foreignObject data-type="diagram">` with Mermaid `classDiagram` body. Each `OoadClass` = one `class` block with `+type field` properties and `+return method()` operations. Relationships = Mermaid arrows keyed by `kind` (`inheritance`, `composition`, `aggregation`, `association`).
+6. **Modules view:** a single `<foreignObject data-type="diagram">` with Mermaid `flowchart LR` body. Labels come from `MiroModule.mermaid_label`. Nested paths use `ContainmentForest` plus Mermaid `subgraph`.
+7. **Class view:** one `<foreignObject>` per module. Bounds come from `Geometry` on the `MiroModule`. `MiroClass` / `MiroImportedClass` emit Mermaid `class` blocks.
 8. **`parse(svg)` extracts the Mermaid source** from the foreignObject body and reconstructs the model using regex/line-based parsing. Auto-detect view type by the Mermaid header (`flowchart` → modules, `classDiagram` → class).
 9. **No Miro REST API calls inside miro_class_model.py.** Generate SVG strings; the agent posts them via `canvas_create_from_svg`.
 

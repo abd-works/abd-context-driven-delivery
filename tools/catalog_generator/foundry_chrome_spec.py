@@ -15,12 +15,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from installation.installer import Installer  # noqa: F401 — load Destination before Catalog
-from catalog_generator.foundry_chrome import (
-    apply_brand,
-    apply_named_brand,
-    brand_folders,
-    copy_commons,
-)
+from catalog_generator.foundry_chrome import Brand
 
 
 with description("foundry chrome brand"):
@@ -33,7 +28,7 @@ with description("foundry chrome brand"):
 
     with context("that copies commons with the bundled brand"):
         with it("should place abd.works wordmarks under commons/brand"):
-            dest = copy_commons(self.out)
+            dest = Brand().copy_commons(self.out)
             expect((dest / "brand" / "abd.works.wordmark.black.svg").is_file()).to(
                 equal(True)
             )
@@ -43,8 +38,8 @@ with description("foundry chrome brand"):
             other = self.out / "other-brand"
             other.mkdir()
             (other / "mark.txt").write_text("alt", encoding="utf-8")
-            commons = copy_commons(self.out / "catalog")
-            apply_brand(commons, other)
+            commons = Brand().copy_commons(self.out / "catalog")
+            Brand(folder=other).apply(commons)
             expect((commons / "brand" / "mark.txt").read_text(encoding="utf-8")).to(
                 equal("alt")
             )
@@ -58,21 +53,21 @@ with description("a catalog brands collection"):
         self.client.mkdir(parents=True)
         (self.client / "mark.txt").write_text("acme", encoding="utf-8")
         self.out_root = self.root / "catalog"
-        copy_commons(self.out_root)
+        Brand().copy_commons(self.out_root)
 
     with after.each:
         self._tmp.cleanup()
 
     with context("that has named brand folders"):
         with it("should list each folder name"):
-            expect("acme" in brand_folders(self.root / "brands")).to(equal(True))
+            expect("acme" in Brand(collection=self.root / "brands").folders()).to(equal(True))
 
         with it("should include the bundled abd-works brand"):
-            expect("abd-works" in brand_folders(self.root / "brands")).to(equal(True))
+            expect("abd-works" in Brand(collection=self.root / "brands").folders()).to(equal(True))
 
     with context("with apply_brand given a collection name"):
         with it("should copy that folder onto the catalog commons brand"):
-            apply_named_brand(self.out_root, "acme", self.root / "brands")
+            Brand(collection=self.root / "brands").apply_named(self.out_root, "acme")
             expect(
                 (self.out_root / "commons" / "brand" / "mark.txt").read_text(
                     encoding="utf-8"

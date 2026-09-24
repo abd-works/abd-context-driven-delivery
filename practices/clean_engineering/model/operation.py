@@ -16,6 +16,9 @@ class Parameter(OoadNode):
         super().__init__(name, sequential_order)
         self.type_hint = type_hint
 
+    def as_record(self) -> dict:
+        return {"name": self.name, "typeHint": self.type_hint}
+
     def update_self(self, source: OoadNode) -> None:
         assert isinstance(source, Parameter)
         self.name = source.name
@@ -86,6 +89,12 @@ class Operation(OoadNode):
             description=self.description,
             callees=list(self.callees),
         )
+
+    def as_record(self) -> dict:
+        return self.to_field().as_record()
+
+    def render(self) -> str:
+        return self.to_field().render()
 
     def update_self(self, source: OoadNode) -> None:
         assert isinstance(source, Operation)

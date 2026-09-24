@@ -28,8 +28,6 @@ from git.git import (
     Ticket,
     TicketState,
     issue_theme_label,
-    resolve_github_status_option,
-    resolve_github_theme_option,
 )
 
 
@@ -80,7 +78,7 @@ with description("a Repo"):
                 judge="judge-chat",
                 judge_pid=0,
             )
-            self.repo.branch_named("session/demo").assign_cli_agent(binding)
+            binding.write_tag(self.repo, "session/demo")
             loaded = self.repo.branch_named("session/demo").cli_agent()
             expect(loaded.doer).to(equal("doer-chat"))
             expect(loaded.judge).to(equal("judge-chat"))
@@ -152,7 +150,7 @@ with description("a Repo ticket lifecycle"):
         )
 
     with it("should apply an issue type name on the ticket"):
-        self.ticket.set_type("Defect")
+        self.ticket.write_type("Defect")
         expect(self.ticket.issue_type).to(equal("Defect"))
 
     with it("should create missing organization issue types"):
@@ -187,7 +185,7 @@ with description("GitHub project status names"):
                 )
             return ""
 
-        repo._gh = fake_gh  # type: ignore[method-assign]
+        repo.run_gh = fake_gh  # type: ignore[method-assign]
         repo._memory = False
         names = project.refresh_states()
         expect(names).to(equal(["Todo", "In Progress", "Review", "Done"]))
@@ -198,21 +196,21 @@ with description("GitHub project status names"):
 
     with it("should map Backlog to Todo when the board has Todo"):
         expect(
-            resolve_github_status_option(
+            Project.github_status_option(
                 "Backlog", ["Todo", "In Progress", "Done"]
             )
         ).to(equal("Todo"))
 
     with it("should keep Backlog when the board has Backlog"):
         expect(
-            resolve_github_status_option(
+            Project.github_status_option(
                 "Backlog", ["Backlog", "In Progress", "Done"]
             )
         ).to(equal("Backlog"))
 
     with it("should map In Progress to In progress when the board uses lowercase"):
         expect(
-            resolve_github_status_option(
+            Project.github_status_option(
                 "In Progress", ["Backlog", "In progress", "Done"]
             )
         ).to(equal("In progress"))
@@ -238,7 +236,7 @@ with description("GitHub project status names"):
                 return '{"id":"PVTI_1"}'
             return ""
 
-        repo._gh = fake_gh  # type: ignore[method-assign]
+        repo.run_gh = fake_gh  # type: ignore[method-assign]
         repo._memory = False
         ticket.set_status("Backlog")
         option_ids = []
@@ -255,7 +253,7 @@ with description("GitHub project status names"):
 with description("GitHub project theme names"):
     with it("should match Theme options case-insensitively"):
         expect(
-            resolve_github_theme_option(
+            Project.github_theme_option(
                 "CLI agent", ["cli-agent", "workspace"]
             )
         ).to(equal("cli-agent"))
@@ -280,7 +278,7 @@ with description("GitHub project theme names"):
                 return '{"id":"PVTI_1"}'
             return ""
 
-        repo._gh = fake_gh  # type: ignore[method-assign]
+        repo.run_gh = fake_gh  # type: ignore[method-assign]
         repo._memory = False
         ticket.add_theme("CLI agent")
         theme_option_ids = []

@@ -1,0 +1,68 @@
+run-queries codeql: CodeQLRunError: codeql failed: Initializing database at C:\dev\abd-context-driven-delivery\practices\ddd\examples\.codeql\javascript-working-copy.
+Running build command: []
+Running command in C:\dev\abd-context-driven-delivery\practices\ddd\examples: [C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\javascript\tools\autobuild.cmd]
+Finalizing database at C:\dev\abd-context-driven-delivery\practices\ddd\examples\.codeql\javascript-working-copy.
+Error: CodeQL detected code written in GitHub Actions and Python, but not any written in JavaScript/TypeScript. Confirm that there is some source code for JavaScript/TypeScript in the project. For more information, review our troubleshooting guide at https://gh.io/troubleshooting-code-scanning/no-source-code-seen-during-build.
+
+[2026-09-24 11:24:56] [build-stdout] Single-threaded extraction.
+[2026-09-24 11:24:56] [build-stderr] No JavaScript or TypeScript code found.
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 358, in _evaluate_pack
+    batch = self._rule_rows()
+            ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 425, in _rule_rows
+    batch.update(self._combined_rule_rows())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 450, in _combined_rule_rows
+    db = self._rule_database if self._rule_database is not None else self._codeql.ensure_database(language)
+                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 181, in ensure_database
+    return self._create_database(working)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 225, in _create_database
+    raise self._failed_codeql(run)
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql failed: Initializing database at C:\dev\abd-context-driven-delivery\practices\ddd\examples\.codeql\javascript-working-copy.
+Running build command: []
+Running command in C:\dev\abd-context-driven-delivery\practices\ddd\examples: [C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\javascript\tools\autobuild.cmd]
+Finalizing database at C:\dev\abd-context-driven-delivery\practices\ddd\examples\.codeql\javascript-working-copy.
+Error: CodeQL detected code written in GitHub Actions and Python, but not any written in JavaScript/TypeScript. Confirm that there is some source code for JavaScript/TypeScript in the project. For more information, review our troubleshooting guide at https://gh.io/troubleshooting-code-scanning/no-source-code-seen-during-build.
+
+[2026-09-24 11:24:56] [build-stdout] Single-threaded extraction.
+[2026-09-24 11:24:56] [build-stderr] No JavaScript or TypeScript code found.
+
+
+run-queries codeql: CodeQLRunError: codeql failed: Initializing database at C:\dev\abd-context-driven-delivery\practices\ddd\examples\.codeql\javascript-working-copy.
+Running build command: []
+Running command in C:\dev\abd-context-driven-delivery\practices\ddd\examples: [C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\javascript\tools\autobuild.cmd]
+Finalizing database at C:\dev\abd-context-driven-delivery\practices\ddd\examples\.codeql\javascript-working-copy.
+Error: CodeQL detected code written in GitHub Actions and Python, but not any written in JavaScript/TypeScript. Confirm that there is some source code for JavaScript/TypeScript in the project. For more information, review our troubleshooting guide at https://gh.io/troubleshooting-code-scanning/no-source-code-seen-during-build.
+
+[2026-09-24 11:25:23] [build-stdout] Single-threaded extraction.
+[2026-09-24 11:25:23] [build-stderr] No JavaScript or TypeScript code found.
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 358, in _evaluate_pack
+    batch = self._rule_rows()
+            ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 425, in _rule_rows
+    batch.update(self._combined_rule_rows())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 450, in _combined_rule_rows
+    db = self._rule_database if self._rule_database is not None else self._codeql.ensure_database(language)
+                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 181, in ensure_database
+    return self._create_database(working)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 225, in _create_database
+    raise self._failed_codeql(run)
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql failed: Initializing database at C:\dev\abd-context-driven-delivery\practices\ddd\examples\.codeql\javascript-working-copy.
+Running build command: []
+Running command in C:\dev\abd-context-driven-delivery\practices\ddd\examples: [C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\javascript\tools\autobuild.cmd]
+Finalizing database at C:\dev\abd-context-driven-delivery\practices\ddd\examples\.codeql\javascript-working-copy.
+Error: CodeQL detected code written in GitHub Actions and Python, but not any written in JavaScript/TypeScript. Confirm that there is some source code for JavaScript/TypeScript in the project. For more information, review our troubleshooting guide at https://gh.io/troubleshooting-code-scanning/no-source-code-seen-during-build.
+
+[2026-09-24 11:25:23] [build-stdout] Single-threaded extraction.
+[2026-09-24 11:25:23] [build-stderr] No JavaScript or TypeScript code found.
+
+

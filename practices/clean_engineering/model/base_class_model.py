@@ -229,6 +229,32 @@ class OoadClass(OoadNode):
         elif not source.properties and not source.operations:
             self.sync_legacy_from_tree()
 
+    def as_record(self) -> dict:
+        return {
+            "name": self.name,
+            "sequentialOrder": self.sequential_order,
+            "intent": self.intent,
+            "properties": [item.as_record() for item in self.properties],
+            "operations": [item.as_record() for item in self.operations],
+            "relationships": [item.as_record() for item in self.relationships],
+            "collaborators": list(self.collaborators),
+        }
+
+    def load_property_field(self, source: PropertyField) -> PropertyField:
+        loaded = PropertyField(name=source.name)
+        loaded.update_self(source)
+        return loaded
+
+    def load_operation_field(self, source: OperationField) -> OperationField:
+        loaded = OperationField(name=source.name)
+        loaded.update_self(source)
+        return loaded
+
+    def load_relationship(self, source: Relationship) -> Relationship:
+        loaded = Relationship(target=source.target)
+        loaded.update_self(source)
+        return loaded
+
     def load_property(self, source: "Property") -> "Property":
         from practices.clean_engineering.model.property import Property as PropertyNode
 
@@ -308,6 +334,18 @@ class Module(OoadNode):
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
         self.classes: List[OoadClass] = []
 
+    def as_record(self) -> dict:
+        return {
+            "name": self.name,
+            "sequentialOrder": self.sequential_order,
+            "description": self.description,
+            "seam": self.seam,
+            "seamTerms": list(self.seam_terms),
+            "dependencies": list(self.dependencies),
+            "constraint": self.constraint,
+            "classes": [loaded.as_record() for loaded in self.classes],
+        }
+
     def public_terms(self) -> List[str]:
         """Seam bullets for modules fidelity: explicit terms, else thin class names, else seam string."""
         if self.seam_terms:
@@ -343,7 +381,7 @@ class Module(OoadNode):
 class CleanEngineeringModel(OoadNode):
     _semantic_type_name = "CleanEngineeringModel"
 
-    def __init__(self, name: str, sequential_order: int = 1) -> None:
+    def __init__(self, name: str = "", sequential_order: int = 1) -> None:
         super().__init__(name, sequential_order)
         self.modules: List[Module] = []
 
@@ -351,6 +389,17 @@ class CleanEngineeringModel(OoadNode):
     def classes(self) -> List[OoadClass]:
         """Flat view of all classes across all modules - for backward compat."""
         return [cls for module in self.modules for cls in module.classes]
+
+    def as_record(self) -> dict:
+        if self.modules:
+            return {
+                "name": self.name,
+                "modules": [module.as_record() for module in self.modules],
+            }
+        return {
+            "name": self.name,
+            "classes": [loaded.as_record() for loaded in self.classes],
+        }
 
     def update_self(self, source: "OoadNode") -> None:
         assert isinstance(source, CleanEngineeringModel)

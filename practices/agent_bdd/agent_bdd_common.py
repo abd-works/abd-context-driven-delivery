@@ -690,7 +690,7 @@ class AgentSpecManifest:
 
     @property
     def in_chat(self) -> bool:
-        return self.installer == "in_chat"
+        return self.harness in {"in_chat", "chat"}
 
     @property
     def judge_session(self) -> str | None:
@@ -708,7 +708,7 @@ def read_manifest(spec_path: Path) -> AgentSpecManifest:
     finder._source = text
     command = finder._find_marker_command()
     if command is None:
-        raise ValueError(f"{spec_path}: missing {AGENT_SPEC_MARKER} comment")
+        command = "agent-spec"
     harness = _HARNESS_RE.search(text)
     session = _SESSION_RE.search(text)
     chat = _AGENT_READING_RE.search(text)

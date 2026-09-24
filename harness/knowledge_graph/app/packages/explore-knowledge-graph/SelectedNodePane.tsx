@@ -174,23 +174,42 @@ function NodeSection({
               {showGuidance && entry.body ? <p>{entry.body}</p> : null}
               {entry.message ? <p className="violation">{entry.message}</p> : null}
               {entry.status === 'violating' || entry.message ? (
-                <button
-                  type="button"
-                  className="copy-prompt"
-                  data-testid="copy-info-to-prompt"
-                  onClick={() =>
-                    void navigator.clipboard.writeText(
-                      violationPrompt({
-                        path,
-                        semanticType,
-                        source: source?.file ? source : origin,
-                        rule: entry,
-                      }),
-                    )
-                  }
-                >
-                  Copy info to prompt
-                </button>
+                <div className="copy-prompt-actions">
+                  <button
+                    type="button"
+                    className="copy-prompt"
+                    data-testid="copy-info-to-prompt"
+                    onClick={() =>
+                      void navigator.clipboard.writeText(
+                        violationPrompt({
+                          path,
+                          semanticType,
+                          source: source?.file ? source : origin,
+                          rule: entry,
+                        }),
+                      )
+                    }
+                  >
+                    Copy info to prompt
+                  </button>
+                  <button
+                    type="button"
+                    className="copy-prompt"
+                    data-testid="copy-this-rule-is-wrong-prompt"
+                    onClick={() =>
+                      void navigator.clipboard.writeText(
+                        wrongRulePrompt({
+                          path,
+                          semanticType,
+                          source: source?.file ? source : origin,
+                          rule: entry,
+                        }),
+                      )
+                    }
+                  >
+                    Copy this rule is wrong prompt
+                  </button>
+                </div>
               ) : null}
             </article>
           ))}
@@ -246,6 +265,15 @@ function paneCopyText(
   return [VIOLATION_TASK_PROCESS, ...prompts].join('\n\n---\n\n');
 }
 
+function sourceFileLabel(source: SourceRangeDto | null): string {
+  if (!source?.file) {
+    return '';
+  }
+  return source.start_line >= 1
+    ? `${source.file}:${source.start_line}-${source.end_line}`
+    : source.file;
+}
+
 function violationPrompt({
   path,
   semanticType,
@@ -257,11 +285,7 @@ function violationPrompt({
   source: SourceRangeDto | null;
   rule: ListedRule;
 }): string {
-  const file = source?.file
-    ? source.start_line >= 1
-      ? `${source.file}:${source.start_line}-${source.end_line}`
-      : source.file
-    : '';
+  const file = sourceFileLabel(source);
   return [
     `Fix this Violation.`,
     `[ ] done`,
@@ -272,6 +296,32 @@ function violationPrompt({
     rule.fidelity ? `Fidelity: ${rule.fidelity}` : '',
     rule.body,
     `Violation: ${rule.message}`,
+  ]
+    .filter((line) => line)
+    .join('\n');
+}
+
+function wrongRulePrompt({
+  path,
+  semanticType,
+  source,
+  rule,
+}: {
+  path: string;
+  semanticType: string;
+  source: SourceRangeDto | null;
+  rule: ListedRule;
+}): string {
+  const file = sourceFileLabel(source);
+  return [
+    'The following rule is wrong. We need to fix the rule. I will explain why the rule is wrong.',
+    `Rule: ${rule.slug}`,
+    rule.practice ? `Practice: ${rule.practice}` : '',
+    rule.fidelity ? `Fidelity: ${rule.fidelity}` : '',
+    `Node: ${path} (${semanticType})`,
+    file ? `File: ${file}` : '',
+    rule.body,
+    rule.message ? `Violation: ${rule.message}` : '',
   ]
     .filter((line) => line)
     .join('\n');

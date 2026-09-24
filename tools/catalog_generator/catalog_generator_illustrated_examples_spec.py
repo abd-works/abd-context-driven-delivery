@@ -16,13 +16,7 @@ for _cat in ("practices", "tools"):
 from expects import equal, expect
 from mamba import before, description, it
 
-from catalog_generator.catalog_generator import (
-    extract_comment_tag,
-    extract_heading_section,
-    extract_whole_file,
-    parse_illustrated_examples,
-    resolve_illustrated_example,
-)
+from catalog_generator.catalog_generator import HeadingSection, IllustratedExampleRow
 
 _INDEX_MD = """# Stories examples
 
@@ -45,7 +39,7 @@ Ignored by the table parser.
 with description("Configure Illustrated Example Mapping Per Fidelity"):
     with description("given a tool's examples.md index naming a real subfolder file"):
         with before.all:
-            self.rows = parse_illustrated_examples(_INDEX_MD)
+            self.rows = IllustratedExampleRow.parse(_INDEX_MD)
 
         with it("resolves each row to its named Fidelity, Source, and Anchor - nothing else"):
             expect(len(self.rows)).to(equal(3))
@@ -64,7 +58,7 @@ with description("Extract Whole-File Illustrated Example"):
             self.source.write_text("# Story Map\n\nEpic -> Story", encoding="utf-8")
 
         with it("resolves the entire source file's content as the illustrated-example body"):
-            body = extract_whole_file(self.source)
+            body = IllustratedExampleRow.whole_file(self.source)
             expect(body).to(equal("# Story Map\n\nEpic -> Story"))
 
 
@@ -72,7 +66,7 @@ with description("Extract Heading-Anchored Illustrated Example Section"):
     with description("given an Illustrated examples row whose Anchor names a ## heading"):
         with it("resolves only the body under that heading up to the next same-or-higher heading"):
             markdown = "# Title\n\n## keep\n\nkept body\n\n## drop\n\ndropped body\n"
-            section = extract_heading_section(markdown, "keep")
+            section = HeadingSection(markdown).extract("keep")
             expect(section).to(equal("kept body"))
             expect("dropped body" in section).to(equal(False))
 
@@ -81,7 +75,7 @@ with description("Extract Comment-Tag-Anchored Illustrated Example Block"):
     with description("given an Illustrated examples row whose Anchor names an HTML comment tag"):
         with it("resolves only the lines carrying that comment tag"):
             text = "line one\nline two <!-- Mu -->\nline three\nline four <!-- Mu -->\n"
-            body = extract_comment_tag(text, "<!-- Mu -->")
+            body = IllustratedExampleRow.comment_tag(text, "<!-- Mu -->")
             expect(body).to(equal("line two <!-- Mu -->\nline four <!-- Mu -->"))
 
 
@@ -93,13 +87,11 @@ with description("resolve_illustrated_example dispatches by anchor shape"):
         (self.tmp / "tagged.md").write_text("a\nb <!-- Mu -->\nc\n", encoding="utf-8")
 
     with it("dispatches whole-file, heading, and comment-tag rows to their own extractor"):
-        from catalog_generator.catalog_generator import IllustratedExampleRow
-
-        whole = resolve_illustrated_example(self.tmp, IllustratedExampleRow("x", "whole.md", "whole-file"))
+        whole = IllustratedExampleRow("x", "whole.md", "whole-file").resolve(self.tmp)
         expect(whole).to(equal("whole content"))
 
-        heading = resolve_illustrated_example(self.tmp, IllustratedExampleRow("x", "heading.md", "## keep"))
+        heading = IllustratedExampleRow("x", "heading.md", "## keep").resolve(self.tmp)
         expect(heading).to(equal("kept"))
 
-        tagged = resolve_illustrated_example(self.tmp, IllustratedExampleRow("x", "tagged.md", "<!-- Mu -->"))
+        tagged = IllustratedExampleRow("x", "tagged.md", "<!-- Mu -->").resolve(self.tmp)
         expect(tagged).to(equal("b <!-- Mu -->"))

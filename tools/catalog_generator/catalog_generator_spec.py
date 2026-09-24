@@ -19,11 +19,11 @@ from mamba import before, description, it
 from catalog_generator.catalog_generator import (
     CONTEXT_TOOL_REGISTRY,
     UTILITY_REGISTRY,
+    CatalogFidelityGuidance,
+    SkillSlashName,
     build_run_request,
     load_registry,
     resolve_lifecycle_actions,
-    scrape_fidelities,
-    skill_slash_name,
 )
 from practices.ddd.ddd import Ddd
 from practices.stories.stories import Stories
@@ -83,12 +83,12 @@ with description("Load Context Tool And Utility Registry"):
 with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections"):
     with description("given DDD's fidelities ClassVar, its format defaults, and ddd.md"):
         with before.all:
-            self.guidances = scrape_fidelities(Ddd)
+            self.guidances = CatalogFidelityGuidance.scrape(Ddd)
 
         with it("resolves each fidelity to its key and default format"):
             keys = [g.key for g in self.guidances]
             expect(keys).to(
-                equal(["bounded_context", "bounded_context", "building_blocks", "tactics"])
+                equal(["bounded_context", "building_blocks", "tactics"])
             )
             formats = {g.key: g.default_format for g in self.guidances}
             expect(formats["bounded_context"]).to(equal("markdown"))
@@ -106,7 +106,7 @@ with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections")
                 fidelities = {"discovery": "modules"}  # BDD has no ## modules section
                 _fidelity_format_defaults = {}
 
-            self.stub_guidances = scrape_fidelities(_NoHeading)
+            self.stub_guidances = CatalogFidelityGuidance.scrape(_NoHeading)
 
         with it("resolves to a Guidance missing stub instead of failing"):
             expect(self.stub_guidances[0].guidance).to(equal("Guidance missing"))
@@ -160,13 +160,13 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
 with description("Collect Skill Slash-Command Map From SKILL Frontmatter"):
     with description("given a .cursor/skills/*/SKILL.md file per context tool"):
         with it("resolves stories to its own snake_case skill name"):
-            expect(skill_slash_name("stories")).to(equal("stories"))
+            expect(SkillSlashName().resolve("stories")).to(equal("stories"))
 
         with it("resolves clean_engineering to the hyphenated clean-engineering skill name"):
-            expect(skill_slash_name("clean_engineering")).to(equal("clean-engineering"))
+            expect(SkillSlashName().resolve("clean_engineering")).to(equal("clean-engineering"))
 
         with it("resolves cdd to its own skill name"):
-            expect(skill_slash_name("cdd")).to(equal("cdd"))
+            expect(SkillSlashName().resolve("cdd")).to(equal("cdd"))
 
         with it("resolves an unknown module dir to nothing rather than guessing"):
-            expect(skill_slash_name("not_a_real_skill")).to(be_none)
+            expect(SkillSlashName().resolve("not_a_real_skill")).to(be_none)

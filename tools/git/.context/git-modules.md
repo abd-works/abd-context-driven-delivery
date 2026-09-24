@@ -151,6 +151,7 @@ closed: bool
 parse_number(ref): int
 github_ref(owner, repo, number): str
 set_status(state_name): Ticket
+write_type(name): Ticket
 close(): None
 
 ## TicketState

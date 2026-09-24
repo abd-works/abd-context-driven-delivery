@@ -103,22 +103,31 @@ class HookInstallation(Installation):
     def write(self, tool: Any) -> None:
         if not tool.install_to_hook:
             return
-        if tool.name == "inject_rules":
-            host = type(getattr(tool, "toolset", None)).__name__
-            if host in {"RulesCollection", "FidelityGuidance"}:
-                return
+        if self._omit_inject_rules(tool):
+            return
         event = getattr(tool.callable, "_hook_name", None)
         if not event:
             return
-        self._handlers.append(
-            {
-                "event": str(event),
-                "operation": tool.name,
-                "ref": tool.registration_name,
-            }
-        )
+        record = {
+            "event": str(event),
+            "operation": tool.name,
+            "ref": tool.registration_name,
+        }
+        if record in self._handlers:
+            return
+        self._handlers.append(record)
         self.write_hooks_manifest()
         self.write_handlers()
+
+    def _omit_inject_rules(self, tool: Any) -> bool:
+        if tool.name != "inject_rules":
+            return False
+        host = type(getattr(tool, "toolset", None)).__name__
+        if host in {"RulesCollection", "FidelityGuidance"}:
+            return True
+        bound = getattr(getattr(tool, "callable", None), "__self__", None)
+        parent = getattr(bound, "parent", None)
+        return type(parent).__name__ == "FidelityGuidance"
 
     def write_handlers(self) -> None:
         if not self._handlers:

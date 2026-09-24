@@ -57,7 +57,8 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 ----
 + write(tool: AgentTool): None
 	// skip unless tool.install_to_hook and the member has _hook_name
-	// skip inject_rules on RulesCollection and FidelityGuidance
+	// skip inject_rules on RulesCollection and FidelityGuidance hosts, and on fidelity bags rehosted onto a practice
+	// enroll inject_rules once per (event, operation, ref) so the practice is the host
 	-> append { event, operation, ref }
 	-> write_hooks_manifest()
 	-> write_handlers()
@@ -142,6 +143,7 @@ One marked operation that may run for an event.
 	// false when owner._hooks_disabled is true
 + invoke(payload: HookPayload): HookResult
 	// call the bound operation with payload.as_dict()
+	// inject_rules uses the toolset's own hook method when the class defines one (listed Guidance on an action); otherwise RulesCollection.inject_rules
 	// agent_message includes tool.docstring unless additional_context is already set
 	-> HookResult.from_handler
 	-> HookResult.with_description

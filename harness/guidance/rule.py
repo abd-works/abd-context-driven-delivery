@@ -7,7 +7,13 @@ import re
 from pathlib import Path
 from typing import Any, Iterator
 
-from harness.agent_tools.agent_tools import collect, agent_toolset, instructions, tools
+from harness.agent_tools.agent_tools import (
+    agent_instructions,
+    collect,
+    agent_toolset,
+    instructions,
+    tools,
+)
 from harness.markdown.markdown import MarkdownCollection
 from harness.hooks.hooks import Hook
 from prompt_echo.prompt_echo import echo
@@ -297,6 +303,42 @@ class RulesCollection(MarkdownCollection):
 
     def format_rules(self) -> str:
         return self.formatted()
+
+    @property
+    @agent_instructions
+    def markdown_block(self) -> str:
+        """Original Rules markdown for the practice and the active fidelity.
+
+        Evaluate the sketch against this block as an AI check — not a graph .ql query.
+        """
+        return self._original_rules_markdown()
+
+    def _original_rules_markdown(self) -> str:
+        chunks: list[str] = []
+        seen: set[str] = set()
+        practice = self._owner_practice()
+        if practice is not None:
+            self._append_original_markdown(
+                chunks, seen, getattr(getattr(practice, "rules", None), "markdown", "")
+            )
+            current = getattr(getattr(practice, "fidelities", None), "current", None)
+            if current is not None:
+                self._append_original_markdown(
+                    chunks,
+                    seen,
+                    getattr(getattr(current, "rules", None), "markdown", ""),
+                )
+        self._append_original_markdown(chunks, seen, self.markdown)
+        return "\n\n".join(chunks)
+
+    def _append_original_markdown(
+        self, chunks: list[str], seen: set[str], text: str | None
+    ) -> None:
+        block = (text or "").strip()
+        if not block or block in seen:
+            return
+        seen.add(block)
+        chunks.append(block)
 
     @collect
     def validate(self) -> str: ...

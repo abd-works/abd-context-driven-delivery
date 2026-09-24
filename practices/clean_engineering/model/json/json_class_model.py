@@ -1,34 +1,4 @@
-"""JSON channel for the CleanEngineering model.
-
-Schema (module-first):
-{
-  "name": "Model Name",
-  "modules": [
-    {
-      "name": "ModuleName",
-      "sequentialOrder": 1,
-      "description": "...",
-      "seam": "...",
-      "seamTerms": ["TermA", "TermB"],
-      "dependencies": ["other_module"],
-      "constraint": "...",
-      "classes": [
-        {
-          "name": "ClassName",
-          "sequentialOrder": 1,
-          "intent": "...",
-          "properties": [{"name": "...", "typeHint": "...", "description": ""}],
-          "operations": [{"name": "...", "parameters": ["..."], "returnType": "...", "description": ""}],
-          "relationships": [{"target": "...", "kind": "...", "cardinality": "...", "description": ""}],
-          "collaborators": []
-        }
-      ]
-    }
-  ]
-}
-
-Legacy schema with top-level "classes" is still accepted on parse for backward compatibility.
-"""
+"""JSON channel for the CleanEngineering model."""
 from __future__ import annotations
 
 import json
@@ -40,39 +10,135 @@ _repo = Path(__file__).resolve().parents[3]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 
-from practices.clean_engineering.model.base_class_model import OoadNode
 from practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    Operation,
-    Property,
-    Relationship,
+    OoadNode,
 )
-from practices.clean_engineering.model.update_report import UpdateReport
+from practices.clean_engineering.model.field_types import OperationField, PropertyField, Relationship
+from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 
 class JsonParseError(ValueError):
     pass
 
 
+class JsonProperty(PropertyField):
+    @classmethod
+    def from_record(cls, record: dict) -> "JsonProperty":
+        loaded = cls(
+            name=record["name"],
+            type_hint=record.get("typeHint", ""),
+            description=record.get("description", ""),
+        )
+        return loaded
+
+
+class JsonOperation(OperationField):
+    @classmethod
+    def from_record(cls, record: dict) -> "JsonOperation":
+        return cls(
+            name=record["name"],
+            parameters=record.get("parameters", []),
+            return_type=record.get("returnType", ""),
+            description=record.get("description", ""),
+        )
+
+
+class JsonRelationship(Relationship):
+    @classmethod
+    def from_record(cls, record: dict) -> "JsonRelationship":
+        return cls(
+            target=record["target"],
+            kind=record.get("kind", ""),
+            cardinality=record.get("cardinality", ""),
+            description=record.get("description", ""),
+        )
+
+
 class JsonOoadClass(OoadClass):
-    pass
+    def load_property_field(self, source: PropertyField) -> JsonProperty:
+        loaded = JsonProperty(name=source.name)
+        loaded.update_self(source)
+        return loaded
+
+    def load_operation_field(self, source: OperationField) -> JsonOperation:
+        loaded = JsonOperation(name=source.name)
+        loaded.update_self(source)
+        return loaded
+
+    def load_relationship(self, source: Relationship) -> JsonRelationship:
+        loaded = JsonRelationship(target=source.target)
+        loaded.update_self(source)
+        return loaded
+
+    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
+        assert isinstance(source, OoadClass)
+        return [
+            ChildCollectionPair(self.properties, source.properties, self.load_property_field),
+            ChildCollectionPair(self.operations, source.operations, self.load_operation_field),
+            ChildCollectionPair(self.relationships, source.relationships, self.load_relationship),
+        ]
+
+    def update_self(self, source: OoadNode) -> None:
+        assert isinstance(source, OoadClass)
+        self.intent = source.intent
+        self.collaborators = list(source.collaborators)
+
+    @classmethod
+    def from_record(cls, record: dict, sequential_order: int) -> "JsonOoadClass":
+        loaded = cls(
+            name=record["name"],
+            sequential_order=record.get("sequentialOrder", sequential_order),
+            intent=record.get("intent", ""),
+            collaborators=record.get("collaborators", []),
+        )
+        loaded.properties = [JsonProperty.from_record(item) for item in record.get("properties", [])]
+        loaded.operations = [JsonOperation.from_record(item) for item in record.get("operations", [])]
+        loaded.relationships = [JsonRelationship.from_record(item) for item in record.get("relationships", [])]
+        return loaded
+
+    def render(self) -> str:
+        return json.dumps(self.as_record(), indent=2)
 
 
 class JsonModule(Module):
     def load_class(self, source: OoadClass) -> JsonOoadClass:
-        return JsonOoadClass(name=source.name, sequential_order=source.sequential_order)
+        loaded = JsonOoadClass(name=source.name, sequential_order=source.sequential_order)
+        loaded.update_self(source)
+        return loaded
+
+    @classmethod
+    def from_record(cls, record: dict, sequential_order: int) -> "JsonModule":
+        seam_terms = record.get("seamTerms") or record.get("seam_terms") or []
+        dependencies = record.get("dependencies") or []
+        if isinstance(seam_terms, str):
+            seam_terms = [term.strip() for term in seam_terms.split(",") if term.strip()]
+        if isinstance(dependencies, str):
+            dependencies = [term.strip() for term in dependencies.split(",") if term.strip()]
+        loaded = cls(
+            name=record.get("name", ""),
+            sequential_order=record.get("sequentialOrder", sequential_order),
+            description=record.get("description", ""),
+            seam=record.get("seam", ""),
+            constraint=record.get("constraint", ""),
+            seam_terms=list(seam_terms),
+            dependencies=list(dependencies),
+        )
+        for index, class_record in enumerate(record.get("classes", []), 1):
+            loaded.classes.append(JsonOoadClass.from_record(class_record, index))
+        return loaded
+
+    def render(self) -> str:
+        return json.dumps(self.as_record(), indent=2)
 
 
 class JsonCleanEngineeringModel(CleanEngineeringModel):
-
     def load_module(self, source: Module) -> JsonModule:
-        return JsonModule(name=source.name, sequential_order=source.sequential_order)
-
-    # ------------------------------------------------------------------
-    # Uniform callable surface
-    # ------------------------------------------------------------------
+        loaded = JsonModule(name=source.name, sequential_order=source.sequential_order)
+        loaded.update_self(source)
+        return loaded
 
     def parse(self, text: str) -> "JsonCleanEngineeringModel":
         try:
@@ -81,142 +147,31 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             raise JsonParseError(f"Invalid JSON: {exc}") from exc
         model = type(self)(name=data.get("name", ""))
         if "modules" in data:
-            self._load_modules(model, data["modules"])
+            for index, record in enumerate(data["modules"], 1):
+                model.modules.append(JsonModule.from_record(record, index))
         elif "classes" in data:
-            self._load_legacy_classes(model, data["classes"])
+            module = JsonModule(name="", sequential_order=1)
+            for index, record in enumerate(data["classes"], 1):
+                module.classes.append(JsonOoadClass.from_record(record, index))
+            if module.classes:
+                model.modules.append(module)
         else:
             raise JsonParseError("JSON must contain a 'modules' or 'classes' key")
         return model
 
-    def _load_modules(self, model: "JsonCleanEngineeringModel", modules: list) -> None:
-        for i, md in enumerate(modules, 1):
-            module = self._module_from_dict(md, i)
-            for j, cd in enumerate(md.get("classes", []), 1):
-                module.classes.append(self._class_from_dict(cd, j))
-            model.modules.append(module)
-
-    def _load_legacy_classes(self, model: "JsonCleanEngineeringModel", classes: list) -> None:
-        module = JsonModule(name="", sequential_order=1)
-        for i, cd in enumerate(classes, 1):
-            module.classes.append(self._class_from_dict(cd, i))
-        if module.classes:
-            model.modules.append(module)
-
-    def _module_from_dict(self, md: dict, sequential_order: int) -> JsonModule:
-        seam_terms = md.get("seamTerms") or md.get("seam_terms") or []
-        dependencies = md.get("dependencies") or []
-        if isinstance(seam_terms, str):
-            seam_terms = [t.strip() for t in seam_terms.split(",") if t.strip()]
-        if isinstance(dependencies, str):
-            dependencies = [t.strip() for t in dependencies.split(",") if t.strip()]
-        return JsonModule(
-            name=md.get("name", ""),
-            sequential_order=md.get("sequentialOrder", sequential_order),
-            description=md.get("description", ""),
-            seam=md.get("seam", ""),
-            constraint=md.get("constraint", ""),
-            seam_terms=list(seam_terms),
-            dependencies=list(dependencies),
-        )
-
-    def _class_from_dict(self, d: dict, sequential_order: int) -> JsonOoadClass:
-        props = [
-            Property(
-                name=p["name"],
-                type_hint=p.get("typeHint", ""),
-                description=p.get("description", ""),
-            )
-            for p in d.get("properties", [])
-        ]
-        ops = [
-            Operation(
-                name=o["name"],
-                parameters=o.get("parameters", []),
-                return_type=o.get("returnType", ""),
-                description=o.get("description", ""),
-            )
-            for o in d.get("operations", [])
-        ]
-        rels = [
-            Relationship(
-                target=r["target"],
-                kind=r.get("kind", ""),
-                cardinality=r.get("cardinality", ""),
-                description=r.get("description", ""),
-            )
-            for r in d.get("relationships", [])
-        ]
-        return JsonOoadClass(
-            name=d["name"],
-            sequential_order=d.get("sequentialOrder", sequential_order),
-            intent=d.get("intent", ""),
-            properties=props,
-            operations=ops,
-            relationships=rels,
-            collaborators=d.get("collaborators", []),
-        )
-
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
-        if canonical.modules:
-            data = {
-                "name": canonical.name,
-                "modules": [self._module_to_dict(m) for m in canonical.modules],
-            }
-        else:
-            data = {
-                "name": canonical.name,
-                "classes": [self._class_to_dict(c) for c in canonical.classes],
-            }
-        return json.dumps(data, indent=2)
-
-    def _module_to_dict(self, module: Module) -> dict:
-        return {
-            "name": module.name,
-            "sequentialOrder": module.sequential_order,
-            "description": module.description,
-            "seam": module.seam,
-            "seamTerms": list(module.seam_terms),
-            "dependencies": list(module.dependencies),
-            "constraint": module.constraint,
-            "classes": [self._class_to_dict(c) for c in module.classes],
-        }
-
-    def _class_to_dict(self, oclass: OoadClass) -> dict:
-        return {
-            "name": oclass.name,
-            "sequentialOrder": oclass.sequential_order,
-            "intent": oclass.intent,
-            "properties": [
-                {"name": p.name, "typeHint": p.type_hint, "description": p.description}
-                for p in oclass.properties
-            ],
-            "operations": [
-                {
-                    "name": o.name,
-                    "parameters": o.parameters,
-                    "returnType": o.return_type,
-                    "description": o.description,
-                }
-                for o in oclass.operations
-            ],
-            "relationships": [
-                {
-                    "target": r.target,
-                    "kind": r.kind,
-                    "cardinality": r.cardinality,
-                    "description": r.description,
-                }
-                for r in oclass.relationships
-            ],
-            "collaborators": oclass.collaborators,
-        }
+    def render(self, canonical: Optional[CleanEngineeringModel] = None, previous: Optional[str] = None) -> str:
+        if canonical is not None:
+            self.translate_from(canonical)
+        return json.dumps(self.as_record(), indent=2)
 
     def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
         return canonical.translate_from(self.parse(text))
 
     @classmethod
     def from_workspace(cls, root: Path) -> Optional["JsonCleanEngineeringModel"]:
-        candidates = list(root.glob("**/CleanEngineering-model.json")) + list(root.glob("**/*.CleanEngineering.json"))
+        candidates = list(root.glob("**/CleanEngineering-model.json")) + list(
+            root.glob("**/*.CleanEngineering.json")
+        )
         for path in sorted(candidates):
             try:
                 return cls().parse(path.read_text(encoding="utf-8"))

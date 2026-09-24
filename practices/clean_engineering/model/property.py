@@ -39,6 +39,16 @@ class Property(OoadNode):
             description=self.description,
         )
 
+    def as_record(self) -> dict:
+        return {
+            "name": self.name,
+            "typeHint": self.type_hint,
+            "description": self.description,
+        }
+
+    def render(self) -> str:
+        return self.to_field().render()
+
     def update_self(self, source: OoadNode) -> None:
         assert isinstance(source, Property)
         self.name = source.name

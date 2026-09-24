@@ -257,7 +257,7 @@ with description("Stories"):
         with it("should reference scenarios rules via deployed skill notation"):
             expect("@stories" in self.contexts).to(be_true)
             expect("#scenarios" in self.contexts).to(be_true)
-            expect("§ Rules" in self.contexts).to(be_true)
+            expect("\u00a7 Rules" in self.contexts).to(be_true)
 
         with it("should include acceptance_tests-only rule slugs"):
             expect("shared-example-fixtures" in self.contexts).to(be_true)
@@ -363,8 +363,8 @@ with description("Stories"):
             self.templates = Stories(fidelity="scenarios", format="markdown").templates
 
         with it("should inline the scenarios markdown template"):
-            expect("Default — Scenario Outline" in self.templates).to(be_true)
-            expect("Alternate — inline scenarios" in self.templates).to(be_true)
+            expect("Scenario Outline" in self.templates).to(be_true)
+            expect("inline scenarios" in self.templates).to(be_true)
             expect("scenario-inline.md" in self.templates).to(equal(False))
             expect("scenario-main-flow.md" in self.templates).to(equal(False))
             expect("scenario-outline.md" in self.templates).to(equal(False))

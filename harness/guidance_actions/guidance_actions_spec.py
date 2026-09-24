@@ -104,6 +104,20 @@ with description("GuidanceAction"):
         expect(notice).to(contain("rules :"))
         expect(notice).to(contain("SampleGuidance"))
 
+    with it("should inject listed BDD rules after sketch returns without a matching path"):
+        from sketch.sketch import Sketch
+
+        kit = Sketch(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-sketch-"))))
+        result = kit.inject_rules(
+            {
+                "tool_name": "sketch.sketch",
+                "tool_input": {"guidance": ["practices.bdd.bdd:Bdd"]},
+            }
+        )
+        expect("observable-behavior" in (result.get("additional_context") or "")).to(
+            equal(True)
+        )
+
     with it("should skip inject_rules for document"):
         from document.document import Document
         from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance

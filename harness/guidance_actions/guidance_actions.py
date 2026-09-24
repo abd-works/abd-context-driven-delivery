@@ -166,13 +166,7 @@ class GuidanceAction:
         if not self._payload_is_this_action(data):
             return {}
         self._bind_guidance_from_payload(data)
-        parts = []
-        labels = []
-        for guidance in self.listed():
-            text = (getattr(getattr(guidance, "rules", None), "markdown", None) or "").strip()
-            if text:
-                parts.append(text)
-                labels.append(type(guidance).__name__)
+        parts, labels = self._listed_inject_parts(data)
         if not parts:
             return {}
         body = "\n\n".join(parts)
@@ -183,6 +177,28 @@ class GuidanceAction:
             PromptEcho().inject_rules_toast(action, labels),
         )
         return {"additional_context": body}
+
+    def _listed_inject_parts(self, data: dict[str, Any]) -> tuple[list[str], list[str]]:
+        parts: list[str] = []
+        labels: list[str] = []
+        for guidance in self.listed():
+            text = self._listed_guidance_rules(guidance, data)
+            if not text:
+                continue
+            parts.append(text)
+            labels.append(type(guidance).__name__)
+        return parts, labels
+
+    def _listed_guidance_rules(self, guidance: Any, data: dict[str, Any]) -> str:
+        rules = getattr(guidance, "rules", None)
+        if rules is None:
+            return ""
+        globbed = getattr(rules, "inject_rules", None)
+        if callable(globbed):
+            text = (globbed(data).get("additional_context") or "").strip()
+            if text:
+                return text
+        return (getattr(rules, "markdown", None) or "").strip()
 
     def _payload_is_this_action(self, payload: dict[str, Any]) -> bool:
         tool = str(payload.get("tool_name") or "").lower()

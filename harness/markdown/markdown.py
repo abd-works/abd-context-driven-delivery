@@ -11,6 +11,16 @@ from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_ty
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
+class MarkdownSlot(str):
+    """Extracted markdown that still answers ``expand()`` and ``templates()``."""
+
+    def expand(self) -> "MarkdownSlot":
+        return self
+
+    def __call__(self) -> "MarkdownSlot":
+        return self
+
+
 class HTML:
     def __init__(self, text: str) -> None:
         self.text = text
@@ -306,8 +316,6 @@ class AssetLocation:
     def _extract_folder(self) -> str:
         if self.folder is None:
             return ""
-        if self.fidelity:
-            return self._extract_fidelity_file()
         return self._merge_folder(self.folder)
 
     def _merge_folder(self, folder_path: Path) -> str:
@@ -321,13 +329,73 @@ class AssetLocation:
         return "\n\n".join(parts)
 
     def _folder_entry_text(self, path: Path) -> str:
-        if path.name.startswith(".") or path.name == "__pycache__":
+        if self._skip_folder_entry(path):
             return ""
         if path.is_file():
-            return f"## {path.stem}\n\n{path.read_text(encoding='utf-8')}"
+            rel = path.relative_to(self.folder).as_posix() if self.folder else path.name
+            return f"## {rel}\n\n{path.read_text(encoding='utf-8')}"
         if path.is_dir():
             return self._merge_folder(path)
         return ""
+
+    def _skip_folder_entry(self, path: Path) -> bool:
+        name = path.name
+        if name.startswith(".") or name in {"__pycache__", "evals"}:
+            return True
+        if "faultyasset" in name.casefold():
+            return True
+        if path.is_dir():
+            return self._skip_format_dir(name)
+        return self._skip_format_file(path) or self._skip_fidelity_file(path)
+
+    def _skip_format_dir(self, name: str) -> bool:
+        wanted = self._format_dir_name()
+        if not wanted:
+            return False
+        aliases = {"md", "py", "ts", "js", "java"}
+        return name.casefold() in aliases and name.casefold() != wanted
+
+    def _format_dir_name(self) -> str:
+        fmt = (self.format or "").casefold()
+        return _FORMAT_DIR_ALIAS.get(fmt, fmt if fmt in {"md", "py", "ts", "js", "java"} else "")
+
+    def _skip_format_file(self, path: Path) -> bool:
+        fmt = (self.format or "").casefold()
+        if not fmt:
+            return False
+        allowed = {
+            "markdown": {".md"},
+            "md": {".md"},
+            "python": {".py"},
+            "py": {".py"},
+            "typescript": {".ts"},
+            "ts": {".ts"},
+            "javascript": {".js"},
+            "js": {".js"},
+            "java": {".java"},
+        }.get(fmt)
+        if not allowed:
+            return False
+        return path.suffix.lower() not in allowed
+
+    def _skip_fidelity_file(self, path: Path) -> bool:
+        stem = path.stem.casefold().replace("_", "-")
+        if self.label == "examples" and (
+            "thin-slice" in stem
+            or stem.startswith("scenario-")
+            or (stem == "examples" and (self.fidelity or "").casefold().replace("_", "-") in {"story-map", ""})
+        ):
+            fidelity = (self.fidelity or "").casefold().replace("_", "-")
+            if fidelity in {"story-map", ""}:
+                return True
+        fidelity = (self.fidelity or "").casefold().replace("_", "-")
+        if fidelity not in {"story-map"}:
+            return False
+        if "scenario" in stem or stem == "thin-slice":
+            return True
+        if path.suffix.lower() == ".md" and "story-map" not in stem and stem != "examples":
+            return True
+        return False
 
     def _extract_section(self) -> str:
         if self.section_file is None:
@@ -418,10 +486,13 @@ class AssetLocator:
         return self._active_resource("format")
 
     def _stamp(self, location: AssetLocation) -> AssetLocation:
+        fidelity = location.fidelity
+        if location.kind == "folder":
+            fidelity = fidelity or self.fidelity
         return replace(
             location,
             label=self._label,
-            fidelity=location.fidelity,
+            fidelity=fidelity,
             format=location.format or self.format,
         )
 
@@ -645,7 +716,10 @@ class YamlBinder:
         stored = attr
         descriptor = getattr(type(self._instance), attr, None)
         if isinstance(descriptor, property) and descriptor.fset is None:
-            stored = _to_snake(attr)
+            leftovers = getattr(self._instance, "yaml", None)
+            if isinstance(leftovers, dict):
+                leftovers[_to_snake(attr)] = self.as_string(value)
+            return
         if stored == "default_format" and isinstance(value, str):
             value = canonical_format(value.split()[0].strip("()`"))
         elif stored == "clean_engineering" and isinstance(value, str):
@@ -884,7 +958,7 @@ class Markdown:
         if return_type is HTML or origin is HTML:
             return HTML.from_markdown(text)
         if return_type is str or return_type is inspect.Signature.empty or return_type is None:
-            return text
+            return MarkdownSlot(text)
         if origin is dict:
             return self.templates_path_map()
         from harness.guidance.rule import RulesCollection
@@ -940,7 +1014,7 @@ class Markdown:
                 if args and args[0] is HTML:
                     return HTML.from_markdown(text)
             if return_type is str or return_type is inspect.Signature.empty or return_type is None:
-                return text
+                return MarkdownSlot(text)
             result = md.coerce(raw, return_type)
             YamlBinder(result).bind_yaml(raw)
             from harness.guidance.rule import RulesCollection
