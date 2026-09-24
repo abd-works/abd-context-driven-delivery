@@ -1,6 +1,6 @@
 # Modules
 
-*Context-Driven Delivery* is how an agent installs practices, opens a work session, and runs generate, document, and scan from the markdown that sits beside the code. Public classes and dependencies below are the CodeQL first-class module prefixes and `moduleDependsOn` edges — not a curated seam.
+*Context-Driven Delivery* is how an agent installs practices, opens a work session, and runs generate, document, and scan from the markdown that sits beside the code. Public classes and dependencies below are the latest CodeQL first-class prefixes and `moduleDependsOn` edges.
 
 ## actions
 ### Public Seam
@@ -130,13 +130,14 @@
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -189,14 +190,16 @@
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
+ - `tools.prompt_log` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -230,31 +233,19 @@
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
 
 *(none in the graph)*
-
-## tools
-### Public Seam
-
-*(no public classes — each tool owns its own module-context)*
-
-### Dependencies
- - *(none — children declare their own)*
----
-
-### Constraint
-
-This folder is not a first-class module. Callers import `tools.workspace`, `tools.git`, …
 
 ## actions.grill_context
 ### Public Seam
@@ -271,8 +262,8 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -295,11 +286,11 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -356,11 +347,12 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -395,13 +387,14 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -434,14 +427,15 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -474,13 +468,14 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -551,14 +546,15 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -615,14 +611,15 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -803,14 +800,15 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -845,10 +843,11 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -909,14 +908,15 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -983,14 +983,15 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -1029,13 +1030,14 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -1149,251 +1151,15 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.clean_engineering.model
-### Public Seam
-#### CFamilyParse
-
-#### Change
-
-#### ChangeKind
-
-#### ChildCollectionPair
-
-#### CleanEngineeringModel
-
-#### ContainmentForest
-
-#### DiagramClass
-
-#### DiagramModule
-
-#### DiagramNode
-
-#### File
-
-#### Geometry
-
-#### GraphMemberRows
-
-#### ImportedClass
-
-#### JavaCleanEngineeringModel
-
-#### JavaOoadClass
-
-#### JavaScriptCleanEngineeringModel
-
-#### JavaScriptModule
-
-#### JavaScriptOoadClass
-
-#### JavaScriptOperation
-
-#### JavaScriptProperty
-
-#### JsonCleanEngineeringModel
-
-#### JsonModule
-
-#### JsonOoadClass
-
-#### JsonOperation
-
-#### JsonParseError
-
-#### JsonProperty
-
-#### JsonRelationship
-
-#### MarkdownCleanEngineeringModel
-
-#### MarkdownModule
-
-#### MarkdownOoadClass
-
-#### MiroClass
-
-#### MiroCleanEngineeringModel
-
-#### MiroImportedClass
-
-#### MiroModule
-
-#### Module
-
-#### ModuleContext
-
-#### ModuleContextFiles
-
-#### OoadClass
-
-#### OoadNode
-
-#### Operation
-
-#### OperationField
-
-#### Page
-
-#### Parameter
-
-#### ParsedPython
-
-#### Property
-
-#### PropertyField
-
-#### PythonCleanEngineeringModel
-
-#### PythonModule
-
-#### PythonOoadClass
-
-#### Relationship
-
-#### Responsibilities
-
-#### SourceSpan
-
-#### TranslationError
-
-#### TypeScriptCleanEngineeringModel
-
-#### TypeScriptModule
-
-#### TypeScriptOoadClass
-
-#### TypeScriptOperation
-
-#### TypeScriptProperty
-
-#### UpdateReport
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.clean_engineering.model.drawio
-### Public Seam
-#### BaseAboveDerivedScanner
-
-#### ClassTitleNoMarkdownBoldScanner
-
-#### DistinctAnchorPointsScanner
-
-#### DrawIOClass
-
-#### DrawIOCleanEngineeringModel
-
-#### DrawIOModule
-
-#### Drawio
-
-#### DrawioScanner
-
-#### DrawioViolation
-
-#### EdgesApproachPerpendicularScanner
-
-#### EdgesDoNotCrossClassesScanner
-
-#### EdgesDoNotCrossOtherEdgesScanner
-
-#### EdgesDoNotOverlapEdgesScanner
-
-#### ImportedClass
-
-#### LeafNodesNotInHorizontalRowScanner
-
-#### Page
-
-#### PreferShortRoutesScanner
-
-#### StereotypeAboveClassNameScanner
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -1452,13 +1218,14 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -1706,14 +1473,15 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -1750,333 +1518,19 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
 
 *(none in the graph)*
-
-## practices.ux.model
-### Public Seam
-#### Change
-
-#### ChangeKind
-
-#### ChildCollectionPair
-
-#### ContentType
-
-#### ContentTypes
-
-#### Control
-
-#### Interaction
-
-#### NavComponent
-
-#### NavComponents
-
-#### ReferencePaths
-
-#### Region
-
-#### Screen
-
-#### StoryDemoControl
-
-#### Transition
-
-#### Transitions
-
-#### TranslationError
-
-#### UpdateReport
-
-#### UxComponent
-
-#### UxComponentCollection
-
-#### UxContext
-
-#### UxMap
-
-#### UxNode
-
-#### Workspace
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.ux.model.drawio
-### Public Seam
-#### DrawioUxMap
-
-### Dependencies
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.ux.model.html
-### Public Seam
-#### HtmlUxMap
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.ux.model.json
-### Public Seam
-#### JsonUxMap
-
-### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.ux.model.markdown
-### Public Seam
-#### MarkdownUxMap
-
-### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `tools` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.ux.scripts
-### Public Seam
-
-*(no public classes in the graph)*
-
-### Dependencies
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.ux.story-demo
-### Public Seam
-
-*(no public classes in the graph)*
-
-### Dependencies
- - *(none in the graph)*
----
-
-### Constraint
-
-*(none in the graph)*
-
-## practices.ux.story-demo.play-dual-runner
-### Public Seam
-
-*(no public classes in the graph)*
-
-### Dependencies
- - *(none in the graph)*
----
-
-### Constraint
-
-*(none in the graph)*
-
-## tools.workspace
-### Public Seam
-#### WorkSession
-#### WorkSessionGuidance
-#### WorkSessionRulesCollection
-#### WorkSessionRule
-#### Turn
-#### TurnCommit
-#### Workspace
-#### SessionLog
-#### ISessionLog
-#### SessionModel
-#### SessionPaths
-#### PathOverride
-#### ToolCall
-#### Example
-#### Examples
-#### Mistake
-#### Correction
-#### Repair
-#### Repairs
-### Dependencies
- - `tools.git` — uses
----
-
-### Constraint
-
-*(none named in this file yet)*
-
-## tools.prompt_log
-### Public Seam
-#### PromptLog
-### Dependencies
- - `harness.hooks` — uses
- - `harness.agent_tools` — uses
----
-
-### Constraint
-
-`@Hooks(disabled=True)` on *PromptLog* skips every audit handler.
-
-## tools.context_setup
-### Public Seam
-#### ContextSetup
-#### ContextIndex
-#### RankedChunk
-#### EmbedResult
-#### SearchResult
-#### EmbeddingProvider
-#### OpenAIEmbeddingProvider
-#### StructureNote
-#### ConversionResult
-#### ScreenResult
-#### SmokeTestResult
-#### PageCapture
-#### ScoutResult
-#### CaptureResult
-### Dependencies
- - `actions.partition` — uses
- - `practices.clean_engineering` — uses
- - `practices.ddd` — uses
- - `practices.stories` — uses
- - `practices.ux` — uses
----
-
-### Constraint
-
-*(none named in this file yet)*
 
 ## tools.catalog_generator
 ### Public Seam
@@ -2139,13 +1593,71 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ux.model.html` — moduleDependsOn
  - `practices.ux.model.json` — moduleDependsOn
  - `practices.ux.model.markdown` — moduleDependsOn
- - `tools` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## tools.context_setup
+### Public Seam
+#### CaptureResult
+
+#### ContextIndex
+
+#### ContextSetup
+
+#### ConversionResult
+
+#### EmbedResult
+
+#### EmbeddingProvider
+
+#### OpenAIEmbeddingProvider
+
+#### PageCapture
+
+#### RankedChunk
+
+#### ScoutResult
+
+#### ScreenResult
+
+#### SearchResult
+
+#### SmokeTestResult
+
+#### StructureNote
+
+### Dependencies
+ - `actions.partition` — moduleDependsOn
+ - `builders.create_agent_toolset` — moduleDependsOn
+ - `harness.agent_tools` — moduleDependsOn
+ - `harness.hooks` — moduleDependsOn
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.mcp` — moduleDependsOn
+ - `installation` — moduleDependsOn
+ - `practices` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.ddd` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.diagnose` — moduleDependsOn
+ - `tools.git` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -2233,12 +1745,13 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.stories` — moduleDependsOn
  - `practices.ux` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -2256,9 +1769,9 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
  - `tools.git` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -2305,10 +1818,11 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.prompt_echo` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -2341,9 +1855,32 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
+ - `tools.prompt_log` — moduleDependsOn
  - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## tools.prompt_log
+### Public Seam
+#### PromptLog
+
+### Dependencies
+ - `harness.hooks` — moduleDependsOn
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.mcp` — moduleDependsOn
+ - `installation` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
 ---
 
 ### Constraint
@@ -2385,12 +1922,580 @@ This folder is not a first-class module. Callers import `tools.workspace`, `tool
  - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
- - `tools` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
  - `tools.diagnose` — moduleDependsOn
  - `tools.git` — moduleDependsOn
  - `tools.handoff` — moduleDependsOn
  - `tools.plan` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## tools.workspace
+### Public Seam
+#### ContextIndex
+
+#### ContextTool
+
+#### Correction
+
+#### Example
+
+#### Examples
+
+#### ISessionLog
+
+#### Mistake
+
+#### PathOverride
+
+#### Repair
+
+#### Repairs
+
+#### SessionLog
+
+#### SessionModel
+
+#### SessionPaths
+
+#### ToolCall
+
+#### Turn
+
+#### TurnCommit
+
+#### WorkSession
+
+#### WorkSessionGuidance
+
+#### WorkSessionRule
+
+#### WorkSessionRulesCollection
+
+#### Workspace
+
+### Dependencies
+ - `actions` — moduleDependsOn
+ - `actions.partition` — moduleDependsOn
+ - `actions.sketch` — moduleDependsOn
+ - `builders.create_agent_toolset` — moduleDependsOn
+ - `builders.create_context_tool` — moduleDependsOn
+ - `harness` — moduleDependsOn
+ - `harness.agent_tools` — moduleDependsOn
+ - `harness.hooks` — moduleDependsOn
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.markdown` — moduleDependsOn
+ - `harness.mcp` — moduleDependsOn
+ - `installation` — moduleDependsOn
+ - `practices` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.clean_engineering.model.drawio` — moduleDependsOn
+ - `practices.ddd` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
+ - `tools.git` — moduleDependsOn
+ - `tools.handoff` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.prompt_echo` — moduleDependsOn
+ - `tools.record_decisions` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.clean_engineering.model
+### Public Seam
+#### CFamilyParse
+
+#### Change
+
+#### ChangeKind
+
+#### ChildCollectionPair
+
+#### CleanEngineeringModel
+
+#### ContainmentForest
+
+#### DiagramClass
+
+#### DiagramModule
+
+#### DiagramNode
+
+#### File
+
+#### Geometry
+
+#### GraphMemberRows
+
+#### ImportedClass
+
+#### JavaCleanEngineeringModel
+
+#### JavaOoadClass
+
+#### JavaScriptCleanEngineeringModel
+
+#### JavaScriptModule
+
+#### JavaScriptOoadClass
+
+#### JavaScriptOperation
+
+#### JavaScriptProperty
+
+#### JsonCleanEngineeringModel
+
+#### JsonModule
+
+#### JsonOoadClass
+
+#### JsonOperation
+
+#### JsonParseError
+
+#### JsonProperty
+
+#### JsonRelationship
+
+#### MarkdownCleanEngineeringModel
+
+#### MarkdownModule
+
+#### MarkdownOoadClass
+
+#### MiroClass
+
+#### MiroCleanEngineeringModel
+
+#### MiroImportedClass
+
+#### MiroModule
+
+#### Module
+
+#### ModuleContext
+
+#### ModuleContextFiles
+
+#### OoadClass
+
+#### OoadNode
+
+#### Operation
+
+#### OperationField
+
+#### Page
+
+#### Parameter
+
+#### ParsedPython
+
+#### Property
+
+#### PropertyField
+
+#### PythonCleanEngineeringModel
+
+#### PythonModule
+
+#### PythonOoadClass
+
+#### Relationship
+
+#### Responsibilities
+
+#### SourceSpan
+
+#### TranslationError
+
+#### TypeScriptCleanEngineeringModel
+
+#### TypeScriptModule
+
+#### TypeScriptOoadClass
+
+#### TypeScriptOperation
+
+#### TypeScriptProperty
+
+#### UpdateReport
+
+### Dependencies
+ - `actions` — moduleDependsOn
+ - `actions.partition` — moduleDependsOn
+ - `actions.sketch` — moduleDependsOn
+ - `builders.create_agent_toolset` — moduleDependsOn
+ - `builders.create_context_tool` — moduleDependsOn
+ - `harness` — moduleDependsOn
+ - `harness.agent_tools` — moduleDependsOn
+ - `harness.hooks` — moduleDependsOn
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.markdown` — moduleDependsOn
+ - `harness.mcp` — moduleDependsOn
+ - `installation` — moduleDependsOn
+ - `practices` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model.drawio` — moduleDependsOn
+ - `practices.ddd` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `practices.ux.model.drawio` — moduleDependsOn
+ - `practices.ux.model.html` — moduleDependsOn
+ - `practices.ux.model.json` — moduleDependsOn
+ - `practices.ux.model.markdown` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
+ - `tools.diagnose` — moduleDependsOn
+ - `tools.git` — moduleDependsOn
+ - `tools.handoff` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.prompt_echo` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.ux.model
+### Public Seam
+#### Change
+
+#### ChangeKind
+
+#### ChildCollectionPair
+
+#### ContentType
+
+#### ContentTypes
+
+#### Control
+
+#### Interaction
+
+#### NavComponent
+
+#### NavComponents
+
+#### ReferencePaths
+
+#### Region
+
+#### Screen
+
+#### StoryDemoControl
+
+#### Transition
+
+#### Transitions
+
+#### TranslationError
+
+#### UpdateReport
+
+#### UxComponent
+
+#### UxComponentCollection
+
+#### UxContext
+
+#### UxMap
+
+#### UxNode
+
+#### Workspace
+
+### Dependencies
+ - `actions` — moduleDependsOn
+ - `actions.partition` — moduleDependsOn
+ - `actions.sketch` — moduleDependsOn
+ - `builders.create_agent_toolset` — moduleDependsOn
+ - `builders.create_context_tool` — moduleDependsOn
+ - `harness` — moduleDependsOn
+ - `harness.agent_tools` — moduleDependsOn
+ - `harness.hooks` — moduleDependsOn
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.markdown` — moduleDependsOn
+ - `harness.mcp` — moduleDependsOn
+ - `installation` — moduleDependsOn
+ - `practices` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.clean_engineering.model.drawio` — moduleDependsOn
+ - `practices.ddd` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux` — moduleDependsOn
+ - `practices.ux.model.drawio` — moduleDependsOn
+ - `practices.ux.model.html` — moduleDependsOn
+ - `practices.ux.model.json` — moduleDependsOn
+ - `practices.ux.model.markdown` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
+ - `tools.git` — moduleDependsOn
+ - `tools.handoff` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.prompt_echo` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.ux.scripts
+### Public Seam
+
+*(no public classes in the graph)*
+
+### Dependencies
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.clean_engineering.model.drawio` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `practices.ux.model.drawio` — moduleDependsOn
+ - `practices.ux.model.html` — moduleDependsOn
+ - `practices.ux.model.json` — moduleDependsOn
+ - `practices.ux.model.markdown` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.ux.story-demo
+### Public Seam
+
+*(no public classes in the graph)*
+
+### Dependencies
+ - *(none in the graph)*
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.clean_engineering.model.drawio
+### Public Seam
+#### BaseAboveDerivedScanner
+
+#### ClassTitleNoMarkdownBoldScanner
+
+#### DistinctAnchorPointsScanner
+
+#### DrawIOClass
+
+#### DrawIOCleanEngineeringModel
+
+#### DrawIOModule
+
+#### Drawio
+
+#### DrawioScanner
+
+#### DrawioViolation
+
+#### EdgesApproachPerpendicularScanner
+
+#### EdgesDoNotCrossClassesScanner
+
+#### EdgesDoNotCrossOtherEdgesScanner
+
+#### EdgesDoNotOverlapEdgesScanner
+
+#### ImportedClass
+
+#### LeafNodesNotInHorizontalRowScanner
+
+#### Page
+
+#### PreferShortRoutesScanner
+
+#### StereotypeAboveClassNameScanner
+
+### Dependencies
+ - `actions` — moduleDependsOn
+ - `actions.partition` — moduleDependsOn
+ - `actions.sketch` — moduleDependsOn
+ - `builders.create_agent_toolset` — moduleDependsOn
+ - `builders.create_context_tool` — moduleDependsOn
+ - `harness` — moduleDependsOn
+ - `harness.agent_tools` — moduleDependsOn
+ - `harness.hooks` — moduleDependsOn
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.markdown` — moduleDependsOn
+ - `harness.mcp` — moduleDependsOn
+ - `installation` — moduleDependsOn
+ - `practices` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.ddd` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `practices.ux.model.drawio` — moduleDependsOn
+ - `practices.ux.model.html` — moduleDependsOn
+ - `practices.ux.model.json` — moduleDependsOn
+ - `practices.ux.model.markdown` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.context_setup` — moduleDependsOn
+ - `tools.git` — moduleDependsOn
+ - `tools.handoff` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.prompt_echo` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.ux.model.drawio
+### Public Seam
+#### DrawioUxMap
+
+### Dependencies
+ - `harness` — moduleDependsOn
+ - `harness.agent_tools` — moduleDependsOn
+ - `harness.hooks` — moduleDependsOn
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.mcp` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.clean_engineering.model.drawio` — moduleDependsOn
+ - `practices.ddd` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `practices.ux.model.html` — moduleDependsOn
+ - `practices.ux.model.json` — moduleDependsOn
+ - `practices.ux.model.markdown` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.prompt_echo` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.ux.model.html
+### Public Seam
+#### HtmlUxMap
+
+### Dependencies
+ - `actions` — moduleDependsOn
+ - `actions.partition` — moduleDependsOn
+ - `harness` — moduleDependsOn
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `installation` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.clean_engineering.model.drawio` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `practices.ux.model.drawio` — moduleDependsOn
+ - `practices.ux.model.json` — moduleDependsOn
+ - `practices.ux.model.markdown` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.ux.model.json
+### Public Seam
+#### JsonUxMap
+
+### Dependencies
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.clean_engineering` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.clean_engineering.model.drawio` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `practices.ux.model.drawio` — moduleDependsOn
+ - `practices.ux.model.html` — moduleDependsOn
+ - `practices.ux.model.markdown` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.ux.model.markdown
+### Public Seam
+#### MarkdownUxMap
+
+### Dependencies
+ - `harness.knowledge_graph` — moduleDependsOn
+ - `practices.agent_bdd` — moduleDependsOn
+ - `practices.clean_engineering.model` — moduleDependsOn
+ - `practices.clean_engineering.model.drawio` — moduleDependsOn
+ - `practices.stories` — moduleDependsOn
+ - `practices.ux.model` — moduleDependsOn
+ - `practices.ux.model.drawio` — moduleDependsOn
+ - `practices.ux.model.html` — moduleDependsOn
+ - `practices.ux.model.json` — moduleDependsOn
+ - `tools.catalog_generator` — moduleDependsOn
+ - `tools.plan` — moduleDependsOn
+ - `tools.workflow` — moduleDependsOn
+ - `tools.workspace` — moduleDependsOn
+---
+
+### Constraint
+
+*(none in the graph)*
+
+## practices.ux.story-demo.play-dual-runner
+### Public Seam
+
+*(no public classes in the graph)*
+
+### Dependencies
+ - *(none in the graph)*
 ---
 
 ### Constraint
