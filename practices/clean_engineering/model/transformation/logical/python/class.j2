@@ -1,3 +1,24 @@
 from __future__ import annotations
+{% set inherited = namespace(name='') %}
+{% for rel in node.relationships %}
+{% if rel.kind == 'inheritance' %}
+{% set inherited.name = rel.target %}
+{% endif %}
+{% endfor %}
 
-{{ node|class_python }}
+class {{ node.name }}{% if inherited.name %}({{ inherited.name }}){% endif %}:
+{%- if node.intent %}
+    """{{ node.intent }}"""
+{% endif %}
+{%- for prop in node.property_nodes %}
+    @property
+    def {{ prop.name | snake }}(self) -> {{ prop.type_hint or 'object' }}:
+        ...
+{% endfor %}
+{%- for op in node.operation_nodes %}
+    def {{ op.name | snake }}(self{% for param in op.parameters %}, {{ param.name | snake }}{% endfor %}) -> {{ op.return_type or 'None' }}:
+        ...
+{% endfor %}
+{%- if not node.property_nodes and not node.operation_nodes %}
+    pass
+{% endif %}

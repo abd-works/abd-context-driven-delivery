@@ -18,7 +18,6 @@ from practices.clean_engineering.model.field_types import OperationField, Proper
 from practices.clean_engineering.model.operation import Operation as SourceOperation
 from practices.clean_engineering.model.operation import Parameter as SourceParameter
 from practices.clean_engineering.model.property import Property as SourceProperty
-from practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
 
 _LENS = "ce:"
 _NEXT_LENSES = ("stories:", "bdd:", "ddd:", "ux:")
@@ -39,7 +38,8 @@ class CleanEngineeringTransformer(Transformer, SourceModel):
         return list(self.modules)
 
     def attach_environment(self, environment: Environment, root: Transformer | None = None) -> None:
-        environment.filters["class_python"] = _class_python
+        environment.filters["snake"] = _to_snake
+        environment.filters["kebab"] = _to_kebab
         super().attach_environment(environment, root)
 
 
@@ -89,19 +89,6 @@ class PropertyTransformer(Transformer, SourceProperty):
 
 class ParameterTransformer(Transformer, SourceParameter):
     pass
-
-
-def _class_python(oclass: SourceClass) -> str:
-    if not oclass.operations and oclass.operation_nodes:
-        oclass.sync_legacy_from_tree()
-    rendered = PythonCleanEngineeringModel()._render_class(oclass, known_names=[])
-    base = next(
-        (rel.target for rel in oclass.relationships if rel.kind == "inheritance"),
-        "",
-    )
-    if not base:
-        return rendered
-    return rendered.replace(f"class {oclass.name}(ABC):", f"class {oclass.name}({base}):", 1)
 
 
 def _to_kebab(name: str) -> str:
