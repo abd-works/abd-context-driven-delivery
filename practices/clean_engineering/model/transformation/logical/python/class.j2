@@ -1,24 +1,19 @@
 from __future__ import annotations
-{% set inherited = namespace(name='') %}
-{% for rel in node.relationships %}
-{% if rel.kind == 'inheritance' %}
-{% set inherited.name = rel.target %}
-{% endif %}
-{% endfor %}
-
-class {{ node.name }}{% if inherited.name %}({{ inherited.name }}){% endif %}:
+{%- from 'macros.j2' import constructor_parameters, property, instance_method %}
+{%- from 'ce_macros.j2' import import_along_arrow, one_class, private_class %}
+{{ import_along_arrow(node) }}
+{{ one_class(node) }}
+{{ private_class(node) }}
 {%- if node.intent %}
     """{{ node.intent }}"""
 {% endif %}
+{{ constructor_parameters(node) }}
 {%- for prop in node.property_nodes %}
-    @property
-    def {{ prop.name | snake }}(self) -> {{ prop.type_hint or 'object' }}:
-        ...
-{% endfor %}
+{{ property(prop) }}
+{%- endfor %}
 {%- for op in node.operation_nodes %}
-    def {{ op.name | snake }}(self{% for param in op.parameters %}, {{ param.name | snake }}{% endfor %}) -> {{ op.return_type or 'None' }}:
-        ...
-{% endfor %}
-{%- if not node.property_nodes and not node.operation_nodes %}
+{{ instance_method(op) }}
+{%- endfor %}
+{%- if not node.property_nodes and not node.operation_nodes and not constructor_parameters(node).strip() %}
     pass
 {% endif %}

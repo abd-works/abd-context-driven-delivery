@@ -1,3 +1,5 @@
 """{{ node.name }}."""
 
 from __future__ import annotations
+{%- from 'ce_macros.j2' import import_along_arrow %}
+{{ import_along_arrow(node) }}

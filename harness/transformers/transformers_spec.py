@@ -14,18 +14,21 @@ for _cat in ("practices", "tools"):
         sys.path.insert(0, _p)
 
 from expects import equal, expect
+from practices.bdd.model.transformation.bdd_transformer import BddTransformer
 from mamba import before, description, it
 
 from harness.transformers.logical_dump import write_temp
 from harness.transformers.transformers import Transformers
+from practices.clean_engineering.model.field_types import Relationship
 from practices.clean_engineering.model.transformation.clean_engineering_transformer import (
     CleanEngineeringTransformer,
 )
 from practices.stories.model.transformation.story_map_transformer import StoryMapTransformer
 
-_FIXTURE_SKETCH = _REPO_ROOT / "harness" / "transformers" / "fixtures" / "mm3e" / "mm3e-sketch.md"
-_FIXTURE_PYTHON = _REPO_ROOT / "harness" / "transformers" / "fixtures" / "mm3e"
-_TEMP = _FIXTURE_PYTHON / "temp"
+_MM3E = _REPO_ROOT / "harness" / "transformers" / "fixtures" / "mm3e"
+_FIXTURE_SKETCH = _MM3E / "mm3e-sketch.md"
+_EXPECTED = _MM3E / "expected"
+_ACTUAL = _MM3E / "actual"
 _SNAKE = re.compile(r"([a-z0-9])([A-Z])")
 
 
@@ -35,8 +38,6 @@ class Mm3ePythonCatalog:
     def from_directory(self, root: Path) -> dict[str, dict]:
         files = {}
         for path in sorted(root.rglob("*.py")):
-            if "temp" in path.parts:
-                continue
             files[str(path.relative_to(root)).replace("\\", "/")] = path.read_text(
                 encoding="utf-8"
             )
@@ -96,6 +97,20 @@ class Mm3ePythonCatalog:
             row["member_names"] = [
                 {"fixture": left, "emitted": right} for left, right in renamed
             ]
+        changed = []
+        for key in sorted(set(fixture_keys) & set(emitted_keys)):
+            left = fixture_members[fixture_keys[key]]
+            right = emitted_members[emitted_keys[key]]
+            if left["kind"] != right["kind"] or left["params"] != right["params"]:
+                changed.append(
+                    {
+                        "member": fixture_keys[key],
+                        "fixture": {"kind": left["kind"], "params": left["params"]},
+                        "emitted": {"kind": right["kind"], "params": right["params"]},
+                    }
+                )
+        if changed:
+            row["member_shape"] = changed
         return row
 
     def _class_entry(self, node: ast.ClassDef) -> dict:
@@ -147,10 +162,10 @@ with description("Transformers"):
         self.files = self.story_map.render("logical")
         self.ce_files = self.ce.render("logical")
         self.catalog = Mm3ePythonCatalog()
-        self.fixture_ce = self.catalog.from_directory(_FIXTURE_PYTHON)
+        self.fixture_ce = self.catalog.from_directory(_EXPECTED)
         self.emitted_ce = self.catalog.from_files(self.ce_files)
         self.ce_delta = self.catalog.compare(self.fixture_ce, self.emitted_ce)
-        write_temp(self.roots, _TEMP)
+        write_temp(self.roots, _ACTUAL)
 
     with it("should load StoryMapTransformer from the stories lens"):
         expect(self.story_map.epics[0].name).to(equal("Resolve Checks"))
@@ -170,3 +185,49 @@ with description("Transformers"):
         expect(self.ce_delta.get("missing_classes", [])).to(equal([]))
         expect(self.ce_delta.get("extra_classes", [])).to(equal([]))
         expect(self.ce_delta.get("classes", {})).to(equal({}))
+
+    with it("should import Trait from the checks module that defines it"):
+        source = self.ce_files["src/ability/ability.py"]
+        expect("from checks.trait import Trait" in source).to(equal(True))
+
+    with description("a generated class"):
+        with description("that used constructor_parameters"):
+            with before.each:
+                roots = Transformers().transform_sketch("ce:\n  shop/\n    Cart\n")
+                cart = roots[0].modules[0].classes[0]
+                cart.relationships.append(Relationship(target="Catalog", kind="association"))
+                self.source = roots[0].render("logical")["src/shop/cart.py"]
+
+            with it("should pass use-explicit-dependencies"):
+                expect(
+                    "def __init__(self, catalog: Catalog) -> None:\n        self._catalog = catalog"
+                    in self.source
+                    and "Catalog()" not in self.source
+                ).to(equal(True))
+
+    with description("a generated description"):
+        with description("that used domain_subject"):
+            with before.each:
+                roots = Transformers().transform_sketch(
+                    "bdd:\n"
+                    "a cart\n"
+                    "  that has lines\n"
+                    "    it should total the lines\n"
+                )
+                self.bdd = next(root for root in roots if isinstance(root, BddTransformer))
+                self.source = self.bdd.render("logical")["tests/a_cart_spec.py"]
+
+            with it("should pass test-observable-behavior"):
+                expect(self.source).to(
+                    equal(
+                        "from mamba import before, description, it\n"
+                        "from expects import expect\n"
+                        "\n"
+                        "with description(\"a cart\"):\n"
+                        "    with description(\"that has lines\"):\n"
+                        "        with before.each:\n"
+                        "            ...\n"
+                        "        with it(\"should total the lines\"):\n"
+                        "            ...\n"
+                    )
+                )

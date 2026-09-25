@@ -28,3 +28,12 @@ class Bdd(PracticeGuidance):
         )
         if path is not None or session is not None:
             self._attach_workspace(path=path, session=session)
+
+    @property
+    def model(self):
+        from practices.bdd.model.transformation.bdd_transformer import BddTransformer
+
+        class BddPracticeModel:
+            transformer = BddTransformer
+
+        return BddPracticeModel()

@@ -1232,8 +1232,8 @@ checks/                              // Trait, Check, Condition, Measurement
     trait
     dc
     circumstanceModifier
-    resolve
-    resolveGraded
+    resolve ()
+    resolveGraded ()
        -> Trait.effectiveRank
   CheckResult
     rollTotal
@@ -1249,12 +1249,12 @@ checks/                              // Trait, Check, Condition, Measurement
   OpposedCheck : Check
     opponent
     isPassive
-    resolve
+    resolve ()
   RoutineCheck : Check
-    resolve
+    resolve ()
   TeamCheck : Check
     helpers
-    resolve
+    resolve ()
   Condition
     name
     gameModifier
@@ -1267,8 +1267,8 @@ checks/                              // Trait, Check, Condition, Measurement
     active
   ImposedConditions
     apply condition source
-    supersede
-    removeWhenSourceEnds
+    supersede ()
+    removeWhenSourceEnds source
     activeConditions
   // invariant: ranks never added as integers — convert through Measurement
   // invariant: only active conditions apply modifiers
@@ -1286,8 +1286,8 @@ character-construction/              // Hero, PowerLevel, PowerPoints, Complicat
     powerPoints
     complications
     spendOn trait
-    validateBalance
-    enforceLimitPair
+    validateBalance ()
+    enforceLimitPair ()
   PowerLevel
     startingPowerPoints
   Complication
@@ -1305,14 +1305,14 @@ ability/                             // Ability, Defense
   Ability : Trait
     naturalRank
     enhancedRank
-    setRank
-    cascadeDependents
-    applyAbsentRestrictions
-    applyDebilitated
+    setRank purchasedRank
+    cascadeDependents ()
+    applyAbsentRestrictions ()
+    applyDebilitated ()
   Defense : Trait
     sourceAbility
     purchasedAboveBase
-    deriveBase
+    deriveBase ()
   // invariant: voluntary rank never below -5; below -5 is debilitated from an effect
   // invariant: absent is not rank -5
   // invariant: Toughness cannot be bought above Stamina base
@@ -1326,9 +1326,9 @@ skill/                               // Skill
   Skill : Trait
     linkedAbility
     trainedOnly
-    assignRanks
-    makeCheck
-    resolveUntrained
+    assignRanks purchasedRank
+    makeCheck dc
+    resolveUntrained ()
 
 advantage/                           // Advantage
   // seam: purchase advantage; apply combat/fortune/skill advantage effects
@@ -1339,16 +1339,16 @@ advantage/                           // Advantage
   Advantage : Trait
     category
     rank
-    purchase
-    apply
+    purchase ()
+    apply ()
   AttackTradeOff
     penaltyStat
     bonusStat
     amount
   Luck
     usesThisSession
-    reRoll
-    refresh
+    reRoll ()
+    refresh ()
 
 power/                               // Power, Effect, Extra, Flaw, Descriptor, Array
   attack
@@ -1373,7 +1373,7 @@ power/                               // Power, Effect, Extra, Flaw, Descriptor, 
     range
     duration
     baseCostPerRank
-    resolve
+    resolve ()
   Extra
     perRank
   Flaw
@@ -1383,8 +1383,8 @@ power/                               // Power, Effect, Extra, Flaw, Descriptor, 
     baseEffect
     alternates
     dynamic
-    switchActive
-    reallocate
+    switchActive ()
+    reallocate ()
   // invariant: after flaws, at least 1 PP per rank (or fractional ranks) and at least 1 PP total
   // invariant: non-dynamic array effects are mutually exclusive
 
@@ -1415,7 +1415,7 @@ equipment/                           // Equipment, Device, Vehicle, Headquarters
     features
   Construct
     abilityProfile
-    issueOrder
+    issueOrder ()
 
 combat/                              // ActionRound, Attack, Damage, HeroPoint, ExtraEffort
   turns
@@ -1430,7 +1430,7 @@ combat/                              // ActionRound, Attack, Damage, HeroPoint, 
   // dep -> power (area/perception bypass attack check)
   ActionRound
     turnOrder
-    rollInitiative
+    rollInitiative ()
   Turn
     standardAction
     moveAction
@@ -1439,16 +1439,16 @@ combat/                              // ActionRound, Attack, Damage, HeroPoint, 
   Attack
     attackBonus
     defenseClass
-    resolve
-    confirmCritical
+    resolve ()
+    confirmCritical ()
   Damage
     toughnessResistance
-    applyDegree
+    applyDegree ()
   HeroPoint
-    spend
+    spend ()
   ExtraEffort
-    declareBenefit
-    applyFatigue
+    declareBenefit ()
+    applyFatigue ()
 
 build-order: checks → character-construction → ability → skill → advantage → power → equipment → combat
 

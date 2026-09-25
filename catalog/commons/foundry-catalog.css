@@ -1,0 +1,3623 @@
+:root {
+  --radius:       6px;
+  --link-soft:        #FFB380;
+  --link-soft-hover:  #FFCCA3;
+  --link-muted:       var(--accent-soft);
+  --orange:       var(--accent);
+  --orange-hover: var(--accent-deep);
+  --ai-blue-500:  var(--ai-accent);
+  --ai-blue-300:  #81D4FA;
+}
+
+/* Foundry catalog — content styles (nav + page hero from abd-works-website/css/site.css) */
+
+/* Hub hero — title left, Practice legend right (vertical stack, content-sized) */
+.page-hero__table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin-bottom: 0;
+  table-layout: auto;
+}
+
+.page-hero__cell {
+  vertical-align: top;
+  padding: 0;
+}
+
+.page-hero__cell--title {
+  width: auto;
+  padding-right: 48px;
+}
+
+.page-hero__cell--title .page-headline {
+  margin: 0 0 20px;
+}
+
+.page-hero__cell--title .body-lead {
+  margin-bottom: 0;
+  max-width: 640px;
+}
+
+.page-hero__cell--practice {
+  width: 1%;
+  white-space: nowrap;
+  padding-top: 0.35em;
+}
+
+.page-hero__cell--practice .kanban-legend-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0;
+}
+
+.page-hero__cell--practice .kanban-legend-heading {
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.page-hero__cell--practice .kanban-legend-cards {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: max-content;
+}
+
+/* Visible outside .kb-slide — natural chip width, no squish */
+.page-hero__cell--practice .kanban-legend-cards .kb-ticket.aad-skill {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  display: block;
+  width: auto;
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 6px 10px;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.page-hero__cell--practice .kanban-legend-cards .kb-ticket.aad-skill.aad-fam-ddd {
+  border-left-color: #6C5CE7;
+}
+
+.page-hero__cell--practice .kanban-legend-cards .kb-ticket.aad-skill.aad-fam-uxd {
+  border-left-color: #E84393;
+}
+
+.page-hero__cell--practice .kanban-legend-cards .kb-ticket.aad-skill.aad-fam-sdd {
+  border-left-color: #6BCB77;
+}
+
+.page-hero__cell--practice .kanban-legend-cards .kb-ticket.aad-skill.aad-fam-arc {
+  border-left-color: var(--abd-blue, #4FC3F7);
+}
+
+@media (max-width: 960px) {
+  .page-hero__table,
+  .page-hero__table tbody,
+  .page-hero__table tr,
+  .page-hero__table td {
+    display: block;
+    width: 100%;
+  }
+
+  .page-hero__cell--title {
+    padding-right: 0;
+    margin-bottom: 12px;
+  }
+
+  .page-hero__cell--practice {
+    width: 100%;
+    white-space: normal;
+    padding-top: 0;
+  }
+
+  .page-hero__cell--practice .kanban-legend-row {
+    align-items: flex-start;
+  }
+
+  .page-hero__cell--practice .kanban-legend-cards {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .page-hero__cell--practice .kanban-legend-cards .kb-ticket.aad-skill {
+    white-space: normal;
+    width: 100%;
+  }
+}
+
+/* Nav: marketing site links + Foundry section (catalog-nav.js) */
+.nav-links__sep {
+  width: 1px;
+  height: 1.1em;
+  align-self: center;
+  background: var(--border);
+  margin: 0 6px;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.nav-links a.nav-links__foundry,
+.nav-drawer-links a.nav-links__foundry {
+  opacity: 0.88;
+}
+
+strong { font-weight: 600; }
+
+.catalog-body {
+  padding-bottom: 96px;
+}
+
+.catalog-body .wrap {
+  max-width: 1400px;
+}
+
+.catalog-body code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: rgba(255,255,255,0.06);
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: var(--accent-soft);
+}
+
+html[data-theme="engineering"] .catalog-body code,
+html[data-abd-theme="engineering"] .catalog-body code {
+  background: rgba(255,255,255,0.06);
+}
+
+html:not([data-theme="engineering"]) .catalog-body code,
+html[data-abd-theme="executive"] .catalog-body code {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.page-hero--detail {
+  padding-top: 20px;
+  padding-bottom: 16px;
+}
+.page-hero--detail .page-headline {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 4px 0 6px;
+}
+.page-headline .skill-name-prefix,
+.cap-card__title .skill-name-prefix {
+  color: var(--accent);
+}
+.page-hero--detail .body-lead {
+  font-size: 0.9rem;
+  margin: 0;
+  color: var(--muted);
+}
+
+.page-hero--detail .back-link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.page-hero--detail .back-link:hover {
+  color: var(--accent);
+}
+
+.page-hero--detail .s-name {
+  margin-bottom: 12px;
+}
+
+.catalog-body p { margin: 0 0 14px; }
+
+.catalog-body h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 32px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.catalog-body h2:first-child { margin-top: 0; }
+.cap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  margin: 18px 0 0;
+}
+.cap-card {
+  position: relative;
+  display: block;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  overflow: hidden;
+  transition: background 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.cap-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+a.cap-card {
+  color: var(--muted);
+}
+.cap-card:hover {
+  background: var(--raised);
+  border-color: var(--accent-soft);
+  text-decoration: none;
+}
+.cap-card:hover::before {
+  transform: scaleX(1);
+}
+.cap-card__title {
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+a.cap-card:hover .cap-card__title {
+  color: var(--accent);
+}
+.cap-card__icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--muted);
+  transition: color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+a.cap-card:hover .cap-card__icon {
+  color: var(--accent-soft);
+}
+.cap-card__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+  margin-bottom: 1px;
+}
+.cap-card__summary { font-size: 0.85rem; color: var(--muted); line-height: 1.45; margin: 0 0 8px; }
+.cap-card__meta { font-size: 0.75rem; color: var(--muted); font-family: var(--font-mono, 'JetBrains Mono', monospace); margin: 0 0 8px; opacity: 0.85; }
+.cap-card__more {
+  font-size: 0.78rem;
+  color: var(--muted);
+  opacity: 1;
+  margin: 10px 0 0;
+}
+a.cap-card:hover .cap-card__more {
+  color: var(--accent-soft);
+}
+
+/* Entry detail pages (skill/*.html, agent/*.html) — overview-style */
+.entry-detail-header .back-link {
+  font-size: 0.82rem;
+  color: var(--muted);
+  display: inline-block;
+  margin: 0 0 10px;
+}
+.entry-detail-header .back-link:hover {
+  color: var(--accent);
+}
+.cap-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: rgba(229, 83, 26, 0.08);
+  border: 1px solid rgba(229, 83, 26, 0.25);
+  border-radius: 3px;
+  padding: 2px 8px;
+  margin: 0 0 8px;
+}
+.entry-caption {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.entry-subheading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 18px 0 8px;
+}
+.entry-prose {
+  white-space: pre-wrap;
+  color: var(--text);
+  line-height: 1.65;
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+.entry-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 26px 0;
+}
+.entry-contents-doc {
+  margin: 0 0 8px;
+}
+.entry-contents-files {
+  margin: 0;
+}
+.entry-md-section {
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius);
+  margin: 0 0 10px;
+  background: rgba(0, 0, 0, 0.14);
+}
+.entry-md-section > summary.entry-md-section__summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.98rem;
+  padding: 12px 14px;
+  list-style: none;
+  color: var(--text);
+  user-select: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.entry-md-section > summary.entry-md-section__summary::before {
+  content: "+";
+  flex-shrink: 0;
+  width: 1.35em;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.05em;
+  line-height: 1.35;
+  color: var(--accent);
+}
+.entry-md-section[open] > summary.entry-md-section__summary::before {
+  content: "-";
+}
+.entry-md-section > summary.entry-md-section__summary::-webkit-details-marker {
+  display: none;
+}
+.entry-md-section .entry-md-section__body {
+  padding: 0 14px 14px 16px;
+  border-top: 1px solid var(--border-muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text);
+}
+.entry-md-section .entry-md-section__body p {
+  margin: 0 0 12px;
+}
+.entry-md-section .entry-md-section__body p:last-child {
+  margin-bottom: 0;
+}
+.entry-md-section .entry-md-section__body ul {
+  margin: 0 0 12px;
+  padding-left: 1.35rem;
+}
+.entry-md-section .entry-md-section__body h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 18px 0 8px;
+  padding-bottom: 0;
+  border-bottom: none;
+  color: var(--text);
+}
+.entry-md-section .entry-md-section__body h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 14px 0 8px;
+  color: var(--text);
+}
+.entry-md-section .entry-md-section__body pre {
+  margin: 0 0 12px;
+  overflow-x: auto;
+}
+.entry-md-section .entry-md-section__body hr {
+  margin: 14px 0;
+  border: none;
+  border-top: 1px solid var(--border-muted);
+}
+.ascii-diagram {
+  background: #111114;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.83em;
+  line-height: 1.55;
+  color: #b8b8c2;
+  margin: 0 0 18px;
+}
+.skill-detail-page .skill-hero-img-wrap + .install-block {
+  margin-top: 18px;
+}
+.skill-detail-page .install-block + .skill-cr-grid,
+.skill-detail-page .install-block + .skill-cr-single {
+  margin-top: 28px;
+}
+.skill-detail-page .skill-hero-img-wrap:empty + .install-block {
+  margin-top: 0;
+}
+.install-block {
+  margin: 20px 0 0;
+  padding: 16px 18px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--accent);
+}
+.install-block h2 {
+  margin-top: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.install-block .install-hint {
+  font-size: 0.92rem;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.install-snippet {
+  background: #111114;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.85em;
+  line-height: 1.5;
+  color: #d4d4d4;
+}
+.install-snippet code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+}
+.install-source {
+  margin: 12px 0 0;
+  font-size: 0.92rem;
+}
+.install-source a {
+  font-weight: 600;
+}
+.install-source-path {
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.82em;
+}
+.file-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.file-list li {
+  margin: 0 0 14px;
+  padding: 10px 12px 10px 14px;
+  border-left: 3px solid var(--border-muted);
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 0 4px 4px 0;
+}
+.file-list .file-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+  display: block;
+  margin-top: 4px;
+}
+.file-list a {
+  font-weight: 600;
+}
+.file-list--root {
+  margin-top: 4px;
+}
+.file-list--nested {
+  margin: 8px 0 0 0;
+  padding-left: 0;
+  border-left: 2px solid var(--border-muted);
+  margin-left: 2px;
+  padding-left: 10px;
+}
+.file-list--nested li {
+  margin-bottom: 10px;
+  padding: 8px 10px 8px 12px;
+  font-size: 0.95rem;
+}
+.file-list__nested-note {
+  margin: 8px 0 0 0;
+  padding: 6px 0 4px 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+/* Expandable folder tree (<details> / <summary>) */
+.file-list > li.file-list__folder {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+}
+.file-list__folder > .file-tree__details {
+  margin: 0 0 10px 0;
+}
+/* Match .entry-md-section: folder trees (rules, scanners, templates, …) */
+.file-tree__details {
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+}
+.file-tree__summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: var(--text);
+  user-select: none;
+  background: transparent;
+}
+.file-tree__summary::-webkit-details-marker {
+  display: none;
+}
+.file-tree__summary::marker {
+  content: "";
+  display: none;
+}
+.file-tree__summary::before {
+  content: "+";
+  flex-shrink: 0;
+  width: 1.35em;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.05em;
+  line-height: 1.35;
+  color: var(--accent);
+}
+.file-tree__details[open] > .file-tree__summary::before {
+  content: "-";
+}
+.file-tree__summary:hover {
+  background: rgba(229, 83, 26, 0.06);
+}
+.file-tree__summary .file-meta {
+  display: inline;
+  margin-left: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.file-tree__inner {
+  padding: 0 14px 14px 16px;
+  border-top: 1px solid var(--border-muted);
+}
+.file-tree__ul {
+  margin-top: 4px;
+}
+.file-tree__dir > .file-tree__details {
+  margin: 0;
+  border-radius: 4px;
+}
+.file-tree__dir--truncated {
+  font-size: 0.95rem;
+}
+.file-tree__file .file-meta {
+  display: block;
+  margin-top: 4px;
+}
+
+/* Foundry prelude + mission + lists: abd-works/commons/agile-garden-fragment.css (prepended by generate_abd_catalog.py) */
+
+/* Executive mode — AI blue fails contrast on light; skill links use accent */
+html[data-abd-theme="executive"] .catalog-prelude .catalog-garden-name a,
+html[data-abd-theme="executive"] .catalog-garden-lists .catalog-garden-name a,
+html[data-abd-theme="executive"] .catalog-garden-name--agent a,
+html[data-abd-theme="executive"] .catalog-garden-name--foundational a {
+  color: var(--accent-deep) !important;
+  border-bottom-color: rgba(198, 69, 20, 0.35);
+}
+html[data-abd-theme="executive"] .catalog-prelude .catalog-garden-name a:hover,
+html[data-abd-theme="executive"] .catalog-garden-lists .catalog-garden-name a:hover,
+html[data-abd-theme="executive"] .catalog-garden-name--agent a:hover,
+html[data-abd-theme="executive"] .catalog-garden-name--foundational a:hover {
+  color: var(--accent) !important;
+  border-bottom-color: rgba(229, 83, 26, 0.55);
+}
+
+/* Single-page hub (index.html): collapsible hub / skills / agents */
+.catalog-section {
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  margin: 0 0 16px;
+  background: rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.catalog-section > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+.catalog-section > summary::-webkit-details-marker { display: none; }
+.catalog-section > summary::marker { content: ""; }
+.catalog-section > summary::before {
+  content: "+";
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  line-height: 1.45rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: 1px solid var(--border-muted);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.catalog-section[open] > summary::before { content: "\2212"; }
+.catalog-section[open] > summary {
+  border-bottom: 1px solid var(--border-muted);
+}
+.catalog-section .section-body {
+  padding: 18px 16px 22px;
+}
+.catalog-section .section-body > p:first-of-type { margin-top: 0; }
+.catalog-section .cap-grid { margin-top: 8px; }
+.catalog-section .count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Static markdown mirror pages (catalog/doc/...) */
+.rule-prose {
+  font-size: 1rem;
+  line-height: 1.65;
+  max-width: 52rem;
+}
+.rule-prose h1,
+.rule-prose h2,
+.rule-prose h3,
+.rule-prose h4 {
+  margin: 1.25em 0 0.5em;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text);
+}
+.rule-prose h1:first-child,
+.rule-prose h2:first-child,
+.rule-prose h3:first-child {
+  margin-top: 0;
+}
+.rule-prose h1 { font-size: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.35em; }
+.rule-prose h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border-muted); padding-bottom: 0.25em; }
+.rule-prose h3 { font-size: 1.1rem; }
+.rule-prose p { margin: 0 0 12px; }
+.rule-prose pre {
+  margin: 12px 0;
+  padding: 12px 14px;
+  overflow: auto;
+  background: #1f1f24;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+.rule-prose code { font-size: inherit; }
+.rule-prose ul,
+.rule-prose ol {
+  margin: 8px 0 12px 1.25rem;
+  padding: 0;
+}
+.rule-prose li { margin-bottom: 6px; }
+.rule-prose strong { color: var(--text); }
+.rule-prose hr {
+  border: 0;
+  border-top: 1px solid var(--border-muted);
+  margin: 1.25em 0;
+}
+.rule-prose .md-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0 16px;
+  -webkit-overflow-scrolling: touch;
+}
+.rule-prose table.md-table {
+  width: max-content;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.rule-prose table.md-table th,
+.rule-prose table.md-table td {
+  border: 1px solid var(--border-muted);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.rule-prose table.md-table th {
+  background: rgba(229, 83, 26, 0.08);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rule-prose table.md-table td { background: var(--surface); }
+.rule-prose a { color: var(--accent); text-decoration: underline; }
+.rule-prose a:hover { text-decoration: none; }
+
+.plugin-slots h3 {
+  margin: 28px 0 8px;
+  font-size: 1.05rem;
+}
+.plugin-slots h3:first-child { margin-top: 0; }
+.cap-grid--plugin-slot { margin-bottom: 8px; }
+
+/* ── Skill detail: family kanban stage nav (matches hub column headings) ── */
+.skill-kanban-nav {
+  --fam-sdd: #6bcb77;
+  --fam-ddd: #6c5ce7;
+  --fam-uxd: #e84393;
+  --fam-arc: #4fc3f7;
+  --fam-idea: var(--accent);
+  --abd-accent: var(--accent);
+  --abd-accent-glow: var(--accent-soft, var(--accent));
+  --abd-raised: var(--raised);
+  --abd-bg: var(--bg);
+  --abd-border: var(--border);
+  --abd-text: var(--text);
+  --abd-muted: var(--muted);
+  background: var(--raised);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0 16px;
+}
+.skill-kanban-nav .wrap {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.skill-kanban-nav__board {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 6px 8px;
+  align-items: start;
+}
+.skill-kanban-nav__practice-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.skill-kanban-nav__practice-col .foundry-practice-col__card {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--abd-raised);
+  border: 1px solid var(--abd-border);
+  border-left-width: 3px;
+  border-radius: 4px;
+  line-height: 1.25;
+  box-sizing: border-box;
+  transition: box-shadow 120ms, border-color 120ms;
+  color: inherit;
+}
+.skill-kanban-nav__practice-col .foundry-practice-col__card:hover {
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.25);
+}
+.skill-kanban-nav__practice-col .foundry-practice-col__card.kb-ticket--current {
+  border-color: rgba(229, 83, 26, 0.45);
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.25);
+}
+.skill-kanban-nav__practice-col .foundry-practice-col__card.foundry-perspective-label--sdd {
+  border-left-color: var(--fam-sdd);
+  color: var(--fam-sdd);
+}
+.skill-kanban-nav__practice-col .foundry-practice-col__card.foundry-perspective-label--ddd {
+  border-left-color: var(--fam-ddd);
+  color: var(--fam-ddd);
+}
+.skill-kanban-nav__practice-col .foundry-practice-col__card.foundry-perspective-label--uxd {
+  border-left-color: var(--fam-uxd);
+  color: var(--fam-uxd);
+}
+.skill-kanban-nav__practice-col .foundry-practice-col__card.foundry-perspective-label--arc {
+  border-left-color: var(--fam-arc);
+  color: var(--fam-arc);
+}
+.skill-kanban-nav__practice-col .kb-skill-tooltip-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.skill-kanban-nav__practice-col .kb-skill-tooltip.kb-col-shape-tooltip {
+  min-width: 10rem;
+  max-width: 22rem;
+}
+.skill-kanban-nav__practice-col .kb-skill-tooltip-wrap:hover .kb-skill-tooltip,
+.skill-kanban-nav__practice-col .kb-skill-tooltip-wrap:focus-within .kb-skill-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.skill-kanban-nav__stages {
+  display: grid;
+  grid-template-columns: repeat(var(--skill-kanban-cols, 5), minmax(0, 1fr));
+  gap: 0 8px;
+  min-width: 0;
+}
+.skill-kanban-nav__col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.skill-kanban-nav__tickets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.skill-kanban-nav .kb-col-head {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 8px 6px 7px;
+  font-family: var(--font-mono);
+  color: var(--abd-text);
+  background: var(--abd-raised);
+  border: 1px solid var(--abd-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.skill-kanban-nav .kb-col-head--static {
+  cursor: default;
+}
+.skill-kanban-nav a.kb-col-head {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.skill-kanban-nav a.kb-col-head:hover {
+  border-color: rgba(229, 83, 26, 0.35);
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.15);
+}
+.skill-kanban-nav .kb-col-head--current {
+  border-color: rgba(229, 83, 26, 0.45);
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.25);
+}
+.skill-kanban-nav .kb-col-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+.skill-kanban-nav .kb-col-scope-shape {
+  flex-shrink: 0;
+  border: 2px solid var(--abd-accent);
+  border-radius: 2px;
+}
+.skill-kanban-nav__stages .kb-col-shape-tooltip,
+.skill-kanban-nav__stages .kb-skill-tooltip-wrap .kb-col-shape-tooltip {
+  display: none !important;
+}
+.skill-kanban-nav__practice-col .kb-col-shape-tooltip {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 9px;
+  font-family: var(--font-mono);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--abd-text);
+  background: var(--abd-raised);
+  border: 1px solid rgba(229, 83, 26, 0.45);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+.skill-kanban-nav__practice-col .kb-col-shape-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 14px;
+  border: 5px solid transparent;
+  border-bottom-color: rgba(229, 83, 26, 0.45);
+}
+.skill-kanban-nav__practice-col .kb-col-shape-tooltip__name {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--abd-accent-glow);
+}
+.skill-kanban-nav__practice-col .kb-col-shape-tooltip__bullets {
+  font-size: 8px;
+  line-height: 1.45;
+  color: var(--abd-text);
+  white-space: pre-line;
+}
+.skill-kanban-nav .kb-col-scope-shape--solution { width: 36px; height: 12px; }
+.skill-kanban-nav .kb-col-scope-shape--increment { width: 24px; height: 16px; }
+.skill-kanban-nav .kb-col-scope-shape--sprint { width: 16px; height: 22px; }
+.skill-kanban-nav .kb-col-scope-shape--story { width: 11px; height: 28px; }
+.skill-kanban-nav .kb-col-head-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--abd-text);
+}
+.skill-kanban-nav .kb-col-head-title > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.skill-kanban-nav .kb-col-num {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--abd-text);
+  background: var(--abd-bg);
+  border: 1px solid var(--abd-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.skill-kanban-nav .kb-ticket {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  background: var(--abd-raised);
+  color: var(--abd-text);
+  padding: 5px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+  border-left-color: var(--abd-muted);
+  line-height: 1.25;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.skill-kanban-nav .kb-ticket:hover {
+  border-color: var(--abd-border);
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.2);
+}
+.skill-kanban-nav .kb-ticket.kb-ticket--current {
+  border-color: rgba(229, 83, 26, 0.45);
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.25);
+}
+.skill-kanban-nav .kb-ticket.aad-fam-sdd { border-left-color: var(--fam-sdd); }
+.skill-kanban-nav .kb-ticket.aad-fam-ddd { border-left-color: var(--fam-ddd); }
+.skill-kanban-nav .kb-ticket.aad-fam-uxd { border-left-color: var(--fam-uxd); }
+.skill-kanban-nav .kb-ticket.aad-fam-arc { border-left-color: var(--fam-arc); }
+.skill-kanban-nav .kb-ticket.aad-fam-idea { border-left-color: var(--fam-idea); }
+.skill-kanban-nav .kb-ticket.aad-fam-delivery { border-left-color: var(--fam-delivery); }
+
+/* crosscut row title header chips — family colored text */
+.skill-kanban-nav .aad-crosscut-row-title.aad-fam-delivery { color: var(--fam-delivery); border-left-color: var(--fam-delivery); }
+.skill-kanban-nav .aad-crosscut-row-title.aad-fam-sdd     { color: var(--fam-sdd);      border-left-color: var(--fam-sdd); }
+.skill-kanban-nav .aad-crosscut-row-title.aad-fam-ddd     { color: var(--fam-ddd);      border-left-color: var(--fam-ddd); }
+.skill-kanban-nav .aad-crosscut-row-title.aad-fam-uxd     { color: var(--fam-uxd);      border-left-color: var(--fam-uxd); }
+.skill-kanban-nav .aad-crosscut-row-title.aad-fam-arc     { color: var(--fam-arc);      border-left-color: var(--fam-arc); }
+/* foundational header chip — muted */
+.skill-kanban-nav .aad-crosscut-tier--foundational .aad-crosscut-row-title { color: var(--abd-muted); }
+
+/* crosscut skill chips — white text, consistent size, natural width */
+.skill-kanban-nav .aad-delivery-crosscut-skills .kb-ticket.aad-skill,
+.skill-kanban-nav .aad-delivery-crosscut-agents .kb-ticket.aad-skill {
+  color: var(--abd-text);
+  font-size: 9.5px;
+  padding: 3px 5px;
+  width: auto;
+  flex: 0 1 auto;
+}
+/* crosscut skills wrap horizontally */
+.skill-kanban-nav .aad-delivery-crosscut-skills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+/* practice rail — delivery/kanban color */
+.skill-kanban-nav__practice-col .foundry-practice-col__card.foundry-perspective-label--delivery {
+  border-left-color: var(--fam-delivery);
+  color: var(--fam-delivery);
+}
+@media (max-width: 960px) {
+  .skill-kanban-nav__board {
+    grid-template-columns: 1fr;
+  }
+  .skill-kanban-nav__stages {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+/* ── Skill detail: full-width hero image / embedded viewer ── */
+.skill-hero-img-wrap {
+  margin: 24px 0 0;
+}
+.skill-hero-img-wrap:empty { display: none; }
+.skill-hero-img-wrap img,
+.skill-hero-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--raised);
+}
+
+/* HTML prototype iframe (reference/example/index.html) */
+.skill-prototype-wrap {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+.skill-prototype-frame {
+  display: block;
+  width: 100%;
+  min-height: 540px;
+  height: 71vh;
+  max-height: 810px;
+  border: 0;
+  background: #fff;
+}
+.skill-prototype-open {
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--raised);
+}
+.skill-prototype-open a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.skill-prototype-open a:hover { text-decoration: underline; }
+
+/* draw.io embedded viewer */
+.skill-drawio-wrap {
+  position: relative;
+  width: 100%;
+  height: min(71vh, 680px);
+  min-height: 340px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: auto;
+  background: #fff;
+}
+.skill-drawio-wrap .mxgraph {
+  width: 100%;
+  min-height: 320px;
+  height: auto;
+}
+.skill-drawio-wrap .geToolbarContainer {
+  z-index: 4;
+}
+
+/* code file preview — white canvas (matches draw.io viewer) */
+.skill-code-preview {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  font-size: 13px;
+  color: #111113;
+}
+.skill-code-lang {
+  padding: 6px 14px;
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #595a61;
+  background: #f6f5f3;
+  border-bottom: 1px solid #e7e1d6;
+}
+.skill-code-preview pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  max-height: 420px;
+  background: #fff;
+}
+.skill-code-preview code {
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #111113;
+}
+
+/* rendered markdown preview — white canvas (matches draw.io viewer) */
+.skill-hero-img-wrap .skill-md-preview {
+  max-height: min(71vh, 610px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.skill-md-preview {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px 24px;
+  background: #fff;
+  color: #111113;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.skill-md-preview h1 { font-size: 18px; font-weight: 700; margin: 0 0 12px; color: #111113; }
+.skill-md-preview h2 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; color: #111113;
+  border-bottom: 1px solid #e7e1d6; padding-bottom: 3px; }
+.skill-md-preview h3 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; color: #111113; }
+.skill-md-preview h4 { font-size: 12px; font-weight: 600; margin: 10px 0 4px; color: #595a61; }
+.skill-md-preview p  { margin: 0 0 10px; }
+.skill-md-preview .spec-steps { margin: 0 0 14px; }
+.skill-md-preview p.spec-step { margin: 0 0 4px; line-height: 1.55; }
+.skill-md-preview .md-table-wrap { overflow-x: auto; margin: 0 0 12px; }
+.skill-md-preview .md-table { border-collapse: collapse; width: 100%; }
+.skill-md-preview ul, .skill-md-preview ol { margin: 0 0 10px; padding-left: 20px; }
+.skill-md-preview li { margin-bottom: 3px; }
+.skill-md-preview code { background: #f0ece4; border-radius: 3px;
+  padding: 1px 5px; font-family: var(--mono, monospace); font-size: 12px; color: #111113; }
+.skill-md-preview pre { background: #f6f5f3; border-radius: 5px;
+  padding: 12px; overflow-x: auto; margin: 0 0 12px; color: #111113; }
+.skill-md-preview table { border-collapse: collapse; width: 100%; margin: 0 0 12px; }
+.skill-md-preview th, .skill-md-preview td {
+  border: 1px solid #ddd8cf; padding: 6px 10px; }
+.skill-md-preview th { background: #f0ece4; font-weight: 600; color: #111113; }
+.skill-md-preview a { color: var(--accent); }
+.skill-md-preview strong { color: #111113; }
+
+/* ── Skill detail: concepts | rules two-column grid ── */
+.skill-cr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin: 24px 0 0;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .skill-cr-grid { grid-template-columns: 1fr; }
+}
+.skill-cr-col { min-width: 0; }
+.skill-cr-single { margin: 24px 0 0; }
+
+/* Glossary example hero — term blocks without heavy HR dividers */
+.skill-md-preview--glossary h1 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #595a61;
+  margin: 0 0 10px;
+  border: 0;
+  padding: 0;
+}
+.skill-md-preview--glossary h2 {
+  font-size: 16px;
+  margin-top: 0;
+}
+.skill-md-preview--glossary h3 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 14px 0 6px;
+  padding: 6px 8px;
+  background: #f6f5f3;
+  border-radius: 4px;
+  border-left: 3px solid var(--accent);
+  color: #111113;
+}
+.skill-md-preview--glossary hr {
+  display: none;
+}
+.skill-md-preview--glossary ul {
+  margin-top: 0;
+}
+
+/* ── Skill detail: full-width content below ── */
+.skill-detail-content-col { margin-top: 32px; }
+.skill-detail-page .skill-cr-grid,
+.skill-detail-page .skill-cr-single {
+  margin-top: 28px;
+}
+.skill-detail-page .skill-hero-img-wrap:empty + .install-block + .skill-cr-grid,
+.skill-detail-page .skill-hero-img-wrap:empty + .install-block + .skill-cr-single,
+.skill-detail-page .skill-hero-img-wrap:empty + .skill-cr-grid,
+.skill-detail-page .skill-hero-img-wrap:empty + .skill-cr-single {
+  margin-top: 0;
+}
+
+/* ── Skill detail: concepts (expandable) ── */
+.skill-hero-img-wrap + .install-block {
+  margin-top: 16px;
+}
+.install-block + .skill-cr-grid,
+.install-block + .skill-cr-single {
+  margin-top: 28px;
+}
+.skill-concepts {
+  margin: 0 0 20px;
+}
+.skill-concepts-heading {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px;
+  border-bottom: 1px solid var(--border-muted);
+  padding-bottom: 8px;
+}
+.skill-concept {
+  border-bottom: 1px solid var(--border-muted);
+}
+.skill-concept summary {
+  padding: 8px 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  user-select: none;
+}
+.skill-concept summary::-webkit-details-marker { display: none; }
+.skill-concept summary::marker { content: ""; }
+.skill-concept summary::before {
+  content: "+";
+  flex-shrink: 0;
+  width: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.skill-concept[open] summary::before { content: "\2212"; }
+.skill-concept-body {
+  padding: 6px 4px 10px 1.9rem;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.skill-concept-body p { margin: 0 0 8px; }
+.skill-concept-body p:last-child { margin-bottom: 0; }
+.skill-concept-body ul { margin: 0 0 8px 1.1em; padding: 0; }
+.skill-concept-body li { margin: 3px 0; }
+
+/* ── Skill detail: rules (DO / DON'T) ── */
+.skill-rules {
+  margin: 0 0 20px;
+}
+.skill-rules-heading {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 12px;
+  border-bottom: 1px solid var(--border-muted);
+  padding-bottom: 8px;
+}
+.skill-rule {
+  border-bottom: 1px solid var(--border-muted);
+}
+.skill-rule[open] > .skill-rule-header {
+  border-bottom: 1px solid var(--border-muted);
+}
+.skill-rule-header {
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  background: var(--raised);
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+.skill-rule-header::-webkit-details-marker { display: none; }
+.skill-rule-header::marker { content: ""; }
+.skill-rule-header::before {
+  content: "+";
+  flex-shrink: 0;
+  width: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.skill-rule[open] > .skill-rule-header::before {
+  content: "\2212";
+}
+.skill-rule-section {
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+.skill-rule-section--do {
+  border-left: 3px solid #2d8a4e;
+}
+.skill-rule-section--dont {
+  border-left: 3px solid #c0392b;
+}
+.skill-rule-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+  color: var(--muted);
+}
+.skill-rule-section--do .skill-rule-section-label { color: #2d8a4e; }
+.skill-rule-section--dont .skill-rule-section-label { color: #c0392b; }
+.skill-rule-section ul { margin: 0; padding: 0 0 0 1.1em; }
+.skill-rule-section li { margin: 2px 0; color: var(--text); }
+
+
+/* Full-screen kanban deck — bootcamp abd-works.css + slides.css do the visual work. */
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0b0b0b;
+  color: #f4f4f5;
+}
+
+.kanban-exit-link {
+  position: fixed;
+  top: 14px;
+  left: 18px;
+  z-index: 40;
+  font-family: var(--abd-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--abd-muted);
+  text-decoration: none;
+  background: rgba(17, 17, 19, 0.85);
+  border: 1px solid var(--abd-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.kanban-exit-link:hover {
+  color: var(--abd-accent-glow);
+  border-color: var(--abd-accent);
+}
+
+/* Agents + skills on one row (catalog layout preference) */
+.kb-slide .aad-delivery-crosscut-row--inline {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.kb-slide .aad-delivery-crosscut-row--inline .aad-delivery-crosscut-sublabel {
+  flex: 0 0 auto;
+  min-width: auto;
+}
+
+.kb-slide .aad-delivery-crosscut-row--inline .aad-delivery-crosscut-agents,
+.kb-slide .aad-delivery-crosscut-row--inline .aad-delivery-crosscut-skills {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 0;
+}
+
+.kb-slide .aad-delivery-crosscut-row--inline .aad-delivery-crosscut-sublabel--skills {
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid var(--abd-border);
+}
+
+/* Catalog kanban: tickets visible immediately — no stagger animation */
+.kb-slide .kb-ticket {
+  transform: none;
+}
+
+.kb-slide .kb-ticket.aad-skill {
+  opacity: 1;
+  filter: none;
+  color: var(--abd-text);
+  transition: opacity 0.4s ease, filter 0.4s ease, color 0.4s ease;
+}
+
+/* Stage slides: mute non-focus columns (bootcamp aad-board-5 behaviour on grid board) */
+.kb-slide .aad-board-grid .kb-col:not(.active) .kb-ticket.aad-skill {
+  opacity: 0.55;
+  filter: saturate(0.7);
+  color: var(--abd-muted);
+}
+
+.kb-slide .aad-board-grid .kb-col.active .kb-ticket.aad-skill {
+  opacity: 1;
+  filter: none;
+  color: var(--abd-text);
+}
+
+/* Overview: no active column — all tickets stay full colour */
+.kb-slide .aad-board-grid:not(:has(.kb-col.active)) .kb-ticket.aad-skill {
+  opacity: 1;
+  filter: none;
+  color: var(--abd-text);
+}
+
+/* ── Tight vertical layout — one padding layer, fill the slide ───────────── */
+
+.reveal .slides > section#m-agentic-delivery {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.reveal .slides > section#m-agentic-delivery::before,
+.reveal .slides > section#m-agentic-delivery::after {
+  display: none !important;
+}
+
+.reveal .slides section.kb-slide {
+  gap: 5px !important;
+  padding: 8px 44px 10px 50px !important;
+  height: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+.kb-slide .kb-header {
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.kb-slide .kb-header h2 {
+  font-size: 0.98em;
+  line-height: 1.2;
+}
+
+.kb-slide .kb-header-right {
+  gap: 4px;
+}
+
+.kb-slide .kb-board.aad-board-grid {
+  flex: 0 0 auto;
+  margin-bottom: 4px;
+  padding: 6px;
+  gap: 0 6px;
+}
+
+.kb-slide .aad-board-grid .kb-col {
+  padding: 6px;
+}
+
+.kb-slide .aad-board-grid .kb-col-head {
+  padding: 5px 6px 6px;
+  margin-bottom: 6px;
+}
+
+.kb-slide .aad-board-grid .kb-col-tickets,
+.kb-slide .aad-board-grid .aad-tickets-grid {
+  gap: 4px;
+}
+
+.kb-slide .aad-board-grid .aad-skill-row {
+  gap: 4px;
+}
+
+/* Stage-tier skills (from repo stages/) — gap below practice rows, neutral brand bar */
+.aad-stage-skills-gap {
+  flex: 0 0 auto;
+  height: 12px;
+  min-height: 12px;
+  margin: 2px 0 4px;
+}
+
+.aad-stage-skills-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.kb-ticket.aad-skill.aad-stage-skill,
+.kb-ticket.aad-skill.aad-fam-stage,
+.aad-row-label.aad-fam-stage,
+.aad-artifact.aad-fam-stage {
+  border-left-color: var(--muted, var(--abd-muted, #9B9BA8));
+}
+
+.kb-ticket.aad-skill.aad-stage-skill:hover {
+  background: rgba(155, 155, 168, 0.14);
+  color: var(--text, var(--abd-text));
+}
+
+.kb-slide .aad-delivery-crosscut-grid {
+  flex: 0 0 auto;
+  margin: 0 0 6px;
+  padding: 6px 8px;
+}
+
+.kb-slide .kanban-legend-row,
+.kanban-catalog-slide .kanban-legend-row,
+.catalog-kanban-embed .kanban-legend-row {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 4px;
+}
+
+.kb-slide .kanban-legend-cards,
+.kanban-catalog-slide .kanban-legend-cards,
+.catalog-kanban-embed .kanban-legend-cards {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kb-slide .kanban-legend-cards .kb-ticket.aad-skill,
+.catalog-kanban-embed .kanban-legend-cards .kb-ticket.aad-skill {
+  display: inline-flex;
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.kb-slide .kb-spotlight {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 6px 10px 8px;
+  gap: 3px;
+}
+
+.kb-slide .kb-spotlight-body {
+  gap: 3px !important;
+}
+
+.kb-slide .aad-principles {
+  margin: 0 0 4px;
+  gap: 6px;
+}
+
+.kb-slide .aad-principle {
+  padding: 4px 6px 5px;
+}
+
+.kb-slide .aad-scale-row {
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  align-items: flex-start;
+}
+
+/* ── Readable type — bootcamp aad-skill rhythm, slightly larger ─────────── */
+
+.kb-slide .kb-col-head {
+  font-size: 12px;
+}
+
+.kb-slide .aad-board-grid .kb-ticket.aad-skill,
+.kb-slide .aad-delivery-crosscut-skills .kb-ticket.aad-skill {
+  font-size: 11px;
+  padding: 5px 8px;
+  line-height: 1.3;
+}
+
+.kb-slide .aad-delivery-crosscut-row--inline .kb-ticket.aad-skill,
+.kb-slide .aad-delivery-crosscut-row--inline .aad-delivery-leaf {
+  font-size: 9.5px;
+  padding: 3px 6px;
+}
+
+.kb-slide .kanban-legend-heading {
+  font-size: 10px;
+}
+
+.kb-slide .kanban-legend-cards .kb-ticket.aad-skill {
+  font-size: 11px;
+  padding: 5px 8px;
+  line-height: 1.3;
+}
+
+.kb-slide .aad-delivery-crosscut-label {
+  font-size: 10px;
+}
+
+.kb-slide .aad-delivery-crosscut-sublabel {
+  font-size: 9px;
+}
+
+.kb-slide .aad-delivery-crosscut-row {
+  gap: 8px 10px;
+}
+
+.kb-slide .aad-delivery-crosscut-row:not(.aad-delivery-crosscut-row--inline) .aad-delivery-crosscut-skills {
+  gap: 6px;
+}
+
+.kb-slide .aad-delivery-leaf,
+.kb-slide .aad-row-agent {
+  font-size: 9.5px;
+  padding: 3px 7px;
+}
+
+.kb-slide .aad-principle-tag {
+  font-size: 10px;
+}
+
+.kb-slide .aad-principle-body {
+  font-size: 11.5px;
+}
+
+.kb-slide .aad-scale-name {
+  font-size: 14px;
+}
+
+.kb-slide .aad-scale-shape-label {
+  font-size: 12px;
+}
+
+.kb-slide .aad-scale-detail {
+  font-size: 10px;
+}
+
+/* ── Stage outcomes row — abd.works-website finding-trait pattern (compact) ─ */
+
+.kb-slide .kanban-stage-questions {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0 8px;
+  padding: 0 6px;
+  margin: 4px 0 8px;
+  align-items: start;
+}
+
+.kb-slide .kanban-stage-questions__cell {
+  padding: 10px 8px 6px;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+.kb-slide .kanban-stage-questions__cell.is-active {
+  background: var(--accent-dim);
+  border-top-color: var(--accent);
+  border-radius: 0 0 4px 4px;
+}
+
+.kb-slide .kanban-stage-questions__headline {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.kb-slide .kanban-stage-questions__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.kb-slide .kanban-stage-questions__item {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.kb-slide .kanban-stage-questions__item::before {
+  content: '\2014';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Bootcamp part3 ticket sizing on overview catalog board */
+.kb-slide .kb-board.aad-board-grid--catalog .kb-ticket.aad-skill {
+  font-size: 11px;
+  padding: 4px 7px;
+  line-height: 1.3;
+}
+
+.kb-slide .kb-board.aad-board-grid--catalog .kb-col-head {
+  font-size: 12px;
+}
+
+.kb-slide .kanban-legend-row:has(+ .kb-spotlight) .kb-ticket.aad-skill,
+.kb-slide .kanban-legend-row .kb-ticket.aad-skill {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.kb-slide .kanban-legend-heading {
+  font-size: 11px;
+}
+
+/* Crosscut rows below stage question bullets */
+.aad-delivery-crosscut-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 10px 6px 8px;
+  padding: 0;
+  min-width: 0;
+}
+
+.aad-delivery-crosscut-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 10px;
+  background: rgba(27, 27, 32, 0.9);
+  border: 1px solid var(--abd-border, var(--border));
+  border-radius: 4px;
+}
+
+.aad-delivery-crosscut-section-title {
+  margin: 0;
+  font-family: var(--abd-mono, var(--font-mono));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--abd-muted, var(--muted));
+}
+
+.aad-delivery-crosscut-section--supporting .aad-delivery-crosscut-section-title {
+  color: var(--abd-accent, #e5531a);
+}
+
+.aad-delivery-crosscut-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aad-delivery-crosscut-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 8.5rem) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.aad-delivery-crosscut-row-label {
+  font-family: var(--abd-mono, var(--font-mono));
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  text-decoration: none;
+  color: var(--abd-text, var(--text));
+  background: var(--abd-raised, var(--raised));
+  border: 1px solid var(--abd-border, var(--border));
+  border-left-width: 3px;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+
+.aad-delivery-crosscut-row-label--spacer {
+  visibility: hidden;
+  min-height: 22px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.aad-delivery-crosscut-row-body {
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.aad-delivery-crosscut-agents,
+.aad-delivery-crosscut-skills {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.aad-crosscut-tier--foundational .aad-delivery-crosscut-row-label {
+  color: var(--abd-muted, var(--muted));
+}
+
+.aad-delivery-crosscut-row--continued + .aad-delivery-crosscut-row {
+  margin-top: 4px;
+}
+
+.aad-delivery-crosscut-section-body > .aad-delivery-crosscut-row:first-child {
+  margin-top: 0;
+}
+
+.aad-delivery-crosscut-row-label.aad-fam-delivery,
+.aad-delivery-leaf.aad-fam-delivery {
+  border-left-color: var(--abd-accent, #e5531a);
+}
+
+.aad-delivery-crosscut-row-label.aad-fam-ddd,
+.aad-delivery-leaf.aad-fam-ddd,
+.aad-fam-ddd.kb-ticket.aad-skill {
+  border-left-color: #6c5ce7;
+}
+
+.aad-delivery-crosscut-row-label.aad-fam-sdd,
+.aad-delivery-leaf.aad-fam-sdd,
+.aad-fam-sdd.kb-ticket.aad-skill {
+  border-left-color: #6bcb77;
+}
+
+.aad-fam-foundational.kb-ticket.aad-skill,
+.aad-fam-foundational.aad-delivery-leaf,
+.aad-fam-foundational.aad-row-label,
+.aad-fam-foundational.aad-delivery-crosscut-row-label {
+  border-left-color: var(--abd-muted, #595a61);
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-stack {
+  margin: 2px 6px 8px;
+  padding: 5px 6px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-row-label {
+  font-size: 8px;
+  min-height: 18px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-skills .kb-ticket.aad-skill,
+.catalog-kanban-embed .aad-delivery-leaf {
+  font-size: 8.5px;
+  padding: 2px 5px;
+}
+
+.entry-subheading--supporting-group {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+/* Hub index — inline delivery kanban below the opening blurb (not a Reveal deck). */
+
+.catalog-kanban-embed {
+  margin: 0 0 20px;
+  padding: 14px 16px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+}
+
+.catalog-kanban-embed__frame.kb-slide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 !important;
+  height: auto;
+  max-height: none;
+}
+
+.catalog-kanban-embed .kb-board.aad-board-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0 6px;
+  margin: 0;
+  padding: 6px;
+}
+
+.catalog-kanban-embed .kb-col {
+  min-width: 0;
+}
+
+/* Hub embed — tighter than full-screen kanban deck */
+.catalog-kanban-embed .kb-board.aad-board-grid--catalog .kb-col-head {
+  font-size: 10px;
+  padding: 4px 5px 5px;
+}
+
+.catalog-kanban-embed .kb-board.aad-board-grid--catalog .kb-ticket.aad-skill {
+  font-size: 9.5px;
+  padding: 3px 5px;
+  line-height: 1.25;
+}
+
+.catalog-kanban-embed .kanban-stage-questions {
+  margin: 2px 0 8px;
+  gap: 0 6px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-stack {
+  margin: 4px 6px 10px;
+  gap: 16px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-section {
+  padding: 10px 8px;
+  gap: 8px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-section-body {
+  gap: 8px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-row {
+  gap: 10px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-section-title {
+  font-size: 8.5px;
+}
+
+.catalog-kanban-embed .kanban-stage-questions__cell {
+  padding: 8px 6px 4px;
+}
+
+.catalog-kanban-embed .kanban-stage-questions__headline {
+  font-size: 9px;
+  margin-bottom: 6px;
+}
+
+.catalog-kanban-embed .kanban-stage-questions__list {
+  gap: 5px;
+}
+
+.catalog-kanban-embed .kanban-stage-questions__item {
+  font-size: 10px;
+  padding-left: 12px;
+  line-height: 1.35;
+}
+
+.catalog-kanban-embed .kanban-legend-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 2px;
+}
+
+.catalog-kanban-embed .kanban-legend-heading {
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.catalog-kanban-embed .kanban-legend-cards {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.catalog-kanban-embed .kanban-legend-row .kb-ticket.aad-skill {
+  font-size: 9.5px;
+  padding: 3px 6px;
+}
+
+.catalog-kanban-embed .aad-stage-skills-gap {
+  height: 10px;
+  min-height: 10px;
+  margin: 2px 0 3px;
+}
+
+.catalog-kanban-embed .aad-stage-skills-block {
+  gap: 3px;
+}
+
+.catalog-kanban-embed .kb-ticket.aad-skill.aad-stage-skill {
+  font-size: 9.5px;
+  padding: 3px 5px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-row-label {
+  font-size: 8px;
+  min-height: 18px;
+}
+
+.catalog-kanban-embed .aad-delivery-crosscut-skills .kb-ticket.aad-skill,
+.catalog-kanban-embed .aad-delivery-leaf {
+  font-size: 9.5px;
+  padding: 3px 5px;
+}
+
+/* Foundry hub — CDD tour + perspective board (from hub-interface-mock) */
+
+.foundry-kanban-shell {
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: visible;
+}
+
+/* Hero → foundry kanban: same gap on hub and skill detail */
+.page-hero--foundry {
+  padding-bottom: 0;
+}
+.page-hero--foundry .page-hero__cell--title .page-headline {
+  margin: 0 0 20px;
+}
+.page-hero--foundry .page-hero__cell--title .body-lead {
+  margin-bottom: 0;
+  max-width: 640px;
+}
+.page-hero--foundry + .wrap > .foundry-kanban-shell {
+  margin-top: 56px;
+}
+
+.foundry-kanban-surface {
+  --abd-bg: #0d1117;
+  --abd-surface: #161618;
+  --abd-raised: #1b1b20;
+  --abd-border: #2a2a2a;
+  --abd-text: #e8e8ed;
+  --abd-muted: #9b9ba8;
+  --abd-accent: #e5531a;
+  --abd-accent-glow: #ff6a2e;
+  --fam-sdd: #6bcb77;
+  --fam-ddd: #6c5ce7;
+  --fam-uxd: #e84393;
+  --fam-arc: #4fc3f7;
+  --fam-ctx: #00b894;
+  --fam-stage: #fdcb6e;
+  --fam-delivery: #e5531a;
+  --foundry-skills-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  --foundry-skills-duration: 560ms;
+  --foundry-skills-fade-duration: 400ms;
+  --foundry-skills-fade-delay-expand: 180ms;
+  position: relative;
+  background: var(--surface);
+  padding: 12px 14px 14px;
+  overflow: visible;
+}
+
+html[data-theme="engineering"] .foundry-kanban-surface {
+  background: var(--raised);
+}
+
+/* Traveling orange ring — flies from CDD button and expands onto targets */
+.foundry-travel-ring {
+  position: absolute;
+  pointer-events: none;
+  z-index: 30;
+  border: 2px solid var(--abd-accent);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.25), 0 0 18px rgba(229, 83, 26, 0.35);
+  opacity: 0;
+  box-sizing: border-box;
+  will-change: top, left, width, height, opacity;
+}
+
+.foundry-travel-ring.is-visible { opacity: 1; }
+
+/* CDD panel — button, tour tag, and expanding slide copy in one vbox */
+.foundry-cdd-panel {
+  position: relative;
+  margin-bottom: 10px;
+  padding: 10px 12px 10px 15px;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  transition: padding 0.35s ease;
+}
+.foundry-cdd-panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 4px 0 0 4px;
+  pointer-events: none;
+}
+.foundry-cdd-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+.foundry-cdd-btn {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  background: rgba(229, 83, 26, 0.06);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 7px 11px;
+  cursor: pointer;
+  transition: border-color 120ms, color 120ms, box-shadow 120ms, background 120ms;
+}
+.foundry-cdd-btn::after {
+  content: ' →';
+  color: var(--accent);
+}
+.foundry-cdd-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(229, 83, 26, 0.1); }
+.foundry-cdd-btn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(229, 83, 26, 0.08);
+  box-shadow: 0 0 0 2px var(--accent-dim2);
+}
+.foundry-cdd-btn.is-active::after { content: ''; }
+.foundry-cdd-panel:not(.is-tour-active) .foundry-cdd-btn:not(.is-active) {
+  box-shadow: 0 0 0 1px var(--accent-dim2);
+}
+.foundry-cdd-panel__tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.foundry-cdd-panel__tag.is-waiting { color: var(--muted); }
+.foundry-cdd-panel:not(.is-tour-active) .foundry-cdd-panel__tag:not(.is-waiting) {
+  animation: foundry-tag-hint 2.4s ease-in-out infinite;
+}
+@keyframes foundry-tag-hint {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.foundry-cdd-intro {
+  margin-top: 8px;
+  max-height: 8em;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.35s ease;
+}
+.foundry-cdd-panel.is-tour-active .foundry-cdd-intro {
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+}
+.foundry-cdd-intro__line1 {
+  margin: 0 0 5px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+}
+.foundry-cdd-intro__line2 {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.45;
+  max-width: 42rem;
+}
+.foundry-cdd-intro__line2 strong { color: var(--text); font-weight: 600; }
+
+.foundry-guide__body {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(10px);
+  max-height: 0;
+  overflow: hidden;
+  transition:
+    max-height 0.45s ease,
+    margin 0.35s ease,
+    opacity 0.5s ease,
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.foundry-guide__body.is-expanding {
+  max-height: 32em;
+  margin-top: 8px;
+}
+.foundry-guide__body.is-expanding.is-tall {
+  max-height: min(62em, 72vh);
+  overflow-y: auto;
+}
+.foundry-guide__body.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.foundry-guide__bullets {
+  margin: 0 0 12px;
+  padding: 0 0 0 1.1em;
+  list-style: none;
+}
+.foundry-guide__bullets li {
+  position: relative;
+  margin: 0 0 8px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+.foundry-guide__bullets li::before {
+  content: '\2014';
+  position: absolute;
+  left: -1.1em;
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+.foundry-guide__scale {
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.foundry-guide__scale-item {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.foundry-guide__scale-name {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+.foundry-guide__scale-detail {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.foundry-guide__lead {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.foundry-guide__perspectives {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.foundry-guide__perspective-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.foundry-guide__perspective-name {
+  flex: 0 0 108px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.foundry-guide__perspective-row--sdd .foundry-guide__perspective-name { color: var(--fam-sdd); }
+.foundry-guide__perspective-row--ddd .foundry-guide__perspective-name { color: var(--fam-ddd); }
+.foundry-guide__perspective-row--uxd .foundry-guide__perspective-name { color: var(--fam-uxd); }
+.foundry-guide__perspective-row--arc .foundry-guide__perspective-name { color: var(--fam-arc); }
+.foundry-guide__perspective-row--bdd .foundry-guide__perspective-name { color: var(--fam-ctx, #00b894); }
+.foundry-guide__perspective-desc { flex: 1; color: var(--text); }
+
+.foundry-guide__executable {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.foundry-guide__exe-heading {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 4px 0 8px;
+}
+
+.foundry-guide__executable-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.foundry-guide__executable-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.foundry-guide__executable-row--sdd { border-left: 3px solid var(--fam-sdd); }
+.foundry-guide__executable-row--ddd { border-left: 3px solid var(--fam-ddd); }
+.foundry-guide__executable-row--uxd { border-left: 3px solid var(--fam-uxd); }
+.foundry-guide__executable-row--arc { border-left: 3px solid var(--fam-arc); }
+.foundry-guide__executable-row--bdd { border-left: 3px solid var(--fam-ctx, #00b894); }
+
+.foundry-guide__executable-name {
+  flex: 0 0 108px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.foundry-guide__executable-row--sdd .foundry-guide__executable-name { color: var(--fam-sdd); }
+.foundry-guide__executable-row--ddd .foundry-guide__executable-name { color: var(--fam-ddd); }
+.foundry-guide__executable-row--uxd .foundry-guide__executable-name { color: var(--fam-uxd); }
+.foundry-guide__executable-row--arc .foundry-guide__executable-name { color: var(--fam-arc); }
+.foundry-guide__executable-row--bdd .foundry-guide__executable-name { color: var(--fam-ctx, #00b894); }
+
+.foundry-guide__executable-desc { flex: 1; color: var(--text); }
+
+.foundry-guide__change-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.foundry-guide__change-row {
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.foundry-guide__change-row--sdd { border-left: 3px solid var(--fam-sdd); }
+.foundry-guide__change-row--ddd { border-left: 3px solid var(--fam-ddd); }
+.foundry-guide__change-row--uxd { border-left: 3px solid var(--fam-uxd); }
+.foundry-guide__change-row--arc { border-left: 3px solid var(--fam-arc); }
+.foundry-guide__change-row--bdd { border-left: 3px solid var(--fam-ctx, #00b894); }
+.foundry-guide__change-row--team { border-left: 3px solid var(--fam-delivery); }
+
+.foundry-guide__change-name {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.foundry-guide__change-row--sdd .foundry-guide__change-name { color: var(--fam-sdd); }
+.foundry-guide__change-row--ddd .foundry-guide__change-name { color: var(--fam-ddd); }
+.foundry-guide__change-row--uxd .foundry-guide__change-name { color: var(--fam-uxd); }
+.foundry-guide__change-row--arc .foundry-guide__change-name { color: var(--fam-arc); }
+.foundry-guide__change-row--bdd .foundry-guide__change-name { color: var(--fam-ctx, #00b894); }
+.foundry-guide__change-row--team .foundry-guide__change-name { color: var(--fam-delivery); }
+
+.foundry-guide__change-bullets {
+  margin: 0;
+  padding: 0 0 0 16px;
+  color: var(--text);
+}
+
+.foundry-guide__change-bullets li {
+  margin-bottom: 4px;
+}
+
+.foundry-guide__change-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .foundry-guide__scale { grid-template-columns: repeat(2, 1fr); }
+  .foundry-guide__perspective-row { flex-direction: column; gap: 4px; }
+  .foundry-guide__perspective-name { flex: none; }
+}
+
+.foundry-board-grid {
+  --foundry-skill-row-h: 36px;
+  --foundry-stage-skill-rows: 3;
+  --foundry-stage-skills-gap-h: 36px;
+  display: grid;
+  grid-template-columns: 168px repeat(6, minmax(0, 1fr));
+  grid-template-rows: auto repeat(5, var(--foundry-skill-row-h)) var(--foundry-stage-skills-gap-h) repeat(var(--foundry-stage-skill-rows), var(--foundry-skill-row-h));
+  background: var(--abd-bg);
+  border: 1px solid var(--abd-border);
+  border-radius: 6px;
+  padding: 6px;
+  overflow: hidden;
+  align-items: stretch;
+}
+
+.foundry-practice-col,
+.foundry-board-grid > .kb-col {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1 / -1;
+  gap: 2px 0;
+  min-width: 0;
+}
+
+.foundry-practice-col {
+  grid-column: 1;
+  padding-top: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.foundry-practice-col > .foundry-skills-toggle { grid-row: 1; }
+.foundry-practice-col > .foundry-family-toggle[data-family="story-driven-delivery"] { grid-row: 2; }
+.foundry-practice-col > .foundry-family-toggle[data-family="domain-driven-design"] { grid-row: 3; }
+.foundry-practice-col > .foundry-family-toggle[data-family="user-experience-design"] { grid-row: 4; }
+.foundry-practice-col > .foundry-family-toggle[data-family="architecture-centric-engineering"] { grid-row: 5; }
+.foundry-practice-col > .foundry-family-toggle[data-family="context-to-memory"] { grid-row: 6; }
+.foundry-practice-col > .foundry-practice-col__stage-spacer { grid-row: 7; }
+.foundry-practice-col > .foundry-practice-col__other-practices { grid-row: 8; }
+
+.foundry-practice-col__card {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-height: var(--foundry-skill-row-h);
+  margin: 0;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--abd-raised);
+  border: 1px solid var(--abd-border);
+  border-left-width: 3px;
+  border-radius: 4px;
+  line-height: 1.25;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.foundry-practice-col__card:hover {
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.25);
+}
+.foundry-practice-col__card.foundry-perspective-label--sdd { border-left-color: var(--fam-sdd); color: var(--fam-sdd); }
+.foundry-practice-col__card.foundry-perspective-label--ddd { border-left-color: var(--fam-ddd); color: var(--fam-ddd); }
+.foundry-practice-col__card.foundry-perspective-label--uxd { border-left-color: var(--fam-uxd); color: var(--fam-uxd); }
+.foundry-practice-col__card.foundry-perspective-label--arc { border-left-color: var(--fam-arc); color: var(--fam-arc); }
+.foundry-practice-col__card.foundry-perspective-label--other,
+.kb-ticket.aad-fam-other {
+  border-left-color: var(--abd-muted);
+  color: var(--abd-muted);
+}
+.foundry-practice-col__stage-spacer {
+  min-height: 0;
+}
+.foundry-practice-col > .foundry-practice-col__stage-spacer.aad-stage-skills-gap,
+.foundry-board-grid > .kb-col > .aad-stage-skills-gap {
+  display: block;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+.foundry-practice-col__other-practices {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: var(--foundry-skill-row-h);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.foundry-practice-col__other-practices .kb-ticket,
+.foundry-practice-col__other-practices .foundry-family-toggle,
+.foundry-practice-col > .kb-ticket.aad-fam-other.foundry-practice-col__card {
+  align-self: stretch;
+  height: 100%;
+  min-height: var(--foundry-skill-row-h);
+  width: 100%;
+}
+.foundry-practice-col__other-practices .foundry-family-toggle {
+  margin: 0;
+  padding: 0 8px;
+  cursor: pointer;
+  text-align: left;
+}
+.foundry-practice-col__other-practices > a.foundry-practice-col__card {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+.foundry-practice-col__other-practices-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: var(--abd-muted);
+  line-height: 1.25;
+}
+.foundry-practice-col__head-spacer {
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 34px;
+  margin: 0;
+  box-sizing: border-box;
+}
+.foundry-skills-toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--abd-raised);
+  border: 1px solid var(--abd-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 120ms, color 120ms;
+}
+.foundry-skills-toggle:hover,
+.foundry-skills-toggle.is-expanded {
+  border-color: rgba(229, 83, 26, 0.45);
+  color: var(--abd-accent-glow);
+}
+.foundry-skills-toggle__icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+.foundry-skills-toggle__bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: var(--abd-accent);
+  border-radius: 1px;
+  transition:
+    transform var(--foundry-skills-duration) var(--foundry-skills-ease),
+    opacity calc(var(--foundry-skills-fade-duration) * 0.75) ease,
+    background-color 180ms ease;
+}
+.foundry-skills-toggle__bar--h {
+  width: 10px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+}
+.foundry-skills-toggle__bar--v {
+  width: 2px;
+  height: 10px;
+  transform: translate(-50%, -50%) scaleY(1);
+  transform-origin: center center;
+}
+.foundry-skills-toggle.is-expanded .foundry-skills-toggle__bar--v {
+  transform: translate(-50%, -50%) scaleY(0);
+  opacity: 0;
+}
+.foundry-skills-toggle:hover .foundry-skills-toggle__bar,
+.foundry-skills-toggle.is-expanded .foundry-skills-toggle__bar {
+  background: var(--abd-accent-glow);
+}
+.foundry-kanban-surface.foundry-skills-expanded .foundry-board-grid {
+  grid-template-rows: auto repeat(5, var(--foundry-skill-row-h)) var(--foundry-stage-skills-gap-h) repeat(var(--foundry-stage-skill-rows), var(--foundry-skill-row-h));
+}
+.foundry-kanban-surface.foundry-skills-collapsed .foundry-board-grid {
+  /* Collapsed idle: zero family row tracks; JS refines when filter active or expanded. */
+  grid-template-rows: auto 0px 0px 0px 0px 0px 0px 0px 0px 0px;
+}
+.foundry-kanban-surface--supporting-only .foundry-skills-extra {
+  grid-template-rows: 1fr;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+}
+.foundry-kanban-surface--supporting-only .foundry-skills-extra__inner {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Crosscut: ticket row layout (foundry) */
+.foundry-kanban-surface .aad-delivery-crosscut-stack {
+  gap: 14px;
+  margin: 10px 6px 8px;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-section {
+  gap: 6px;
+  padding: 10px;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-section-body {
+  gap: 6px;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-row {
+  display: none;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 8px;
+  grid-template-columns: none;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-row.is-filter-visible {
+  display: flex;
+}
+/* Hub: show all rows when no filter active; hide non-matching when filter active */
+.foundry-kanban-surface:not(.foundry-skill-filter-active) .aad-delivery-crosscut-row {
+  display: flex;
+}
+.foundry-kanban-surface.foundry-skill-filter-active .aad-delivery-crosscut-row:not(.is-filter-visible) {
+  display: none;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-section {
+  display: flex;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-section[hidden] {
+  display: none !important;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-skills {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-skills.aad-delivery-crosscut-skills--collapsed {
+  display: none;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-skills.is-skills-visible {
+  display: flex;
+}
+.foundry-kanban-surface .aad-crosscut-row-title {
+  flex: 0 0 auto;
+  min-height: calc(var(--foundry-skill-row-h) - 4px);
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.foundry-kanban-surface .aad-delivery-crosscut-skills .kb-ticket.aad-skill,
+.foundry-kanban-surface .aad-delivery-crosscut-agents .kb-ticket.aad-skill {
+  min-height: calc(var(--foundry-skill-row-h) - 4px);
+  box-sizing: border-box;
+  font-size: 9.5px;
+  padding: 3px 5px;
+  color: var(--abd-text);
+  width: auto;
+  flex: 0 1 auto;
+}
+/* header chips: family-colored text + colored left border */
+.foundry-kanban-surface .aad-crosscut-row-title.aad-fam-delivery,
+.kb-ticket.aad-fam-delivery {
+  border-left-color: var(--fam-delivery);
+}
+.foundry-kanban-surface .aad-crosscut-row-title.aad-fam-delivery {
+  color: var(--fam-delivery);
+}
+.foundry-kanban-surface .aad-crosscut-row-title.aad-fam-sdd {
+  border-left-color: var(--fam-sdd);
+  color: var(--fam-sdd);
+}
+.foundry-kanban-surface .aad-crosscut-row-title.aad-fam-ddd {
+  border-left-color: var(--fam-ddd);
+  color: var(--fam-ddd);
+}
+.foundry-kanban-surface .aad-crosscut-row-title.aad-fam-uxd {
+  border-left-color: var(--fam-uxd);
+  color: var(--fam-uxd);
+}
+.foundry-kanban-surface .aad-crosscut-row-title.aad-fam-arc {
+  border-left-color: var(--fam-arc);
+  color: var(--fam-arc);
+}
+.foundry-kanban-surface .aad-crosscut-tier--foundational .aad-crosscut-row-title {
+  color: var(--abd-muted);
+}
+.foundry-kanban-surface .aad-crosscut-row-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  position: relative;
+  padding-right: 22px;
+}
+/* Hide page until kanban scroll is applied after board layout */
+html.foundry-scroll-pending {
+  visibility: hidden;
+}
+
+/* Settling: skip transitions on first paint */
+.foundry-kanban-surface.foundry-skill-nav-settling .foundry-board-grid,
+.foundry-kanban-surface.foundry-skill-nav-settling .foundry-board-grid .kb-col > .aad-skill-row,
+.foundry-kanban-surface.foundry-skill-nav-settling .kb-ticket,
+.foundry-kanban-surface.foundry-skill-nav-settling .kb-col-head {
+  transition: none !important;
+}
+.foundry-kanban-surface.foundry-skill-nav-animated .aad-delivery-crosscut-row,
+.foundry-kanban-surface.foundry-skill-nav-animated .aad-delivery-crosscut-section,
+.foundry-kanban-surface.foundry-skill-nav-animated .kb-col > .aad-skill-row {
+  transition:
+    opacity 220ms var(--foundry-skills-ease),
+    visibility 220ms var(--foundry-skills-ease);
+}
+
+/* Board row visibility — shared hub + skill page (is-filter-visible from JS) */
+.foundry-kanban-surface .kb-col > .aad-skill-row:not(.is-filter-visible) {
+  display: none;
+}
+.foundry-kanban-surface .kb-col > .aad-skill-row.is-filter-visible {
+  display: flex;
+}
+.foundry-kanban-surface.foundry-skills-expanded .kb-col > .aad-skill-row.is-filter-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active .kb-col > .aad-skill-row.is-filter-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  overflow: visible;
+}
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active .kb-col > .aad-skill-row:not(.is-filter-visible) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Collapsed focus mode: only ticked families stay in the practice rail */
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active .foundry-practice-col .foundry-family-toggle:not(.is-selected) {
+  display: none !important;
+}
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active:not(.foundry-skill-filter-other) .foundry-practice-col__other-practices {
+  display: none !important;
+}
+/* Collapsed idle: hide practice-rail families — only Skills toggle stays visible */
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-idle .foundry-practice-col__card,
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-idle .foundry-practice-col .foundry-family-toggle,
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-idle .foundry-practice-col__other-practices,
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-idle .foundry-practice-col__other-practices .foundry-family-toggle,
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-idle .foundry-practice-col__stage-spacer {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Expanded: show all practice-rail family chips */
+.foundry-kanban-surface.foundry-skills-expanded .foundry-practice-col__card,
+.foundry-kanban-surface.foundry-skills-expanded .foundry-practice-col .foundry-family-toggle,
+.foundry-kanban-surface.foundry-skills-expanded .foundry-practice-col__other-practices,
+.foundry-kanban-surface.foundry-skills-expanded .foundry-practice-col__other-practices .foundry-family-toggle {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Collapsed focus mode: ticked families stay visible in the practice rail */
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active .foundry-practice-col .foundry-family-toggle.is-selected,
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active .foundry-practice-col__other-practices .foundry-family-toggle.is-selected {
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+}
+
+/* Board row grid slots — explicit subgrid slots keep stage columns aligned */
+.foundry-board-grid > .kb-col > .aad-skill-row[data-family="story-driven-delivery"] { grid-row: 2; }
+.foundry-board-grid > .kb-col > .aad-skill-row[data-family="domain-driven-design"] { grid-row: 3; }
+.foundry-board-grid > .kb-col > .aad-skill-row[data-family="user-experience-design"] { grid-row: 4; }
+.foundry-board-grid > .kb-col > .aad-skill-row[data-family="architecture-centric-engineering"] { grid-row: 5; }
+.foundry-board-grid > .kb-col > .aad-skill-row[data-family="context-to-memory"] { grid-row: 6; }
+/* Context stage column: CTX skills span all family rows so multiple tickets stack vertically */
+.foundry-board-grid > .kb-col[data-stage="context"] > .aad-skill-row[data-family="context-to-memory"] {
+  grid-row: 2 / 7;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: start;
+  gap: 2px;
+}
+.foundry-board-grid > .kb-col[data-stage="context"] > .aad-skill-row--empty {
+  display: none !important;
+  min-height: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.foundry-board-grid > .kb-col > .aad-stage-skills-gap { grid-row: 7; }
+.foundry-board-grid > .kb-col > .aad-skill-row--stage-other:nth-child(8) { grid-row: 8; }
+.foundry-board-grid > .kb-col > .aad-skill-row--stage-other:nth-child(9) { grid-row: 9; }
+.foundry-board-grid > .kb-col > .aad-skill-row--stage-other:nth-child(10) { grid-row: 10; }
+
+.foundry-kanban-surface.foundry-skill-filter-active:not(.foundry-skill-filter-other) .kb-col > .aad-stage-skills-gap,
+.foundry-kanban-surface.foundry-skill-filter-active:not(.foundry-skill-filter-other) .kb-col > .aad-skill-row--stage-other {
+  display: none;
+}
+/* Collapse other-practice stage tracks when other filter is off (hub + skill page) */
+.foundry-kanban-surface.foundry-skills-expanded.foundry-other-rows-collapsed .foundry-board-grid {
+  grid-template-rows: auto repeat(4, var(--foundry-skill-row-h)) 0px var(--foundry-skill-row-h) 0px 0px;
+}
+.foundry-kanban-surface.foundry-skills-expanded.foundry-other-rows-collapsed .foundry-practice-col__stage-spacer {
+  display: none;
+  min-height: 0;
+  height: 0;
+  overflow: hidden;
+}
+.foundry-kanban-surface.foundry-skills-expanded.foundry-other-rows-collapsed .kb-col > .aad-stage-skills-gap,
+.foundry-kanban-surface.foundry-skills-expanded.foundry-other-rows-collapsed .kb-col > .aad-skill-row--stage-other {
+  display: none;
+}
+/* Practice rail stays above the board grid for family chip clicks */
+.foundry-kanban-surface .foundry-practice-col {
+  z-index: 2;
+  position: relative;
+  pointer-events: auto;
+}
+
+/* Family toggle tick — shared by hub and skill pages */
+.foundry-kanban-surface .foundry-family-toggle {
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  position: relative;
+  padding-right: 22px;
+}
+.foundry-kanban-surface .foundry-family-toggle::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 5px;
+  height: 9px;
+  border: solid var(--abd-accent);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-60%) rotate(45deg) scale(0);
+  opacity: 0;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+.foundry-kanban-surface .foundry-family-toggle.is-selected {
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.35);
+  color: var(--abd-text);
+}
+.foundry-kanban-surface .foundry-family-toggle.foundry-perspective-label--other.is-selected {
+  color: var(--abd-text);
+}
+.foundry-kanban-surface .foundry-family-toggle.is-selected::after {
+  transform: translateY(-60%) rotate(45deg) scale(1);
+  opacity: 1;
+}
+
+.foundry-kanban-surface .kb-ticket.kb-ticket--current:not(.foundry-family-toggle) {
+  border-color: rgba(229, 83, 26, 0.55);
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.35);
+  background: rgba(229, 83, 26, 0.08);
+}
+.foundry-board-grid .foundry-practice-col__card,
+.foundry-board-grid .foundry-practice-col__other-practices,
+.foundry-board-grid .foundry-practice-col__stage-spacer,
+.foundry-board-grid > .kb-col > .aad-stage-skills-gap,
+.foundry-board-grid .kb-col > .aad-skill-row,
+.foundry-board-grid .foundry-stage-skills,
+.foundry-board-grid .kb-col > .aad-skill-row--stage-other {
+  transition:
+    opacity var(--foundry-skills-fade-duration) var(--foundry-skills-ease),
+    transform var(--foundry-skills-duration) var(--foundry-skills-ease);
+}
+.foundry-kanban-surface.foundry-skills-expanded .foundry-practice-col__card,
+.foundry-kanban-surface.foundry-skills-expanded .foundry-practice-col__other-practices,
+.foundry-kanban-surface.foundry-skills-expanded .kb-col > .aad-skill-row:not(.aad-skill-row--empty),
+.foundry-kanban-surface.foundry-skills-expanded .foundry-stage-skills {
+  opacity: 1;
+  transition-delay: var(--foundry-skills-fade-delay-expand), 0ms;
+}
+.foundry-kanban-surface.foundry-skills-collapsed:not(.foundry-skill-filter-active) .kb-col > .aad-skill-row,
+.foundry-kanban-surface.foundry-skills-collapsed:not(.foundry-skill-filter-active) .kb-col > .aad-stage-skills-gap,
+.foundry-kanban-surface.foundry-skills-collapsed:not(.foundry-skill-filter-active) .kb-col > .aad-skill-row--stage-other,
+.foundry-kanban-surface.foundry-skills-collapsed:not(.foundry-skill-filter-active) .foundry-stage-skills {
+  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  transition-delay: 0ms, 0ms;
+}
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active .kb-col > .aad-skill-row:not(.is-filter-visible),
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active .kb-col > .aad-stage-skills-gap,
+.foundry-kanban-surface.foundry-skills-collapsed.foundry-skill-filter-active .kb-col > .aad-skill-row--stage-other:not(.is-filter-visible) {
+  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+}
+.foundry-kanban-surface.foundry-skills-collapsed .foundry-practice-col__stage-spacer {
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.foundry-kanban-surface.foundry-skills-collapsed .foundry-practice-col > .foundry-skills-toggle {
+  opacity: 1;
+  pointer-events: auto;
+  overflow: visible;
+}
+.foundry-skills-extra {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin: 0 6px;
+  transition: grid-template-rows var(--foundry-skills-duration) var(--foundry-skills-ease);
+}
+.foundry-kanban-surface.foundry-skills-collapsed .foundry-skills-extra {
+  grid-template-rows: 0fr;
+}
+.foundry-skills-extra__inner {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 1;
+  transition: opacity var(--foundry-skills-fade-duration) var(--foundry-skills-ease);
+}
+.foundry-kanban-surface.foundry-skills-expanded .foundry-skills-extra__inner {
+  opacity: 1;
+  transition-delay: var(--foundry-skills-fade-delay-expand);
+}
+.foundry-kanban-surface.foundry-skills-collapsed .foundry-skills-extra__inner {
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0ms;
+}
+.foundry-skills-extra .aad-delivery-crosscut-stack {
+  margin-top: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .foundry-board-grid,
+  .foundry-board-grid .foundry-practice-col__card,
+  .foundry-board-grid .foundry-practice-col__other-practices,
+  .foundry-board-grid .kb-col > .aad-skill-row,
+  .foundry-board-grid .foundry-stage-skills,
+  .foundry-skills-toggle__bar,
+  .foundry-skills-extra,
+  .foundry-skills-extra__inner {
+    transition: none;
+  }
+}
+
+.kb-col {
+  display: flex;
+  flex-direction: column;
+  background: var(--abd-surface);
+  border-radius: 6px;
+  padding: 6px;
+  min-width: 0;
+  overflow: visible;
+}
+
+.foundry-board-grid > .kb-col {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1 / -1;
+  gap: 2px 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  position: relative;
+}
+
+.foundry-kanban-surface .kb-col > .aad-skill-row {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-height: var(--foundry-skill-row-h);
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.foundry-kanban-surface .kb-col > .aad-skill-row .kb-ticket {
+  width: 100%;
+  min-height: calc(var(--foundry-skill-row-h) - 4px);
+  box-sizing: border-box;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.foundry-kanban-surface .kb-col > .aad-skill-row--stage-other {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-height: var(--foundry-skill-row-h);
+  margin: 0;
+  box-sizing: border-box;
+}
+.foundry-kanban-surface .kb-col > .aad-skill-row--stage-other .kb-ticket {
+  width: 100%;
+  min-height: calc(var(--foundry-skill-row-h) - 4px);
+  box-sizing: border-box;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 3px 5px;
+  border-left-width: 3px;
+  border-left-color: var(--abd-muted);
+  background: var(--abd-raised);
+  color: var(--abd-text);
+}
+.foundry-kanban-surface .foundry-stage-skills .kb-ticket {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.foundry-kanban-surface .kb-col > .aad-skill-row .kb-ticket:hover,
+.foundry-kanban-surface .kb-col > .aad-skill-row--stage-other .kb-ticket:hover,
+.foundry-kanban-surface .foundry-stage-skills .kb-ticket:hover {
+  color: var(--abd-text);
+  border-color: rgba(229, 83, 26, 0.35);
+}
+
+.foundry-board-grid > .kb-col > .kb-col-head {
+  margin: 0;
+  height: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.foundry-stage-skills {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.foundry-stage-skills .aad-stage-skills-gap {
+  flex: 0 0 auto;
+  height: 24px;
+  min-height: 24px;
+  margin: 4px 0 8px;
+}
+
+.foundry-stage-skills .aad-stage-skills-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kb-col-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 8px 6px 7px;
+  font-family: var(--font-mono);
+  text-align: left;
+  color: var(--abd-text);
+  background: var(--abd-raised);
+  border: 1px solid var(--abd-border);
+  border-radius: 4px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+.kb-col-head:hover {
+  z-index: 40;
+}
+.kb-col-head:hover { border-color: rgba(229, 83, 26, 0.45); }
+.kb-col-head:hover .kb-col-head-title { color: var(--abd-accent-glow); }
+
+.kb-col-head.is-ring-landed,
+.foundry-perspective-label.is-ring-landed,
+.kb-ticket.is-ring-landed {
+  /* ring-only tour — no inner highlight */
+}
+
+.kb-col-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  overflow: visible;
+}
+
+.kb-col-scope-shape-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.kb-col-scope-shape-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -10px -6px;
+}
+.foundry-kanban-surface .kb-col-head--link {
+  cursor: help;
+}
+.kb-col-scope-shape {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  border: 2px solid var(--abd-accent);
+  border-radius: 2px;
+  outline: none;
+}
+.kb-col-shape-tooltip {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 10px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 9.5rem;
+  max-width: 13rem;
+  padding: 7px 9px;
+  font-family: var(--font-mono);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--abd-text, var(--text, #e8e8ed));
+  background-color: var(--abd-raised, var(--raised, #1b1b20));
+  border: 1px solid rgba(229, 83, 26, 0.45);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+.kb-col-shape-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 14px;
+  border: 5px solid transparent;
+  border-bottom-color: rgba(229, 83, 26, 0.45);
+}
+.kb-col-shape-tooltip.is-floating {
+  position: fixed;
+  z-index: 10000;
+  top: auto;
+  left: auto;
+  transform: none;
+  isolation: isolate;
+  /* Portaled to body — re-declare foundry tokens (normally scoped to .foundry-kanban-surface). */
+  --abd-bg: #0d1117;
+  --abd-surface: #161618;
+  --abd-raised: #1b1b20;
+  --abd-border: #2a2a2a;
+  --abd-text: #e8e8ed;
+  --abd-muted: #9b9ba8;
+  --abd-accent: #e5531a;
+  --abd-accent-glow: #ff6a2e;
+  background-color: #1b1b20;
+  color: #e8e8ed;
+}
+.kb-col-shape-tooltip.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.kb-col-shape-tooltip.is-floating.is-visible {
+  background-color: #1b1b20;
+}
+.kb-col-shape-tooltip__name {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--abd-accent-glow, var(--accent-glow, #ff6a2e));
+}
+.kb-col-shape-tooltip__width {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--abd-muted, var(--muted, #9b9ba8));
+}
+.kb-col-shape-tooltip__bullets {
+  font-size: 8px;
+  line-height: 1.35;
+  color: var(--abd-text, var(--text, #e8e8ed));
+}
+.kb-skill-tooltip-wrap {
+  position: relative;
+  display: inline;
+}
+.foundry-practice-col .foundry-family-toggle .kb-skill-tooltip-wrap {
+  pointer-events: none;
+}
+.foundry-kanban-surface .kb-ticket.aad-skill.has-skill-tooltip {
+  cursor: help;
+}
+.kb-skill-tooltip.kb-col-shape-tooltip {
+  min-width: 10rem;
+  max-width: 22rem;
+  transition:
+    opacity 0.28s ease,
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.28s ease;
+}
+.kb-skill-tooltip.kb-col-shape-tooltip.is-floating {
+  transform: scale(0.9) translateY(-8px);
+  transform-origin: top left;
+  opacity: 0;
+}
+.kb-skill-tooltip.kb-col-shape-tooltip.is-floating.is-visible {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  background-color: #1b1b20;
+}
+.kb-skill-tooltip .kb-col-shape-tooltip__bullets {
+  white-space: pre-line;
+  line-height: 1.45;
+  overflow: visible;
+}
+.kb-col-scope-shape--solution { width: 36px; height: 12px; }
+.kb-col-scope-shape--increment { width: 24px; height: 16px; }
+.kb-col-scope-shape--sprint { width: 16px; height: 22px; }
+.kb-col-scope-shape--story { width: 11px; height: 28px; }
+
+.kb-col-head-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--abd-text);
+}
+.kb-col-num {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--abd-text);
+  background: var(--abd-bg);
+  border: 1px solid var(--abd-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.kb-col-scope-name {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--abd-accent-glow);
+}
+.kb-col-scope-detail {
+  display: none;
+  font-size: 7.5px;
+  color: var(--abd-muted);
+  line-height: 1.35;
+}
+.kb-col-head.is-ring-landed .kb-col-scope-detail { display: block; }
+
+.aad-tickets-grid { display: flex; flex-direction: column; gap: 0; }
+.aad-skill-row { min-height: 34px; display: flex; margin: 1px 0; }
+.foundry-kanban-surface .foundry-board-grid .aad-skill-row {
+  min-height: var(--foundry-skill-row-h);
+  margin: 0;
+}
+.kb-ticket {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: 100%;
+  font-size: 9.5px;
+  font-weight: 600;
+  background: var(--abd-raised);
+  color: var(--abd-text);
+  padding: 3px 5px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+  border-left-color: var(--abd-muted);
+  line-height: 1.25;
+  text-decoration: none;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.kb-ticket.aad-fam-sdd { border-left-color: var(--fam-sdd); }
+.kb-ticket.aad-fam-ddd { border-left-color: var(--fam-ddd); }
+.kb-ticket.aad-fam-uxd { border-left-color: var(--fam-uxd); }
+.kb-ticket.aad-fam-arc { border-left-color: var(--fam-arc); }
+.kb-ticket.aad-fam-ctx { border-left-color: var(--fam-ctx); }
+.kb-ticket.aad-fam-delivery { border-left-color: var(--fam-delivery); }
+
+/* Hub embed: show tickets immediately (bootcamp deck CSS hides until .shown) */
+.foundry-kanban-surface .kb-ticket,
+.foundry-kanban-surface .kb-col-def {
+  opacity: 1;
+  transform: none;
+}
+.foundry-kanban-surface .kb-ticket::before {
+  display: none;
+}
+
+.kanban-stage-questions {
+  display: grid;
+  grid-template-columns: 168px repeat(6, minmax(0, 1fr));
+  gap: 0 6px;
+  margin: 8px 6px 0;
+}
+.kanban-stage-questions--foundry .kanban-stage-questions__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kanban-stage-questions--foundry .kanban-stage-questions__item {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 14px;
+  font-size: 8.5px;
+  line-height: 1.35;
+  color: var(--abd-text);
+}
+.kanban-stage-questions--foundry .kanban-stage-questions__item::before {
+  content: '\2014';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--abd-accent);
+  font-weight: 700;
+}
+.kanban-stage-questions__cell {
+  padding: 8px 6px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+}
+.kanban-stage-questions--foundry .kanban-stage-questions__cell[data-stage] {
+  cursor: pointer;
+}
+.kanban-stage-questions--foundry .kanban-stage-questions__cell.is-active {
+  border-top-color: var(--abd-accent);
+  color: var(--abd-text);
+}
+.foundry-kanban-surface .kb-col-head[data-stage].kb-col-head--link,
+.foundry-kanban-surface .kb-col-head[data-stage].kb-col-head--toggle {
+  cursor: pointer;
+}
+.foundry-kanban-surface .kb-col-head.kb-col-head--current {
+  border-color: rgba(229, 83, 26, 0.45);
+}
+.foundry-kanban-surface .kb-col-head.foundry-stage-toggle {
+  padding-right: 22px;
+}
+.foundry-kanban-surface .kb-col-head.foundry-stage-toggle::after {
+  content: '';
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  width: 5px;
+  height: 9px;
+  border: solid var(--abd-accent);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-60%) rotate(45deg) scale(0);
+  opacity: 0;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+.foundry-kanban-surface .kb-col-head.foundry-stage-toggle.is-selected {
+  box-shadow: 0 0 0 1px rgba(229, 83, 26, 0.35);
+  color: var(--abd-text);
+}
+.foundry-kanban-surface .kb-col-head.foundry-stage-toggle.is-selected::after {
+  transform: translateY(-60%) rotate(45deg) scale(1);
+  opacity: 1;
+}
+/* ── Stage column collapse / expand ── */
+.kb-col-collapse-btn {
+  position: absolute;
+  top: 2px; right: 2px;
+  z-index: 50;
+  background: var(--abd-raised);
+  border: 1px solid var(--abd-border);
+  cursor: pointer;
+  color: var(--abd-muted);
+  font-family: var(--abd-mono, var(--font-mono, monospace));
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  opacity: 0.7;
+}
+.kb-col-collapse-btn:hover {
+  color: var(--abd-accent, #e5531a);
+  background: var(--abd-surface);
+  border-color: rgba(229, 83, 26, 0.45);
+  opacity: 1;
+}
+
+.kb-col-collapsed-label {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--abd-mono, var(--font-mono, monospace));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--abd-muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+.kb-col--collapsed { overflow: hidden; }
+.kb-col--collapsed > .kb-col-head {
+  visibility: hidden; pointer-events: none; height: 0; overflow: hidden; padding: 0; margin: 0; border: none;
+}
+.kb-col--collapsed > .aad-skill-row,
+.kb-col--collapsed > .kb-col-def,
+.kb-col--collapsed > .aad-stage-skills-gap,
+.kb-col--collapsed > .foundry-stage-skills { visibility: hidden; }
+.kb-col--collapsed > .kb-col-collapsed-label { display: none; }
+.kb-col--collapsed > .kb-col-collapse-btn {
+  top: 50%; right: 50%;
+  transform: translate(50%, -50%);
+  font-size: 14px;
+  opacity: 1;
+  border-color: var(--abd-border);
+}
+
+.mock-below-fold {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .foundry-board-grid,
+  .kanban-stage-questions { grid-template-columns: 1fr; }
+  .foundry-practice-col {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding-top: 0;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+}
+

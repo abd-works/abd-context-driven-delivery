@@ -28,6 +28,10 @@ class CleanEngineeringTransformer(Transformer, SourceModel):
     logical_template_root = Path(__file__).resolve().parent / "logical" / "python"
     _tests_folder = "src"
 
+    def __init__(self, name: str = "", sequential_order: int = 1) -> None:
+        super().__init__(name, sequential_order)
+        self.class_index: dict[str, OoadClassTransformer] = {}
+
     @classmethod
     def load(cls, sketch: str) -> "CleanEngineeringTransformer":
         root = cls(name="", sequential_order=1)
@@ -68,8 +72,32 @@ class FileTransformer(Transformer, SourceFile):
         return f"{self._tests_folder}/{name}"
 
 
+class ImportBinding:
+    def __init__(self, module: str, name: str) -> None:
+        self.module = module
+        self.name = name
+
+
 class OoadClassTransformer(Transformer, SourceClass):
     _logical_template = "class"
+
+    @property
+    def base_imports(self) -> list[ImportBinding]:
+        index = getattr(self, "class_index", {})
+        bindings = []
+        for rel in self.relationships:
+            if rel.kind != "inheritance":
+                continue
+            target = index.get(rel.target)
+            if target is None:
+                continue
+            file_module = _to_snake(rel.target)
+            if target.module_name == self.module_name:
+                module = f".{file_module}"
+            else:
+                module = f"{_to_snake(target.module_name)}.{file_module}"
+            bindings.append(ImportBinding(module, rel.target))
+        return bindings
 
     def children(self) -> list:
         return list(self.property_nodes) + list(self.operation_nodes)
@@ -147,6 +175,7 @@ def _push_module(
     while len(stack) > level:
         stack.pop()
     module = ModuleTransformer(name, _next_order(stack[-1].modules if stack else root.modules))
+    module.class_index = root.class_index
     _apply_inline_seams(module, comment)
     if stack:
         stack[-1].modules.append(module)
@@ -169,6 +198,9 @@ def _add_class(
         return None
     name, base = _split_base(stripped)
     oclass = OoadClassTransformer(name, _next_order(host.classes))
+    oclass.module_name = host.name
+    oclass.class_index = host.class_index
+    host.class_index[name] = oclass
     if base:
         oclass.relationships.append(Relationship(target=base, kind="inheritance"))
     host.classes.append(oclass)
@@ -178,17 +210,21 @@ def _add_class(
 def _add_member(oclass: OoadClassTransformer, stripped: str) -> OperationTransformer | None:
     tokens = stripped.split()
     name = tokens[0]
+    if name.endswith("()"):
+        name = name[:-2]
+        tokens = [name, *tokens[1:]]
     if len(tokens) == 1:
         prop = PropertyTransformer(name, len(oclass.property_nodes) + 1)
         oclass.property_nodes.append(prop)
         oclass.properties.append(PropertyField(name=name))
         return None
+    param_names = [] if tokens[1:] == ["()"] else tokens[1:]
     operation = OperationTransformer(name, len(oclass.operation_nodes) + 1)
-    for index, param_name in enumerate(tokens[1:], start=1):
+    for index, param_name in enumerate(param_names, start=1):
         operation.parameters.append(ParameterTransformer(param_name, index))
-    operation.legacy_parameters = list(tokens[1:])
+    operation.legacy_parameters = list(param_names)
     oclass.operation_nodes.append(operation)
-    oclass.operations.append(OperationField(name=name, parameters=list(tokens[1:])))
+    oclass.operations.append(OperationField(name=name, parameters=list(param_names)))
     return operation
 
 

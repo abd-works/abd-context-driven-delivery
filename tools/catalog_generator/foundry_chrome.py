@@ -21,7 +21,7 @@ _FOUNDRY_CSS_SRC = _TEMPLATES / "foundry-catalog.css"
 STAGES: tuple[tuple[str, str], ...] = (
     ("discovery", "discovery"),
     ("spec", "specification"),
-    ("engineer", "engineering"),
+    ("engineer", "implementation"),
 )
 
 # Scope shapes borrowed from Foundry: discovery←shaping, spec←exploration,
@@ -106,7 +106,7 @@ _DISPLAY_LABELS: dict[str, str] = {
     "ddd": "domain-driven-design",
     "discovery": "discovery",
     "spec": "specification",
-    "engineer": "engineering",
+    "engineer": "implementation",
     "story_map": "story-map",
     "scenarios": "scenarios",
     "acceptance_tests": "acceptance-tests",
@@ -236,7 +236,7 @@ def page_shell(
     if body_wrap_class:
         body_wrap = f"wrap {body_wrap_class.strip()}"
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="engineering" data-abd-theme="engineering">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -249,9 +249,9 @@ def page_shell(
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{commons_prefix}site.css?v=foundry-33">
 <link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-13">
-<link rel="stylesheet" href="{commons_prefix}cdd-board.css?v=cdd-13">
+<link rel="stylesheet" href="{commons_prefix}cdd-board.css?v=cdd-14">
 {extra_head}
-<script src="{commons_prefix}catalog-nav.js?v=foundry-11"></script>
+<script src="{commons_prefix}catalog-nav.js?v=foundry-12"></script>
 </head>
 <body data-nav-prefix="{html.escape(nav_prefix)}" data-nav-current="{html.escape(nav_current)}" data-nav-site-base="{html.escape(site_base)}">
 <main id="main-content">

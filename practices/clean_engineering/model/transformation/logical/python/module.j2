@@ -1,5 +1,3 @@
-"""{{ node.name }}.
-
-{% if node.seam %}{{ node.seam }}
-{% endif %}{% if node.constraint %}{{ node.constraint }}
-{% endif %}"""
+{%- from 'ce_macros.j2' import module_context, subclass_in_domain -%}
+{{ module_context(node) }}
+{{ subclass_in_domain(node) }}

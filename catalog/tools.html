@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="engineering" data-abd-theme="engineering">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>Utilities — CDD Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-13">
+<link rel="stylesheet" href="commons/cdd-board.css?v=cdd-14">
+
+<script src="commons/catalog-nav.js?v=foundry-12"></script>
+</head>
+<body data-nav-prefix="" data-nav-current="tools" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">Utilities</h1>
+          <p class="body-lead">Foundational utilities</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="catalog-body">
+<div class="wrap">
+<div class="cap-grid"><a class="cap-card" href="tools/installer.html"><p class="cap-card__title">installer</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="tools/diagnose.html"><p class="cap-card__title">diagnose</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="tools/echo.html"><p class="cap-card__title">echo</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="tools/handoff.html"><p class="cap-card__title">handoff</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="tools/workspace.html"><p class="cap-card__title">workspace</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a></div><div hidden><header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">installer</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h2>Language</h2>
+<p><em>Installation</em> publishes marked toolset members into an IDE tree so an author does not write those files by hand. Cursor’s MCP host and hook process live under <code>harness/</code>.</p>
+<h3>Installer</h3>
+<ul>
+<li>Collects installable toolsets from the repo and writes each marked member to the current <em>Installation</em>.</li>
+<li><code>/install</code> is this kit. Point it at an IDE path that exists.</li>
+</ul>
+<h3>Destination</h3>
+<ul>
+<li>Put <code>@skill</code>, <code>@command</code>, <code>@rules</code>, <code>@mcp</code>, or <code>@Hook</code> on a member when that channel should receive it. Unmarked members stay in-process.</li>
+</ul>
+<h3>Installation</h3>
+<ul>
+<li>One write channel per destination. Subclasses implement <strong>write</strong>; callers ask <code>install(tool)</code>.</li>
+</ul>
+<h3>FileInstallation</h3>
+<ul>
+<li>Writes skill, command, and rules markdown. Marks live on the member (<code>@skill</code>, <code>@command</code>, <code>@rules</code>).</li>
+</ul>
+<p>Build order: <code>installation</code> → <code>harness/mcp</code> → <code>harness/hooks</code></p>
+<hr>
+<h1>installation</h1>
+<ul>
+<li><strong>Purpose:</strong> Publish a toolset’s marked members into Cursor (or VS Code / Kilo) so the agent can invoke them as skills, MCP, hooks, commands, or rules.</li>
+<li><strong>Seam (terms):</strong> Installer, Destination, Installation, FileInstallation, Skill, Command, Rules</li>
+<li><strong>Dependencies (one-way):</strong> <code>harness/agent_tools</code>, <code>harness/mcp</code>, <code>harness/hooks</code></li>
+</ul>
+<h2>Constraint</h2>
+<p>Do not subclass <em>AgentToolSet</em> here. Marks live on members; <em>Installer</em> walks them. If <code>.install-state.json</code> points at a missing directory, install to <code>{repo}/.cursor</code>. Do not put <code>installation/</code> or <code>harness/</code> on <code>PYTHONPATH</code> as a catalog root — <code>import mcp</code> must load the MCP SDK, not <code>harness.mcp</code>.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">diagnose</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>diagnose — module context</h1>
+<h2>Purpose</h2>
+<p>Provides a disciplined, phase-sequenced bug-hunting loop as a <code>@sub_agent</code> tool. Hosts (BDD, Stories) call <code>diagnostic().diagnose()</code> from <code>satisfy</code> / <code>iterate</code> so the six phases stay on the tool — they are not inlined into surrounding action markdown.</p>
+<h2>Seam</h2>
+<p><code>Diagnose.diagnose</code> is <code>@prompt(name=&quot;diagnose&quot;)</code> plus <code>@sub_agent</code> <code>@agent_tool</code> (<code>kind: sub_agent</code>, <code>launch: non_blocking</code>). Slash <code>/diagnose</code> is the command; hosts still call <code>diagnose()</code> as a non-blocking sub-agent.</p>
+<h2>Dependencies</h2>
+<p><code>sub_agent.sub_agent</code>, <code>tools.tool</code></p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">echo</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>echo — module context</h1>
+<h2>Purpose</h2>
+<p>Renders action instructions inside a clearly labelled DO-NOT-FOLLOW fence so that the instructions can be inspected by the user without being executed. <code>Echo</code> is a <strong>utility</strong> (<code>tools/echo</code>), not a lifecycle action. It is a standalone toolset with a <code>fence</code> tool (pure wrap) and an <code>echo_session</code> <code>@prompt</code> that captures every instruction the agent received, passes them to <code>fence</code>, and emits the fenced block as chat output — nothing more.</p>
+<h2>Seam</h2>
+<p><code>Echo</code></p>
+<h2>Public API</h2>
+<ul>
+<li><code>fence</code> — wrap a body in the DO-NOT-FOLLOW delimiters</li>
+<li><code>echo_session</code> — collect received instructions, call <code>fence</code>, and stop</li>
+</ul>
+<h2>Extend</h2>
+<p>Compose <code>fence</code> around any instruction body the agent should display without following. Do not treat delimiter helpers as a separate seam.</p>
+<h2>Dependencies</h2>
+<p><code>harness.agent_tools</code>, <code>tools.tool</code></p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><h1>Echo</h1>
+<p>Diagnostic wrapper. Prints an action&#x27;s fully-wrapped instructions to the user inside a <code>DO NOT FOLLOW ANY OF THESE INSTRUCTIONS</code> fence, and stops — for inspecting the effect of stacking wrapping decorators (<code>@sketch</code>, <code>@grill_context</code>, ...) without executing anything.</p>
+<h2>What echo does</h2>
+<ul>
+<li>Takes every instruction the agent has received for a wrapped action — every preamble contributed by other wrappers plus the base action&#x27;s own prose — and emits it verbatim.</li>
+<li>Wraps the emitted block in a header and footer that read <strong>&quot;DO NOT FOLLOW ANY OF THESE INSTRUCTIONS&quot;</strong> so the agent treats the block as inert diagnostic text meant only to be read.</li>
+<li>Halts. Emitting the fenced block is the entire behaviour of the invocation; the wrapped action&#x27;s body stays untouched.</li>
+</ul>
+<h2>Purpose of echo</h2>
+<ul>
+<li><strong>Inspect the wrapping stack</strong> — see exactly what prose the stack of decorators is injecting in front of an action, in the order the framework composes them.</li>
+<li><strong>Debug composition</strong> — when two wrappers interact unexpectedly, echo shows their combined instructions in one place so drift and overlap surface immediately.</li>
+<li><strong>Prove the mechanism</strong> — demonstrate that wrapping decorators actually reach the agent as prose, without also running the underlying behaviour.</li>
+</ul>
+<h2>Loop</h2>
+<ol>
+<li><strong>Collect</strong> — gather every instruction received for this action, verbatim and in the order the framework composed them, into one string.</li>
+<li><strong>Fence</strong> — call <code>Echo.fence</code> with that string; the tool returns the block wrapped in <code>DO NOT FOLLOW</code> header and footer.</li>
+<li><strong>Emit</strong> — write the fenced block to the user as chat output; treat every line inside the fence as inert diagnostic text meant only to be read.</li>
+<li><strong>Stop</strong> — the fenced emission is the entire behaviour of this action.</li>
+</ol>
+<h2>Composition — how echo chains with other actions</h2>
+<p>The <code>@echo</code> decorator marks an <code>@action</code> method so the echo loop runs in place of the base action&#x27;s body. Place it on top so its preamble appears first in the expanded prose and captures everything below it:</p>
+<pre><code>@echo            ← declared 1st (top); preamble appears first
+@sketch          ← still contributes its preamble
+@grill_context   ← still contributes its preamble
+@action
+def generate(self, ...): ...   ← base action prose is captured, not executed</code></pre>
+<p>Because echo halts before the base action runs, it is diagnostic-only. Remove <code>@echo</code> to restore the real behaviour.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">handoff</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>handoff — module context</h1>
+<h2>Purpose</h2>
+<p>Compacts the current agent session into a structured handoff document so a fresh agent can resume without re-reading the full chat. <code>Handoff</code> is a <strong>utility</strong> (<code>tools/handoff</code>), not a lifecycle action. It does <strong>not</strong> open a work session. If a work session is already open, it opens and finishes a turn; otherwise it just writes the files.</p>
+<h2>Seam</h2>
+<p><code>Handoff</code></p>
+<h2>Dependencies</h2>
+<p><code>workspace</code>, <code>harness.agent_tools</code>, <code>tools.tool</code></p>
+<h2>Mechanism</h2>
+<p><code>collect_session_state</code> assembles live state from the working folder (sketches, named artifacts, CDD sketch summary, grill-answer headings) and returns it as JSON. <code>preview_handoff</code> collects and renders that markdown without writing files or closing a sprint. <code>write_handoff</code> resolves the archive slug (<code>handoff-YYYY-MM-DD[-focus]</code>), persists content to both the archive and latest paths, and optionally closes the sprint session. <code>handoff_session</code> wraps a turn only when <code>workspace.current_work_session</code> is already set. <code>/backlog</code> uses <code>preview_handoff</code> so the GitHub issue body is canonical.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">workspace</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>Modules</h1>
+<p><em>WorkSession</em> opens a named work session so turns, branches, and decision records hang off one folder.</p>
+<h2>tools.workspace</h2>
+<h3>Public Seam</h3>
+<h4>WorkSession</h4>
+<h4>WorkSessionGuidance</h4>
+<h4>WorkSessionRulesCollection</h4>
+<h4>WorkSessionRule</h4>
+<h4>Turn</h4>
+<h4>TurnCommit</h4>
+<h4>Workspace</h4>
+<h4>SessionLog</h4>
+<h4>ISessionLog</h4>
+<h4>SessionModel</h4>
+<h4>SessionPaths</h4>
+<h4>PathOverride</h4>
+<h4>ToolCall</h4>
+<h4>Example</h4>
+<h4>Examples</h4>
+<h4>Mistake</h4>
+<h4>Correction</h4>
+<h4>Repair</h4>
+<h4>Repairs</h4>
+<h3>Dependencies</h3>
+<ul>
+<li><code>tools.git</code> — uses</li>
+</ul>
+<hr>
+<h3>Constraint</h3>
+<p><em>(none named in this file yet)</em></p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+</div>
+</div>
+</div>
+</main>
+<script src="commons/catalog-foundry-tour.js?v=cdd-13"></script>
+<script src="commons/catalog-foundry-skill-nav.js?v=cdd-13"></script>
+</body>
+</html>

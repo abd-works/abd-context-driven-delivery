@@ -1,0 +1,38 @@
+{% macro one_class(node) %}
+{%- if node.name[:1] != '_' -%}
+{%- set inherited = namespace(name='') -%}
+{%- for rel in node.relationships if rel.kind == 'inheritance' -%}
+{%- set inherited.name = rel.target -%}
+{%- endfor -%}
+class {{ node.name }}{% if inherited.name %}({{ inherited.name }}){% endif %}:
+{%- endif -%}
+{% endmacro %}
+
+{% macro private_class(node) %}
+{%- if node.name[:1] == '_' -%}
+class {{ node.name }}:
+{%- endif -%}
+{% endmacro %}
+
+{% macro import_along_arrow(node) %}
+{%- for dep in node.base_imports | default([], true) %}
+from {{ dep.module }} import {{ dep.name }}
+{%- endfor %}
+{%- for dep in node.dependencies | default([], true) %}
+from {{ dep | snake }} import {{ dep }}
+{%- endfor %}
+{% endmacro %}
+
+{% macro subclass_in_domain(node) %}
+{%- for cls in node.classes | default([], true) if cls.name[:1] == '_' %}
+from {{ cls.name | snake }} import {{ cls.name }}
+{%- endfor %}
+{% endmacro %}
+
+{% macro module_context(node) %}
+"""{{ node.name }}.
+
+{% if node.seam %}{{ node.seam }}
+{% endif %}{% if node.constraint %}{{ node.constraint }}
+{% endif %}"""
+{% endmacro %}

@@ -46,20 +46,55 @@ practices/
     model
       codeql                       // StoryMap, Epic, SubEpic, Story, Scenario, Background, Step, Example : Source, Node
       transformation               // StoryMapTransformer, EpicTransformer, SubEpicTransformer, StoryTransformer, ScenarioTransformer, BackgroundTransformer, StepTransformer, ExampleTransformer
+        story_nodes node
+        story_name node
+        kebab_path node
+        steps node
+        outline node
+        fixture node
+        seed node
+        boundary_stub node
+        step_body node
   clean_engineering/
     model
       codeql                       // CleanEngineeringModel, Module, File, OoadClass, Operation, Property, Parameter : Source, Node
       transformation               // CleanEngineeringTransformer, ModuleTransformer, FileTransformer, OoadClassTransformer, OperationTransformer, PropertyTransformer, ParameterTransformer
+        one_class node
+        private_class node
+        import_along_arrow node
+        subclass_in_domain node
+        module_context node
     specifications/
       lern_domain_driven           // templates/ passed into Transformers.transform logic
   bdd/
     model
       codeql                       // Description, Context, Observation : Source, Node
       transformation               // DescriptionTransformer, ContextTransformer, ObservationTransformer
+        domain_subject node
+        description_tree node
+        setup_for_label node
+        signature_only node
+        one_framework node
+        scan_pair node
   ddd/
     model
       codeql                       // BoundedContext, Aggregate, Entity, EntityRoot, ValueObject, Repository, DomainEvent, DomainService : Source, Node
       transformation               // BoundedContextTransformer, AggregateTransformer, EntityTransformer, EntityRootTransformer, ValueObjectTransformer, RepositoryTransformer, DomainEventTransformer, DomainServiceTransformer, SpecificationTransformer, FactoryTransformer
+        context node
+        depends node
+        stereotype node
+        repository_collection node
+        gateway node
+        factory node
+        generalisation node
+        past_tense_event node
+        specification node
+  ux/
+    model
+      transformation               // ScreenTransformer
+        domain_title node
+        data_goto node
+        domain_import node
 
 KnowledgeGraph
   refresh_master
@@ -110,14 +145,38 @@ KnowledgeGraph
       // cross-practice joins deferred
 
   ----
+ Macros
+      // {% macro name(node) %} — called by more than one practice
+      constructor_parameters node
+      property node
+      instance_method node
+
+  ----
  StoryMapTransformer : StoryMap, Transformer
+      story_nodes
       EpicTransformer
+          story_nodes
+          story_name
+          kebab_path
       SubEpicTransformer
+          story_nodes
+          story_name
+          kebab_path
       StoryTransformer
+          story_name
+          kebab_path
+          steps
+          fixture
+          seed
+          boundary_stub
+          step_body
       ScenarioTransformer
+          outline
       BackgroundTransformer
       StepTransformer
+          steps
       ExampleTransformer
+          fixture
       // practices/stories/model/transformation/ — wrap each stories/model/codeql type
       // EpicTransformer: folder template; StoryTransformer: language file; ScenarioTransformer BackgroundTransformer StepTransformer ExampleTransformer: no file — story template keeps rendering
       // theme Discover Solution — starts
@@ -128,10 +187,20 @@ KnowledgeGraph
   ----
  CleanEngineeringTransformer : CleanEngineeringModel, Transformer
       ModuleTransformer
+          module_context
+          subclass_in_domain
       FileTransformer
+          import_along_arrow
       OoadClassTransformer
+          constructor_parameters
+          instance_method
+          property
+          one_class
+          private_class
       OperationTransformer
+          instance_method
       PropertyTransformer
+          property
       ParameterTransformer
       // practices/clean_engineering/model/transformation/ — wrap each clean_engineering/model/codeql type
       // ModuleTransformer: folder; FileTransformer OoadClassTransformer: language file; OperationTransformer PropertyTransformer ParameterTransformer: no file unless it has a logical template — parent keeps rendering
@@ -144,8 +213,15 @@ KnowledgeGraph
 
   ----
  DescriptionTransformer : Description, Transformer
+      domain_subject
+      description_tree
+      one_framework
+      scan_pair
       ContextTransformer
+          description_tree
+          setup_for_label
       ObservationTransformer
+          signature_only
       // practices/bdd/model/transformation/ — wrap each bdd/model/codeql type
       // DescriptionTransformer: language file; ContextTransformer ObservationTransformer: no file — description template keeps rendering
       // theme Discover Solution — starts
@@ -154,15 +230,38 @@ KnowledgeGraph
 
   ----
  BoundedContextTransformer : BoundedContext, Transformer
+      context
       AggregateTransformer
+          depends
       EntityTransformer
+          stereotype
+          generalisation
+          constructor_parameters
+          instance_method
+          property
       EntityRootTransformer
+          stereotype
+          generalisation
+          constructor_parameters
+          instance_method
+          property
       ValueObjectTransformer
+          stereotype
+          instance_method
+          property
       RepositoryTransformer
+          stereotype
+          repository_collection
+          constructor_parameters
       DomainEventTransformer
+          past_tense_event
       DomainServiceTransformer
+          gateway
       SpecificationTransformer
+          specification
       FactoryTransformer
+          factory
+          constructor_parameters
       // practices/ddd/model/transformation/ — wrap each ddd/model/codeql type
       // BoundedContextTransformer: module annotated as bounded context
       // AggregateTransformer: module folder — not a class named Aggregate
@@ -174,6 +273,13 @@ KnowledgeGraph
       // theme Discover Solution — starts
       // theme Specify Solution — building blocks stay on these types
       // theme Specify Solution — ends
+
+  ----
+ ScreenTransformer
+      domain_title
+      data_goto
+      domain_import
+      // practices/ux/model/transformation/
 
   ----
  LernDomainDriven : PracticeGuidance
@@ -236,6 +342,50 @@ a story map
     in python
       it_behaves_like "story map from the sketch"
       it should transform to python
+      with a generated story
+        that used story_nodes
+          it should pass do-not-invent-requirements
+          it should pass behaviours-not-one-time-tasks
+          it should pass four-to-nine-children
+          it should pass branch-on-mechanical-uniqueness
+          it should pass explore-full-interaction-surface
+          it should pass right-size-story-nodes
+        that used story_name
+          it should pass verb-noun-format
+          it should pass story-name-captures-system-mechanic
+        that used kebab_path
+          it should pass kebab-case-paths
+        that used steps
+          it should pass gwt-steps-trace-to-domain-operations
+          it should pass behavioral-and-system-observable-outcomes
+          it should pass expressive-system-interactions
+          it should pass plain-english-gwt-steps
+          it should pass scenario-names-continuation
+          it should pass given-only-what-the-system-checks
+          it should pass given-names-complex-state-root-first
+          it should pass but-marks-missing-state
+          it should pass when-holds-the-operation
+          it should pass when-names-intent-not-interface-gesture
+          it should pass assert-domain-behavior-not-seeded-state
+          it should pass and-chaining
+          it should pass evidence-distinguishes-observed-inferred-and-intended
+          it should pass flagged-writes-intended-gwt
+          it should pass seed-prior-story-as-given
+        that used outline
+          it should pass outline-requires-many-permutations
+        that used fixture
+          it should pass examples-trace-domain-model
+          it should pass examples-declare-seed-vs-interaction
+          it should pass shared-example-fixtures
+        that used seed
+          it should pass seed-state-at-its-real-owner
+          it should pass separate-test-controls-from-production-contracts
+          it should pass infrastructure-in-lifecycle-hooks
+        that used boundary_stub
+          it should pass system-stubs-domain-real
+        that used step_body
+          it should pass inline-simple-gwt-bodies
+          it should pass extract-assertion-helper
     in typescript
       it_behaves_like "story map from the sketch"
       it should transform to typescript
@@ -294,6 +444,36 @@ a clean engineering model
     in python
       it_behaves_like "clean engineering model from the sketch"
       it should transform to python
+      with a generated class
+        that used constructor_parameters
+          it should pass use-explicit-dependencies
+        that used property
+          it should pass use-property-not-accessor
+        that used instance_method
+          it should pass prefer-class-operations
+          it should pass prefer-instance-operations
+          it should pass shape-classes-around-resources
+          it should pass put-logic-on-the-owning-resource
+          it should pass keep-classes-single-responsibility
+          it should pass use-typed-signatures
+          it should pass limit-operation-parameters
+          it should pass avoid-vague-parameter-names
+          it should pass provide-meaningful-context
+        that used one_class
+          it should pass do-not-invent-parallel-object-models
+      with a generated module
+        that used private_class
+          it should pass deep-module
+        that used import_along_arrow
+          it should pass one-way-deps
+        that used subclass_in_domain
+          it should pass extensions-live-with-the-domain
+        that used module_context
+          it should pass named-seam-and-constraint
+          it should pass public-seam-only
+          it should pass modules-not-model-blocks
+          it should pass missing-module-context
+          it should pass language-modules-one-section
     in typescript
       it_behaves_like "clean engineering model from the sketch"
       it should transform to typescript
@@ -394,6 +574,39 @@ a bounded context
     in python
       it_behaves_like "bounded contexts from the sketch"
       it should transform to python
+      with a generated bounded context
+        that used context
+          it should pass bc-by-lifecycle-not-ui-themes
+          it should pass one-meaning-per-context
+          it should pass vendor-not-implementation
+          it should pass context-tree-bc-aggregate-concept
+          it should pass user-facing-system-first
+        that used depends
+          it should pass dependency-fields-tracked
+          it should pass cross-boundary-synchronization-decided
+          it should pass hang-deps-on-owning-bc
+          it should pass link-arrow-target
+          it should pass no-orphan-contexts
+      with a generated class
+        that used stereotype
+          it should pass building-blocks-fidelity-requires-tactical-stereotype
+          it should pass identity-test-entity-vs-vo
+          it should pass every-concept-classified
+          it should pass aggregate-root-identity-and-entry
+        that used repository_collection
+          it should pass repository-is-collection-lifecycle
+          it should pass repository-owns-aggregate-lifecycle
+          it should pass load-with-identity-in-hand
+        that used gateway
+          it should pass external-system-access-is-service-interface
+        that used factory
+          it should pass factory-is-complex-creation
+        that used generalisation
+          it should pass shared-identity-is-generalisation
+        that used past_tense_event
+          it should pass domain-events-past-tense
+        that used specification
+          it should pass specification-is-reusable-rule
     in typescript
       it_behaves_like "bounded contexts from the sketch"
       it should transform to typescript
@@ -430,6 +643,27 @@ a description
     in python
       it_behaves_like "description from the sketch"
       it should transform to python
+      with a generated description
+        that used domain_subject
+          it should pass describe-is-subject-not-internal
+          it should pass describe-is-plain-english
+          it should pass domain-practice-alignment
+        that used description_tree
+          it should pass usage-order-behaviors
+          it should pass state-not-when
+          it should pass nest-by-enabling-events
+          it should pass full-surface-coverage
+          it should pass hierarchy-preservation
+        that used setup_for_label
+          it should pass context-setup-expresses-state
+          it should pass context-sharing
+        that used signature_only
+          it should pass no-implementation
+          it should pass honors-documented-surface-contracts
+        that used one_framework
+          it should pass framework-syntax
+        that used scan_pair
+          it should pass scan-fixture-pair
     in typescript
       it_behaves_like "description from the sketch"
       it should transform to typescript
@@ -459,6 +693,15 @@ filled domain logic
       it should write the view those templates name
       it should write the tests folder those templates name
       it should keep ooad class transformer operation names across the emitted layers
+
+a screen
+  with a generated screen
+    that used domain_title
+      it should pass screen-names-use-domain-terms
+    that used data_goto
+      it should pass key-interactions-wired
+    that used domain_import
+      it should pass story-domain-js-imported
 
 templates that describe the tech stack
   that have been written

@@ -55,14 +55,13 @@ CONTEXT_TOOL_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("Domain-Driven Design", "practices.ddd.ddd", "Ddd"),
 )
 
-# Harness owns generate (replaces the old deploy_agent_skills utility).
+# Installer owns install. Diagnose, echo, handoff, and workspace are live utilities.
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
-    ("harness", "installer.installer", "Harness"),
+    ("installer", "installation.installer", "Installer"),
     ("diagnose", "diagnose.diagnose", "Diagnose"),
     ("echo", "echo.echo", "Echo"),
     ("handoff", "handoff.handoff", "Handoff"),
     ("workspace", "workspace.workspace", "WorkSession"),
-    ("sub_agent", "sub_agent.sub_agent", "SubAgent"),
 )
 
 @dataclass
@@ -87,7 +86,7 @@ class RegistryEntry:
         from catalog_generator.foundry_chrome import cap_card
 
         cards: list[str] = []
-        for stage, fid_name in (getattr(self.cls, "fidelities", {}) or {}).items():
+        for stage, fid_name in fidelity_names_by_stage(self.cls).items():
             cards.append(
                 cap_card(
                     fid_name,
@@ -102,7 +101,7 @@ class RegistryEntry:
         from catalog_generator.foundry_chrome import page_shell
 
         owner = self.cls()
-        skill_name = SkillSlashName().resolve(owner.toolset_name) or owner.toolset_name
+        skill_name = SkillSlashName().resolve(owner_toolset_name(owner)) or owner_toolset_name(owner)
         guidances = CatalogFidelityGuidance.scrape(self.cls)
         context_tool = catalog.catalog_context_tool
         context_tool.owner = owner
@@ -125,7 +124,7 @@ class RegistryEntry:
             nav_current="context-tools",
             kanban_embed=catalog._kanban_embed(),
         )
-        CatalogPage(catalog.out_root).write(f"context-tools/{owner.toolset_name}.html", page)
+        CatalogPage(catalog.out_root).write(f"context-tools/{owner_toolset_name(owner)}.html", page)
         catalog._write_fidelity_pages(guidances)
 
     def write_utility_page(self, catalog: Catalog) -> None:
@@ -153,6 +152,37 @@ class RegistryEntry:
             kanban_embed=catalog._kanban_embed(),
         )
         CatalogPage(catalog.out_root).write(f"tools/{self.display_name}.html", page)
+
+
+def fidelity_names_by_stage(practice: type) -> dict[str, str]:
+    declared = practice.__dict__.get("fidelities")
+    if isinstance(declared, dict):
+        return {str(key): str(value) for key, value in declared.items()}
+    instance = practice()
+    entries = getattr(getattr(instance, "fidelities", None), "entries", None) or {}
+    stage_to_board = {
+        "discovery": "discovery",
+        "specification": "spec",
+        "spec": "spec",
+        "implementation": "engineer",
+        "engineering": "engineer",
+        "engineer": "engineer",
+    }
+    names: dict[str, str] = {}
+    for key, child in entries.items():
+        board_key = stage_to_board.get(str(getattr(child, "stage", "") or "").strip().lower())
+        if not board_key:
+            continue
+        names[board_key] = str(getattr(child, "fidelity", None) or getattr(child, "name", None) or key)
+    return names
+
+
+def owner_toolset_name(owner: object) -> str:
+    name = getattr(owner, "toolset_name", None)
+    if isinstance(name, str) and name:
+        return name
+    return RegistryEntry("", "", "", type(owner)).toolset_name()
+
 
 def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
     """Resolve every context-tool and utility registry row to a real class.
@@ -292,7 +322,7 @@ class CatalogFidelityGuidance(FidelityGuidance):
             kanban_embed=catalog._kanban_embed(),
         )
         CatalogPage(catalog.out_root).write(
-            f"fidelities/{owner.toolset_name}-{self.key}.html",
+            f"fidelities/{owner_toolset_name(owner)}-{self.key}.html",
             fid_page,
         )
 
@@ -1440,11 +1470,10 @@ class CatalogContextTool:
 
         from catalog_generator.foundry_chrome import display_label
 
-        owner = self.owner
         slug = self._owner_slug()
         if slug == "cdd":
             return ""
-        fidelity_names = list(getattr(type(owner), "fidelities", {}).values())
+        fidelity_names = [guidance.key for guidance in self.guidances]
         cards = "".join(
             f'<a class="cap-card fidelity-card" href="../fidelities/{slug}-{name}.html">'
             f'<p class="cap-card__title">{html_mod.escape(display_label(name))}</p>'
@@ -1586,7 +1615,7 @@ class Catalog:
         return [self._board_row_for_entry(entry) for entry in self._context_tool_entries]
 
     def _board_row_for_entry(self, entry: RegistryEntry) -> dict:
-        self._board_fidelities = getattr(entry.cls, "fidelities", {}) or {}
+        self._board_fidelities = self._board_fidelity_names(entry)
         self._board_tool_name = entry.toolset_name()
         self._board_stage_map: dict[str, dict] = {}
         for stage_key, _label in self._board_stages:
@@ -1598,6 +1627,9 @@ class Catalog:
             "href": f"context-tools/{self._board_tool_name}.html",
             "fidelities": self._board_stage_map,
         }
+
+    def _board_fidelity_names(self, entry: RegistryEntry) -> dict[str, str]:
+        return fidelity_names_by_stage(entry.cls)
 
     def _fill_board_stage(self) -> None:
         tool_name = self._board_tool_name
@@ -1749,7 +1781,7 @@ class Catalog:
             entry.write_utility_page(self)
 
     def _prepare_tool_kanban(self) -> None:
-        tool_name = self._current_owner.toolset_name
+        tool_name = owner_toolset_name(self._current_owner)
         self._kanban_path_prefix = "../"
         self._kanban_highlight_tool = tool_name
         self._kanban_highlight_fidelity = None
@@ -1762,7 +1794,7 @@ class Catalog:
         self._kanban_initial_family = None
 
     def _prepare_fidelity_kanban(self, fidelity_key: str) -> None:
-        tool_name = self._current_owner.toolset_name
+        tool_name = owner_toolset_name(self._current_owner)
         self._kanban_path_prefix = "../"
         self._kanban_highlight_tool = tool_name
         self._kanban_highlight_fidelity = fidelity_key
@@ -1773,12 +1805,11 @@ class Catalog:
 
         board = render_hub_board(self._board_tools, self._action_dicts, self._utility_dicts)
         hub = page_shell(
-            title="The ABD Foundry — Context Driven Delivery",
-            h1='The ABD <span class="accent">Foundry</span>',
+            title="ABD Context Driven Delivery Harness",
+            h1='ABD <span class="accent">Context Driven Delivery</span> Harness',
             tagline=(
-                "The ABD Foundry — thirty years of product engineering experience "
-                "shared as agents, skills, and tools that anyone can use. Grab the repo "
-                '<a href="https://github.com/abd-works/abd-context-driven-delivery" '
+                "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
+                f'Get the repo <a href="{self.repo_url}" '
                 'target="_blank" rel="noopener noreferrer">here</a>.'
             ),
             body_inner=self._hub_body(),
@@ -1800,11 +1831,10 @@ class Catalog:
             '<h2 id="catalog-workflow-heading">'
             '<a href="workflow.html">CDD Workflow</a>'
             "</h2>"
-            "<p>Scenario-based steps for partitioning docs, documenting existing systems, "
-            "designing new work, and fixing artifacts — using context tools, actions, and fidelities.</p>"
             "</section>\n"
-            '<section class="install-block catalog-install" aria-labelledby="catalog-install-heading">'
-            '<h2 id="catalog-install-heading">Install</h2>'
+            '<section class="install-block catalog-install">'
+            '<details>'
+            '<summary id="catalog-install-heading">Install</summary>'
             "<ol>"
             "<li>Get the repository: "
             f'<a href="{html_mod.escape(self.repo_url)}" target="_blank" rel="noopener noreferrer">'
@@ -1819,6 +1849,7 @@ class Catalog:
             "(action <code>generate</code>). "
             "That deploys each context tool as an IDE skill shim.</li>"
             "</ol>"
+            "</details>"
             "</section>\n"
         )
 
@@ -1833,10 +1864,10 @@ class Catalog:
             r"^#\s+.*\n+", "", workflow_md.lstrip(), count=1, flags=re.MULTILINE
         )
         workflow_html = page_shell(
-            title="CDD Workflow — ABD Foundry",
+            title="CDD Workflow — ABD Context Driven Delivery Harness",
             h1="CDD Workflow",
             tagline=(
-                "Scenario-based steps for using context tools, actions, and fidelities. "
+                "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
                 '<a href="index.html">Back to catalog</a>.'
             ),
             body_inner=(

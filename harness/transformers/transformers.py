@@ -10,6 +10,7 @@ from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.mcp.mcp_server import mcp
 from harness.transformers.transformer import Transformer
 from installation.files import Skill
+from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.stories.stories import Stories
 
@@ -47,6 +48,8 @@ class Transformers:
             practices.append(Stories())
         if _has_lens(sketch, "ce:"):
             practices.append(CleanEngineering())
+        if _has_lens(sketch, "bdd:"):
+            practices.append(Bdd())
         return practices
 
 
@@ -62,7 +65,6 @@ def _environment_for(practices: list) -> Environment:
         if root is None:
             continue
         loaders.append(FileSystemLoader(str(root)))
-    if not loaders:
-        loaders.append(FileSystemLoader(str(Path(__file__).resolve().parent)))
+    loaders.append(FileSystemLoader(str(Path(__file__).resolve().parent)))
     loader = loaders[0] if len(loaders) == 1 else ChoiceLoader(loaders)
     return Environment(loader=loader, autoescape=False)
