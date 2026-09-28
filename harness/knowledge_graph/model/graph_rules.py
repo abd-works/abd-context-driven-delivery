@@ -37,6 +37,7 @@ FIDELITY_ORDER: Dict[str, List[str]] = {
     "ddd": ["tactics", "building_blocks", "bounded_context"],
     "bdd": ["behavior"],
     "ux": ["front_end_code", "mockup", "ia"],
+    "lern_domain_driven": ["code"],
 }
 
 FIDELITY_NODE_SCOPE: Dict[str, Dict[str, Set[str]]] = {
@@ -94,6 +95,16 @@ FIDELITY_NODE_SCOPE: Dict[str, Dict[str, Set[str]]] = {
         "ia": {"Screen", "UxMap"},
         "mockup": {"Screen", "Control", "UxMap"},
         "front_end_code": {"Screen", "Control", "UxMap"},
+    },
+    "lern_domain_driven": {
+        "code": {
+            "Module",
+            "File",
+            "OoadClass",
+            "Property",
+            "Operation",
+            "Parameter",
+        },
     },
 }
 
@@ -191,6 +202,16 @@ class GraphRule(Rule):
     def query_pack(self) -> Path:
         if self._query_pack is not None:
             return self._query_pack
+        nested = (
+            _PRACTICES
+            / "clean_engineering"
+            / "specifications"
+            / self.practice
+            / "model"
+            / "codeql"
+        )
+        if (nested / "qlpack.yml").is_file():
+            return nested
         return _PRACTICES / self.practice / "model" / "codeql"
 
     @property

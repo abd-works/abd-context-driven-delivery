@@ -12,6 +12,9 @@ from .graph_rules import GraphRule
 def load_graph_rules_from_markdown(root=None) -> List[GraphRule]:
     from practices.bdd.bdd import Bdd
     from practices.clean_engineering.clean_engineering import CleanEngineering
+    from practices.clean_engineering.specifications.lern_domain_driven.lern_domain_driven import (
+        LernDomainDriven,
+    )
     from practices.ddd.ddd import Ddd
     from practices.stories.stories import Stories
     from practices.ux.ux import Ux
@@ -23,6 +26,7 @@ def load_graph_rules_from_markdown(root=None) -> List[GraphRule]:
         ("ddd", Ddd()),
             ("bdd", Bdd()),
             ("ux", Ux()),
+            ("lern_domain_driven", LernDomainDriven()),
         ):
         wrapped.extend(_wrap(guidance.rules, practice=practice, shared=True))
         fidelities = getattr(guidance, "fidelities", None)
