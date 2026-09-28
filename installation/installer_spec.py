@@ -583,9 +583,9 @@ with description("an MCP install into a project .cursor folder") as self:
         expect(server["cwd"]).to(equal(str(self.project)))
         expect(server["env"]["CDD_PROJECT"]).to(equal(str(self.project)))
 
-    with it("should remove cdd from the user Cursor mcp.json"):
+    with it("should leave the user Cursor mcp.json unchanged"):
         data = json.loads(self._user_mcp.read_text(encoding="utf-8"))
-        expect("cdd" in data.get("mcpServers", {})).to(equal(False))
+        expect(data["mcpServers"]["cdd"]["command"]).to(equal("python"))
 
 
 with description("an installer that has finished writing the IDE path") as self:

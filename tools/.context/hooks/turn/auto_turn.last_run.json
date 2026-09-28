@@ -1,9 +1,0 @@
-{
-  "at": "2026-09-28T00:21:21.324430+00:00",
-  "event": "afterAgentResponse",
-  "conversation_id": "9ce13238-ec80-48cc-be03-42ae5a553899",
-  "generation_id": "5d5ccd8d-ba26-4d8b-b6c0-f98ea11bf1b8",
-  "committed_sha": "861099815951ca225c5a487371e4f13c86025544",
-  "skipped": null,
-  "error": null
-}
