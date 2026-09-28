@@ -532,10 +532,16 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
   const dto = JSON.parse(line) as KnowledgeGraphDto;
   dto.folder = root;
   const graph = graphFromWorkspaceDto(dto);
-  if (_graphIsEmpty(graph)) {
+  if (_graphIsEmpty(graph) || !_hasDemonstrates(graph)) {
     return _graphFromDisk(root) ?? graph;
   }
   return graph;
+}
+
+function _hasDemonstrates(graph: KnowledgeGraph): boolean {
+  return graph.toDto().practice_graphs.some((item) =>
+    item.relationships.some((edge) => edge.kind === 'demonstrates'),
+  );
 }
 
 function _graphIsEmpty(graph: KnowledgeGraph): boolean {

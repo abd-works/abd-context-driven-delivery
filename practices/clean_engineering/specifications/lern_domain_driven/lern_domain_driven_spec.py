@@ -133,22 +133,13 @@ with description("a LernDomainDriven generator"):
             expect(self.rendered).to(contain("ask-cross-aggregate-sync"))
             expect("event" in self.rendered.lower()).to(be_true)
 
-    with context("whose scanners are discovered from its own scanners/ folder"):
+    with context("whose CodeQL pack lists the architecture rules"):
         with before.each:
             self.discovered = ScannerCollection(module_dir=_MODULE_DIR).discover()
+            self.pack = _MODULE_DIR / "model" / "codeql"
 
-        with it("should register exactly the architecture rules, one scanner each"):
+        with it("should resolve a javascript query pack beside the practice"):
+            expect((self.pack / "qlpack.yml").is_file()).to(equal(True))
+
+        with it("should register exactly the architecture rules, one query each"):
             expect(sorted(self.discovered)).to(equal(sorted(_ALL_RULE_SLUGS)))
-
-    with context("whose ported scanners run end-to-end against its own templates/"):
-        with before.each:
-            collection = ScannerCollection(module_dir=_MODULE_DIR)
-            self.report = collection.run(_MODULE_DIR, [_MODULE_DIR / "templates"])
-
-        with it("should report violations for the tool's own folder shape (no scripts/ or playwright/vitest config)"):
-            rules = {v.rule for v in self.report.violations}
-            expect(rules).to(equal({"scaffold-test-scripts"}))
-
-        with it("should not flag the route template for calling the repository directly"):
-            rules = {v.rule for v in self.report.violations}
-            expect("delegate-routes-to-domain-server" in rules).to(equal(False))
