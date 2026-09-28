@@ -32,9 +32,7 @@ export const SKIP_DIR = new Set([
 const SOURCE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.py']);
 
 export function scanSourceFiles(files: WorkspaceFile[]): WorkspaceFile[] {
-  return files
-    .filter((file) => isScanSourcePath(file.relativePath))
-    .slice(0, 500);
+  return files.filter((file) => isScanSourcePath(file.relativePath));
 }
 
 export function isScanSourcePath(relativePath: string): boolean {
@@ -241,6 +239,8 @@ export function knowledgeGraphFromWorkspace(
     }
   }
 
+  _wireDemonstrates(files, nodes, relationships);
+
   const dto: KnowledgeGraphDto = {
     id,
     folder,
@@ -254,6 +254,83 @@ export function knowledgeGraphFromWorkspace(
     ],
   };
   return KnowledgeGraph.fromDto(dto);
+}
+
+function _wireDemonstrates(
+  files: WorkspaceFile[],
+  nodes: NodeDto[],
+  relationships: RelationshipDto[],
+): void {
+  const classId = new Map<string, string>();
+  for (const node of nodes) {
+    if (node.semantic_type === 'OoadClass' && !classId.has(node.name)) {
+      classId.set(node.name, node.node_id);
+    }
+  }
+  for (const file of files) {
+    if (!_isExampleFile(file.relativePath)) {
+      continue;
+    }
+    for (const found of _exampleConstructors(file)) {
+      const target = classId.get(found.className);
+      if (!target) {
+        continue;
+      }
+      const exampleId = `st:Example:${file.relativePath.replaceAll('\\', '/')}:${found.name}`;
+      nodes.push({
+        node_id: exampleId,
+        name: found.name,
+        practice: 'stories',
+        semantic_type: 'Example',
+        properties: {},
+        applicable_rules: [],
+        violations: [],
+        source: {
+          file: file.relativePath.replaceAll('\\', '/'),
+          start_line: found.line,
+          end_line: found.line,
+          text: found.text,
+        },
+      });
+      relationships.push({
+        kind: 'demonstrates',
+        from_id: exampleId,
+        to_id: target,
+      });
+    }
+  }
+}
+
+function _isExampleFile(relativePath: string): boolean {
+  const normalized = relativePath.replaceAll('\\', '/');
+  return (
+    normalized.endsWith('.examples.ts') ||
+    normalized.endsWith('.examples.py') ||
+    normalized.includes('/examples/')
+  );
+}
+
+function _exampleConstructors(
+  file: WorkspaceFile,
+): { name: string; className: string; line: number; text: string }[] {
+  const found: { name: string; className: string; line: number; text: string }[] = [];
+  const lines = file.text.split('\n');
+  const pattern = file.relativePath.endsWith('.py')
+    ? /^(\w+)\s*=\s*([A-Z][A-Za-z0-9_]*)\s*\(/
+    : /^export const (\w+)\s*=\s*new\s+([A-Z][A-Za-z0-9_]*)/;
+  for (let index = 0; index < lines.length; index += 1) {
+    const matched = lines[index].match(pattern);
+    if (!matched) {
+      continue;
+    }
+    found.push({
+      name: matched[1],
+      className: matched[2],
+      line: index + 1,
+      text: lines[index],
+    });
+  }
+  return found;
 }
 
 function _folderId(relative: string): string {

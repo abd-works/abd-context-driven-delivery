@@ -307,9 +307,6 @@ function _readWorkspaceFromDisk(folder: string): WorkspaceFile[] {
 }
 
 function _walk(root: string, current: string, files: WorkspaceFile[]): void {
-  if (files.length >= 500) {
-    return;
-  }
   for (const entry of readdirSync(current)) {
     if (SKIP_DIRS.has(entry)) {
       continue;
@@ -327,9 +324,6 @@ function _walk(root: string, current: string, files: WorkspaceFile[]): void {
       relativePath: relative(root, full).replaceAll('\\', '/'),
       text: readFileSync(full, 'utf8'),
     });
-    if (files.length >= 500) {
-      return;
-    }
   }
 }
 
