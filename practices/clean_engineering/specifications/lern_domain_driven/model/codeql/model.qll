@@ -79,13 +79,15 @@ predicate repositoryType(string name) { name.matches("%Repository") }
 predicate zodCall(CallExpr call) {
   exists(PropAccess acc |
     acc = call.getCallee() and
-    acc.getPropertyName() = "object" or
-    acc.getPropertyName() = "string" or
-    acc.getPropertyName() = "number" or
-    acc.getPropertyName() = "boolean" or
-    acc.getPropertyName() = "enum" or
-    acc.getPropertyName() = "array" or
-    acc.getPropertyName() = "union"
+    (
+      acc.getPropertyName() = "object" or
+      acc.getPropertyName() = "string" or
+      acc.getPropertyName() = "number" or
+      acc.getPropertyName() = "boolean" or
+      acc.getPropertyName() = "enum" or
+      acc.getPropertyName() = "array" or
+      acc.getPropertyName() = "union"
+    )
   )
 }
 
