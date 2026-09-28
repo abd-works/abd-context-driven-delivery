@@ -202,3 +202,19 @@ with description("CodeQL report runner"):
 
         mark = _hierarchy_violations(_Node())
         expect("keep-operations-small-focused" in mark).to(equal(True))
+
+
+with description("CodeQL.detect_language"):
+    with it("should choose javascript when the tree is TypeScript"):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            src = root / "src"
+            src.mkdir()
+            (src / "App.tsx").write_text("export const App = () => null;\n", encoding="utf-8")
+            expect(CodeQL(root).detect_language()).to(equal("javascript"))
+
+    with it("should choose python when the tree is Python"):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "hello.py").write_text("class Hello:\n    pass\n", encoding="utf-8")
+            expect(CodeQL(root).detect_language()).to(equal("python"))

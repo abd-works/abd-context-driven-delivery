@@ -80,6 +80,46 @@ export function resolveScanRoot(
 }
 
 /** Native pickers only give the last folder name, not a disk path. */
+export function resolveNamedFolder(
+  chosen: string,
+  bases: string[],
+  isDir: (path: string) => boolean,
+  childrenOf: (path: string) => string[],
+  joinPath: (...parts: string[]) => string,
+  baseName: (path: string) => string,
+): string | undefined {
+  const name = chosen.trim();
+  if (!name) {
+    return undefined;
+  }
+  if (isDir(name)) {
+    return name;
+  }
+  for (const base of bases) {
+    if (!base) {
+      continue;
+    }
+    if (baseName(base) === name && isDir(base)) {
+      return base;
+    }
+    const nested = joinPath(base, name);
+    if (isDir(nested)) {
+      return nested;
+    }
+    if (!isDir(base)) {
+      continue;
+    }
+    for (const child of childrenOf(base)) {
+      const deeper = joinPath(base, child, name);
+      if (isDir(deeper)) {
+        return deeper;
+      }
+    }
+  }
+  return undefined;
+}
+
+/** Native pickers only give the last folder name, not a disk path. */
 export const PICKER_UPLOAD_LIMIT = 20;
 
 const TS_SKIP = new Set([

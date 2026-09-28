@@ -1,0 +1,47 @@
+---
+sourceLocationPrefix: C:\dev\abd-context-driven-delivery
+baselineLinesOfCode: 77848
+unicodeNewlines: false
+columnKind: utf32
+primaryLanguage: python
+inProgress:
+  primaryLanguage: python
+  installedExtractors:
+    actions:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/actions
+    cpp:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/cpp
+    csharp:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/csharp
+    csv:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/csv
+    go:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/go
+    html:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/html
+    java:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/java
+    javascript:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/javascript
+    properties:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/properties
+    python:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/python
+    ruby:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/ruby
+    rust:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/rust
+    swift:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/swift
+    xml:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/xml
+    yaml:
+     - C:/Users/jeffa/AppData/Local/Programs/CodeQL/codeql/yaml
+creationMetadata:
+  sha: 6579d6d239780a49fc77df111e7ee718d02f7330
+  cliVersion: 2.27.0
+  creationTime: 2026-09-28T20:06:46.745684200Z
+buildMode: none
+overlayBaseDatabase: false
+overlayDatabase: false
+finalised: false

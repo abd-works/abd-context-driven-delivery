@@ -1,0 +1,228 @@
+"""First-order guidance-action prelude — workspace, then the session's hanging turn and decisions."""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import Any
+
+from harness.agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
+from prompt_echo.prompt_echo import PromptEcho, echo
+from harness.hooks.hooks import Hook
+from harness.mcp.mcp_server import mcp
+
+# Guidance list, one Guidance (ref or {toolset, …}), or a string to act on directly.
+GuidanceArg = str | dict[str, Any] | list[str | dict[str, Any]]
+
+
+def listed(action) -> list:
+    """Instantiate Guidance bound on ``action._tool_items`` for guidance-action recipe bodies."""
+    if getattr(action, "_guidance_text", None) is not None:
+        return []
+    raw = getattr(action, "_tool_items", None) or []
+    return AgentToolSet.instantiate_all(raw)
+
+
+@agent_toolset
+class GuidanceAction:
+    """Open workspace if needed. Turn and decision records hang off the work session."""
+
+    def __init__(self, path: str = ".", session: str = "") -> None:
+        super().__init__()
+        # Session / git load — parked. Bind guidance and run the operation only.
+        # self.workspace = Workspace(str(path))
+        # self.workspace.load()
+        self.workspace = None
+        self._session_name = session
+        self._guidance_text: str | None = None
+        self._tool_items: list = []
+        # if session:
+        #     self._open_session(session, path=path)
+
+    def _session(self):
+        return self.workspace.current_work_session
+
+    def _decisions(self):
+        session = self._session()
+        if session is not None:
+            return session.decisions
+        from record_decisions.record_decisions import RecordDecisions
+
+        return RecordDecisions()
+
+    def _turn(self):
+        from workspace.workspace import Turn
+
+        session = self._session()
+        if session is not None:
+            return session.turn()
+        return Turn()
+
+    def _open_session(self, name: str = "", *, path: str = "") -> str:
+        return ""
+
+    def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
+        """Guidance ref or dict: iterate Guidance. Other strings: run once on that text."""
+        if guidance is None:
+            return
+        bound = self._as_guidance_item(guidance)
+        if bound is not None and not isinstance(guidance, list):
+            self._guidance_text = None
+            self._tool_items = [bound]
+            return
+        if isinstance(guidance, str):
+            self._guidance_text = guidance
+            self._tool_items = []
+            return
+        self._guidance_text = None
+        items = []
+        for item in list(guidance or []):
+            bound = self._as_guidance_item(item)
+            items.append(item if bound is None else bound)
+        self._tool_items = items
+
+    def _as_guidance_item(self, item: Any) -> Any:
+        if isinstance(item, dict):
+            return item
+        if not isinstance(item, str):
+            return item
+        text = item.strip()
+        if text.startswith("{") and text.endswith("}"):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, dict) and parsed.get("toolset"):
+                return parsed
+        if ":" in text and "\n" not in text:
+            return text
+        return None
+
+    def guidance_text(self) -> str | None:
+        """The string to run this action on, when guidance was not a Guidance list."""
+        return self._guidance_text
+
+    def listed(self) -> list:
+        """Return the Guidance bound on this run from the guidance argument."""
+        return listed(self)
+
+    def each(self, operation):
+        """Run ``operation`` once on a guidance string, or once per Guidance."""
+        text = self._guidance_text
+        if text is not None:
+            return [operation(text)]
+        return [operation(item) for item in self.listed()]
+
+    def run(self, guidance: GuidanceArg, operation, *, action: str = "") -> list:
+        """Bind guidance and run ``operation`` on the string or each Guidance."""
+        self._bind_guidance(guidance)
+        # self.begin(guidance, action=action)
+        results = self.each(operation)
+        # self.end()
+        return results
+
+    @mcp
+    @agent_tool
+    def open_workspace(self, name: str = "", path: str = "") -> str:
+        """Open a work session on this workspace if one is not already open. Pass a name to open or switch to that session; returns the session name and any branch warning."""
+        return ""
+        # if self.workspace.current_work_session is not None and not name:
+        #     return self.workspace.current_work_session.name
+        # warning = self._open_session(name or self._session_name, path=path)
+        # session_name = self.workspace.current_work_session.name
+        # if warning:
+        #     return f"{warning}\n{session_name}"
+        # return session_name
+
+    @echo
+    @agent_instructions
+    def begin(self, guidance: GuidanceArg | None = None, action: str = "") -> str:
+        """Start a guidance action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one."""
+        self._bind_guidance(guidance)
+        return ""
+        # warning = ""
+        # if self.workspace.current_work_session is None:
+        #     warning = self._open_session(self._session_name)
+        # session = self._session()
+        # if session is not None:
+        #     try:
+        #         session.turn
+        #         if action:
+        #             session.turn.action = action
+        #         instructions(self._decisions().record_decisions_session())
+        #     except (AttributeError, TypeError):
+        #         pass
+        #     if not warning:
+        #         warning = session.branch_warning()
+        # return warning
+
+    @echo
+    @Hook("postToolUse")
+    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Inject listed Guidance rules markdown after this action returns."""
+        if type(self).__name__ == "Document":
+            return {}
+        data = payload or {}
+        if not self._payload_is_this_action(data):
+            return {}
+        self._bind_guidance_from_payload(data)
+        parts, labels = self._listed_inject_parts(data)
+        if not parts:
+            return {}
+        body = "\n\n".join(parts)
+        action = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", type(self).__name__).lower()
+        echo = PromptEcho()
+        echo.toast_roots = data.get("workspace_roots")
+        echo.show_ide_toast(
+            PromptEcho().inject_rules_toast(action, labels),
+        )
+        return {"additional_context": body}
+
+    def _listed_inject_parts(self, data: dict[str, Any]) -> tuple[list[str], list[str]]:
+        parts: list[str] = []
+        labels: list[str] = []
+        for guidance in self.listed():
+            text = self._listed_guidance_rules(guidance, data)
+            if not text:
+                continue
+            parts.append(text)
+            labels.append(type(guidance).__name__)
+        return parts, labels
+
+    def _listed_guidance_rules(self, guidance: Any, data: dict[str, Any]) -> str:
+        rules = getattr(guidance, "rules", None)
+        if rules is None:
+            return ""
+        globbed = getattr(rules, "inject_rules", None)
+        if callable(globbed):
+            text = (globbed(data).get("additional_context") or "").strip()
+            if text:
+                return text
+        return (getattr(rules, "markdown", None) or "").strip()
+
+    def _payload_is_this_action(self, payload: dict[str, Any]) -> bool:
+        tool = str(payload.get("tool_name") or "").lower()
+        if not tool:
+            return False
+        name = type(self).__name__
+        snake = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
+        aliases = {name.lower(), snake, snake.replace("_", "-"), snake.replace("_", "")}
+        return any(alias and alias in tool for alias in aliases)
+
+    def _bind_guidance_from_payload(self, payload: dict[str, Any]) -> None:
+        raw = payload.get("tool_input") or {}
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except json.JSONDecodeError:
+                raw = {}
+        if not isinstance(raw, dict):
+            return
+        if "guidance" in raw:
+            self._bind_guidance(raw.get("guidance"))
+
+    @agent_instructions
+    def end(self) -> str:
+        """Close the guidance action by committing the session turn."""
+        return ""
+        # tools(self._turn().turn(utility="guidance_action"))

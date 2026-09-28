@@ -17,6 +17,7 @@ import {
 import {
   isScanSourcePath,
   knowledgeGraphFromWorkspace,
+  resolveNamedFolder,
   scanSourceFiles,
   SKIP_DIR,
   type WorkspaceFile,
@@ -197,9 +198,6 @@ function _isDir(folder: string): boolean {
 
 function _resolvePickedFolder(folder: string): string {
   const chosen = folder.trim();
-  if (_isDir(chosen)) {
-    return chosen;
-  }
   const repo = _repoRoot();
   const last = _readLastScanRoot();
   if (!chosen || chosen === 'workspace') {
@@ -211,14 +209,22 @@ function _resolvePickedFolder(folder: string): string {
   const bases = [repo, last, last ? dirname(last) : '', dirname(repo)].filter(
     Boolean,
   );
-  for (const base of bases) {
-    if (basename(base) === chosen && _isDir(base)) {
-      return base;
-    }
-    const nested = join(base, chosen);
-    if (_isDir(nested)) {
-      return nested;
-    }
+  const found = resolveNamedFolder(
+    chosen,
+    bases,
+    _isDir,
+    (base) => {
+      try {
+        return readdirSync(base);
+      } catch {
+        return [];
+      }
+    },
+    join,
+    basename,
+  );
+  if (found) {
+    return found;
   }
   throw new FolderNotFound(chosen);
 }

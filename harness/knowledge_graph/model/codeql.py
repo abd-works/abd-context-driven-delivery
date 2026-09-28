@@ -7,6 +7,7 @@ import os
 import shutil
 import signal
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional
@@ -171,6 +172,22 @@ class CodeQL:
                 return candidate
         return self.root.resolve()
 
+    def detect_language(self) -> str:
+        skip = {"node_modules", ".git", "dist", "__pycache__", ".venv", ".codeql", "coverage"}
+        ts = 0
+        py = 0
+        for dirpath, dirnames, filenames in os.walk(self.root):
+            dirnames[:] = [name for name in dirnames if name not in skip]
+            for name in filenames:
+                suffix = Path(name).suffix.lower()
+                if suffix in {".ts", ".tsx", ".js", ".jsx"} and not name.endswith(".d.ts"):
+                    ts += 1
+                elif suffix == ".py":
+                    py += 1
+                if ts + py >= 80:
+                    return "javascript" if ts > py else "python"
+        return "javascript" if ts > py else "python"
+
     def ensure_database(self, language: str = "python") -> Path:
         working = self.root / ".codeql" / f"{language}-working-copy"
         ready = self._ready_database(language)
@@ -182,11 +199,13 @@ class CodeQL:
 
     @property
     def master(self) -> Path:
-        return self.root / ".codeql" / "python-master"
+        language = getattr(self, "_database_language", "python")
+        return self.root / ".codeql" / f"{language}-master"
 
     @property
     def working_copy(self) -> Path:
-        return self.root / ".codeql" / "python-working-copy"
+        language = getattr(self, "_database_language", "python")
+        return self.root / ".codeql" / f"{language}-working-copy"
 
     def rewrite_master(self, language: str = "python") -> Path:
         self._unlock_databases()
@@ -206,6 +225,10 @@ class CodeQL:
         language = getattr(self, "_database_language", "python")
         source_root = self.root
         database.parent.mkdir(parents=True, exist_ok=True)
+        env = os.environ.copy()
+        python = sys.executable
+        env["CODEQL_PYTHON"] = python
+        env["PATH"] = str(Path(python).parent) + os.pathsep + env.get("PATH", "")
         run = subprocess.run(
             [
                 self.executable(),
@@ -220,6 +243,8 @@ class CodeQL:
             check=False,
             capture_output=True,
             text=True,
+            env=env,
+            cwd=str(source_root),
         )
         if run.returncode != 0 or not self._database_ready(database):
             raise self._failed_codeql(run)
@@ -236,10 +261,11 @@ class CodeQL:
 
     def rewrite_working_copy(self) -> Path:
         self._unlock_databases()
+        language = self.detect_language()
+        self._database_language = language
         database = self.working_copy
-        building = database.with_name("python-working-copy.building")
+        building = database.with_name(f"{language}-working-copy.building")
         self._retire_database(building)
-        self._database_language = "python"
         created = self._create_database(building)
         return self._install_created_database(created, database)
 

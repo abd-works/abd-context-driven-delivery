@@ -169,7 +169,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 className="btn-refresh"
                 data-testid="create-database"
                 disabled={loading || !folder}
-                onClick={() => createDatabase()}
+                onClick={() => createDatabase(folder)}
               >
                 Create database
               </button>
@@ -178,7 +178,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 className="btn-refresh"
                 data-testid="refresh-master"
                 disabled={loading || !folder}
-                onClick={() => refreshMaster()}
+                onClick={() => refreshMaster(folder)}
               >
                 Refresh master
               </button>
@@ -187,7 +187,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 className="btn-refresh"
                 data-testid="reload-working-copy"
                 disabled={loading || !folder}
-                onClick={() => reloadWorkingCopy()}
+                onClick={() => reloadWorkingCopy(folder)}
               >
                 Reload working copy
               </button>

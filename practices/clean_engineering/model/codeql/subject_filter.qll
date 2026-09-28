@@ -1,8 +1,10 @@
 import python
 
-predicate subjectFilterPrefix(string prefix) { prefix = "" }
+predicate subjectFilterPrefix(string prefix) { prefix = "harness/knowledge_graph" }
 
-predicate firstClassModulePrefix(string prefix) { none() }
+predicate firstClassModulePrefix(string prefix) {
+  prefix = "harness/knowledge_graph"
+}
 
 predicate inSubject(AstNode n) {
   inSubjectPath(n.getLocation().getFile().getRelativePath().replaceAll("\\", "/"))
@@ -14,5 +16,9 @@ predicate inSubjectFilter(Class cls) {
 
 bindingset[path]
 predicate inSubjectPath(string path) {
-  any()
+  exists(string filterPrefix, string normalized |
+    subjectFilterPrefix(filterPrefix) and
+    normalized = path.replaceAll("\\", "/") and
+    (normalized = filterPrefix or normalized.matches(filterPrefix + "/%"))
+  )
 }

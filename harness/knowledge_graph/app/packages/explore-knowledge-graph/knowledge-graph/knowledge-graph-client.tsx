@@ -332,17 +332,23 @@ export function useKnowledgeGraph(id: string) {
     take(KnowledgeGraphsClient.scan({ folder: lastFolder, force: true }), 'Refresh');
   }, [take]);
 
-  const createDatabase = useCallback(() => {
-    take(KnowledgeGraphsClient.createDatabase(lastScanFolder()), 'Create database');
-  }, [take]);
-
-  const refreshMaster = useCallback(() => {
-    take(KnowledgeGraphsClient.refreshMaster(lastScanFolder()), 'Refresh master');
-  }, [take]);
-
-  const reloadWorkingCopy = useCallback(() => {
+  const createDatabase = useCallback((root?: string) => {
     take(
-      KnowledgeGraphsClient.reloadWorkingCopy(lastScanFolder()),
+      KnowledgeGraphsClient.createDatabase(root || lastScanFolder()),
+      'Create database',
+    );
+  }, [take]);
+
+  const refreshMaster = useCallback((root?: string) => {
+    take(
+      KnowledgeGraphsClient.refreshMaster(root || lastScanFolder()),
+      'Refresh master',
+    );
+  }, [take]);
+
+  const reloadWorkingCopy = useCallback((root?: string) => {
+    take(
+      KnowledgeGraphsClient.reloadWorkingCopy(root || lastScanFolder()),
       'Reload working copy',
     );
   }, [take]);

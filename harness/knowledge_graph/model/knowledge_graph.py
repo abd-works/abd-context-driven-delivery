@@ -54,7 +54,7 @@ class KnowledgeGraph:
         from .practice_graph import PracticeGraph
 
         codeql = CodeQL(self.root)
-        master = codeql.rewrite_master()
+        master = codeql.rewrite_master(codeql.detect_language())
         graph = PracticeGraph(self.root)
         codeql.populate(graph, database=master, results_path=master / "practice-graph.json")
         codeql.copy_master_to_working_copy()
@@ -95,7 +95,7 @@ class KnowledgeGraph:
             self._root = Path(root)
             self._practice_graphs = []
         codeql = CodeQL(self.root)
-        codeql.rewrite_master()
+        codeql.rewrite_master(codeql.detect_language())
         codeql.copy_master_to_working_copy()
         self._practice_graphs = []
         return self
