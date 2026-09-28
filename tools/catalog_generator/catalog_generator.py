@@ -573,6 +573,17 @@ def extract_shared_sections(markdown: str, fidelity_keys: set[str]) -> str:
     return "\n\n".join(chunk for chunk in chunks if chunk)
 
 
+def _insert_after_heading(html_text: str, heading: str, insertion: str) -> str:
+    """Place ``insertion`` after the named heading's section, before the next heading."""
+    match = re.search(rf"<h([1-4])>{re.escape(heading)}</h\1>", html_text)
+    if not match:
+        return html_text + insertion
+    start = match.end()
+    nxt = re.search(r"<h[1-4]>", html_text[start:])
+    insert_at = start + nxt.start() if nxt else len(html_text)
+    return html_text[:insert_at] + insertion + html_text[insert_at:]
+
+
 def fidelity_opening_paragraph(markdown: str, fidelity_key: str) -> str:
     """First paragraph of a fidelity's Overview — the outline, not the rules."""
     section = HeadingSection(markdown, level=3).extract(fidelity_key)
@@ -1469,15 +1480,23 @@ class CatalogFidelity:
         self.default_format = defaults.get(self.fidelity_name)
 
     def _guidance_preview(self, label: str) -> str:
-        from catalog_generator.foundry_chrome import markdown_to_html, wrap_guidance_body
+        from catalog_generator.foundry_chrome import (
+            catalog_examples_html,
+            markdown_to_html,
+            wrap_guidance_body,
+        )
 
         overview_html = markdown_to_html(self.overview) if self.overview.strip() else ""
         fid_md = f"## {label}\n\n{self.guidance}" if self.guidance else self.guidance
+        examples = catalog_examples_html(self._module_dir(), self.fidelity_name)
         bits = []
         if overview_html:
             bits.append(f"<h2>Overview</h2>\n{overview_html}")
         bits.append(wrap_guidance_body(markdown_to_html(fid_md)))
-        return "\n".join(bits)
+        preview = "\n".join(bits)
+        if examples:
+            preview = _insert_after_heading(preview, "Overview", examples)
+        return preview
 
     def generate_catalog(self) -> str:
         """Render everything under the board: title, invoke, guidance, template, example.
@@ -1568,22 +1587,29 @@ class CatalogContextTool:
     def _fidelity_section(self) -> str:
         import html as html_mod
 
-        from catalog_generator.foundry_chrome import display_label, markdown_to_html
+        from catalog_generator.foundry_chrome import (
+            catalog_examples_html,
+            display_label,
+            markdown_to_html,
+        )
 
         slug = self._owner_slug()
         guide = self._guide_markdown()
+        module_dir = Path(getattr(self.owner, "module_dir", Path("."))).resolve()
         rows: list[str] = []
         for guidance in self.guidances:
             name = guidance.key
             title = display_label(name)
             opening = fidelity_opening_paragraph(guide, name)
             opening_html = markdown_to_html(opening) if opening else ""
+            examples = catalog_examples_html(module_dir, name)
             rows.append(
                 '<div class="practice-fidelity">'
                 f'<h3 class="practice-fidelity__title">'
                 f'<a href="../fidelities/{html_mod.escape(slug)}-{html_mod.escape(name)}.html">'
                 f"{html_mod.escape(title)}</a></h3>"
                 f'<div class="practice-fidelity__opening">{opening_html}</div>'
+                f"{examples}"
                 "</div>"
             )
         if not rows:

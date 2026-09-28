@@ -166,7 +166,7 @@ class KnowledgeGraph:
             self._root = Path(root)
             self._practice_graphs = []
         return json.dumps(self._nodes_as_json(Filter.from_value(filter)), indent=2)
-
+  
     @mcp
     @Skill
     @agent_instructions

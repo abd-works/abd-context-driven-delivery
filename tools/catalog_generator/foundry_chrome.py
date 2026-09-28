@@ -6,9 +6,12 @@ Stage column heads navigate to CDD fidelities (no stage filter).
 """
 from __future__ import annotations
 
+import base64
 import html
 import re
 import shutil
+import urllib.parse
+import zlib
 from pathlib import Path
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
@@ -481,7 +484,7 @@ def page_shell(
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{commons_prefix}site.css?v=foundry-33">
-<link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-75">
+<link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-76">
 <link rel="stylesheet" href="{commons_prefix}cdd-board.css?v=cdd-31">
 {extra_head}
 <script src="{commons_prefix}catalog-nav.js?v=foundry-13"></script>
@@ -821,6 +824,105 @@ def wrap_guidance_body(html_text: str) -> str:
         )
 
     return _GUIDANCE_BODY_RE.sub(repl, html_text)
+
+
+def catalog_examples_html(module_dir: Path, fidelity_key: str) -> str:
+    """Collapsible Examples block for ``{practice}/catalog-examples/{fidelity}.*``.
+
+    Every file with that stem is shown. Markdown renders as HTML, Draw.io
+    opens in the diagrams.net viewer, and other files stay as source.
+    """
+    folder = Path(module_dir) / "catalog-examples"
+    if not folder.is_dir() or not fidelity_key:
+        return ""
+    files = sorted(
+        (path for path in folder.iterdir() if path.is_file() and path.stem == fidelity_key),
+        key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name),
+    )
+    if not files:
+        return ""
+    parts = [_render_catalog_example(path) for path in files]
+    return (
+        '<details class="catalog-examples">'
+        "<summary>Examples</summary>"
+        f'<div class="catalog-examples__body">{"".join(parts)}</div>'
+        "</details>"
+    )
+
+
+_EXAMPLE_SUFFIX_ORDER = {
+    ".md": 0,
+    ".markdown": 0,
+    ".html": 1,
+    ".htm": 1,
+    ".drawio": 2,
+    ".dio": 2,
+}
+
+
+def _render_catalog_example(path: Path) -> str:
+    suffix = path.suffix.lower()
+    name = html.escape(path.name)
+    if suffix in (".md", ".markdown"):
+        body = _render_example_markdown(path.read_text(encoding="utf-8"))
+        inner = f'<div class="skill-md-preview">{body}</div>'
+    elif suffix in (".html", ".htm"):
+        srcdoc = html.escape(path.read_text(encoding="utf-8"), quote=True)
+        inner = (
+            f'<iframe class="catalog-example__frame" title="{name}" '
+            f'sandbox="" srcdoc="{srcdoc}"></iframe>'
+        )
+    elif suffix in (".drawio", ".dio"):
+        src = html.escape(_drawio_viewer_url(path.read_text(encoding="utf-8")), quote=True)
+        inner = (
+            f'<iframe class="catalog-drawio-frame" title="{name}" loading="lazy" src="{src}"></iframe>'
+        )
+    else:
+        lang = html.escape(suffix.lstrip(".") or "text")
+        source = html.escape(path.read_text(encoding="utf-8"))
+        inner = (
+            '<div class="skill-code-preview">'
+            f'<div class="skill-code-lang">{lang}</div>'
+            f"<pre><code>{source}</code></pre>"
+            "</div>"
+        )
+    return (
+        '<figure class="catalog-example">'
+        f'<figcaption class="catalog-example__name">{name}</figcaption>'
+        f"{inner}"
+        "</figure>"
+    )
+
+
+def _render_example_markdown(text: str) -> str:
+    body = _strip_markdown_frontmatter(text).strip()
+    while body.startswith("---") and not body.startswith("----"):
+        body = body[3:].lstrip("\n")
+    lines = [line for line in body.splitlines() if line.strip()]
+    indented = sum(1 for line in lines if line[:1].isspace())
+    has_markup = any(line.lstrip().startswith(("#", "|")) for line in lines)
+    if lines and not has_markup and indented >= len(lines) / 2:
+        return f'<pre class="catalog-example__tree">{html.escape(body.strip())}</pre>'
+    return markdown_to_html(body, include_tables=True)
+
+
+def _strip_markdown_frontmatter(text: str) -> str:
+    if not text.startswith("---"):
+        return text
+    end = text.find("\n---", 3)
+    if end == -1:
+        return text
+    return text[end + 4 :].lstrip("\n")
+
+
+def _drawio_viewer_url(xml: str) -> str:
+    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
+    raw = compressor.compress(xml.encode("utf-8")) + compressor.flush()
+    token = urllib.parse.quote(base64.b64encode(raw).decode("ascii"), safe="")
+    return (
+        "https://viewer.diagrams.net/?lightbox=1&nav=1&layers=1&toolbar=zoom"
+        f"&edit=_blank#R{token}"
+    )
 
 
 def fence(lang: str, text: str) -> str:

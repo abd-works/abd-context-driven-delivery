@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="commons/site.css?v=foundry-33">
-<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-75">
+<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-76">
 <link rel="stylesheet" href="commons/cdd-board.css?v=cdd-31">
 
 <script src="commons/catalog-nav.js?v=foundry-13"></script>
@@ -57,7 +57,304 @@
 <li><strong><code>evidence-distinguishes-observed-inferred-and-intended</code></strong> - Label behaviour as observed, inferred, or intended and cite its source. When available evidence cannot exercise required behaviour, write the intended GWT and state the limitation, because an unobserved expectation must not be presented as a fact.</li>
 </ul>
 <hr></section>
-<section class="install-block" aria-label="Fidelities"><h2>Fidelities</h2><div class="practice-fidelities"><div class="practice-fidelity"><h3 class="practice-fidelity__title"><a href="../fidelities/stories-story_map.html">story-map</a></h3><div class="practice-fidelity__opening"><p>Define a story map as Epic → nestable Sub-Epic → Story. Change the map while nodes are still titles; after scenarios, screens, and tests exist, the same move is much more expensive.</p></div></div><div class="practice-fidelity"><h3 class="practice-fidelity__title"><a href="../fidelities/stories-scenarios.html">scenarios</a></h3><div class="practice-fidelity__opening"><p><code>{epic}/{sub-epic}/{story}/{story_snake}_story.test.md</code> — same stem as the TypeScript or Python acceptance test; only the extension is <code>md</code>. One file per story. Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.</p></div></div><div class="practice-fidelity"><h3 class="practice-fidelity__title"><a href="../fidelities/stories-acceptance_tests.html">acceptance-tests</a></h3><div class="practice-fidelity__opening"><p><strong>Produce:</strong> <code>{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}</code> plus the production code that makes it pass. Markdown scenarios for the same story are <code>{story_snake}_story.test.md</code>. Shared Given/When/Then helpers stay <code>story_test.py</code> / <code>story-test.ts</code>. Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.</p></div></div></div></section>
+<section class="install-block" aria-label="Fidelities"><h2>Fidelities</h2><div class="practice-fidelities"><div class="practice-fidelity"><h3 class="practice-fidelity__title"><a href="../fidelities/stories-story_map.html">story-map</a></h3><div class="practice-fidelity__opening"><p>Define a story map as Epic → nestable Sub-Epic → Story. Change the map while nodes are still titles; after scenarios, screens, and tests exist, the same move is much more expensive.</p></div><details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">story_map.md</figcaption><div class="skill-md-preview"><pre class="catalog-example__tree">(E) Onboard A Customer
+    (E) Get Sign Up Plan
+        (S) Customer --&gt; Open Plan Deep Link
+        (S) Customer --&gt; Apply Catalog Voucher
+    (E) Create Customer
+        (S) My Paradise --&gt; Create Unconfirmed User
+        (S) My Paradise --&gt; Enter Validation Code
+        (S) My Paradise --&gt; Create Customer
+        (S) My Paradise --&gt; Load Customer
+        (S) My Paradise --&gt; Ensure Cart on Customer
+    (E) Sign In With Existing Account
+        (S) Customer --&gt; Sign In With Existing Account
+    (E) Get Number
+        (S) Customer --&gt; Determine Number
+        (S) Customer --&gt; Pick Number
+        (S) Customer --&gt; Enter Porting Number
+        (S) Customer --&gt; Verify Ported Number
+    (E) Get Onboarding Plan
+        (S) Customer --&gt; Choose Onboarding Plan
+    (E) Get Sim
+        (S) Customer --&gt; Select Sim
+        (S) Customer --&gt; Enter Existing Sim
+        (S) Customer --&gt; Activate Sim
+    (E) Get Verified Profile
+        (S) Customer --&gt; Customer Complete Persona Kyc
+        (S) Ambassador --&gt; Collect Identity With Brand Amassador
+    (E) Get Order Review
+        (S) Customer --&gt; Check The Order
+        (S) Customer --&gt; Change Plan From Review
+    (E) Get Payment
+        (S) Customer --&gt; Enter Payment
+        (S) My Paradise --&gt; Authorize Card
+        (S) My Paradise --&gt; Provide Apple Pay Certificate
+    (E) Place Order
+        (S) My Paradise --&gt; Create Billing Account
+        (S) My Paradise --&gt; Create Product Order
+        (S) Customer --&gt; View Order Result
+        (S) My Paradise --&gt; Create Order Ticket
+    (E) Get Voucher Credit
+        (S) My Paradise --&gt; Redeem Voucher and Apply Credit
+(E) Self-Serve Subscription
+    (E) Access Selfcare
+        (S) Customer --&gt; Enter Sign In Credentials
+        (E) Customer --&gt; Reset Password
+        (S) Customer --&gt; Edit Profile
+        (S) Customer --&gt; Sign Out
+    (E) Manage Billing
+        (S) Customer --&gt; View Billing
+        (S) Customer --&gt; Pay Now
+        (S) Customer --&gt; Enter New Payment Method
+    (E) Manage Services
+        (S) Customer --&gt; View Dashboard
+        (S) Customer --&gt; Change Plan
+        (S) Customer --&gt; Request Line Portability
+        (S) Purchase Device
+        (S) Customer --&gt; Send Support Request
+---</pre></div></figure><figure class="catalog-example"><figcaption class="catalog-example__name">story_map.drawio</figcaption><iframe class="catalog-drawio-frame" title="story_map.drawio" loading="lazy" src="https://viewer.diagrams.net/?lightbox=1&amp;nav=1&amp;layers=1&amp;toolbar=zoom&amp;edit=_blank#R3Z1bc9u2EoDfz6%2FA%2BMw0TwxF0hLFOnLHld3LNE40UZI%2BQyQksSYJHl5sq7%2F%2BLADeRMmOU5sYb%2FOQmLuwQ32z2AuwgN%2F9dB9H5JZleciT2Rvr7egNYYnPgzDZzN6UxdqYvvnp%2FD%2Fv4vt1GDGy5XkxO6Fp%2BjYI6Sajcf42YcXJ%2BbvqkSQ0ZrOTZcGzHbmm6QkJg9lJLh6NGB7P4Qf9mtF0e80DFp2%2FyzgvhGzOokgOHZ0Qc09gnZCUZiwpjuh4suI0Cwxq%2BCX8HzHLTsgtjUp4g49KRS7IvFHlxS4CFUtD%2FyzjZRKwYGad3W3Dgi1T6rPZHbzZ2baIIxBzYLKO%2BN1sGwYBS87g40dzHvFs9l9mBWPmnuVFxm9YJfMmrkMnZ2ueFJVkJP9IyTL8m80s6%2BxEgC7Y%2Fd6nshQUBu9YADRQ2vBBd6AQ%2F96FQbEFkT2Fhy0LN1v4lgl8TfPZyab6JsnFVGC%2BAcjcsMLIw01ilKmRRjRpiP3KCrIEBfmSkoVUVLzyciWQ%2FTh6FjRANg1O96FN7ZUzeRza6KnQnAqaN26hOQMxM7c0CQy%2BXjfSghvV98G8MakPBt%2BA%2FZOtcqDV8JTaf0KQsuna3yc48adstX6MoPtkgGMJ0HG8BuC4w2%2Bsj19D7jcYRj6u141dfubkY2dYbaDCvfxY5uzJVGmeMr%2BYrcN7FnQRr9dr2%2B8hDiaryfhRI51%2BL2LPGR4xT1kivzICxlIjCpObnl0eOMZXapieRsM8Qq0NKaCTnpFcgo68lzpsJuhpNMGI00DB9GlBI953jNc7sqAZDcL81TtHa6zRCA%2B4NcTeg0aZ4LzWYDPAhqQOC4RENdrVFI1bXvpbGIbTDdqWRhM8Cq5BdiG0tQmSr7UWmyk2RAcwRT9jtGCHdclcyg%2BLEhxJtu0eZtnO%2BIWy7B6y%2BrmEajRZh1nMAkMYFd4gYrvDzeAnwuvb4ZdWT77kKCexq20Sm%2FAKLDOAYBjQIuQQn3nAGqRXQku%2BNloyl1p0RYqjD%2Bh3e0k0ED19EGW6eIBQpop4AZ6OtVshi9Ni96AtXgktYqBjfcmOKVPJMDHuwmJrsPswL8JkY1Dfh9SmaMDKRZ3fE%2FInjCJX1ShyUY9CB9gdtrBJynjVMUuxXPuhEqHKISfOgDlkC8oMGITjOExYLcBZ9k0GXpd9gFbD6bJWHFgblok5cXRMTNPfcp4zUPYAzqWcULz8PC38VHKd8kwGix5ElVsvlBItSXeshSS8S7jeSZRQ9vVIfpVKiRJqPqwkp5YWkjdiE8AvM%2FEafZB%2FiE2AudLh5aglaTHzOwEyL2hUxxcjY0DnVhbKeT80w%2Bu%2B%2Bk0pPWH5G%2BDaXFqMI0sxrrJF8mlvHLp9qoGDdrvbfNgF0W4xY2yE8LzD%2FNqyXjC%2F7qH7N23zeQPvNX8T3b9pp8%2FztE7hOgHvi3GWfdZorNcUj9PrVzEPukY028%2Bjwfef415LXYwsgFgyWvR76bwX7aWLTSYYyWVXeDLoLQ0jugqjsNgh7hKxBt%2BjfwxcWy1XQ8gVDCEXe0PQTVjLGnzC1s5PEMUaLyx3eNPrYOoHhqu86%2BfwGJc7vHFl7H8lywtQpZUfE2LI%2BLKgofhJjSG08XUicEDuJ8ago2o7w1NVy4XN5lLXJNViYbOjtERpmbY3PEPwZeGtCCVdeheVECk3Z%2BD8Ti6uhgzKtoyLIzF7yd7XSkkWtRJX5ndqDbx20Kdn1lrD53EaMbDFlGU5T6hxs%2FOxxuLTgdPA76N4wI%2FMq1FkoUaRP8QodFP91NI71U2fRxF8UiOET11ANq0aHFaZOM1CY5rnNOD9feaLeFUpXr%2FZurrN9ik8W%2FNVo8nv1WjVOPKzGE0u4j5kRGY8cA7Ks0BuG9yG7G5%2FnVsoyKdKgStSjY90kVjuS65yd6hB4cP8G6PYMiXGGpfGA29aPcasUzCCnHzeMmV%2FGE%2BwOPomrFmmGygImTghGdCCGuuMsYC36foXpRdHIy9BT36p9fiwehqx%2BluabJjae1lnPO77x7nUqx2YX0B%2F4CbRYJ0MXBCldBezTluniCyLWoYrqLjWwIfIK1Z1r1P1hDSauANXOUdh9TvC%2BoaGZlq6lpZpadKy2PIM3k0uOCLeW3FdPea2D6yt42ox1kVZ19VjcFDc3UJBZ4gjpExIDR%2FeDwo%2FnxbtatlCjSLiKCkT05jMu6PQ0Z06mqZz8BeIDT9jQVgYMU1KGkU7hA101tTTNJ%2BPEmvntVSTuVST60aNzwIHTJ8hTfb7ddxCyPo1HI48zxsP2ODQYVUfjFrBZ%2BucgEIchL0Bu5K%2BDa5%2FJu9npcZ7ZqzlOeykrXlCbA5Kv%2BivyCiaC6XEuixjjyw9LMU6QLOYkJcR1gLOHrl6JvMBsPYwCmiaZWilwWd2rtYprDgWoX%2FDEAcS23K0BpIutb7fU%2Fb3udLhu8TG0e72tqHEg7DqsC1Pu8%2BraB1zer%2FVKnxWN%2FBifXXlVFW27TfZKFVVsmG7Qck%2BUnu85On3fXAm%2FM1Y3Ejlzrq620vp8UYQe%2BADEt8HstPJKcY1RiqbE9R1aT1zRTPV7ZeqUXIWrQ1xKJEZMFlzPwtTcTqxPcQo9EuhJ8s9PZqLmx3r8OrmyeSfzO4HWMF89VmeG0Lty3jbdG0KOVk2clxe0bFfqp3jieCqXaX6phoxiUVXEY1yrNWcY7%2BQP3w2wd4eXX3Pz7w7Ap0XbPAO5AUP8DY9neLAt1jOzvM73tmQaro5DeOHTXEmz3uLnfd6WM8BWK%2FcAUyVA7AnzjM7j5%2FJ15TbBHWHIlZfMNXsC54Cs3ULYqfloEMejyeYvg5PoK5Z42XvRrWPJcYk8%2FR0YKgxTeim2VFoKx4prncSsKVN49HQadM%2BNrWsUT8gdY7j0cDO8RFm%2B4tAB1aHZro2DPVMV1O0kSS8bc8UDSMf%2BB1GchO95FSWnoAJVg0RBvzYLQ96SfoHMMeqmY5cVwPQsZ3YetgKTQgxuh9Flo0cVxiZTF%2BqH%2BKJ4JRPDGi%2BlUtvWCPJZKonkjyAbT%2BYXLZifBN3qnfidtv%2Fj7X8Y7wG%2F1Qzwvpag0hcGivumuzfQlLfafBeXB676A5AB3c60gw3LTMw0ZwZAROCNu%2Bp5OSykuNDOdGMMmdJACNSYaJGZbSdLYckIEulJJ9qJTqo3rMSH1P9Fk5z%2F1dzmtWv9JQKsVRz%2Fn8%3D"></iframe></figure></div></details></div><div class="practice-fidelity"><h3 class="practice-fidelity__title"><a href="../fidelities/stories-scenarios.html">scenarios</a></h3><div class="practice-fidelity__opening"><p><code>{epic}/{sub-epic}/{story}/{story_snake}_story.test.md</code> — same stem as the TypeScript or Python acceptance test; only the extension is <code>md</code>. One file per story. Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.</p></div><details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">scenarios.md</figcaption><div class="skill-md-preview"><h1>Story: Determine Number</h1>
+<h4>Examples</h4>
+<p>##### available number</p>
+<table class="catalog-md-table">
+<thead><tr><th>available number</th><th>example</th><th>number</th></tr></thead>
+<tbody>
+<tr><td>available number</td><td>held available number</td><td>4415550100</td></tr>
+<tr><td>available number</td><td>chosen available number</td><td>4415550101</td></tr>
+<tr><td>available number</td><td>James matching numbers</td><td>5263712345, 5263798765</td></tr>
+<tr><td>available number</td><td>numbers locked by another customer</td><td>4415550200, 4415550201</td></tr>
+</tbody>
+</table>
+<p>##### search term</p>
+<table class="catalog-md-table">
+<thead><tr><th>search term</th><th>example</th><th>input</th><th>converted</th></tr></thead>
+<tbody>
+<tr><td>search term</td><td>James search</td><td>JAMES</td><td>52637</td></tr>
+</tbody>
+</table>
+<p>##### Mavenir shopping cart</p>
+<table class="catalog-md-table">
+<thead><tr><th>Mavenir shopping cart</th><th>example</th><th>id</th><th>customer</th><th>bundle</th><th>MSISDN</th></tr></thead>
+<tbody>
+<tr><td>Mavenir shopping cart</td><td>empty cart</td><td>cart_cus_1</td><td>cus_1</td><td></td><td></td></tr>
+<tr><td>Mavenir shopping cart</td><td>cart holding held available number</td><td>cart_cus_1</td><td>cus_1</td><td>plan_1</td><td>4415550100</td></tr>
+</tbody>
+</table>
+<p>##### account credentials</p>
+<table class="catalog-md-table">
+<thead><tr><th>account credentials</th><th>example</th><th>email</th><th>password</th><th>confirmPassword</th></tr></thead>
+<tbody>
+<tr><td>account credentials</td><td>valid account credentials</td><td>prospect@example.com</td><td>Valid-pass99</td><td>Valid-pass99</td></tr>
+</tbody>
+</table>
+<h4>Background</h4>
+<p><em>Given</em> a ++My Paradise customer++ with a ++Mavenir shopping cart++</p>
+<h4>Scenario: View available numbers</h4>
+<p><em>But</em> no ++MSISDN++ is in the ++Mavenir shopping cart++ <em>And</em> ++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir <em>When</em> the Customer loads available numbers <em>Then</em> My Paradise sends the list resources request to Mavenir <em>When</em> Mavenir locks 20 MSISDN resources and returns the available number values <em>Then</em> My Paradise returns the available numbers <em>And</em> ++available number++ ++held available number++ and ++available number++ ++chosen available number++ are in the Available Number list</p>
+<h4>Scenario: View available numbers — MSISDN in cart</h4>
+<p><em>Given</em> ++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++ <em>And</em> ++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir <em>When</em> the Customer loads available numbers <em>Then</em> My Paradise sends the list resources request to Mavenir <em>When</em> Mavenir locks 20 MSISDN resources and returns the available number values <em>Then</em> the Customer sees their number is ++available number++ ++held available number++ <em>And</em> My Paradise returns the available numbers</p>
+<h4>Scenario: Refresh available numbers</h4>
+<p><em>Given</em> ++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir <em>When</em> the Customer refreshes the number list <em>Then</em> My Paradise sends the list resources request to Mavenir <em>When</em> Mavenir locks 20 MSISDN resources and returns the available numbers <em>Then</em> My Paradise returns a fresh set of available numbers</p>
+<h4>Scenario: Search for a number</h4>
+<p><em>Given</em> ++available number++ ++James matching numbers++ are available in Mavenir <em>When</em> the Customer searches for numbers matching ++search term++ ++James search++ <em>Then</em> My Paradise sends the search request to Mavenir with pattern ++search term++ ++James search++ <em>When</em> Mavenir locks MSISDN resources matching 52637 and returns matching values <em>Then</em> My Paradise returns Available Numbers matching 52637 <em>And</em> the matching numbers are stored on the line for selection</p>
+<h4>Scenario: Numbers locked by another customer are excluded from results</h4>
+<p><em>Given</em> another customer has already locked ++available number++ ++held available number++ and ++available number++ ++chosen available number++ in Mavenir <em>And</em> ++available number++ ++numbers locked by another customer++ are the currently available numbers <em>When</em> the Customer loads available numbers <em>Then</em> My Paradise sends the list resources request to Mavenir <em>When</em> Mavenir returns only available numbers, excluding the locked ones <em>Then</em> the locked numbers are not in the available numbers list <em>And</em> only the currently available numbers are returned</p></div></figure></div></details></div><div class="practice-fidelity"><h3 class="practice-fidelity__title"><a href="../fidelities/stories-acceptance_tests.html">acceptance-tests</a></h3><div class="practice-fidelity__opening"><p><strong>Produce:</strong> <code>{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}</code> plus the production code that makes it pass. Markdown scenarios for the same story are <code>{story_snake}_story.test.md</code>. Shared Given/When/Then helpers stay <code>story_test.py</code> / <code>story-test.ts</code>. Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.</p></div><details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">acceptance_tests.ts</figcaption><div class="skill-code-preview"><div class="skill-code-lang">ts</div><pre><code>import { afterEach, beforeEach, expect, vi } from &#x27;vitest&#x27;;
+import type { MockInstance } from &#x27;vitest&#x27;;
+import { scenario, story } from &#x27;stories/story-test&#x27;;
+import { type Cart, CartRepository } from &#x27;../../../domain/cart/Cart&#x27;;
+import { AccountCredentials, customerRepository } from &#x27;../../../domain/customer/Customer&#x27;;
+import {
+  MavenirCartItem,
+  MavenirProductCharacteristic,
+  MavenirShoppingCart,
+  shoppingCartGateway,
+} from &#x27;../../../domain/systems/mavenir/shopping-cart-gateway&#x27;;
+import { mavenirMsisdnGateway } from &#x27;../../../domain/systems/mavenir/msisdn-gateway&#x27;;
+import { portalGateway } from &#x27;../../../domain/systems/mavenir/portal-gateway&#x27;;
+
+// available number
+const heldAvailableNumber = &#x27;4415550100&#x27;;
+const chosenAvailableNumber = &#x27;4415550101&#x27;;
+const jamesMatchingNumbers = [&#x27;5263712345&#x27;, &#x27;5263798765&#x27;];
+const numbersLockedByAnotherCustomer = [&#x27;4415550200&#x27;, &#x27;4415550201&#x27;];
+
+// search term
+const jamesSearch = { input: &#x27;JAMES&#x27;, converted: &#x27;52637&#x27; };
+
+// Mavenir shopping cart
+const emptyCart = new MavenirShoppingCart(&#x27;cart_cus_1&#x27;, &#x27;cus_1&#x27;);
+const cartHoldingHeldAvailableNumber = new MavenirShoppingCart(
+  &#x27;cart_cus_1&#x27;,
+  &#x27;cus_1&#x27;,
+  &#x27;plan_1&#x27;,
+  [
+    new MavenirCartItem(
+      {
+        name: &#x27;&#x27;,
+        description: &#x27;&#x27;,
+        isBundle: true,
+        productCharacteristic: [new MavenirProductCharacteristic(&#x27;MSISDN&#x27;, heldAvailableNumber)],
+      },
+      { id: &#x27;plan_1&#x27; },
+    ),
+  ],
+);
+
+// account credentials
+const validAccountCredentials = new AccountCredentials(
+  &#x27;prospect@example.com&#x27;,
+  &#x27;Valid-pass99&#x27;,
+  &#x27;Valid-pass99&#x27;,
+  &#x27;&#x27;,
+  false,
+);
+
+const cartRepository = new CartRepository(shoppingCartGateway);
+
+function msisdnOn(cart: MavenirShoppingCart): string | undefined {
+  return cart.cartItem
+    .flatMap(item =&gt; item.product.productCharacteristic)
+    .find(characteristic =&gt; characteristic.name === &#x27;MSISDN&#x27;)?.value;
+}
+
+async function customerWithCart(mavenirShoppingCart: MavenirShoppingCart): Promise&lt;Cart&gt; {
+  const customerId = mavenirShoppingCart.customerId ?? &#x27;cus_1&#x27;;
+  portalGateway.seedCustomerById(customerId, validAccountCredentials.email ?? &#x27;&#x27;);
+  shoppingCartGateway.seedCart(customerId, mavenirShoppingCart.id, {
+    bundleId: mavenirShoppingCart.bundleId,
+    msisdn: msisdnOn(mavenirShoppingCart),
+  });
+  const customer = await customerRepository.load(validAccountCredentials);
+  return cartRepository.load(customer)!;
+}
+
+afterEach(() =&gt; {
+  shoppingCartGateway.reset();
+  mavenirMsisdnGateway.reset();
+  portalGateway.reset();
+  vi.restoreAllMocks();
+});
+
+story(&#x27;Determine Number&#x27;, () =&gt; {
+  let listResourcesSpy: MockInstance&lt;typeof mavenirMsisdnGateway.listResources&gt;;
+  let searchResourcesSpy: MockInstance&lt;typeof mavenirMsisdnGateway.searchResources&gt;;
+
+  beforeEach(() =&gt; {
+    listResourcesSpy = vi.spyOn(mavenirMsisdnGateway, &#x27;listResources&#x27;);
+    searchResourcesSpy = vi.spyOn(mavenirMsisdnGateway, &#x27;searchResources&#x27;);
+  });
+
+  scenario(&#x27;View available numbers&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let numbers: string[] | Error;
+
+    given(&#x27;a My Paradise customer with a Mavenir shopping cart and no MSISDN&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
+      cart = await customerWithCart(emptyCart);
+    });
+    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
+      numbers = cart.line!.getNumbers();
+    });
+    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
+      expect(listResourcesSpy).toHaveBeenCalledOnce();
+    });
+    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available number values&#x27;, () =&gt; {});
+    then(&#x27;My Paradise returns the available numbers&#x27;, () =&gt; {
+      expect(numbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
+    }).and(&#x27;held available number and chosen available number are in the Available Number list&#x27;, () =&gt; {
+      expect(numbers as string[]).toContain(heldAvailableNumber);
+      expect(numbers as string[]).toContain(chosenAvailableNumber);
+    });
+  });
+
+  scenario(&#x27;View available numbers — MSISDN in cart&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let numbers: string[] | Error;
+
+    given(&#x27;MSISDN held available number is in the Mavenir shopping cart&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
+      cart = await customerWithCart(cartHoldingHeldAvailableNumber);
+    });
+    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
+      numbers = cart.line!.getNumbers();
+    });
+    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
+      expect(listResourcesSpy).toHaveBeenCalledOnce();
+    });
+    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available number values&#x27;, () =&gt; {});
+    then(&#x27;the Customer sees their number is held available number&#x27;, () =&gt; {
+      expect(cart.line?.msisdn).toBe(heldAvailableNumber);
+    }).and(&#x27;My Paradise returns the available numbers&#x27;, () =&gt; {
+      expect(numbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
+    });
+  });
+
+  scenario(&#x27;Refresh available numbers&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let refreshedNumbers: string[] | Error;
+
+    given(&#x27;a My Paradise customer with a Mavenir shopping cart&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
+      cart = await customerWithCart(emptyCart);
+    });
+    when(&#x27;the Customer refreshes the number list&#x27;, () =&gt; {
+      refreshedNumbers = cart.line!.getNumbers();
+    });
+    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
+      expect(listResourcesSpy).toHaveBeenCalledOnce();
+    });
+    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available numbers&#x27;, () =&gt; {});
+    then(&#x27;My Paradise returns a fresh set of available numbers&#x27;, () =&gt; {
+      expect(refreshedNumbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
+    });
+  });
+
+  scenario(&#x27;Search for a number&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let searchResults: string[] | Error;
+
+    given(&#x27;James matching numbers are available in Mavenir&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers(jamesMatchingNumbers);
+      cart = await customerWithCart(emptyCart);
+    });
+    when(&#x27;the Customer searches for numbers matching James search&#x27;, () =&gt; {
+      searchResults = cart.line!.searchNumbers(jamesSearch.converted);
+    });
+    then(&#x27;My Paradise sends the search request to Mavenir with pattern James search&#x27;, () =&gt; {
+      expect(searchResourcesSpy).toHaveBeenCalledWith(jamesSearch.converted);
+    });
+    when(&#x27;Mavenir locks MSISDN resources matching 52637 and returns matching values&#x27;, () =&gt; {});
+    then(&#x27;My Paradise returns Available Numbers matching 52637&#x27;, () =&gt; {
+      expect(searchResults).toEqual(jamesMatchingNumbers);
+    }).and(&#x27;the matching numbers are stored on the line for selection&#x27;, () =&gt; {
+      expect(cart.line?.availableNumbers).toEqual(jamesMatchingNumbers);
+    });
+  });
+
+  scenario(&#x27;Numbers locked by another customer are excluded from results&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let numbers: string[] | Error;
+
+    given(&#x27;another customer has already locked the standard available numbers in Mavenir&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers(numbersLockedByAnotherCustomer);
+      cart = await customerWithCart(emptyCart);
+    });
+    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
+      numbers = cart.line!.getNumbers();
+    });
+    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
+      expect(listResourcesSpy).toHaveBeenCalledOnce();
+    });
+    when(&#x27;Mavenir returns only available numbers, excluding the locked ones&#x27;, () =&gt; {});
+    then(&#x27;the locked numbers are not in the available numbers list&#x27;, () =&gt; {
+      expect(numbers).not.toContain(heldAvailableNumber);
+      expect(numbers).not.toContain(chosenAvailableNumber);
+    }).and(&#x27;only the currently available numbers are returned&#x27;, () =&gt; {
+      expect(numbers).toEqual(numbersLockedByAnotherCustomer);
+    });
+  });
+});
+</code></pre></div></figure></div></details></div></div></section>
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Practice</p><h1 class="page-headline">Clean Engineering</h1></header>
 <section class="install-block fidelity-guidance" aria-label="Practice guidance"><h2>Overview</h2>
 <p>Structure the problem into independent modules with small public interfaces, substantial hidden functionality, and one-way dependencies. Implement those modules with rigorous object-oriented and clean-code practices. When boundaries hold, a change stays inside one module; when they blur, callers depend on internal decisions and must change with them.</p>

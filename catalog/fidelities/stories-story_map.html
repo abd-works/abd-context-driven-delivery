@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../commons/site.css?v=foundry-33">
-<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-75">
+<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-76">
 <link rel="stylesheet" href="../commons/cdd-board.css?v=cdd-31">
 
 <script src="../commons/catalog-nav.js?v=foundry-13"></script>
@@ -77,7 +77,63 @@
 <section class="install-block fidelity-guidance" data-fidelity="story_map" aria-label="Fidelity guidance"><h2>story-map</h2>
 <h4>Overview</h4>
 <p>Define a story map as Epic → nestable Sub-Epic → Story. Change the map while nodes are still titles; after scenarios, screens, and tests exist, the same move is much more expensive.</p>
-<h4>Guidance</h4><div class="fidelity-guidance-body">
+<details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">story_map.md</figcaption><div class="skill-md-preview"><pre class="catalog-example__tree">(E) Onboard A Customer
+    (E) Get Sign Up Plan
+        (S) Customer --&gt; Open Plan Deep Link
+        (S) Customer --&gt; Apply Catalog Voucher
+    (E) Create Customer
+        (S) My Paradise --&gt; Create Unconfirmed User
+        (S) My Paradise --&gt; Enter Validation Code
+        (S) My Paradise --&gt; Create Customer
+        (S) My Paradise --&gt; Load Customer
+        (S) My Paradise --&gt; Ensure Cart on Customer
+    (E) Sign In With Existing Account
+        (S) Customer --&gt; Sign In With Existing Account
+    (E) Get Number
+        (S) Customer --&gt; Determine Number
+        (S) Customer --&gt; Pick Number
+        (S) Customer --&gt; Enter Porting Number
+        (S) Customer --&gt; Verify Ported Number
+    (E) Get Onboarding Plan
+        (S) Customer --&gt; Choose Onboarding Plan
+    (E) Get Sim
+        (S) Customer --&gt; Select Sim
+        (S) Customer --&gt; Enter Existing Sim
+        (S) Customer --&gt; Activate Sim
+    (E) Get Verified Profile
+        (S) Customer --&gt; Customer Complete Persona Kyc
+        (S) Ambassador --&gt; Collect Identity With Brand Amassador
+    (E) Get Order Review
+        (S) Customer --&gt; Check The Order
+        (S) Customer --&gt; Change Plan From Review
+    (E) Get Payment
+        (S) Customer --&gt; Enter Payment
+        (S) My Paradise --&gt; Authorize Card
+        (S) My Paradise --&gt; Provide Apple Pay Certificate
+    (E) Place Order
+        (S) My Paradise --&gt; Create Billing Account
+        (S) My Paradise --&gt; Create Product Order
+        (S) Customer --&gt; View Order Result
+        (S) My Paradise --&gt; Create Order Ticket
+    (E) Get Voucher Credit
+        (S) My Paradise --&gt; Redeem Voucher and Apply Credit
+(E) Self-Serve Subscription
+    (E) Access Selfcare
+        (S) Customer --&gt; Enter Sign In Credentials
+        (E) Customer --&gt; Reset Password
+        (S) Customer --&gt; Edit Profile
+        (S) Customer --&gt; Sign Out
+    (E) Manage Billing
+        (S) Customer --&gt; View Billing
+        (S) Customer --&gt; Pay Now
+        (S) Customer --&gt; Enter New Payment Method
+    (E) Manage Services
+        (S) Customer --&gt; View Dashboard
+        (S) Customer --&gt; Change Plan
+        (S) Customer --&gt; Request Line Portability
+        (S) Purchase Device
+        (S) Customer --&gt; Send Support Request
+---</pre></div></figure><figure class="catalog-example"><figcaption class="catalog-example__name">story_map.drawio</figcaption><iframe class="catalog-drawio-frame" title="story_map.drawio" loading="lazy" src="https://viewer.diagrams.net/?lightbox=1&amp;nav=1&amp;layers=1&amp;toolbar=zoom&amp;edit=_blank#R3Z1bc9u2EoDfz6%2FA%2BMw0TwxF0hLFOnLHld3LNE40UZI%2BQyQksSYJHl5sq7%2F%2BLADeRMmOU5sYb%2FOQmLuwQ32z2AuwgN%2F9dB9H5JZleciT2Rvr7egNYYnPgzDZzN6UxdqYvvnp%2FD%2Fv4vt1GDGy5XkxO6Fp%2BjYI6Sajcf42YcXJ%2BbvqkSQ0ZrOTZcGzHbmm6QkJg9lJLh6NGB7P4Qf9mtF0e80DFp2%2FyzgvhGzOokgOHZ0Qc09gnZCUZiwpjuh4suI0Cwxq%2BCX8HzHLTsgtjUp4g49KRS7IvFHlxS4CFUtD%2FyzjZRKwYGad3W3Dgi1T6rPZHbzZ2baIIxBzYLKO%2BN1sGwYBS87g40dzHvFs9l9mBWPmnuVFxm9YJfMmrkMnZ2ueFJVkJP9IyTL8m80s6%2BxEgC7Y%2Fd6nshQUBu9YADRQ2vBBd6AQ%2F96FQbEFkT2Fhy0LN1v4lgl8TfPZyab6JsnFVGC%2BAcjcsMLIw01ilKmRRjRpiP3KCrIEBfmSkoVUVLzyciWQ%2FTh6FjRANg1O96FN7ZUzeRza6KnQnAqaN26hOQMxM7c0CQy%2BXjfSghvV98G8MakPBt%2BA%2FZOtcqDV8JTaf0KQsuna3yc48adstX6MoPtkgGMJ0HG8BuC4w2%2Bsj19D7jcYRj6u141dfubkY2dYbaDCvfxY5uzJVGmeMr%2BYrcN7FnQRr9dr2%2B8hDiaryfhRI51%2BL2LPGR4xT1kivzICxlIjCpObnl0eOMZXapieRsM8Qq0NKaCTnpFcgo68lzpsJuhpNMGI00DB9GlBI953jNc7sqAZDcL81TtHa6zRCA%2B4NcTeg0aZ4LzWYDPAhqQOC4RENdrVFI1bXvpbGIbTDdqWRhM8Cq5BdiG0tQmSr7UWmyk2RAcwRT9jtGCHdclcyg%2BLEhxJtu0eZtnO%2BIWy7B6y%2BrmEajRZh1nMAkMYFd4gYrvDzeAnwuvb4ZdWT77kKCexq20Sm%2FAKLDOAYBjQIuQQn3nAGqRXQku%2BNloyl1p0RYqjD%2Bh3e0k0ED19EGW6eIBQpop4AZ6OtVshi9Ni96AtXgktYqBjfcmOKVPJMDHuwmJrsPswL8JkY1Dfh9SmaMDKRZ3fE%2FInjCJX1ShyUY9CB9gdtrBJynjVMUuxXPuhEqHKISfOgDlkC8oMGITjOExYLcBZ9k0GXpd9gFbD6bJWHFgblok5cXRMTNPfcp4zUPYAzqWcULz8PC38VHKd8kwGix5ElVsvlBItSXeshSS8S7jeSZRQ9vVIfpVKiRJqPqwkp5YWkjdiE8AvM%2FEafZB%2FiE2AudLh5aglaTHzOwEyL2hUxxcjY0DnVhbKeT80w%2Bu%2B%2Bk0pPWH5G%2BDaXFqMI0sxrrJF8mlvHLp9qoGDdrvbfNgF0W4xY2yE8LzD%2FNqyXjC%2F7qH7N23zeQPvNX8T3b9pp8%2FztE7hOgHvi3GWfdZorNcUj9PrVzEPukY028%2Bjwfef415LXYwsgFgyWvR76bwX7aWLTSYYyWVXeDLoLQ0jugqjsNgh7hKxBt%2BjfwxcWy1XQ8gVDCEXe0PQTVjLGnzC1s5PEMUaLyx3eNPrYOoHhqu86%2BfwGJc7vHFl7H8lywtQpZUfE2LI%2BLKgofhJjSG08XUicEDuJ8ago2o7w1NVy4XN5lLXJNViYbOjtERpmbY3PEPwZeGtCCVdeheVECk3Z%2BD8Ti6uhgzKtoyLIzF7yd7XSkkWtRJX5ndqDbx20Kdn1lrD53EaMbDFlGU5T6hxs%2FOxxuLTgdPA76N4wI%2FMq1FkoUaRP8QodFP91NI71U2fRxF8UiOET11ANq0aHFaZOM1CY5rnNOD9feaLeFUpXr%2FZurrN9ik8W%2FNVo8nv1WjVOPKzGE0u4j5kRGY8cA7Ks0BuG9yG7G5%2FnVsoyKdKgStSjY90kVjuS65yd6hB4cP8G6PYMiXGGpfGA29aPcasUzCCnHzeMmV%2FGE%2BwOPomrFmmGygImTghGdCCGuuMsYC36foXpRdHIy9BT36p9fiwehqx%2BluabJjae1lnPO77x7nUqx2YX0B%2F4CbRYJ0MXBCldBezTluniCyLWoYrqLjWwIfIK1Z1r1P1hDSauANXOUdh9TvC%2BoaGZlq6lpZpadKy2PIM3k0uOCLeW3FdPea2D6yt42ox1kVZ19VjcFDc3UJBZ4gjpExIDR%2FeDwo%2FnxbtatlCjSLiKCkT05jMu6PQ0Z06mqZz8BeIDT9jQVgYMU1KGkU7hA101tTTNJ%2BPEmvntVSTuVST60aNzwIHTJ8hTfb7ddxCyPo1HI48zxsP2ODQYVUfjFrBZ%2BucgEIchL0Bu5K%2BDa5%2FJu9npcZ7ZqzlOeykrXlCbA5Kv%2BivyCiaC6XEuixjjyw9LMU6QLOYkJcR1gLOHrl6JvMBsPYwCmiaZWilwWd2rtYprDgWoX%2FDEAcS23K0BpIutb7fU%2Fb3udLhu8TG0e72tqHEg7DqsC1Pu8%2BraB1zer%2FVKnxWN%2FBifXXlVFW27TfZKFVVsmG7Qck%2BUnu85On3fXAm%2FM1Y3Ejlzrq620vp8UYQe%2BADEt8HstPJKcY1RiqbE9R1aT1zRTPV7ZeqUXIWrQ1xKJEZMFlzPwtTcTqxPcQo9EuhJ8s9PZqLmx3r8OrmyeSfzO4HWMF89VmeG0Lty3jbdG0KOVk2clxe0bFfqp3jieCqXaX6phoxiUVXEY1yrNWcY7%2BQP3w2wd4eXX3Pz7w7Ap0XbPAO5AUP8DY9neLAt1jOzvM73tmQaro5DeOHTXEmz3uLnfd6WM8BWK%2FcAUyVA7AnzjM7j5%2FJ15TbBHWHIlZfMNXsC54Cs3ULYqfloEMejyeYvg5PoK5Z42XvRrWPJcYk8%2FR0YKgxTeim2VFoKx4prncSsKVN49HQadM%2BNrWsUT8gdY7j0cDO8RFm%2B4tAB1aHZro2DPVMV1O0kSS8bc8UDSMf%2BB1GchO95FSWnoAJVg0RBvzYLQ96SfoHMMeqmY5cVwPQsZ3YetgKTQgxuh9Flo0cVxiZTF%2BqH%2BKJ4JRPDGi%2BlUtvWCPJZKonkjyAbT%2BYXLZifBN3qnfidtv%2Fj7X8Y7wG%2F1Qzwvpag0hcGivumuzfQlLfafBeXB676A5AB3c60gw3LTMw0ZwZAROCNu%2Bp5OSykuNDOdGMMmdJACNSYaJGZbSdLYckIEulJJ9qJTqo3rMSH1P9Fk5z%2F1dzmtWv9JQKsVRz%2Fn8%3D"></iframe></figure></div></details><h4>Guidance</h4><div class="fidelity-guidance-body">
 <p><strong>Name the layers.</strong> Actors are people or systems (<code>Customer</code>, <code>Support Agent</code>, <code>Order Service</code>). Epics name an end-to-end outcome (<code>Manage Customer Orders</code>). Sub-Epics name one outcome inside an Epic (<code>Place Customer Order</code>). Stories name one observable interaction that can be tested on its own (<code>Submit Order</code>).</p>
 <p><strong>Decompose through interactions.</strong> Cover the business capability with Epics, then ground each Epic in Stories that demonstrate real behaviour. Find the <strong>walking skeleton</strong>, the smallest end-to-end path that works and delivers value, and validate it before adding later increments. Split increments by actor, data, workflow, channel, interface, non-functional requirement, or business rule when that creates a demonstrable step.</p>
 <p><strong>Map the complete outcome.</strong> Include the primary path, supporting actors, system interactions, reversals, and recovery behaviour needed to achieve the outcome. Administrators, support staff, partner onboarding, cancellations, refunds, escalations, and failures belong on the map when sources require them, because a forward path alone does not describe the working product.</p>

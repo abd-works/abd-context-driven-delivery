@@ -1281,6 +1281,56 @@ html[data-abd-theme="executive"] .catalog-garden-name--foundational a:hover {
 .skill-md-preview th { background: #f0ece4; font-weight: 600; color: #111113; }
 .skill-md-preview a { color: var(--accent); }
 .skill-md-preview strong { color: #111113; }
+.skill-md-preview .catalog-example__tree {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: var(--font-mono, monospace);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #111113;
+  background: transparent;
+}
+
+.catalog-examples {
+  margin: 12px 0 0;
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 4px;
+  background: var(--raised, #1b1b20);
+}
+.catalog-examples > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent, #e5531a);
+}
+.catalog-examples__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+.catalog-example {
+  margin: 0;
+}
+.catalog-example__name {
+  margin: 0 0 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--muted, #9b9ba8);
+}
+.catalog-drawio-frame,
+.catalog-example__frame {
+  width: 100%;
+  height: min(71vh, 680px);
+  min-height: 340px;
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 6px;
+  background: #fff;
+}
 
 /* ── Skill detail: concepts | rules two-column grid ── */
 .skill-cr-grid {

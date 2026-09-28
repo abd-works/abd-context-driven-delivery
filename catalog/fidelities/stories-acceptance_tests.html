@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../commons/site.css?v=foundry-33">
-<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-75">
+<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-76">
 <link rel="stylesheet" href="../commons/cdd-board.css?v=cdd-31">
 
 <script src="../commons/catalog-nav.js?v=foundry-13"></script>
@@ -77,7 +77,203 @@
 <section class="install-block fidelity-guidance" data-fidelity="acceptance_tests" aria-label="Fidelity guidance"><h2>acceptance-tests</h2>
 <h4>Overview</h4>
 <p><strong>Produce:</strong> <code>{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}</code> plus the production code that makes it pass. Markdown scenarios for the same story are <code>{story_snake}_story.test.md</code>. Shared Given/When/Then helpers stay <code>story_test.py</code> / <code>story-test.ts</code>. Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.</p>
-<h4>Guidance</h4><div class="fidelity-guidance-body">
+<details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">acceptance_tests.ts</figcaption><div class="skill-code-preview"><div class="skill-code-lang">ts</div><pre><code>import { afterEach, beforeEach, expect, vi } from &#x27;vitest&#x27;;
+import type { MockInstance } from &#x27;vitest&#x27;;
+import { scenario, story } from &#x27;stories/story-test&#x27;;
+import { type Cart, CartRepository } from &#x27;../../../domain/cart/Cart&#x27;;
+import { AccountCredentials, customerRepository } from &#x27;../../../domain/customer/Customer&#x27;;
+import {
+  MavenirCartItem,
+  MavenirProductCharacteristic,
+  MavenirShoppingCart,
+  shoppingCartGateway,
+} from &#x27;../../../domain/systems/mavenir/shopping-cart-gateway&#x27;;
+import { mavenirMsisdnGateway } from &#x27;../../../domain/systems/mavenir/msisdn-gateway&#x27;;
+import { portalGateway } from &#x27;../../../domain/systems/mavenir/portal-gateway&#x27;;
+
+// available number
+const heldAvailableNumber = &#x27;4415550100&#x27;;
+const chosenAvailableNumber = &#x27;4415550101&#x27;;
+const jamesMatchingNumbers = [&#x27;5263712345&#x27;, &#x27;5263798765&#x27;];
+const numbersLockedByAnotherCustomer = [&#x27;4415550200&#x27;, &#x27;4415550201&#x27;];
+
+// search term
+const jamesSearch = { input: &#x27;JAMES&#x27;, converted: &#x27;52637&#x27; };
+
+// Mavenir shopping cart
+const emptyCart = new MavenirShoppingCart(&#x27;cart_cus_1&#x27;, &#x27;cus_1&#x27;);
+const cartHoldingHeldAvailableNumber = new MavenirShoppingCart(
+  &#x27;cart_cus_1&#x27;,
+  &#x27;cus_1&#x27;,
+  &#x27;plan_1&#x27;,
+  [
+    new MavenirCartItem(
+      {
+        name: &#x27;&#x27;,
+        description: &#x27;&#x27;,
+        isBundle: true,
+        productCharacteristic: [new MavenirProductCharacteristic(&#x27;MSISDN&#x27;, heldAvailableNumber)],
+      },
+      { id: &#x27;plan_1&#x27; },
+    ),
+  ],
+);
+
+// account credentials
+const validAccountCredentials = new AccountCredentials(
+  &#x27;prospect@example.com&#x27;,
+  &#x27;Valid-pass99&#x27;,
+  &#x27;Valid-pass99&#x27;,
+  &#x27;&#x27;,
+  false,
+);
+
+const cartRepository = new CartRepository(shoppingCartGateway);
+
+function msisdnOn(cart: MavenirShoppingCart): string | undefined {
+  return cart.cartItem
+    .flatMap(item =&gt; item.product.productCharacteristic)
+    .find(characteristic =&gt; characteristic.name === &#x27;MSISDN&#x27;)?.value;
+}
+
+async function customerWithCart(mavenirShoppingCart: MavenirShoppingCart): Promise&lt;Cart&gt; {
+  const customerId = mavenirShoppingCart.customerId ?? &#x27;cus_1&#x27;;
+  portalGateway.seedCustomerById(customerId, validAccountCredentials.email ?? &#x27;&#x27;);
+  shoppingCartGateway.seedCart(customerId, mavenirShoppingCart.id, {
+    bundleId: mavenirShoppingCart.bundleId,
+    msisdn: msisdnOn(mavenirShoppingCart),
+  });
+  const customer = await customerRepository.load(validAccountCredentials);
+  return cartRepository.load(customer)!;
+}
+
+afterEach(() =&gt; {
+  shoppingCartGateway.reset();
+  mavenirMsisdnGateway.reset();
+  portalGateway.reset();
+  vi.restoreAllMocks();
+});
+
+story(&#x27;Determine Number&#x27;, () =&gt; {
+  let listResourcesSpy: MockInstance&lt;typeof mavenirMsisdnGateway.listResources&gt;;
+  let searchResourcesSpy: MockInstance&lt;typeof mavenirMsisdnGateway.searchResources&gt;;
+
+  beforeEach(() =&gt; {
+    listResourcesSpy = vi.spyOn(mavenirMsisdnGateway, &#x27;listResources&#x27;);
+    searchResourcesSpy = vi.spyOn(mavenirMsisdnGateway, &#x27;searchResources&#x27;);
+  });
+
+  scenario(&#x27;View available numbers&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let numbers: string[] | Error;
+
+    given(&#x27;a My Paradise customer with a Mavenir shopping cart and no MSISDN&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
+      cart = await customerWithCart(emptyCart);
+    });
+    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
+      numbers = cart.line!.getNumbers();
+    });
+    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
+      expect(listResourcesSpy).toHaveBeenCalledOnce();
+    });
+    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available number values&#x27;, () =&gt; {});
+    then(&#x27;My Paradise returns the available numbers&#x27;, () =&gt; {
+      expect(numbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
+    }).and(&#x27;held available number and chosen available number are in the Available Number list&#x27;, () =&gt; {
+      expect(numbers as string[]).toContain(heldAvailableNumber);
+      expect(numbers as string[]).toContain(chosenAvailableNumber);
+    });
+  });
+
+  scenario(&#x27;View available numbers — MSISDN in cart&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let numbers: string[] | Error;
+
+    given(&#x27;MSISDN held available number is in the Mavenir shopping cart&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
+      cart = await customerWithCart(cartHoldingHeldAvailableNumber);
+    });
+    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
+      numbers = cart.line!.getNumbers();
+    });
+    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
+      expect(listResourcesSpy).toHaveBeenCalledOnce();
+    });
+    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available number values&#x27;, () =&gt; {});
+    then(&#x27;the Customer sees their number is held available number&#x27;, () =&gt; {
+      expect(cart.line?.msisdn).toBe(heldAvailableNumber);
+    }).and(&#x27;My Paradise returns the available numbers&#x27;, () =&gt; {
+      expect(numbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
+    });
+  });
+
+  scenario(&#x27;Refresh available numbers&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let refreshedNumbers: string[] | Error;
+
+    given(&#x27;a My Paradise customer with a Mavenir shopping cart&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
+      cart = await customerWithCart(emptyCart);
+    });
+    when(&#x27;the Customer refreshes the number list&#x27;, () =&gt; {
+      refreshedNumbers = cart.line!.getNumbers();
+    });
+    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
+      expect(listResourcesSpy).toHaveBeenCalledOnce();
+    });
+    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available numbers&#x27;, () =&gt; {});
+    then(&#x27;My Paradise returns a fresh set of available numbers&#x27;, () =&gt; {
+      expect(refreshedNumbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
+    });
+  });
+
+  scenario(&#x27;Search for a number&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let searchResults: string[] | Error;
+
+    given(&#x27;James matching numbers are available in Mavenir&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers(jamesMatchingNumbers);
+      cart = await customerWithCart(emptyCart);
+    });
+    when(&#x27;the Customer searches for numbers matching James search&#x27;, () =&gt; {
+      searchResults = cart.line!.searchNumbers(jamesSearch.converted);
+    });
+    then(&#x27;My Paradise sends the search request to Mavenir with pattern James search&#x27;, () =&gt; {
+      expect(searchResourcesSpy).toHaveBeenCalledWith(jamesSearch.converted);
+    });
+    when(&#x27;Mavenir locks MSISDN resources matching 52637 and returns matching values&#x27;, () =&gt; {});
+    then(&#x27;My Paradise returns Available Numbers matching 52637&#x27;, () =&gt; {
+      expect(searchResults).toEqual(jamesMatchingNumbers);
+    }).and(&#x27;the matching numbers are stored on the line for selection&#x27;, () =&gt; {
+      expect(cart.line?.availableNumbers).toEqual(jamesMatchingNumbers);
+    });
+  });
+
+  scenario(&#x27;Numbers locked by another customer are excluded from results&#x27;, ({ given, when, then }) =&gt; {
+    let cart: Cart;
+    let numbers: string[] | Error;
+
+    given(&#x27;another customer has already locked the standard available numbers in Mavenir&#x27;, async () =&gt; {
+      mavenirMsisdnGateway.seedAvailableNumbers(numbersLockedByAnotherCustomer);
+      cart = await customerWithCart(emptyCart);
+    });
+    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
+      numbers = cart.line!.getNumbers();
+    });
+    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
+      expect(listResourcesSpy).toHaveBeenCalledOnce();
+    });
+    when(&#x27;Mavenir returns only available numbers, excluding the locked ones&#x27;, () =&gt; {});
+    then(&#x27;the locked numbers are not in the available numbers list&#x27;, () =&gt; {
+      expect(numbers).not.toContain(heldAvailableNumber);
+      expect(numbers).not.toContain(chosenAvailableNumber);
+    }).and(&#x27;only the currently available numbers are returned&#x27;, () =&gt; {
+      expect(numbers).toEqual(numbersLockedByAnotherCustomer);
+    });
+  });
+});
+</code></pre></div></figure></div></details><h4>Guidance</h4><div class="fidelity-guidance-body">
 <p>Apply <code>@stories</code> <code>#scenarios</code> § Guidance and § Rules to acceptance tests. Use the <strong>Test shape ladder</strong> in the <code>testing-approach</code> rule under <code>clean_engineering/rules/</code>: start with the real application when it is available, use deterministic external-system stubs while developing, and replace them with end-to-end boundaries when requested.</p>
 <p><strong>Develop the behaviour, not only the test.</strong> Acceptance-test work owns both the executable specification and the production code that satisfies it. Take one Scenario at a time: write the failing acceptance test, invoke the Clean Engineering companion at <code>code</code> fidelity, implement the smallest production change that can pass, rerun the test, refactor when it is green, and then continue to the next behaviour. After two failed fix attempts, diagnose the failure before changing more code.</p>
 <p>Refer to <a href="../language-tools.md"><code>../language-tools.md</code></a> for language-specific test tools and idioms.</p>
