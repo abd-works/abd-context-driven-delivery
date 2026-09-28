@@ -77,6 +77,7 @@ export class KnowledgeGraphHttpClient {
     if (filter.node) params.set('node', filter.node);
     if (filter.violations) params.set('violations', 'true');
     appendList(params, 'rule', filter.rules, filter.rule);
+    appendList(params, 'rule_source', filter.ruleSources);
     const query = params.toString();
     const suffix = query ? `?${query}` : '';
     const response = await fetch(`/api/knowledge-graphs/${id}${suffix}`);
@@ -359,6 +360,7 @@ export function useKnowledgeGraph(id: string) {
       node_types: [],
       relationship_types: [...RELATIONSHIP_KINDS],
       rules: [],
+      rule_sources: ['base', 'project'],
     },
     selectedNode: client?.presentation.selected_node ?? null,
     selectedTree: client?.presentation.selected_tree ?? null,

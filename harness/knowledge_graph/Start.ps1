@@ -27,7 +27,7 @@ for cat in ('practices', 'tools', 'actions'):
     path = str(repo / cat)
     if path not in sys.path:
         sys.path.insert(0, path)
-from harness.mcp.codeql_query_daemon import ensure_query_server
-client = ensure_query_server(repo)
+from harness.mcp.codeql_query_daemon import QueryServerClient
+client = QueryServerClient().ensure_query_server(repo)
 print(f'query-server daemon pid={client.pid} port={client.port}')
 "@

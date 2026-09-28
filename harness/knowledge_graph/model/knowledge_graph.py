@@ -291,6 +291,7 @@ class KnowledgeGraph:
                     "message": hit.message,
                     "practice": hit.practice,
                     "fidelity": hit.fidelity,
+                    "tag": getattr(hit, "tag", "base") or "base",
                 }
                 for hit in hits
             ],

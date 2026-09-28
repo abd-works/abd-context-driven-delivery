@@ -9,7 +9,7 @@ from harness.guidance.rule import Rule
 from .graph_rules import GraphRule
 
 
-def load_graph_rules_from_markdown() -> List[GraphRule]:
+def load_graph_rules_from_markdown(root=None) -> List[GraphRule]:
     from practices.bdd.bdd import Bdd
     from practices.clean_engineering.clean_engineering import CleanEngineering
     from practices.ddd.ddd import Ddd
@@ -26,14 +26,14 @@ def load_graph_rules_from_markdown() -> List[GraphRule]:
         ):
         wrapped.extend(_wrap(guidance.rules, practice=practice, shared=True))
         fidelities = getattr(guidance, "fidelities", None)
-        if fidelities is None:
-            continue
-        for name, child in getattr(fidelities, "entries", {}).items():
-            child_rules = getattr(child, "rules", None)
-            for rule in _wrap(child_rules, practice=practice, shared=False):
-                if rule.fidelity is None:
-                    rule.fidelity = getattr(child, "fidelity", None) or name
-                wrapped.append(rule)
+        if fidelities is not None:
+            for name, child in getattr(fidelities, "entries", {}).items():
+                child_rules = getattr(child, "rules", None)
+                for rule in _wrap(child_rules, practice=practice, shared=False):
+                    if rule.fidelity is None:
+                        rule.fidelity = getattr(child, "fidelity", None) or name
+                    wrapped.append(rule)
+        wrapped.extend(guidance.project_rules(root))
     return wrapped
 
 
@@ -45,5 +45,5 @@ def _wrap(collection, *, practice: str, shared: bool) -> List[GraphRule]:
         if isinstance(rule, GraphRule):
             wrapped.append(rule)
         elif isinstance(rule, Rule):
-            wrapped.append(GraphRule(rule, practice=practice, shared=shared))
+            wrapped.append(GraphRule(rule, practice=practice, shared=shared, tag="base"))
     return wrapped

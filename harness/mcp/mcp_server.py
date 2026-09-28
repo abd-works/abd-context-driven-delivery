@@ -216,10 +216,15 @@ class CursorMcpJson:
         """
         data = self._mcp_document(self.user_cursor_mcp_json())
         if data is None:
-            return False
+            if not canonical:
+                return False
+            data = {"mcpServers": {}}
         servers = data["mcpServers"]
         if not self.cdd_stdio_names(servers):
-            return False
+            if not canonical:
+                return False
+            self._rewrite_user_cdd_server(data, server)
+            return True
         if not canonical and self._same_repo_scripts_exist(servers, server):
             return False
         if self._user_host_matches(servers, server):
@@ -264,7 +269,6 @@ class CursorMcpJson:
         servers["cdd"] = spec
         data["mcpServers"] = servers
         self.user_cursor_mcp_json().write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-
 
 class McpStandupFailed(Exception):
     """The MCP host could not stand up or failed diagnose."""
@@ -360,31 +364,40 @@ class McpInstallation(Installation):
     def write_mcp_manifest(self) -> None:
         if not self.mcp_operations:
             return
-        from installation.installer import Installer
-
-        repo = self.repo or Path(__file__).resolve().parents[2]
-        host = repo / "harness" / "mcp" / "scripts" / "start_host.py"
-        payload = {
-            "mcpServers": {
-                "cdd": {
-                    "type": "stdio",
-                    "command": sys.executable,
-                    "args": ["-u", str(host)],
-                    "env": {
-                        "PYTHONPATH": Installer(repo=repo).pythonpath(),
-                        "PYTHONIOENCODING": "utf-8",
-                    },
-                }
-            }
-        }
         dest = self.path / "mcp.json"
         dest.parent.mkdir(parents=True, exist_ok=True)
-        text = json.dumps(payload, indent=2) + "\n"
+        text = json.dumps(self._stdio_manifest(), indent=2) + "\n"
         if dest.is_file() and dest.read_text(encoding="utf-8") == text:
             self.track_write(dest)
             return
         dest.write_text(text, encoding="utf-8")
         self.track_write(dest)
+
+    def _stdio_manifest(self) -> dict[str, Any]:
+        from installation.installer import Installer
+
+        repo = self.repo or Path(__file__).resolve().parents[2]
+        project = self._project_root()
+        host = repo / "harness" / "mcp" / "scripts" / "start_host.py"
+        return {
+            "mcpServers": {
+                "cdd": {
+                    "type": "stdio",
+                    "command": sys.executable,
+                    "args": ["-u", str(host)],
+                    "cwd": str(project),
+                    "env": {
+                        "PYTHONPATH": Installer(repo=repo).pythonpath(),
+                        "PYTHONIOENCODING": "utf-8",
+                        "CDD_PROJECT": str(project),
+                    },
+                }
+            }
+        }
+
+    def _project_root(self) -> Path:
+        path = Path(self.path)
+        return path.parent if path.name == ".cursor" else path
 
     def bind(self, server: Any) -> None:
         self._bound = True

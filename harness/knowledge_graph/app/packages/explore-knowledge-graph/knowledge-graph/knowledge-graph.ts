@@ -33,6 +33,7 @@ export const RuleHitSchema = z.object({
   body: z.string().default(''),
   practice: z.string().default(''),
   fidelity: z.string().nullable().default(null),
+  tag: z.string().default('base'),
 });
 
 export const NodeSchema = z.object({
@@ -43,6 +44,10 @@ export const NodeSchema = z.object({
   semantic_type: z.string(),
   properties: z.record(z.string()).default({}),
   applicable_rules: z.array(z.string()).default([]),
+  rule_catalog: z
+    .array(z.object({ slug: z.string(), tag: z.string().default('base') }))
+    .default([]),
+  rule_tags: z.record(z.string()).default({}),
   violations: z.array(RuleHitSchema).default([]),
   source: SourceRangeSchema.nullable().default(null),
 });
@@ -87,6 +92,7 @@ export type GraphFilter = {
   violations?: boolean;
   rules?: string[];
   rule?: string;
+  ruleSources?: string[];
 };
 
 export type GraphFilterOptions = {
@@ -95,10 +101,12 @@ export type GraphFilterOptions = {
   node_types: string[];
   relationship_types: string[];
   rules: string[];
+  rule_sources: string[];
 };
 
 export type ListedRule = {
   slug: string;
+  tag: string;
   status: 'passing' | 'violating';
   body: string;
   message: string;
@@ -161,12 +169,18 @@ export class RuleHit {
   get fidelity(): string {
     return this.dto.fidelity ?? '';
   }
+
+  get tag(): string {
+    return this.dto.tag || 'base';
+  }
 }
 
 export class NodeRules {
   constructor(
     private readonly applicableRules: readonly string[],
     private readonly hits: readonly RuleHit[],
+    private readonly catalog: readonly { slug: string; tag: string }[] = [],
+    private readonly ruleTags: Record<string, string> = {},
   ) {}
 
   get violations(): RuleHit[] {
@@ -186,7 +200,7 @@ export class NodeRules {
   }
 
   status(ruleSlug: string): 'passing' | 'violating' | 'absent' {
-    if (!this.applicableRules.includes(ruleSlug)) {
+    if (!this.hasRule(ruleSlug)) {
       return 'absent';
     }
     if (this.hits.some((hit) => hit.ruleSlug === ruleSlug)) {
@@ -196,17 +210,44 @@ export class NodeRules {
   }
 
   hasRule(ruleSlug: string): boolean {
+    if (this.catalog.some((entry) => entry.slug === ruleSlug)) {
+      return true;
+    }
     return this.applicableRules.includes(ruleSlug);
   }
 
   details(): ListedRule[] {
-    const slugs = this.applicableRules.length
-      ? this.applicableRules
-      : [...new Set(this.hits.map((hit) => hit.ruleSlug))];
-    return slugs.map((slug) => {
-      const hit = this.hits.find((entry) => entry.ruleSlug === slug);
-      return listedRuleFromHit(slug, hit);
+    return this._entries().map((entry) => {
+      const hit = this.hits.find(
+        (item) => item.ruleSlug === entry.slug && item.tag === entry.tag,
+      );
+      return listedRuleFromHit(entry.slug, hit, entry.tag);
     });
+  }
+
+  private _entries(): { slug: string; tag: string }[] {
+    if (this.catalog.length > 0) {
+      return this.catalog.map((entry) => ({
+        slug: entry.slug,
+        tag: entry.tag || 'base',
+      }));
+    }
+    const slugs = this.applicableRules.length
+      ? [...this.applicableRules]
+      : [...new Set(this.hits.map((hit) => hit.ruleSlug))];
+    return slugs.map((slug) => ({ slug, tag: this._tagForSlug(slug) }));
+  }
+
+  private _tagForSlug(slug: string): string {
+    const hit = this.hits.find((item) => item.ruleSlug === slug);
+    if (hit) {
+      return hit.tag || 'base';
+    }
+    const catalog = this.catalog.find((entry) => entry.slug === slug);
+    if (catalog) {
+      return catalog.tag || 'base';
+    }
+    return this.ruleTags[slug] || 'base';
   }
 
   tally(): { failed: number; total: number } {
@@ -251,7 +292,12 @@ export class GraphNode {
   get rules(): NodeRules {
     if (!this._rules) {
       const hits = this.dto.violations.map((hit) => new RuleHit(hit));
-      this._rules = new NodeRules(this.dto.applicable_rules, hits);
+      this._rules = new NodeRules(
+        this.dto.applicable_rules,
+        hits,
+        this.dto.rule_catalog ?? [],
+        this.dto.rule_tags ?? {},
+      );
     }
     return this._rules;
   }
@@ -462,38 +508,41 @@ export class KnowledgeGraph {
 
   private _nodeViolationCount(node: GraphNode): number {
     const slugs = listed(this.view.filter.rules, this.view.filter.rule);
+    const sources = listed(this.view.filter.ruleSources);
     const seen = new Set<string>();
     for (const hit of node.rules.violations) {
       if (slugs !== null && !slugs.includes(hit.ruleSlug)) {
         continue;
       }
-      seen.add(hit.ruleSlug);
+      if (sources !== null && !sources.includes(hit.tag)) {
+        continue;
+      }
+      seen.add(`${hit.ruleSlug}\0${hit.tag}`);
     }
     return seen.size;
   }
 
   private _listedRules(node: GraphNode): ListedRule[] {
     const slugs = listed(this.view.filter.rules, this.view.filter.rule);
+    const sources = listed(this.view.filter.ruleSources);
+    const chosen = (rule: { slug: string; tag: string }) =>
+      (slugs === null || slugs.includes(rule.slug)) &&
+      (sources === null || sources.includes(rule.tag));
     if (this.view.filter.violations) {
       const seen = new Set<string>();
       const violating: ListedRule[] = [];
       for (const hit of node.rules.violations) {
-        if (seen.has(hit.ruleSlug)) {
+        const tag = hit.tag || 'base';
+        const key = `${hit.ruleSlug}\0${tag}`;
+        if (seen.has(key) || !chosen({ slug: hit.ruleSlug, tag })) {
           continue;
         }
-        if (slugs !== null && !slugs.includes(hit.ruleSlug)) {
-          continue;
-        }
-        seen.add(hit.ruleSlug);
-        violating.push(listedRuleFromHit(hit.ruleSlug, hit));
+        seen.add(key);
+        violating.push(listedRuleFromHit(hit.ruleSlug, hit, tag));
       }
       return violating;
     }
-    const details = node.rules.details();
-    if (slugs === null) {
-      return details;
-    }
-    return details.filter((rule) => slugs.includes(rule.slug));
+    return node.rules.details().filter(chosen);
   }
 
   private _listedRelationships(node: GraphNode): ListedRelationshipKind[] {
@@ -624,7 +673,8 @@ export class KnowledgeGraph {
   private _narrowsToHits(): boolean {
     return (
       Boolean(this.view.filter.violations) ||
-      listed(this.view.filter.rules, this.view.filter.rule) !== null
+      listed(this.view.filter.rules, this.view.filter.rule) !== null ||
+      listed(this.view.filter.ruleSources) !== null
     );
   }
 
@@ -1191,12 +1241,14 @@ export class KnowledgeGraph {
         ...this._allEdges().map((edge) => edge.kind),
       ]),
       rules: this._ruleOptions(),
+      rule_sources: ['base', 'project'],
     };
   }
 
   private _ruleOptions(): string[] {
     const practices = listed(this.view.filter.practices, this.view.filter.practice);
     const stages = listed(this.view.filter.stages, this.view.filter.fidelity);
+    const sources = listed(this.view.filter.ruleSources);
     const slugs: string[] = [];
     for (const node of this._allNodes()) {
       if (!allows(practices, node.practice)) {
@@ -1205,8 +1257,18 @@ export class KnowledgeGraph {
       if (!allows(stages, node.stage)) {
         continue;
       }
-      slugs.push(...node.rules.applicable);
-      slugs.push(...node.rules.violations.map((hit) => hit.ruleSlug));
+      for (const rule of node.rules.details()) {
+        if (sources !== null && !sources.includes(rule.tag)) {
+          continue;
+        }
+        slugs.push(rule.slug);
+      }
+      for (const hit of node.rules.violations) {
+        if (sources !== null && !sources.includes(hit.tag)) {
+          continue;
+        }
+        slugs.push(hit.ruleSlug);
+      }
     }
     if (this.view.filter.violations) {
       const failing = new Set<string>();
@@ -1265,6 +1327,22 @@ export class KnowledgeGraph {
   private _matchesRules(node: GraphNode): boolean {
     const { violations } = this.view.filter;
     const rules = listed(this.view.filter.rules, this.view.filter.rule);
+    const sources = listed(this.view.filter.ruleSources);
+    if (sources !== null) {
+      const matching = node.rules.details().filter((rule) => {
+        if (!sources.includes(rule.tag)) {
+          return false;
+        }
+        return rules === null || rules.includes(rule.slug);
+      });
+      if (matching.length === 0) {
+        return false;
+      }
+      if (violations) {
+        return matching.some((rule) => rule.status === 'violating');
+      }
+      return true;
+    }
     if (rules !== null && !rules.some((slug) => node.rules.hasRule(slug))) {
       return false;
     }
@@ -1493,9 +1571,10 @@ function findListedNode(
   return null;
 }
 
-function listedRuleFromHit(slug: string, hit?: RuleHit): ListedRule {
+function listedRuleFromHit(slug: string, hit?: RuleHit, tag?: string): ListedRule {
   return {
     slug,
+    tag: hit?.tag || tag || 'base',
     status: hit ? 'violating' : 'passing',
     body: hit?.body || RULE_GUIDANCE[slug] || '',
     message: hit?.message ?? '',

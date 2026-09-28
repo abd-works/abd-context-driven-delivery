@@ -260,20 +260,26 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
         lambda: {"nodes": [], "relationships": []}
     )
     practices: dict[str, str] = {}
-    rule_slugs: dict[tuple[str, str], list[str]] = {}
+    rule_rows: dict[tuple[str, str], list] = {}
     for node in graph.nodes.values():
         practice = getattr(node, "practice", "") or "node"
         practices[node.node_id] = practice
         semantic = node.semantic_type()
         key = (practice, semantic)
-        if key not in rule_slugs:
-            rule_slugs[key] = [
-                rule.slug
-                for rule in graph.rule_registry.rules_for_node(
+        if key not in rule_rows:
+            rule_rows[key] = list(
+                graph.rule_registry.rules_for_node(
                     practice=practice,
                     semantic_type=semantic,
                 )
-            ]
+            )
+        matched = rule_rows[key]
+        rule_tags: dict[str, str] = {}
+        rule_catalog: list[dict[str, str]] = []
+        for rule in matched:
+            tag = getattr(rule, "tag", "base") or "base"
+            rule_tags[rule.slug] = tag
+            rule_catalog.append({"slug": rule.slug, "tag": tag})
         hits = graph.violations_for(node)
         grouped[practice]["nodes"].append(
             {
@@ -283,13 +289,16 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
                 "fidelity": closest_fidelity(practice, semantic),
                 "semantic_type": semantic,
                 "properties": {},
-                "applicable_rules": rule_slugs[key],
+                "applicable_rules": [rule.slug for rule in matched],
+                "rule_tags": rule_tags,
+                "rule_catalog": rule_catalog,
                 "violations": [
                     {
                         "rule_slug": hit.rule_slug,
                         "message": hit.message,
                         "practice": hit.practice,
                         "fidelity": hit.fidelity,
+                        "tag": getattr(hit, "tag", "base") or "base",
                     }
                     for hit in hits
                 ],

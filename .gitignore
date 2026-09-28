@@ -21,14 +21,17 @@ sandbox/node_modules/
 .kilo/
 tools/agent_skills/.deploy-state.json
 primitives/harness/.deploy-state.json
+installation/.install-state.json
 
 # SessionLog append-only audit trails (runtime; not sprint artifacts)
 **/logs/events.log
 
 # Hook runtime logs under active session folders (archived to .sessions/closed/ on close)
 .context/sessions/*/logs/
+.sessions/default/logs/dispatch.debug
 .context/prompt-log.txt
 .context/hooks/turn/auto_turn.last_run.json
+tools/.context/hooks/turn/auto_turn.last_run.json
 primitives/hooks/dispatch.debug
 primitives/hooks/skill_inject.debug
 primitives/hooks/prompt_echo.debug

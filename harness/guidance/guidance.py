@@ -168,6 +168,33 @@ class PracticeGuidance(Guidance):
     def context_index_key(self) -> str:
         return AssetLocator(self, "").class_file_directory().name
 
+    def project_rules(self, root=None) -> list:
+        """Custom rulesets from the working folder, tagged project."""
+        from harness.guidance.project_rules import load_project_rules
+
+        folder = self._working_folder(root)
+        if folder is None:
+            return []
+        fidelities = getattr(self, "fidelities", None)
+        names = list(getattr(fidelities, "entries", {}) or {})
+        return load_project_rules(folder, self.context_index_key, names)
+
+    def _working_folder(self, root=None) -> Path | None:
+        workspace = getattr(self, "workspace", None)
+        candidates = (
+            root,
+            getattr(workspace, "path", None) if workspace is not None else None,
+            getattr(self, "path", None),
+        )
+        for candidate in candidates:
+            if candidate is None:
+                continue
+            text = str(candidate).strip()
+            if not text or text == ".":
+                continue
+            return Path(text)
+        return None
+
     @property
     def supported_formats(self) -> frozenset:
         own = dict(getattr(self, "_formats", None) or {})
