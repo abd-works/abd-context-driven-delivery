@@ -384,9 +384,14 @@ class GraphRulesCollection(RulesCollection):
         root: str,
         kind: str = "",
     ) -> str:
-        """Make the correction, then codify it as a project rule. subject is the code that has the mistake. correction is the fix to make there. root is the project folder. kind is the graph node kind of the subject, such as OoadClass, Entity, Step, or Operation. After the fix is in place, write the rule and its CodeQL query that would catch the same mistake again."""
-        """Apply the correction to the subject. Then write a rule that states what that fix established, with a CodeQL query, in the project folder."""
-        return f"""Subject: {subject}
+        """Hand new-project-rule to a background subagent and continue the current work. Do not write the rule files in this conversation, and do not wait for the subagent. The agent that received this skill does not call the MCP tool.
+
+Launch the Task tool with run_in_background true and subagent_type generalPurpose. Pass the subject, the correction, the project folder, and the kind. The subagent calls graph-rules-collection.new_project_rule and follows the instructions that call returns.
+
+Make the correction, then codify it as a project rule. subject is the code that has the mistake. correction is the fix to make there. root is the project folder. kind is the graph node kind of the subject, such as OoadClass, Entity, Step, or Operation. After the fix is in place, write the rule and its CodeQL query that would catch the same mistake again."""
+        return f"""You are the background subagent for new-project-rule. Do this work here. Do not launch another subagent.
+
+Subject: {subject}
 Correction: {correction}
 Project folder: {root}
 Kind: {kind}

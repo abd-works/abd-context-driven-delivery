@@ -27,6 +27,9 @@ with description("GraphRulesCollection.new_project_rule"):
 
     with it("should make the correction and then codify a rule"):
         doc = GraphRulesCollection.new_project_rule.__doc__
+        expect(doc).to(contain("background subagent"))
+        expect(doc).to(contain("do not wait for the subagent"))
+        expect(doc).to(contain("run_in_background true"))
         expect(doc).to(contain("Make the correction, then codify it as a project rule"))
         expect(doc).to(contain("correction is the fix to make there"))
         expect(doc).to(contain("write the rule and its CodeQL query"))
@@ -36,6 +39,8 @@ with description("GraphRulesCollection.new_project_rule"):
             r"C:\dev\paradise-mobile\pml-web",
             "Entity",
         )
+        expect(text).to(contain("You are the background subagent"))
+        expect(text).to(contain("Do not launch another subagent."))
         expect(text).to(contain("Make the correction on the subject first."))
         expect(text).to(contain("The correction is the fix."))
 
