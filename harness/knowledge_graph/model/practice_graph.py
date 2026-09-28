@@ -451,8 +451,18 @@ class PracticeGraph:
             self._codeql.pack_language(pack) or "python"
         )
         self._codeql.write_rules_query(pack)
-        db = self._rule_database if self._rule_database is not None else self._codeql.ensure_database(language)
+        db = self._database_for(language)
+        if db is None:
+            return {}
         return self._codeql.run_rules(pack / "rules.ql", self._combined_slugs, database=db)
+
+    def _database_for(self, language: str) -> Path | None:
+        if self._rule_database is not None:
+            return self._rule_database
+        if self._codeql.has_database(language):
+            return self._codeql.ensure_database(language)
+        print(f"skip {language} rules; no {language} database", flush=True)
+        return None
 
     def _leftover_rule_rows(self, batch: Dict[str, list]) -> None:
         by_language: Dict[str, list] = {}
@@ -460,12 +470,10 @@ class PracticeGraph:
             language = self._codeql.query_language(query)
             by_language.setdefault(language, []).append(query)
         for language, queries in by_language.items():
+            db = self._database_for(language)
+            if db is None:
+                continue
             try:
-                db = (
-                    self._rule_database
-                    if self._rule_database is not None
-                    else self._codeql.ensure_database(language)
-                )
                 batch.update(self._codeql.run_queries(queries, database=db))
             except Exception as error:
                 print(f"run-queries leftover/{language}  ERROR {error}", flush=True)

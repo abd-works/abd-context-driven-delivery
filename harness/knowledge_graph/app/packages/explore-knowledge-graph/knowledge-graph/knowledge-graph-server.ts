@@ -513,6 +513,10 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
     },
   );
   if (result.status !== 0) {
+    const fromDisk = _graphFromDisk(root);
+    if (fromDisk) {
+      return fromDisk;
+    }
     if (existsSync(cached)) {
       const graph = _graphFromCache(cached, root);
       if (graph) {
@@ -533,7 +537,26 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
   }
   const dto = JSON.parse(line) as KnowledgeGraphDto;
   dto.folder = root;
-  return graphFromWorkspaceDto(dto);
+  const graph = graphFromWorkspaceDto(dto);
+  if (_graphIsEmpty(graph)) {
+    return _graphFromDisk(root) ?? graph;
+  }
+  return graph;
+}
+
+function _graphIsEmpty(graph: KnowledgeGraph): boolean {
+  return graph.toDto().practice_graphs.every((item) => item.nodes.length === 0);
+}
+
+function _graphFromDisk(root: string): KnowledgeGraph | null {
+  if (!_isDir(root)) {
+    return null;
+  }
+  const files = _readWorkspaceFromDisk(root);
+  if (files.length === 0) {
+    return null;
+  }
+  return knowledgeGraphFromWorkspace(root, files, crypto.randomUUID());
 }
 
 function _graphFromCache(cached: string, root: string): KnowledgeGraph | null {

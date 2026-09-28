@@ -188,6 +188,9 @@ class CodeQL:
                     return "javascript" if ts > py else "python"
         return "javascript" if ts > py else "python"
 
+    def has_database(self, language: str | None = None) -> bool:
+        return self._ready_database(language or self.detect_language()) is not None
+
     def ensure_database(self, language: str = "python") -> Path:
         working = self.root / ".codeql" / f"{language}-working-copy"
         ready = self._ready_database(language)
@@ -860,9 +863,13 @@ class CodeQL:
         populate: bool = True,
     ) -> None:
         self._pending_results = results_path
+        language = self.detect_language()
+        self._database_language = language
         if not populate and self._load_cached_facts(graph):
             return
-        db = database if database is not None else self.ensure_database("python")
+        if not populate and database is None:
+            return
+        db = database if database is not None else self.ensure_database(language)
         self._write_subject_filter(_CODEQL_QUERIES, path_root=self._ql_path_root(db))
         populate_queries = self._populate_query_paths()
         print(f"run-queries populate ({len(populate_queries)} queries) ...", flush=True)
@@ -897,6 +904,8 @@ class CodeQL:
         return None
 
     def _load_cached_facts(self, graph: PracticeGraph) -> bool:
+        if self.detect_language() != "python":
+            return False
         try:
             self.load_existing_facts(graph, results_path=self._pending_results)
             return True
@@ -924,10 +933,12 @@ class CodeQL:
         *,
         results_path: str | Path | None = None,
     ) -> None:
-        database = self._ready_database("python")
+        language = self.detect_language()
+        self._database_language = language
+        database = self._ready_database(language)
         if database is None:
             raise CodeQLRunError(
-                f"no python-master or python-working-copy under {self.root / '.codeql'}"
+                f"no {language}-master or {language}-working-copy under {self.root / '.codeql'}"
             )
         populate_queries = self._populate_query_paths()
         started = time.perf_counter()

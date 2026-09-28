@@ -396,9 +396,12 @@ def main(
         )
         server = None
     try:
-        CodeQL(workspace).populate(graph, populate=populate)
-        slugs = _slugs_for(graph, selected)
-        graph.evaluate_rules(slugs)
+        codeql = CodeQL(workspace)
+        codeql.populate(graph, populate=populate)
+        ran_rules = populate or codeql.has_database()
+        if ran_rules:
+            slugs = _slugs_for(graph, selected)
+            graph.evaluate_rules(slugs)
         if as_json:
             print(
                 f"loaded {len(graph.nodes)} nodes, {len(graph.relationships)} edges",
@@ -410,6 +413,13 @@ def main(
             export_path.write_text(json.dumps(payload), encoding="utf-8")
             print(f"wrote {export_path}", file=log, flush=True)
             print(json.dumps(payload), flush=True)
+            return
+        if not ran_rules:
+            print(
+                f"no CodeQL database under {workspace / '.codeql'}; skipped rules",
+                file=log,
+                flush=True,
+            )
             return
         print(
             f"full run: {len(slugs.names)} graph rules "
