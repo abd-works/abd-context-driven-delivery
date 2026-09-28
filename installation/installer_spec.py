@@ -540,6 +540,54 @@ with description("an MCP manifest file") as self:
             expect((self.tree / "mcp.json").exists()).to(equal(False))
 
 
+with description("an MCP install into a project .cursor folder") as self:
+    with before.each:
+        self._user_mcp = Path.home() / ".cursor" / "mcp.json"
+        self._user_mcp_before = (
+            self._user_mcp.read_text(encoding="utf-8") if self._user_mcp.is_file() else None
+        )
+        self._user_mcp.parent.mkdir(parents=True, exist_ok=True)
+        self._user_mcp.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "cdd": {
+                            "type": "stdio",
+                            "command": "python",
+                            "args": ["-u", str(_REPO_ROOT / "harness" / "mcp" / "scripts" / "start_host.py")],
+                        }
+                    }
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        self._tmp = tempfile.mkdtemp()
+        self.project = Path(self._tmp)
+        self.cursor = self.project / ".cursor"
+        self.cursor.mkdir()
+        Installer(ide="Cursor", path=self.cursor, repo=_REPO_ROOT).install([SampleMcpOps()])
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+        if self._user_mcp_before is None:
+            if self._user_mcp.is_file():
+                self._user_mcp.unlink()
+        else:
+            self._user_mcp.write_text(self._user_mcp_before, encoding="utf-8")
+
+    with it("should set cwd and CDD_PROJECT to the project root"):
+        data = json.loads((self.cursor / "mcp.json").read_text(encoding="utf-8"))
+        server = data["mcpServers"]["cdd"]
+        expect(server["cwd"]).to(equal(str(self.project)))
+        expect(server["env"]["CDD_PROJECT"]).to(equal(str(self.project)))
+
+    with it("should remove cdd from the user Cursor mcp.json"):
+        data = json.loads(self._user_mcp.read_text(encoding="utf-8"))
+        expect("cdd" in data.get("mcpServers", {})).to(equal(False))
+
+
 with description("an installer that has finished writing the IDE path") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()

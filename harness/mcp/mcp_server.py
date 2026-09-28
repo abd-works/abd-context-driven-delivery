@@ -265,6 +265,20 @@ class CursorMcpJson:
         data["mcpServers"] = servers
         self.user_cursor_mcp_json().write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
+    def remove_user_cdd_servers(self) -> bool:
+        """Drop user-level cdd entries so Cursor uses the project mcp.json."""
+        data = self._mcp_document(self.user_cursor_mcp_json())
+        if data is None:
+            return False
+        servers = data["mcpServers"]
+        names = self.cdd_stdio_names(servers)
+        if not names:
+            return False
+        for name in names:
+            servers.pop(name, None)
+        self.user_cursor_mcp_json().write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        return True
+
 
 class McpStandupFailed(Exception):
     """The MCP host could not stand up or failed diagnose."""
@@ -360,31 +374,54 @@ class McpInstallation(Installation):
     def write_mcp_manifest(self) -> None:
         if not self.mcp_operations:
             return
+        dest = self.path / "mcp.json"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        text = json.dumps(self._stdio_manifest(), indent=2) + "\n"
+        if dest.is_file() and dest.read_text(encoding="utf-8") == text:
+            self.track_write(dest)
+            self._prefer_project_over_user_host()
+            return
+        dest.write_text(text, encoding="utf-8")
+        self.track_write(dest)
+        self._prefer_project_over_user_host()
+
+    def _stdio_manifest(self) -> dict[str, Any]:
         from installation.installer import Installer
 
         repo = self.repo or Path(__file__).resolve().parents[2]
+        project = self._project_root()
         host = repo / "harness" / "mcp" / "scripts" / "start_host.py"
-        payload = {
+        return {
             "mcpServers": {
                 "cdd": {
                     "type": "stdio",
                     "command": sys.executable,
                     "args": ["-u", str(host)],
+                    "cwd": str(project),
                     "env": {
                         "PYTHONPATH": Installer(repo=repo).pythonpath(),
                         "PYTHONIOENCODING": "utf-8",
+                        "CDD_PROJECT": str(project),
                     },
                 }
             }
         }
-        dest = self.path / "mcp.json"
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        text = json.dumps(payload, indent=2) + "\n"
-        if dest.is_file() and dest.read_text(encoding="utf-8") == text:
-            self.track_write(dest)
+
+    def _project_root(self) -> Path:
+        path = Path(self.path)
+        return path.parent if path.name == ".cursor" else path
+
+    def _is_canonical_repo_cursor(self) -> bool:
+        if self.repo is None:
+            return False
+        return Path(self.path).resolve() == (Path(self.repo) / ".cursor").resolve()
+
+    def _prefer_project_over_user_host(self) -> None:
+        if Path(self.path).name != ".cursor":
             return
-        dest.write_text(text, encoding="utf-8")
-        self.track_write(dest)
+        if self._is_canonical_repo_cursor():
+            return
+        CursorMcpJson().remove_user_cdd_servers()
 
     def bind(self, server: Any) -> None:
         self._bound = True

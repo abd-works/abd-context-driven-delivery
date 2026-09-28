@@ -30,6 +30,15 @@ class StartHost:
                 return candidate
         return self.FALLBACK_REPO
 
+    def find_project(self) -> Path:
+        return Path(os.environ.get("CDD_PROJECT") or os.getcwd()).resolve()
+
+    def ide_path_for(self, project: Path, repo: Path) -> Path:
+        cursor = project / ".cursor"
+        if cursor.is_dir():
+            return cursor
+        return repo / ".cursor"
+
 
 def main() -> None:
     starter = StartHost()
@@ -39,10 +48,12 @@ def main() -> None:
         or os.environ.get("CDD_REPO")
         or os.getcwd()
     )
+    project = starter.find_project()
     repo = starter.find_cdd_repo(requested)
     os.chdir(repo)
     os.environ["PYTHONIOENCODING"] = "utf-8"
     os.environ["CDD_REPO"] = str(repo)
+    os.environ["CDD_PROJECT"] = str(project)
     if str(repo) not in sys.path:
         sys.path.insert(0, str(repo))
     from installation.installer import Installer
@@ -55,8 +66,8 @@ def main() -> None:
     refs = starter.toolset_refs(toolsets)
     if not refs:
         refs = tuple(installer.collect_toolsets())
-    HostPid.from_ide(repo / ".cursor").claim()
-    McpHost.from_refs(refs, repo=str(repo), project=str(repo)).run()
+    HostPid.from_ide(starter.ide_path_for(project, repo)).claim()
+    McpHost.from_refs(refs, repo=str(repo), project=str(project)).run()
 
 
 if __name__ == "__main__":
