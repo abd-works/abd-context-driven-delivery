@@ -555,6 +555,7 @@ function _filterFromQuery(query: Record<string, unknown>): GraphFilter {
     node: _stringQuery(query.node),
     violations: query.violations === 'true',
     rules: _stringList(query.rule),
+    ruleSources: _stringList(query.rule_source),
   };
 }
 

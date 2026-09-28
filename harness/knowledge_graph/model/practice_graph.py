@@ -77,7 +77,7 @@ class PracticeGraph:
         self._violations_by_node: Dict[str, List[RuleViolation]] = {}
         self.partial_failures: List[str] = []
         self.rule_timings: List[RuleTiming] = []
-        self.rule_registry = rule_registry if rule_registry is not None else RuleRegistry.load()
+        self.rule_registry = rule_registry if rule_registry is not None else RuleRegistry.load(self.root)
         self.modules: Dict[str, Node] = {}
         self.epics: Dict[str, Node] = {}
         self.descriptions: Dict[str, Node] = {}
@@ -302,6 +302,7 @@ class PracticeGraph:
                     location=entry.get("file", ""),
                     line=int(entry.get("line") or 0),
                     source="codeql",
+                    tag=entry.get("tag") or "base",
                 )
                 )
 
@@ -428,7 +429,11 @@ class PracticeGraph:
     def _collect_pack_query(self, rule, hits_lib) -> None:
         if rule.graphQuery is None:
             return
-        if not self._codeql.query_matches_pack(rule.graphQuery):
+        matches = self._codeql.query_matches_pack(rule.graphQuery)
+        if getattr(rule, "tag", "base") == "project" and not (matches and hits_lib.is_file()):
+            self._leftover_queries.append(rule.graphQuery)
+            return
+        if not matches:
             print(
                 f"skip {rule.slug} (query language does not match pack)",
                 flush=True,

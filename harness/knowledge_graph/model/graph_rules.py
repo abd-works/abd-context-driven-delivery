@@ -7,7 +7,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set
 
+from harness.agent_tools.agent_tools import agent_instructions
 from harness.guidance.rule import Rule, RulesCollection
+from harness.mcp.mcp_server import mcp
+from installation.files import Skill
 
 _REPO = Path(__file__).resolve().parents[3]
 _PRACTICES = _REPO / "practices"
@@ -106,6 +109,7 @@ class RuleViolation:
     direct: bool = False
     source: str = "graph"  # graph | codeql
     contributors: List[str] = field(default_factory=list)
+    tag: str = "base"
 
     @classmethod
     def from_entry(cls, graph, entry: dict):
@@ -147,7 +151,15 @@ class RuleViolation:
 
 
 class GraphRule(Rule):
-    def __init__(self, rule: Rule, *, practice: str, shared: bool = False) -> None:
+    def __init__(
+        self,
+        rule: Rule,
+        *,
+        practice: str,
+        shared: bool = False,
+        tag: str = "base",
+        query_pack=None,
+    ) -> None:
         super().__init__(rule.slug, rule.body, rule.fidelity)
         self.scanner = rule.scanner
         parent = getattr(rule, "parent", None)
@@ -155,6 +167,8 @@ class GraphRule(Rule):
             self.parent = parent
         self.practice = practice
         self.shared = shared
+        self.tag = tag or "base"
+        self._query_pack = None if query_pack is None else Path(query_pack)
 
     def validate(self) -> str:
         if self.graphQuery is None:
@@ -175,6 +189,8 @@ class GraphRule(Rule):
 
     @property
     def query_pack(self) -> Path:
+        if self._query_pack is not None:
+            return self._query_pack
         return _PRACTICES / self.practice / "model" / "codeql"
 
     @property
@@ -318,6 +334,7 @@ class GraphRule(Rule):
             line=line or int(getattr(src, "line", 0) or 0),
             source=source,
             contributors=list(contributors or ()),
+            tag=self.tag,
         )
 
 
@@ -357,6 +374,36 @@ def _practice_slug(parent: Any) -> str:
 
 
 class GraphRulesCollection(RulesCollection):
+    @mcp
+    @Skill
+    @agent_instructions
+    def new_project_rule(
+        self,
+        subject: str,
+        correction: str,
+        root: str,
+        kind: str = "",
+    ) -> str:
+        """Make the correction, then codify it as a project rule. subject is the code that has the mistake. correction is the fix to make there. root is the project folder. kind is the graph node kind of the subject, such as OoadClass, Entity, Step, or Operation. After the fix is in place, write the rule and its CodeQL query that would catch the same mistake again."""
+        """Apply the correction to the subject. Then write a rule that states what that fix established, with a CodeQL query, in the project folder."""
+        return f"""Subject: {subject}
+Correction: {correction}
+Project folder: {root}
+Kind: {kind}
+
+Make the correction on the subject first. The correction is the fix.
+Then name a rule that states what that fix established, and write that rule plus its CodeQL query.
+When a base rule already states that fix, skip the new rule files.
+
+Write the bullet in {root}/.context/rules/{{practice}}/{{fidelity}}/rules.md
+Write the query in {root}/.context/rules/{{practice}}/{{fidelity}}/codeql/{{slug}}.ql
+Choose the practice and fidelity from the subject. Practices are stories, ddd, clean_engineering, bdd, and ux. Use the fidelity folder that matches the subject, such as acceptance_tests, scenarios, story_map, tactics, or code.
+
+Add one bullet: **`slug`** - what the fix established, because the mistake comes back when the check is missing.
+When rules.md is new, start it with a yaml fence, alwaysApply false, and globs for that fidelity.
+A TypeScript query starts with import javascript, is @kind problem, and selects the subject, the message, and one contributor.
+"""
+
     @classmethod
     def from_markdown(
         cls,
@@ -384,15 +431,15 @@ class RuleRegistry:
         self.rules: List[GraphRule] = []
 
     @classmethod
-    def load(cls) -> "RuleRegistry":
+    def load(cls, root=None) -> "RuleRegistry":
         registry = cls()
-        registry.load_from_practices()
+        registry.load_from_practices(root)
         return registry
 
-    def load_from_practices(self) -> None:
+    def load_from_practices(self, root=None) -> None:
         from .guidance_rules_loader import load_graph_rules_from_markdown
 
-        self.rules = load_graph_rules_from_markdown()
+        self.rules = load_graph_rules_from_markdown(root)
 
     def runnable(
         self,
@@ -400,15 +447,16 @@ class RuleRegistry:
         slugs: Optional[Set[str]] = None,
         skip: Optional[Set[str]] = None,
     ) -> tuple[List[GraphRule], List[GraphRule]]:
-        seen: Set[str] = set()
+        seen: Set[tuple] = set()
         runnable: List[GraphRule] = []
         skipped: List[GraphRule] = []
         for rule in self.rules:
-            if not rule.graph_evaluated or rule.slug in seen:
+            key = (rule.slug, getattr(rule, "tag", "base") or "base")
+            if not rule.graph_evaluated or key in seen:
                 continue
             if slugs is not None and rule.slug not in slugs:
                 continue
-            seen.add(rule.slug)
+            seen.add(key)
             if skip is not None and rule.slug in skip:
                 skipped.append(rule)
                 continue

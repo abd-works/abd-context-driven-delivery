@@ -60,10 +60,17 @@ class AppliesTo:
 
 
 class Rule:
-    def __init__(self, slug: str, body: str, fidelity: str | None = None) -> None:
+    def __init__(
+        self,
+        slug: str,
+        body: str,
+        fidelity: str | None = None,
+        tag: str = "base",
+    ) -> None:
         self.slug = slug
         self.body = body
         self.fidelity = fidelity
+        self.tag = tag or "base"
         self.scanner: Any = None
 
     def bind_scanner(self, module_dir: Path | None) -> None:

@@ -45,6 +45,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     null,
   );
   const [rules, setRules] = useState<string[] | null>(null);
+  const [ruleSources, setRuleSources] = useState<string[] | null>(null);
   const [violations, setViolations] = useState(false);
   const [folder, setFolder] = useState(scannedFolder);
   const [theme, setTheme] = useState(
@@ -102,6 +103,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     nodeTypes?: string[] | null;
     relationshipTypes?: string[] | null;
     rules?: string[] | null;
+    ruleSources?: string[] | null;
     violations?: boolean;
   }) {
     const practiceValues = 'practices' in next ? next.practices! : practices;
@@ -110,6 +112,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     const relationshipValues =
       'relationshipTypes' in next ? next.relationshipTypes! : relationshipTypes;
     const ruleValues = 'rules' in next ? next.rules! : rules;
+    const sourceValues = 'ruleSources' in next ? next.ruleSources! : ruleSources;
     const violationsValue = next.violations ?? violations;
     filterGraph({
       practices: practiceValues ?? undefined,
@@ -117,6 +120,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
       nodeTypes: nodeTypeValues ?? undefined,
       relationshipTypes: relationshipValues ?? undefined,
       rules: ruleValues ?? undefined,
+      ruleSources: sourceValues ?? undefined,
       violations: violationsValue,
     });
   }
@@ -295,6 +299,15 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               onChange={(next) => {
                 setRelationshipTypes(next);
                 applyFilters({ relationshipTypes: next });
+              }}
+            />
+            <FilterList
+              label="ruleset"
+              values={ruleSources}
+              options={filterOptions.rule_sources ?? ['base', 'project']}
+              onChange={(next) => {
+                setRuleSources(next);
+                applyFilters({ ruleSources: next });
               }}
             />
             <FilterList
