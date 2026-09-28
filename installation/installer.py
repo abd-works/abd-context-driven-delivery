@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 
-from installation.destination import Installation
+from installation.destination import Installation, noCatalog
 from harness.agent_tools.agent_tools import (
     AgentToolSet,
     InstallDestination,
@@ -21,6 +21,7 @@ from harness.hooks.hooks import Hook
 from harness.mcp.mcp_server import Mcp
 
 
+@noCatalog
 @agent_toolset
 class Installer:
     """Collect installable toolsets; then install each tool."""
@@ -43,7 +44,6 @@ class Installer:
             ".venv",
             "node_modules",
             ".git",
-            "harness",
         }
     )
     _CATALOG_DIRS = ("tools", "practices", "actions")
@@ -104,7 +104,7 @@ class Installer:
             return False
 
     def import_path_entries(self, repo: Path | str | None = None) -> list[str]:
-        """Repo root plus tools, practices, and actions. Never ``installation/`` or ``harness/`` (those shadow the MCP SDK)."""
+        """Repo root plus tools, practices, and actions. Never ``installation/`` or ``harness/`` (those shadow the MCP SDK). The deploy walk still parses ``harness/``."""
         root = Path(repo).resolve() if repo is not None else self.repo
         entries = [str(root)]
         for name in self._CATALOG_DIRS:
@@ -167,9 +167,7 @@ class Installer:
             rel_parts = py_file.parts
         if any(part.startswith(".") for part in rel_parts[:-1]):
             return True
-        if rel_parts[:2] == ("harness", "knowledge_graph"):
-            pass
-        elif any(part.lower() in self._SKIP_DIRS for part in py_file.parts):
+        if any(part.lower() in self._SKIP_DIRS for part in rel_parts):
             return True
         name = py_file.name
         if name in self._SKIP_FILE_NAMES:

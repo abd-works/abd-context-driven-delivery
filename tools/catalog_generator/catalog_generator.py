@@ -33,12 +33,14 @@ from typing import Any, Iterable
 
 from harness.guidance.guidance import FidelityGuidance
 from harness.agent_tools import agent_tool, agent_toolset
+from installation.destination import noCatalog, omitted_from_catalog
 from installation.files import skill
 from harness.mcp.mcp_server import mcp
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
 _SKILL_NAME_RE = re.compile(r"^name:\s*(.+?)\s*$", re.MULTILINE)
+_NO_CATALOG = "noCatalog"
 
 # -- Registry ---------------------------------------------------------------
 #
@@ -116,12 +118,14 @@ class RegistryEntry:
         catalog._prepare_tool_kanban()
         page = page_shell(
             title=f"{self.display_name} — CDD Catalog",
-            h1=self.display_name,
-            tagline="Context tool",
+            h1=catalog._harness_headline(),
+            tagline=catalog._harness_tagline(),
             body_inner=body,
             commons_prefix="../commons/",
             nav_prefix="../",
             nav_current="context-tools",
+            show_hero=True,
+            body_wrap_class="skill-detail-page",
             kanban_embed=catalog._kanban_embed(),
         )
         CatalogPage(catalog.out_root).write(f"context-tools/{owner_toolset_name(owner)}.html", page)
@@ -141,13 +145,14 @@ class RegistryEntry:
         catalog._utility_bodies.append(body)
         page = page_shell(
             title=f"{self.display_name} — utility",
-            h1=self.display_name,
-            tagline="Utility",
+            h1=catalog._harness_headline(),
+            tagline=catalog._harness_tagline(),
             body_inner=body,
             commons_prefix="../commons/",
             nav_prefix="../",
+            
             nav_current="tools",
-            show_hero=False,
+            show_hero=True,
             body_wrap_class="skill-detail-page",
             kanban_embed=catalog._kanban_embed(),
         )
@@ -170,6 +175,8 @@ def fidelity_names_by_stage(practice: type) -> dict[str, str]:
     }
     names: dict[str, str] = {}
     for key, child in entries.items():
+        if omitted_from_catalog(child):
+            continue
         board_key = stage_to_board.get(str(getattr(child, "stage", "") or "").strip().lower())
         if not board_key:
             continue
@@ -191,17 +198,23 @@ def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
     (``ImportError`` / ``AttributeError``) immediately - "nothing missing"
     is a hard fail at discover time, not a silently dropped row.
     """
-    practices: list[RegistryEntry] = []
-    for name, module_path, class_name in CONTEXT_TOOL_REGISTRY:
+    return _registry_entries(CONTEXT_TOOL_REGISTRY), _registry_entries(UTILITY_REGISTRY)
+
+
+def _registry_entries(rows: tuple[tuple[str, str, str], ...]) -> list[RegistryEntry]:
+    """Resolve registry rows, dropping classes marked ``@noCatalog``."""
+    entries: list[RegistryEntry] = []
+    for name, module_path, class_name in rows:
         entry = RegistryEntry(name, module_path, class_name)
         entry.cls = entry._load_class()
-        practices.append(entry)
-    utilities: list[RegistryEntry] = []
-    for name, module_path, class_name in UTILITY_REGISTRY:
-        entry = RegistryEntry(name, module_path, class_name)
-        entry.cls = entry._load_class()
-        utilities.append(entry)
-    return practices, utilities
+        if keep_in_catalog(entry):
+            entries.append(entry)
+    return entries
+
+
+def keep_in_catalog(entry: RegistryEntry) -> bool:
+    """Registry rows marked ``@noCatalog`` stay deployed and stay out of the catalog."""
+    return not omitted_from_catalog(entry.cls)
 
 # -- Fidelity scraping --------------------------------------------------------
 
@@ -311,13 +324,13 @@ class CatalogFidelityGuidance(FidelityGuidance):
         catalog._prepare_fidelity_kanban(self.key)
         fid_page = page_shell(
             title=f"{display_label(self.key)} — {entry.display_name}",
-            h1=display_label(self.key),
-            tagline=f"{entry.display_name} · fidelity",
+            h1=catalog._harness_headline(),
+            tagline=catalog._harness_tagline(),
             body_inner=fid_body,
             commons_prefix="../commons/",
             nav_prefix="../",
             nav_current="fidelities",
-            show_hero=False,
+            show_hero=True,
             body_wrap_class="skill-detail-page",
             kanban_embed=catalog._kanban_embed(),
         )
@@ -328,7 +341,7 @@ class CatalogFidelityGuidance(FidelityGuidance):
 
     @classmethod
     def scrape(cls, practice: type) -> list[CatalogFidelityGuidance]:
-        """For every fidelity on ``practice``, resolve default format and ``##`` body."""
+        """For every fidelity on ``practice``, resolve default format and the ``###`` body."""
         from harness.markdown import Markdown
 
         keys = cls._fidelity_keys(practice)
@@ -340,7 +353,11 @@ class CatalogFidelityGuidance(FidelityGuidance):
         overview = extract_tool_overview(guide_text) if guide_text else ""
         results: list[CatalogFidelityGuidance] = []
         for fidelity_key in keys:
-            section = HeadingSection(guide_text).extract(fidelity_key) if guide_text else None
+            section = (
+                HeadingSection(guide_text, level=3).extract(fidelity_key)
+                if guide_text
+                else None
+            )
             default_format = Markdown(None, "").fidelity_format(section) if section else None
             if not default_format:
                 default_format = getattr(practice, "_fidelity_format_defaults", {}).get(
@@ -368,6 +385,7 @@ class CatalogFidelityGuidance(FidelityGuidance):
             return [
                 getattr(child, "name", None) or getattr(child, "fidelity", key)
                 for key, child in entries.items()
+                if not omitted_from_catalog(child)
             ]
         return []
 
@@ -525,6 +543,66 @@ def extract_tool_overview(markdown: str) -> str:
         body_lines.pop()
     return "\n".join(body_lines).strip()
 
+
+def extract_shared_sections(markdown: str, fidelity_keys: set[str]) -> str:
+    """Practice-level ``##`` sections, stopping before each fidelity.
+
+    ``## Fidelities`` and any heading that names a fidelity stay off the
+    practice page. Those bodies belong on the fidelity pages.
+    """
+    if not markdown.strip():
+        return ""
+    skip = {key.lower() for key in fidelity_keys}
+    skip.add("fidelities")
+    heading_re = re.compile(r"^##\s+(.+?)\s*$")
+    chunks: list[str] = []
+    current: list[str] = []
+    include = False
+    for line in markdown.splitlines():
+        match = heading_re.match(line.strip())
+        if match:
+            if include and current:
+                chunks.append("\n".join(current).strip())
+            include = match.group(1).strip().lower() not in skip
+            current = [line] if include else []
+            continue
+        if include:
+            current.append(line)
+    if include and current:
+        chunks.append("\n".join(current).strip())
+    return "\n\n".join(chunk for chunk in chunks if chunk)
+
+
+def fidelity_opening_paragraph(markdown: str, fidelity_key: str) -> str:
+    """First paragraph of a fidelity's Overview — the outline, not the rules."""
+    section = HeadingSection(markdown, level=3).extract(fidelity_key)
+    if not section:
+        return ""
+    overview = HeadingSection(section, level=4).extract("Overview")
+    return _first_prose_paragraph(overview if overview is not None else section)
+
+
+def _first_prose_paragraph(text: str) -> str:
+    lines: list[str] = []
+    started = False
+    in_fence = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if started:
+                break
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if not stripped or stripped.startswith("#"):
+            if started:
+                break
+            continue
+        started = True
+        lines.append(line)
+    return "\n".join(lines).strip()
+
 def importlib_module_file(module_path: str) -> str:
     """Thin wrapper so ``scrape_fidelities`` needs only one import surface."""
     module = importlib.import_module(module_path)
@@ -622,7 +700,10 @@ class ActionResolution:
         if item.name.startswith("_") or item.name in _LIFECYCLE_ACTION_SKIP:
             return
         self.node = item
-        if _ACTION_DECORATOR_NAME in self._decorator_names():
+        names = self._decorator_names()
+        if _NO_CATALOG in names:
+            return
+        if _ACTION_DECORATOR_NAME in names:
             methods.append(item)
 
     def _init_peer_kit_attrs(self) -> dict[str, str]:
@@ -802,7 +883,10 @@ class ActionResolution:
             instance = getattr(module, class_name)()
             discovered = instance.agent_tools
             if action_name in discovered:
-                actions[action_name] = discovered[action_name]
+                tool = discovered[action_name]
+                if omitted_from_catalog(getattr(tool, "callable", tool)):
+                    continue
+                actions[action_name] = tool
 
         class _Owner:
             pass
@@ -823,13 +907,13 @@ class ActionResolution:
         catalog._action_bodies.append(body)
         page = page_shell(
             title=f"{self.name} — lifecycle action",
-            h1=self.name,
-            tagline="Lifecycle action",
+            h1=catalog._harness_headline(),
+            tagline=catalog._harness_tagline(),
             body_inner=body,
             commons_prefix="../commons/",
             nav_prefix="../",
             nav_current="actions",
-            show_hero=False,
+            show_hero=True,
             body_wrap_class="skill-detail-page",
             kanban_embed=catalog._kanban_embed(),
         )
@@ -1385,14 +1469,14 @@ class CatalogFidelity:
         self.default_format = defaults.get(self.fidelity_name)
 
     def _guidance_preview(self, label: str) -> str:
-        from catalog_generator.foundry_chrome import markdown_to_html
+        from catalog_generator.foundry_chrome import markdown_to_html, wrap_guidance_body
 
         overview_html = markdown_to_html(self.overview) if self.overview.strip() else ""
         fid_md = f"## {label}\n\n{self.guidance}" if self.guidance else self.guidance
         bits = []
         if overview_html:
             bits.append(f"<h2>Overview</h2>\n{overview_html}")
-        bits.append(markdown_to_html(fid_md))
+        bits.append(wrap_guidance_body(markdown_to_html(fid_md)))
         return "\n".join(bits)
 
     def generate_catalog(self) -> str:
@@ -1440,48 +1524,76 @@ class CatalogContextTool:
         self.guidances: list[CatalogFidelityGuidance] = []
 
     def generate_catalog(self) -> str:
-        """Render one context-tool page body - badge, Purpose, fidelity cards
-        (links only — never nest full fidelity pages)."""
+        """Render one practice page the way a fidelity page is rendered.
+
+        Shared practice sections (overview, guidance, shared rules, and any
+        other practice-level heading) sit in the guidance block. Fidelity
+        pages are linked, not inlined.
+        """
         import html as html_mod
 
-        from catalog_generator.foundry_chrome import display_label, markdown_to_html
+        from catalog_generator.foundry_chrome import markdown_to_html, wrap_guidance_body
 
-        owner = self.owner
         display_name = self.display_name
-        guidances = self.guidances
-        purpose = (getattr(owner, "__doc__", "") or "").strip()
-        overview = guidances[0].overview if guidances else ""
-        purpose_html = markdown_to_html(overview) if overview else f"<p>{html_mod.escape(purpose)}</p>"
-        slug = self._owner_slug()
-        fidelities_section = self._fidelity_cards()
-        return (
-            f'<article class="context-tool-page" data-tool="{html_mod.escape(display_name)}">\n'
-            f'  <header><span class="badge">{html_mod.escape(display_name)}</span></header>\n'
-            f'  <div class="purpose-html">{purpose_html}</div>\n'
-            f"{fidelities_section}"
-            f"</article>"
+        shared_html = wrap_guidance_body(markdown_to_html(self._shared_markdown()))
+        guidance = (
+            f'<section class="install-block fidelity-guidance" aria-label="Practice guidance">'
+            f"{shared_html}</section>\n"
+            if shared_html.strip()
+            else ""
         )
+        return (
+            f'<header class="page-hero--detail fidelity-detail-header">'
+            f'<p class="s-name">Practice</p>'
+            f'<h1 class="page-headline">{html_mod.escape(display_name)}</h1>'
+            f"</header>\n"
+            f"{guidance}"
+            f"{self._fidelity_section()}"
+        )
+
+    def _guide_markdown(self) -> str:
+        module_dir = Path(getattr(self.owner, "module_dir", Path("."))).resolve()
+        guide = module_dir / f"{module_dir.name}.md"
+        if not guide.is_file():
+            return ""
+        return guide.read_text(encoding="utf-8")
+
+    def _shared_markdown(self) -> str:
+        keys = {guidance.key for guidance in self.guidances}
+        return extract_shared_sections(self._guide_markdown(), keys)
 
     def _owner_slug(self) -> str:
         return RegistryEntry("", "", "", type(self.owner)).toolset_name()
 
-    def _fidelity_cards(self) -> str:
+    def _fidelity_section(self) -> str:
         import html as html_mod
 
-        from catalog_generator.foundry_chrome import display_label
+        from catalog_generator.foundry_chrome import display_label, markdown_to_html
 
         slug = self._owner_slug()
-        if slug == "cdd":
+        guide = self._guide_markdown()
+        rows: list[str] = []
+        for guidance in self.guidances:
+            name = guidance.key
+            title = display_label(name)
+            opening = fidelity_opening_paragraph(guide, name)
+            opening_html = markdown_to_html(opening) if opening else ""
+            rows.append(
+                '<div class="practice-fidelity">'
+                f'<h3 class="practice-fidelity__title">'
+                f'<a href="../fidelities/{html_mod.escape(slug)}-{html_mod.escape(name)}.html">'
+                f"{html_mod.escape(title)}</a></h3>"
+                f'<div class="practice-fidelity__opening">{opening_html}</div>'
+                "</div>"
+            )
+        if not rows:
             return ""
-        fidelity_names = [guidance.key for guidance in self.guidances]
-        cards = "".join(
-            f'<a class="cap-card fidelity-card" href="../fidelities/{slug}-{name}.html">'
-            f'<p class="cap-card__title">{html_mod.escape(display_label(name))}</p>'
-            f'<p class="cap-card__label">Fidelity</p>'
-            f'<p class="cap-card__more">Open →</p></a>'
-            for name in fidelity_names
+        return (
+            '<section class="install-block" aria-label="Fidelities">'
+            "<h2>Fidelities</h2>"
+            f'<div class="practice-fidelities">{"".join(rows)}</div>'
+            "</section>\n"
         )
-        return f'  <section class="fidelities cap-grid">{cards}</section>\n'
 
 class CatalogUtility:
     """The utility-row detail page for one plain-utility ``Toolset`` instance."""
@@ -1653,6 +1765,8 @@ class Catalog:
     def add_guidance(self, guidance: Any) -> None:
         from harness.markdown import HTML, Markdown
 
+        if omitted_from_catalog(guidance):
+            return
         slug = getattr(guidance, "context_index_key", None) or type(guidance).__name__
         for label in ("context", "guidance", "examples"):
             try:
@@ -1746,6 +1860,7 @@ class Catalog:
         self._write_action_pages()
         self._write_utility_pages()
         self._write_hub()
+        self._write_source_docs()
         self._write_workflow()
         self._write_grid_pages()
 
@@ -1800,18 +1915,25 @@ class Catalog:
         self._kanban_highlight_fidelity = fidelity_key
         self._kanban_initial_family = tool_name
 
+    def _harness_headline(self) -> str:
+        return 'ABD <span class="accent">Context Driven Delivery</span> Harness'
+
+    def _harness_tagline(self) -> str:
+        return (
+            "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
+            f'Get the repo <a href="{self.repo_url}" '
+            'target="_blank" rel="noopener noreferrer">here</a>.'
+        )
+
     def _write_hub(self) -> None:
         from catalog_generator.foundry_chrome import page_shell, render_hub_board
 
         board = render_hub_board(self._board_tools, self._action_dicts, self._utility_dicts)
         hub = page_shell(
             title="ABD Context Driven Delivery Harness",
-            h1='ABD <span class="accent">Context Driven Delivery</span> Harness',
-            tagline=(
-                "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
-                f'Get the repo <a href="{self.repo_url}" '
-                'target="_blank" rel="noopener noreferrer">here</a>.'
-            ),
+            h1=self._harness_headline(),
+            tagline=self._harness_tagline(),
+            after_tagline=self._hub_doc_links(),
             body_inner=self._hub_body(),
             commons_prefix="commons/",
             nav_prefix="",
@@ -1820,6 +1942,567 @@ class Catalog:
         )
         self.write_page("index.html", hub)
 
+    def _hub_doc_links(self) -> str:
+        return (
+            '<a class="page-hero__approach-btn" href="cdd-approach.html">The approach</a>'
+        )
+
+    def _write_source_docs(self) -> None:
+        self._write_approach_page()
+        self._write_approach_practice_pages()
+        self._write_coming_soon_pages()
+        self._write_readme_page()
+
+    def _approach_practices(self) -> tuple[dict, ...]:
+        practices = (
+            {
+                "slug": "iterate-and-learn",
+                "title": "Iterate and Learn",
+                "summary": (
+                    "Limit each run to what the team can review. Each pass increases fidelity."
+                ),
+                "bullets": (
+                    "Limit each AI run to the cognitive load of the team, so people can guide, review, and adjust what it generates.",
+                    "Keep the context window small. Even frontier models produce better output well under their maximum.",
+                    "Layer context through successive generations. Each pass increases fidelity.",
+                ),
+                "paras": (
+                    "Limit each AI run to the cognitive load of the team, so people can guide, review, and adjust what it generates.",
+                    "Keep the context window small. Even frontier models produce better output well under their maximum.",
+                    "Layer context through successive generations. Each pass increases fidelity.",
+                    (
+                        "The CDD harness includes "
+                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md">Sketch</a>, '
+                        "a session where a person and AI probe, grill, illustrate, and align. "
+                        "Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback."
+                    ),
+                ),
+                "caption": (
+                    "The CDD harness includes "
+                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md">Sketch</a>, '
+                    "a session where a person and AI probe, grill, illustrate, and align. "
+                    "Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback."
+                ),
+            },
+            {
+                "slug": "product-engineering",
+                "title": "Product Engineering",
+                "summary": (
+                    "The fundamentals of product engineering have not changed."
+                ),
+                "paras": (
+                    "The fundamentals of product engineering have not changed.",
+                    "Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.",
+                ),
+                "bullets": (
+                    "The fundamentals of product engineering have not changed.",
+                    "Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.",
+                ),
+            },
+            {
+                "slug": "code-is-context",
+                "title": "Code Is Context",
+                "summary": (
+                    "Managing context is critical. With the right product engineering practices, your code is the "
+                    "primary source of truth for how the business and the technology work — linking, versioning, "
+                    "reviews, and auditing come practically for free."
+                ),
+                "bullets": (
+                    "Code is the source of truth for how the business and the technology work. Linking, versioning, reviews, and auditing come with it.",
+                    "Refine context into an executable specification that tests the actual solution.",
+                    "Write the code as a direct expression of the design, so it can be turned into docs and back.",
+                ),
+                "paras": (
+                    "Code is the source of truth for how the business and the technology work. Linking, versioning, reviews, and auditing come with it.",
+                    "Refine context into an executable specification that tests the actual solution.",
+                    "Write the code as a direct expression of the design, so it can be turned into docs and back.",
+                    (
+                        'The CDD harness includes <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md">Stories</a>, '
+                        "a practice that generates working code for both functional and business logic. "
+                        "Flipping between "
+                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md">documentation</a> '
+                        "and "
+                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts">code</a> '
+                        "is seamless."
+                    ),
+                ),
+                "caption": (
+                    'The CDD harness includes <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md">Stories</a>, '
+                    "a practice that generates working code for both functional and business logic. "
+                    "Flipping between "
+                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md">documentation</a> '
+                    "and "
+                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts">code</a> '
+                    "is seamless."
+                ),
+            },
+            {
+                "slug": "context-storming",
+                "title": "Context Storming",
+                "summary": (
+                    "Define and connect context across product, engineering, and operations. "
+                    "Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory."
+                ),
+                "bullets": (
+                    "Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.",
+                    "Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.",
+                ),
+                "paras": (
+                    "Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.",
+                    "Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.",
+                    (
+                        'The CDD harness includes the <a href="https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph">knowledge graph</a>, '
+                        "the models and the relationships between them. CodeQL reads them out of the code."
+                    ),
+                ),
+                "caption": (
+                    'The CDD harness includes the <a href="https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph">knowledge graph</a>, '
+                    "the models and the relationships between them. CodeQL reads them out of the code."
+                ),
+            },
+        )
+        by_slug = {practice["slug"]: practice for practice in practices}
+        order = (
+            "iterate-and-learn",
+            "product-engineering",
+            "context-storming",
+            "code-is-context",
+        )
+        return tuple(by_slug[slug] for slug in order)
+
+    def _write_approach_page(self) -> None:
+        from catalog_generator.foundry_chrome import page_shell
+
+        page = page_shell(
+            title="ABD Context Driven Delivery Harness",
+            h1=self._harness_headline(),
+            tagline="",
+            subhead=(
+                "The CDD harness helps you guide AI to refine unstructured context "
+                "in stages until it lives as working code."
+            ),
+            after_subhead=(
+                f'Get the repo <a href="{self.repo_url}" '
+                'target="_blank" rel="noopener noreferrer">here</a>.'
+            ),
+            body_inner=self._approach_page_body(),
+            commons_prefix="commons/",
+            nav_prefix="",
+            nav_current="",
+            body_wrap_class="approach-wrap",
+        )
+        self.write_page("cdd-approach.html", page)
+
+    def _write_coming_soon_pages(self) -> None:
+        import html as html_mod
+
+        from catalog_generator.foundry_chrome import page_shell
+
+        for slug, title in (
+            ("customer-discovery", "Customer Discovery"),
+            ("devops", "DevOps"),
+        ):
+            body = (
+                '<article class="approach-practice">'
+                '<p class="approach-practice__back"><a href="cdd-approach.html">← Back to the approach</a></p>'
+                f'<h2 class="approach-practice__title">{html_mod.escape(title)}</h2>'
+                '<p class="approach-practice__para">Coming soon.</p>'
+                "</article>"
+            )
+            page = page_shell(
+                title=f"{title} — ABD Context Driven Delivery",
+                h1=f'<span class="accent">{html_mod.escape(title)}</span>',
+                tagline="",
+                body_inner=body,
+                commons_prefix="commons/",
+                nav_prefix="",
+                nav_current="",
+                body_wrap_class="approach-wrap",
+            )
+            self.write_page(f"{slug}.html", page)
+
+    def _write_approach_practice_pages(self) -> None:
+        import html as html_mod
+
+        from catalog_generator.foundry_chrome import page_shell
+
+        for practice in self._approach_practices():
+            paras = "".join(
+                f'<p class="approach-practice__para">{para}</p>'
+                for para in practice["paras"]
+            )
+            body = (
+                '<article class="approach-practice">'
+                f'<p class="approach-practice__back"><a href="cdd-approach.html">← Back to the approach</a></p>'
+                f'<h2 class="approach-practice__title">{html_mod.escape(practice["title"])}</h2>'
+                f'<div class="approach-practice__body">{paras}</div>'
+                "</article>"
+            )
+            page = page_shell(
+                title=f'{practice["title"]} — ABD Context Driven Delivery',
+                h1=f'<span class="accent">{html_mod.escape(practice["title"])}</span>',
+                tagline="",
+                body_inner=body,
+                commons_prefix="commons/",
+                nav_prefix="",
+                nav_current="",
+                body_wrap_class="approach-wrap",
+            )
+            self.write_page(f'cdd-{practice["slug"]}.html', page)
+
+    def _approach_page_body(self) -> str:
+        import html as html_mod
+
+        stages = (
+            {
+                "id": "context",
+                "label": "Context",
+                "items": ("Business Model", "User Traction", "Operating Benchmarks"),
+                "item_fams": ("sdd", "uxd", "arc"),
+                "shape": "square",
+                "scope_name": "Context",
+                "scope_width": "square",
+                "detail_title": "Context",
+                "paras": (
+                    "Collect every source that describes the problem to be solved, the current conditions, constraints, and the intended solution — business, customer, and technology.",
+                    "Extract documentation. Interview experts.",
+                    "Parse code, instrument systems, and orchestrate running tests. Categorize and index the material so AI can consume it cleanly.",
+                ),
+            },
+            {
+                "id": "discovery",
+                "label": "Discovery",
+                "items": ("Outcome", "Experience", "Architecture"),
+                "item_fams": ("sdd", "uxd", "arc"),
+                "shape": "solution",
+                "scope_name": "Whole solution",
+                "scope_width": "wide / shallow",
+                "detail_title": "Discovery",
+                "paras": (
+                    "Refine context into lower-fidelity artifacts that make it easier to align on the overarching solution, catch systemic errors, and avoid failure cascading downstream.",
+                    "Focus on how outcomes translate to user journeys, and map those journeys to system behavior.",
+                    "Define enough structure to establish how domain boundaries and technology modules connect.",
+                ),
+            },
+            {
+                "id": "specification",
+                "label": "Specification",
+                "items": ("Increment", "Prototype", "Reference"),
+                "item_fams": ("sdd", "uxd", "arc"),
+                "shape": "sprint",
+                "scope_name": "Sprint",
+                "scope_width": "narrow / deeper",
+                "detail_title": "Specification",
+                "paras": (
+                    "Create machine-executable specifications — one small slice of the journey at a time.",
+                    "Refine the business understanding needed to modularize domain validity, access, persistence, consistency, and integration.",
+                    "Write example-driven scenarios backed by domain-driven operations, and generate working UI prototypes that pass their tests.",
+                ),
+            },
+            {
+                "id": "implementation",
+                "label": "Implement",
+                "items": ("Tests", "Interface", "Solution"),
+                "item_fams": ("sdd", "uxd", "arc"),
+                "shape": "story",
+                "scope_name": "Story",
+                "scope_width": "narrowest / deep",
+                "detail_title": "Implement",
+                "paras": (
+                    "Build each slice onto the target stack. AI oversees deterministic tools so the same input produces results guarded by safety and quality standards.",
+                    "Automate scenario specifications to cover user, system, and module-connecting interfaces.",
+                    "Evaluate every error — technical and functional — and feed results back into the growing knowledge repository.",
+                ),
+            },
+            {
+                "id": "validate",
+                "label": "Validate",
+                "items": ("Economics", "Impact", "Feasibility"),
+                "item_fams": ("sdd", "uxd", "arc"),
+                "shape": "story",
+                "scope_name": "Story",
+                "scope_width": "narrowest / deep",
+                "detail_title": "Validate",
+                "paras": (
+                    "Confirm the economics: revenue, growth, savings, or profit against the investment.",
+                    "Confirm user impact — does the intended value line up with the behavior that was observed?",
+                    "Confirm feasibility for cost, risk, and operations, then inject that feedback back into the context so AI compounds learning over time.",
+                ),
+            },
+        )
+        principles = self._approach_practices()
+
+        stage_buttons: list[str] = []
+        for index, stage in enumerate(stages):
+            items = "".join(
+                f'<li class="approach-stage__item kb-ticket aad-skill aad-fam-{html_mod.escape(fam)}">'
+                f"{html_mod.escape(item)}</li>"
+                for item, fam in zip(stage["items"], stage["item_fams"])
+            )
+            shape = (
+                '<span class="kb-col-scope-shape-wrap approach-stage__scope">'
+                f'<span class="kb-col-scope-shape kb-col-scope-shape--{html_mod.escape(stage["shape"])}" '
+                f'aria-label="{html_mod.escape(stage["scope_name"])}. {html_mod.escape(stage["scope_width"])}"></span>'
+                '<span class="kb-col-shape-tooltip" role="tooltip">'
+                f'<span class="kb-col-shape-tooltip__name">{html_mod.escape(stage["scope_name"])}</span>'
+                f'<span class="kb-col-shape-tooltip__width">{html_mod.escape(stage["scope_width"])}</span>'
+                "</span></span>"
+            )
+            active = " is-active" if index == 0 else ""
+            stage_buttons.append(
+                f'<button type="button" class="approach-stage{active}" '
+                f'data-stage-index="{index}" data-stage-id="{html_mod.escape(stage["id"])}" '
+                f'aria-pressed="{"true" if index == 0 else "false"}">'
+                f'<span class="approach-stage__head">'
+                f'{shape}'
+                f'<span class="approach-stage__label">{html_mod.escape(stage["label"])}</span>'
+                f"</span>"
+                f'<ul class="approach-stage__items">{items}</ul>'
+                "</button>"
+            )
+
+        first = stages[0]
+        bullets = "".join(
+            f"<li>{html_mod.escape(para)}</li>" for para in first["paras"]
+        )
+        stage_json = html_mod.escape(
+            __import__("json").dumps(
+                [
+                    {
+                        "id": s["id"],
+                        "label": s["label"],
+                        "detail_title": s["detail_title"],
+                        "items": list(s["items"]),
+                        "paras": list(s["paras"]),
+                    }
+                    for s in stages
+                ]
+            ),
+            quote=True,
+        )
+
+        from catalog_generator.foundry_chrome import approach_principle_grid
+
+        principle_kinds = {
+            "product-engineering": "descriptions",
+            "iterate-and-learn": "windows",
+            "code-is-context": "spec",
+            "context-storming": "storm",
+        }
+        principle_cards: list[str] = []
+        for number, practice in enumerate(principles, start=1):
+            kind = principle_kinds.get(practice["slug"], "tickets")
+            grid = approach_principle_grid(self._board_tools, kind)
+            caption = practice.get("caption", "")
+            caption_html = (
+                f'<aside class="approach-principle__caption"><p class="approach-principle__caption-body">{caption}</p></aside>'
+                if caption
+                else ""
+            )
+            bullet_items = "".join(
+                f"<li>{html_mod.escape(item)}</li>" for item in practice.get("bullets", ())
+            )
+            bullets_html = (
+                f'<ul class="approach-principle__bullets">{bullet_items}</ul>' if bullet_items else ""
+            )
+            principle_cards.append(
+                '<section class="approach-principle">'
+                f'<button type="button" class="approach-principle__toggle" aria-expanded="false">'
+                f'<span class="approach-principle__num" aria-hidden="true">{number}</span>'
+                f'<span class="approach-principle__copy">'
+                f'<h3 class="approach-principle__title">{html_mod.escape(practice["title"])}</h3>'
+                f"</span></button>"
+                f'<div class="approach-principle__panel"><div class="approach-principle__panel-inner">{bullets_html}{grid}{caption_html}</div></div>'
+                "</section>"
+            )
+
+        return (
+            '<div class="approach-page" id="approach-page" tabindex="0" '
+            f'data-stages="{stage_json}">'
+            '<div class="approach-main" id="approach-main">'
+            f'<div class="approach-stage-row" role="list">{"".join(stage_buttons)}</div>'
+            '<section class="approach-detail" id="approach-detail" aria-live="polite">'
+            f'<h2 class="approach-detail__title" id="approach-detail-title">'
+            f'{html_mod.escape(first["detail_title"])}</h2>'
+            f'<ul class="approach-detail__body" id="approach-detail-body">{bullets}</ul>'
+            "</section>"
+            "</div>"
+            '<aside class="approach-principles" id="approach-principles" aria-labelledby="approach-principles-heading">'
+            '<h2 class="approach-principles__title" id="approach-principles-heading">'
+            'Context Driven Delivery Practices'
+            "</h2>"
+            f'<div class="approach-principles__list">{"".join(principle_cards)}</div>'
+            "</aside>"
+            '<section class="approach-library" aria-labelledby="approach-library-heading">'
+            '<h2 class="approach-library__title" id="approach-library-heading">'
+            "Our CDD harness is a library of skills, agents and tools that bring the best of "
+            "agile product, delivery, and engineering practices into the age of AI."
+            "</h2>"
+            f"{approach_principle_grid(self._board_tools, 'tickets')}"
+            "</section>"
+            "</div>"
+            "<script>(function(){"
+            "var root=document.getElementById('approach-page');"
+            "if(!root)return;"
+            "var stages=[];"
+            "try{stages=JSON.parse(root.getAttribute('data-stages')||'[]');}catch(e){return;}"
+            "var buttons=[].slice.call(root.querySelectorAll('.approach-stage'));"
+            "var titleEl=document.getElementById('approach-detail-title');"
+            "var bodyEl=document.getElementById('approach-detail-body');"
+            "var principlesEl=document.getElementById('approach-principles');"
+            "var principles=[].slice.call(root.querySelectorAll('.approach-principle'));"
+            "var principleIndex=-1;"
+            "var index=0;"
+            "var ready=false;"
+            "var started=false;"
+            "var onPrinciples=false;"
+            "function scrollRefineToTop(){"
+            "window.scrollTo({top:0,behavior:'smooth'});"
+            "}"
+            "function scrollPrinciple(el){"
+            "var nav=document.querySelector('.site-nav');"
+            "var navH=nav?nav.getBoundingClientRect().height:0;"
+            "var pad=navH+16;"
+            "var top=el.getBoundingClientRect().top+window.pageYOffset;"
+            "var height=el.offsetHeight;"
+            "var room=window.innerHeight-pad;"
+            "var y=top-pad;"
+            "if(height<room)y=top-pad-Math.min(24,room-height);"
+            "window.scrollTo({top:Math.max(0,y),behavior:'smooth'});"
+            "}"
+            "function showPrinciple(i,scroll){"
+            "principleIndex=i;"
+            "onPrinciples=i>=0;"
+            "principles.forEach(function(el,n){"
+            "var open=n===i;"
+            "el.classList.toggle('is-open',open);"
+            "var toggle=el.querySelector('.approach-principle__toggle');"
+            "if(toggle)toggle.setAttribute('aria-expanded',open?'true':'false');"
+            "});"
+            "if(scroll&&i>=0&&principles[i]){"
+            "var target=principles[i];"
+            "window.setTimeout(function(){scrollPrinciple(target);},440);"
+            "}"
+            "}"
+            "function paint(scroll){"
+            "buttons.forEach(function(btn,i){"
+            "var on=!onPrinciples&&i===index;"
+            "btn.classList.toggle('is-active',on);"
+            "btn.classList.remove('is-done');"
+            "btn.setAttribute('aria-pressed',on?'true':'false');"
+            "if(on){"
+            "btn.classList.remove('is-flash');"
+            "void btn.offsetWidth;"
+            "btn.classList.add('is-flash');"
+            "}"
+            "});"
+            "var stage=stages[index];"
+            "if(!stage)return;"
+            "titleEl.textContent=stage.detail_title;"
+            "bodyEl.classList.remove('is-enter');"
+            "void bodyEl.offsetWidth;"
+            "bodyEl.innerHTML=stage.paras.map(function(para){"
+            "return '<li>'+para.replace(/</g,'&lt;')+'</li>';"
+            "}).join('');"
+            "bodyEl.classList.add('is-enter');"
+            "if(scroll&&!onPrinciples&&started)scrollRefineToTop();"
+            "}"
+            "function move(delta){"
+            "started=true;"
+            "if(delta>0){"
+            "if(principleIndex>=0){"
+            "if(principleIndex>=principles.length-1)return;"
+            "showPrinciple(principleIndex+1,true);"
+            "paint(false);"
+            "return;"
+            "}"
+            "if(index===stages.length-1){"
+            "showPrinciple(0,true);"
+            "paint(false);"
+            "return;"
+            "}"
+            "index+=1;"
+            "paint(true);"
+            "return;"
+            "}"
+            "if(principleIndex>0){"
+            "showPrinciple(principleIndex-1,true);"
+            "paint(false);"
+            "return;"
+            "}"
+            "if(principleIndex===0){"
+            "showPrinciple(-1,false);"
+            "index=stages.length-1;"
+            "paint(true);"
+            "return;"
+            "}"
+            "if(index===0)return;"
+            "index-=1;"
+            "paint(true);"
+            "}"
+            "buttons.forEach(function(btn,i){"
+            "btn.addEventListener('click',function(){"
+            "showPrinciple(-1,false);"
+            "started=true;"
+            "index=i;"
+            "paint(ready);"
+            "});"
+            "});"
+            "principles.forEach(function(el,i){"
+            "var toggle=el.querySelector('.approach-principle__toggle');"
+            "if(!toggle)return;"
+            "toggle.addEventListener('click',function(){"
+            "started=true;"
+            "if(principleIndex===i){showPrinciple(-1,false);paint(false);return;}"
+            "showPrinciple(i,true);"
+            "paint(false);"
+            "});"
+            "});"
+            "document.addEventListener('keydown',function(e){"
+            "if(e.target.closest('input,textarea,select,a'))return;"
+            "if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();move(1);}"
+            "else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();move(-1);}"
+            "});"
+            "var wheelLock=false;"
+            "document.addEventListener('wheel',function(e){"
+            "if(e.ctrlKey||e.metaKey)return;"
+            "if(e.target.closest('input,textarea,select'))return;"
+            "var dy=e.deltaY;"
+            "if(Math.abs(dy)<Math.abs(e.deltaX))dy=e.deltaX;"
+            "if(Math.abs(dy)<4)return;"
+            "e.preventDefault();"
+            "if(wheelLock)return;"
+            "wheelLock=true;"
+            "move(dy>0?1:-1);"
+            "window.setTimeout(function(){wheelLock=false;},480);"
+            "},{passive:false});"
+            "paint(false);"
+            "ready=true;"
+            "})();</script>"
+        )
+
+    def _write_readme_page(self) -> None:
+        from catalog_generator.foundry_chrome import markdown_to_html, page_shell
+
+        source = _REPO_ROOT / "README.md"
+        if not source.is_file():
+            return
+        raw = source.read_text(encoding="utf-8")
+        body_md = re.sub(r"^#\s+.*\n+", "", raw.lstrip(), count=1, flags=re.MULTILINE)
+        page = page_shell(
+            title="README — ABD Context Driven Delivery Harness",
+            h1="README",
+            tagline=(
+                "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
+                '<a href="index.html">Back to catalog</a>.'
+            ),
+            body_inner=f'<article class="catalog-source-doc">{markdown_to_html(body_md)}</article>',
+            commons_prefix="commons/",
+            nav_prefix="",
+            nav_current="",
+        )
+        self.write_page("readme.html", page)
+
     def _hub_body(self) -> str:
         import html as html_mod
 
@@ -1827,11 +2510,6 @@ class Catalog:
             _REPO_ROOT / "harness" / "harness" / "harness.py",
         )
         return (
-            '<section class="catalog-workflow" aria-labelledby="catalog-workflow-heading">'
-            '<h2 id="catalog-workflow-heading">'
-            '<a href="workflow.html">CDD Workflow</a>'
-            "</h2>"
-            "</section>\n"
             '<section class="install-block catalog-install">'
             '<details>'
             '<summary id="catalog-install-heading">Install</summary>'

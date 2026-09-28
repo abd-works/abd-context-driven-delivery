@@ -393,7 +393,7 @@ with description("lifecycle actions registered for deploy") as self:
         from actions.sketch.sketch import Sketch
         from actions.validate.validate import Validate
 
-        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+        self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
             [
                 Document(),
                 Generate(),
@@ -425,10 +425,15 @@ with description("lifecycle actions registered for deploy") as self:
                 "partition",
                 "render",
                 "validate",
-                "create-rule",
                 "grill",
             ):
                 expect(names).to(contain(name))
+            expect("create-rule" in names).to(equal(False))
+
+        with it("should not publish an mcp operation marked noDeploy"):
+            names = [op.mcp_name for op in self.mcp.mcp_operations]
+            expect(names).to(contain("validate.validate"))
+            expect("validate.createRule" in names).to(equal(False))
 
         with it("should record mcp-published action operations"):
             from installation.installer import Installer as LiveInstaller
@@ -883,6 +888,12 @@ with description("the installer import path") as self:
         refs = Installer(ide="Cursor", path=self.repo / ".cursor", repo=self.repo).collect_toolsets()
         expect(any("examples" in ref.replace("\\", "/") for ref in refs)).to(equal(False))
         expect(any("car_story" in ref for ref in refs)).to(equal(False))
+
+    with it("should collect deployable toolsets under harness"):
+        refs = Installer(ide="Cursor", path=self.repo / ".cursor", repo=self.repo).collect_toolsets()
+        expect(refs).to(contain("harness.transformers.transformers:Transformers"))
+        expect(refs).to(contain("harness.knowledge_graph.model.knowledge_graph:KnowledgeGraph"))
+        expect(refs).to(contain("harness.guidance.guidance:Guidance"))
 
     with it("should not record a temp install path in the shared install state"):
         shared = Path(__file__).resolve().parent / ".install-state.json"

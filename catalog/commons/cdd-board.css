@@ -54,7 +54,12 @@
   grid-row: 1;
   text-decoration: none;
   color: inherit;
-  cursor: pointer;
+  cursor: default;
+}
+.foundry-board-grid--cdd .kb-col-head:hover,
+.foundry-board-grid--cdd .kb-col-head:hover .kb-col-head-title {
+  border-color: var(--abd-border);
+  color: inherit;
 }
 
 /* Slightly larger tickets than the dense Foundry 6-col board. */
@@ -92,9 +97,65 @@
   color: var(--abd-text, #1a1a1e);
 }
 
+.kanban-stage-questions--cdd .kanban-stage-questions__desc {
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--abd-muted, #9b9ba8);
+}
+
+.kanban-stage-questions--cdd .kanban-stage-questions__desc + .kanban-stage-questions__desc {
+  margin-top: 6px;
+}
+
 html[data-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-questions__item,
 html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-questions__item {
   color: var(--abd-text, #e8e8ed);
+}
+
+html[data-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-questions__desc,
+html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-questions__desc {
+  color: var(--abd-muted, #9b9ba8);
+}
+
+.kanban-stage-questions--cdd.is-collapsed .kanban-stage-questions__cell {
+  display: none;
+}
+
+.policy-boxes-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 8px;
+  padding: 0;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  background: #1b1b20;
+  color: #e5531a;
+  cursor: pointer;
+}
+
+.policy-boxes-toggle:hover {
+  border-color: #e5531a;
+  background: #111113;
+}
+
+.policy-boxes-toggle svg {
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.kanban-stage-questions--cdd:not(.is-collapsed) .policy-boxes-toggle svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .policy-boxes-toggle svg {
+    transition: none;
+  }
 }
 
 /* Always-expanded: never collapse practice rail or fidelity tickets. */
@@ -104,6 +165,369 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
+}
+
+/* Tour blank / staged reveal — override always-expanded until practices step. */
+.foundry-kanban-surface.is-tour-blank .foundry-practice-col > .foundry-family-toggle,
+.foundry-kanban-surface.is-tour-blank .kb-col > .aad-skill-row,
+.foundry-kanban-surface.is-tour-stages .foundry-practice-col > .foundry-family-toggle,
+.foundry-kanban-surface.is-tour-stages .kb-col > .aad-skill-row {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Tour step crossfade — board content fades with guide text (same 320ms). */
+.foundry-kanban-surface .foundry-board-overlay,
+.foundry-kanban-surface .foundry-practice-col > .foundry-family-toggle {
+  transition: opacity 0.32s ease;
+}
+
+.foundry-kanban-surface.is-tour-fading-out .foundry-board-grid > .kb-col > .aad-skill-row,
+.foundry-kanban-surface.is-tour-fading-out .foundry-board-grid > .kb-col > .tour-stage-detail,
+.foundry-kanban-surface.is-tour-fading-out .foundry-practice-col > .foundry-family-toggle,
+.foundry-kanban-surface.is-tour-fading-out .foundry-board-overlay,
+.foundry-kanban-surface.is-tour-fading-out .foundry-board-overlay__row {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  /* Opacity only while fading — don't collapse height mid-fade. */
+  transition: opacity 0.32s ease !important;
+  max-height: 420px !important;
+  transform: none !important;
+}
+
+.foundry-kanban-surface.is-tour-fading-out .foundry-board-grid > .kb-col > .kb-col-head {
+  opacity: 0.35;
+  transition: opacity 0.32s ease;
+}
+
+/* Approach stage details live inside each column on tour step 1. */
+.tour-stage-detail {
+  display: none;
+  grid-column: 1 / -1;
+  grid-row: 2 / -1;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 2px 6px;
+  padding: 10px 10px 12px;
+  border-radius: 4px;
+  background: rgba(229, 83, 26, 0.14);
+  border: 1px solid rgba(229, 83, 26, 0.45);
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: max-height 0.45s cubic-bezier(0.33, 1, 0.68, 1),
+              opacity 0.35s ease,
+              transform 0.35s ease,
+              padding 0.35s ease,
+              margin 0.35s ease,
+              border-width 0.35s ease;
+}
+
+.foundry-kanban-surface.is-tour-stages .tour-stage-detail {
+  display: flex;
+}
+
+.foundry-kanban-surface.is-tour-stages.is-tour-details-open .tour-stage-detail,
+.foundry-kanban-surface.is-tour-practices.is-tour-details-open .tour-stage-detail {
+  display: flex;
+  max-height: 420px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.foundry-kanban-surface.is-tour-practices.is-tour-details-open .kb-col > .aad-skill-row {
+  display: none !important;
+}
+
+.foundry-kanban-surface.is-tour-stages .tour-stage-detail.is-collapsing,
+.foundry-kanban-surface.is-tour-practices .tour-stage-detail.is-collapsing {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-width: 0;
+}
+
+.foundry-kanban-surface.is-tour-stages .foundry-board-grid--cdd {
+  grid-template-rows: auto minmax(0, auto);
+  min-height: 0;
+  height: auto;
+}
+
+.foundry-kanban-surface.is-tour-stages.is-tour-details-open .foundry-board-grid--cdd {
+  grid-template-rows: auto minmax(180px, auto);
+}
+
+.tour-stage-detail__chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tour-stage-detail__chip {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--abd-border, #2a2a2a);
+  border-left-width: 3px;
+  border-left-color: var(--accent, #e5531a);
+  background: var(--abd-raised, #1b1b20);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--abd-text, #e8e8ed);
+}
+
+.tour-stage-detail__chip--sdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.tour-stage-detail__chip--uxd { border-left-color: var(--fam-uxd, #e84393); }
+.tour-stage-detail__chip--arc { border-left-color: var(--fam-arc, #4fc3f7); }
+
+.tour-stage-detail__desc {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--abd-muted, #9b9ba8);
+}
+
+.tour-stage-detail__desc + .tour-stage-detail__desc {
+  margin-top: 2px;
+}
+
+/* Never show the bottom orange phase boxes during the tour — column details carry the copy. */
+.foundry-kanban-surface.is-tour-blank .kanban-stage-questions,
+.foundry-kanban-surface.is-tour-stages .kanban-stage-questions,
+.foundry-kanban-surface.is-tour-practices .kanban-stage-questions,
+.foundry-kanban-surface.is-tour-spec-focus .kanban-stage-questions,
+.foundry-kanban-surface.is-tour-fidelities-shown .kanban-stage-questions {
+  display: none !important;
+}
+
+/* Spec-focus: keep only the specification column's detail slot, swap copy via JS. */
+.foundry-kanban-surface.is-tour-spec-focus .tour-stage-detail,
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail {
+  display: none !important;
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="discovery"],
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="engineer"] {
+  transition: opacity 0.4s ease, flex 0.45s ease;
+}
+
+.foundry-board-grid.has-perspective-overlay > .kb-col .kb-col-head {
+  opacity: 1 !important;
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__title {
+  margin: 0 0 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent, #e5531a);
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  padding-left: 8px;
+  border-left: 3px solid var(--abd-border, #2a2a2a);
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--sdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--arc { border-left-color: var(--fam-arc, #4fc3f7); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--uxd { border-left-color: var(--fam-uxd, #e84393); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--bdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--ddd { border-left-color: var(--fam-ddd, #6c5ce7); }
+
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__name {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--abd-text, #e8e8ed);
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__desc {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--abd-muted, #9b9ba8);
+}
+
+.foundry-kanban-surface.is-tour-blank .kanban-stage-questions,
+.foundry-kanban-surface.is-tour-blank .foundry-skills-extra {
+  display: none !important;
+}
+
+.foundry-kanban-surface.is-tour-blank .foundry-board-grid--cdd {
+  grid-template-rows: auto;
+  min-height: 0;
+  height: auto;
+}
+
+.foundry-kanban-surface.is-tour-practices .foundry-board-grid--cdd {
+  grid-template-rows: auto repeat(5, var(--foundry-skill-row-h));
+  min-height: 0;
+  height: auto;
+}
+
+/* Product Engineering: description column only — no Discovery / Specification / Implementation heads. */
+.foundry-kanban-surface.is-tour-practices.is-tour-practices-shown:not(.is-tour-spec-focus):not(.is-tour-fidelities-shown) .kb-col > .kb-col-head {
+  visibility: hidden;
+}
+
+/* Spec-focus: collapse side columns; put spec copy in the phase-description slot. */
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd {
+  grid-template-columns: 200px 40px minmax(0, 1fr) 40px;
+  grid-template-rows: auto repeat(5, var(--foundry-skill-row-h));
+  min-height: 0;
+  height: auto;
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="discovery"] > .aad-skill-row,
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="engineer"] > .aad-skill-row {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="discovery"],
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="engineer"] {
+  opacity: 0.45;
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="spec"] {
+  box-shadow: none;
+  border-radius: 4px;
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="discovery"] > .kb-col-head,
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="engineer"] > .kb-col-head {
+  visibility: hidden;
+}
+
+.foundry-kanban-surface.is-tour-spec-focus .foundry-skills-extra {
+  display: none !important;
+}
+
+.foundry-kanban-surface.is-tour-fidelities-shown .foundry-board-grid--cdd {
+  grid-template-columns: 200px repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto repeat(5, var(--foundry-skill-row-h));
+  min-height: 0;
+  height: auto;
+}
+
+.foundry-kanban-surface.is-tour-stages .foundry-skills-extra {
+  display: none !important;
+}
+
+.foundry-kanban-surface.is-tour-practices .foundry-skills-extra {
+  display: none !important;
+}
+
+.foundry-kanban-surface.is-tour-practices .foundry-practice-col > .foundry-family-toggle {
+  display: flex !important;
+  opacity: 0;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transition: opacity 0.3s ease;
+}
+
+.foundry-kanban-surface.is-tour-practices.is-tour-practices-shown .foundry-practice-col > .foundry-family-toggle {
+  opacity: 1 !important;
+}
+
+.foundry-kanban-surface.is-tour-practices .kb-col > .aad-skill-row {
+  display: flex !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.foundry-kanban-surface.is-tour-practices.is-tour-fidelities-shown .kb-col > .aad-skill-row {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+.foundry-tour-spec-box.is-visible {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.foundry-tour-spec-box__title {
+  margin: 0 0 10px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent, #e5531a);
+}
+
+.foundry-tour-spec-box__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.foundry-tour-spec-box__row {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: var(--abd-raised, #1b1b20);
+  border-left: 3px solid var(--abd-border, #2a2a2a);
+}
+
+.foundry-tour-spec-box__row--sdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.foundry-tour-spec-box__row--arc { border-left-color: var(--fam-arc, #4fc3f7); }
+.foundry-tour-spec-box__row--uxd { border-left-color: var(--fam-uxd, #e84393); }
+.foundry-tour-spec-box__row--bdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.foundry-tour-spec-box__row--ddd { border-left-color: var(--fam-ddd, #6c5ce7); }
+
+.foundry-tour-spec-box__name {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--abd-text, #e8e8ed);
+}
+
+.foundry-tour-spec-box__desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--abd-muted, #9b9ba8);
+}
+
+@keyframes foundry-tour-policies-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .foundry-kanban-surface--cdd-always-expanded .foundry-skills-extra,
@@ -223,6 +647,10 @@ html[data-abd-theme="engineering"] .fidelity-detail-header .page-headline {
 
 .skill-detail-page .fidelity-guidance strong {
   color: var(--text, #e8e8ed);
+}
+
+.skill-detail-page .fidelity-guidance .fidelity-guidance-body strong {
+  color: var(--accent, #e5531a);
 }
 
 .skill-detail-page .fidelity-guidance code {

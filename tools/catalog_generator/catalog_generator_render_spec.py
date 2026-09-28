@@ -126,17 +126,21 @@ with description("Render Context Tool Page"):
             self.catalog_context_tool.guidances = guidances
             self.page = self.catalog_context_tool.generate_catalog()
 
-        with it("shows the tool's badge and Purpose prose"):
+        with it("shows the practice name, shared rules, and purpose prose"):
             expect("Domain-Driven Design" in self.page).to(be_true)
             expect("bounded contexts" in self.page.lower() or "Apply" in self.page).to(be_true)
+            expect("ubiquitous-language-everywhere" in self.page).to(be_true)
 
-        with it("shows one card per fidelity, in declared stage order"):
-            bounded_at = self.page.find("bounded-context")
-            building_at = self.page.find("building-blocks")
-            tactics_at = self.page.find(">tactics<")
+        with it("links each fidelity page, in declared stage order"):
+            section = self.page[self.page.find('aria-label="Fidelities"'):]
+            bounded_at = section.find("bounded-context")
+            building_at = section.find("building-blocks")
+            tactics_at = section.find(">tactics<")
             if tactics_at < 0:
-                tactics_at = self.page.find("tactics")
+                tactics_at = section.find("tactics")
             expect(bounded_at < building_at < tactics_at).to(be_true)
+            expect("cap-card" in section).to(equal(False))
+            expect("Draw where language changes" in section).to(be_true)
 
 
 with description("Render Utility Page"):
@@ -218,12 +222,28 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             install_at = self.index_html.find("catalog-install-heading")
             expect(utilities_at < install_at).to(be_true)
 
-        with it("links the CDD Workflow page underneath the board and writes workflow.html"):
-            expect('href="workflow.html"' in self.index_html).to(be_true)
-            expect("catalog-workflow-heading" in self.index_html).to(be_true)
-            workflow_at = self.index_html.find("catalog-workflow-heading")
-            install_at = self.index_html.find("catalog-install-heading")
-            expect(workflow_at < install_at).to(be_true)
+        with it("links the approach as a hero button and writes approach plus README pages"):
+            approach_at = self.index_html.find('href="cdd-approach.html"')
+            board_at = self.index_html.find('id="catalog-kanban"')
+            expect(approach_at != -1).to(be_true)
+            expect(approach_at < board_at).to(be_true)
+            expect('page-hero__approach-btn' in self.index_html).to(be_true)
+            expect('href="readme.html"' in self.index_html).to(equal(False))
+            approach_html = (self.tmp / "cdd-approach.html").read_text(encoding="utf-8")
+            readme_html = (self.tmp / "readme.html").read_text(encoding="utf-8")
+            expect("page-hero" in approach_html).to(be_true)
+            expect("approach-stage-row" in approach_html).to(be_true)
+            expect("approach-detail" in approach_html).to(be_true)
+            expect("approach-principles" in approach_html).to(be_true)
+            expect("Context Driven Delivery Practices" in approach_html).to(be_true)
+            expect("Product Engineering" in approach_html).to(be_true)
+            expect("Iterate and Learn" in approach_html).to(be_true)
+            expect("page-hero" in readme_html).to(be_true)
+            expect("Basic usage" in readme_html).to(be_true)
+
+        with it("writes workflow.html and leaves it off the hub under the board"):
+            expect("catalog-workflow-heading" in self.index_html).to(equal(False))
+            expect('href="workflow.html"' in self.index_html).to(equal(False))
             expect((self.tmp / "workflow.html").is_file()).to(be_true)
             workflow_html = (self.tmp / "workflow.html").read_text(encoding="utf-8")
             expect("CDD Workflow" in workflow_html).to(be_true)
@@ -262,7 +282,8 @@ with description("Render Flat Grid Pages"):
             for page_name, expected in (
                 ("context-tools.html", "Context-driven delivery"),
                 ("actions.html", "createRule"),
-                ("tools.html", "diagnose"),
             ):
                 content = (self.tmp / page_name).read_text(encoding="utf-8")
                 expect(expected in content).to(be_true)
+            tools_html = (self.tmp / "tools.html").read_text(encoding="utf-8")
+            expect("diagnose" in tools_html).to(equal(False))

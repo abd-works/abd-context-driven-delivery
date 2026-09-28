@@ -9,6 +9,7 @@ from harness.guidance.rule import AppliesTo, Rule, RulesCollection
 from git.git import GitConnectError, GitRepo, Repo
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown import markdownCollection
+from installation.destination import noCatalog
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.mcp.mcp_server import Mcp
 
@@ -39,6 +40,7 @@ class TurnCommit:
         return self.branch
 
 
+@noCatalog
 class WorkSession:
     """One named work session — owns guidance and announced turns."""
 

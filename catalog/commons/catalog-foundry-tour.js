@@ -12,8 +12,14 @@
     '<li>Layer context through successive generations — adjust fidelity based on what has already been produced.</li>' +
     '</ul>';
 
+  var PERSPECTIVES_LEAD_HTML =
+    '<ul class="foundry-guide__bullets">' +
+    '<li>The fundamentals of product engineering have not changed. Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.</li>' +
+    '<li>Guide AI through Customer Discovery, UX, Story Specs, DevOps, and Software Craftsmanship.</li>' +
+    '</ul>';
+
   var PERSPECTIVES_SLIDE_HTML =
-    '<p class="foundry-guide__lead">Different windows that answer different questions — integrated with minimal overlap and redundancy. Replace scattered docs, tickets, and tribal memory with <strong>one connected source</strong> — each fact lives in one place and links to the rest.</p>' +
+    PERSPECTIVES_LEAD_HTML +
     '<div class="foundry-guide__perspectives">' +
     '<div class="foundry-guide__perspective-row foundry-guide__perspective-row--sdd"><span class="foundry-guide__perspective-name">Stories</span><span class="foundry-guide__perspective-desc">A shared map of the product: actors, systems, and the interactions that deliver the solution.</span></div>' +
     '<div class="foundry-guide__perspective-row foundry-guide__perspective-row--arc"><span class="foundry-guide__perspective-name">Clean Engineering</span><span class="foundry-guide__perspective-desc">Object design from modules through contracts to production code — structure AI can generate and verify.</span></div>' +
@@ -22,20 +28,24 @@
     '<div class="foundry-guide__perspective-row foundry-guide__perspective-row--ddd"><span class="foundry-guide__perspective-name">Domain-Driven Design</span><span class="foundry-guide__perspective-desc">Bounded contexts, aggregates, and building blocks that name and protect the business model.</span></div>' +
     '</div>';
 
-  var EXECUTABLE_SLIDE_HTML =
-    '<p class="foundry-guide__executable">Refine context into machine-readable, behavioural specification that AI can build from.</p>' +
+  var EXECUTABLE_LEAD_HTML =
     '<ul class="foundry-guide__bullets">' +
-    '<li>Turn knowledge and org context into an <strong>executable, machine-readable asset</strong>. <strong>Behavioural</strong> specifications, <strong>templated</strong> for consistency.</li>' +
-    '<li>Favor <strong>unambiguous artifacts</strong> — tests, templates, and directions — over narrative docs. Each states behaviour clearly enough to generate from, review against, and change without rework.</li>' +
-    '</ul>' +
-    '<div class="foundry-guide__exe-heading">What &ldquo;executable&rdquo; means per context tool</div>' +
-    '<div class="foundry-guide__executable-rows">' +
-    '<div class="foundry-guide__executable-row foundry-guide__executable-row--sdd"><span class="foundry-guide__executable-name">Stories</span><span class="foundry-guide__executable-desc">Executable scenario-specifications with real-world examples</span></div>' +
-    '<div class="foundry-guide__executable-row foundry-guide__executable-row--arc"><span class="foundry-guide__executable-name">Clean Engineering</span><span class="foundry-guide__executable-desc">Deep modules with explicit, narrow seams and type-safe contracts created using clean code</span></div>' +
-    '<div class="foundry-guide__executable-row foundry-guide__executable-row--uxd"><span class="foundry-guide__executable-name">User Experience</span><span class="foundry-guide__executable-desc">Interface mockups that work according to both story specifications and design templates</span></div>' +
-    '<div class="foundry-guide__executable-row foundry-guide__executable-row--bdd"><span class="foundry-guide__executable-name">BDD</span><span class="foundry-guide__executable-desc">Nested describe/it behaviour specs that pass</span></div>' +
-    '<div class="foundry-guide__executable-row foundry-guide__executable-row--ddd"><span class="foundry-guide__executable-name">DDD</span><span class="foundry-guide__executable-desc">Templates that generate domain building blocks using the target architecture</span></div>' +
+    '<li>Your code is the primary source of truth for how things actually work — linking, versioning, reviews, and auditing come for free.</li>' +
+    '<li>Structure context into executable, machine-executable specification that tests the actual solution.</li>' +
+    '<li>Write code so that it is a direct expression of the design — easily transformed to docs and back.</li>' +
+    '</ul>';
+
+  var EXECUTABLE_UNDER_HTML =
+    '<div class="foundry-tour-spec-box__title">What &ldquo;executable&rdquo; means in specification</div>' +
+    '<div class="foundry-tour-spec-box__rows">' +
+    '<div class="foundry-tour-spec-box__row foundry-tour-spec-box__row--sdd"><span class="foundry-tour-spec-box__name">Stories</span><span class="foundry-tour-spec-box__desc">Executable scenario-specifications with real-world examples</span></div>' +
+    '<div class="foundry-tour-spec-box__row foundry-tour-spec-box__row--arc"><span class="foundry-tour-spec-box__name">Clean Engineering</span><span class="foundry-tour-spec-box__desc">Deep modules with explicit, narrow seams and type-safe contracts</span></div>' +
+    '<div class="foundry-tour-spec-box__row foundry-tour-spec-box__row--uxd"><span class="foundry-tour-spec-box__name">User Experience</span><span class="foundry-tour-spec-box__desc">Interface mockups that work according to story specs and design templates</span></div>' +
+    '<div class="foundry-tour-spec-box__row foundry-tour-spec-box__row--bdd"><span class="foundry-tour-spec-box__name">BDD</span><span class="foundry-tour-spec-box__desc">Nested describe/it behaviour specs that pass</span></div>' +
+    '<div class="foundry-tour-spec-box__row foundry-tour-spec-box__row--ddd"><span class="foundry-tour-spec-box__name">DDD</span><span class="foundry-tour-spec-box__desc">Templates that generate domain building blocks for the target architecture</span></div>' +
     '</div>';
+
+  var EXECUTABLE_SLIDE_HTML = EXECUTABLE_LEAD_HTML;
 
   var CHANGE_SLIDE_HTML =
     '<p class="foundry-guide__lead">Context-Driven Delivery will fundamentally change how people work. AI is moving people towards a <strong>builder culture</strong>.</p>' +
@@ -82,8 +92,9 @@
 
   var PAUSE_BEFORE_STEP_MS = 320;
   var PAUSE_BEFORE_RING_MS = 480;
-  var TEXT_EXPAND_MS = 480;
-  var TEXT_APPEAR_MS = 520;
+  var TEXT_EXPAND_MS = 320;
+  var TEXT_APPEAR_MS = 320;
+  var STEP_FADE_MS = 320;
 
   var PERSPECTIVE_BY_KEY = {
     sdd: 'A shared map of the product: actors, systems, and the interactions that deliver the solution.',
@@ -107,6 +118,17 @@
   var toggleBtn = document.getElementById('cdd-toggle');
   var guideTag = document.getElementById('guide-tag');
   var guideText = document.getElementById('guide-text');
+  var IDLE_HINT = 'to advance';
+
+  function setGuideHint(text, withArrow) {
+    if (!guideTag) return;
+    var label = text || IDLE_HINT;
+    if (withArrow) {
+      guideTag.innerHTML = label + ' <span class="foundry-cdd-panel__arrow">→</span>';
+    } else {
+      guideTag.textContent = label;
+    }
+  }
   var colHeads = Array.prototype.slice.call(document.querySelectorAll('.kb-col-head'));
   var rowLabels = Array.prototype.slice.call(
     document.querySelectorAll('.foundry-perspective-label')
@@ -126,11 +148,72 @@
   var specCol = document.querySelector('.kb-col[data-stage="spec"]')
     || document.querySelector('.kb-col[data-stage="specification"]');
   var perspectiveCol = document.querySelector('.foundry-practice-col');
+  var advanceBtn = document.getElementById('tour-advance');
 
   if (!surface || !ring || !toggleBtn || !guidePanel) return;
 
   var cddBoard = surface.classList.contains('foundry-kanban-surface--cdd-always-expanded');
   var isSkillPage = surface.classList.contains('foundry-kanban-surface--skill-page');
+
+  function setTourBoardState(state) {
+    surface.classList.remove(
+      'is-tour-blank',
+      'is-tour-stages',
+      'is-tour-practices',
+      'is-tour-practices-shown',
+      'is-tour-fidelities-shown',
+      'is-tour-spec-focus',
+      'is-tour-details-open'
+    );
+    if (state === 'blank') surface.classList.add('is-tour-blank');
+    else if (state === 'stages') surface.classList.add('is-tour-stages');
+    else if (state === 'practices') surface.classList.add('is-tour-practices');
+    else if (state === 'practices-shown') {
+      surface.classList.add('is-tour-practices', 'is-tour-practices-shown');
+    }
+    else if (state === 'spec-focus') {
+      surface.classList.add(
+        'is-tour-practices',
+        'is-tour-practices-shown',
+        'is-tour-spec-focus'
+      );
+    }
+    else if (state === 'full') {
+      surface.classList.add(
+        'is-tour-practices',
+        'is-tour-practices-shown',
+        'is-tour-fidelities-shown'
+      );
+    }
+  }
+
+  function scrollTourToFold() {
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    var target = guidePanel || board;
+    if (!target) return Promise.resolve();
+    var nav = document.querySelector('.site-nav');
+    var navH = nav ? nav.getBoundingClientRect().height : 0;
+    var pad = 16;
+    var y = target.getBoundingClientRect().top + window.pageYOffset - (navH + pad);
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    return pause(320);
+  }
+
+  function openStageDetails() {
+    surface.classList.add('is-tour-details-open');
+    return pause(450);
+  }
+
+  function collapseStageDetails() {
+    var details = surface.querySelectorAll('.tour-stage-detail');
+    details.forEach(function (el) { el.classList.add('is-collapsing'); });
+    surface.classList.remove('is-tour-details-open');
+    return pause(400).then(function () {
+      details.forEach(function (el) { el.classList.remove('is-collapsing'); });
+    });
+  }
+
+  setTourBoardState('blank');
 
   function initFoundryTooltips() {
     var activeTip = null;
@@ -393,25 +476,222 @@
   }
 
   function flyRingToTargets(fromRect, elements, pad, opts) {
-    opts = opts || {};
-    var targetRect = unionRect(elements, pad);
-    return flyRingRect(fromRect, targetRect, {
-      runId: opts.runId,
-      duration: opts.duration || 400,
-      hold: opts.hold != null ? opts.hold : 100,
-      targets: elements,
-      pad: pad
-    });
+    hideRing();
+    return Promise.resolve();
   }
 
   function syncRingToTargets() {
-    if (!lastRingTargets || !lastRingTargets.length) return;
-    if (ringIsAnimating()) return;
-    var r = unionRect(lastRingTargets, lastRingPad);
-    placeRing(r);
-    lastRingRect = r;
-    ring.classList.add('is-visible');
-    ring.style.opacity = '1';
+    hideRing();
+  }
+
+  function focusStages(elements) {
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    if (board) board.classList.add('is-tour-stages-focus');
+    var els = elements && elements.length ? elements : colHeads;
+    var target = els[0] || board;
+    if (!target || typeof target.scrollIntoView !== 'function') return Promise.resolve();
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    return pause(220);
+  }
+
+  function clearStagesFocus() {
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    if (board) board.classList.remove('is-tour-stages-focus');
+  }
+
+  function ensurePerspectiveOverlay() {
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    if (!board) return null;
+    var overlay = document.getElementById('board-perspective-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'board-perspective-overlay';
+      overlay.className = 'foundry-board-overlay';
+      overlay.setAttribute('aria-hidden', 'true');
+      board.appendChild(overlay);
+    }
+    return overlay;
+  }
+
+  function specColumnHead() {
+    return document.querySelector('.kb-col[data-stage="spec"] > .kb-col-head')
+      || document.querySelector('.kb-col[data-stage="specification"] > .kb-col-head');
+  }
+
+  function clearSpecHeaderAlign() {
+    var head = specColumnHead();
+    if (!head) return;
+    head.style.position = '';
+    head.style.left = '';
+    head.style.width = '';
+    head.style.height = '';
+    head.style.top = '';
+    head.style.zIndex = '';
+    head.style.margin = '';
+  }
+
+  function lineUpSpecHeader() {
+    clearSpecHeaderAlign();
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    var head = specColumnHead();
+    var practiceCol = document.querySelector('.foundry-practice-col');
+    if (!board || !head || !practiceCol) return;
+    head.offsetHeight;
+    var anchor = practiceCol.querySelector('[data-perspective]');
+    var boardRect = board.getBoundingClientRect();
+    var anchorRight = anchor ? anchor.getBoundingClientRect().right : practiceCol.getBoundingClientRect().right;
+    var left = Math.round(anchorRight - boardRect.left);
+    var width = Math.max(80, Math.round(boardRect.right - anchorRight - 6));
+    var colRect = head.parentElement.getBoundingClientRect();
+    var headRect = head.getBoundingClientRect();
+    head.style.position = 'absolute';
+    head.style.boxSizing = 'border-box';
+    head.style.zIndex = '3';
+    head.style.margin = '0';
+    head.style.top = Math.round(headRect.top - colRect.top) + 'px';
+    head.style.height = Math.round(headRect.height) + 'px';
+    head.style.left = Math.round((boardRect.left + left) - colRect.left) + 'px';
+    head.style.width = width + 'px';
+  }
+
+  function hidePerspectiveOverlay() {
+    clearSpecHeaderAlign();
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    var overlay = document.getElementById('board-perspective-overlay');
+    if (board) board.classList.remove('has-perspective-overlay');
+    if (overlay) {
+      overlay.classList.remove('is-visible');
+      overlay.innerHTML = '';
+    }
+  }
+
+  function ensureSpecUnderBox() {
+    return null;
+  }
+
+  function showSpecUnderBox() {
+    /* Spec copy lives in the phase-description cells, not a separate under-box. */
+  }
+
+  function hideSpecUnderBox() {
+    var box = document.getElementById('tour-spec-box');
+    if (!box) return;
+    box.classList.remove('is-visible');
+    box.setAttribute('aria-hidden', 'true');
+    box.innerHTML = '';
+  }
+
+  var stageQuestionsOriginal = null;
+
+  var stageDetailOriginal = {};
+
+  function fillSpecPhaseDescriptions() {
+    var specDetail = document.querySelector('.tour-stage-detail[data-stage-detail="spec"]');
+    if (specDetail) {
+      if (!stageDetailOriginal.spec) stageDetailOriginal.spec = specDetail.innerHTML;
+      specDetail.innerHTML = EXECUTABLE_UNDER_HTML;
+    }
+    var root = document.querySelector('.kanban-stage-questions');
+    if (!root) return;
+    if (stageQuestionsOriginal == null) stageQuestionsOriginal = root.innerHTML;
+    var specCell = root.querySelector('.kanban-stage-questions__cell[data-stage="spec"]');
+    if (specCell) specCell.innerHTML = EXECUTABLE_UNDER_HTML;
+  }
+
+  function restorePhaseDescriptions() {
+    var specDetail = document.querySelector('.tour-stage-detail[data-stage-detail="spec"]');
+    if (specDetail && stageDetailOriginal.spec) {
+      specDetail.innerHTML = stageDetailOriginal.spec;
+    }
+    var root = document.querySelector('.kanban-stage-questions');
+    if (!root || stageQuestionsOriginal == null) return;
+    root.innerHTML = stageQuestionsOriginal;
+  }
+
+  function setCollapsedSideColumns(collapsed) {
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    if (!board) return;
+    ['discovery', 'engineer'].forEach(function (stage) {
+      board.querySelectorAll(':scope > .kb-col[data-stage="' + stage + '"]').forEach(function (col) {
+        col.classList.toggle('kb-col--collapsed', collapsed);
+      });
+    });
+    if (collapsed) {
+      board.classList.add('is-tour-spec-cols');
+    } else {
+      board.classList.remove('is-tour-spec-cols');
+      clearSpecHeaderAlign();
+    }
+  }
+
+  var SPEC_CELL_TEXT = {
+    sdd: 'Executable scenario-specifications with real-world examples',
+    arc: 'Deep modules with explicit, narrow seams and type-safe contracts',
+    uxd: 'Interface mockups that work according to story specs and design templates',
+    bdd: 'Nested describe/it behaviour specs that pass',
+    ddd: 'Templates that generate domain building blocks for the target architecture'
+  };
+
+  function showAlignedCells(texts) {
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    var practiceCol = document.querySelector('.foundry-practice-col');
+    var overlay = ensurePerspectiveOverlay();
+    if (!board || !practiceCol || !overlay) return Promise.resolve();
+    board.offsetHeight;
+    var boardRect = board.getBoundingClientRect();
+    var anchor = practiceCol.querySelector('[data-perspective]');
+    var anchorRight = anchor ? anchor.getBoundingClientRect().right : practiceCol.getBoundingClientRect().right;
+    var left = Math.round(anchorRight - boardRect.left);
+    var width = Math.max(80, Math.round(boardRect.right - anchorRight - 6));
+    overlay.innerHTML = '';
+    PERSPECTIVE_ORDER.forEach(function (key) {
+      var label = practiceCol.querySelector('[data-perspective="' + key + '"]');
+      var desc = texts[key];
+      if (!label || !desc) return;
+      var r = label.getBoundingClientRect();
+      var row = document.createElement('div');
+      row.className = 'foundry-board-overlay__row is-shown';
+      row.style.top = Math.round(r.top - boardRect.top) + 'px';
+      row.style.height = Math.round(r.height) + 'px';
+      row.style.left = left + 'px';
+      row.style.width = width + 'px';
+      row.innerHTML = '<span class="foundry-board-overlay__desc">' + desc + '</span>';
+      overlay.appendChild(row);
+    });
+    board.classList.add('has-perspective-overlay');
+    overlay.classList.add('is-visible');
+    return Promise.resolve();
+  }
+
+  function placeEmptyColumnHead() {
+    var board = document.querySelector('.foundry-board-grid') || document.getElementById('board');
+    var practiceCol = document.querySelector('.foundry-practice-col');
+    var overlay = document.getElementById('board-perspective-overlay');
+    var practiceHead = practiceCol && practiceCol.querySelector('.foundry-practice-col__cdd-head');
+    if (!board || !practiceCol || !overlay || !practiceHead) return;
+    var boardRect = board.getBoundingClientRect();
+    var anchor = practiceCol.querySelector('[data-perspective]');
+    var anchorRight = anchor ? anchor.getBoundingClientRect().right : practiceCol.getBoundingClientRect().right;
+    var headRect = practiceHead.getBoundingClientRect();
+    var head = document.createElement('div');
+    head.className = 'foundry-board-overlay__head';
+    head.style.top = Math.round(headRect.top - boardRect.top) + 'px';
+    head.style.height = Math.round(headRect.height) + 'px';
+    head.style.left = Math.round(anchorRight - boardRect.left) + 'px';
+    head.style.width = Math.max(80, Math.round(boardRect.right - anchorRight - 6)) + 'px';
+    overlay.appendChild(head);
+  }
+
+  function showPerspectiveOverlay() {
+    return showAlignedCells(PERSPECTIVE_BY_KEY).then(function () {
+      placeEmptyColumnHead();
+    });
+  }
+
+  function showSpecCells() {
+    return showAlignedCells(SPEC_CELL_TEXT).then(function () {
+      lineUpSpecHeader();
+    });
   }
 
   function flyRingRect(fromRect, toRect, opts) {
@@ -528,6 +808,103 @@
     guideText.innerHTML = '';
   }
 
+  function fadeOutGuideText() {
+    if (!guideText.classList.contains('is-revealed') && !guideText.innerHTML) {
+      guideText.classList.remove('is-expanding', 'is-tall');
+      guideText.innerHTML = '';
+      return Promise.resolve();
+    }
+    guideText.classList.remove('is-revealed');
+    return pause(STEP_FADE_MS).then(function () {
+      guideText.classList.remove('is-expanding', 'is-tall');
+      guideText.innerHTML = '';
+    });
+  }
+
+  function fadeOutBoardContent() {
+    surface.classList.add('is-tour-fading-out');
+    return pause(STEP_FADE_MS);
+  }
+
+  function fadeOutTogether() {
+    surface.classList.add('is-tour-fading-out');
+    if (guideText.classList.contains('is-revealed') || guideText.innerHTML) {
+      guideText.classList.remove('is-revealed');
+    }
+    return pause(STEP_FADE_MS).then(function () {
+      guideText.classList.remove('is-tall');
+      guideText.innerHTML = '';
+    });
+  }
+
+  function fitGuideBox() {
+    if (!guideText) return;
+    var width = guideText.getBoundingClientRect().width;
+    if (!width) return;
+    var samples = [SCOPE_SLIDE_HTML, PERSPECTIVES_LEAD_HTML, EXECUTABLE_LEAD_HTML];
+    var probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;height:auto;';
+    probe.style.width = width + 'px';
+    document.body.appendChild(probe);
+    var max = 0;
+    samples.forEach(function (html) {
+      probe.innerHTML = html;
+      max = Math.max(max, probe.offsetHeight);
+    });
+    probe.remove();
+    if (!max) return;
+    if (guidePanel) guidePanel.style.setProperty('--guide-slide-h', max + 'px');
+    guideText.style.height = max + 'px';
+    guideText.style.maxHeight = max + 'px';
+  }
+
+  function fadeInTogether(tag, html, opts) {
+    opts = opts || {};
+    guidePanel.classList.add('is-tour-active');
+    guideTag.classList.remove('is-waiting');
+    setGuideHint(IDLE_HINT, false);
+    guideText.classList.remove('is-revealed', 'is-tall');
+    guideText.innerHTML = html;
+    if (opts.tall) guideText.classList.add('is-tall');
+    if (opts.openDetails) surface.classList.add('is-tour-details-open');
+    fitGuideBox();
+    /* Same frame: expand guide box, reveal text, and show board content. */
+    return new Promise(function (resolve) {
+      window.requestAnimationFrame(function () {
+        guideText.classList.add('is-expanding', 'is-revealed');
+        surface.classList.remove('is-tour-fading-out');
+        resolve();
+      });
+    }).then(function () {
+      return pause(STEP_FADE_MS);
+    });
+  }
+
+  /** Fade out text+chips together, swap board, fade in text+grid together. */
+  function transitionTourStep(runId, opts) {
+    return fadeOutTogether().then(function () {
+      if (runId !== currentRunId) return;
+      if (typeof opts.applyBoard === 'function') opts.applyBoard();
+      /* Keep new content invisible until the shared fade-in. */
+      surface.classList.add('is-tour-fading-out');
+      if (opts.openDetails) surface.classList.add('is-tour-details-open');
+      return new Promise(function (resolve) {
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(resolve);
+        });
+      });
+    }).then(function () {
+      if (runId !== currentRunId) return;
+      return fadeInTogether(opts.tag, opts.html, {
+        tall: opts.tall,
+        openDetails: opts.openDetails
+      });
+    }).then(function () {
+      if (runId !== currentRunId) return;
+      setGuideHint(IDLE_HINT, false);
+    });
+  }
+
   function waitForLayoutAfterCollapse() {
     return new Promise(function (resolve) {
       window.setTimeout(function () {
@@ -544,9 +921,8 @@
     lastRingRect = null;
     lastRingTargets = null;
     guidePanel.classList.add('is-tour-active');
-    guideTag.textContent = '…';
-    guideTag.classList.add('is-waiting');
-    hideGuideText();
+    guideTag.classList.remove('is-waiting');
+    setGuideHint(IDLE_HINT, false);
   }
 
   /** Pause → expand box → text fades in → pause → caller flies orange ring. */
@@ -561,7 +937,7 @@
     return chain
       .then(function () {
         guideTag.classList.remove('is-waiting');
-        guideTag.textContent = tag;
+        setGuideHint(IDLE_HINT, false);
         return new Promise(function (resolve) {
           window.requestAnimationFrame(function () {
             if (opts.tall) guideText.classList.add('is-tall');
@@ -585,128 +961,173 @@
       });
   }
 
+  function setTourButtonLabel(label) {
+    if (!toggleBtn) return;
+    toggleBtn.textContent = label;
+  }
+
   function resetTour() {
     bumpRun();
     hideRing();
     clearLanded();
+    clearStagesFocus();
+    hidePerspectiveOverlay();
+    hideSpecUnderBox();
+    setCollapsedSideColumns(false);
+    surface.classList.remove('is-tour-fading-out');
     lastRingRect = null;
     lastRingTargets = null;
     toggleBtn.classList.remove('is-active');
     guidePanel.classList.remove('is-tour-active');
     mode = 'idle';
     guideTag.classList.remove('is-waiting');
-    guideTag.textContent = 'Click for overview';
+    setGuideHint(IDLE_HINT, false);
+    setTourButtonLabel('Start tour');
     hideGuideText();
+    hidePerspectiveOverlay();
+    setTourBoardState('blank');
+    restorePhaseDescriptions();
     if (typeof window.__foundrySetSkillsExpanded === 'function' && !cddBoard) {
       window.__foundrySetSkillsExpanded(false);
     }
   }
 
-  /** Click 1: expand copy, then ring all column headers (positions after panel growth). */
+  /** Step 1: Iterate and Learn — scroll, then text + stage details fade in together. */
   function animateScopeTour() {
     clearLanded();
     hideRing();
+    hidePerspectiveOverlay();
+    hideSpecUnderBox();
+    setCollapsedSideColumns(false);
+    restorePhaseDescriptions();
     lastRingRect = null;
     lastRingTargets = null;
     toggleBtn.classList.add('is-active');
+    setTourButtonLabel('Iterate and Learn');
     mode = 'scope';
     guidePanel.classList.add('is-tour-active');
-    guideTag.textContent = '…';
+    setGuideHint(IDLE_HINT, false);
     guideTag.classList.add('is-waiting');
 
     return runTour([
       function (runId) {
-        return revealGuideText('Context scope', SCOPE_SLIDE_HTML)
-          .then(function () {
-            if (runId !== currentRunId) return;
-            return flyRingToTargets(ringOriginFromButton(), colHeads, 5, {
-              runId: runId,
-              duration: 420,
-              hold: 100
-            });
+        return scrollTourToFold().then(function () {
+          if (runId !== currentRunId) return;
+          return transitionTourStep(runId, {
+            tag: 'Iterate and Learn',
+            html: SCOPE_SLIDE_HTML,
+            openDetails: true,
+            applyBoard: function () {
+              setTourBoardState('stages');
+            }
           });
+        });
       }
     ]);
   }
 
-  /** Click 2: expand copy, then ring perspective labels. */
+  /** Step 2: Product Engineering — practices + descriptions. */
   function animatePerspectiveTour() {
-    clearLanded();
-    mode = 'perspective';
-    setGuideWaiting();
-    if (typeof window.__foundrySetSkillsExpanded === 'function') window.__foundrySetSkillsExpanded(true);
-
-    var targets = rowLabels.length ? rowLabels : [perspectiveCol];
-
-    return runTour([
-      function (runId) {
-        return waitForLayoutAfterCollapse()
-          .then(function () {
-            return revealGuideText(
-              'Context perspectives',
-              PERSPECTIVES_SLIDE_HTML,
-              { skipInitialPause: true }
-            );
-          })
-          .then(function () {
-            if (runId !== currentRunId) return;
-            return flyRingToTargets(ringOriginFromButton(), targets, 4, {
-              runId: runId,
-              duration: 400,
-              hold: 120
-            });
-          });
-      }
-    ]);
-  }
-
-  /** Click 3: expand copy, then ring Specification column. */
-  function animateSpecColumn() {
-    clearLanded();
-    mode = 'column';
-    activeColIndex = 3;
-    setGuideWaiting();
-
-    return runTour([
-      function (runId) {
-        return waitForLayoutAfterCollapse()
-          .then(function () {
-            return revealGuideText(
-              'Executable context',
-              EXECUTABLE_SLIDE_HTML,
-              { skipInitialPause: true }
-            );
-          })
-          .then(function () {
-            if (runId !== currentRunId) return;
-            return flyRingToTargets(ringOriginFromButton(), [specCol], 5, {
-              runId: runId,
-              duration: 380,
-              hold: 140
-            });
-          });
-      }
-    ]);
-  }
-
-  /** Click 4: change implications — final panel; no ring. */
-  function animateChangeImplications() {
     clearLanded();
     hideRing();
     lastRingRect = null;
     lastRingTargets = null;
-    mode = 'change';
-    guidePanel.classList.add('is-tour-active');
+    mode = 'perspective';
+    setTourButtonLabel('Product Engineering');
+    setGuideWaiting();
+    hideSpecUnderBox();
+    setCollapsedSideColumns(false);
+    if (typeof window.__foundrySetSkillsExpanded === 'function') window.__foundrySetSkillsExpanded(true);
 
     return runTour([
       function (runId) {
-        return revealGuideText(
-          'Change implications',
-          CHANGE_SLIDE_HTML,
-          { skipInitialPause: true, skipRingPause: true, tall: true }
-        ).then(function () {
+        return scrollTourToFold().then(function () {
           if (runId !== currentRunId) return;
-          hideRing();
+          return transitionTourStep(runId, {
+            tag: 'Product Engineering',
+            html: PERSPECTIVES_LEAD_HTML,
+            applyBoard: function () {
+              setTourBoardState('practices');
+              surface.classList.add('is-tour-practices-shown');
+              showPerspectiveOverlay(null, { stagger: false });
+            }
+          });
+        });
+      }
+    ]);
+  }
+
+  /** Step 3: Code Is Context — spec focus. */
+  function animateSpecColumn() {
+    clearLanded();
+    hideSpecUnderBox();
+    hideRing();
+    mode = 'column';
+    activeColIndex = 3;
+    setTourButtonLabel('Code Is Context');
+    setGuideWaiting();
+
+    return runTour([
+      function (runId) {
+        return transitionTourStep(runId, {
+          tag: 'Code Is Context',
+          html: EXECUTABLE_LEAD_HTML,
+          applyBoard: function () {
+            setTourBoardState('spec-focus');
+            setCollapsedSideColumns(true);
+            showSpecCells();
+          }
+        });
+      }
+    ]);
+  }
+
+  /** Step 4: text + all fidelities fade together. */
+  function animateShowPractices() {
+    clearLanded();
+    hidePerspectiveOverlay();
+    hideSpecUnderBox();
+    hideRing();
+    mode = 'fidelities';
+    setTourButtonLabel('Practice fidelities');
+    setGuideWaiting();
+
+    return runTour([
+      function (runId) {
+        return transitionTourStep(runId, {
+          tag: 'Context Storming',
+          html: '<ul class="foundry-guide__bullets"><li>Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.</li><li>Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.</li></ul>',
+          applyBoard: function () {
+            restorePhaseDescriptions();
+            setCollapsedSideColumns(false);
+            setTourBoardState('full');
+          }
+        });
+      }
+    ]);
+  }
+
+  /** Step 5: change implications — final panel. */
+  function animateChangeImplications() {
+    clearLanded();
+    hidePerspectiveOverlay();
+    hideSpecUnderBox();
+    hideRing();
+    lastRingRect = null;
+    lastRingTargets = null;
+    mode = 'change';
+    setGuideWaiting();
+
+    return runTour([
+      function (runId) {
+        return transitionTourStep(runId, {
+          tag: 'Change implications',
+          html: CHANGE_SLIDE_HTML,
+          tall: true,
+          applyBoard: function () {
+            setCollapsedSideColumns(false);
+            setTourBoardState('full');
+          }
         });
       }
     ]);
@@ -715,10 +1136,6 @@
   function advanceMode() {
     if (tourBusy) return;
     if (mode === 'idle') {
-      animateScopeTour();
-      return;
-    }
-    if (mode === 'scope') {
       animatePerspectiveTour();
       return;
     }
@@ -727,6 +1144,14 @@
       return;
     }
     if (mode === 'column') {
+      animateScopeTour();
+      return;
+    }
+    if (mode === 'scope') {
+      animateShowPractices();
+      return;
+    }
+    if (mode === 'fidelities') {
       animateChangeImplications();
       return;
     }
@@ -735,9 +1160,42 @@
     }
   }
 
+  function retreatMode() {
+    if (tourBusy) return;
+    if (mode === 'idle') return;
+    if (mode === 'perspective') {
+      resetTour();
+      return;
+    }
+    if (mode === 'column') {
+      setCollapsedSideColumns(false);
+      animatePerspectiveTour();
+      return;
+    }
+    if (mode === 'scope') {
+      hidePerspectiveOverlay();
+      animateSpecColumn();
+      return;
+    }
+    if (mode === 'fidelities') {
+      animateScopeTour();
+      return;
+    }
+    if (mode === 'change') {
+      animateShowPractices();
+    }
+  }
+
   toggleBtn.addEventListener('click', function () {
-    advanceMode();
+    if (mode === 'idle') advanceMode();
+    else resetTour();
   });
+
+  if (advanceBtn) {
+    advanceBtn.addEventListener('click', function () {
+      advanceMode();
+    });
+  }
 
   rowLabels.forEach(function (label) {
     label.addEventListener('click', function (e) {
@@ -747,8 +1205,16 @@
       e.preventDefault();
       selectedPerspective = key;
       cancelRingAnimations();
+      lastRingTargets = [label];
+      lastRingPad = 4;
       hideRing();
       guideTag.classList.remove('is-waiting');
+      if (mode === 'perspective') {
+        showPerspectiveOverlay(selectedPerspective);
+        setGuideHint(IDLE_HINT, false);
+        syncRingToTargets();
+        return;
+      }
       revealGuideText(
         PERSPECTIVE_TAG_BY_KEY[selectedPerspective],
         '<p class="foundry-guide__lead">' + PERSPECTIVE_BY_KEY[selectedPerspective] + '</p>',
@@ -760,19 +1226,32 @@
   });
 
   document.addEventListener('keydown', function (e) {
-    if (e.key !== ' ' && e.key !== 'Enter' && e.key !== 'ArrowRight') return;
     if (e.target.closest('input, textarea, select')) return;
-    e.preventDefault();
-    advanceMode();
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      advanceMode();
+      return;
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      retreatMode();
+    }
   });
 
   if (window.ResizeObserver && guidePanel) {
     new ResizeObserver(function () {
       if (mode !== 'idle') syncRingToTargets();
+      if (mode === 'perspective') showPerspectiveOverlay(selectedPerspective || null);
+      if (mode === 'column') showSpecCells();
     }).observe(guidePanel);
   }
 
+  fitGuideBox();
+
   window.addEventListener('resize', function () {
+    fitGuideBox();
+    if (mode === 'perspective') showPerspectiveOverlay(selectedPerspective || null);
+    if (mode === 'column') showSpecCells();
     cancelRingAnimations();
     if (mode !== 'idle' && lastRingTargets) {
       syncRingToTargets();

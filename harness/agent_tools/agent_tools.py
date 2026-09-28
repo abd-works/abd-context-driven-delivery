@@ -788,24 +788,30 @@ class AgentToolDestination:
     callable: Callable[..., Any]
 
     @property
+    def deploy_suppressed(self) -> bool:
+        from installation.destination import omitted_from_deploy
+
+        return omitted_from_deploy(self.callable)
+
+    @property
     def install_to_mcp(self) -> bool:
-        return bool(getattr(self.callable, "_mcp", False))
+        return not self.deploy_suppressed and bool(getattr(self.callable, "_mcp", False))
 
     @property
     def install_to_hook(self) -> bool:
-        return bool(getattr(self.callable, "_hook", False))
+        return not self.deploy_suppressed and bool(getattr(self.callable, "_hook", False))
 
     @property
     def install_to_skill(self) -> bool:
-        return bool(getattr(self.callable, "_skill", False))
+        return not self.deploy_suppressed and bool(getattr(self.callable, "_skill", False))
 
     @property
     def install_to_command(self) -> bool:
-        return bool(getattr(self.callable, "_command", False))
+        return not self.deploy_suppressed and bool(getattr(self.callable, "_command", False))
 
     @property
     def install_to_rule(self) -> bool:
-        return bool(getattr(self.callable, "_rules", False))
+        return not self.deploy_suppressed and bool(getattr(self.callable, "_rules", False))
 
     def install_to(self, destination: str) -> bool:
         if destination == InstallDestination.MCP:

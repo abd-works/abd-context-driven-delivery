@@ -30,15 +30,7 @@
 
 
 
-  var SITE_LINKS = [
-
-    { label: 'The problem', href: 'the-problem.html' },
-
-    { label: 'The work', href: 'the-work.html' },
-
-    { label: 'The proof', href: 'the-proof.html' }
-
-  ];
+  var SITE_LINKS = [];
 
 
 
@@ -231,7 +223,7 @@
 
     });
 
-    items.push({ sep: true });
+    if (items.length) items.push({ sep: true });
 
     foundryLinks().forEach(function (l) {
 

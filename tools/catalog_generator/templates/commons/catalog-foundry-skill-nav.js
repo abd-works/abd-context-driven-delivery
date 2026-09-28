@@ -321,8 +321,9 @@
     surface.classList.toggle('foundry-other-rows-collapsed', !otherVisible());
   }
 
-  /* Board rows: practice families show when idle or ticked; other rows only when other is ticked */
+  /* Board rows stay visible. A practice chip links to that practice page. */
   function rowVisible(row) {
+    if (cddAlwaysExpanded) return true;
     if (selectedStages.size > 0) {
       var col = row.closest('.kb-col[data-stage]');
       if (!col || !selectedStages.has(col.getAttribute('data-stage'))) return false;
@@ -357,6 +358,7 @@
 
   /* Supporting section: filter by family; kanban row is always visible (supporting-only practice). */
   function crosscutRowVisible(row) {
+    if (cddAlwaysExpanded) return true;
     var group = row.getAttribute('data-crosscut-group');
     if (group === KANBAN_SUPPORTING_GROUP) return true;
     if (selectedFamilies.size === 0) return true;
@@ -596,6 +598,7 @@
 
   familyButtons.forEach(function (btn) {
     btn.addEventListener('click', function (e) {
+      if (btn.getAttribute('href')) return;
       e.preventDefault();
       toggleFamily(btn);
     });
@@ -652,7 +655,7 @@
     readSavedStageFilter().forEach(function (stage) { selectedStages.add(stage); });
   }
 
-  var saved = readSavedFilter();
+  var saved = cddAlwaysExpanded ? null : readSavedFilter();
   if (saved && saved.families.length) {
     saved.families.forEach(function (family) {
       familyButtons.forEach(function (btn) {
@@ -681,6 +684,16 @@
     setSkillsExpanded(readSkillsExpandedPref(), 'restore');
   }
   applyStageColumnFilter();
+
+  document.querySelectorAll('.kanban-stage-questions--cdd').forEach(function (row) {
+    var btn = row.querySelector('.policy-boxes-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var collapsed = row.classList.toggle('is-collapsed');
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      btn.setAttribute('aria-label', collapsed ? 'Show stage policies' : 'Hide stage policies');
+    });
+  });
 
   window.addEventListener('popstate', function (e) {
     var poppedStage = stageFromUrl();

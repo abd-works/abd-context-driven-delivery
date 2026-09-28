@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="engineering" data-abd-theme="engineering">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>README — ABD Context Driven Delivery Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-75">
+<link rel="stylesheet" href="commons/cdd-board.css?v=cdd-31">
+
+<script src="commons/catalog-nav.js?v=foundry-13"></script>
+</head>
+<body data-nav-prefix="" data-nav-current="" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">README</h1>
+          <p class="body-lead">Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. <a href="index.html">Back to catalog</a>.</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="catalog-body">
+<div class="wrap">
+<article class="catalog-source-doc"><p>Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI.</p>
+<h2>Install</h2>
+<ol>
+<li>Clone this repository into the project workspace, or as a sibling checkout the agent can see.</li>
+<li>In chat, run <code><a href="installation/installer.py">/install</a></code>. That writes skills, rules, MCP, and hooks into the IDE path (<code>.cursor</code> for Cursor).</li>
+</ol>
+<p>Open <code><a href="catalog/index.html">catalog/index.html</a></code> for the board of practices, stages, and actions.</p>
+<h2>Basic usage</h2>
+<p>Name a practice and a action and optionally a format. The action is what to do. The practice is which view of the work.</p>
+<pre><code>/stories-map /generate /miro {{context}}  ← write the scenario files for that slice
+
+/clean-engineering-code /generate /python {{context}}  &lt;- write software craftmanship level code 
+
+/ddd-tactical-building-block /validate {{context}}  &lt;-- validate ddd elements pass all practice guidance rules</code></pre>
+<p>Iteratively sketch using multiple views</p>
+<pre><code>/stories /domain-driven-design /sketch  ← sketch the journey and the domain together, in short passes
+</code></pre>
+<h2>Stages</h2>
+<p>Work moves through three stages. Stay on the current stage until that view agrees, then go deeper on one slice.</p>
+<ul>
+<li><a href="practices/cdd/cdd.md#discovery">Discovery</a> — outcome, journey, and architecture, still cheap to change. </li>
+</ul>
+<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/cdd/agents/discovery.md">Discoverer</a> agent to run discovery.</em></p>
+<ul>
+<li><a href="practices/cdd/cdd.md#spec">Specification</a> — one increment: scenarios, domain behavior, and the experience. </li>
+</ul>
+<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/cdd/agents/specification.md">Specification</a> agent to run specification.</em></p>
+<ul>
+<li><a href="practices/cdd/cdd.md#engineer">Implementation</a> — tests, touchpoints, and the solution on the target stack. </li>
+</ul>
+<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/cdd/agents/implementation.md">Implementation</a> agent to run implementation.</em></p>
+<h2>Practices</h2>
+<p>Tools that refine context in stages, according to a particular perspective.</p>
+<ul>
+<li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md">Stories</a> — actors, systems, and the interactions that deliver the solution.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#story_map">story-map</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#scenarios">scenarios</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#acceptance_tests">acceptance-tests</a>.</em></li>
+<li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md">Domain-driven design</a> — the business concepts and the boundaries that protect them.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#bounded_context">bounded-context</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#building_blocks">building-blocks</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#tactics">tactics</a>.</em></li>
+<li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md">Clean engineering</a> — modules, contracts, and the code that can be generated and checked.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#modules">modules</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#model">model</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#code">code</a>.</em></li>
+<li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/bdd/bdd.md">Behavior-driven development</a> — behavior tests written in the language of the domain.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/bdd/bdd.md#behavior">behavior</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/bdd/bdd.md#development">development</a>.</em></li>
+<li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ux/ux.md">User experience</a> — how people move through and act on the solution.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ux/ux.md#ia">ia</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ux/ux.md#mockup">mockup</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ux/ux.md#front_end_code">front-end-code</a>.</em></li>
+</ul>
+<h2>Actions</h2>
+<ul>
+<li><code><a href="actions/partition/partition.md">/partition</a></code> — split context into an index and verbatim segments for each practice.</li>
+<li><code><a href="actions/document/document.md">/document</a></code> — document current state, without adding best practices or correcting it.</li>
+<li><code><a href="actions/sketch/sketch.md">/sketch</a></code> — grill in short passes and sketch only what each answer unlocked.</li>
+<li><code><a href="actions/grill_context/grill_context.py">/grill</a></code> — interview the plan against files you have read.</li>
+<li><code><a href="actions/generate/generate.md">/generate</a></code> — write the artifacts for a practice at its current stage.</li>
+<li><code><a href="actions/validate/validate.md">/validate</a></code> — check artifacts against the practice rules.</li>
+<li><code><a href="actions/satisfy/satisfy.md">/satisfy</a></code> — validate, apply the fixes, and validate again.</li>
+<li><code><a href="actions/render/AGENTS.md">/render</a></code> — convert generated content into another format.</li>
+<li><code><a href="actions/improvement/repair.md">/repair</a></code> — open a repair on a practice and instruct the fix.</li>
+<li><code><a href="actions/iterate/iterate.py">/iterate</a></code> — revise the deliverable in small agreed slices.</li>
+</ul></article>
+</div>
+</div>
+</main>
+<script src="commons/catalog-foundry-skill-nav.js?v=cdd-16"></script>
+</body>
+</html>

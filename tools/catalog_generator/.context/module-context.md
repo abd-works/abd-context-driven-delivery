@@ -19,8 +19,9 @@ Defaults `--out catalog`, `--repo-url` from `git remote get-url origin`, `--ref`
 ## Public API
 
 **Discover (Assemble Catalog Page Data):**
-- `load_registry() -> (list[RegistryEntry], list[RegistryEntry])` — resolves `CONTEXT_TOOL_REGISTRY` / `UTILITY_REGISTRY` to real classes; import failure is a hard fail, not a silent gap.
-- `scrape_fidelities(cls) -> list[FidelityGuidance]` — fidelity key, default format, and `## {fidelity}` guidance body from `{module_dir}/{module_dir.name}.md`; missing heading resolves to a `"Guidance missing"` stub.
+- `load_registry() -> (list[RegistryEntry], list[RegistryEntry])` — resolves `CONTEXT_TOOL_REGISTRY` / `UTILITY_REGISTRY` to real classes; import failure is a hard fail, not a silent gap. A class marked `@noCatalog` is left out. The mark does not change install or deploy.
+- `noCatalog` — decorator on a class, fidelity, or operation. The catalog skips it (registry row, fidelity page, lifecycle action). `@Skill`, `@Command`, `@Mcp`, and `@Hook` on the same target still deploy. The utility registry classes carry `@noCatalog` until they are ready to show. `@noDeploy` is the install mark; it lives on the operation and does not change catalog inclusion.
+- `scrape_fidelities(cls) -> list[FidelityGuidance]` — fidelity key, default format, and `### {fidelity}` guidance body from `{module_dir}/{module_dir.name}.md` under `## Fidelities`; missing heading resolves to a `"Guidance missing"` stub.
 - `resolve_lifecycle_actions() -> list[ActionResolution]` — walks `BaseContextTool`'s public `@action` methods in source order; peer-kit action delegates follow unique call pairs.
 - `skill_slash_name(module_dir_name) -> str | None` — reads the deployed `.cursor/skills/{name}/SKILL.md` frontmatter `name:` field; tries the hyphenated form too (`clean_engineering` → `clean-engineering`).
 

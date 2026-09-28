@@ -1,20 +1,19 @@
 # Context Driven Delivery: Enabling clients to clean, clarify, and transform context into working solutions
 
 - **Context**
-  - Systems
-  - Dialogue 
-  - Documentation
-  - Architecture
+  - Business Model
+  - User Traction
+  - Operating Benchmarks
 
-Collect every source that describes the problem to be solved, the current conditions, constraints, and the intended solution.  Business, Customer, Technology
+Collect every source that describes the problem to be solved, the current conditions, constraints, and the intended solution — business, customer, and technology.
 
-Parse code, instrument systems, orchestrate running tests,  documentation, and the conversation with experts. 
+Extract documentation. Interview experts.
 
-Extract, parse, categorize, index for easier ai consumption
+Parse code, instrument systems, and orchestrate running tests. Categorize and index the material so AI can consume it cleanly.
 
 - **Discovery**
   - Outcome
-  - Journey
+  - Experience
   - Architecture
 
 Refine context into lower fidelity artifacts that make it easier to align on the overarching solution, catch systemic errors, and avoide failure  cascasding downstream.
@@ -25,8 +24,8 @@ Define enough structure to establish how domaion boundaries and technology modul
 
 - **Specification**
   - Increment
-  - Experience
   - Prototype
+  - Reference
 
 Ceate machine executable specifucations; one small slice of the journey at a time.
 
@@ -40,7 +39,7 @@ Generate working UI prototypes that pass all tests.
 
 **Implement**
   - Tests
-  - Touchpoint
+  - Interface
   - Solution
 
 Build each slice onto the target stack. AI oversees deterministic tools so that the same input produces results that are gaurdrailed by safety and quaility standards.
@@ -51,10 +50,9 @@ Eval every error, both technical and functional to improve the ai delivery syste
 
 
 - **Validate**
-  - Value
   - Economics
+  - Impact
   - Feasibility
-  - Learning
 
 Confirm user impact; dpoes the intended value and observed behave line up.
 
@@ -65,16 +63,21 @@ Confirm the solution is feasible. Are costs, risk, and operations meetinh expect
 Inject all feedback back into the context, so Ai benefts from compunded leanring over time
 
 
-## Principles of CDD
-**Iterate and Learn** — Layer context and limit AI runs to the cognitive load of what humans can absorb; guide, validate, and improve the system.  
+## Context Driven Delivery Practices
 
-[Sketch](https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md) - A tool that engage a person and AI in an interactive probe, grill, illustrate, and align session. Multiple rounds are used to scaffold stories, domain, UX, etc  in order to establish rapid understanding and feedback. 
+**Product Engineering** — The fundamentals of product engineering have not changed. Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.
 
-**Code is context** — managing context is critucal, and with the right product engineering practices your code can be the primary source of truth that describes how both the business and technology work. Linking, versioning, reviews, auditing come practically for free. 
+**Iterate and Learn** — Layer context and limit AI runs to the cognitive load of what humans can absorb; guide, validate, and improve the system.
 
-[Stories](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md) - A tool that generates working code that describes both functional and business logic.  Flipping to and from [documententaion](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md) and  <-> [code](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts) is seamless.
+[Sketch](https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md) engages a person and AI in an interactive probe, grill, illustrate, and align session. Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback.
 
-**Mulitiple Perspectives** — Define and connect context across product, engineering, and operations, replacing scattered docs, tickets, and tribal memory with an integratred knowledge graph.
+**Code Is Context** — Managing context is critical. With the right product engineering practices, your code is the primary source of truth for how the business and the technology work — linking, versioning, reviews, and auditing come practically for free.
+
+[Stories](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md) generate working code that describes both functional and business logic. Flipping between [documentation](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md) and [code](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts) is seamless.
+
+**Context Storming** — Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.
+
+Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.
 
 The [knowledge graph](https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph) is these models and the relationships between them. CodeQL reads them out of the code.
 
@@ -83,7 +86,3 @@ The [knowledge graph](https://github.com/abd-works/abd-context-driven-delivery/t
 - **Clean engineering** — modules, contracts, and the code that can be generated and checked
 - **Behavior-driven development** — behavior tests written in the language of the domain
 - **User experience** — how people move through and act on the solution
-
-
-
-

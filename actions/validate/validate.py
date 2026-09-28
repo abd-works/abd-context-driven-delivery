@@ -6,6 +6,7 @@ from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions
+from installation.destination import noDeploy
 from installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 from harness.guidance.rule import Rule
@@ -33,6 +34,7 @@ class Validate(GuidanceAction):
         report = "Validation report for artifacts under {session.path}/."
         return "\n\n".join([_VALIDATE_MARKDOWN, *parts, report])
 
+    @noDeploy
     @Mcp
     @Skill
     @agent_instructions

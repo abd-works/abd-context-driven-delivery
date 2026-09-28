@@ -1,0 +1,12 @@
+# catalog_generator
+
+- **`@noCatalog` keeps a class or operation out of the catalog.** Put it on a toolset, fidelity, or operation that already deploys. The catalog skips that registry row, fidelity, and lifecycle action, because the behavior is not ready to show. Installer does not read `@noCatalog`, so `@Skill`, `@Command`, `@Mcp`, and `@Hook` on the same target still deploy.
+- **Practice pages use the fidelity page shell.** Render the practice-level sections — overview, guidance, shared rules, and any other heading that is not a fidelity — then list each fidelity as a linked title and the opening paragraph of its Overview. Do not render those fidelities as cards, and do not inline a fidelity's rules on the practice page.
+- **Fidelity guidance is always a `### {fidelity}` heading inside `## Fidelities`.** That is the only format. Scrape that heading for the guidance body and its `default_format`. Without the format, the template lookup reports unknown.
+- **Catalog HTML omits yaml fences.** `default_format`, `stage`, companion fidelity, `alwaysApply`, and `globs` stay in the practice markdown. The catalog page shows the prose.
+- **Bold text in a Guidance section is accent orange.** Overview, Scaffold, and Rules keep the body color. The orange is only the `<strong>` lead-ins under the Guidance heading.
+- **A practice click on the catalog board opens that practice page.** The practice page highlights that practice. Do not hide the other rows. Stage column headers stay inert.
+- **The harness title and subheader stay above the board on every catalog page.** Clicking a stage scale opens that page with the same headline and tagline still in place.
+- **Customer Discovery and DevOps on the approach grid link to coming-soon pages.** They are not catalog practices. The labels open `customer-discovery.html` and `devops.html`.
+- **Customer Discovery and DevOps use brand semantic colors.** Customer Discovery is warning amber `#F59E0B`. DevOps is info blue `#3B82F6`. Orange stays the action signal and AI blue `#4FC3F7` stays the AI signal, so these two labels do not reuse either one.
+- **Context Storming is a one-column discovery description and comes before Code Is Context.** Each row is one or two sentences from that practice's discovery fidelity. The practice grid is the library section at the bottom of the approach page. The approach hero leads with the harness sentence, then the repo link.

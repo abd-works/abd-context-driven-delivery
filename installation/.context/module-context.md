@@ -30,4 +30,4 @@ Build order: `installation` → `harness/mcp` → `harness/hooks`
 
 ## Constraint
 
-Do not subclass *AgentToolSet* here. Marks live on members; *Installer* walks them. If `.install-state.json` points at a missing directory, install to `{repo}/.cursor`. Do not put `installation/` or `harness/` on `PYTHONPATH` as a catalog root — `import mcp` must load the MCP SDK, not `harness.mcp`.
+Do not subclass *AgentToolSet* here. Marks live on members; *Installer* walks them, including `harness/`. If `.install-state.json` points at a missing directory, install to `{repo}/.cursor`. Do not put `installation/` or `harness/` on `PYTHONPATH` as a catalog root — `import mcp` must load the MCP SDK, not `harness.mcp`.

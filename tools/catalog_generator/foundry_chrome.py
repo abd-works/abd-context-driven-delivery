@@ -47,25 +47,41 @@ _STAGE_SCOPES: dict[str, dict[str, str]] = {
     },
 }
 
-# Orange policy boxes — Foundry discovery/specification/engineering with CDD edits.
+# Stage column bullets — approach-page scope chips (Outcome / Increment / Tests).
 _STAGE_POLICIES: dict[str, tuple[str, ...]] = {
     "discovery": (
-        "system interactions",
-        "modules",
-        "user navigation",
-        "Boundaries",
+        "Outcome",
+        "Experience",
+        "Architecture",
     ),
     "spec": (
-        "behavior",
-        "model",
-        "mockups",
-        "building blocks",
+        "Increment",
+        "Prototype",
+        "Reference",
     ),
     "engineer": (
-        "tests",
-        "code",
+        "Tests",
         "Interface",
-        "architecture code",
+        "Solution",
+    ),
+}
+
+# Approach write-ups shown under each stage column during the tour.
+_STAGE_DESCRIPTIONS: dict[str, tuple[str, ...]] = {
+    "discovery": (
+        "Refine context into lower-fidelity artifacts that make it easier to align on the overarching solution, catch systemic errors, and avoid failure cascading downstream.",
+        "Focus on how outcomes translate to user journeys, and map those journeys to system behavior.",
+        "Define enough structure to establish how domain boundaries and technology modules connect.",
+    ),
+    "spec": (
+        "Create machine-executable specifications — one small slice of the journey at a time.",
+        "Refine the business understanding needed to modularize domain validity, access, persistence, consistency, and integration.",
+        "Write example-driven scenarios backed by domain-driven operations, and generate working UI prototypes that pass their tests.",
+    ),
+    "engineer": (
+        "Build each slice onto the target stack. AI oversees deterministic tools so the same input produces results guarded by safety and quality standards.",
+        "Automate scenario specifications to cover user, system, and module-connecting interfaces.",
+        "Evaluate every error — technical and functional — and feed results back into the growing knowledge repository.",
     ),
 }
 
@@ -139,6 +155,204 @@ def family_perspective(toolset_name: str) -> str:
     return _FAM_LABEL.get(toolset_name, "other")
 
 
+_PRACTICE_BLURBS: dict[str, str] = {
+    "stories": "Map user interactions to system behaviors, then define each through executable specifications.",
+    "clean_engineering": "Highest quality software through modularized architecture and clean code that is resilient to change.",
+    "ux": "Defining user impact from journey and information architecture to screen navigation.",
+    "bdd": "Specify domain logic through behavioural, automated tests.",
+    "ddd": "Organize the code around domain state, domain logic, and domain rules.",
+}
+
+_SPEC_BLURBS: dict[str, str] = {
+    "stories": "Executable scenario-specifications with real-world examples",
+    "clean_engineering": "Deep modules with explicit, narrow seams defined using code-level, type-safe contracts",
+    "ux": "Interface mockups that work according to story specs and design templates",
+    "bdd": "Nested describe/it behaviour tests that serve as both documentation and automated tests for domain logic",
+    "ddd": "Templates that generate domain building blocks for the target architecture",
+}
+
+# Discovery-fidelity overviews, tightened to one or two sentences for Context Storming.
+_STORM_BLURBS: dict[str, str] = {
+    "stories": (
+        "Define the story map as Epic, Sub-Epic, and Story. "
+        "Change it while the nodes are still titles, because the same move costs much more after scenarios, screens, and tests exist."
+    ),
+    "ddd": (
+        "Draw where the language changes: context boundaries, the aggregates that protect invariants, and the dependency arcs between contexts. "
+        "Names and boundaries are cheap to change here, and expensive once building blocks, stories, and code depend on them."
+    ),
+    "ux": (
+        "Decide which screens exist and how users move between them. "
+        "Name screens, regions, and transitions in the user's language before controls or brand."
+    ),
+    "clean_engineering": (
+        "Partition the problem into modules a reader can understand on their own. "
+        "Name each module, its public seam, and its one-way dependencies."
+    ),
+    "bdd": (
+        "Name every observation as a nested describe/it signature. "
+        "Leave the test bodies empty until the behavior is agreed."
+    ),
+}
+
+
+def approach_principle_grid(practices: list[dict], kind: str) -> str:
+    """Static board under one approach principle. ``kind`` is descriptions, windows, spec, or tickets."""
+    by_name = {t["toolset_name"]: t for t in practices}
+    row_order = ("stories", "ddd", "ux", "clean_engineering", "bdd")
+    rows = [by_name[name] for name in row_order if name in by_name]
+
+    def practice_href(tool: dict) -> str:
+        return tool.get("href") or f"context-tools/{tool['toolset_name']}.html"
+
+    def label(tool: dict) -> str:
+        fam = family_perspective(tool["toolset_name"])
+        return (
+            f'<a class="approach-grid__label approach-grid__label--{html.escape(fam)}" '
+            f'href="{html.escape(practice_href(tool))}">'
+            f'{html.escape(display_label(tool["toolset_name"]))}</a>'
+        )
+
+    cdd = by_name.get("cdd")
+    cdd_href = html.escape(practice_href(cdd) if cdd else "context-tools/cdd.html")
+    cdd_head = (
+        f'<a class="approach-grid__label approach-grid__label--cdd" href="{cdd_href}">'
+        "context-driven-delivery</a>"
+    )
+
+    if kind == "descriptions":
+        # Customer discovery and DevOps sit on this grid only. They are not catalog practices.
+        bookends = (
+            (
+                "customer-discovery",
+                "customer-discovery",
+                "Validate customer impact by delivering the smallest increment that enables them, and pivot to measure and learn.",
+                "customer-discovery.html",
+            ),
+            (
+                "devops",
+                "devops",
+                "Merge development and operations by treating infrastructure as code and testing and deploying continuously.",
+                "devops.html",
+            ),
+        )
+
+        def plain_row(name: str, fam: str, blurb: str, href: str) -> list[str]:
+            return [
+                f'<a class="approach-grid__label approach-grid__label--{html.escape(fam)}" '
+                f'href="{html.escape(href)}">{html.escape(name)}</a>',
+                f'<div class="approach-grid__cell">{html.escape(blurb)}</div>',
+            ]
+
+        body = plain_row(*bookends[0])
+        for tool in rows:
+            body.append(label(tool))
+            body.append(
+                f'<div class="approach-grid__cell">{html.escape(_PRACTICE_BLURBS.get(tool["toolset_name"], ""))}</div>'
+            )
+        body.extend(plain_row(*bookends[1]))
+        return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
+
+    if kind == "spec":
+        body = []
+        for tool in rows:
+            body.append(label(tool))
+            body.append(
+                f'<div class="approach-grid__cell">{html.escape(_SPEC_BLURBS.get(tool["toolset_name"], ""))}</div>'
+            )
+        return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
+
+    if kind == "storm":
+        body = []
+        for tool in rows:
+            body.append(label(tool))
+            body.append(
+                f'<div class="approach-grid__cell">{html.escape(_STORM_BLURBS.get(tool["toolset_name"], ""))}</div>'
+            )
+        return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
+
+    if kind == "windows":
+        stages = ("Context", "Discovery", "Specification", "Implementation")
+        stage_bar = '<div class="approach-window__stages">' + "".join(
+            f'<div class="approach-window__stage">{html.escape(label)}</div>' for label in stages
+        ) + "</div>"
+        windows = (
+            ("solution", "Whole Solution", "wide / shallow", "", "outcomes · scope · boundaries"),
+            ("increment", "Increment", "medium", "days", "interactions · experience · structure"),
+            ("sprint", "Session", "narrow / deeper", "hours", "behaviour · design · logic"),
+            ("story", "Story", "narrowest / deep", "minutes", "tests · code · interface"),
+        )
+        parts: list[str] = []
+        for index, (shape, name, width, when, detail) in enumerate(windows):
+            if index:
+                parts.append('<div class="approach-window__arrow" aria-hidden="true"></div>')
+            bracket = f"{width} - {when}" if when else width
+            parts.append(
+                f'<div class="approach-window approach-window--{shape}">'
+                '<div class="approach-window__shape"></div>'
+                f'<div class="approach-window__name">{html.escape(name)}</div>'
+                f'<div class="approach-window__width">({html.escape(bracket)})</div>'
+                f'<div class="approach-window__detail">{html.escape(detail)}</div>'
+                "</div>"
+            )
+        return (
+            '<div class="approach-windows" role="img" '
+            'aria-label="Context window narrows from Whole Solution to Story">'
+            + stage_bar
+            + '<div class="approach-windows__row">'
+            + "".join(parts)
+            + "</div></div>"
+        )
+
+    if kind == "stages":
+        heads = [cdd_head]
+        details = []
+        for stage_key, stage_label in STAGES:
+            fams = ("sdd", "uxd", "arc")
+            chips = "".join(
+                f'<li class="approach-grid__chip approach-grid__chip--{fams[i % 3]}">{html.escape(item)}</li>'
+                for i, item in enumerate(_STAGE_POLICIES.get(stage_key, ()))
+            )
+            paras = "".join(
+                f'<p>{html.escape(para)}</p>' for para in _STAGE_DESCRIPTIONS.get(stage_key, ())
+            )
+            shape = "solution" if stage_key == "discovery" else "sprint" if stage_key == "spec" else "story"
+            heads.append(
+                f'<div class="approach-grid__head"><span class="approach-grid__shape approach-grid__shape--{shape}"></span>'
+                f'<span class="approach-grid__head-title">{html.escape(stage_label)}</span></div>'
+            )
+            details.append(f'<div class="approach-grid__stage"><ul>{chips}</ul>{paras}</div>')
+        labels = "".join(label(tool) for tool in rows)
+        return (
+            '<div class="approach-grid approach-grid--stages">'
+            + "".join(heads)
+            + f'<div class="approach-grid__labels">{labels}</div>'
+            + "".join(details)
+            + "</div>"
+        )
+
+    heads = [cdd_head]
+    for stage_key, stage_label in STAGES:
+        shape = "solution" if stage_key == "discovery" else "sprint" if stage_key == "spec" else "story"
+        heads.append(
+            f'<div class="approach-grid__head"><span class="approach-grid__shape approach-grid__shape--{shape}"></span>'
+            f'<span class="approach-grid__head-title">{html.escape(stage_label)}</span></div>'
+        )
+    body = heads
+    for tool in rows:
+        body.append(label(tool))
+        for stage_key, _stage_label in STAGES:
+            fid = (tool.get("fidelities") or {}).get(stage_key)
+            if fid:
+                body.append(
+                    f'<a class="approach-grid__ticket approach-grid__ticket--{html.escape(family_perspective(tool["toolset_name"]))}" '
+                    f'href="{html.escape(fid["href"])}">{html.escape(display_label(fid["key"]))}</a>'
+                )
+            else:
+                body.append('<div class="approach-grid__ticket approach-grid__ticket--empty"></div>')
+    return f'<div class="approach-grid approach-grid--tickets">{"".join(body)}</div>'
+
+
 class Brand:
     """Named brand overlay for catalog commons."""
 
@@ -209,6 +423,9 @@ def page_shell(
     site_base: str = "https://abd.works/",
     show_hero: bool = True,
     body_wrap_class: str = "",
+    after_tagline: str = "",
+    subhead: str = "",
+    after_subhead: str = "",
 ) -> str:
     """Wrap content in the Foundry catalog page chrome (nav + hero + scripts).
 
@@ -218,14 +435,30 @@ def page_shell(
     """
     hero = ""
     if show_hero:
+        lead = f'\n          <p class="body-lead">{tagline}</p>' if tagline.strip() else ""
+        if subhead.strip():
+            lead += (
+                f'\n          <p class="page-hero__subhead">{html.escape(subhead)}</p>'
+            )
+        if after_subhead.strip():
+            lead += (
+                f'\n          <p class="body-lead page-hero__repo">{after_subhead}</p>'
+            )
+        after = after_tagline.strip()
+        title_bar = (
+            f'\n          <div class="page-hero__title-bar">'
+            f'\n            <h1 class="page-headline">{h1}</h1>'
+            f'\n            {after}'
+            f"\n          </div>"
+            if after
+            else f'\n          <h1 class="page-headline">{h1}</h1>'
+        )
         hero = f"""
 <div class="page-hero page-hero--foundry">
   <div class="wrap">
     <table class="page-hero__table" role="presentation">
       <tr>
-        <td class="page-hero__cell page-hero__cell--title">
-          <h1 class="page-headline">{h1}</h1>
-          <p class="body-lead">{tagline}</p>
+        <td class="page-hero__cell page-hero__cell--title">{title_bar}{lead}
         </td>
       </tr>
     </table>
@@ -248,10 +481,10 @@ def page_shell(
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{commons_prefix}site.css?v=foundry-33">
-<link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-13">
-<link rel="stylesheet" href="{commons_prefix}cdd-board.css?v=cdd-14">
+<link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-75">
+<link rel="stylesheet" href="{commons_prefix}cdd-board.css?v=cdd-31">
 {extra_head}
-<script src="{commons_prefix}catalog-nav.js?v=foundry-12"></script>
+<script src="{commons_prefix}catalog-nav.js?v=foundry-13"></script>
 </head>
 <body data-nav-prefix="{html.escape(nav_prefix)}" data-nav-current="{html.escape(nav_current)}" data-nav-site-base="{html.escape(site_base)}">
 <main id="main-content">
@@ -264,8 +497,7 @@ def page_shell(
 </div>
 </div>
 </main>
-<script src="{commons_prefix}catalog-foundry-tour.js?v=cdd-13"></script>
-<script src="{commons_prefix}catalog-foundry-skill-nav.js?v=cdd-13"></script>
+<script src="{commons_prefix}catalog-foundry-skill-nav.js?v=cdd-16"></script>
 </body>
 </html>
 """
@@ -298,16 +530,16 @@ def _ticket(
     )
 
 
-def _family_toggle(display_name: str, toolset_name: str, *, header: bool = False) -> str:
-    """Practice-rail chip — button that filters the board (row header only)."""
+def _family_toggle(display_name: str, toolset_name: str, href: str, *, header: bool = False) -> str:
+    """Practice-rail chip — opens that practice page. Does not filter the board."""
     fam = family_class(toolset_name)
     persp = family_perspective(toolset_name)
     extra = " foundry-practice-col__card--header" if header else ""
     return (
-        f'<button type="button" class="kb-ticket aad-skill {fam} foundry-practice-col__card '
+        f'<a class="kb-ticket aad-skill {fam} foundry-practice-col__card '
         f'foundry-perspective-label foundry-family-toggle foundry-perspective-label--{persp}{extra}" '
         f'data-family="{html.escape(toolset_name)}" data-perspective="{persp}" '
-        f'aria-pressed="false">{html.escape(display_name)}</button>'
+        f'href="{html.escape(href)}" aria-pressed="false">{html.escape(display_name)}</a>'
     )
 
 
@@ -331,6 +563,26 @@ def _scope_shape_html(stage_key: str) -> str:
     )
 
 
+def _stage_col_detail_html(stage_key: str) -> str:
+    """Approach chips + write-ups shown inside each column during tour stage 1."""
+    fams = ("sdd", "uxd", "arc")
+    chips = "".join(
+        f'<li class="tour-stage-detail__chip tour-stage-detail__chip--{fams[i % 3]}">'
+        f"{html.escape(item)}</li>"
+        for i, item in enumerate(_STAGE_POLICIES.get(stage_key, ()))
+    )
+    paras = "".join(
+        f'<p class="tour-stage-detail__desc">{html.escape(para)}</p>'
+        for para in _STAGE_DESCRIPTIONS.get(stage_key, ())
+    )
+    return (
+        f'<div class="tour-stage-detail" data-stage-detail="{html.escape(stage_key)}">'
+        f'<ul class="tour-stage-detail__chips">{chips}</ul>'
+        f'{paras}'
+        f"</div>"
+    )
+
+
 def _stage_questions_html(
     practices: list[dict],
     *,
@@ -338,22 +590,36 @@ def _stage_questions_html(
 ) -> str:
     by_name = {t["toolset_name"]: t for t in practices}
     cdd = by_name.get("cdd") or {}
-    cells = ['<div class="kanban-stage-questions__spacer" aria-hidden="true"></div>']
+    cells = [
+        '<div class="kanban-stage-questions__spacer">'
+        '<button type="button" class="policy-boxes-toggle" aria-expanded="false" '
+        'aria-label="Show stage policies">'
+        '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">'
+        '<path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" '
+        'stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"/>'
+        "</svg></button></div>"
+    ]
     for stage_key, _ in STAGES:
         items = "".join(
             f'<li class="kanban-stage-questions__item">{html.escape(item)}</li>'
             for item in _STAGE_POLICIES[stage_key]
+        )
+        paras = "".join(
+            f'<p class="kanban-stage-questions__desc">{html.escape(para)}</p>'
+            for para in _STAGE_DESCRIPTIONS.get(stage_key, ())
         )
         fid = (cdd.get("fidelities") or {}).get(stage_key)
         href = path_prefix + (fid["href"] if fid else f"fidelities/cdd-{stage_key}.html")
         cells.append(
             f'<a class="kanban-stage-questions__cell" data-stage="{html.escape(stage_key)}" '
             f'href="{html.escape(href)}">'
-            f'<ul class="kanban-stage-questions__list">{items}</ul></a>'
+            f'<ul class="kanban-stage-questions__list">{items}</ul>'
+            f'{paras}'
+            f"</a>"
         )
     return (
         '<div class="kanban-stage-questions kanban-stage-questions--foundry '
-        'kanban-stage-questions--cdd" data-id="stage-questions">'
+        'kanban-stage-questions--cdd is-collapsed" data-id="stage-questions">'
         + "".join(cells)
         + "</div>"
     )
@@ -364,12 +630,13 @@ def _cdd_tour_panel_html() -> str:
   <div class="foundry-travel-ring" id="travel-ring" aria-hidden="true"></div>
   <div class="foundry-cdd-panel" id="foundry-guide">
     <div class="foundry-cdd-panel__head">
-      <button type="button" class="foundry-cdd-btn" id="cdd-toggle" aria-label="Start Context-Driven Delivery overview">Context-driven delivery</button>
-      <span class="foundry-cdd-panel__tag" id="guide-tag">Click for overview</span>
+      <button type="button" class="foundry-cdd-btn" id="cdd-toggle" aria-label="Start Context-Driven Delivery tour">Start tour</button>
+      <button type="button" class="foundry-cdd-advance" id="tour-advance" aria-label="Advance tour">→</button>
+      <span class="foundry-cdd-panel__hint" id="guide-tag">to advance</span>
     </div>
     <div class="foundry-cdd-intro" id="cdd-intro">
       <p class="foundry-cdd-intro__line1">Speed is not governed by coding speed. It is governed by <strong>coordination cost</strong> and <strong>cognitive load</strong>.</p>
-      <p class="foundry-cdd-intro__line2"><strong>Context-Driven Delivery</strong> is the practice that turns organizational knowledge into executable, machine-readable context AI can generate from accurately.</p>
+      <p class="foundry-cdd-intro__line2"><strong>Context-Driven Delivery</strong> is the practice of transforming organizational knowledge into assets that are machine-readable and machine executable.</p>
     </div>
     <div class="foundry-guide__body" id="guide-text" aria-live="polite"></div>
   </div>
@@ -399,7 +666,12 @@ def render_hub_board(
     cdd_tool_href = path_prefix + (cdd_tool["href"] if cdd_tool else "context-tools/cdd.html")
 
     practice_bits = [
-        _family_toggle(display_label(tool["toolset_name"]), tool["toolset_name"], header=False)
+        _family_toggle(
+            display_label(tool["toolset_name"]),
+            tool["toolset_name"],
+            path_prefix + tool["href"],
+            header=False,
+        )
         for tool in ordered
     ]
 
@@ -441,18 +713,15 @@ def render_hub_board(
             if hit and hit.get("key") == highlight_fidelity:
                 active = " active"
 
-        if cdd_fid:
-            stage_href = path_prefix + cdd_fid["href"]
-        else:
-            stage_href = path_prefix + f"fidelities/cdd-{stage_key}.html"
         stage_current = " kb-col-head--current" if active else ""
         cols.append(
             f'<div class="kb-col{active}" data-id="col-{stage_key}" data-stage="{stage_key}">'
-            f'<a class="kb-col-head{stage_current}" href="{html.escape(stage_href)}">'
+            f'<div class="kb-col-head{stage_current}">'
             f'<div class="kb-col-head-row">'
             f"{_scope_shape_html(stage_key)}"
             f'<span class="kb-col-head-title"><span>{html.escape(stage_label)}</span></span>'
-            f"</div></a>"
+            f"</div></div>"
+            f"{_stage_col_detail_html(stage_key)}"
             f'{"".join(rows)}'
             f"</div>"
         )
@@ -496,7 +765,6 @@ def render_hub_board(
 <div class="wrap">
 <div class="foundry-kanban-shell" id="kanban-shell">
 <section class="foundry-kanban-surface foundry-skills-expanded catalog-kanban-embed foundry-kanban-surface--cdd-always-expanded" id="catalog-kanban" aria-label="CDD catalog board"{attrs}>
-{_cdd_tour_panel_html()}
   <div class="foundry-board-grid foundry-board-grid--cdd" id="board">
     {practice_col}
     {"".join(cols)}
@@ -535,6 +803,24 @@ def render_hub_board(
 def details_block(title: str, body: str, *, open_default: bool = False) -> str:
     op = " open" if open_default else ""
     return f"<details{op}><summary>{html.escape(title)}</summary>\n{body}\n</details>"
+
+
+_GUIDANCE_BODY_RE = re.compile(
+    r"(<h[1-4]>Guidance</h[1-4]>)(.*?)(?=<h[1-4]>|\Z)",
+    re.DOTALL,
+)
+
+
+def wrap_guidance_body(html_text: str) -> str:
+    """Mark the Guidance section so its bold lead-ins can be colored apart from Rules."""
+
+    def repl(match: re.Match) -> str:
+        return (
+            f"{match.group(1)}"
+            f'<div class="fidelity-guidance-body">{match.group(2)}</div>'
+        )
+
+    return _GUIDANCE_BODY_RE.sub(repl, html_text)
 
 
 def fence(lang: str, text: str) -> str:
@@ -612,9 +898,12 @@ def markdown_to_html(text: str, *, include_tables: bool = False) -> str:
         line = lines[i]
         if in_code:
             if line.strip().startswith("```"):
-                body = html.escape("\n".join(code_buf))
-                lang_attr = f' class="language-{html.escape(code_lang)}"' if code_lang else ""
-                out.append(f"<pre><code{lang_attr}>{body}</code></pre>")
+                # Fidelity and rule files keep format, stage, and glob metadata in
+                # yaml fences. That metadata stays in the markdown; the catalog HTML shows the prose.
+                if code_lang.lower() not in ("yaml", "yml"):
+                    body = html.escape("\n".join(code_buf))
+                    lang_attr = f' class="language-{html.escape(code_lang)}"' if code_lang else ""
+                    out.append(f"<pre><code{lang_attr}>{body}</code></pre>")
                 in_code = False
                 code_buf = []
                 code_lang = ""
@@ -737,7 +1026,7 @@ def markdown_to_html(text: str, *, include_tables: bool = False) -> str:
         out.append(f"<p>{inline(' '.join(p.strip() for p in para))}</p>")
 
     close_list()
-    if in_code:
+    if in_code and code_lang.lower() not in ("yaml", "yml"):
         out.append(f"<pre><code>{html.escape(chr(10).join(code_buf))}</code></pre>")
     return "\n".join(out)
 

@@ -2,6 +2,7 @@
 single main-flow scenario. See catalog/cdd-catalog-sketch.md, epic
 "Assemble Catalog Page Data".
 """
+import ast
 import sys
 from pathlib import Path
 
@@ -19,12 +20,19 @@ from mamba import before, description, it
 from catalog_generator.catalog_generator import (
     CONTEXT_TOOL_REGISTRY,
     UTILITY_REGISTRY,
+    ActionResolution,
     CatalogFidelityGuidance,
+    RegistryEntry,
     SkillSlashName,
     build_run_request,
+    keep_in_catalog,
     load_registry,
+    noCatalog,
+    omitted_from_catalog,
     resolve_lifecycle_actions,
 )
+from installation.files import skill
+from installation.installer import Installer
 from practices.ddd.ddd import Ddd
 from practices.stories.stories import Stories
 from generate.generate import Generate
@@ -60,6 +68,61 @@ with description("Build Run Request From Live Toolset Manifest"):
             expect(host["context"]["fidelity"]).to(equal("story_map"))
 
 
+with description("noCatalog"):
+    with description("a class or operation marked not ready for the catalog"):
+        with it("drops the class from registry resolution"):
+            @noCatalog
+            class LaterUtility:
+                pass
+
+            class ShownUtility:
+                pass
+
+            hidden = RegistryEntry("later", "later", "LaterUtility", LaterUtility)
+            shown = RegistryEntry("shown", "shown", "ShownUtility", ShownUtility)
+            expect(keep_in_catalog(hidden)).to(equal(False))
+            expect(keep_in_catalog(shown)).to(be_true)
+
+        with it("drops the operation from the lifecycle action walk"):
+            tree = ast.parse(
+                "class Kit:\n"
+                "    @agent_instructions\n"
+                "    @noCatalog\n"
+                "    def sketch(self):\n"
+                "        pass\n"
+                "    @agent_instructions\n"
+                "    def generate(self):\n"
+                "        pass\n"
+            )
+            resolution = ActionResolution()
+            resolution.tree = tree
+            expect([method.name for method in resolution._public_action_methods()]).to(
+                equal(["generate"])
+            )
+
+        with it("leaves the skill mark in place so install still deploys it"):
+            @noCatalog
+            @skill
+            def sketch(self):
+                """Sketch the plan."""
+                return None
+
+            expect(omitted_from_catalog(sketch)).to(be_true)
+            expect(getattr(sketch, "_skill", False)).to(be_true)
+            expect("noCatalog" in Installer._ANNOTATIONS).to(equal(False))
+            expect("Skill" in Installer._ANNOTATIONS).to(be_true)
+            source = ast.parse(
+                "@agent_toolset\n"
+                "class Kit:\n"
+                "    @Skill\n"
+                "    @noCatalog\n"
+                "    def sketch(self):\n"
+                "        pass\n"
+            )
+            installer = object.__new__(Installer)
+            expect(installer._class_is_installable(source.body[0])).to(be_true)
+
+
 with description("Load Context Tool And Utility Registry"):
     with description("given the hardcoded registry lists"):
         with before.all:
@@ -70,10 +133,9 @@ with description("Load Context Tool And Utility Registry"):
             for entry in self.practices:
                 expect(isinstance(entry.cls, type)).to(be_true)
 
-        with it("resolves every utility to a real class with nothing missing"):
-            expect(len(self.utilities)).to(equal(len(UTILITY_REGISTRY)))
-            for entry in self.utilities:
-                expect(isinstance(entry.cls, type)).to(be_true)
+        with it("omits utilities marked noCatalog"):
+            expect(len(UTILITY_REGISTRY) > 0).to(be_true)
+            expect(self.utilities).to(equal([]))
 
         with it("resolves CDD as the header-row entry, first in the list"):
             expect(self.practices[0].display_name).to(equal("Context-driven delivery"))
@@ -94,16 +156,16 @@ with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections")
             expect(formats["bounded_context"]).to(equal("markdown"))
             expect(formats["tactics"]).to(equal("python"))
 
-        with it("resolves the matching ## {fidelity} guidance body from ddd.md"):
+        with it("resolves the matching ### {fidelity} guidance body from ddd.md"):
             tactics = next(g for g in self.guidances if g.key == "tactics")
             expect(tactics.guidance).not_to(equal("Guidance missing"))
             expect(len(tactics.guidance) > 0).to(be_true)
 
-    with description("given a fidelity with no matching ## heading in {tool}.md"):
+    with description("given a fidelity with no matching ### heading in {tool}.md"):
         with before.all:
             class _NoHeading:
                 __module__ = "practices.bdd.bdd"
-                fidelities = {"discovery": "modules"}  # BDD has no ## modules section
+                fidelities = {"discovery": "modules"}  # BDD has no ### modules section
                 _fidelity_format_defaults = {}
 
             self.stub_guidances = CatalogFidelityGuidance.scrape(_NoHeading)
