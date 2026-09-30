@@ -1,5 +1,6 @@
 /**
  * Epic: Get Sim
+ * Orders: 0.0.4
  */
 
 import { scenario, story } from "tests/story-test";
@@ -11,6 +12,17 @@ import { scenario, story } from "tests/story-test";
 
 story('Choose Esim', () => {
   scenario('Choose eSIM', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('eSIM is available', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('the phone supports eSIM', () => {
+          // TODO: implement step
+        });
+    });
     given('no ++SIM type++ is on the line', () => {
       // TODO: implement step
     });
@@ -32,6 +44,17 @@ story('Choose Esim', () => {
   });
 
   scenario('Choose eSIM — already on the line', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('eSIM is available', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('the phone supports eSIM', () => {
+          // TODO: implement step
+        });
+    });
     given('the line already has ++SIM type++ eSIM', () => {
       // TODO: implement step
     });
@@ -44,6 +67,17 @@ story('Choose Esim', () => {
   });
 
   scenario('Choose eSIM — cart patch fails', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('eSIM is available', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('the phone supports eSIM', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir returns an error on cart patch', () => {
       // TODO: implement step
     });
@@ -67,6 +101,14 @@ story('Choose Esim', () => {
 
 story('Request a Paradise Sim Card', () => {
   scenario('Request a Paradise SIM card', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is choosing a physical SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('no ++SIM type++ is on the line', () => {
       // TODO: implement step
     })
@@ -94,6 +136,14 @@ story('Request a Paradise Sim Card', () => {
   });
 
   scenario('Request a Paradise SIM card — already on the line', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is choosing a physical SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the line already has ++SIM type++ pSIM', () => {
       // TODO: implement step
     });
@@ -106,6 +156,14 @@ story('Request a Paradise Sim Card', () => {
   });
 
   scenario('Request a Paradise SIM card — cart patch fails', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is choosing a physical SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir returns an error on cart patch', () => {
       // TODO: implement step
     });
@@ -129,6 +187,14 @@ story('Request a Paradise Sim Card', () => {
 
 story('Enter Existing Sim', () => {
   scenario('Enter existing SIM', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is choosing a physical SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir has ++ICCID++ ++valid ICCID++ available in inventory', () => {
       // TODO: implement step
     });
@@ -153,6 +219,14 @@ story('Enter Existing Sim', () => {
   });
 
   scenario('ICCID contains spaces', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is choosing a physical SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer has ++ICCID++ ++ICCID with spaces++', () => {
       // TODO: implement step
     });
@@ -168,6 +242,14 @@ story('Enter Existing Sim', () => {
   });
 
   scenario('Inventory rejects ICCID', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is choosing a physical SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir does not have ++ICCID++ ++invalid ICCID++ available in inventory', () => {
       // TODO: implement step
     });
@@ -194,6 +276,23 @@ story('Enter Existing Sim', () => {
 
 story('Activate Sim', () => {
   scenario('Activate Sim', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is waiting for a Paradise SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer is verified', () => {
+          // TODO: implement step
+        })
+        .and('the line has ++SIM type++ pSIM', () => {
+          // TODO: implement step
+        })
+        .but('no ++ICCID++ is on the line', () => {
+          // TODO: implement step
+        })
+        .and('the ++Mavenir customer++ has ++waiting pSIM++ Active', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir has ++ICCID++ ++valid ICCID++ available in inventory', () => {
       // TODO: implement step
     });
@@ -218,6 +317,23 @@ story('Activate Sim', () => {
   });
 
   scenario('waiting pSIM is absent', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is waiting for a Paradise SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer is verified', () => {
+          // TODO: implement step
+        })
+        .and('the line has ++SIM type++ pSIM', () => {
+          // TODO: implement step
+        })
+        .but('no ++ICCID++ is on the line', () => {
+          // TODO: implement step
+        })
+        .and('the ++Mavenir customer++ has ++waiting pSIM++ Active', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir has ++ICCID++ ++valid ICCID++ available in inventory', () => {
       // TODO: implement step
     })
@@ -233,6 +349,23 @@ story('Activate Sim', () => {
   });
 
   scenario('waiting pSIM already completed', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is waiting for a Paradise SIM', () => {
+        // TODO: implement step
+      })
+        .and('the Customer is verified', () => {
+          // TODO: implement step
+        })
+        .and('the line has ++SIM type++ pSIM', () => {
+          // TODO: implement step
+        })
+        .but('no ++ICCID++ is on the line', () => {
+          // TODO: implement step
+        })
+        .and('the ++Mavenir customer++ has ++waiting pSIM++ Active', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir has ++ICCID++ ++valid ICCID++ available in inventory', () => {
       // TODO: implement step
     })
@@ -255,16 +388,30 @@ story('Activate Sim', () => {
 
 story('Complete Draft Sim Order', () => {
   scenario('Complete Draft Sim Order', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('a Customer completed the My Paradise onboarding flow', () => {
+        // TODO: implement step
+      })
+        .and('the Customer\'s line has ++SIM type++ pSIM', () => {
+          // TODO: implement step
+        })
+        .but('the Customer never entered an ++ICCID++', () => {
+          // TODO: implement step
+        })
+        .and('the ++Mavenir customer++ has ++waiting pSIM++ Active', () => {
+          // TODO: implement step
+        });
+    });
     given('Care opens the ++Mavenir customer++ record in Mavenir DEP', () => {
       // TODO: implement step
     })
-      .and('Care sees the draft order in the orders grid (22-dep-orders-grid.png)', () => {
+      .and('Care sees the draft order in the orders grid (`22-dep-orders-grid.png`)', () => {
         // TODO: implement step
       });
     when('Care attaches the ++ICCID++ to the draft order and completes it', () => {
       // TODO: implement step
     });
-    then('the order status in DEP Order History changes from draft to active (23-dep-order-history.png)', () => {
+    then('the order status in DEP Order History changes from draft to active (`23-dep-order-history.png`)', () => {
       // TODO: implement step
     })
       .and('the ++waiting pSIM++ characteristic on the ++Mavenir customer++ is cleared', () => {

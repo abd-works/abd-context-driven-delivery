@@ -1,5 +1,6 @@
 /**
  * Epic: Get New Number
+ * Orders: 0.0.1.1
  */
 
 import { background, scenario, story } from "../../story-test.js";
@@ -9,7 +10,6 @@ import { background, scenario, story } from "../../story-test.js";
  */
 
 story('Determine Number', () => {
-  background('each', ({ given }) => {
     scenario('View available numbers', ({ given, when, then }) => {
       given('a My Paradise customer with a Mavenir shopping cart and no MSISDN', () => {});
       when('the Customer loads available numbers', () => {});
@@ -43,6 +43,13 @@ story('Determine Number', () => {
       when('Mavenir returns only available numbers, excluding the locked ones', () => {});
       then('the locked numbers are not in the available numbers list', () => {}).and('only the currently available numbers are returned', () => {});
     });
+});
+
+/**
+ * Story: Choose a Number
+ */
+
+story('Choose a Number', () => {
     scenario('Pick number', ({ given, when, then }) => {
       when('Mavenir confirms the reservation and patches the cart', () => {}).and('the Customer is forwarded to Select Sim', () => {});
     });
@@ -54,5 +61,4 @@ story('Determine Number', () => {
     scenario('Patch cart with number fails', ({ given, when, then }) => {
       then('My Paradise shows Failed to update your cart.', () => {});
     });
-  });
 });

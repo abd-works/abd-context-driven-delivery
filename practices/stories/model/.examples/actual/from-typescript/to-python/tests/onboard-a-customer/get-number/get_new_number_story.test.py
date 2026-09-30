@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, background, given, scenario, story, then, when
 
 # Epic: Get New Number
+# Orders: 0.0.1.1
 
 # Story: Determine Number
 with story("Determine Number"):
-    with background.each:
         with scenario("View available numbers"):
             with given("a My Paradise customer with a Mavenir shopping cart and no MSISDN"):
                 pass
@@ -64,6 +64,9 @@ with story("Determine Number"):
                 pass
             with and_("only the currently available numbers are returned"):
                 pass
+
+# Story: Choose a Number
+with story("Choose a Number"):
         with scenario("Pick number"):
             with when("Mavenir confirms the reservation and patches the cart"):
                 pass

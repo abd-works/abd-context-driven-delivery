@@ -1,5 +1,6 @@
 /**
  * Epic: Get Voucher Credit
+ * Orders: 0.0.9
  */
 
 import { scenario, story } from "tests/story-test";
@@ -14,7 +15,7 @@ story('Redeem Voucher and Apply Credit', () => {
     given('the Customer is in Order Creation with ++voucher++ ++{voucher}++ applied', () => {
       // TODO: implement step
     })
-      .and('the ++Mavenir shopping cart++ carries ++plan++ ++Essentials++ (id 100000000014, totalPrice 70.00)', () => {
+      .and('the ++Mavenir shopping cart++ carries ++plan++ ++Essentials++ (id `100000000014`, totalPrice `70.00`)', () => {
         // TODO: implement step
       })
       .and('Vouchera has ++voucher++ ++{voucher}++', () => {
@@ -26,7 +27,7 @@ story('Redeem Voucher and Apply Credit', () => {
     when('the Customer redeems the voucher', () => {
       // TODO: implement step
     });
-    then('My Paradise sends the redeem request to Vouchera with ++voucher redemption++ ++{redemption}++ (voucherCode, redeemerIdentifier, orderAmount 70.00)', () => {
+    then('My Paradise sends the redeem request to Vouchera with ++voucher redemption++ ++{redemption}++ (voucherCode, redeemerIdentifier, orderAmount `70.00`)', () => {
       // TODO: implement step
     });
     when('Vouchera records the ++voucher redemption++', () => {
@@ -38,7 +39,7 @@ story('Redeem Voucher and Apply Credit', () => {
     when('the Customer applies the voucher credit', () => {
       // TODO: implement step
     });
-    then('My Paradise sends the ++credit adjustment++ ++{credit}++ to Mavenir (transactionType creditAdjustment, glCode 100004, unit BMD, channel @type)', () => {
+    then('My Paradise sends the ++credit adjustment++ ++{credit}++ to Mavenir (`transactionType` creditAdjustment, glCode `100004`, unit BMD, channel `@type`)', () => {
       // TODO: implement step
     });
     when('Mavenir records the ++credit adjustment++ on the billing account', () => {
@@ -56,7 +57,7 @@ story('Redeem Voucher and Apply Credit', () => {
     given('the Customer is in Order Creation with ++voucher++ ++any-plan voucher++ applied', () => {
       // TODO: implement step
     })
-      .and('the ++Mavenir shopping cart++ carries ++plan++ ++Essentials++ (id 100000000014, totalPrice 70.00)', () => {
+      .and('the ++Mavenir shopping cart++ carries ++plan++ ++Essentials++ (id `100000000014`, totalPrice `70.00`)', () => {
         // TODO: implement step
       })
       .and('Vouchera has ++voucher++ ++any-plan voucher++', () => {
@@ -65,7 +66,7 @@ story('Redeem Voucher and Apply Credit', () => {
     when('the Customer redeems the voucher', () => {
       // TODO: implement step
     });
-    then('My Paradise sends the redeem request to Vouchera with ++voucher redemption++ ++zero redemption++ (orderAmount 0.00)', () => {
+    then('My Paradise sends the redeem request to Vouchera with ++voucher redemption++ ++zero redemption++ (orderAmount `0.00`)', () => {
       // TODO: implement step
     });
     when('Vouchera records the ++voucher redemption++', () => {
@@ -86,7 +87,7 @@ story('Redeem Voucher and Apply Credit', () => {
     given('the Customer is in Order Creation with ++voucher++ ++amount-off voucher++ applied', () => {
       // TODO: implement step
     })
-      .but('the ++Mavenir shopping cart++ carries ++plan++ ++Ace++ (id 100000000042) which is not in ++voucher++ ++amount-off voucher++ planIds', () => {
+      .but('the ++Mavenir shopping cart++ carries ++plan++ ++Ace++ (id `100000000042`) which is not in ++voucher++ ++amount-off voucher++ planIds', () => {
         // TODO: implement step
       });
     when('the Customer redeems the voucher', () => {

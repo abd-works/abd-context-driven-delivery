@@ -15,10 +15,10 @@ from practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
-    DiagramStoryMap,
+    DiagramStoryModel,
     DiagramEpic,
 )
-from practices.stories.model.story_model import Epic, Increment, StoryMap, StoryType, Epic
+from practices.stories.model.story_model import Epic, Increment, StoryModel, StoryType, Epic
 
 
 class DrawIOIncrement(DiagramIncrement):
@@ -49,12 +49,12 @@ class DrawIOIncrement(DiagramIncrement):
         return (cls.lane_height - DiagramStory.size) // 2
 
     @classmethod
-    def save(cls, story_map: StoryMap) -> str:
-        return DrawIOStoryMap()._write_thin_slice(story_map)
+    def save(cls, story_map: StoryModel) -> str:
+        return DrawIOStoryModel()._write_thin_slice(story_map)
 
     @classmethod
     def load(cls, text: str) -> List["DrawIOIncrement"]:
-        return DrawIOStoryMap()._read_thin_slice(text)
+        return DrawIOStoryModel()._read_thin_slice(text)
 
 
 class DrawIOStory(DiagramStory):
@@ -100,8 +100,8 @@ class DrawIOStory(DiagramStory):
     @property
     def y(self) -> int:
         story_map = self._owning_map()
-        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryMap) else 0
-        shaping = isinstance(story_map, DrawIOStoryMap) and story_map.has_outline_estimates
+        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryModel) else 0
+        shaping = isinstance(story_map, DrawIOStoryModel) and story_map.has_outline_estimates
         base = DrawIOEpic.shaping_row_y if shaping else DrawIOEpic.row_y
         deepest_bottom = base + depth * (DrawIOEpic.bar_height + DrawIOEpic.depth_gap) + DrawIOEpic.bar_height
         if shaping:
@@ -111,7 +111,7 @@ class DrawIOStory(DiagramStory):
             deepest_bottom + self.actor_height + self.actor_gap + self.pad_below_sub_epic,
         )
 
-    def cells(self, parent_id: str) -> List["DrawIOStoryMap.Vertex"]:
+    def cells(self, parent_id: str) -> List["DrawIOStoryModel.Vertex"]:
         parent = self.parent
         index = parent.stories.index(self) if isinstance(parent, Epic) else 0
         actor = self.actors[0].strip() if self.actors else ""
@@ -120,18 +120,18 @@ class DrawIOStory(DiagramStory):
             prior = parent.stories[index - 1]
             previous = prior.actors[0].strip() if prior.actors else ""
         cell_id = f"{parent_id}/{self.cell_slug}"
-        drawn: List[DrawIOStoryMap.Vertex] = []
+        drawn: List[DrawIOStoryModel.Vertex] = []
         room = (
             self.y >= parent.y + DrawIOEpic.bar_height + self.actor_height + self.actor_gap
             if isinstance(parent, Epic) else False
         )
-        if room and actor and actor != previous:
-            drawn.append(DrawIOStoryMap.Vertex.make(
+        if room and actor:
+            drawn.append(DrawIOStoryModel.Vertex.make(
                 f"{cell_id}/actor", actor, self.x,
                 self.y - self.actor_height - self.actor_gap,
                 self.size, self.actor_height, self.actor_style,
             ))
-        drawn.append(DrawIOStoryMap.Vertex.make(
+        drawn.append(DrawIOStoryModel.Vertex.make(
             cell_id, self.name, self.x, self.y, self.size, self.size,
             self.style.format(role=self.story_type.value),
         ))
@@ -181,7 +181,7 @@ class DrawIOEpic(DiagramEpic):
         if not isinstance(self.parent, Epic):
             return self.row_y
         story_map = self._owning_map()
-        shaping = isinstance(story_map, DrawIOStoryMap) and story_map.has_outline_estimates
+        shaping = isinstance(story_map, DrawIOStoryModel) and story_map.has_outline_estimates
         base = self.shaping_row_y if shaping else self.nested_row_y
         return base + self.depth * (self.bar_height + self.depth_gap)
 
@@ -226,10 +226,10 @@ class DrawIOEpic(DiagramEpic):
             found.update(child.story_xs())
         return found
 
-    def cells(self) -> List["DrawIOStoryMap.Vertex"]:
+    def cells(self) -> List["DrawIOStoryModel.Vertex"]:
         if not isinstance(self.parent, Epic):
             return self._epic_cells()
-        drawn = [DrawIOStoryMap.Vertex.make(
+        drawn = [DrawIOStoryModel.Vertex.make(
             self.cell_id, self.name, self.x, self.y, self.bar_width, self.bar_height, self.style,
         )]
         for story in self.stories:
@@ -244,21 +244,21 @@ class DrawIOEpic(DiagramEpic):
                 estimate_x = last_story_x + DiagramStory.size + self.estimate_gap
             else:
                 estimate_x = self.x + self.tighten
-            drawn.append(DrawIOStoryMap.Vertex.make(
+            drawn.append(DrawIOStoryModel.Vertex.make(
                 f"{self.cell_id}/estimate", label, estimate_x, self.stories[0].y if self.stories else self._story_row(),
                 max(self.bar_width - (estimate_x - self.x) - self.tighten, 80),
                 DiagramStory.size, self.estimate_style,
             ))
         return drawn
 
-    def _epic_cells(self) -> List["DrawIOStoryMap.Vertex"]:
-        drawn = [DrawIOStoryMap.Vertex.make(
+    def _epic_cells(self) -> List["DrawIOStoryModel.Vertex"]:
+        drawn = [DrawIOStoryModel.Vertex.make(
             self.cell_id, self.name, self.x, self.y, self.width, self.height, self.style,
         )]
         estimate = (self.estimate or "").strip()
         if estimate:
             label = self.estimate_label()
-            drawn.append(DrawIOStoryMap.Vertex.make(
+            drawn.append(DrawIOStoryModel.Vertex.make(
                 f"{self.cell_id}/epic-estimate", label, self.x, self.estimate_row_y,
                 min(160, self.width), self.estimate_height, self.epic_estimate_style,
             ))
@@ -268,8 +268,8 @@ class DrawIOEpic(DiagramEpic):
 
     def _story_row(self) -> int:
         story_map = self._owning_map()
-        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryMap) else 0
-        shaping = isinstance(story_map, DrawIOStoryMap) and story_map.has_outline_estimates
+        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryModel) else 0
+        shaping = isinstance(story_map, DrawIOStoryModel) and story_map.has_outline_estimates
         base = self.shaping_row_y if shaping else self.row_y
         deepest_bottom = base + depth * (self.bar_height + self.depth_gap) + self.bar_height
         if shaping:
@@ -286,7 +286,7 @@ class DrawIOParseError(Exception):
     """Raised when a document is not a valid Draw.io story map."""
 
 
-class DrawIOStoryMap(DiagramStoryMap):
+class DrawIOStoryModel(DiagramStoryModel):
     epic_type = DrawIOEpic
     story_type = DrawIOStory
     increment_type = DrawIOIncrement
@@ -308,7 +308,7 @@ class DrawIOStoryMap(DiagramStoryMap):
             self.extra_attributes = None
 
         @classmethod
-        def make(cls, cell_id, label, x, y, width, height, style) -> "DrawIOStoryMap.Vertex":
+        def make(cls, cell_id, label, x, y, width, height, style) -> "DrawIOStoryModel.Vertex":
             vertex = cls()
             vertex.cell_id = cell_id
             vertex.label = label
@@ -348,7 +348,7 @@ class DrawIOStoryMap(DiagramStoryMap):
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
 
-    def load(self, text: str) -> "DrawIOStoryMap":
+    def load(self, text: str) -> "DrawIOStoryModel":
         try:
             root_el = ET.fromstring(text)
         except ET.ParseError as err:
@@ -363,7 +363,7 @@ class DrawIOStoryMap(DiagramStoryMap):
             raise DrawIOParseError("Root element must be <mxGraphModel>")
 
         cells = tree.findall(".//mxCell[@vertex='1']")
-        story_map = DrawIOStoryMap()
+        story_map = DrawIOStoryModel()
         current_epic: DrawIOEpic | None = None
         current_sub_epic_stack: List[DrawIOEpic] = []
         current_actor = ""
@@ -393,6 +393,7 @@ class DrawIOStoryMap(DiagramStoryMap):
                 story = DrawIOStory(value, len(parent.stories) + 1, StoryType.USER)
                 if current_actor:
                     story.actors = [current_actor]
+                current_actor = ""
                 parent.append_story(story)
             elif style.startswith("text") and current_epic is not None and not current_sub_epic_stack:
                 estimate = self._parse_estimate_value(value)
@@ -412,7 +413,7 @@ class DrawIOStoryMap(DiagramStoryMap):
 
     # -- Thin-slice view -------------------------------------------------------
 
-    def _write_thin_slice(self, canonical: StoryMap) -> str:
+    def _write_thin_slice(self, canonical: StoryModel) -> str:
         """Render a swim-lane grid: epic/sub-epic columns x increment rows.
 
         Row 1: Epic headers (same positions as story-map view).
@@ -539,7 +540,7 @@ class DrawIOStoryMap(DiagramStoryMap):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
         return root, graph_root, 2
 
-    def _cell(self, cell_id, label) -> "DrawIOStoryMap.Vertex":
+    def _cell(self, cell_id, label) -> "DrawIOStoryModel.Vertex":
         vertex = self.Vertex()
         vertex.cell_id = cell_id
         vertex.label = label

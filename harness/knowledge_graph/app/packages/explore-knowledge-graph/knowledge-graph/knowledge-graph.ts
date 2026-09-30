@@ -14,7 +14,9 @@ import {
   NODE_TYPES_BY_PRACTICE,
   PRACTICES,
   RELATIONSHIP_KINDS,
+  STAGES,
   RULE_GUIDANCE,
+  closestFidelity,
   stageFor,
 } from './catalog';
 
@@ -304,7 +306,7 @@ export class GraphNode {
   }
 
   get stage(): string {
-    return stageFor(this.dto.fidelity);
+    return stageFor(this.dto.fidelity) || stageFor(closestFidelity(this.practice, this.semanticType));
   }
 
   get semanticType(): string {
@@ -462,7 +464,14 @@ export class KnowledgeGraph {
   }
 
   get sourceFile(): SourceRangeDto | null {
-    return this.selectedNode?.source ?? null;
+    const selected = this.selectedNode;
+    if (!selected) {
+      return null;
+    }
+    if (selected.source?.file) {
+      return selected.source;
+    }
+    return this._classSource(selected.name);
   }
 
   toDto(): KnowledgeGraphDto {
@@ -490,7 +499,7 @@ export class KnowledgeGraph {
             rules: this._listedRules(this.selectedNode),
           }
         : null,
-      selected_tree: findListedNode(listedTree, this.view.selectedNodeId),
+      selected_tree: this._sourcePane(findListedNode(listedTree, this.view.selectedNodeId)),
       selected_rule: this._selectedRule(),
       source_file: this.sourceFile,
     };
@@ -500,6 +509,314 @@ export class KnowledgeGraph {
     return new KnowledgeGraph(
       ensureFolderPackages(dropClonedOperationHits(dropCatalogModules(dto))),
     );
+  }
+
+  private _sourcePane(node: ListedTreeNode | null): ListedTreeNode | null {
+    if (!node) {
+      return node;
+    }
+    if (node.semantic_type === 'OoadClass') {
+      return { ...node, children: this._withoutMembers(node.children) };
+    }
+    if (node.semantic_type === 'Operation' || node.semantic_type === 'Property') {
+      return this._memberPane(node, 1, new Set());
+    }
+    if (node.semantic_type === 'Example') {
+      return { ...node, children: this._classesForExample(node.node_id).map((cls) => this._paneClass(cls)) };
+    }
+    if (node.semantic_type === 'Step') {
+      return {
+        ...node,
+        children: [
+          ...this._operationsForStep(node),
+          ...this._classesForStep(node).map((cls) => this._paneClass(cls)),
+        ],
+      };
+    }
+    return node;
+  }
+
+  private _withoutMembers(children: ListedTreeNode[]): ListedTreeNode[] {
+    return children
+      .filter(
+        (child) =>
+          child.semantic_type !== 'Property' &&
+          child.semantic_type !== 'Operation' &&
+          child.semantic_type !== 'Parameter',
+      )
+      .map((child) => ({ ...child, children: this._withoutMembers(child.children) }));
+  }
+
+  private _memberPane(node: ListedTreeNode, depth: number, stack: Set<string>): ListedTreeNode {
+    const owner = this._owningClassNode(node.node_id);
+    const types =
+      node.semantic_type === 'Property'
+        ? this._propertyClasses(node)
+        : this._referencedTypeNodes(node, owner);
+    const typeNodes = types.map((typeNode) => this._paneClass(typeNode));
+    if (owner && !typeNodes.some((typeNode) => typeNode.node_id === owner.nodeId)) {
+      typeNodes.push(this._paneClass(owner));
+    }
+    const calls = depth >= 5 ? [] : this._directCalls(node, stack);
+    const next = new Set(stack);
+    next.add(node.node_id);
+    return {
+      ...node,
+      children: [
+        ...typeNodes,
+        ...calls.map((call) => this._memberPane(call, depth + 1, next)),
+      ],
+    };
+  }
+
+  private _directCalls(caller: ListedTreeNode, stack: Set<string>): ListedTreeNode[] {
+    const labels = memberCallLabels(caller.source?.text ?? '');
+    const byName = new Map<string, GraphNode>();
+    for (const edge of this._allEdges()) {
+      if (edge.kind !== 'invokes' || edge.from_id !== caller.node_id) {
+        continue;
+      }
+      const target = this._nodeById(edge.to_id);
+      if (!target || target.nodeId === caller.node_id || stack.has(target.nodeId)) {
+        continue;
+      }
+      if (target.semanticType !== 'Operation' && target.semanticType !== 'Property') {
+        continue;
+      }
+      if (
+        caller.semantic_type === 'Operation' &&
+        target.semanticType === 'Property' &&
+        isSimpleProperty(target.source?.text ?? '')
+      ) {
+        continue;
+      }
+      byName.set(target.name, target);
+    }
+    const ordered: ListedTreeNode[] = [];
+    const used = new Set<string>();
+    for (const [member, label] of labels) {
+      const target = byName.get(member);
+      if (!target || used.has(target.nodeId)) {
+        continue;
+      }
+      used.add(target.nodeId);
+      ordered.push({ ...this._paneClass(target), name: label });
+    }
+    for (const target of byName.values()) {
+      if (used.has(target.nodeId)) {
+        continue;
+      }
+      const owner = this._owningClassNode(target.nodeId);
+      ordered.push({
+        ...this._paneClass(target),
+        name: owner ? `${owner.name}.${target.name}` : target.name,
+      });
+    }
+    return ordered;
+  }
+
+  private _propertyClasses(property: ListedTreeNode): GraphNode[] {
+    const names = new Set(fieldTypeNames(property.source?.text ?? ''));
+    for (const group of property.relationships) {
+      if (group.kind !== 'hasType') {
+        continue;
+      }
+      for (const target of group.targets) {
+        names.add(target.name);
+      }
+    }
+    for (const edge of this._allEdges()) {
+      if (edge.kind !== 'hasType' || edge.from_id !== property.node_id) {
+        continue;
+      }
+      const target = this._nodeById(edge.to_id);
+      if (target) {
+        names.add(target.name);
+      }
+    }
+    const owner = this._owningClassNode(property.node_id);
+    return this._classesNamed(names, new Set(owner ? [owner.nodeId] : []));
+  }
+
+  private _classesNamed(names: Iterable<string>, exclude: Set<string>): GraphNode[] {
+    const found: GraphNode[] = [];
+    const seen = new Set(exclude);
+    for (const name of names) {
+      if (SKIP_TYPES.has(name)) {
+        continue;
+      }
+      const match = this._allNodes().find(
+        (node) => node.semanticType === 'OoadClass' && node.name === name,
+      );
+      if (!match || seen.has(match.nodeId)) {
+        continue;
+      }
+      seen.add(match.nodeId);
+      found.push(match);
+    }
+    return found;
+  }
+
+  private _operationsForStep(step: ListedTreeNode): ListedTreeNode[] {
+    const found: ListedTreeNode[] = [];
+    const seen = new Set<string>();
+    for (const edge of this._allEdges()) {
+      if (edge.kind !== 'invokes' || edge.from_id !== step.node_id) {
+        continue;
+      }
+      const operation = this._nodeById(edge.to_id);
+      if (!operation || operation.semanticType !== 'Operation' || seen.has(operation.nodeId)) {
+        continue;
+      }
+      seen.add(operation.nodeId);
+      const listed = this._listedLeaf(operation);
+      found.push(
+        this._memberPane(
+          {
+            ...listed,
+            path: listed.name,
+            origin: listed.source,
+            children: [],
+          },
+          1,
+          new Set(),
+        ),
+      );
+    }
+    return found;
+  }
+
+  private _classesForExample(exampleId: string): GraphNode[] {
+    const found: GraphNode[] = [];
+    const seen = new Set<string>();
+    for (const edge of this._allEdges()) {
+      if (edge.kind !== 'demonstrates' || edge.from_id !== exampleId) {
+        continue;
+      }
+      const cls = this._nodeById(edge.to_id);
+      if (!cls || cls.semanticType !== 'OoadClass' || seen.has(cls.nodeId)) {
+        continue;
+      }
+      seen.add(cls.nodeId);
+      found.push(cls);
+    }
+    return found;
+  }
+
+  private _classesForStep(step: ListedTreeNode): GraphNode[] {
+    const found: GraphNode[] = [];
+    const seen = new Set<string>();
+    const add = (cls: GraphNode | null) => {
+      if (!cls || cls.semanticType !== 'OoadClass' || seen.has(cls.nodeId)) {
+        return;
+      }
+      seen.add(cls.nodeId);
+      found.push(cls);
+    };
+    for (const edge of this._allEdges()) {
+      if (edge.from_id !== step.node_id) {
+        continue;
+      }
+      if (edge.kind === 'owns') {
+        const example = this._nodeById(edge.to_id);
+        if (example?.semanticType === 'Example') {
+          for (const cls of this._classesForExample(example.nodeId)) {
+            add(cls);
+          }
+        }
+      }
+      if (edge.kind === 'invokes') {
+        const operation = this._nodeById(edge.to_id);
+        if (!operation || operation.semanticType !== 'Operation') {
+          continue;
+        }
+        const owner = this._owningClassNode(operation.nodeId);
+        add(owner);
+        const listed = findListedNode([step], operation.nodeId) ?? {
+          ...this._paneClass(operation),
+        };
+        for (const cls of this._referencedTypeNodes(listed, owner)) {
+          add(cls);
+        }
+      }
+    }
+    for (const child of step.children) {
+      if (child.semantic_type !== 'Example') {
+        continue;
+      }
+      for (const cls of this._classesForExample(child.node_id)) {
+        add(cls);
+      }
+    }
+    return found;
+  }
+
+  private _paneClass(node: GraphNode): ListedTreeNode {
+    const leaf = this._listedLeaf(node);
+    return {
+      ...leaf,
+      path: leaf.name,
+      origin: leaf.source,
+      children: [],
+    };
+  }
+
+  private _owningClassNode(operationId: string): GraphNode | null {
+    for (const edge of this._allEdges()) {
+      if (edge.kind !== 'owns' || edge.to_id !== operationId) {
+        continue;
+      }
+      const owner = this._nodeById(edge.from_id);
+      if (owner?.semanticType === 'OoadClass') {
+        return owner;
+      }
+    }
+    return null;
+  }
+
+  private _signatureText(operation: ListedTreeNode, owner: GraphNode | null): string {
+    return methodSignature(operation.name, operation.source?.text ?? '', owner?.source?.text ?? '');
+  }
+
+  private _referencedTypeNodes(operation: ListedTreeNode, owner: GraphNode | null): GraphNode[] {
+    const names = new Set<string>(signatureTypeNames(this._signatureText(operation, owner)));
+    for (const child of operation.children) {
+      if (child.semantic_type !== 'Parameter') {
+        continue;
+      }
+      for (const group of child.relationships) {
+        if (group.kind !== 'hasType') {
+          continue;
+        }
+        for (const target of group.targets) {
+          names.add(target.name);
+        }
+      }
+    }
+    for (const group of operation.relationships) {
+      if (group.kind !== 'returns' && group.kind !== 'hasType') {
+        continue;
+      }
+      for (const target of group.targets) {
+        names.add(target.name);
+      }
+    }
+    const found: GraphNode[] = [];
+    const seen = new Set<string>(owner ? [owner.nodeId] : []);
+    for (const name of names) {
+      if (SKIP_TYPES.has(name)) {
+        continue;
+      }
+      const match = this._allNodes().find(
+        (node) => node.semanticType === 'OoadClass' && node.name === name,
+      );
+      if (!match || seen.has(match.nodeId)) {
+        continue;
+      }
+      seen.add(match.nodeId);
+      found.push(match);
+    }
+    return found;
   }
 
   private _withView(view: {
@@ -530,14 +847,40 @@ export class KnowledgeGraph {
       practice: node.practice,
       semantic_type: node.semanticType,
       is_file: node.isFile,
-      properties: node.properties,
+      properties: withoutFolder(node.properties),
       rule_statuses: node.rules.statuses(),
       rules,
       relationships: this._listedRelationships(node),
-      source: node.source,
+      source:
+        node.source?.file ||
+        ((node.semanticType === 'Step' || node.semanticType === 'Example') && node.source?.text)
+          ? node.source
+          : this._classSource(node.name),
       failed,
       total: failed,
     };
+  }
+
+  private _classSource(name: string): SourceRangeDto | null {
+    const key = name.replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+    if (!key) {
+      return null;
+    }
+    let match: SourceRangeDto | null = null;
+    for (const other of this._allNodes()) {
+      if (other.semanticType !== 'OoadClass' || !other.source?.file) {
+        continue;
+      }
+      const otherKey = other.name.replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+      if (otherKey !== key) {
+        continue;
+      }
+      if (other.name === name) {
+        return other.source;
+      }
+      match = other.source;
+    }
+    return match;
   }
 
   private _nodeViolationCount(node: GraphNode): number {
@@ -586,10 +929,34 @@ export class KnowledgeGraph {
       this.view.filter.relationshipTypes,
       this.view.filter.relationshipType || this.view.filter.connectorKind,
     );
-    if (kinds === null) {
+    const chosen = kinds === null ? groups : groups.filter((group) => kinds.includes(group.kind));
+    return this._targetsInSelectedPractices(node, chosen);
+  }
+
+  private _targetsInSelectedPractices(
+    node: GraphNode,
+    groups: ListedRelationshipKind[],
+  ): ListedRelationshipKind[] {
+    const practices = listed(this.view.filter.practices, this.view.filter.practice);
+    if (!practices) {
       return groups;
     }
-    return groups.filter((group) => kinds.includes(group.kind));
+    const classModelOnly = practices.length === 1 && practices[0] === 'clean_engineering';
+    return groups
+      .map((group) => ({
+        ...group,
+        targets: group.targets.filter((target) => {
+          if (
+            classModelOnly &&
+            node.semanticType === 'OoadClass' &&
+            group.kind === 'invokes'
+          ) {
+            return false;
+          }
+          return practices.includes(target.practice);
+        }),
+      }))
+      .filter((group) => group.targets.length > 0);
   }
 
   private _relatedByNode(): Map<string, ListedRelationshipKind[]> {
@@ -728,7 +1095,6 @@ export class KnowledgeGraph {
       const nested = sortNodes(
         [...closure.values()].filter(
           (child) =>
-            child.semanticType !== 'Example' &&
             !next.has(child.nodeId) &&
             (parentOf.get(child.nodeId) ?? []).includes(node.nodeId),
         ),
@@ -870,6 +1236,18 @@ export class KnowledgeGraph {
       }
       if (edge.kind === 'owns') {
         const nextParent = closure.get(edge.from_id);
+        const child = closure.get(edge.to_id);
+        if (child?.semanticType === 'Example') {
+          if (nextParent?.semanticType === 'Step' || nextParent?.semanticType === 'Background') {
+            const parents = parentOf.get(edge.to_id) ?? [];
+            if (!parents.includes(edge.from_id)) {
+              parents.push(edge.from_id);
+              parentOf.set(edge.to_id, parents);
+            }
+            owned.add(edge.to_id);
+          }
+          continue;
+        }
         const currentId = parentOf.get(edge.to_id)?.[0];
         const currentParent = currentId ? closure.get(currentId) : undefined;
         const packageWouldReplace =
@@ -891,7 +1269,28 @@ export class KnowledgeGraph {
         parentOf.set(edge.to_id, parents);
       }
     }
+    for (const edge of this._allEdges()) {
+      if (edge.kind !== 'loads' && edge.kind !== 'demonstratedThrough') {
+        continue;
+      }
+      const child = closure.get(edge.to_id);
+      const parent = closure.get(edge.from_id);
+      if (!child || child.semanticType !== 'Example' || owned.has(edge.to_id) || !parent) {
+        continue;
+      }
+      if (parent.semanticType !== 'Step' && parent.semanticType !== 'Background') {
+        continue;
+      }
+      const parents = parentOf.get(edge.to_id) ?? [];
+      if (!parents.includes(edge.from_id)) {
+        parents.push(edge.from_id);
+        parentOf.set(edge.to_id, parents);
+      }
+    }
     for (const [childId, parents] of parentOf) {
+      if (closure.get(childId)?.semanticType === 'Example') {
+        continue;
+      }
       const stories = parents.filter(
         (parentId) => closure.get(parentId)?.semanticType === 'Story',
       );
@@ -1465,26 +1864,26 @@ export class KnowledgeGraph {
     const forPractices = except({ practices: undefined, practice: undefined });
     const forStages = except({ stages: undefined, fidelity: undefined });
     const forTypes = except({ nodeTypes: undefined, nodeType: undefined });
-    const forRelationships = except({
-      relationshipTypes: undefined,
-      relationshipType: undefined,
-      connectorKind: undefined,
-    });
-    const forRules = except({ rules: undefined, rule: undefined });
-    const forSources = except({ ruleSources: undefined });
+    const unfiltered = this._allNodes();
     return {
       practices: unique([
         ...PRACTICES,
         ...forPractices.map((node) => node.practice).filter(Boolean),
       ]),
-      stages: unique(forStages.map((node) => node.stage).filter(Boolean)),
+      stages: unique([
+        ...STAGES,
+        ...forStages.map((node) => node.stage).filter(Boolean),
+      ]),
       node_types: unique([
         ...forTypes.map((node) => node.semanticType).filter(Boolean),
         ...practiceNodeTypes(this.view.filter.practices),
       ]),
-      relationship_types: this._kindsOn(forRelationships),
-      rules: this._slugsOn(forRules),
-      rule_sources: this._sourcesOn(forSources),
+      relationship_types: unique([
+        ...RELATIONSHIP_KINDS,
+        ...this._kindsOn(unfiltered),
+      ]),
+      rules: this._slugsOn(unfiltered, true),
+      rule_sources: unique(['base', 'project', ...this._sourcesOn(unfiltered)]),
     };
   }
 
@@ -1502,8 +1901,8 @@ export class KnowledgeGraph {
     );
   }
 
-  private _slugsOn(nodes: GraphNode[]): string[] {
-    const sources = listed(this.view.filter.ruleSources);
+  private _slugsOn(nodes: GraphNode[], unfiltered = false): string[] {
+    const sources = unfiltered ? null : listed(this.view.filter.ruleSources);
     const slugs: string[] = [];
     for (const node of nodes) {
       for (const rule of node.rules.details()) {
@@ -1519,7 +1918,7 @@ export class KnowledgeGraph {
         slugs.push(hit.ruleSlug);
       }
     }
-    if (this.view.filter.violations) {
+    if (!unfiltered && this.view.filter.violations) {
       const failing = new Set<string>();
       for (const node of this._allNodes()) {
         for (const hit of node.rules.violations) {
@@ -1830,6 +2229,105 @@ function operationHitBelongs(
   return false;
 }
 
+export const SKIP_TYPES = new Set([
+  'string',
+  'number',
+  'boolean',
+  'unknown',
+  'void',
+  'any',
+  'null',
+  'undefined',
+  'object',
+  'never',
+  'bigint',
+  'symbol',
+  'str',
+  'int',
+  'float',
+  'bool',
+  'None',
+  'list',
+  'dict',
+  'self',
+  'Promise',
+  'Array',
+  'Readonly',
+  'Partial',
+  'Record',
+  'Map',
+  'Set',
+  'Date',
+]);
+
+export function methodSignature(name: string, operationText: string, classText: string): string {
+  const line = classText.match(new RegExp(`(?:^|\\n)[^\\n]*\\b${name}\\s*\\([^\\n]*`))?.[0] ?? '';
+  if (line.includes(':') || line.includes('->')) {
+    return line;
+  }
+  if (operationText.includes('(')) {
+    return operationText;
+  }
+  return line || operationText;
+}
+
+export function isSimpleProperty(text: string): boolean {
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('//'));
+  if (lines.length === 0) {
+    return true;
+  }
+  const body = lines.join('\n');
+  if (/\b(if|for|while|switch|try|catch|throw)\b/.test(body)) {
+    return false;
+  }
+  if (/\b(get|set|async|function)\b/.test(body) && body.includes('(')) {
+    return false;
+  }
+  if (/\([^)]*\)\s*\{/.test(body)) {
+    return false;
+  }
+  return lines.length <= 2;
+}
+
+export function memberCallLabels(text: string): Map<string, string> {
+  const labels = new Map<string, string>();
+  const call = /\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b/g;
+  for (const match of text.matchAll(call)) {
+    if (SKIP_TYPES.has(match[1]) || labels.has(match[2])) {
+      continue;
+    }
+    labels.set(match[2], `${match[1]}.${match[2]}`);
+  }
+  return labels;
+}
+
+export function fieldTypeNames(text: string): string[] {
+  const declared = text.split(':').slice(1).join(':');
+  return typeIdentifiers(declared);
+}
+
+export function signatureTypeNames(text: string): string[] {
+  const head = text.split('{')[0] ?? '';
+  const params = head.match(/\(([^)]*)\)/)?.[1] ?? '';
+  const returned = head.match(/\)\s*(?::|->)\s*([\s\S]*)$/)?.[1] ?? '';
+  const names: string[] = [];
+  for (const part of params.split(',')) {
+    if (!part.includes(':')) {
+      continue;
+    }
+    names.push(...typeIdentifiers(part.slice(part.indexOf(':') + 1)));
+  }
+  names.push(...typeIdentifiers(returned));
+  return names;
+}
+
+function typeIdentifiers(text: string): string[] {
+  return text.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
+}
+
 function findListedNode(
   nodes: ListedTreeNode[],
   nodeId: string | null,
@@ -1869,6 +2367,16 @@ function listed(
     return fallback ? [fallback] : null;
   }
   return values;
+}
+
+function withoutFolder(properties: Record<string, string>): Record<string, string> {
+  const shown: Record<string, string> = {};
+  for (const [name, value] of Object.entries(properties)) {
+    if (name !== 'folder' && value) {
+      shown[name] = value;
+    }
+  }
+  return shown;
 }
 
 function allows(selected: string[] | null, value: string): boolean {

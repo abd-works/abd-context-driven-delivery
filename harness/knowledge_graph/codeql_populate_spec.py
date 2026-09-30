@@ -40,6 +40,63 @@ with description("CodeQL practice-graph export"):
         expect(export.get("story_calls")).to(have_length(1))
 
 
+with description("CodeQL class members"):
+    with it("should own a property and an operation on the class from their file"):
+        graph = PracticeGraph(_SLICE)
+        rows = GraphMemberRows(
+            [
+                {
+                    "name": "Item",
+                    "module": "domain.a",
+                    "file": "a/Item.ts",
+                    "line": 1,
+                    "end_line": 5,
+                },
+                {
+                    "name": "Item",
+                    "module": "domain.b",
+                    "file": "b/Item.ts",
+                    "line": 10,
+                    "end_line": 18,
+                },
+            ],
+            [
+                {
+                    "class_name": "Item",
+                    "name": "sku",
+                    "file": "b/Item.ts",
+                    "line": 12,
+                    "end_line": 12,
+                    "type_hint": "string",
+                }
+            ],
+        )
+        rows.operations = [
+            {
+                "class_name": "Item",
+                "name": "rename",
+                "file": "b/Item.ts",
+                "line": 14,
+                "end_line": 16,
+                "return_type": "",
+            }
+        ]
+        CleanEngineeringModel("CleanEngineering", 1).ensure(graph, rows)
+        owners = [
+            node
+            for node in graph.nodes.values()
+            if node.semantic_type() == "OoadClass" and node.name == "Item"
+        ]
+        expect(len(owners)).to(equal(2))
+        home = next(
+            node
+            for node in owners
+            if str(getattr(node.source, "file", "")).endswith("b/Item.ts")
+        )
+        names = sorted(child.name for child in home.related(Kind.OWNS))
+        expect(names).to(equal(["rename", "sku"]))
+
+
 with description("CodeQL populate on PracticeGraph"):
     with it("should create CE nodes and operation invokes edges from export"):
         graph = PracticeGraph(_SLICE)

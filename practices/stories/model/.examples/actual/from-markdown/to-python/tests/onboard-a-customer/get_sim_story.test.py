@@ -3,12 +3,16 @@ from __future__ import annotations
 from story_test import and_, background, given, scenario, story, then, when
 
 # Epic: Get Sim
+# Orders: 0.0.4
 
 # Story: Choose Esim
 # Actor: Customer
 with story("Choose Esim"):
-    with background.each:
         with scenario("Choose eSIM"):
+            # background: background
+            # background-step: Given | eSIM is available
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
+            # background-step: And | the phone supports eSIM
             with given("no ++SIM type++ is on the line"):
                 pass
             with when("the Customer selects eSIM"):
@@ -22,6 +26,10 @@ with story("Choose Esim"):
             with and_("the Customer is forwarded to Verify ID"):
                 pass
         with scenario("Choose eSIM — already on the line"):
+            # background: background
+            # background-step: Given | eSIM is available
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
+            # background-step: And | the phone supports eSIM
             with given("the line already has ++SIM type++ eSIM"):
                 pass
             with when("the Customer selects eSIM"):
@@ -29,6 +37,10 @@ with story("Choose Esim"):
             with then("My Paradise skips the cart patch"):
                 pass
         with scenario("Choose eSIM — cart patch fails"):
+            # background: background
+            # background-step: Given | eSIM is available
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
+            # background-step: And | the phone supports eSIM
             with given("Mavenir returns an error on cart patch"):
                 pass
             with when("the Customer selects eSIM"):
@@ -41,8 +53,10 @@ with story("Choose Esim"):
 # Story: Request a Paradise Sim Card
 # Actor: Customer
 with story("Request a Paradise Sim Card"):
-    with background.each:
         with scenario("Request a Paradise SIM card"):
+            # background: background
+            # background-step: Given | the Customer is choosing a physical SIM
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
             with given("no ++SIM type++ is on the line"):
                 pass
             with and_("no ++ICCID++ is on the line"):
@@ -55,11 +69,14 @@ with story("Request a Paradise Sim Card"):
                 pass
             with then("My Paradise stores pSIM on the line"):
                 pass
-            with and_("the line has no ++ICCID++"):
+            with but_("the line has no ++ICCID++"):
                 pass
             with and_("the Customer is forwarded to Verify ID"):
                 pass
         with scenario("Request a Paradise SIM card — already on the line"):
+            # background: background
+            # background-step: Given | the Customer is choosing a physical SIM
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
             with given("the line already has ++SIM type++ pSIM"):
                 pass
             with when("the Customer requests a Paradise SIM card"):
@@ -67,6 +84,9 @@ with story("Request a Paradise Sim Card"):
             with then("My Paradise skips the cart patch"):
                 pass
         with scenario("Request a Paradise SIM card — cart patch fails"):
+            # background: background
+            # background-step: Given | the Customer is choosing a physical SIM
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
             with given("Mavenir returns an error on cart patch"):
                 pass
             with when("the Customer requests a Paradise SIM card"):
@@ -79,8 +99,10 @@ with story("Request a Paradise Sim Card"):
 # Story: Enter Existing Sim
 # Actor: Customer
 with story("Enter Existing Sim"):
-    with background.each:
         with scenario("Enter existing SIM"):
+            # background: background
+            # background-step: Given | the Customer is choosing a physical SIM
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
             with given("Mavenir has ++ICCID++ ++valid ICCID++ available in inventory"):
                 pass
             with when("the Customer attaches ++ICCID++ ++valid ICCID++"):
@@ -96,6 +118,9 @@ with story("Enter Existing Sim"):
             with and_("the Customer is forwarded to Verify ID"):
                 pass
         with scenario("ICCID contains spaces"):
+            # background: background
+            # background-step: Given | the Customer is choosing a physical SIM
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
             with given("the Customer has ++ICCID++ ++ICCID with spaces++"):
                 pass
             with when("the Customer attaches ++ICCID++ ++ICCID with spaces++"):
@@ -105,6 +130,9 @@ with story("Enter Existing Sim"):
             with and_("My Paradise does not query inventory or patch the cart"):
                 pass
         with scenario("Inventory rejects ICCID"):
+            # background: background
+            # background-step: Given | the Customer is choosing a physical SIM
+            # background-step: And | the Customer has a ++My Paradise customer++ with ++available number++ ++chosen available number++ in the ++Mavenir shopping cart++
             with given("Mavenir does not have ++ICCID++ ++invalid ICCID++ available in inventory"):
                 pass
             with when("the Customer attaches ++ICCID++ ++invalid ICCID++"):
@@ -119,8 +147,13 @@ with story("Enter Existing Sim"):
 # Story: Activate Sim
 # Actor: Customer
 with story("Activate Sim"):
-    with background.each:
         with scenario("Activate Sim"):
+            # background: background
+            # background-step: Given | the Customer is waiting for a Paradise SIM
+            # background-step: And | the Customer is verified
+            # background-step: And | the line has ++SIM type++ pSIM
+            # background-step: But | no ++ICCID++ is on the line
+            # background-step: And | the ++Mavenir customer++ has ++waiting pSIM++ Active
             with given("Mavenir has ++ICCID++ ++valid ICCID++ available in inventory"):
                 pass
             with when("the Customer activates the SIM with ++ICCID++ ++valid ICCID++"):
@@ -136,15 +169,27 @@ with story("Activate Sim"):
             with then("My Paradise stores ++ICCID++ ++valid ICCID++ on the line"):
                 pass
         with scenario("waiting pSIM is absent"):
+            # background: background
+            # background-step: Given | the Customer is waiting for a Paradise SIM
+            # background-step: And | the Customer is verified
+            # background-step: And | the line has ++SIM type++ pSIM
+            # background-step: But | no ++ICCID++ is on the line
+            # background-step: And | the ++Mavenir customer++ has ++waiting pSIM++ Active
             with given("Mavenir has ++ICCID++ ++valid ICCID++ available in inventory"):
                 pass
-            with and_("the ++Mavenir customer++ has no ++waiting pSIM++ characteristic"):
+            with but_("the ++Mavenir customer++ has no ++waiting pSIM++ characteristic"):
                 pass
             with when("the Customer activates the SIM with ++ICCID++ ++valid ICCID++"):
                 pass
             with then("the pSIM delivered order is rejected"):
                 pass
         with scenario("waiting pSIM already completed"):
+            # background: background
+            # background-step: Given | the Customer is waiting for a Paradise SIM
+            # background-step: And | the Customer is verified
+            # background-step: And | the line has ++SIM type++ pSIM
+            # background-step: But | no ++ICCID++ is on the line
+            # background-step: And | the ++Mavenir customer++ has ++waiting pSIM++ Active
             with given("Mavenir has ++ICCID++ ++valid ICCID++ available in inventory"):
                 pass
             with and_("the ++Mavenir customer++ has ++waiting pSIM++ Cleared"):
@@ -156,8 +201,12 @@ with story("Activate Sim"):
 
 # Story: Complete Draft Sim Order
 with story("Complete Draft Sim Order"):
-    with background.each:
         with scenario("Complete Draft Sim Order"):
+            # background: background
+            # background-step: Given | a Customer completed the My Paradise onboarding flow
+            # background-step: And | the Customer's line has ++SIM type++ pSIM
+            # background-step: But | the Customer never entered an ++ICCID++
+            # background-step: And | the ++Mavenir customer++ has ++waiting pSIM++ Active
             with given("Care opens the ++Mavenir customer++ record in Mavenir DEP"):
                 pass
             with and_("Care sees the draft order in the orders grid (`22-dep-orders-grid.png`)"):

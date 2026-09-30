@@ -17,10 +17,10 @@ from practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
-    DiagramStoryMap,
+    DiagramStoryModel,
     DiagramEpic,
 )
-from practices.stories.model.story_model import Epic, StoryMap, StoryType, Epic
+from practices.stories.model.story_model import Epic, StoryModel, StoryType, Epic
 
 
 class MiroIncrement(DiagramIncrement):
@@ -53,7 +53,7 @@ class MiroIncrement(DiagramIncrement):
         return increment
 
     @classmethod
-    def save(cls, story_map: StoryMap) -> str:
+    def save(cls, story_map: StoryModel) -> str:
         headers = ["Increment"]
         story_column: Dict[str, int] = {}
         column = 1
@@ -149,7 +149,7 @@ class MiroStory(DiagramStory):
     @property
     def y(self) -> int:
         story_map = self._owning_map()
-        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryMap) else 0
+        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryModel) else 0
         deepest_bottom = (
             DiagramEpic.row_y
             + depth * (DiagramEpic.bar_height + DiagramEpic.depth_gap)
@@ -309,7 +309,7 @@ class MiroParseError(Exception):
     """Raised when the payload is not a valid Miro story map SVG."""
 
 
-class MiroStoryMap(DiagramStoryMap):
+class MiroStoryModel(DiagramStoryModel):
     epic_type = MiroEpic
     story_type = MiroStory
     increment_type = MiroIncrement
@@ -335,7 +335,7 @@ class MiroStoryMap(DiagramStoryMap):
             + "\n</svg>"
         )
 
-    def render_chunks(self, canonical: "MiroStoryMap", chunk_size: int = 80) -> List[str]:
+    def render_chunks(self, canonical: "MiroStoryModel", chunk_size: int = 80) -> List[str]:
         """Render story-map SVG as a list of valid SVG chunks for incremental Miro upload.
 
         Each chunk is self-contained and has at most chunk_size rect elements.
@@ -355,7 +355,7 @@ class MiroStoryMap(DiagramStoryMap):
             chunks.append(f"{header}\n{body}\n{footer}")
         return chunks
 
-    def render_api_shapes(self, canonical: "MiroStoryMap") -> List[dict]:
+    def render_api_shapes(self, canonical: "MiroStoryModel") -> List[dict]:
         """Return a flat list of shape descriptors for direct Miro REST API upload.
 
         Each dict has: id, x, y, w, h, rx, fill, stroke, stroke_width,
@@ -435,14 +435,14 @@ class MiroStoryMap(DiagramStoryMap):
         font_size = max(8, round(shape.get("font_size", 12) * scale * 0.5))
         return centre_x, centre_y, width, height, font_size
 
-    def _build_shape_dicts(self, canonical: "MiroStoryMap") -> List[dict]:
+    def _build_shape_dicts(self, canonical: "MiroStoryModel") -> List[dict]:
         """One shape dict per epic, sub-epic, and story. Each node places itself."""
         shapes: List[dict] = []
         for epic in canonical.epics:
             shapes.extend(epic.shapes())
         return shapes
 
-    def _build_rect_lines(self, canonical: "MiroStoryMap") -> List[str]:
+    def _build_rect_lines(self, canonical: "MiroStoryModel") -> List[str]:
         """Build the flat list of SVG rect lines for the full story map."""
         return [self._shape_to_svg_line(s) for s in self._build_shape_dicts(canonical)]
 
@@ -457,7 +457,7 @@ class MiroStoryMap(DiagramStoryMap):
             f'data-font-size="{s["font_size"]}"{actor_attr} />'
         )
 
-    def load(self, text: str) -> "MiroStoryMap":
+    def load(self, text: str) -> "MiroStoryModel":
         """Read a canvas-composer SVG into a Miro story map."""
         try:
             root_el = ET.fromstring(
@@ -479,7 +479,7 @@ class MiroStoryMap(DiagramStoryMap):
         if not tagged:
             raise MiroParseError("No story-map nodes found in SVG (missing data-role attributes)")
 
-        story_map = MiroStoryMap()
+        story_map = MiroStoryModel()
         current_epic: MiroEpic | None = None
         current_sub_epic_stack: List[MiroEpic] = []
 

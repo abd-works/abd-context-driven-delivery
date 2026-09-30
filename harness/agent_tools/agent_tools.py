@@ -1804,8 +1804,30 @@ class AgentInstructions(AgentTool):
 
 
 
+def _callable_needs_arguments(call: Callable[..., Any]) -> bool:
+    try:
+        signature = inspect.signature(call)
+    except (TypeError, ValueError):
+        return False
+    for parameter in signature.parameters.values():
+        if parameter.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            continue
+        if parameter.default is inspect.Parameter.empty:
+            return True
+    return False
+
+
 def tools(*calls: Callable[..., Any]) -> list[Any]:
-    return [call() if callable(call) else call for call in calls]
+    rendered: list[Any] = []
+    for call in calls:
+        if callable(call) and not _callable_needs_arguments(call):
+            rendered.append(call())
+        else:
+            rendered.append(call)
+    return rendered
 
 
 def instructions(*calls: Callable[..., Any]) -> str:

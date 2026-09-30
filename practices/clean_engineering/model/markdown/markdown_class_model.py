@@ -78,7 +78,6 @@ class MarkdownOoadClass(OoadClass):
         return [
             ChildCollectionPair(self.properties, source.properties, self.load_property_field),
             ChildCollectionPair(self.operations, source.operations, self.load_operation_field),
-            ChildCollectionPair(self.relationships, source.relationships, self.load_relationship),
         ]
 
     def update_self(self, source: OoadNode) -> None:
@@ -177,7 +176,6 @@ class MarkdownOoadClass(OoadClass):
         loaded.intent = parsed.intent
         loaded.properties = parsed.properties
         loaded.operations = parsed.operations
-        loaded.relationships = parsed.relationships
         loaded.collaborators = list(parsed.collaborators)
         return loaded
 
@@ -236,7 +234,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
 
     module_type = None
 
-    def load_model_content(self) -> None:
+    def load_content(self) -> None:
         from pathlib import Path
 
         text = Path(self.path).read_text(encoding="utf-8")
@@ -500,9 +498,9 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         props_text = parts4[0] if parts4 else ""
         ops_text = parts4[1] if len(parts4) > 1 else ""
 
-        props, rels = self._parse_properties_and_relationships(props_text)
+        props, _rels = self._parse_properties_and_relationships(props_text)
         ops, _op_rels = self._parse_operations_and_relationships(ops_text)
-        rels = self._relationships_from_properties(props)
+        self._relationships_from_properties(props)
         if constructor_line:
             constructors, _ = self._parse_operations_and_relationships(constructor_line)
             for constructor in constructors:
@@ -515,7 +513,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             intent=intent,
             properties=props,
             operations=ops,
-            relationships=rels,
         )
 
 
@@ -623,25 +620,12 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         return names
 
 
-    def _relationships_from_properties(self, props: List[Property]) -> List[Relationship]:
-        """A relationship is the property that names its target. Operation signatures do not add a second edge."""
-        rels: List[Relationship] = []
-        seen: set[str] = set()
+    def _relationships_from_properties(self, props: List[Property]) -> None:
+        """A relationship is optional on the property. A primitive or a third-party type has none."""
+        from practices.clean_engineering.model.property import bind_property_relationship
+
         for prop in props:
-            kind = (prop.stereotype or "").lower()
-            if kind not in {"composition", "aggregation", "association"}:
-                continue
-            for target in self._domain_type_names(prop.type_hint):
-                if target in seen:
-                    continue
-                seen.add(target)
-                rels.append(Relationship(
-                    kind=kind,
-                    target=target,
-                    cardinality=prop.cardinality,
-                    description=prop.origin,
-                ))
-        return rels
+            bind_property_relationship(prop)
 
     def _dedupe_relationships(self, rels: List[Relationship]) -> List[Relationship]:
         """One edge per target; stronger ownership (composition > aggregation > association) wins."""

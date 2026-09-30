@@ -1,5 +1,6 @@
 /**
  * Epic: Get Sim
+ * Orders: 0.0.4
  */
 
 import { scenario, story } from "tests/story-test";
@@ -15,7 +16,6 @@ story('Choose Esim', () => {
 
 /**
  * Story: Request a Paradise Sim Card
- * Actor: Customer
  */
 
 story('Request a Paradise Sim Card', () => {
@@ -24,7 +24,6 @@ story('Request a Paradise Sim Card', () => {
 
 /**
  * Story: Enter Existing Sim
- * Actor: Customer
  */
 
 story('Enter Existing Sim', () => {
@@ -33,7 +32,6 @@ story('Enter Existing Sim', () => {
 
 /**
  * Story: Activate Sim
- * Actor: Customer
  */
 
 story('Activate Sim', () => {
@@ -42,7 +40,6 @@ story('Activate Sim', () => {
 
 /**
  * Story: Complete Draft Sim Order
- * Actor: Customer
  */
 
 story('Complete Draft Sim Order', () => {

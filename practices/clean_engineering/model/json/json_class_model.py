@@ -80,7 +80,6 @@ class JsonOoadClass(OoadClass):
         return [
             ChildCollectionPair(self.properties, source.properties, self.load_property_field),
             ChildCollectionPair(self.operations, source.operations, self.load_operation_field),
-            ChildCollectionPair(self.relationships, source.relationships, self.load_relationship),
         ]
 
     def update_self(self, source: OoadNode) -> None:
@@ -98,7 +97,8 @@ class JsonOoadClass(OoadClass):
         )
         loaded.properties = [JsonProperty.from_record(item) for item in record.get("properties", [])]
         loaded.operations = [JsonOperation.from_record(item) for item in record.get("operations", [])]
-        loaded.relationships = [JsonRelationship.from_record(item) for item in record.get("relationships", [])]
+        for item in record.get("relationships", []):
+            loaded.place_relationship(JsonRelationship.from_record(item))
         return loaded
 
     def render(self) -> str:

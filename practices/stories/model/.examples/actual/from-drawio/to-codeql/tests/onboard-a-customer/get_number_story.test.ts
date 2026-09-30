@@ -1,5 +1,6 @@
 /**
  * Epic: Get Number
+ * Orders: 0.0.2
  */
 
 import { scenario, story } from "tests/story-test";
@@ -15,7 +16,6 @@ story('Determine Number', () => {
 
 /**
  * Story: Query Msisdn Inventory
- * Actor: Customer
  */
 
 story('Query Msisdn Inventory', () => {
@@ -24,7 +24,6 @@ story('Query Msisdn Inventory', () => {
 
 /**
  * Story: List Msisdn Resources
- * Actor: Customer
  */
 
 story('List Msisdn Resources', () => {
@@ -33,7 +32,6 @@ story('List Msisdn Resources', () => {
 
 /**
  * Story: Search Msisdn Inventory
- * Actor: Customer
  */
 
 story('Search Msisdn Inventory', () => {
@@ -42,7 +40,6 @@ story('Search Msisdn Inventory', () => {
 
 /**
  * Story: Search Msisdn Resources
- * Actor: Customer
  */
 
 story('Search Msisdn Resources', () => {
@@ -60,7 +57,6 @@ story('Choose a Number', () => {
 
 /**
  * Story: Submit Reserve Number Request to Mid-Tier
- * Actor: Customer
  */
 
 story('Submit Reserve Number Request to Mid-Tier', () => {
@@ -69,7 +65,6 @@ story('Submit Reserve Number Request to Mid-Tier', () => {
 
 /**
  * Story: Submit Reserve Msisdn
- * Actor: Customer
  */
 
 story('Submit Reserve Msisdn', () => {
@@ -78,7 +73,6 @@ story('Submit Reserve Msisdn', () => {
 
 /**
  * Story: Reserve Msisdn Resource
- * Actor: Customer
  */
 
 story('Reserve Msisdn Resource', () => {
@@ -87,7 +81,6 @@ story('Reserve Msisdn Resource', () => {
 
 /**
  * Story: Submit Patch Cart With Number Request to Mid-Tier
- * Actor: Customer
  */
 
 story('Submit Patch Cart With Number Request to Mid-Tier', () => {
@@ -96,7 +89,6 @@ story('Submit Patch Cart With Number Request to Mid-Tier', () => {
 
 /**
  * Story: Patch Cart With Number
- * Actor: Customer
  */
 
 story('Patch Cart With Number', () => {
@@ -105,7 +97,6 @@ story('Patch Cart With Number', () => {
 
 /**
  * Story: Patch Shopping Cart
- * Actor: Customer
  */
 
 story('Patch Shopping Cart', () => {
@@ -114,7 +105,6 @@ story('Patch Shopping Cart', () => {
 
 /**
  * Story: Bring a Number
- * Actor: Customer
  */
 
 story('Bring a Number', () => {
@@ -123,7 +113,6 @@ story('Bring a Number', () => {
 
 /**
  * Story: Confirm Number Already With Paradise
- * Actor: Customer
  */
 
 story('Confirm Number Already With Paradise', () => {
@@ -132,7 +121,6 @@ story('Confirm Number Already With Paradise', () => {
 
 /**
  * Story: Evaluate Porting Two Factor Flag
- * Actor: Customer
  */
 
 story('Evaluate Porting Two Factor Flag', () => {
@@ -141,7 +129,6 @@ story('Evaluate Porting Two Factor Flag', () => {
 
 /**
  * Story: Submit Portability Request to Mid-Tier
- * Actor: Customer
  */
 
 story('Submit Portability Request to Mid-Tier', () => {
@@ -150,7 +137,6 @@ story('Submit Portability Request to Mid-Tier', () => {
 
 /**
  * Story: Patch Cart With Portability
- * Actor: Customer
  */
 
 story('Patch Cart With Portability', () => {
@@ -159,7 +145,6 @@ story('Patch Cart With Portability', () => {
 
 /**
  * Story: Send Port Verification
- * Actor: Customer
  */
 
 story('Send Port Verification', () => {
@@ -168,7 +153,6 @@ story('Send Port Verification', () => {
 
 /**
  * Story: Send Verification Sms
- * Actor: Customer
  */
 
 story('Send Verification Sms', () => {
@@ -177,7 +161,6 @@ story('Send Verification Sms', () => {
 
 /**
  * Story: Enter Porting Sms Code
- * Actor: Customer
  */
 
 story('Enter Porting Sms Code', () => {
@@ -186,7 +169,6 @@ story('Enter Porting Sms Code', () => {
 
 /**
  * Story: Check Port Verification
- * Actor: Customer
  */
 
 story('Check Port Verification', () => {
@@ -195,7 +177,6 @@ story('Check Port Verification', () => {
 
 /**
  * Story: Check Verification
- * Actor: Customer
  */
 
 story('Check Verification', () => {

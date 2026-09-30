@@ -7,6 +7,8 @@ function node(
   extra: {
     sequential_order?: number;
     keyword?: string;
+    practice?: string;
+    properties?: Record<string, string>;
     source?: { file: string; start_line: number; end_line: number; text: string } | null;
   } = {},
 ) {
@@ -116,6 +118,45 @@ describe('scenario step order', () => {
     expect(background?.children.map((child) => child.semantic_type)).toEqual([]);
     expect(background?.source?.text).toContain(".and('the cart is empty'");
     expect(story?.children.some((child) => child.name === 'signs up')).toBe(true);
+  });
+
+  it('lists an example under the Given, not under the story', () => {
+    const graph = KnowledgeGraph.fromDto({
+      id: '44444444-4444-4444-8444-444444444444',
+      folder: 'workspace',
+      practice_graphs: [
+        {
+          id: 'practice:stories',
+          name: 'stories',
+          nodes: [
+            node('epic', 'Onboard', 'Epic'),
+            node('story', 'Create Customer', 'Story'),
+            node('bg', 'each', 'Background', {
+              source: {
+                file: 'story.spec.ts',
+                start_line: 2,
+                end_line: 4,
+                text: "    given('a verified account', () => {\n    });",
+              },
+            }),
+            node('example', 'enteredValidAccountCredentials', 'Example'),
+          ],
+          relationships: [
+            { kind: 'owns', from_id: 'epic', to_id: 'story' },
+            { kind: 'owns', from_id: 'story', to_id: 'bg' },
+            { kind: 'demonstratedThrough', from_id: 'story', to_id: 'example' },
+            { kind: 'demonstratedThrough', from_id: 'bg', to_id: 'example' },
+          ],
+        },
+      ],
+    });
+    const story = graph
+      .filterGraph({ practices: ['stories'] })
+      .present()
+      .listed_tree[0]?.children[0]?.children[0];
+    const given = story?.children.find((child) => child.semantic_type === 'Background');
+    expect(story?.children.map((child) => child.name)).not.toContain('enteredValidAccountCredentials');
+    expect(given?.children.map((child) => child.name)).toEqual(['enteredValidAccountCredentials']);
   });
 
   it('lists a scenario in the order the steps appear in the file', () => {

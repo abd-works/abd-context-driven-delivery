@@ -1,0 +1,11 @@
+[2026-09-29 22:22:29] This is codeql database run-queries --threads=0 --quiet C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql -- C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql
+[2026-09-29 22:22:29] Log file was started late.
+[2026-09-29 22:22:30] Calling plumbing command: codeql resolve ram --dataset=C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript --format=json
+[2026-09-29 22:22:30] Plumbing command codeql resolve ram completed:
+                      [
+                        "-J-Xmx1800M",
+                        "--off-heap-ram=1299"
+                      ]
+[2026-09-29 22:22:30] Spawning plumbing command: execute queries -J-Xmx1800M --off-heap-ram=1299 --verbosity=warnings --logdir=C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\log --evaluator-log-level=5 --threads=0 --warnings=show --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --dynamic-join-order-mode=none --output=C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\results -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql
+[2026-09-29 22:22:56] Plumbing command codeql execute queries terminated with status 0.
+[2026-09-29 22:22:56] Exiting with code 0

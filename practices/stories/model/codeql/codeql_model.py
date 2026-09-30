@@ -15,7 +15,7 @@ from practices.stories.model.story_model import (
     Scenario as SourceScenario,
     Step as SourceStep,
     Story as SourceStory,
-    StoryMap as SourceStoryMap,
+    StoryModel as SourceStoryModel,
     Epic as SourceEpic,
 )
 
@@ -25,16 +25,60 @@ if TYPE_CHECKING:
     from harness.knowledge_graph.model.practice_graph import PracticeGraph
 
 
-class Example(SourceExample, Node):
+class CodeQLStoryNode(Node):
+    """Shared graph behavior for every CodeQL story type."""
+
+    practice = "stories"
+
+    def relate_once(self, kind: str, to: Optional[Node]) -> None:
+        if to is None:
+            return
+        if to.node_id in {node.node_id for node in self.related(kind)}:
+            return
+        self.relate(kind, to)
+
+    def own_example(self, example: Optional[Node]) -> None:
+        """An example is a child of the step or background, the same collection as its other children."""
+        if example is None or example.semantic_type() != "Example":
+            return
+        self.relate_once(Kind.OWNS, example)
+
+    def named(self, name: str, semantic_type: str) -> Optional[Node]:
+        plain = (name or "").strip()
+        graph = getattr(self, "_graph", None)
+        if not plain or graph is None:
+            return None
+        found = None
+        for node in graph.nodes.values():
+            if getattr(node, "name", None) != plain or node.semantic_type() != semantic_type:
+                continue
+            if semantic_type == "OoadClass" and getattr(node, "practice", "") == "clean_engineering":
+                return node
+            found = node
+        return found
+
+    def named_member(self, class_name: str, member_name: str, semantic_type: str) -> Optional[Node]:
+        owner = self.named(class_name, "OoadClass")
+        graph = getattr(self, "_graph", None)
+        if owner is None and graph is not None:
+            owner = graph.class_named(class_name)
+        if owner is None:
+            return None
+        for node in owner.related(Kind.OWNS):
+            if node.semantic_type() == semantic_type and node.name == member_name:
+                return node
+        return None
+
+
+class Example(SourceExample, CodeQLStoryNode):
     practice = "stories"
     _semantic_type_name = "Example"
 
     def demonstrates(self, cls: Node) -> None:
+        """The example demonstrates the class. A step that loads the example does not."""
         if cls.semantic_type() != "OoadClass":
             return
-        if cls.node_id in {node.node_id for node in self.related(Kind.DEMONSTRATES)}:
-            return
-        self.relate(Kind.DEMONSTRATES, cls)
+        self.relate_once(Kind.DEMONSTRATES, cls)
 
     def retrieved_using(self, member: Node) -> None:
         """An example is read back through at most one operation or property."""
@@ -42,7 +86,15 @@ class Example(SourceExample, Node):
             return
         if self.related(Kind.RETRIEVED_USING):
             return
-        self.relate(Kind.RETRIEVED_USING, member)
+        self.relate_once(Kind.RETRIEVED_USING, member)
+
+    def load_demonstrates(self, class_names: List[str], member: Optional[Node] = None) -> None:
+        for class_name in class_names:
+            owned = self.named(class_name, "OoadClass")
+            if owned is not None:
+                self.demonstrates(owned)
+        if member is not None:
+            self.retrieved_using(member)
 
     def matching(
         self,
@@ -59,6 +111,8 @@ class Example(SourceExample, Node):
         out: List[Example] = []
         for examples in index.values():
             for example in examples:
+                if not example.name:
+                    continue
                 if export_lower in example.name.lower() or example.name.lower() in export_lower:
                     out.append(example)
         return out
@@ -76,15 +130,14 @@ class Example(SourceExample, Node):
             self._demonstrate_class(graph, class_name)
 
     def _demonstrate_class(self, graph: "PracticeGraph", class_name: str) -> None:
-        owned = graph.ce_class_named(class_name)
-        if owned is None:
-            return
+        self._graph = graph
         entry = self._demonstrate_entry
         for example in self.matching(entry.get("export_name") or "", entry.get("file") or ""):
-            example.demonstrates(owned)
+            example._graph = graph
+            example.load_demonstrates([class_name])
 
 
-class Step(SourceStep, Node):
+class Step(SourceStep, CodeQLStoryNode):
     practice = "stories"
     _semantic_type_name = "Step"
 
@@ -94,29 +147,34 @@ class Step(SourceStep, Node):
             return
         if target.semantic_type() not in {"Operation", "Property"}:
             return
-        if target.node_id in {node.node_id for node in self.related(Kind.INVOKES)}:
-            return
-        self.relate(Kind.INVOKES, target)
+        self.relate_once(Kind.INVOKES, target)
 
     def observes(self, example: Node) -> None:
-        """A then step watches at most one example."""
+        """A then step's example is one child in that step's collection."""
         if self.step_type != StepType.THEN:
             return
-        if example.semantic_type() != "Example":
+        if any(node.semantic_type() == "Example" for node in self.related(Kind.OWNS)):
             return
-        if self.related(Kind.OBSERVES):
-            return
-        self.relate(Kind.OBSERVES, example)
+        self.own_example(example)
 
     def loads(self, example: Node) -> None:
-        """A given step arranges zero or more examples."""
+        """A given step's examples are children, the same collection as its other children."""
         if self.step_type != StepType.GIVEN:
             return
-        if example.semantic_type() != "Example":
-            return
-        if example.node_id in {node.node_id for node in self.related(Kind.LOADS)}:
-            return
-        self.relate(Kind.LOADS, example)
+        self.own_example(example)
+
+    def load_loads(self, example: Node) -> None:
+        self.loads(example)
+
+    def load_invokes(self, class_name: str, member_name: str) -> None:
+        target = self.named_member(class_name, member_name, "Operation")
+        if target is None:
+            target = self.named_member(class_name, member_name, "Property")
+        if target is not None:
+            self.invokes(target)
+
+    def load_observes(self, example: Node) -> None:
+        self.observes(example)
 
     @classmethod
     def from_source(cls, source: SourceStep) -> "Step":
@@ -140,19 +198,81 @@ class Step(SourceStep, Node):
                 story_call.get("story_file") or "",
                 int(story_call.get("line") or 0),
             )
-            target = graph.operation_named(
+            if step is None:
+                continue
+            step._graph = graph
+            step.load_invokes(
                 story_call.get("callee_class") or "",
                 story_call.get("callee_operation") or "",
             )
-            if target is None:
-                target = self._property_named(
-                    graph,
-                    story_call.get("callee_class") or "",
-                    story_call.get("callee_operation") or "",
-                )
-            if step is None or target is None:
+
+    def wire_source_invokes(self, graph: "PracticeGraph") -> None:
+        """A when step invokes the operation its body calls."""
+        import re
+
+        self._graph = graph
+        root = getattr(graph, "root", None)
+        if root is None:
+            return
+        classes: Dict[str, Node] = {}
+        for node in graph.nodes.values():
+            if node.semantic_type() == "OoadClass":
+                classes[node.name.lower()] = node
+        call = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+        skip = {
+            "expect",
+            "vi",
+            "console",
+            "Math",
+            "JSON",
+            "Object",
+            "Promise",
+            "Array",
+            "describe",
+            "it",
+            "test",
+            "beforeEach",
+            "afterEach",
+        }
+        for step in graph.nodes_of_type(Step):
+            if step.step_type != StepType.WHEN:
                 continue
-            step.invokes(target)
+            for receiver, method in call.findall(self._step_body(root, step)):
+                if receiver in skip:
+                    continue
+                owner = classes.get(receiver.lower())
+                if owner is None:
+                    continue
+                step.load_invokes(owner.name, method)
+
+    def _step_body(self, root, step) -> str:
+        source = getattr(step, "source", None)
+        if source is None or not getattr(source, "file", ""):
+            return ""
+        path = Path(root) / str(source.file)
+        if not path.is_file():
+            return getattr(source, "text", "") or ""
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        start = max(int(getattr(source, "line", 0) or 1) - 1, 0)
+        end = int(getattr(source, "end_line", 0) or 0)
+        if end <= int(getattr(source, "line", 0) or 0):
+            end = self._callback_end(lines, start)
+        return "\n".join(lines[start:end])
+
+    def _callback_end(self, lines: List[str], start: int) -> int:
+        text = "\n".join(lines[start:])
+        open_at = text.find("{")
+        if open_at < 0:
+            return start + 1
+        depth = 0
+        for index, char in enumerate(text[open_at:], start=open_at):
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return start + text[: index + 1].count("\n") + 1
+        return min(start + 40, len(lines))
 
     def _property_named(self, graph: "PracticeGraph", class_name: str, property_name: str):
         owner = graph.class_named(class_name)
@@ -187,7 +307,9 @@ class Step(SourceStep, Node):
                 continue
             if step.step_type != StepType.THEN:
                 continue
-            watched = step.related(Kind.OBSERVES)
+            watched = [
+                node for node in step.related(Kind.OWNS) if node.semantic_type() == "Example"
+            ]
             if watched:
                 watched[0].retrieved_using(target)
 
@@ -242,22 +364,21 @@ class Step(SourceStep, Node):
         return None
 
 
-class Background(SourceBackground, Node):
+class Background(SourceBackground, CodeQLStoryNode):
     practice = "stories"
     _semantic_type_name = "Background"
 
     def loads(self, example: Node) -> None:
-        if example.semantic_type() != "Example":
-            return
-        if example.node_id in {node.node_id for node in self.related(Kind.LOADS)}:
-            return
-        self.relate(Kind.LOADS, example)
+        self.own_example(example)
+
+    def load_loads(self, example: Node) -> None:
+        self.loads(example)
 
     def load_step(self, source: SourceStep) -> Step:
         return Step.from_source(source)
 
 
-class Scenario(SourceScenario, Node):
+class Scenario(SourceScenario, CodeQLStoryNode):
     practice = "stories"
     _semantic_type_name = "Scenario"
 
@@ -272,7 +393,7 @@ class Scenario(SourceScenario, Node):
 
     def aggregate_from_steps(self) -> None:
         """A scenario's invokes and observes are the union of its steps."""
-        self._copy_edges(self._owned_steps(), (Kind.INVOKES, Kind.OBSERVES))
+        self._copy_edges(self._owned_steps(), (Kind.INVOKES,))
 
     def _owned_steps(self) -> List[Step]:
         steps: List[Step] = []
@@ -296,9 +417,18 @@ class Scenario(SourceScenario, Node):
     def owner_of(self, entry: dict):
         scenarios = self._scenarios
         backgrounds = self._backgrounds
+        if entry.get("background"):
+            for bg_entry, background in backgrounds:
+                if Node().slug(bg_entry.get("story") or "") != Node().slug(entry.get("story") or ""):
+                    continue
+                if (bg_entry.get("name") or "background") != (entry.get("background") or "background"):
+                    continue
+                if (bg_entry.get("scenario") or "").lower() != (entry.get("scenario") or "").lower():
+                    continue
+                return background
         if entry.get("scenario"):
             key = (
-                StoryMap().normalized_file(entry.get("file") or ""),
+                StoryModel().normalized_file(entry.get("file") or ""),
                 Node().slug(entry.get("story") or ""),
                 (entry.get("scenario") or "").lower(),
             )
@@ -310,16 +440,10 @@ class Scenario(SourceScenario, Node):
                     entry.get("story") or ""
                 ):
                     return scenario
-        if entry.get("background"):
-            for bg_entry, background in backgrounds:
-                if Node().slug(bg_entry.get("story") or "") != Node().slug(entry.get("story") or ""):
-                    continue
-                if (bg_entry.get("name") or "background") == (entry.get("background") or "background"):
-                    return background
         return None
 
 
-class Story(SourceStory, Node):
+class Story(SourceStory, CodeQLStoryNode):
     practice = "stories"
     _semantic_type_name = "Story"
 
@@ -337,19 +461,20 @@ class Story(SourceStory, Node):
         scenarios = [
             node for node in self.related(Kind.OWNS) if node.semantic_type() == "Scenario"
         ]
-        Scenario._copy_edges(self, scenarios, (Kind.INVOKES, Kind.OBSERVES))
+        Scenario._copy_edges(self, scenarios, (Kind.INVOKES,))
 
 
-class Epic(SourceEpic, Node):
+class Epic(SourceEpic, CodeQLStoryNode):
     practice = "stories"
     _semantic_type_name = "Epic"
 
     def uses(self, module: Node) -> None:
         if module.semantic_type() != "Module":
             return
-        if module.node_id in {node.node_id for node in self.related(Kind.USES)}:
-            return
-        self.relate(Kind.USES, module)
+        self.relate_once(Kind.USES, module)
+
+    def load_uses(self, module: Node) -> None:
+        self.uses(module)
 
     def load_epic(self, source: SourceEpic) -> "Epic":
         return Epic(source.name, source.sequential_order)
@@ -363,9 +488,13 @@ class Epic(SourceEpic, Node):
 
 
 
-class StoryMap(SourceStoryMap, Node):
+class StoryModel(SourceStoryModel, CodeQLStoryNode):
     practice = "stories"
-    _semantic_type_name = "StoryMap"
+    _semantic_type_name = "StoryModel"
+
+    def save(self) -> str:
+        """The graph is the structure. A file is written by the channel copied from this map."""
+        return ""
 
     def load_epic(self, source: SourceEpic) -> Epic:
         return Epic(source.name, source.sequential_order)
@@ -413,9 +542,9 @@ class StoryMap(SourceStoryMap, Node):
         self._example_stories = getattr(self, "_example_stories", {}) or {}
         self._example_graph = graph
         if graph.story_map is None:
-            graph.story_map = StoryMap()
+            graph.story_map = StoryModel()
             graph.register(graph.story_map)
-        story_map: StoryMap = graph.story_map
+        story_map: StoryModel = graph.story_map
         epics: Dict[str, Epic] = {Node().slug(e.name): e for e in graph.nodes_of_type(Epic)}
         subs: Dict[Tuple[str, str], Epic] = {}
         for sub in graph.nodes_of_type(Epic):
@@ -441,7 +570,11 @@ class StoryMap(SourceStoryMap, Node):
             story = stories.get(story_key)
             if story is None:
                 story = Story(entry.get("name") or "", len(parent.stories) + 1)
-                story.source = SourceLocation(entry.get("file") or "", int(entry.get("line") or 0))
+                story.source = SourceLocation(
+                    entry.get("file") or "",
+                    int(entry.get("line") or 0),
+                    int(entry.get("end_line") or 0),
+                )
                 actor = (entry.get("actor") or "").strip()
                 if actor:
                     story.actors = [actor]
@@ -449,21 +582,6 @@ class StoryMap(SourceStoryMap, Node):
                 graph.register(story)
                 parent.relate(Kind.OWNS, story)
                 stories[story_key] = story
-        backgrounds: List[Tuple[dict, Background]] = []
-        for entry in raw.get("backgrounds") or []:
-            story = stories.get(self._story_key(entry))
-            if story is None or story.backgrounds:
-                continue
-            background = Background(entry.get("name") or "background", 1)
-            background.source = SourceLocation(
-                entry.get("file") or "",
-                int(entry.get("line") or 0),
-                int(entry.get("end_line") or 0),
-            )
-            story.backgrounds.append(background)
-            graph.register(background)
-            story.relate(Kind.OWNS, background)
-            backgrounds.append((entry, background))
         self._example_backgrounds: Dict[Tuple[str, str, str], Background] = {}
         scenarios: Dict[Tuple[str, str, str], Scenario] = {}
         for entry in raw.get("scenarios") or []:
@@ -485,6 +603,36 @@ class StoryMap(SourceStoryMap, Node):
             graph.register(scenario)
             story.relate(Kind.OWNS, scenario)
             scenarios[key] = scenario
+        backgrounds: List[Tuple[dict, Background]] = []
+        for entry in raw.get("backgrounds") or []:
+            story = stories.get(self._story_key(entry))
+            if story is None:
+                continue
+            background = Background(entry.get("name") or "background", 1)
+            background.source = SourceLocation(
+                entry.get("file") or "",
+                int(entry.get("line") or 0),
+                int(entry.get("end_line") or 0),
+            )
+            scenario_name = (entry.get("scenario") or "").lower()
+            if scenario_name:
+                scenario = scenarios.get((
+                    self.normalized_file(entry.get("file") or ""),
+                    Node().slug(entry.get("story") or ""),
+                    scenario_name,
+                ))
+                if scenario is None:
+                    continue
+                scenario.backgrounds.append(background)
+                graph.register(background)
+                scenario.relate(Kind.OWNS, background)
+            elif not story.backgrounds:
+                story.backgrounds.append(background)
+                graph.register(background)
+                story.relate(Kind.OWNS, background)
+            else:
+                continue
+            backgrounds.append((entry, background))
         self._example_scenarios = scenarios
         for entry, background in backgrounds:
             key = (
@@ -505,6 +653,7 @@ class StoryMap(SourceStoryMap, Node):
         self._wire_step_examples(graph, created_steps, [node for _, node in backgrounds])
         calls = Step("", StepType.GIVEN, 0)
         calls.wire_calls(graph, raw.get("story_calls") or [])
+        calls.wire_source_invokes(graph)
         calls.wire_observations(graph, raw.get("story_observations") or [])
         Example("").wire_demonstrates(graph, raw.get("example_exports") or [])
         self._aggregate_cross_practice(graph)
@@ -562,14 +711,18 @@ class StoryMap(SourceStoryMap, Node):
             for row in rows:
                 word = (row.get("keyword") or "given").lower()
                 text = row.get("text") or ""
-                source = SourceLocation(row.get("file") or "", int(row.get("line") or 0))
+                source = SourceLocation(
+                    row.get("file") or "",
+                    int(row.get("line") or 0),
+                    int(row.get("end_line") or 0),
+                )
                 if word in {"and", "but"} and previous is not None:
                     extra = Step(text, previous.step_type, len(previous.ands) + 1, keyword=word, source=source)
                     previous.ands = [*previous.ands, extra]
                     graph.register(extra)
                     created.append((row, extra))
                     continue
-                phase = phases.get(word)
+                phase = StepType.THEN if word in {"but", "and"} else phases.get(word)
                 if phase is None:
                     continue
                 step = Step(text, phase, len(built) + 1, keyword=word, source=source)
@@ -600,7 +753,11 @@ class StoryMap(SourceStoryMap, Node):
                 self._example_entry = entry
                 self._example_name = name
                 example = self._new_example(None)
-                example.source = SourceLocation(entry.get("file") or "", int(entry.get("line") or 0))
+                example.source = SourceLocation(
+                    entry.get("file") or "",
+                    int(entry.get("line") or 0),
+                    int(entry.get("end_line") or 0),
+                )
                 self._example_graph.register(example)
                 self._examples_by_file[(file_name, name.lower())] = example
 
@@ -675,18 +832,18 @@ class StoryMap(SourceStoryMap, Node):
             ]
             if step.step_type == StepType.GIVEN:
                 for example in examples:
-                    step.loads(example)
+                    step.load_loads(example)
             elif step.step_type == StepType.THEN and examples:
-                step.observes(examples[0])
+                step.load_observes(examples[0])
         for background in backgrounds:
             for step in background.related(Kind.OWNS):
                 if step.semantic_type() != "Step":
                     continue
-                for example in step.related(Kind.LOADS):
-                    background.loads(example)
+                for example in step.related(Kind.OWNS):
+                    background.load_loads(example)
                 for extra in step.ands:
-                    for example in extra.related(Kind.LOADS):
-                        background.loads(example)
+                    for example in extra.related(Kind.OWNS):
+                        background.load_loads(example)
 
     def _aggregate_cross_practice(self, graph: "PracticeGraph") -> None:
         for scenario in graph.nodes_of_type(Scenario):
@@ -717,17 +874,17 @@ class StoryMap(SourceStoryMap, Node):
         return stories
 
     def _use_modules_from(self, epic: Epic, node) -> None:
-        for kind in (Kind.LOADS, Kind.OBSERVES, Kind.INVOKES):
-            for target in node.related(kind):
-                if target.semantic_type() == "Example":
-                    for cls in target.related(Kind.DEMONSTRATES):
-                        module = self._module_of(cls)
-                        if module is not None:
-                            epic.uses(module)
-                    continue
-                module = self._module_of(target)
+        for example in node.related(Kind.OWNS):
+            if example.semantic_type() != "Example":
+                continue
+            for cls in example.related(Kind.DEMONSTRATES):
+                module = self._module_of(cls)
                 if module is not None:
-                    epic.uses(module)
+                    epic.load_uses(module)
+        for target in node.related(Kind.INVOKES):
+            module = self._module_of(target)
+            if module is not None:
+                epic.load_uses(module)
 
     def _module_of(self, node):
         home = node.home_module
@@ -737,18 +894,224 @@ class StoryMap(SourceStoryMap, Node):
 
 
     @classmethod
-    def load_folder(cls, folder) -> "StoryMap":
-        """Build the story map from the story queries over a folder of story files."""
+    def load_content(cls, folder) -> "StoryModel":
+        """One run over a CodeQL database. A folder of story files still uses the story queries."""
         from pathlib import Path
 
+        root = Path(folder)
+        if (root / "codeql-database.yml").is_file():
+            return cls()._load_database(root)
         from harness.knowledge_graph.model.codeql_query import query_workspace
         from harness.knowledge_graph.model.practice_graph import PracticeGraph
 
-        root = Path(folder)
         export = query_workspace(root)
         graph = PracticeGraph(root)
-        cls().ensure(graph, cls._raw(export))
+        raw = cls._raw(export)
+        cls._sort_stories(root, raw)
+        cls().ensure(graph, raw)
+        cls._comment_examples(root, graph.story_map)
+        cls._background_example_comments(root, graph.story_map)
         return graph.story_map
+
+    @staticmethod
+    def _comment_examples(root, story_map) -> None:
+        import re
+        from pathlib import Path
+
+        def visit(node) -> None:
+            for story in getattr(node, "stories", []) or []:
+                source = getattr(story, "source", None)
+                rel = getattr(source, "file", "") if source is not None else ""
+                path = Path(root) / rel if rel else None
+                text = path.read_text(encoding="utf-8") if path is not None and path.is_file() else ""
+                for scenario in story.scenarios:
+                    if not text:
+                        continue
+                    found = re.search(
+                        rf"scenario\(\s*['\"]{re.escape(scenario.name)}['\"]",
+                        text,
+                    )
+                    if found is None:
+                        continue
+                    nxt = re.search(r"scenario\(", text[found.end():])
+                    chunk = text[found.end():found.end() + nxt.start()] if nxt else text[found.end():]
+                    comment = re.search(r"(?m)^[ \t]*// examples:\s*(.+)$", chunk)
+                    if comment is None:
+                        continue
+                    for part in comment.group(1).split(","):
+                        name = part.strip()
+                        if name and name not in scenario.examples:
+                            scenario.examples[name] = name
+            for child in getattr(node, "epics", []) or []:
+                visit(child)
+
+        visit(story_map)
+
+    @staticmethod
+    def _background_example_comments(root, story_map) -> None:
+        import json
+        import re
+        from pathlib import Path
+
+        def visit(node) -> None:
+            for story in getattr(node, "stories", []) or []:
+                source = getattr(story, "source", None)
+                rel = getattr(source, "file", "") if source is not None else ""
+                path = Path(root) / rel if rel else None
+                if path is None or not path.is_file() or not story.backgrounds:
+                    continue
+                text = path.read_text(encoding="utf-8")
+                found = re.search(rf"story\(\s*['\"]{re.escape(story.name)}['\"]", text)
+                if found is None:
+                    continue
+                previous = list(re.finditer(r"story\(", text[:found.start()]))
+                start = previous[-1].end() if previous else 0
+                match = re.search(r"background-examples:\s*(\{.*\})", text[start:found.start()])
+                if match is None:
+                    continue
+                payload = json.loads(match.group(1))
+                if not isinstance(payload, dict):
+                    continue
+                for name, cells in payload.items():
+                    story.backgrounds[0].examples[name] = cells if isinstance(cells, dict) else name
+                for scenario in story.scenarios:
+                    for background in scenario.backgrounds:
+                        if background.examples:
+                            continue
+                        background.examples = story.backgrounds[0].examples.clone(background)
+            for child in getattr(node, "epics", []) or []:
+                visit(child)
+
+        visit(story_map)
+
+    def _load_database(self, database: Path) -> "StoryModel":
+        from harness.knowledge_graph.model.codeql import CodeQL
+        from practices.clean_engineering.model.codeql.codeql_model import (
+            CleanEngineeringModel as CodeQLCleanEngineeringModel,
+        )
+
+        model = CodeQLCleanEngineeringModel.load_content(database)
+        codeql = CodeQL(database)
+        queries = [
+            Path(__file__).resolve().parent / name
+            for name in (
+                "stories.ql",
+                "scenarios.ql",
+                "backgrounds.ql",
+                "steps.ql",
+                "example_exports.ql",
+            )
+        ]
+        batch = codeql.run_queries(queries, database, write_filter=False)
+        self.ensure(model.graph, self._database_raw(batch))
+        return model.graph.story_map
+
+    @staticmethod
+    def _text(value) -> str:
+        if isinstance(value, dict):
+            return str(value.get("label") or "")
+        if value is None:
+            return ""
+        return str(value)
+
+    def _database_raw(self, batch: dict) -> dict:
+        from harness.knowledge_graph.model.codeql_query import StorySourceQuery
+
+        owners_of = StorySourceQuery(Path("."))
+        stories = []
+        for row in batch.get("stories") or []:
+            file_name = self._text(row[2] if len(row) > 2 else "")
+            owners = owners_of._owner_chain(file_name)
+            stories.append(
+                {
+                    "name": self._text(row[1] if len(row) > 1 else ""),
+                    "file": file_name,
+                    "line": int(self._text(row[3]) or 0) if len(row) > 3 else 0,
+                    "end_line": int(self._text(row[4]) or 0) if len(row) > 4 else 0,
+                    "owners": owners,
+                    "epic": owners[0] if owners else "",
+                    "sub_epic": owners[-1] if len(owners) > 1 else "",
+                    "actor": "",
+                }
+            )
+        scenarios = [
+            {
+                "name": self._text(row[1] if len(row) > 1 else ""),
+                "story": self._text(row[2] if len(row) > 2 else ""),
+                "file": self._text(row[3] if len(row) > 3 else ""),
+                "line": int(self._text(row[4]) or 0) if len(row) > 4 else 0,
+                "end_line": int(self._text(row[5]) or 0) if len(row) > 5 else 0,
+            }
+            for row in batch.get("scenarios") or []
+        ]
+        backgrounds = [
+            {
+                "name": self._text(row[1] if len(row) > 1 else "") or "background",
+                "story": self._text(row[2] if len(row) > 2 else ""),
+                "file": self._text(row[3] if len(row) > 3 else ""),
+                "line": int(self._text(row[4]) or 0) if len(row) > 4 else 0,
+                "scenario": self._text(row[5] if len(row) > 5 else ""),
+                "end_line": int(self._text(row[6]) or 0) if len(row) > 6 else 0,
+            }
+            for row in batch.get("backgrounds") or []
+        ]
+        steps = [
+            {
+                "keyword": self._text(row[1] if len(row) > 1 else ""),
+                "text": self._text(row[2] if len(row) > 2 else ""),
+                "story": self._text(row[3] if len(row) > 3 else ""),
+                "scenario": self._text(row[4] if len(row) > 4 else ""),
+                "background": self._text(row[5] if len(row) > 5 else ""),
+                "file": self._text(row[6] if len(row) > 6 else ""),
+                "line": int(self._text(row[7]) or 0) if len(row) > 7 else 0,
+                "end_line": int(self._text(row[8]) or 0) if len(row) > 8 else 0,
+            }
+            for row in batch.get("steps") or []
+        ]
+        examples: Dict[Tuple[str, str], dict] = {}
+        for row in batch.get("example_exports") or []:
+            name = self._text(row[1] if len(row) > 1 else "")
+            file_name = self._text(row[2] if len(row) > 2 else "")
+            key = (file_name, name)
+            entry = examples.get(key)
+            if entry is None:
+                entry = {
+                    "export_name": name,
+                    "file": file_name,
+                    "line": int(self._text(row[3]) or 0) if len(row) > 3 else 0,
+                    "end_line": int(self._text(row[5]) or 0) if len(row) > 5 else 0,
+                    "demonstrates": [],
+                }
+                examples[key] = entry
+            class_name = self._text(row[4] if len(row) > 4 else "")
+            if class_name and class_name not in entry["demonstrates"]:
+                entry["demonstrates"].append(class_name)
+        return {
+            "stories": stories,
+            "scenarios": scenarios,
+            "backgrounds": backgrounds,
+            "steps": steps,
+            "example_exports": list(examples.values()),
+        }
+
+    @staticmethod
+    def _sort_stories(root, raw: dict) -> None:
+        import re
+        from pathlib import Path
+
+        root = Path(root)
+        cache: dict = {}
+
+        def order(entry: dict) -> tuple:
+            rel = (entry.get("file") or "").replace("\\", "/")
+            if rel not in cache:
+                path = root / rel
+                text = path.read_text(encoding="utf-8") if path.is_file() else ""
+                match = re.search(r"Orders:\s*([0-9.]+)", text)
+                cache[rel] = tuple(int(part) for part in match.group(1).split(".") if part) if match else (10**6,)
+            return (cache[rel], int(entry.get("line") or 0), entry.get("name") or "")
+
+        raw["stories"] = sorted(raw.get("stories") or [], key=order)
 
     @staticmethod
     def _raw(export) -> dict:

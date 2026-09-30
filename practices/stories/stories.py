@@ -21,14 +21,14 @@ class Stories(PracticeGuidance):
             fidelity=None if stage is not None else fidelity,
             default_workspace_folder="tests",
             formats={
-                "markdown": ("stories.model.markdown.nodes", "MarkdownStoryMap"),
-                "json": ("stories.model.json.nodes", "JsonStoryMap"),
-                "drawio": ("stories.model.drawio.nodes", "DrawIOStoryMap"),
-                "miro": ("stories.model.miro.nodes", "MiroStoryMap"),
-                "python": ("stories.model.python.python_story_model", "PythonStoryMap"),
-                "typescript": ("stories.model.typescript.typescript_story_model", "TypeScriptStoryMap"),
-                "java": ("stories.model.java.java_story_model", "JavaStoryMap"),
-                "javascript": ("stories.model.javascript.javascript_story_model", "JavaScriptStoryMap"),
+                "markdown": ("stories.model.markdown.nodes", "MarkdownStoryModel"),
+                "json": ("stories.model.json.nodes", "JsonStoryModel"),
+                "drawio": ("stories.model.drawio.nodes", "DrawIOStoryModel"),
+                "miro": ("stories.model.miro.nodes", "MiroStoryModel"),
+                "python": ("stories.model.python.python_story_model", "PythonStoryModel"),
+                "typescript": ("stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
+                "java": ("stories.model.java.java_story_model", "JavaStoryModel"),
+                "javascript": ("stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
             },
         )
         if stage is not None:

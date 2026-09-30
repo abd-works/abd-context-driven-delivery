@@ -37,7 +37,7 @@ from practices.stories.model.story_model import (
     Scenario,
     Step,
     Story,
-    StoryMap,
+    StoryModel,
     Epic,
 )
 
@@ -82,12 +82,7 @@ class GraphClass(OoadClass, GraphNodeMixin):
     _semantic_type_name = "OoadClass"
 
     def load_property(self, source: Property) -> "GraphProperty":
-        return GraphProperty(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
+        return GraphProperty.from_field(source, source.sequential_order)
 
     def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
@@ -169,12 +164,7 @@ class GraphEntity(Entity, GraphNodeMixin):
     _semantic_type_name = "Entity"
 
     def load_property(self, source: Property) -> "GraphProperty":
-        return GraphProperty(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
+        return GraphProperty.from_field(source, source.sequential_order)
 
     def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
@@ -200,12 +190,7 @@ class GraphEntityRoot(Entity, GraphNodeMixin):
         self.is_root = True
 
     def load_property(self, source: Property) -> "GraphProperty":
-        return GraphProperty(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
+        return GraphProperty.from_field(source, source.sequential_order)
 
     def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
@@ -227,12 +212,7 @@ class GraphValueObject(ValueObject, GraphNodeMixin):
     _semantic_type_name = "ValueObject"
 
     def load_property(self, source: Property) -> "GraphProperty":
-        return GraphProperty(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
+        return GraphProperty.from_field(source, source.sequential_order)
 
     def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
@@ -254,12 +234,7 @@ class GraphRepository(Repository, GraphNodeMixin):
     _semantic_type_name = "Repository"
 
     def load_property(self, source: Property) -> "GraphProperty":
-        return GraphProperty(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
+        return GraphProperty.from_field(source, source.sequential_order)
 
     def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
@@ -281,12 +256,7 @@ class GraphDomainEvent(DomainEvent, GraphNodeMixin):
     _semantic_type_name = "DomainEvent"
 
     def load_property(self, source: Property) -> "GraphProperty":
-        return GraphProperty(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
+        return GraphProperty.from_field(source, source.sequential_order)
 
     def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
@@ -313,12 +283,7 @@ class GraphDomainService(DomainService, GraphNodeMixin):
     _semantic_type_name = "DomainService"
 
     def load_property(self, source: Property) -> "GraphProperty":
-        return GraphProperty(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
+        return GraphProperty.from_field(source, source.sequential_order)
 
     def load_operation(self, source: Operation) -> "GraphOperation":
         node = GraphOperation(
@@ -391,12 +356,12 @@ def graph_ddd_class_for(source: OoadClass) -> OoadClass:
 # ---------------------------------------------------------------------------
 
 
-class GraphStoryMap(StoryMap, GraphNodeMixin):
+class GraphStoryModel(StoryModel, GraphNodeMixin):
     practice = "stories"
-    _semantic_type_name = "StoryMap"
+    _semantic_type_name = "StoryModel"
 
     @classmethod
-    def clone(cls, other: StoryMap) -> "GraphStoryMap":
+    def clone(cls, other: StoryModel) -> "GraphStoryModel":
         cloned = cls()
         for epic in other.epics:
             cloned.epics.append(GraphEpic.clone(epic))

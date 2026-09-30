@@ -3,12 +3,15 @@ from __future__ import annotations
 from story_test import and_, background, given, scenario, story, then, when
 
 # Epic: Place Order
+# Orders: 0.0.8
 
 # Story: Create Billing Account
 # Actor: My Paradise
 with story("Create Billing Account"):
-    with background.each:
         with scenario("Create billing account"):
+            # background: background
+            # background-step: Given | the Customer has a configured cart
+            # background-step: But | the Customer has no billing account
             with when("the Customer creates a billing account"):
                 pass
             with then("My Paradise sends the billing account request to Mavenir"):
@@ -20,6 +23,9 @@ with story("Create Billing Account"):
             with and_("the Customer is on the Done step"):
                 pass
         with scenario("Billing account already exists"):
+            # background: background
+            # background-step: Given | the Customer has a configured cart
+            # background-step: But | the Customer has no billing account
             with given("the Customer already has a billing account"):
                 pass
             with when("the Customer creates a billing account"):
@@ -29,6 +35,9 @@ with story("Create Billing Account"):
             with and_("Mavenir does not receive a billing account request"):
                 pass
         with scenario("Billing account creation fails"):
+            # background: background
+            # background-step: Given | the Customer has a configured cart
+            # background-step: But | the Customer has no billing account
             with given("Mavenir returns an error for the billing account request"):
                 pass
             with when("the Customer creates a billing account"):
@@ -41,8 +50,10 @@ with story("Create Billing Account"):
 # Story: Create Product Order
 # Actor: My Paradise
 with story("Create Product Order"):
-    with background.each:
         with scenario("Create product order"):
+            # background: background
+            # background-step: Given | the Customer has a billing account
+            # background-step: And | the cart has plan, number, and SIM
             with given("the Customer is verified"):
                 pass
             with when("the Customer places the product order"):
@@ -56,6 +67,9 @@ with story("Create Product Order"):
             with and_("the Customer onboarding is done"):
                 pass
         with scenario("Pay-up-front charge fails"):
+            # background: background
+            # background-step: Given | the Customer has a billing account
+            # background-step: And | the cart has plan, number, and SIM
             with given("the pay-up-front charge fails"):
                 pass
             with when("the Customer places the product order"):
@@ -65,6 +79,9 @@ with story("Create Product Order"):
             with and_("the order succeeded without pay-up-front"):
                 pass
         with scenario("Product order fails"):
+            # background: background
+            # background-step: Given | the Customer has a billing account
+            # background-step: And | the cart has plan, number, and SIM
             with given("Mavenir returns an error for the product order"):
                 pass
             with when("the Customer places the product order"):
@@ -72,6 +89,9 @@ with story("Create Product Order"):
             with then("the order did not succeed"):
                 pass
         with scenario("Onboarding is already done"):
+            # background: background
+            # background-step: Given | the Customer has a billing account
+            # background-step: And | the cart has plan, number, and SIM
             with given("the Customer onboarding is already done"):
                 pass
             with when("the Customer places the product order"):
@@ -81,6 +101,9 @@ with story("Create Product Order"):
             with and_("Mavenir does not receive a product order request"):
                 pass
         with scenario("Unverified with no bypass and no portability"):
+            # background: background
+            # background-step: Given | the Customer has a billing account
+            # background-step: And | the cart has plan, number, and SIM
             with given("the Customer is not verified"):
                 pass
             with and_("the plan does not bypass verification"):
@@ -99,7 +122,6 @@ with story("Create Product Order"):
 # Story: View Order Result
 # Actor: Customer
 with story("View Order Result"):
-    with background.each:
         with scenario("View order result"):
             with given("the order result is {example}"):
                 pass
@@ -111,7 +133,6 @@ with story("View Order Result"):
 # Story: Create Order Ticket
 # Actor: My Paradise
 with story("Create Order Ticket"):
-    with background.each:
         with scenario("Create order ticket"):
             with given("the Customer {example}"):
                 pass
@@ -127,8 +148,10 @@ with story("Create Order Ticket"):
 # Story: View Order History
 # Actor: Care
 with story("View Order History"):
-    with background.each:
         with scenario("View Order History"):
+            # background: background
+            # background-step: Given | the Customer has a product order in Mavenir
+            # background-step: And | Care is in Customer Management → Order History
             with when("Care views Order History for the Customer"):
                 pass
             with then("Care sees the product order with status badges"):

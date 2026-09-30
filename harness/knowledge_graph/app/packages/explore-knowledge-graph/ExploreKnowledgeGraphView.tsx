@@ -47,6 +47,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
   const [rules, setRules] = useState<string[] | null>(null);
   const [ruleSources, setRuleSources] = useState<string[] | null>(null);
   const [violations, setViolations] = useState(false);
+  const [showRules, setShowRules] = useState(true);
   const [folder, setFolder] = useState(scannedFolder);
   const [theme, setTheme] = useState(
     () => document.documentElement.dataset.theme ?? '',
@@ -321,6 +322,15 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
             />
             <div className="filter-extras">
               <label>
+                show rules
+                <input
+                  type="checkbox"
+                  data-testid="show-rules"
+                  checked={showRules}
+                  onChange={(event) => setShowRules(event.target.checked)}
+                />
+              </label>
+              <label>
                 violations
                 <input
                   type="checkbox"
@@ -351,6 +361,9 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
             <PracticeGraphTree
               key={folder}
               roots={listedTree}
+              nodes={listedNodes}
+              practices={practices}
+              showRules={showRules}
               selectedId={selectedNode?.node_id ?? null}
               selectedRule={selectedRule?.slug ?? null}
               onSelect={selectNode}
@@ -363,6 +376,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               selectedRule={selectedRule}
               sourceFile={sourceFile}
               violations={violations}
+              showRules={showRules}
             />
           </section>
         </div>

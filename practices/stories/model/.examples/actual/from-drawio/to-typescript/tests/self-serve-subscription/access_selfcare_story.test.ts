@@ -1,5 +1,6 @@
 /**
  * Epic: Access Selfcare
+ * Orders: 0.1.0
  */
 
 import { scenario, story } from "tests/story-test";
@@ -15,7 +16,6 @@ story('Enter Sign In Credentials', () => {
 
 /**
  * Story: Reset Password
- * Actor: Customer
  */
 
 story('Reset Password', () => {
@@ -24,7 +24,6 @@ story('Reset Password', () => {
 
 /**
  * Story: Edit Profile
- * Actor: Customer
  */
 
 story('Edit Profile', () => {
@@ -33,7 +32,6 @@ story('Edit Profile', () => {
 
 /**
  * Story: Sign Out
- * Actor: Customer
  */
 
 story('Sign Out', () => {

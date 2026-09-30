@@ -153,8 +153,9 @@ class OoadClass(OoadNode):
         self.commented_code_lines: List[int] = []
         self.properties: List["Property"] = properties if properties is not None else []
         self.operations: List["Operation"] = operations if operations is not None else []
-        self.relationships: List[Relationship] = relationships if relationships is not None else []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
+        for relationship in relationships or []:
+            self.place_relationship(relationship)
         self.property_nodes: List["Property"] = []
         self.operation_nodes: List["Operation"] = []
 
@@ -163,7 +164,6 @@ class OoadClass(OoadNode):
         self.intent = source.intent
         self.properties = list(source.properties)
         self.operations = list(source.operations)
-        self.relationships = list(source.relationships)
         self.collaborators = list(source.collaborators)
         if not source.property_nodes and not source.operation_nodes:
             self.sync_tree_from_legacy()
@@ -183,7 +183,6 @@ class OoadClass(OoadNode):
         cloned.commented_code_lines = list(self.commented_code_lines)
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
-        cloned.relationships = [item.clone() for item in self.relationships]
         cloned.property_nodes = [item.clone() for item in self.property_nodes]
         cloned.operation_nodes = [item.clone() for item in self.operation_nodes]
         return cloned
@@ -223,6 +222,12 @@ class OoadClass(OoadNode):
         loaded.stereotype = getattr(source, "stereotype", "") or ""
         loaded.cardinality = getattr(source, "cardinality", "") or ""
         loaded.origin = getattr(source, "origin", "") or ""
+        source_relationship = getattr(source, "relationship", None)
+        loaded.relationship = source_relationship.clone() if source_relationship is not None else None
+        if loaded.relationship is None:
+            from practices.clean_engineering.model.property import bind_property_relationship
+
+            bind_property_relationship(loaded)
         loaded.invariants = [item.clone() for item in getattr(source, "invariants", [])]
         return loaded
 
@@ -284,9 +289,36 @@ class OoadClass(OoadNode):
     def get_next_operation_from_file(self) -> "Operation":
         raise NotImplementedError(f"{type(self).__name__} must implement get_next_operation_from_file")
 
+    @property
+    def relationships(self) -> List[Relationship]:
+        """Relationships that live on properties whose type is a domain class."""
+        return [
+            prop.relationship
+            for prop in self.properties
+            if getattr(prop, "relationship", None) is not None
+        ]
+
+    def place_relationship(self, relationship: Relationship) -> None:
+        """Put this relationship on every property whose type names the target."""
+        from practices.clean_engineering.model.property import bind_property_relationship
+        from practices.clean_engineering.model.type_refs import domain_type_names
+
+        if (relationship.kind or "").lower() == "inheritance":
+            return
+        for prop in self.properties:
+            if relationship.target not in domain_type_names(getattr(prop, "type_hint", "") or ""):
+                continue
+            if relationship.kind:
+                prop.stereotype = relationship.kind
+            if relationship.cardinality:
+                prop.cardinality = relationship.cardinality
+            if relationship.description and not getattr(prop, "origin", ""):
+                prop.origin = relationship.description
+            bind_property_relationship(prop)
+
     def load_relationships(self) -> None:
         while self.has_more_relationship():
-            self.relationships.append(self.load_next_relationship())
+            self.place_relationship(self.load_next_relationship())
 
     def has_more_relationship(self) -> bool:
         return False
@@ -487,14 +519,14 @@ class CleanEngineeringModel(OoadNode):
     def load(self, path: str) -> "CleanEngineeringModel":
         self.path = path
         self.modules = []
-        self.load_model_content()
+        self.load_content()
         self.load_modules()
         return self
 
     def save(self) -> str:
         raise NotImplementedError(f"{type(self).__name__} must implement save")
 
-    def load_model_content(self) -> None:
+    def load_content(self) -> None:
         return None
 
     def load_modules(self) -> None:

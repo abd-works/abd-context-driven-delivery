@@ -1,4 +1,4 @@
-"""Relationship on a class. Kind is composition, aggregation, or association."""
+"""Optional relationship on a property. Kind is composition, aggregation, or association. Cardinality is 0..1, 0..*, 1, or 1..*."""
 
 from __future__ import annotations
 

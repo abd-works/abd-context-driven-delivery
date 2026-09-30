@@ -1,6 +1,6 @@
 """CodeQL graph types for Stories."""
 
-from .codeql_model import Background, Epic, Example, Scenario, Step, Story, StoryMap, Epic
+from .codeql_model import Background, Epic, Example, Scenario, Step, Story, StoryModel, Epic
 
 __all__ = [
     "Background",
@@ -9,6 +9,6 @@ __all__ = [
     "Scenario",
     "Step",
     "Story",
-    "StoryMap",
+    "StoryModel",
     "Epic",
 ]

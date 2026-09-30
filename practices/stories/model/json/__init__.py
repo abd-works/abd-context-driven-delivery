@@ -1,1 +1,1 @@
-from .nodes import JsonStoryMap, JsonParseError
+from .nodes import JsonStoryModel, JsonParseError

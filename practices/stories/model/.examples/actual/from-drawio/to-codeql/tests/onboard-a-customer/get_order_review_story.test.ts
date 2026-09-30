@@ -1,5 +1,6 @@
 /**
  * Epic: Get Order Review
+ * Orders: 0.0.6
  */
 
 import { scenario, story } from "tests/story-test";
@@ -15,7 +16,6 @@ story('Check The Order', () => {
 
 /**
  * Story: Upgrade To Data Freedom
- * Actor: Customer
  */
 
 story('Upgrade To Data Freedom', () => {
@@ -24,7 +24,6 @@ story('Upgrade To Data Freedom', () => {
 
 /**
  * Story: Change Plan From Review
- * Actor: Customer
  */
 
 story('Change Plan From Review', () => {

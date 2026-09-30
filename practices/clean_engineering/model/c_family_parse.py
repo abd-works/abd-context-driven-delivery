@@ -9,7 +9,6 @@ import re
 from typing import Callable
 
 from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation
-from practices.clean_engineering.model.field_types import Relationship
 from practices.clean_engineering.model.property import Property, append_invariant, take_property_note
 
 _CLASS_RE = re.compile(
@@ -104,7 +103,7 @@ class CFamilyParse:
             ]
             self._prepend_constructors(oclass, body)
             oclass.properties = self._fields_from_body(oclass, body)
-            oclass.relationships = self._relationships_from_members(oclass)
+            self._bind_member_relationships(oclass)
             module.classes.append(oclass)
             class_order += 1
 
@@ -316,30 +315,12 @@ class CFamilyParse:
                 chars.append(" ")
         return "".join(chars)
 
-    def _relationships_from_members(self, oclass: OoadClass) -> list:
-        """Association to every domain type a field, parameter, or return names."""
-        seen: set[str] = set()
-        relationships = []
+    def _bind_member_relationships(self, oclass: OoadClass) -> None:
+        """A field relates only when its type names a domain class."""
+        from practices.clean_engineering.model.property import bind_property_relationship
+
         for prop in oclass.properties:
-            targets = self._domain_types(prop.type_hint)
-            if not targets:
-                continue
-            kind = (getattr(prop, "stereotype", "") or "association").lower()
-            if kind not in {"composition", "aggregation", "association"}:
-                kind = "association"
-            if not prop.stereotype:
-                prop.stereotype = kind
-            for target in targets:
-                if target in seen:
-                    continue
-                seen.add(target)
-                relationships.append(Relationship(
-                    target=target,
-                    kind=kind,
-                    cardinality=getattr(prop, "cardinality", ""),
-                    description=getattr(prop, "origin", ""),
-                ))
-        return relationships
+            bind_property_relationship(prop)
 
     def _domain_types(self, type_raw: str) -> list[str]:
         names: list[str] = []

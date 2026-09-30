@@ -1,4 +1,4 @@
-"""JavaScriptStoryMap - a story map stored as `*_story.js` files.
+"""JavaScriptStoryModel - a story map stored as `*_story.js` files.
 
 Each story file is `story` / `background` / `scenario` / `given` / `when` / `then`.
 """
@@ -9,12 +9,12 @@ from typing import Dict, List, Optional
 
 from pathlib import Path
 
-from practices.stories.model.code_story_model import CodeStoryMap, CodeStoryMapError
+from practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
 from practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
 from practices.stories.model.story_model import Epic
 
 
-class JavaScriptStoryMap(CodeStoryMap):
+class JavaScriptStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "_story.test.js"
     LANGUAGE_LINE_COMMENT = "//"
     epic_type = JavaScriptEpic
@@ -39,12 +39,13 @@ class JavaScriptStoryMap(CodeStoryMap):
     def _epic_helper_path(self, epic_root: str, epic: Epic) -> str:
         return f"{epic_root}/{epic.slug()}-helper.js"
 
-    def load(self, external: Dict[str, str]) -> "JavaScriptStoryMap":
+    def load(self, external: Dict[str, str]) -> "JavaScriptStoryModel":
         if not isinstance(external, dict):
-            raise CodeStoryMapError("JavaScript story map parse expects a path->content dict")
+            raise CodeStoryModelError("JavaScript story map parse expects a path->content dict")
         self.epics.clear()
         # Group *_story.js by epic / sub-epic / story folder
-        for path, content in sorted(external.items()):
+        for path in self._ordered_paths(external):
+            content = external[path]
             if not path.endswith(self.LEAF_EXTENSION):
                 continue
             parts = path.strip("/").split("/")

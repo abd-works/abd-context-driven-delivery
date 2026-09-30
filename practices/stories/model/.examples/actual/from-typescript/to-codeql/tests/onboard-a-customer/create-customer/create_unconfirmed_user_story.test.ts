@@ -1,8 +1,11 @@
 /**
  * Epic: Create Unconfirmed User
+ * Orders: 0.0.0.1
  */
 
 import { scenario, story } from "tests/story-test";
+import { enteredValidAccountCredentials, enteredAlreadyRegisteredAccountCredentials, storedAlreadyRegisteredUnconfirmedCognitoUser, expectedValidAccountCredentials } from "./examples";
+
 
 /**
  * Story: Create Unconfirmed Cognito User
@@ -25,6 +28,7 @@ story('Create Unconfirmed Cognito User', () => {
   });
 
   scenario('Enter Valid account credentials', ({ given, when, then }) => {
+    // examples: enteredValidAccountCredentials
     when('the User enters valid account credentials', () => {
       // TODO: implement step
     });
@@ -37,6 +41,7 @@ story('Create Unconfirmed Cognito User', () => {
   });
 
   scenario('Email already registered', ({ given, when, then }) => {
+    // examples: enteredAlreadyRegisteredAccountCredentials, storedAlreadyRegisteredUnconfirmedCognitoUser
     given('already-registered account credentials are already registered', () => {
       // TODO: implement step
     });
@@ -49,6 +54,7 @@ story('Create Unconfirmed Cognito User', () => {
   });
 
   scenario('Create Unconfirmed User', ({ given, when, then }) => {
+    // examples: enteredValidAccountCredentials, expectedValidAccountCredentials
     given('the amplifyService.signUp spy is set up', () => {
       // TODO: implement step
     });
@@ -61,6 +67,7 @@ story('Create Unconfirmed Cognito User', () => {
   });
 
   scenario('Email already registered in Cognito', ({ given, when, then }) => {
+    // examples: enteredAlreadyRegisteredAccountCredentials, storedAlreadyRegisteredUnconfirmedCognitoUser
     given('an unconfirmed Cognito user exists for already-registered account credentials', () => {
       // TODO: implement step
     });

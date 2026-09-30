@@ -1,5 +1,14 @@
 ## Story: Authorize Card
 
+### Examples
+
+#### payment status
+
+| payment status | example | transactionId | status | reason | group |
+| --- | --- | --- | --- | --- | --- |
+| payment status | completed auth | d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3 | completed | APPROVED | payment status |
+| payment status | failed auth | d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3 | failed | DECLINED | payment status |
+
 ### Scenario: Payment completed
 
 *Given* the Customer has ++payment authorization++ ++stub auth++

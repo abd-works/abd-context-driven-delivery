@@ -17,4 +17,5 @@ where
 select cls.getName(), name, assign.getLocation().getFile().getShortName(),
   assign.getLocation().getStartLine(),
   assign.getLocation().getFile().getRelativePath(),
-  assign.getLocation().getEndLine()
+  assign.getLocation().getEndLine(),
+  assign.getAnnotation().toString()

@@ -18,13 +18,13 @@ from expects import equal, have_len, be_true, contain, expect, raise_error
 
 from practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from practices.stories.model.story_model import Scenario
-from practices.stories.model.story_model import StoryMap
-from practices.stories.model.code_story_model import CodeStoryMapError
-from practices.stories.model.python.python_story_model import PythonStoryMap
+from practices.stories.model.story_model import StoryModel
+from practices.stories.model.code_story_model import CodeStoryModelError
+from practices.stories.model.python.python_story_model import PythonStoryModel
 
 
-def _story_map_with_stories() -> StoryMap:
-    story_map = StoryMap()
+def _story_map_with_stories() -> StoryModel:
+    story_map = StoryModel()
     for i in range(1, 5):
         story_map.append_epic(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
@@ -46,7 +46,7 @@ with description("a Python runnable-story Story Map") as self:
         "that holds a rendered code Story Map with 4 Epics and 3 Epics under the first Epic"
     ):
         with before.each:
-            self.py = PythonStoryMap()
+            self.py = PythonStoryModel()
             self.canonical = _story_map_with_stories()
             self.tree = self.py.render(self.canonical)
             self.leaf_paths = self.py.leaf_files_of(self.tree)
@@ -79,7 +79,7 @@ with description("a Python runnable-story Story Map") as self:
     with context("that has been rendered and parsed back without edits"):
         with before.each:
             self.canonical = _story_map_with_stories()
-            self.parsed = PythonStoryMap().parse(PythonStoryMap().render(self.canonical))
+            self.parsed = PythonStoryModel().parse(PythonStoryModel().render(self.canonical))
 
         with it("should preserve Story and Scenario counts under each Epic"):
             first_sub = self.parsed.epics[0].epics[0]
@@ -93,6 +93,6 @@ with description("a Python runnable-story Story Map") as self:
 
     with context("that is not a valid Python story-spec tree"):
         with it("should reject parse"):
-            expect(lambda: PythonStoryMap().parse("not a tree")).to(
-                raise_error(CodeStoryMapError)
+            expect(lambda: PythonStoryModel().parse("not a tree")).to(
+                raise_error(CodeStoryModelError)
             )

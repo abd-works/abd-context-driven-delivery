@@ -148,9 +148,15 @@ class SpecFixture:
         cart_rels = [Relationship(target="Order", kind="association")]
         if extra_relationship:
             cart_rels.append(extra_relationship)
+        class_name = "Cart"
+        for rel in cart_rels:
+            if (rel.kind or "").lower() == "inheritance":
+                class_name = f"Cart extends {rel.target}"
+                continue
+            cart_props.append(Property(name=rel.target[:1].lower() + rel.target[1:], type_hint=rel.target))
         module.classes.append(
             OoadClass(
-                name="Cart",
+                name=class_name,
                 sequential_order=1,
                 properties=cart_props,
                 operations=[Operation(name="place_order", return_type="Order")],

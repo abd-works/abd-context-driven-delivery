@@ -28,7 +28,7 @@ with description("PracticeGraph dot_graph"):
         expect(graph.story_map is not None).to(equal(True))
         dot = graph.story_map.dot_graph
         expect(dot).to(contain("digraph"))
-        expect(dot).to(contain("StoryMap"))
+        expect(dot).to(contain("StoryModel"))
         expect(dot).to(contain("Epic"))
         expect(dot).to(contain("onboard-a-customer"))
         expect(dot).to(contain(f'[label="{Kind.OWNS}"]'))
@@ -49,7 +49,7 @@ with description("PracticeGraph dot_graph"):
     with it("should merge practice roots on PracticeGraph.dot_graph"):
         graph = PracticeGraph.load(_CATALOG, populate=False)
         dot = graph.dot_graph
-        expect(dot).to(contain("StoryMap"))
+        expect(dot).to(contain("StoryModel"))
         expect(dot.count("->") > 0).to(equal(True))
 
 
@@ -60,7 +60,7 @@ if _PML.is_dir():
             expect(graph.story_map is not None).to(equal(True))
             dot = graph.story_map.dot_graph
             expect(dot).to(contain("digraph"))
-            expect(dot).to(contain("StoryMap"))
+            expect(dot).to(contain("StoryModel"))
             expect(len(graph.nodes_of_type(Epic)) > 0).to(equal(True))
             expect(dot.count("->") > 0).to(equal(True))
 
@@ -73,7 +73,7 @@ if _PML.is_dir():
             graph = PracticeGraph.load(_PML, populate=False)
             text = graph.story_map.hierarchy_text
             print(text)
-            expect(text).to(contain("StoryMap"))
+            expect(text).to(contain("StoryModel"))
             expect(text).to(contain("Onboard A Customer"))
             expect(text).to(contain("Create Customer"))
             expect(text).to(contain("Load Customer"))

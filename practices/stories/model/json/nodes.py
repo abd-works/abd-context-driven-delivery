@@ -38,7 +38,7 @@ from typing import Any, Dict, List, Optional
 from practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from practices.stories.model.story_model import Scenario
 from practices.stories.model.source_location import SourceLocation
-from practices.stories.model.story_model import StoryMap
+from practices.stories.model.story_model import StoryModel
 from practices.stories.model.story_model import Increment
 
 # -- Leaf node types -----------------------------------------------------------
@@ -71,7 +71,7 @@ class JsonParseError(Exception):
     """Raised when a document does not conform to the story-graph.json schema."""
 
 
-class JsonStoryMap(StoryMap):
+class JsonStoryModel(StoryModel):
     epic_type = JsonEpic
     story_type = JsonStory
     increment_type = JsonIncrement
@@ -89,7 +89,7 @@ class JsonStoryMap(StoryMap):
 
     # -- Uniform Callable Surface ----------------------------------------------
 
-    def render(self, story_map: "JsonStoryMap", previous: Optional[str] = None) -> str:
+    def render(self, story_map: "JsonStoryModel", previous: Optional[str] = None) -> str:
         payload: Dict[str, Any] = {
             "epics": [self._epic_to_dict(e) for e in story_map.epics],
         }
@@ -99,13 +99,13 @@ class JsonStoryMap(StoryMap):
             ]
         return json.dumps(payload, indent=2)
 
-    def parse(self, text: str) -> "JsonStoryMap":
+    def parse(self, text: str) -> "JsonStoryModel":
         try:
             payload = json.loads(text)
         except json.JSONDecodeError as err:
             raise JsonParseError(f"Not valid JSON: {err}") from err
         self._guard_schema(payload)
-        story_map = JsonStoryMap()
+        story_map = JsonStoryModel()
         for epic_dict in payload.get("epics", []):
             story_map.epics.append(self._epic_from_dict(epic_dict))
         for inc_dict in payload.get("increments", []):
@@ -120,7 +120,7 @@ class JsonStoryMap(StoryMap):
             epic._stamp_source(loc)
 
     @classmethod
-    def from_workspace(cls, root: "Path") -> Optional["JsonStoryMap"]:
+    def from_workspace(cls, root: "Path") -> Optional["JsonStoryModel"]:
         """Find story-graph.json in *root* and parse it; return None if absent."""
         from pathlib import Path as _Path
         root = _Path(root).resolve()
@@ -166,6 +166,8 @@ class JsonStoryMap(StoryMap):
             "storyType": story.story_type.value,
             "scenarios": [self._scenario_to_dict(s) for s in story.scenarios],
         }
+        if story.backgrounds:
+            payload["backgrounds"] = [self._background_to_dict(background) for background in story.backgrounds]
         if story.actors:
             payload["actors"] = list(story.actors)
         if getattr(story, "domain_terms", None):
@@ -179,9 +181,11 @@ class JsonStoryMap(StoryMap):
             "name": scenario.name,
             "sequentialOrder": scenario.sequential_order,
         }
-        rows = scenario.examples.table()
+        rows = self._example_rows(scenario.examples)
         if rows:
             payload["exampleRows"] = rows
+        if scenario.backgrounds:
+            payload["backgrounds"] = [self._background_to_dict(background) for background in scenario.backgrounds]
         return payload
 
     def _increment_to_dict(self, inc: JsonIncrement) -> Dict[str, Any]:
@@ -239,6 +243,8 @@ class JsonStoryMap(StoryMap):
             story.domain_terms = list(story_record["domainTerms"])
         if story_record.get("evidence"):
             story.evidence = list(story_record["evidence"])
+        for background in story_record.get("backgrounds") or []:
+            story.backgrounds.append(self._background_from_dict(background, len(story.backgrounds) + 1))
         for sc in story_record.get("scenarios", []):
             story.scenarios.append(self._scenario_from_dict(sc))
         return story
@@ -249,9 +255,40 @@ class JsonStoryMap(StoryMap):
             sequential_order=int(scenario_record.get("sequentialOrder", 0)),
         )
         for index, row in enumerate(scenario_record.get("exampleRows") or [], start=1):
-            label = str(row.get("example") or row.get("name") or f"example-{index}")
-            scenario.examples[label] = dict(row)
+            self._put_example(scenario.examples, row, index)
+        for background in scenario_record.get("backgrounds") or []:
+            scenario.backgrounds.append(self._background_from_dict(background, len(scenario.backgrounds) + 1))
         return scenario
+
+    def _example_rows(self, examples) -> List[Dict[str, str]]:
+        rows = []
+        for name, example in examples.items():
+            cells = {key: "" if value is None else str(value) for key, value in example.cells().items()}
+            cells.setdefault("example", name)
+            rows.append(cells)
+        return rows
+
+    def _put_example(self, examples, row: Dict[str, Any], index: int) -> None:
+        label = str(row.get("example") or row.get("name") or f"example-{index}")
+        if set(row) <= {"example"}:
+            examples[label] = label
+            return
+        examples[label] = dict(row)
+
+    def _background_to_dict(self, background) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"name": background.name}
+        rows = self._example_rows(background.examples)
+        if rows:
+            payload["exampleRows"] = rows
+        return payload
+
+    def _background_from_dict(self, record: Dict[str, Any], order: int):
+        from practices.stories.model.story_model import Background
+
+        background = Background(record.get("name") or "background", order)
+        for index, row in enumerate(record.get("exampleRows") or [], start=1):
+            self._put_example(background.examples, row, index)
+        return background
 
     def _increment_from_dict(self, increment_record: Dict[str, Any]) -> JsonIncrement:
         stories = []

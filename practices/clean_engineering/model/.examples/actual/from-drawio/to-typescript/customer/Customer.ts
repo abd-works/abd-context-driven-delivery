@@ -63,7 +63,9 @@ class MidtierCustomerService {
 }
 
 class CustomerException {
+  // << association >>
   operation: CustomerOperation;
+  // << association >>
   accountCredentials: AccountCredentials;
   message: string;
   cause: Error;
@@ -131,6 +133,7 @@ class AccountCredentials {
   confirmPassword: string;
   validationCode: string;
   verified: boolean;
+  // << association >>
   token: AccountToken | null;
   customerId: string | null;
   validationCodeWasSent: boolean;
@@ -233,14 +236,23 @@ class AccountCredentialRequirement {
 }
 
 class AccountCredentialRequirements {
+  // << association >>
   emailRequired: AccountCredentialRequirement;
+  // << association >>
   emailFormat: AccountCredentialRequirement;
+  // << association >>
   passwordRequired: AccountCredentialRequirement;
+  // << association >>
   passwordLetters: AccountCredentialRequirement;
+  // << association >>
   passwordNumber: AccountCredentialRequirement;
+  // << association >>
   passwordSymbol: AccountCredentialRequirement;
+  // << association >>
   passwordLength: AccountCredentialRequirement;
+  // << association >>
   confirmRequired: AccountCredentialRequirement;
+  // << association >>
   confirmMismatch: AccountCredentialRequirement;
 
   constructor(emailRequired: AccountCredentialRequirement, emailFormat: AccountCredentialRequirement, passwordRequired: AccountCredentialRequirement, passwordLetters: AccountCredentialRequirement, passwordNumber: AccountCredentialRequirement, passwordSymbol: AccountCredentialRequirement, passwordLength: AccountCredentialRequirement, confirmRequired: AccountCredentialRequirement, confirmMismatch: AccountCredentialRequirement) {
@@ -339,6 +351,7 @@ class MavenirCustomer {
   waitingPsim: string | null;
   done: string | null;
   inquiryId: string | null;
+  // << association >>
   voucher: Voucher | null;
   // << association >>
   shoppingCart: MavenirShoppingCart | null;

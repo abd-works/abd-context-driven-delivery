@@ -1,5 +1,6 @@
 /**
  * Epic: Get Verified Profile
+ * Orders: 0.0.5
  */
 
 import { scenario, story } from "tests/story-test";
@@ -11,7 +12,12 @@ import { scenario, story } from "tests/story-test";
 
 story('Customer Complete Persona Kyc', () => {
   scenario('Persona verification required', ({ given, when, then }) => {
-    then('no idNumber on ++identity++', () => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    but('no idNumber on ++identity++', () => {
       // TODO: implement step
     });
     when('the Customer validates whether a Persona inquiry is required', () => {
@@ -26,6 +32,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Persona verification already complete', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer has ++identity++ with an idNumber', () => {
       // TODO: implement step
     });
@@ -41,6 +52,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Create a completed Persona inquiry', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer has no idNumber on ++identity++', () => {
       // TODO: implement step
     });
@@ -74,6 +90,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Persona inquiry not completed', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     when('the Customer creates a Persona inquiry', () => {
       // TODO: implement step
     });
@@ -92,6 +113,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('No government ID document on inquiry', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the completed ++Persona inquiry++ has no government ID document', () => {
       // TODO: implement step
     });
@@ -113,6 +139,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Persona errors on inquiry load', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     when('the Customer creates a Persona inquiry', () => {
       // TODO: implement step
     });
@@ -131,6 +162,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Document not found', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('Persona has no ++Persona document++ for that document ID', () => {
       // TODO: implement step
     });
@@ -149,6 +185,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Document email mismatch', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the ++Persona document++ email does not match the Customer email', () => {
       // TODO: implement step
     });
@@ -167,6 +208,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Verify later', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer has a ++My Paradise customer++ with no idNumber on ++identity++', () => {
       // TODO: implement step
     });
@@ -185,6 +231,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Enter valid identity and address', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer has a ++My Paradise customer++ in session', () => {
       // TODO: implement step
     });
@@ -200,6 +251,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Enter identity after a verified Persona inquiry', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer has a verified ++Persona inquiry++ mapped onto ++identity++ ++valid identity++', () => {
       // TODO: implement step
     });
@@ -215,6 +271,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Re-enter a verified identity', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer has ++identity++ ++valid identity++ already verified', () => {
       // TODO: implement step
     });
@@ -230,6 +291,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Enter incomplete identity or address', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     when('the Customer enters ++identity++ and ++address++ with {field} empty', () => {
       // TODO: implement step
     });
@@ -242,6 +308,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Confirm identity with a verified Persona inquiry', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer has entered ++identity++ ++valid identity++ and ++address++ ++valid address++', () => {
       // TODO: implement step
     })
@@ -272,6 +343,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Profile requirements unmet', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer has not entered ++identity++ or ++address++', () => {
       // TODO: implement step
     });
@@ -287,6 +363,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Customer already exists', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('another Mavenir customer already has ++identity++ idNumber I1234562', () => {
       // TODO: implement step
     });
@@ -302,6 +383,11 @@ story('Customer Complete Persona Kyc', () => {
   });
 
   scenario('Mavenir profile patch error', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
     given('Mavenir returns a profile patch error', () => {
       // TODO: implement step
     });

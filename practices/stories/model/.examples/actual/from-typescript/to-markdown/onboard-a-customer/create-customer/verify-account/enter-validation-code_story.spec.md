@@ -1,5 +1,12 @@
 ## Story: Enter Validation Code
 
+### Story Background: each
+
+*Given* the User has submitted valid account credentials
+*And* Cognito has an unconfirmed Cognito user
+*And* Cognito has sent a validation code to the User
+*And* the User has account credentials with valid email and password
+
 ### Scenario: Enter validation code
 
 *When* the User activates the account with the emailed validation code

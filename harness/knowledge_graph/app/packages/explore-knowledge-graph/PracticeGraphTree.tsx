@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
+  fieldTypeNames,
+  isSimpleProperty,
+  memberCallLabels,
+  methodSignature,
+  signatureTypeNames,
+  SKIP_TYPES,
   stepTitle,
   type ListedRelationshipKind,
   type ListedTreeNode,
@@ -368,24 +374,35 @@ function listedRules(node: ListedTreeNode) {
 }
 
 function listedProperties(node: ListedTreeNode) {
-  return Object.entries(node.properties ?? {}).filter(([, value]) => value);
+  return Object.entries(node.properties ?? {}).filter(
+    ([name, value]) => name !== 'folder' && value,
+  );
 }
 
-function listedRelationships(node: ListedTreeNode) {
-  return node.relationships ?? [];
-}
-
-function relatedCount(groups: ListedRelationshipKind[]) {
-  return groups.reduce((sum, group) => sum + group.targets.length, 0);
-}
-
-const PRACTICE_SECTION_ORDER = ['stories', 'clean_engineering', 'ddd', 'ux', 'bdd'];
-
-function practiceSectionLabel(practice: string): string {
-  if (practice === 'clean_engineering') {
-    return 'ce';
-  }
-  return practice;
+function listedRelationships(node: ListedTreeNode, practices: string[] | null) {
+  const groups = node.relationships ?? [];
+  return groups
+    .map((group) => {
+      if (
+        group.kind === 'owns' ||
+        group.kind === 'belongsTo' ||
+        group.kind === 'demonstratedThrough'
+      ) {
+        return { ...group, targets: [] };
+      }
+      let targets = group.targets.filter((target) => target.semantic_type !== 'Example');
+      if (practices) {
+        targets = targets.filter((target) => practices.includes(target.practice));
+      }
+      if (group.kind === 'demonstrates' && node.semantic_type !== 'Example') {
+        targets = [];
+      }
+      if (group.kind === 'demonstrates') {
+        targets = targets.filter((target) => target.semantic_type === 'OoadClass');
+      }
+      return { ...group, targets };
+    })
+    .filter((group) => group.targets.length > 0);
 }
 
 function practiceSectionMark(practice: string): string {
@@ -413,60 +430,254 @@ function practiceSectionMark(practice: string): string {
   return 'Relationships';
 }
 
-function relationshipSections(nodePractice: string, relationships: ListedRelationshipKind[]) {
-  const byPractice = new Map<string, ListedRelationshipKind[]>();
-  for (const group of relationships) {
-    const targetsByPractice = new Map<string, ListedRelationshipKind['targets']>();
+type RelatedNode = Partial<ListedTreeNode> & {
+  node_id: string;
+  practice: string;
+};
+
+function listedTreeNode(node: RelatedNode): ListedTreeNode {
+  return {
+    node_id: node.node_id,
+    name: node.name ?? node.node_id,
+    path: node.path ?? node.name ?? node.node_id,
+    practice: node.practice ?? '',
+    semantic_type: node.semantic_type ?? '',
+    is_file: node.is_file ?? false,
+    properties: node.properties ?? {},
+    rule_statuses: node.rule_statuses ?? {},
+    rules: node.rules ?? [],
+    relationships: node.relationships ?? [],
+    source: node.source ?? null,
+    origin: node.origin ?? null,
+    failed: node.failed ?? 0,
+    total: node.total ?? 0,
+    children: node.children ?? [],
+  };
+}
+
+function invokeLabel(
+  kind: string,
+  target: { node_id: string; name: string },
+  nodesById: Map<string, ListedTreeNode>,
+): string {
+  if (kind !== 'invokes') {
+    return target.name;
+  }
+  const owner = classOwning(nodesById, target.node_id);
+  return owner ? `${target.name} on ${owner}` : target.name;
+}
+
+function classNodeOwning(
+  nodesById: Map<string, ListedTreeNode>,
+  operationId: string,
+): ListedTreeNode | null {
+  for (const node of nodesById.values()) {
+    if (node.semantic_type !== 'OoadClass') {
+      continue;
+    }
+    if (node.children.some((child) => child.node_id === operationId)) {
+      return node;
+    }
+  }
+  return null;
+}
+
+function classOwning(nodesById: Map<string, ListedTreeNode>, operationId: string): string {
+  return classNodeOwning(nodesById, operationId)?.name ?? '';
+}
+
+function invokeTypeNodes(
+  target: { node_id: string; name: string },
+  nodesById: Map<string, ListedTreeNode>,
+): ListedTreeNode[] {
+  const operation = nodesById.get(target.node_id);
+  if (!operation) {
+    return [];
+  }
+  const owner = classNodeOwning(nodesById, operation.node_id);
+  const text = methodSignature(
+    operation.name,
+    operation.source?.text ?? '',
+    owner?.source?.text ?? '',
+  );
+  const names = new Set(signatureTypeNames(text));
+  for (const child of operation.children) {
+    if (child.semantic_type !== 'Parameter') {
+      continue;
+    }
+    for (const group of child.relationships) {
+      if (group.kind !== 'hasType') {
+        continue;
+      }
+      for (const related of group.targets) {
+        names.add(related.name);
+      }
+    }
+  }
+  for (const group of operation.relationships) {
+    if (group.kind !== 'returns' && group.kind !== 'hasType') {
+      continue;
+    }
+    for (const related of group.targets) {
+      names.add(related.name);
+    }
+  }
+  const found: ListedTreeNode[] = [];
+  const seen = new Set<string>([operation.node_id]);
+  if (owner) {
+    seen.add(owner.node_id);
+  }
+  for (const name of names) {
+    if (SKIP_TYPES.has(name) || name === owner?.name) {
+      continue;
+    }
+    const match = [...nodesById.values()].find(
+      (node) => node.semantic_type === 'OoadClass' && node.name === name,
+    );
+    if (!match || seen.has(match.node_id)) {
+      continue;
+    }
+    seen.add(match.node_id);
+    found.push(match);
+  }
+  return found;
+}
+
+function propertyTypeNodes(
+  property: ListedTreeNode,
+  nodesById: Map<string, ListedTreeNode>,
+): ListedTreeNode[] {
+  const names = new Set(fieldTypeNames(property.source?.text ?? ''));
+  for (const group of property.relationships) {
+    if (group.kind !== 'hasType') {
+      continue;
+    }
+    for (const related of group.targets) {
+      names.add(related.name);
+    }
+  }
+  const owner = classNodeOwning(nodesById, property.node_id);
+  const found: ListedTreeNode[] = [];
+  const seen = new Set<string>([property.node_id]);
+  if (owner) {
+    seen.add(owner.node_id);
+  }
+  for (const name of names) {
+    if (SKIP_TYPES.has(name) || name === owner?.name) {
+      continue;
+    }
+    const match = [...nodesById.values()].find(
+      (node) => node.semantic_type === 'OoadClass' && node.name === name,
+    );
+    if (!match || seen.has(match.node_id)) {
+      continue;
+    }
+    seen.add(match.node_id);
+    found.push(match);
+  }
+  return found;
+}
+
+function calledMembers(
+  node: ListedTreeNode,
+  nodesById: Map<string, ListedTreeNode>,
+): ListedTreeNode[] {
+  if (node.semantic_type !== 'Operation' && node.semantic_type !== 'Property') {
+    return [];
+  }
+  const labels = memberCallLabels(node.source?.text ?? '');
+  const found: ListedTreeNode[] = [];
+  const seen = new Set<string>();
+  for (const group of node.relationships ?? []) {
+    if (group.kind !== 'invokes') {
+      continue;
+    }
     for (const target of group.targets) {
-      if (target.semantic_type === 'Example' && group.kind !== 'demonstratedThrough') {
+      if (target.semantic_type !== 'Operation' && target.semantic_type !== 'Property') {
         continue;
       }
-      const samePractice = !target.practice || target.practice === nodePractice;
-      const key =
-        target.semantic_type === 'Example' && samePractice
-          ? 'examples'
-          : target.practice && !samePractice
-            ? target.practice
-            : 'internal';
-      const list = targetsByPractice.get(key) ?? [];
-      list.push(target);
-      targetsByPractice.set(key, list);
-      if (key === 'examples') {
-        const internal = targetsByPractice.get('internal') ?? [];
-        internal.push(target);
-        targetsByPractice.set('internal', internal);
-      }
-    }
-    for (const [practice, targets] of targetsByPractice) {
-      if (targets.length === 0) {
+      const full = nodesById.get(target.node_id);
+      if (!full || seen.has(full.node_id)) {
         continue;
       }
-      const groups = byPractice.get(practice) ?? [];
-      groups.push({ kind: group.kind, targets });
-      byPractice.set(practice, groups);
+      const label = labels.get(full.name);
+      if (!label) {
+        continue;
+      }
+      if (
+        node.semantic_type === 'Operation' &&
+        full.semantic_type === 'Property' &&
+        isSimpleProperty(full.source?.text ?? '')
+      ) {
+        continue;
+      }
+      seen.add(full.node_id);
+      found.push({ ...full, name: label });
     }
   }
-  const keys = [...byPractice.keys()].filter((key) => key !== 'internal' && key !== 'examples');
-  keys.sort((left, right) => {
-    const leftRank = PRACTICE_SECTION_ORDER.indexOf(left);
-    const rightRank = PRACTICE_SECTION_ORDER.indexOf(right);
-    const ranked =
-      (leftRank === -1 ? PRACTICE_SECTION_ORDER.length : leftRank) -
-      (rightRank === -1 ? PRACTICE_SECTION_ORDER.length : rightRank);
-    return ranked || left.localeCompare(right);
-  });
-  if ((byPractice.get('examples') ?? []).some((group) => group.targets.length > 0)) {
-    keys.push('examples');
+  return found;
+}
+
+function linkedTypeNodes(
+  node: ListedTreeNode,
+  nodesById: Map<string, ListedTreeNode>,
+): ListedTreeNode[] {
+  if (node.semantic_type === 'Operation') {
+    return invokeTypeNodes({ node_id: node.node_id, name: node.name }, nodesById);
   }
-  if ((byPractice.get('internal') ?? []).some((group) => group.targets.length > 0)) {
-    keys.push('internal');
+  if (node.semantic_type === 'Property') {
+    return propertyTypeNodes(node, nodesById);
   }
-  return keys.map((practice) => ({
-    practice,
-    label: practiceSectionLabel(practice),
-    mark: practiceSectionMark(practice),
-    relationships: (byPractice.get(practice) ?? []).filter((group) => group.targets.length > 0),
-  }));
+  return [];
+}
+
+function asMemberNode(
+  target: ListedRelationshipKind['targets'][number],
+  nodesById: Map<string, ListedTreeNode>,
+): ListedTreeNode | null {
+  if (target.semantic_type !== 'Operation' && target.semantic_type !== 'Property') {
+    return null;
+  }
+  const full = nodesById.get(target.node_id);
+  if (full) {
+    return full;
+  }
+  return {
+    node_id: target.node_id,
+    name: target.name,
+    path: target.name,
+    practice: target.practice,
+    semantic_type: target.semantic_type,
+    is_file: false,
+    properties: {},
+    rule_statuses: {},
+    rules: [],
+    relationships: [],
+    source: null,
+    origin: null,
+    failed: 0,
+    total: 0,
+    children: [],
+  };
+}
+
+function flatRelationships(relationships: ListedRelationshipKind[]) {
+  const rows: Array<{ kind: string; target: ListedRelationshipKind['targets'][number] }> = [];
+  const seen = new Set<string>();
+  for (const group of relationships) {
+    for (const target of group.targets) {
+      if (target.semantic_type === 'Example') {
+        continue;
+      }
+      const key = `${group.kind}:${target.node_id}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      rows.push({ kind: group.kind, target });
+    }
+  }
+  return rows;
 }
 
 function PropertiesGroup({
@@ -591,146 +802,113 @@ function RulesGroup({
   );
 }
 
-function RelationshipsGroup({
+function RelationshipRow({
   nodeId,
-  section,
+  kind,
+  target,
   depth,
+  practices,
+  showRules,
   selectedId,
   expanded,
+  nodesById,
+  stack,
   onToggle,
   onSelect,
 }: {
   nodeId: string;
-  section: ReturnType<typeof relationshipSections>[number];
+  kind: string;
+  target: ListedRelationshipKind['targets'][number];
   depth: number;
+  practices: string[] | null;
+  showRules: boolean;
   selectedId: string | null;
   expanded: Set<string>;
+  nodesById: Map<string, ListedTreeNode>;
+  stack: Set<string>;
   onToggle: (id: string) => void;
   onSelect: (id: string, ruleSlug?: string) => void;
 }) {
-  const relationships = section.relationships;
-  const exampleTargets =
-    section.practice === 'examples'
-      ? relationships
-          .flatMap((group) => group.targets)
-          .filter(
-            (target, index, all) =>
-              all.findIndex((other) => other.node_id === target.node_id) === index,
-          )
-      : [];
-  const relationshipsId = `${nodeId}::relationships::${section.practice}`;
-  const isOpen = expanded.has(relationshipsId);
-  const count =
-    section.practice === 'examples' ? exampleTargets.length : relatedCount(relationships);
-  if (count === 0) {
-    return null;
-  }
+  const targetNode = nodesById.get(target.node_id);
+  const next = new Set(stack);
+  next.add(target.node_id);
+  const typeNodes = kind === 'invokes' ? invokeTypeNodes(target, nodesById) : [];
+  const properties = kind === 'invokes' || !targetNode ? [] : listedProperties(targetNode);
+  const rules = showRules && targetNode && kind !== 'invokes' ? listedRules(targetNode) : [];
+  const children = kind === 'invokes' ? typeNodes : (targetNode?.children ?? []);
+  const canOpen =
+    !stack.has(target.node_id) &&
+    (children.length > 0 || properties.length > 0 || rules.length > 0);
+  const rowId = `${nodeId}::rel::${kind}::${target.node_id}`;
+  const isOpen = expanded.has(rowId);
   return (
-    <li data-depth={depth} data-testid="tree-relationships" data-practice={section.practice}>
+    <li data-depth={depth} data-testid="tree-relationship">
       <div className="tree-row">
+        {canOpen ? (
+          <button
+            type="button"
+            className="tree-twist"
+            data-testid="tree-expand"
+            aria-expanded={isOpen}
+            aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${target.name}`}
+            onClick={() => onToggle(rowId)}
+          >
+            {isOpen ? '▼' : '▶'}
+          </button>
+        ) : (
+          <span className="tree-twist-spacer" />
+        )}
         <button
           type="button"
-          className="tree-twist"
-          data-testid="tree-expand-relationships"
-          aria-expanded={isOpen}
-          aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${section.label}`}
-          onClick={() => onToggle(relationshipsId)}
+          title={kind}
+          className={selectedId === target.node_id ? 'selected' : ''}
+          data-testid="tree-relationship-target"
+          onClick={() => onSelect(target.node_id)}
         >
-          {isOpen ? '▼' : '▶'}
-        </button>
-        <button
-          type="button"
-          title={section.label}
-          onClick={() => onToggle(relationshipsId)}
-        >
-          <KindMark kind={section.mark} isFile={false} />
-          <span className="tree-name">{section.label}</span>
-          <span className="tree-counts" data-testid="tree-relationship-counts">
-            ({count})
-          </span>
+          <KindMark kind={practiceSectionMark(target.practice)} isFile={false} />
+          <span className="tree-name">{kind}</span>
+          <span className="tree-name">{invokeLabel(kind, target, nodesById)}</span>
         </button>
       </div>
-      {isOpen && section.practice === 'examples' && (
+      {isOpen && canOpen && (targetNode || typeNodes.length > 0) && (
         <ul>
-          {exampleTargets.map((target) => (
-            <li key={target.node_id} data-depth={depth + 1}>
-              <div className="tree-row">
-                <span className="tree-twist-spacer" />
-                <button
-                  type="button"
-                  title={kindLabel(target.semantic_type, false)}
-                  className={selectedId === target.node_id ? 'selected' : ''}
-                  data-testid="tree-relationship-target"
-                  onClick={() => onSelect(target.node_id)}
-                >
-                  <KindMark kind={target.semantic_type} isFile={false} />
-                  <span className="tree-name">{target.name}</span>
-                </button>
-              </div>
-            </li>
+          {children.map((child) => (
+            <TreeRow
+              key={child.node_id}
+              node={child}
+              depth={depth + 1}
+              practices={practices}
+              showRules={showRules}
+              selectedId={selectedId}
+              selectedRule={null}
+              expanded={expanded}
+              nodesById={nodesById}
+              stack={next}
+              onToggle={onToggle}
+              onSelect={onSelect}
+            />
           ))}
-        </ul>
-      )}
-      {isOpen && section.practice !== 'examples' && (
-        <ul>
-          {relationships.map((group) => {
-            if (group.targets.length === 0) {
-              return null;
-            }
-            const kindId = `${relationshipsId}::${group.kind}`;
-            const kindOpen = expanded.has(kindId);
-            return (
-              <li key={group.kind} data-depth={depth + 1} data-testid="tree-relationship-kind">
-                <div className="tree-row">
-                  <button
-                    type="button"
-                    className="tree-twist"
-                    data-testid="tree-expand-relationship-kind"
-                    aria-expanded={kindOpen}
-                    aria-label={`${kindOpen ? 'Collapse' : 'Expand'} ${group.kind}`}
-                    onClick={() => onToggle(kindId)}
-                  >
-                    {kindOpen ? '▼' : '▶'}
-                  </button>
-                  <button
-                    type="button"
-                    title="Relationship"
-                    onClick={() => onToggle(kindId)}
-                  >
-                    <KindMark kind="Relationship" isFile={false} />
-                    <span className="tree-name">{group.kind}</span>
-                    <span className="tree-counts">({group.targets.length})</span>
-                  </button>
-                </div>
-                {kindOpen && (
-                  <ul>
-                    {group.targets.map((target) => (
-                      <li key={target.node_id} data-depth={depth + 2}>
-                        <div className="tree-row">
-                          <span className="tree-twist-spacer" />
-                          <button
-                            type="button"
-                            title={kindLabel(target.semantic_type, false)}
-                            className={
-                              selectedId === target.node_id ? 'selected' : ''
-                            }
-                            data-testid="tree-relationship-target"
-                            onClick={() => onSelect(target.node_id)}
-                          >
-                            <KindMark
-                              kind={target.semantic_type}
-                              isFile={false}
-                            />
-                            <span className="tree-name">{target.name}</span>
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            );
-          })}
+          {properties.length > 0 ? (
+            <PropertiesGroup
+              nodeId={target.node_id}
+              properties={properties}
+              depth={depth + 1}
+              expanded={expanded}
+              onToggle={onToggle}
+            />
+          ) : null}
+          {rules.length > 0 ? (
+            <RulesGroup
+              nodeId={target.node_id}
+              rules={rules}
+              depth={depth + 1}
+              selectedId={selectedId}
+              selectedRule={null}
+              expanded={expanded}
+              onToggle={onToggle}
+              onSelect={onSelect}
+            />
+          ) : null}
         </ul>
       )}
     </li>
@@ -740,31 +918,62 @@ function RelationshipsGroup({
 function TreeRow({
   node,
   depth,
+  practices,
+  showRules = true,
   selectedId,
   selectedRule,
   expanded,
+  nodesById,
+  stack,
+  callDepth = 1,
   onToggle,
   onSelect,
 }: {
   node: ListedTreeNode;
   depth: number;
+  practices: string[] | null;
+  showRules?: boolean;
   selectedId: string | null;
   selectedRule: string | null;
   expanded: Set<string>;
+  nodesById: Map<string, ListedTreeNode>;
+  stack?: Set<string>;
+  callDepth?: number;
   onToggle: (id: string) => void;
   onSelect: (id: string, ruleSlug?: string) => void;
 }) {
+  const seen = stack ?? new Set<string>();
+  const next = new Set(seen);
+  next.add(node.node_id);
   const title = stepTitle(
     node.name,
     node.semantic_type,
     '',
     node.source?.text ?? node.origin?.text ?? '',
   );
-  const rules = listedRules(node);
+  const calls = callDepth >= 5 ? [] : calledMembers(node, nodesById);
+  const linked = linkedTypeNodes(node, nodesById);
+  const childNodes = calls.length > 0 || linked.length > 0 ? [...calls, ...linked] : node.children;
+  const shownCalls = new Set(calls.map((call) => call.node_id));
+  const rules = showRules ? listedRules(node) : [];
   const properties = listedProperties(node);
-  const relationships = relationshipSections(node.practice, listedRelationships(node));
+  const relationships = flatRelationships(listedRelationships(node, practices)).filter((row) => {
+    if (shownCalls.has(row.target.node_id) && row.kind === 'invokes') {
+      return false;
+    }
+    if (linked.length === 0) {
+      return true;
+    }
+    if (node.semantic_type === 'Operation') {
+      return row.kind !== 'returns' && row.kind !== 'hasType' && row.kind !== 'hasParameter';
+    }
+    if (node.semantic_type === 'Property') {
+      return row.kind !== 'hasType';
+    }
+    return true;
+  });
   const hasChildren =
-    node.children.length > 0 ||
+    childNodes.length > 0 ||
     properties.length > 0 ||
     rules.length > 0 ||
     relationships.length > 0;
@@ -808,18 +1017,29 @@ function TreeRow({
       </div>
       {hasChildren && isOpen && (
         <ul>
-          {node.children.map((child) => (
-            <TreeRow
-              key={child.node_id}
-              node={child}
-              depth={depth + 1}
-              selectedId={selectedId}
-              selectedRule={selectedRule}
-              expanded={expanded}
-              onToggle={onToggle}
-              onSelect={onSelect}
-            />
-          ))}
+          {childNodes.map((child) =>
+            seen.has(child.node_id) ? null : (
+              <TreeRow
+                key={child.node_id}
+                node={child}
+                depth={depth + 1}
+                practices={practices}
+                showRules={showRules}
+                selectedId={selectedId}
+                selectedRule={selectedRule}
+                expanded={expanded}
+                nodesById={nodesById}
+                stack={next}
+                callDepth={
+                  child.semantic_type === 'Operation' || child.semantic_type === 'Property'
+                    ? callDepth + 1
+                    : callDepth
+                }
+                onToggle={onToggle}
+                onSelect={onSelect}
+              />
+            ),
+          )}
           {properties.length > 0 ? (
             <PropertiesGroup
               nodeId={node.node_id}
@@ -829,6 +1049,55 @@ function TreeRow({
               onToggle={onToggle}
             />
           ) : null}
+          {relationships.map((row) => {
+            const member = row.kind === 'invokes' ? asMemberNode(row.target, nodesById) : null;
+            if (member) {
+              if (
+                node.semantic_type === 'Operation' &&
+                member.semantic_type === 'Property' &&
+                isSimpleProperty(member.source?.text ?? '')
+              ) {
+                return null;
+              }
+              if (seen.has(member.node_id)) {
+                return null;
+              }
+              return (
+                <TreeRow
+                  key={member.node_id}
+                  node={member}
+                  depth={depth + 1}
+                  practices={practices}
+                  showRules={showRules}
+                  selectedId={selectedId}
+                  selectedRule={selectedRule}
+                  expanded={expanded}
+                  nodesById={nodesById}
+                  stack={next}
+                  callDepth={callDepth + 1}
+                  onToggle={onToggle}
+                  onSelect={onSelect}
+                />
+              );
+            }
+            return (
+              <RelationshipRow
+                key={`${row.kind}:${row.target.node_id}`}
+                nodeId={node.node_id}
+                kind={row.kind}
+                target={row.target}
+                depth={depth + 1}
+                practices={practices}
+                showRules={showRules}
+                selectedId={selectedId}
+                expanded={expanded}
+                nodesById={nodesById}
+                stack={next}
+                onToggle={onToggle}
+                onSelect={onSelect}
+              />
+            );
+          })}
           {rules.length > 0 ? (
             <RulesGroup
               nodeId={node.node_id}
@@ -841,18 +1110,6 @@ function TreeRow({
               onSelect={onSelect}
             />
           ) : null}
-          {relationships.map((section) => (
-            <RelationshipsGroup
-              key={section.practice}
-              nodeId={node.node_id}
-              section={section}
-              depth={depth + 1}
-              selectedId={selectedId}
-              expanded={expanded}
-              onToggle={onToggle}
-              onSelect={onSelect}
-            />
-          ))}
         </ul>
       )}
     </li>
@@ -861,11 +1118,17 @@ function TreeRow({
 
 export function PracticeGraphTree({
   roots,
+  nodes = [],
+  practices = null,
+  showRules = true,
   selectedId,
   selectedRule = null,
   onSelect,
 }: {
   roots: ListedTreeNode[];
+  nodes?: RelatedNode[];
+  practices?: string[] | null;
+  showRules?: boolean;
   selectedId: string | null;
   selectedRule?: string | null;
   onSelect: (id: string, ruleSlug?: string) => void;
@@ -887,6 +1150,22 @@ export function PracticeGraphTree({
       return next;
     });
   }
+  const nodesById = new Map<string, ListedTreeNode>();
+  const remember = (node: ListedTreeNode) => {
+    const existing = nodesById.get(node.node_id);
+    if (!existing || (existing.children.length === 0 && node.children.length > 0)) {
+      nodesById.set(node.node_id, node);
+    }
+    for (const child of node.children) {
+      remember(child);
+    }
+  };
+  for (const node of nodes) {
+    remember(listedTreeNode(node));
+  }
+  for (const root of roots) {
+    remember(root);
+  }
   return (
     <ul className="tree">
       {roots.map((node) => (
@@ -894,9 +1173,12 @@ export function PracticeGraphTree({
           key={node.node_id}
           node={node}
           depth={0}
+          practices={practices}
+          showRules={showRules}
           selectedId={selectedId}
           selectedRule={selectedRule}
           expanded={expanded}
+          nodesById={nodesById}
           onToggle={onToggle}
           onSelect={onSelect}
         />

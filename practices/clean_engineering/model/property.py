@@ -6,6 +6,8 @@ import re
 from typing import List
 
 from practices.clean_engineering.model.base_class_model import OoadNode
+from practices.clean_engineering.model.field_types import Relationship
+from practices.clean_engineering.model.type_refs import domain_type_names
 from practices.clean_engineering.model.update_report import ChildCollectionPair
 
 
@@ -54,15 +56,15 @@ def take_property_note(prop: "Property", text: str) -> None:
     stereotype = _STEREOTYPE_NOTE.match(cleaned)
     if stereotype:
         prop.stereotype = stereotype.group(1).lower()
-        return
-    if _CARDINALITY.match(cleaned):
+    elif _CARDINALITY.match(cleaned):
         prop.cardinality = cleaned
-        return
-    origin = _ORIGIN.match(cleaned)
-    if origin:
-        prop.origin = origin.group(1).strip()
-        return
-    append_invariant(prop, cleaned)
+    else:
+        origin = _ORIGIN.match(cleaned)
+        if origin:
+            prop.origin = origin.group(1).strip()
+        else:
+            append_invariant(prop, cleaned)
+    bind_property_relationship(prop)
 
 
 def property_notes(prop: "Property") -> List[str]:
@@ -74,6 +76,24 @@ def property_notes(prop: "Property") -> List[str]:
         lines.append(prop.cardinality)
     lines.extend(invariant_lines(prop))
     return lines
+
+
+def bind_property_relationship(prop: "Property") -> None:
+    """A relationship exists only when the field's type names a domain class."""
+    targets = domain_type_names(prop.type_hint)
+    if not targets:
+        prop.relationship = None
+        return
+    kind = (prop.stereotype or "association").lower()
+    if kind not in {"composition", "aggregation", "association"}:
+        kind = "association"
+    prop.stereotype = kind
+    prop.relationship = Relationship(
+        target=targets[0],
+        kind=kind,
+        cardinality=prop.cardinality,
+        description=prop.origin,
+    )
 
 
 def invariant_lines(owner: object) -> List[str]:
@@ -100,6 +120,7 @@ class Property(OoadNode):
         self.stereotype = ""
         self.cardinality = ""
         self.origin = ""
+        self.relationship: Relationship | None = None
         self.invariants: List[Invariant] = []
 
     def clone(self) -> "Property":
@@ -108,6 +129,7 @@ class Property(OoadNode):
         cloned.stereotype = self.stereotype
         cloned.cardinality = self.cardinality
         cloned.origin = self.origin
+        cloned.relationship = self.relationship.clone() if self.relationship is not None else None
         cloned.invariants = [item.clone() for item in self.invariants]
         return cloned
 
@@ -136,6 +158,8 @@ class Property(OoadNode):
         self.stereotype = getattr(source, "stereotype", "") or ""
         self.cardinality = getattr(source, "cardinality", "") or ""
         self.origin = getattr(source, "origin", "") or ""
+        source_relationship = getattr(source, "relationship", None)
+        self.relationship = source_relationship.clone() if source_relationship is not None else None
         self.invariants = [item.clone() for item in getattr(source, "invariants", [])]
 
     def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
@@ -152,6 +176,10 @@ class Property(OoadNode):
         loaded.stereotype = getattr(field, "stereotype", "") or ""
         loaded.cardinality = getattr(field, "cardinality", "") or ""
         loaded.origin = getattr(field, "origin", "") or ""
+        source_relationship = getattr(field, "relationship", None)
+        loaded.relationship = source_relationship.clone() if source_relationship is not None else None
+        if loaded.relationship is None:
+            bind_property_relationship(loaded)
         loaded.invariants = [item.clone() for item in getattr(field, "invariants", [])]
         return loaded
 

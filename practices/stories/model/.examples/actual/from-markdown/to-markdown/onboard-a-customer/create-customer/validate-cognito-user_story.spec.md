@@ -5,6 +5,7 @@
 ### Background
 
 *Given* the User has an ++account token++
+
 *When* Midtier is asked to validate the ++account token++
 *Then* Midtier verifies the ++account token++
 *And* Midtier reads the email from the ++account token++

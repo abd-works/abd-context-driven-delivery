@@ -24,6 +24,9 @@ class CodeQLProperty:
     type_hint: str = ""
     file: str = ""
     line: int = 0
+    stereotype: str = ""
+    cardinality: str = ""
+    origin: str = ""
 
 
 @dataclass
@@ -94,6 +97,7 @@ class CodeQLBackground:
     line: int = 0
     end_line: int = 0
     scope: str = "each"
+    scenario: str = ""
 
 
 @dataclass

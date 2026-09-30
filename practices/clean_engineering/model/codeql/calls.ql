@@ -8,12 +8,34 @@ import python
 import subject_filter
 import model
 
-from Function caller, Function callee
+from Function caller, string calleeOwner, string calleeName, string calleeModule, string callerModule
 where
   exists(graphOwnerName(caller)) and
-  exists(graphOwnerName(callee)) and
   inSubject(caller) and
-  inSubject(callee) and
-  directCall(caller, callee)
-select graphOwnerName(caller), caller.getName(), graphOwnerName(callee), callee.getName(),
-  callee.getEnclosingModule().getName(), caller.getEnclosingModule().getName()
+  callerModule = caller.getEnclosingModule().getName() and
+  (
+    exists(Function callee |
+      directCall(caller, callee) and
+      exists(graphOwnerName(callee)) and
+      inSubject(callee) and
+      calleeOwner = graphOwnerName(callee) and
+      calleeName = callee.getName() and
+      calleeModule = callee.getEnclosingModule().getName()
+    )
+    or
+    exists(Attribute attr, Name receiver |
+      attr.getScope() = caller and
+      not exists(Call call | call.getFunc() = attr) and
+      receiver = attr.getObject() and
+      calleeName = attr.getName() and
+      calleeModule = callerModule and
+      (
+        receiver.getId() = "self" and calleeOwner = graphOwnerName(caller)
+        or
+        receiver.getId() != "self" and
+        receiver.getId() != "cls" and
+        calleeOwner = receiver.getId()
+      )
+    )
+  )
+select graphOwnerName(caller), caller.getName(), calleeOwner, calleeName, calleeModule, callerModule

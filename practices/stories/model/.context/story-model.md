@@ -1,18 +1,18 @@
-# Story map
+# Story model
 
-*StoryMap* reads one file into epics, stories, and increments. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Markdown, JSON, and the code languages continue through one background, then scenarios, steps, and examples. Draw.io and Miro stop at stories, and they still read increments. Every channel uses the same walk. A channel only differs in how the next node is taken out of the file.
+*StoryModel* reads one file into epics, stories, and increments. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Markdown, JSON, and the code languages continue through one background, then scenarios, steps, and examples. Draw.io and Miro stop at stories, and they still read increments. Every channel uses the same walk. A channel only differs in how the next node is taken out of the file.
 
-Callers use the base nodes. `StoryModelFactory.load` takes a file or a folder, chooses the channel story map, and returns a `StoryMap`.
+Callers use the base nodes. `StoryModelFactory.load` takes a file or a folder. A given step loads its example. The CodeQL extensions hold the links to a class, an operation, a property, a module, or an example in the graph. CodeQL resolves each name when its model is built. A transform to markdown or another language copies the CodeQL model and traverses those links. The copy reads the node already on the edge. It does not look the name up again.
 
 ```
-story_map = StoryModelFactory.load(path)
+story_model = StoryModelFactory.load(path)
 ```
 
 # practices/stories/model
 
-- **Purpose:** Keep stakeholder behaviour as one story map — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads.
-- **Seam (terms):** StoryNode, StoryModelFactory, StoryMap, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, MiroApiClient
-- **Dependencies (one-way):** *(none)*
+- **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads. A diagram channel writes that hierarchy as a story map. A link to a clean engineering class, operation, property, or module is a CodeQL edge. A later channel reads that edge when it is built from the CodeQL model.
+- **Seam (terms):** StoryNode, StoryModelFactory, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, MiroApiClient
+- **Dependencies (one-way):** the CodeQL story types read clean engineering nodes that are already in the graph. The base factory does not load a class model.
 
 ## StoryNode
 
@@ -30,40 +30,43 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 
 ## StoryModelFactory
 
-+ load(path: str): StoryMap
++ load(path: str): StoryModel
 	// path is a file, or a folder of files
-	// the file type, or the files in the folder, selects the channel story map
-	// that map loads itself
-	// the return is a StoryMap
+	// the file type, or the files in the folder, selects the channel story model
+	// the model loads itself
+	// a link to a class, an operation, or a property is resolved on the CodeQL story model
+	// the return is a StoryModel
 
-## StoryMap
+## StoryModel
 
-+ StoryMap(source: StoryMap)
-	// source empty: the map is empty until load
++ StoryModel(source: StoryModel)
+	// source empty: the model is empty until load
 	// source set: epics, stories, and increments are this channel's types, built from source. A nested epic uses epic_type. An increment uses increment_type
-	// the new map does not keep the source's channel types
+	// the new model does not keep the source's channel types
 ------
 + file: str
 + epics: list[Epic]
-	// composition — an epic has no map outside this story map
+	// composition — an epic has no model outside this story model
 	// a nested epic is an epic whose parent is an epic
 + increments: list[Increment]
-	// composition — an increment has no map outside this story map
+	// composition — an increment has no model outside this story model
 + epic_type: type
 + story_type: type
 + increment_type: type
 ----
-+ load(file: str): StoryMap
++ load(file: str): StoryModel
 	// stores file, then runs the same walk for every channel
 	self.file = file
-	self.load_story_map_content()
+	self.load_content()
 	self.load_epics()
 	self.load_increments()
 + save(): str
 	// every channel writes its file with this operation
 + append_increment(increment: Increment): None
-- load_story_map_content(): None
-	// channel prepares its cursor over file
+- load_content(): None
+	// each channel overrides this. load calls this one operation
+	// a file channel prepares its cursor over the file
+	// CodeQL runs once over the database. Its cursor is the row lists
 - load_epics(): None
 	// while has_more_epic: append load_next_epic()
 - has_more_epic(): bool
@@ -106,7 +109,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 	// story = get_next_story_from_file()
 	// a slice names the story. It does not load a background or scenarios
 - get_next_story_from_file(): Story
-	// channel: the next story name in this slice, in the map's story_type
+	// channel: the next story name in this slice, in the model's story_type
 
 ## Epic
 
@@ -135,7 +138,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 	// -> child.load_epics()
 	// -> child.load_stories()
 - get_next_epic_from_file(): Epic
-	// channel: the next child epic, in the map's epic_type
+	// channel: the next child epic, in the model's epic_type
 - load_stories(): None
 	// while has_more_story: append_story(load_next_story())
 - has_more_story(): bool
@@ -144,7 +147,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 	// -> story.load_background()
 	// -> story.load_scenarios()
 - get_next_story_from_file(): Story
-	// channel: the next story shell from the file, in the map's story_type
+	// channel: the next story shell from the file, in the model's story_type
 
 ## Story
 
@@ -156,7 +159,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 + name: str
 + sequential_order: int
 + story_type: StoryType
-	// user, system, or technical. StoryMap.story_type is the channel class, not this value
+	// user, system, or technical. StoryModel.story_type is the channel class, not this value
 + background: Background
 + scenarios: list[Scenario]
 ----
@@ -195,6 +198,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 - load_step(): None
 	// step = get_step_from_file()
 	// -> step.load_ands()
+	// -> step.load_example()
 - get_step_from_file(): Step
 - load_examples(): None
 	// while has_more_example: append load_next_example()
@@ -218,6 +222,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 - load_next_step(): Step
 	// step = get_next_step_from_file()
 	// -> step.load_ands()
+	// -> step.load_example()
 - get_next_step_from_file(): Step
 - load_examples(): None
 - has_more_example(): bool
@@ -229,6 +234,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 + Step(source: Step)
 	// copies text, step type, keyword, and order
 	// each source and becomes this channel's and
+	// the source example becomes this channel's example
 ------
 + text: str
 + step_type: StepType
@@ -237,12 +243,19 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 	// Given, When, Then, And, or But
 + sequential_order: int
 + ands: list[Step]
++ example: Example
+	// given. The example this step names
 ----
 - load_ands(): None
 	// while has_more_and: append the next and
 - has_more_and(): bool
 - load_next_and(): Step
+	// and = get_next_and_from_file()
+	// -> and.load_example()
 - get_next_and_from_file(): Step
+- load_example(): None
+	// given, and an and that continues a given
+	// example is the example this step names
 
 ## StepType
 
@@ -253,26 +266,28 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 ## Example
 
 + Example(source: Example)
-	// copies name and value
+	// copies name, value, and text
 ------
 + name: str
 + value: str
++ text: str
+	// the class text in the markdown or the code
 
 ## MarkdownStoryNode
 
 + strip_backticks(text: str): str
 + strip_markup(text: str): str
-	// backticks, then the surrounding stars. Increment, scenario, and the story map all read names through this
+	// backticks, then the surrounding stars. Increment, scenario, and the story model all read names through this
 
-## MarkdownStoryMap : StoryMap
+## MarkdownStoryModel : StoryModel
 
-+ MarkdownStoryMap(source: StoryMap)
++ MarkdownStoryModel(source: StoryModel)
 ------
 + epic_type: MarkdownEpic
 + story_type: MarkdownStory
 + increment_type: MarkdownIncrement
 ----
-- load_story_map_content(): None
+- load_content(): None
 	// cursor is the markdown headings in file. Increments are the headings in thin-slicing.md, thin-slice.md, thin-slices.md, or increments.md
 - has_more_epic(): bool
 - get_next_epic_from_file(): MarkdownEpic
@@ -328,15 +343,15 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 + record(): dict
 	// this node's JSON object
 
-## JsonStoryMap : StoryMap
+## JsonStoryModel : StoryModel
 
-+ JsonStoryMap(source: StoryMap)
++ JsonStoryModel(source: StoryModel)
 ------
 + epic_type: JsonEpic
 + story_type: JsonStory
 + increment_type: JsonIncrement
 ----
-- load_story_map_content(): None
+- load_content(): None
 	// cursor is the JSON epic array in file. Increments are the increments array in the same file
 - has_more_epic(): bool
 - get_next_epic_from_file(): JsonEpic
@@ -401,9 +416,9 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 	// epic, subepic:{depth}, story:{type}, actor, or estimate
 	// Draw.io writes this as the style prefix. Miro writes it as data-role. Load matches the same word
 
-## DiagramStoryMap : StoryMap
+## DiagramStoryModel : StoryModel
 
-+ DiagramStoryMap(source: StoryMap)
++ DiagramStoryModel(source: StoryModel)
 	// children are DiagramEpic and DiagramStory. A nested epic is a DiagramEpic whose parent is a DiagramEpic. An increment is a DiagramIncrement
 ------
 + epic_type: DiagramEpic
@@ -440,23 +455,23 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 + matches(style: str): bool
 	// the style starts with this node's role. Load uses that to choose an epic, a nested epic, a story, an actor, or an estimate
 
-## DrawIOStoryMap : DiagramStoryMap
+## DrawIOStoryModel : DiagramStoryModel
 
-+ DrawIOStoryMap(source: StoryMap)
++ DrawIOStoryModel(source: StoryModel)
 	// DrawIOEpic for each epic, including a nested epic, then DrawIOStory. An increment is a DrawIOIncrement
 ------
 + epic_type: DrawIOEpic
 + story_type: DrawIOStory
 + increment_type: DrawIOIncrement
 ----
-- load_story_map_content(): None
+- load_content(): None
 	// cursor is the vertex cells in file. Increments are the inc-lane cells
 - has_more_epic(): bool
 - get_next_epic_from_file(): DrawIOEpic
 - has_more_increment(): bool
 - get_next_increment_from_file(): DrawIOIncrement
 + save(): str
-	// writes this map's cells
+	// writes the story map
 
 ## DrawIOIncrement : DiagramIncrement, DrawIOStoryNode
 
@@ -467,7 +482,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 ## DrawIOEpic : DiagramEpic, DrawIOStoryNode
 
 - place(side: str, destination: DiagramStoryNode): None
-	// parent is the map: the epic bar and the estimate row
+	// parent is the model: the epic bar and the estimate row
 	// parent is an epic: the nested bar. height stays the diagram height
 - estimate_label(): str
 	// writes Epic.estimate_label as the estimate cell
@@ -486,7 +501,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 
 ## MiroApiClient
 
-The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `clear` deletes by id. `clear_story_map` lists the board and deletes shapes whose fill this map paints.
+The Miro REST API. `MiroStoryModel.upload` posts shapes through `create_shape`. `clear` deletes by id. `clear_story_map` lists the board and deletes shapes whose fill this model paints.
 
 + create(token: str): MiroApiClient
 	// token, else MIRO_TOKEN, else ~/.miro-token, else .cursor/miro-token.txt
@@ -510,15 +525,15 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 + matches(role: str): bool
 	// data-role equals this node's role. Load uses that to choose an epic, a nested epic, or a story
 
-## MiroStoryMap : DiagramStoryMap
+## MiroStoryModel : DiagramStoryModel
 
-+ MiroStoryMap(source: StoryMap)
++ MiroStoryModel(source: StoryModel)
 ------
 + epic_type: MiroEpic
 + story_type: MiroStory
 + increment_type: MiroIncrement
 ----
-- load_story_map_content(): None
+- load_content(): None
 	// cursor is the Miro items in file. Increments are the rows of the thin-slice table
 - has_more_epic(): bool
 - get_next_epic_from_file(): MiroEpic
@@ -529,7 +544,7 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 	// each shape goes to the board through client.create_shape. Miro places a shape by its centre
 + clear(board_id: str, client: MiroApiClient, miro_ids: list[str]): int
 + clear_story_map(board_id: str, client: MiroApiClient): int
-	// list_shapes, then delete the shapes whose fill this map paints
+	// list_shapes, then delete the shapes whose fill this model paints
 
 ## MiroIncrement : DiagramIncrement, MiroStoryNode
 
@@ -540,7 +555,7 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 ## MiroEpic : DiagramEpic, MiroStoryNode
 
 - place(side: str, destination: DiagramStoryNode): None
-	// parent is the map: the epic bar
+	// parent is the model: the epic bar
 	// parent is an epic: the nested bar
 ----
 - has_more_epic(): bool
@@ -564,17 +579,17 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 + name_from_slug(slug: str): str
 	// the name read back from a folder
 
-## CodeStoryMap : StoryMap
+## CodeStoryModel : StoryModel
 
-+ CodeStoryMap(source: StoryMap)
++ CodeStoryModel(source: StoryModel)
 	// file for load is the path-to-content map of the source tree
-	// a test tree has no increment files. Increments arrive when this map is built from a source that already has them
+	// a test tree has no increment files. Increments arrive when this model is built from a source that already has them
 ------
 + epic_type: CodeEpic
 + story_type: CodeStory
 + increment_type: CodeIncrement
 ----
-- load_story_map_content(): None
+- load_content(): None
 	// cursor is epic folders, then nested epic folders, then story files
 - has_more_epic(): bool
 - get_next_epic_from_file(): CodeEpic
@@ -639,9 +654,9 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 - has_more_example(): bool
 - get_next_example_from_file(): Example
 
-## PythonStoryMap : CodeStoryMap
+## PythonStoryModel : CodeStoryModel
 
-+ PythonStoryMap(source: StoryMap)
++ PythonStoryModel(source: StoryModel)
 ------
 + epic_type: PythonEpic
 + story_type: PythonStory
@@ -664,9 +679,9 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 - get_next_and_from_file(): Step
 - get_next_example_from_file(): Example
 
-## TypeScriptStoryMap : CodeStoryMap
+## TypeScriptStoryModel : CodeStoryModel
 
-+ TypeScriptStoryMap(source: StoryMap)
++ TypeScriptStoryModel(source: StoryModel)
 ------
 + epic_type: TypeScriptEpic
 + story_type: TypeScriptStory
@@ -688,9 +703,9 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 - get_next_and_from_file(): Step
 - get_next_example_from_file(): Example
 
-## JavaScriptStoryMap : CodeStoryMap
+## JavaScriptStoryModel : CodeStoryModel
 
-+ JavaScriptStoryMap(source: StoryMap)
++ JavaScriptStoryModel(source: StoryModel)
 ------
 + epic_type: JavaScriptEpic
 + story_type: JavaScriptStory
@@ -712,9 +727,9 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 - get_next_and_from_file(): Step
 - get_next_example_from_file(): Example
 
-## JavaStoryMap : CodeStoryMap
+## JavaStoryModel : CodeStoryModel
 
-+ JavaStoryMap(source: StoryMap)
++ JavaStoryModel(source: StoryModel)
 ------
 + epic_type: JavaEpic
 + story_type: JavaStory
@@ -736,4 +751,153 @@ The Miro REST API. `MiroStoryMap.upload` posts shapes through `create_shape`. `c
 - get_next_and_from_file(): Step
 - get_next_example_from_file(): Example
 
-Python, TypeScript, JavaScript, and Java extend the code types: story map, increment, epic, story, and scenario. There is no language step type. A language scenario reads the step, the and, and the example. A nested epic is an epic whose parent is an epic. `StoryMap` loads the top epics, then the increments. `Increment` loads the stories in that slice. `Epic` loads its child epics and its stories, and `estimate_label` writes the estimate. `load_background` and `load_scenarios` stay on `Story`. A story has one background. `load_step` stays on `Background`. A background has one step, and that step loads its ands. `load_steps` and `load_examples` stay on `Scenario`. `load_examples` also stays on `Background`. `load_ands` stays on `Step`. Every story map implements `save(): str`. Draw.io and Miro extend `DiagramStoryMap` and stop at stories. `DiagramStoryNode.add` places the child below its parent and to the right of the previous child, then `stretch` widens that node and every parent above it. Draw.io and Miro override `width` and `y` where the bar differs. A Draw.io node is a `DrawIOStoryNode`: `slug`, `cell_id`, `style`, `cell`, `cells`, and `matches`. A Miro node is a `MiroStoryNode`: `slug`, `shape`, `shapes`, `fills`, and `matches`. Both write `role` and read it back. A code node is a `CodeStoryNode`: `slug`, `snake`, `pascal`, `camel`, and `name_from_slug`. `CodeScenario` reads calls into steps and ands. Each language overrides `calls_in`, `scenario_blocks`, `backgrounds_in`, `example_names`, `create`, and `CodeStory.load`. A markdown node is a `MarkdownStoryNode`: `strip_backticks` and `strip_markup`. `MarkdownStep` owns `display_text`. `MarkdownScenario` reads the scenario file. A channel overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its file contains.
+## CodeQL story types
+
+CodeQL mixes the graph node into the story types. `Node` is that common node: identity, edges, and the graph. `CodeQLStoryNode` adds the story behavior every CodeQL story type uses. Each story type then adds only its own links. CodeQL runs over the database built from a folder, or a collection of folders. It does not copy another model. `load_content` is that one run, and it returns five row lists: stories, scenarios, backgrounds, steps, and examples. The epic is a column on the story row. `load_next` reads the next row for the node it is building. `named()` looks up a node that run already loaded. Markdown, JSON, Draw.io, Miro, and the code languages do not resolve it.
+
+## Node
+
+The graph node mixed into a CodeQL practice type. Stories, clean engineering, and DDD use this same node.
+
++ practice: str
++ source
+	// the file and line this node was read from
++ node_id: str
+	// the same id is the same node
++ graph
+	// the practice graph this node has joined
+----
++ semantic_type(): str
+	// Epic, Step, OoadClass, Operation, and the other node kinds
++ slug(name: str): str
++ join(graph): Node
+	// registers this node and sets node_id
++ relate(kind, to): Relationship
+	// one edge from this node to another
++ related(kind): list
+	// the nodes on that edge. Incoming edges are read with direction in
++ children(): list
+	// the nodes this node owns
+
+## CodeQLStoryNode : Node
+
++ practice: stories
+----
+- relate_once(kind, to): None
+	// relate when this kind does not already hold that node_id
+- own_example(example): None
+	// an example is a child, the same owns collection as the node's other children
+- named(name, semantic_type): Node
+	// the node this run already loaded, with this name and type
+
+## CodeQLStoryModel : StoryModel, CodeQLStoryNode
+
++ CodeQLStoryModel()
+	// empty until load
+	// the database holds a folder, or a collection of folders
+------
++ epic_type: CodeQLEpic
++ story_type: CodeQLStory
+----
+- load_content(): None
+	// one run over the database
+	// cursor is the story rows, scenario rows, background rows, step rows, and example rows
+	// the epic is a column on the story row
+- has_more_epic(): bool
+	// another story row names an epic not yet built
+- get_next_epic_from_file(): CodeQLEpic
+	// the epic named on that story row
++ save(): str
+	// no-op. The graph is the structure this model built
+
+## CodeQLEpic : Epic, CodeQLStoryNode
+
++ CodeQLEpic()
+	// built from the epic column on a story row
+	// uses is each module named() finds from the stories in this epic
+------
++ uses
+	// each module is the node already in the graph
+	// taken from the class an example demonstrates, or the class that owns an invoked member
+----
+- load_uses(): None
+	// named() finds each module this run already loaded. relate_once stores it on uses
+	// the module is the home module of a demonstrated class, or of an invoked member
+
+## CodeQLStory : Story, CodeQLStoryNode
+
++ CodeQLStory()
+	// the next story row for this epic
+	// invokes is the union of the scenario rows for this story
+------
++ invokes
+	// the operations and properties its scenarios invoke
+----
+- aggregate_from_scenarios(): None
+	// union of each scenario's invokes
+
+## CodeQLBackground : Background, CodeQLStoryNode
+
++ CodeQLBackground()
+	// the background row for this story
+	// the examples its given steps own are children of this background too
+------
+----
+- load_loads(): None
+	// own_example stores each example the given steps already own
+
+## CodeQLScenario : Scenario, CodeQLStoryNode
+
++ CodeQLScenario()
+	// the next scenario row for this story
+	// invokes is the union of the step rows for this scenario
+------
++ invokes
+	// the operations and properties its steps invoke
+----
+- aggregate_from_steps(): None
+	// union of each step's invokes, ands included
+
+## CodeQLStep : Step, CodeQLStoryNode
+
++ CodeQLStep()
+	// the next step row for this scenario
+	// examples are children. invokes is the link named on a when row
+------
++ invokes
+	// when, and an and that continues a when. Each operation or property is the node already in the graph. The operation includes its class
+----
+- load_loads(): None
+	// given, and an and that continues a given
+	// own_example stores each example this run already loaded as a child
+- load_invokes(): None
+	// when, and an and that continues a when
+	// named() finds each operation or property this run already loaded. relate_once stores it on invokes
+- load_observes(): None
+	// then, and an and that continues a then
+	// own_example stores the one example this run already loaded as a child
+
+## CodeQLExample : Example, CodeQLStoryNode
+
++ CodeQLExample()
+	// the next example row
+	// demonstrates and retrieved using are the class and the member named on that row
+------
++ demonstrates
+	// each class is the node already in the graph
++ retrieved_using
+	// the operation or property that reads this example back, or empty. The operation includes its class
+----
+- load_demonstrates(): None
+	// named() finds the class, and the operation or property, this run already loaded
+	// relate_once stores them on demonstrates and retrieved using
+
+A transform builds the other channel from this model. The copy traverses uses, owned examples, invokes, demonstrates, and retrieved using, and writes each related node in that channel's format.
+
+```
+markdown = MarkdownStoryModel(codeql_model)
+markdown.save()
+```
+
+`codeql_model.save()` returns an empty string.
+

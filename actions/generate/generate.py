@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.agent_tools import agent_instructions, agent_toolset, instructions
+from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 
@@ -16,8 +16,15 @@ class Generate(GuidanceAction):
     @agent_instructions
     def generate(self, guidance: GuidanceArg) -> str:
         """Write artifacts for each listed Guidance at its current fidelity. Opens the work session, generates each Guidance's output, applies validate-driven fixes, then closes the turn. When finished, run validate. Pass a string to generate from that text once."""
+        tools(self._render().render)
         self.run(guidance, self._generate_item, action="generate")
         return "When done, run validate."
+
+    def _render(self):
+        """Render action, available while generating code from another format."""
+        from render.render import Render
+
+        return Render()
 
     def _generate_item(self, item) -> None:
         if isinstance(item, str):

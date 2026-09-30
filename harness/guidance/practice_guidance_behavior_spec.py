@@ -24,7 +24,7 @@ from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
 from practices.examples.car.car import Car
-from practices.stories.model.markdown.nodes import MarkdownStoryMap
+from practices.stories.model.markdown.nodes import MarkdownStoryModel
 from practices.stories.stories import Stories
 
 _CLASS_MARKDOWN = """\
@@ -178,7 +178,7 @@ with description("a practice"):
 
         with context("with an object model"):
             with before.each:
-                self.model = MarkdownStoryMap().parse(_STORY_MAP)
+                self.model = MarkdownStoryModel().parse(_STORY_MAP)
                 self.result = Stories(fidelity="story_map").render(
                     "drawio", self.model
                 )

@@ -1,5 +1,6 @@
 /**
  * Epic: Manage Services
+ * Orders: 0.1.2
  */
 
 import { scenario, story } from "tests/story-test";
@@ -15,7 +16,6 @@ story('View Dashboard', () => {
 
 /**
  * Story: Change Plan
- * Actor: Customer
  */
 
 story('Change Plan', () => {
@@ -24,7 +24,6 @@ story('Change Plan', () => {
 
 /**
  * Story: Request Line Portability
- * Actor: Customer
  */
 
 story('Request Line Portability', () => {
@@ -33,7 +32,6 @@ story('Request Line Portability', () => {
 
 /**
  * Story: Purchase Device
- * Actor: Customer
  */
 
 story('Purchase Device', () => {

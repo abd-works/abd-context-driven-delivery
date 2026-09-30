@@ -25,11 +25,21 @@
               "scenarios": [
                 {
                   "name": "Open Plan Deep Link",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Unknown plan deep link",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -52,23 +62,48 @@
               "scenarios": [
                 {
                   "name": "Apply Catalog Voucher via deep link",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Apply Catalog Voucher manually",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Short catalog voucher code is rejected",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Remove Catalog Voucher",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Apply unusable catalog voucher",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -89,15 +124,575 @@
               "scenarios": [
                 {
                   "name": "Enter new account credentials",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "email required",
+                          "field": "email",
+                          "requirement": "Email is required",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "email format",
+                          "field": "email",
+                          "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password letters",
+                          "field": "password",
+                          "requirement": "Password must contain uppercase and lowercase letters",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password number",
+                          "field": "password",
+                          "requirement": "Password must have at least one number",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password symbol",
+                          "field": "password",
+                          "requirement": "Password must have at least one symbol",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password length",
+                          "field": "password",
+                          "requirement": "Length must be greater than 8 characters",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "confirm required",
+                          "field": "confirmPassword",
+                          "requirement": "Confirm Password is required",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "confirm mismatch",
+                          "field": "confirmPassword",
+                          "requirement": "Passwords don't match",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "example",
+                          "field": "unmet",
+                          "requirement": "Create account",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "valid account credentials",
+                          "field": "",
+                          "requirement": "enabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "Paradise Mobile account credentials",
+                          "field": "",
+                          "requirement": "enabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password letters",
+                          "field": "Password must contain uppercase and lowercase letters",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password number",
+                          "field": "Password must have at least one number",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password symbol",
+                          "field": "Password must have at least one symbol",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password length",
+                          "field": "Length must be greater than 8 characters",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid confirm required",
+                          "field": "Confirm Password is required",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid confirm mismatch",
+                          "field": "Passwords don't match",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid email required",
+                          "field": "Email is required",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid email format",
+                          "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Paradise Mobile email",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "email required",
+                          "field": "email",
+                          "requirement": "Email is required",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "email format",
+                          "field": "email",
+                          "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password letters",
+                          "field": "password",
+                          "requirement": "Password must contain uppercase and lowercase letters",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password number",
+                          "field": "password",
+                          "requirement": "Password must have at least one number",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password symbol",
+                          "field": "password",
+                          "requirement": "Password must have at least one symbol",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password length",
+                          "field": "password",
+                          "requirement": "Length must be greater than 8 characters",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "confirm required",
+                          "field": "confirmPassword",
+                          "requirement": "Confirm Password is required",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "confirm mismatch",
+                          "field": "confirmPassword",
+                          "requirement": "Passwords don't match",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "example",
+                          "field": "unmet",
+                          "requirement": "Create account",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "valid account credentials",
+                          "field": "",
+                          "requirement": "enabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "Paradise Mobile account credentials",
+                          "field": "",
+                          "requirement": "enabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password letters",
+                          "field": "Password must contain uppercase and lowercase letters",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password number",
+                          "field": "Password must have at least one number",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password symbol",
+                          "field": "Password must have at least one symbol",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password length",
+                          "field": "Length must be greater than 8 characters",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid confirm required",
+                          "field": "Confirm Password is required",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid confirm mismatch",
+                          "field": "Passwords don't match",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid email required",
+                          "field": "Email is required",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid email format",
+                          "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Email already registered",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "email required",
+                          "field": "email",
+                          "requirement": "Email is required",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "email format",
+                          "field": "email",
+                          "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password letters",
+                          "field": "password",
+                          "requirement": "Password must contain uppercase and lowercase letters",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password number",
+                          "field": "password",
+                          "requirement": "Password must have at least one number",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password symbol",
+                          "field": "password",
+                          "requirement": "Password must have at least one symbol",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "password length",
+                          "field": "password",
+                          "requirement": "Length must be greater than 8 characters",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "confirm required",
+                          "field": "confirmPassword",
+                          "requirement": "Confirm Password is required",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credential requirements",
+                          "example": "confirm mismatch",
+                          "field": "confirmPassword",
+                          "requirement": "Passwords don't match",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "example",
+                          "field": "unmet",
+                          "requirement": "Create account",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "valid account credentials",
+                          "field": "",
+                          "requirement": "enabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "Paradise Mobile account credentials",
+                          "field": "",
+                          "requirement": "enabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password letters",
+                          "field": "Password must contain uppercase and lowercase letters",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password number",
+                          "field": "Password must have at least one number",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password symbol",
+                          "field": "Password must have at least one symbol",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid password length",
+                          "field": "Length must be greater than 8 characters",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid confirm required",
+                          "field": "Confirm Password is required",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid confirm mismatch",
+                          "field": "Passwords don't match",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid email required",
+                          "field": "Email is required",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        },
+                        {
+                          "account credential requirements": "account credentials",
+                          "example": "invalid email format",
+                          "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "requirement": "disabled",
+                          "group": "Account credential requirements"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "account credential requirements": "account credential requirements",
+                      "example": "email required",
+                      "field": "email",
+                      "requirement": "Email is required",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credential requirements",
+                      "example": "email format",
+                      "field": "email",
+                      "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credential requirements",
+                      "example": "password letters",
+                      "field": "password",
+                      "requirement": "Password must contain uppercase and lowercase letters",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credential requirements",
+                      "example": "password number",
+                      "field": "password",
+                      "requirement": "Password must have at least one number",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credential requirements",
+                      "example": "password symbol",
+                      "field": "password",
+                      "requirement": "Password must have at least one symbol",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credential requirements",
+                      "example": "password length",
+                      "field": "password",
+                      "requirement": "Length must be greater than 8 characters",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credential requirements",
+                      "example": "confirm required",
+                      "field": "confirmPassword",
+                      "requirement": "Confirm Password is required",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credential requirements",
+                      "example": "confirm mismatch",
+                      "field": "confirmPassword",
+                      "requirement": "Passwords don't match",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "example",
+                      "field": "unmet",
+                      "requirement": "Create account",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "valid account credentials",
+                      "field": "",
+                      "requirement": "enabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "Paradise Mobile account credentials",
+                      "field": "",
+                      "requirement": "enabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "invalid password letters",
+                      "field": "Password must contain uppercase and lowercase letters",
+                      "requirement": "disabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "invalid password number",
+                      "field": "Password must have at least one number",
+                      "requirement": "disabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "invalid password symbol",
+                      "field": "Password must have at least one symbol",
+                      "requirement": "disabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "invalid password length",
+                      "field": "Length must be greater than 8 characters",
+                      "requirement": "disabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "invalid confirm required",
+                      "field": "Confirm Password is required",
+                      "requirement": "disabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "invalid confirm mismatch",
+                      "field": "Passwords don't match",
+                      "requirement": "disabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "invalid email required",
+                      "field": "Email is required",
+                      "requirement": "disabled",
+                      "group": "Account credential requirements"
+                    },
+                    {
+                      "account credential requirements": "account credentials",
+                      "example": "invalid email format",
+                      "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                      "requirement": "disabled",
+                      "group": "Account credential requirements"
+                    }
+                  ]
                 }
               ]
             },
@@ -108,15 +703,30 @@
               "scenarios": [
                 {
                   "name": "Create Unconfirmed Cognito User",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Email already registered in Cognito",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Cognito register fails with another error",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -127,15 +737,163 @@
               "scenarios": [
                 {
                   "name": "Enter validation code",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "validation code": "validation code",
+                          "example": "valid validation code",
+                          "code": "123456",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "mismatch validation code",
+                          "code": "Hmm. That code didn't work.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "expired validation code",
+                          "code": "Hmm. That code didn't work.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "attempts exceeded validation code",
+                          "code": "Attempts limit exceeded. Please try again later.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "example",
+                          "code": "helper",
+                          "group": "validation code"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Activate with unusable validation code",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "validation code": "validation code",
+                          "example": "valid validation code",
+                          "code": "123456",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "mismatch validation code",
+                          "code": "Hmm. That code didn't work.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "expired validation code",
+                          "code": "Hmm. That code didn't work.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "attempts exceeded validation code",
+                          "code": "Attempts limit exceeded. Please try again later.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "example",
+                          "code": "helper",
+                          "group": "validation code"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Resend validation code",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "validation code": "validation code",
+                          "example": "valid validation code",
+                          "code": "123456",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "mismatch validation code",
+                          "code": "Hmm. That code didn't work.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "expired validation code",
+                          "code": "Hmm. That code didn't work.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "attempts exceeded validation code",
+                          "code": "Attempts limit exceeded. Please try again later.",
+                          "group": "validation code"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "example",
+                          "code": "helper",
+                          "group": "validation code"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "validation code": "validation code",
+                      "example": "valid validation code",
+                      "code": "123456",
+                      "group": "validation code"
+                    },
+                    {
+                      "validation code": "validation code",
+                      "example": "mismatch validation code",
+                      "code": "Hmm. That code didn't work.",
+                      "group": "validation code"
+                    },
+                    {
+                      "validation code": "validation code",
+                      "example": "expired validation code",
+                      "code": "Hmm. That code didn't work.",
+                      "group": "validation code"
+                    },
+                    {
+                      "validation code": "validation code",
+                      "example": "attempts exceeded validation code",
+                      "code": "Attempts limit exceeded. Please try again later.",
+                      "group": "validation code"
+                    },
+                    {
+                      "validation code": "validation code",
+                      "example": "example",
+                      "code": "helper",
+                      "group": "validation code"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -149,11 +907,77 @@
               "scenarios": [
                 {
                   "name": "Confirm Cognito User",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "validation code": "validation code",
+                          "example": "mismatch validation code",
+                          "error": "CodeMismatchException"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "expired validation code",
+                          "error": "ExpiredCodeException"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "attempts exceeded validation code",
+                          "error": "LimitExceededException"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Confirm with unusable validation code",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "validation code": "validation code",
+                          "example": "mismatch validation code",
+                          "error": "CodeMismatchException"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "expired validation code",
+                          "error": "ExpiredCodeException"
+                        },
+                        {
+                          "validation code": "validation code",
+                          "example": "attempts exceeded validation code",
+                          "error": "LimitExceededException"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "validation code": "validation code",
+                      "example": "mismatch validation code",
+                      "error": "CodeMismatchException"
+                    },
+                    {
+                      "validation code": "validation code",
+                      "example": "expired validation code",
+                      "error": "ExpiredCodeException"
+                    },
+                    {
+                      "validation code": "validation code",
+                      "example": "attempts exceeded validation code",
+                      "error": "LimitExceededException"
+                    }
+                  ]
                 }
               ]
             },
@@ -164,7 +988,12 @@
               "scenarios": [
                 {
                   "name": "Issue Account Token To Browser Session",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -175,11 +1004,21 @@
               "scenarios": [
                 {
                   "name": "Cognito User already has a Mavenir Customer id",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Cognito User has no Mavenir Customer id",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -190,19 +1029,39 @@
               "scenarios": [
                 {
                   "name": "Submit Create Customer Request to Mid-Tier",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Email already has a Mavenir Customer",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Invalid Account Token",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Mavenir is unreachable",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -213,7 +1072,12 @@
               "scenarios": [
                 {
                   "name": "Validate Cognito User",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -224,15 +1088,30 @@
               "scenarios": [
                 {
                   "name": "Submit Create Mavenir Customer",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Mavenir customer already exists",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Mavenir is unreachable",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -243,11 +1122,21 @@
               "scenarios": [
                 {
                   "name": "Create Customer",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Email already has a Mavenir Customer",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -261,7 +1150,12 @@
               "scenarios": [
                 {
                   "name": "Store Mavenir Customer Id on Cognito User",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -272,15 +1166,30 @@
               "scenarios": [
                 {
                   "name": "Load My Paradise Customer From Midtier And Store In Session",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Billing account is terminated",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Load customer fails",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -291,7 +1200,12 @@
               "scenarios": [
                 {
                   "name": "Get Mavenir Customer and Transform To My Paradise Customer And Return",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -302,7 +1216,12 @@
               "scenarios": [
                 {
                   "name": "Get Mavenir Customer",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -319,7 +1238,12 @@
               "scenarios": [
                 {
                   "name": "Fix Orphan Cognito Account",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -330,7 +1254,12 @@
               "scenarios": [
                 {
                   "name": "Read False Initial Activation",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -379,19 +1308,149 @@
               "scenarios": [
                 {
                   "name": "View available numbers",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "available number": "available number",
+                          "example": "held available number",
+                          "number": "4415550100",
+                          "group": "available number"
+                        },
+                        {
+                          "available number": "available number",
+                          "example": "chosen available number",
+                          "number": "4415550101",
+                          "group": "available number"
+                        },
+                        {
+                          "search term": "search term",
+                          "example": "James search",
+                          "input": "JAMES",
+                          "converted": "52637",
+                          "group": "search term"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "View available numbers \u2014 MSISDN in cart",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "available number": "available number",
+                          "example": "held available number",
+                          "number": "4415550100",
+                          "group": "available number"
+                        },
+                        {
+                          "available number": "available number",
+                          "example": "chosen available number",
+                          "number": "4415550101",
+                          "group": "available number"
+                        },
+                        {
+                          "search term": "search term",
+                          "example": "James search",
+                          "input": "JAMES",
+                          "converted": "52637",
+                          "group": "search term"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Refresh available numbers",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "available number": "available number",
+                          "example": "held available number",
+                          "number": "4415550100",
+                          "group": "available number"
+                        },
+                        {
+                          "available number": "available number",
+                          "example": "chosen available number",
+                          "number": "4415550101",
+                          "group": "available number"
+                        },
+                        {
+                          "search term": "search term",
+                          "example": "James search",
+                          "input": "JAMES",
+                          "converted": "52637",
+                          "group": "search term"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Search for a number",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "available number": "available number",
+                          "example": "held available number",
+                          "number": "4415550100",
+                          "group": "available number"
+                        },
+                        {
+                          "available number": "available number",
+                          "example": "chosen available number",
+                          "number": "4415550101",
+                          "group": "available number"
+                        },
+                        {
+                          "search term": "search term",
+                          "example": "James search",
+                          "input": "JAMES",
+                          "converted": "52637",
+                          "group": "search term"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "available number": "available number",
+                      "example": "held available number",
+                      "number": "4415550100",
+                      "group": "available number"
+                    },
+                    {
+                      "available number": "available number",
+                      "example": "chosen available number",
+                      "number": "4415550101",
+                      "group": "available number"
+                    },
+                    {
+                      "search term": "search term",
+                      "example": "James search",
+                      "input": "JAMES",
+                      "converted": "52637",
+                      "group": "search term"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -457,15 +1516,30 @@
               "scenarios": [
                 {
                   "name": "Pick new number",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Pick new number \u2014 replace existing",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Keep current number",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -479,15 +1553,30 @@
               "scenarios": [
                 {
                   "name": "Reserve number",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Reserve number \u2014 replace existing",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Reserve number request fails",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -581,15 +1670,87 @@
               "scenarios": [
                 {
                   "name": "Bring a number",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "portability": "portability",
+                          "example": "valid portability",
+                          "donorOperator": "Digicel",
+                          "portNumber": "4412345678",
+                          "accountNumber": "12345",
+                          "userType": "Residential",
+                          "accountType": "Postpaid",
+                          "device": "Iphone",
+                          "group": "portability"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Number to be ported is incomplete",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "portability": "portability",
+                          "example": "valid portability",
+                          "donorOperator": "Digicel",
+                          "portNumber": "4412345678",
+                          "accountNumber": "12345",
+                          "userType": "Residential",
+                          "accountType": "Postpaid",
+                          "device": "Iphone",
+                          "group": "portability"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Provider not selected",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "portability": "portability",
+                          "example": "valid portability",
+                          "donorOperator": "Digicel",
+                          "portNumber": "4412345678",
+                          "accountNumber": "12345",
+                          "userType": "Residential",
+                          "accountType": "Postpaid",
+                          "device": "Iphone",
+                          "group": "portability"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "portability": "portability",
+                      "example": "valid portability",
+                      "donorOperator": "Digicel",
+                      "portNumber": "4412345678",
+                      "accountNumber": "12345",
+                      "userType": "Residential",
+                      "accountType": "Postpaid",
+                      "device": "Iphone",
+                      "group": "portability"
+                    }
+                  ]
                 }
               ]
             },
@@ -600,11 +1761,21 @@
               "scenarios": [
                 {
                   "name": "Confirm the number is not already with Paradise",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Confirm the number is already with Paradise",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -630,23 +1801,48 @@
               "scenarios": [
                 {
                   "name": "Submit portability request \u2014 porting-2fa off (live)",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Submit portability request \u2014 porting-2fa on, SMS sent (Intended)",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Submit portability request \u2014 rate limited, bypass (Intended)",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Submit portability request \u2014 invalid number (Intended)",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Submit portability request fails",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -702,15 +1898,115 @@
               "scenarios": [
                 {
                   "name": "Enter ++porting SMS code++",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "valid porting SMS code",
+                          "code": "123456",
+                          "group": "porting SMS code"
+                        },
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "mismatch porting SMS code",
+                          "code": "Invalid verification code.",
+                          "group": "porting SMS code"
+                        },
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "example",
+                          "code": "helper",
+                          "group": "porting SMS code"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Verify with unusable ++porting SMS code++",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "valid porting SMS code",
+                          "code": "123456",
+                          "group": "porting SMS code"
+                        },
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "mismatch porting SMS code",
+                          "code": "Invalid verification code.",
+                          "group": "porting SMS code"
+                        },
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "example",
+                          "code": "helper",
+                          "group": "porting SMS code"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Resend ++porting SMS code++",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "valid porting SMS code",
+                          "code": "123456",
+                          "group": "porting SMS code"
+                        },
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "mismatch porting SMS code",
+                          "code": "Invalid verification code.",
+                          "group": "porting SMS code"
+                        },
+                        {
+                          "porting SMS code": "porting SMS code",
+                          "example": "example",
+                          "code": "helper",
+                          "group": "porting SMS code"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "porting SMS code": "porting SMS code",
+                      "example": "valid porting SMS code",
+                      "code": "123456",
+                      "group": "porting SMS code"
+                    },
+                    {
+                      "porting SMS code": "porting SMS code",
+                      "example": "mismatch porting SMS code",
+                      "code": "Invalid verification code.",
+                      "group": "porting SMS code"
+                    },
+                    {
+                      "porting SMS code": "porting SMS code",
+                      "example": "example",
+                      "code": "helper",
+                      "group": "porting SMS code"
+                    }
+                  ]
                 }
               ]
             },
@@ -721,11 +2017,21 @@
               "scenarios": [
                 {
                   "name": "Check port verification \u2014 code valid",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Check port verification \u2014 code mismatch",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -736,11 +2042,21 @@
               "scenarios": [
                 {
                   "name": "Check verification \u2014 code valid",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Check verification \u2014 code mismatch",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             },
@@ -812,19 +2128,39 @@
               "scenarios": [
                 {
                   "name": "Choose Onboarding Plan",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Choose a different ++plan++",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Select the ++plan++ already in the cart",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Failed to update plan",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -872,7 +2208,12 @@
               "scenarios": [
                 {
                   "name": "Keep Current Plan",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             }
@@ -890,15 +2231,30 @@
               "scenarios": [
                 {
                   "name": "Choose eSIM",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Choose eSIM \u2014 already on the line",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Choose eSIM \u2014 cart patch fails",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -912,15 +2268,30 @@
               "scenarios": [
                 {
                   "name": "Request a Paradise SIM card",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Request a Paradise SIM card \u2014 already on the line",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Request a Paradise SIM card \u2014 cart patch fails",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -934,15 +2305,30 @@
               "scenarios": [
                 {
                   "name": "Enter existing SIM",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "ICCID contains spaces",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Inventory rejects ICCID",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -956,15 +2342,30 @@
               "scenarios": [
                 {
                   "name": "Activate Sim",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "waiting pSIM is absent",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "waiting pSIM already completed",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -978,7 +2379,12 @@
               "scenarios": [
                 {
                   "name": "Complete Draft Sim Order",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ]
             }
@@ -996,71 +2402,156 @@
               "scenarios": [
                 {
                   "name": "Persona verification required",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Persona verification already complete",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Create a completed Persona inquiry",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Persona inquiry not completed",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "No government ID document on inquiry",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Persona errors on inquiry load",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Document not found",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Document email mismatch",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Verify later",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Enter valid identity and address",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Enter identity after a verified Persona inquiry",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Re-enter a verified identity",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Enter incomplete identity or address",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Confirm identity with a verified Persona inquiry",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Profile requirements unmet",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Customer already exists",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Mavenir profile patch error",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1095,11 +2586,21 @@
               "scenarios": [
                 {
                   "name": "Check the order",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Check the order with port-in number",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1113,11 +2614,86 @@
               "scenarios": [
                 {
                   "name": "Upgrade plan from review",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "plan upgrade": "plan upgrade",
+                          "example": "upgrade to Data Freedom",
+                          "currentPlan": "Essentials",
+                          "newPlan": "Data Freedom"
+                        },
+                        {
+                          "plan upgrade": "plan upgrade",
+                          "example": "upgrade to Ace",
+                          "currentPlan": "Data Freedom",
+                          "newPlan": "Ace"
+                        },
+                        {
+                          "plan upgrade": "plan upgrade",
+                          "example": "upgrade to Atlas",
+                          "currentPlan": "Ace",
+                          "newPlan": "Atlas"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "No upsell shown on top-tier plan",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "plan upgrade": "plan upgrade",
+                          "example": "upgrade to Data Freedom",
+                          "currentPlan": "Essentials",
+                          "newPlan": "Data Freedom"
+                        },
+                        {
+                          "plan upgrade": "plan upgrade",
+                          "example": "upgrade to Ace",
+                          "currentPlan": "Data Freedom",
+                          "newPlan": "Ace"
+                        },
+                        {
+                          "plan upgrade": "plan upgrade",
+                          "example": "upgrade to Atlas",
+                          "currentPlan": "Ace",
+                          "newPlan": "Atlas"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "plan upgrade": "plan upgrade",
+                      "example": "upgrade to Data Freedom",
+                      "currentPlan": "Essentials",
+                      "newPlan": "Data Freedom"
+                    },
+                    {
+                      "plan upgrade": "plan upgrade",
+                      "example": "upgrade to Ace",
+                      "currentPlan": "Data Freedom",
+                      "newPlan": "Ace"
+                    },
+                    {
+                      "plan upgrade": "plan upgrade",
+                      "example": "upgrade to Atlas",
+                      "currentPlan": "Ace",
+                      "newPlan": "Atlas"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1131,19 +2707,39 @@
               "scenarios": [
                 {
                   "name": "Select a different plan from review",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Keep current plan from review",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Select the plan already in the cart from review",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Plan update fails from review",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1164,19 +2760,94 @@
               "scenarios": [
                 {
                   "name": "Enter Payment",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "payment authorization": "payment authorization",
+                          "example": "stub auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "totalAmount": "1",
+                          "salesChannel": "ON-BOARDING",
+                          "group": "payment authorization"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Pay upfront",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "payment authorization": "payment authorization",
+                          "example": "stub auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "totalAmount": "1",
+                          "salesChannel": "ON-BOARDING",
+                          "group": "payment authorization"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Payment authorization fails to load",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "payment authorization": "payment authorization",
+                          "example": "stub auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "totalAmount": "1",
+                          "salesChannel": "ON-BOARDING",
+                          "group": "payment authorization"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "FAC authorization timeout",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "payment authorization": "payment authorization",
+                          "example": "stub auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "totalAmount": "1",
+                          "salesChannel": "ON-BOARDING",
+                          "group": "payment authorization"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "payment authorization": "payment authorization",
+                      "example": "stub auth",
+                      "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                      "totalAmount": "1",
+                      "salesChannel": "ON-BOARDING",
+                      "group": "payment authorization"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1196,15 +2867,107 @@
               "scenarios": [
                 {
                   "name": "Payment completed",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "payment status": "payment status",
+                          "example": "completed auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "status": "completed",
+                          "reason": "APPROVED",
+                          "group": "payment status"
+                        },
+                        {
+                          "payment status": "payment status",
+                          "example": "failed auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "status": "failed",
+                          "reason": "DECLINED",
+                          "group": "payment status"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Card not verified",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "payment status": "payment status",
+                          "example": "completed auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "status": "completed",
+                          "reason": "APPROVED",
+                          "group": "payment status"
+                        },
+                        {
+                          "payment status": "payment status",
+                          "example": "failed auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "status": "failed",
+                          "reason": "DECLINED",
+                          "group": "payment status"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Maximum payment attempts",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "payment status": "payment status",
+                          "example": "completed auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "status": "completed",
+                          "reason": "APPROVED",
+                          "group": "payment status"
+                        },
+                        {
+                          "payment status": "payment status",
+                          "example": "failed auth",
+                          "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                          "status": "failed",
+                          "reason": "DECLINED",
+                          "group": "payment status"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "payment status": "payment status",
+                      "example": "completed auth",
+                      "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                      "status": "completed",
+                      "reason": "APPROVED",
+                      "group": "payment status"
+                    },
+                    {
+                      "payment status": "payment status",
+                      "example": "failed auth",
+                      "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3",
+                      "status": "failed",
+                      "reason": "DECLINED",
+                      "group": "payment status"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1218,7 +2981,33 @@
               "scenarios": [
                 {
                   "name": "Provide Apple Pay certificate",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background",
+                      "exampleRows": [
+                        {
+                          "Apple Pay certificate": "Apple Pay certificate",
+                          "example": "Bermuda Apple Pay cert",
+                          "keyIdentifier": "CertificateSerialNumber=08b3a3b7b23c2c56a625e95211699f0b",
+                          "group": "Apple Pay certificate"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "backgrounds": [
+                {
+                  "name": "background",
+                  "exampleRows": [
+                    {
+                      "Apple Pay certificate": "Apple Pay certificate",
+                      "example": "Bermuda Apple Pay cert",
+                      "keyIdentifier": "CertificateSerialNumber=08b3a3b7b23c2c56a625e95211699f0b",
+                      "group": "Apple Pay certificate"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1253,15 +3042,30 @@
               "scenarios": [
                 {
                   "name": "Create billing account",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Billing account already exists",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Billing account creation fails",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1275,23 +3079,48 @@
               "scenarios": [
                 {
                   "name": "Create product order",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Pay-up-front charge fails",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Product order fails",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Onboarding is already done",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 },
                 {
                   "name": "Unverified with no bypass and no portability",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [
@@ -1333,7 +3162,12 @@
               "scenarios": [
                 {
                   "name": "View Order History",
-                  "sequentialOrder": 0
+                  "sequentialOrder": 0,
+                  "backgrounds": [
+                    {
+                      "name": "background"
+                    }
+                  ]
                 }
               ],
               "actors": [

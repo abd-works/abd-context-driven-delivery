@@ -1,5 +1,6 @@
 /**
  * Epic: Get Payment
+ * Orders: 0.0.7
  */
 
 import { scenario, story } from "tests/story-test";
@@ -9,9 +10,21 @@ import { scenario, story } from "tests/story-test";
  * Actor: Customer
  */
 
+// background-examples: {"stub auth": {"payment authorization": "payment authorization", "example": "stub auth", "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3", "totalAmount": "1", "salesChannel": "ON-BOARDING", "group": "payment authorization"}}
 story('Enter Payment', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Enter Payment', ({ given, when, then }) => {
-    given('payUpFront is off', () => {
+    background('background', ({ given }) => {
+      given('the Customer has completed order review and is on Checkout', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a loaded ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    given('`payUpFront` is off', () => {
       // TODO: implement step
     })
       .and('Mavenir CCS authorizes ++payment authorization++ ++stub auth++', () => {
@@ -32,7 +45,15 @@ story('Enter Payment', () => {
   });
 
   scenario('Pay upfront', ({ given, when, then }) => {
-    given('payUpFront is on', () => {
+    background('background', ({ given }) => {
+      given('the Customer has completed order review and is on Checkout', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a loaded ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    given('`payUpFront` is on', () => {
       // TODO: implement step
     })
       .and('the cart has ++plan++ ++Essentials++', () => {
@@ -56,7 +77,15 @@ story('Enter Payment', () => {
   });
 
   scenario('Payment authorization fails to load', ({ given, when, then }) => {
-    given('payUpFront is off', () => {
+    background('background', ({ given }) => {
+      given('the Customer has completed order review and is on Checkout', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a loaded ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    given('`payUpFront` is off', () => {
       // TODO: implement step
     })
       .but('Mavenir CCS does not return a payment authorization', () => {
@@ -77,7 +106,15 @@ story('Enter Payment', () => {
   });
 
   scenario('FAC authorization timeout', ({ given, when, then }) => {
-    given('payUpFront is off', () => {
+    background('background', ({ given }) => {
+      given('the Customer has completed order review and is on Checkout', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a loaded ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    given('`payUpFront` is off', () => {
       // TODO: implement step
     })
       .but('Mavenir does not return a transaction id', () => {
@@ -112,8 +149,14 @@ story('Evaluate Payment Flags', () => {
  * Actor: My Paradise
  */
 
+// background-examples: {"completed auth": {"payment status": "payment status", "example": "completed auth", "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3", "status": "completed", "reason": "APPROVED", "group": "payment status"}, "failed auth": {"payment status": "payment status", "example": "failed auth", "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3", "status": "failed", "reason": "DECLINED", "group": "payment status"}}
 story('Authorize Card', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Payment completed', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+    });
     given('the Customer has ++payment authorization++ ++stub auth++', () => {
       // TODO: implement step
     })
@@ -138,6 +181,8 @@ story('Authorize Card', () => {
   });
 
   scenario('Card not verified', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+    });
     given('the Customer has ++payment authorization++ ++stub auth++', () => {
       // TODO: implement step
     })
@@ -165,6 +210,8 @@ story('Authorize Card', () => {
   });
 
   scenario('Maximum payment attempts', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+    });
     given('the Customer has ++payment authorization++ ++stub auth++', () => {
       // TODO: implement step
     })
@@ -198,8 +245,14 @@ story('Authorize Card', () => {
  * Actor: My Paradise
  */
 
+// background-examples: {"Bermuda Apple Pay cert": {"Apple Pay certificate": "Apple Pay certificate", "example": "Bermuda Apple Pay cert", "keyIdentifier": "CertificateSerialNumber=08b3a3b7b23c2c56a625e95211699f0b", "group": "Apple Pay certificate"}}
 story('Provide Apple Pay Certificate', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Provide Apple Pay certificate', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+    });
     given('the Apple Pay merchant certificate is available', () => {
       // TODO: implement step
     });

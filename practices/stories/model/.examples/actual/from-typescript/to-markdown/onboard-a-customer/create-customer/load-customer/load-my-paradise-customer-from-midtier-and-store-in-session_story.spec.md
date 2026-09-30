@@ -1,5 +1,9 @@
 ## Story: Load My Paradise Customer From Midtier And Store In Session
 
+### Story Background: each
+
+*Given* Mavenir has a customer and the Cognito user holds its id
+
 ### Scenario: Load My Paradise Customer From Midtier And Store In Session
 
 *When* My Paradise loads the customer through Midtier

@@ -42,7 +42,7 @@ FIDELITY_ORDER: Dict[str, List[str]] = {
 
 FIDELITY_NODE_SCOPE: Dict[str, Dict[str, Set[str]]] = {
     "stories": {
-        "story_map": {"Epic", "Epic", "Story", "StoryMap"},
+        "story_map": {"Epic", "Epic", "Story", "StoryModel"},
         "scenarios": {"Scenario", "Background", "Step", "Example"},
         "acceptance_tests": {"Step", "Example"},
     },

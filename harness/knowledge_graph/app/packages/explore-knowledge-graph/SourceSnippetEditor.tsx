@@ -1,16 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
+import {
+  displayedCallSource,
+  visibleLineCount,
+  type CallBody,
+  type CallFold,
+  type ClassBody,
+} from './call-expansion';
 import type { SourceRangeDto } from './knowledge-graph';
 
+const GLYPH_MARGIN = 2;
+const EMPTY_CLASSES: ClassBody[] = [];
+const EMPTY_CALLS: CallBody[] = [];
 const LINE_HEIGHT = 20;
 const MAX_HEIGHT = 520;
 
 const SNIPPET_OPTIONS = {
   readOnly: true,
   domReadOnly: true,
-  folding: true,
-  showFoldingControls: 'always' as const,
-  foldingStrategy: 'indentation' as const,
+  folding: false,
+  showFoldingControls: 'never' as const,
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
   automaticLayout: true,
@@ -39,6 +48,11 @@ export function SourceSnippetEditor({
   onToggle,
   toggleTestId = 'toggle-source',
   toggleLabel,
+  mark = 'chevron',
+  calls,
+  classes,
+  anchored,
+  listClasses = false,
 }: {
   source: SourceRangeDto;
   label: string;
@@ -48,21 +62,104 @@ export function SourceSnippetEditor({
   onToggle?: () => void;
   toggleTestId?: string;
   toggleLabel?: string;
+  mark?: 'chevron' | 'class';
+  calls?: Map<string, CallBody>;
+  classes?: ClassBody[];
+  anchored?: CallBody[];
+  listClasses?: boolean;
 }) {
   const theme = useExplorerMonacoTheme();
   const value = source.text || '';
+  const valueRef = useRef(value);
+  valueRef.current = value;
   const startLine = source.start_line || 1;
-  const [height, setHeight] = useState(() => editorHeight(value));
+  const noCalls = useRef(new Map<string, CallBody>());
+  const catalog = calls ?? noCalls.current;
+  const known = classes ?? EMPTY_CLASSES;
+  const rooted = anchored ?? EMPTY_CALLS;
+  const layout = useMemo(
+    () => displayedCallSource(value, catalog, 1, [], known, rooted, listClasses),
+    [value, catalog, known, rooted, listClasses],
+  );
+  const closedFolds = useRef(new Set<number>());
+  const [opened, setOpened] = useState<{ text: string; lines: Set<number> }>({
+    text: value,
+    lines: new Set(),
+  });
+  const openFolds = opened.text === value ? opened.lines : closedFolds.current;
+  const lineMap = useRef<string[]>(layout.lineNumbers);
+  const foldsRef = useRef(layout.folds);
+  const openFoldsRef = useRef(openFolds);
+  lineMap.current = layout.lineNumbers;
+  foldsRef.current = layout.folds;
+  openFoldsRef.current = openFolds;
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const hideSource = useRef({ id: 'call-folds' });
+  const decorations = useRef<{ clear: () => void } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [height, setHeight] = useState(() => editorHeight(visibleLineCount(layout, openFolds)));
   useEffect(() => {
-    setHeight(editorHeight(value));
-  }, [value]);
+    setHeight(editorHeight(visibleLineCount(layout, openFolds)));
+  }, [layout, openFolds]);
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    if (editor.getValue() !== layout.text) {
+      editor.setValue(layout.text);
+    }
+    editor.updateOptions({
+      glyphMargin: layout.folds.length > 0,
+      lineNumbers: (line) => {
+        const mapped = lineMap.current[line - 1];
+        return mapped ? String(startLine + Number(mapped) - 1) : '';
+      },
+    });
+    applyCallFolds(editor, layout.folds, openFolds, hideSource.current, decorations);
+  }, [layout, startLine, openFolds, mounted]);
   const fitHeight: OnMount = (editor) => {
+    editorRef.current = editor;
+    setMounted(true);
     const fit = () => {
       const next = fittedHeight(editor.getContentHeight());
       setHeight((current) => (current === next ? current : next));
     };
     fit();
     editor.onDidContentSizeChange(fit);
+    const node = editor.getDomNode();
+    node?.addEventListener(
+      'mousedown',
+      (event) => {
+        const target = editor.getTargetAtClientPoint(event.clientX, event.clientY);
+        const line = target?.position?.lineNumber ?? target?.range?.startLineNumber;
+        const markHit =
+          event.target instanceof Element &&
+          event.target.closest('.call-fold, .class-fold') !== null;
+        if (!line || !target || (target.type !== GLYPH_MARGIN && !markHit)) {
+          return;
+        }
+        const fold = foldsRef.current.find((entry) => entry.start === line);
+        if (!fold) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        setOpened((current) => {
+          const base = current.text === valueRef.current ? current.lines : closedFolds.current;
+          const next = new Set(base);
+          if (next.has(fold.start)) {
+            next.delete(fold.start);
+          } else {
+            next.add(fold.start);
+          }
+          openFoldsRef.current = next;
+          applyCallFolds(editor, foldsRef.current, next, hideSource.current, decorations);
+          return { text: valueRef.current, lines: next };
+        });
+      },
+      true,
+    );
   };
   return (
     <div
@@ -79,7 +176,7 @@ export function SourceSnippetEditor({
           aria-label={toggleLabel ?? (open ? 'Collapse' : 'Expand')}
           onClick={onToggle}
         >
-          {open ? '▼' : '▶'}
+          {mark === 'class' ? <ClassMark open={open} /> : open ? '▼' : '▶'}
         </button>
         <h2>
           {label} <span className="source-type">({typeLabel})</span>
@@ -89,13 +186,19 @@ export function SourceSnippetEditor({
         <Editor
           height={height}
           language={languageFor(source.file)}
-          value={value}
+          value={layout.text}
           theme={theme}
           onMount={fitHeight}
-          loading={<pre className="source-loading">{value}</pre>}
+          loading={<pre className="source-loading">{layout.text}</pre>}
           options={{
             ...SNIPPET_OPTIONS,
-            lineNumbers: (line) => String(startLine + line - 1),
+            folding: mark === 'class',
+            showFoldingControls: mark === 'class' ? 'always' : 'never',
+            glyphMargin: layout.folds.length > 0,
+            lineNumbers: (line) => {
+              const mapped = lineMap.current[line - 1];
+              return mapped ? String(startLine + Number(mapped) - 1) : '';
+            },
           }}
         />
       ) : null}
@@ -120,8 +223,83 @@ function useExplorerMonacoTheme(): 'kg-light' | 'kg-dark' {
   return theme;
 }
 
-function editorHeight(value: string): number {
-  const lines = Math.max(value.split('\n').length, 1);
+function applyCallFolds(
+  editor: Parameters<OnMount>[0],
+  folds: CallFold[],
+  open: Set<number>,
+  source: object,
+  decorations: { current: { clear: () => void } | null },
+) {
+  const ranges = folds
+    .filter((fold) => !open.has(fold.start) && fold.end > fold.start)
+    .map((fold) => ({
+      startLineNumber: fold.start + 1,
+      startColumn: 1,
+      endLineNumber: fold.end,
+      endColumn: 1,
+    }));
+  (
+    editor as Parameters<OnMount>[0] & {
+      setHiddenAreas(ranges: object[], source?: object): void;
+    }
+  ).setHiddenAreas(ranges, source);
+  decorations.current?.clear();
+  decorations.current = editor.createDecorationsCollection(
+    folds.map((fold) => ({
+      range: {
+        startLineNumber: fold.start,
+        startColumn: 1,
+        endLineNumber: fold.start,
+        endColumn: 1,
+      },
+      options: {
+        glyphMarginClassName: glyphClass(fold.kind, open.has(fold.start)),
+        glyphMarginHoverMessage: {
+          value: hoverLabel(fold.kind, open.has(fold.start)),
+        },
+      },
+    })),
+  );
+}
+
+function glyphClass(kind: CallFold['kind'], open: boolean): string {
+  if (kind === 'class') {
+    return open ? 'class-fold class-fold-open' : 'class-fold';
+  }
+  return open ? 'call-fold call-fold-open' : 'call-fold';
+}
+
+function hoverLabel(kind: CallFold['kind'], open: boolean): string {
+  const noun = kind === 'class' ? 'class' : 'call';
+  return open ? `Collapse ${noun}` : `Expand ${noun}`;
+}
+
+function ClassMark({ open }: { open: boolean }) {
+  return (
+    <svg
+      className="class-mark"
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      data-open={open ? 'true' : 'false'}
+      aria-hidden="true"
+    >
+      <rect
+        x="2.5"
+        y="2.5"
+        width="11"
+        height="11"
+        rx="0.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path d="M2.5 6.2h11" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function editorHeight(lines: number): number {
   return fittedHeight(lines * LINE_HEIGHT + 16);
 }
 

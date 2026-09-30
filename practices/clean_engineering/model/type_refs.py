@@ -39,6 +39,24 @@ def parse_parameter(name_and_type: str) -> tuple[str, str]:
     return raw, ""
 
 
+_THIRD_PARTY_TYPES = frozenset({
+    "String", "Number", "Boolean", "Void", "Any", "Unknown", "Object",
+    "Record", "Array", "Promise", "Partial", "Omit", "Pick", "RegExp",
+    "Date", "Error", "Map", "Set", "Readonly", "Required", "NonNullable",
+    "Collection", "List", "Iterable", "Sequence", "Optional",
+})
+
+
+def domain_type_names(type_hint: str) -> List[str]:
+    """PascalCase names that are domain classes. Primitives and third-party types are not."""
+    names: List[str] = []
+    for token in pascal_type_names(type_hint):
+        if token in _THIRD_PARTY_TYPES or token in names:
+            continue
+        names.append(token)
+    return names
+
+
 def pascal_type_names(type_hint: str) -> List[str]:
     if not type_hint or is_primitive_type(type_hint):
         return []

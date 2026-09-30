@@ -1,5 +1,6 @@
 /**
  * Epic: Get Order Review
+ * Orders: 0.0.6
  */
 
 import { scenario, story } from "tests/story-test";
@@ -11,6 +12,17 @@ import { scenario, story } from "tests/story-test";
 
 story('Check The Order', () => {
   scenario('Check the order', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with ++plan++ ++Essentials++ in the ++Mavenir shopping cart++', () => {
+        // TODO: implement step
+      })
+        .and('++available number++ ++chosen available number++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('the Customer has chosen eSIM', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer has completed account setup, number, SIM, and profile', () => {
       // TODO: implement step
     });
@@ -26,6 +38,17 @@ story('Check The Order', () => {
   });
 
   scenario('Check the order with port-in number', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with ++plan++ ++Essentials++ in the ++Mavenir shopping cart++', () => {
+        // TODO: implement step
+      })
+        .and('++available number++ ++chosen available number++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('the Customer has chosen eSIM', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer has a port-in number with +1 (441) 123-4567 as port number and +1 (441) 555-0101 as temporary MSISDN', () => {
       // TODO: implement step
     });
@@ -47,8 +70,20 @@ story('Check The Order', () => {
  * Actor: Customer
  */
 
+// background-examples: {"upgrade to Data Freedom": {"plan upgrade": "plan upgrade", "example": "upgrade to Data Freedom", "currentPlan": "Essentials", "newPlan": "Data Freedom"}, "upgrade to Ace": {"plan upgrade": "plan upgrade", "example": "upgrade to Ace", "currentPlan": "Data Freedom", "newPlan": "Ace"}, "upgrade to Atlas": {"plan upgrade": "plan upgrade", "example": "upgrade to Atlas", "currentPlan": "Ace", "newPlan": "Atlas"}}
 story('Upgrade To Data Freedom', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Upgrade plan from review', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is reviewing their order', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++plan++ ++{currentPlan}++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     });
@@ -64,12 +99,20 @@ story('Upgrade To Data Freedom', () => {
     then('My Paradise stores ++plan++ ++{newPlan}++ as the cart bundle', () => {
       // TODO: implement step
     })
-      .and('the Customer sees You have been upgraded!', () => {
+      .and('the Customer sees *You have been upgraded!*', () => {
         // TODO: implement step
       });
   });
 
   scenario('No upsell shown on top-tier plan', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is reviewing their order', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++plan++ ++Atlas++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     });
@@ -90,6 +133,14 @@ story('Upgrade To Data Freedom', () => {
 
 story('Change Plan From Review', () => {
   scenario('Select a different plan from review', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is reviewing their order', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++plan++ ++Essentials++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer has opened plan selection from review', () => {
       // TODO: implement step
     });
@@ -111,6 +162,14 @@ story('Change Plan From Review', () => {
   });
 
   scenario('Keep current plan from review', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is reviewing their order', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++plan++ ++Essentials++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer has opened plan selection from review', () => {
       // TODO: implement step
     });
@@ -123,6 +182,14 @@ story('Change Plan From Review', () => {
   });
 
   scenario('Select the plan already in the cart from review', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is reviewing their order', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++plan++ ++Essentials++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer has opened plan selection from review', () => {
       // TODO: implement step
     });
@@ -135,6 +202,14 @@ story('Change Plan From Review', () => {
   });
 
   scenario('Plan update fails from review', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer is reviewing their order', () => {
+        // TODO: implement step
+      })
+        .and('the Customer has a ++My Paradise customer++ with ++plan++ ++Essentials++ in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer has opened plan selection from review', () => {
       // TODO: implement step
     })
@@ -144,7 +219,7 @@ story('Change Plan From Review', () => {
     when('My Paradise patches the ++Mavenir shopping cart++ with ++plan++ ++Data Freedom++', () => {
       // TODO: implement step
     });
-    then('My Paradise shows Failed to update new plan choice.', () => {
+    then('My Paradise shows *Failed to update new plan choice.*', () => {
       // TODO: implement step
     })
       .and('the cart bundle remains ++plan++ ++Essentials++', () => {

@@ -39,8 +39,8 @@
 
 + CustomerException(...)
 ------
-+ operation: CustomerOperation
-+ accountCredentials: AccountCredentials
++ << association >> operation: CustomerOperation
++ << association >> accountCredentials: AccountCredentials
 + message: string
 + cause: Error
 ----
@@ -83,7 +83,7 @@
 + confirmPassword: string
 + validationCode: string
 + verified: boolean
-+ token: AccountToken | null
++ << association >> token: AccountToken | null
 + customerId: string | null
 + validationCodeWasSent: boolean
 + canActivate: boolean
@@ -142,15 +142,15 @@
 
 + AccountCredentialRequirements(...)
 ------
-+ emailRequired: AccountCredentialRequirement
-+ emailFormat: AccountCredentialRequirement
-+ passwordRequired: AccountCredentialRequirement
-+ passwordLetters: AccountCredentialRequirement
-+ passwordNumber: AccountCredentialRequirement
-+ passwordSymbol: AccountCredentialRequirement
-+ passwordLength: AccountCredentialRequirement
-+ confirmRequired: AccountCredentialRequirement
-+ confirmMismatch: AccountCredentialRequirement
++ << association >> emailRequired: AccountCredentialRequirement
++ << association >> emailFormat: AccountCredentialRequirement
++ << association >> passwordRequired: AccountCredentialRequirement
++ << association >> passwordLetters: AccountCredentialRequirement
++ << association >> passwordNumber: AccountCredentialRequirement
++ << association >> passwordSymbol: AccountCredentialRequirement
++ << association >> passwordLength: AccountCredentialRequirement
++ << association >> confirmRequired: AccountCredentialRequirement
++ << association >> confirmMismatch: AccountCredentialRequirement
 ----
 
 ## AmplifyService
@@ -212,7 +212,7 @@
 + waitingPsim: string | null
 + done: string | null
 + inquiryId: string | null
-+ voucher: Voucher | null
++ << association >> voucher: Voucher | null
 + << association >> shoppingCart: MavenirShoppingCart | null
 + << composition >> contactMedium: ContactMedium
 + << composition >> engagedParty: EngagedParty
@@ -370,8 +370,8 @@
 
 + CartException(...)
 ------
-+ operation: CartOperation
-+ customer: Customer
++ << association >> operation: CartOperation
++ << association >> customer: Customer
 + message: string
 + cause: Error
 ----
@@ -774,7 +774,7 @@
 + Line(...)
 ------
 + msisdn: string | null
-+ simType: SimType | null
++ << association >> simType: SimType | null
 + iccid: string | null
 + availableNumbers: string[]
 + << association >> portability: Portability | null

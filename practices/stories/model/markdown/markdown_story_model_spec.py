@@ -15,16 +15,16 @@ from expects import equal, have_len, be_true, be_false, expect, raise_error
 
 from practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from practices.stories.model.story_model import Scenario
-from practices.stories.model.story_model import StoryMap
+from practices.stories.model.story_model import StoryModel
 from practices.stories.model.markdown.nodes import (
     MarkdownParseError,
-    MarkdownStoryMap,
+    MarkdownStoryModel,
 )
 
 
 class SpecFixture:
-    def canonical_story_map_4_epics_3_epics(self) -> StoryMap:
-        story_map = StoryMap()
+    def canonical_story_map_4_epics_3_epics(self) -> StoryModel:
+        story_map = StoryModel()
         for i in range(1, 5):
             epic = Epic(f"Epic {i}", i)
             story_map.epics.append(epic)
@@ -45,10 +45,10 @@ fixture = SpecFixture()
 
 with description("a Markdown document") as self:
     with before.each:
-        self.markdown = MarkdownStoryMap()
+        self.markdown = MarkdownStoryModel()
 
     with it("should contain no headings"):
-        empty_story_map = StoryMap()
+        empty_story_map = StoryModel()
         text = self.markdown.render(empty_story_map)
         expect(text.count("#")).to(equal(0))
 
@@ -160,7 +160,7 @@ with description("a Markdown document") as self:
                     expect("## Epic 1.2" in self.new_text).to(be_true)
                     expect("## Epic 1.3" in self.new_text).to(be_true)
 
-    with context("that is being read back into a MarkdownStoryMap"):
+    with context("that is being read back into a MarkdownStoryModel"):
         with before.each:
             self.source = fixture.canonical_story_map_4_epics_3_epics()
             self.text = self.markdown.render(self.source)

@@ -3,13 +3,18 @@ from __future__ import annotations
 from story_test import and_, background, given, scenario, story, then, when
 
 # Epic: Get Number
+# Orders: 0.0.2
 
 # Story: Determine Number
 # Actor: Customer
+# background-examples: {"held available number": {"available number": "available number", "example": "held available number", "number": "4415550100", "group": "available number"}, "chosen available number": {"available number": "available number", "example": "chosen available number", "number": "4415550101", "group": "available number"}, "James search": {"search term": "search term", "example": "James search", "input": "JAMES", "converted": "52637", "group": "search term"}}
 with story("Determine Number"):
-    with background.each:
+    with background.background:
         with scenario("View available numbers"):
-            with then("no ++MSISDN++ is in the ++Mavenir shopping cart++"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            with but_("no ++MSISDN++ is in the ++Mavenir shopping cart++"):
                 pass
             with when("the Prospect proceeds to selecting their number"):
                 pass
@@ -30,6 +35,9 @@ with story("Determine Number"):
             with then("the Continue operation is enabled"):
                 pass
         with scenario("View available numbers — MSISDN in cart"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++"):
                 pass
             with when("the Prospect proceeds to selecting their number"):
@@ -45,6 +53,9 @@ with story("Determine Number"):
             with then("the Pick new number operation is enabled"):
                 pass
         with scenario("Refresh available numbers"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with when("the Prospect clicks Refresh"):
                 pass
             with then("My Paradise loads a fresh set of ++available number++ through the Midtier"):
@@ -54,6 +65,9 @@ with story("Determine Number"):
             with and_("the Continue operation is disabled"):
                 pass
         with scenario("Search for a number"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with when("the Prospect enters ++search term++ ++James search++ in the search field"):
                 pass
             with then("the search field helper shows *Your number: JAMES (52637)*"):
@@ -65,7 +79,6 @@ with story("Determine Number"):
 
 # Story: Query Msisdn Inventory
 with story("Query Msisdn Inventory"):
-    with background.each:
         with scenario("Query MSISDN inventory for porting"):
             with given("a ++PML customer++ is authenticated in Midtier"):
                 pass
@@ -89,7 +102,6 @@ with story("Query Msisdn Inventory"):
 
 # Story: List Msisdn Resources
 with story("List Msisdn Resources"):
-    with background.each:
         with scenario("List MSISDN resources for porting"):
             with given("++MSISDN++ resources with available status are in the Mavenir inventory"):
                 pass
@@ -111,7 +123,6 @@ with story("List Msisdn Resources"):
 
 # Story: Search Msisdn Inventory
 with story("Search Msisdn Inventory"):
-    with background.each:
         with scenario("Search MSISDN inventory"):
             with given("a ++PML customer++ is authenticated in Midtier"):
                 pass
@@ -124,7 +135,6 @@ with story("Search Msisdn Inventory"):
 
 # Story: Search Msisdn Resources
 with story("Search Msisdn Resources"):
-    with background.each:
         with scenario("Search MSISDN resources by pattern"):
             with given("++MSISDN++ resources with available status are in the Mavenir inventory"):
                 pass
@@ -138,11 +148,13 @@ with story("Search Msisdn Resources"):
 # Story: Choose a Number
 # Actor: Customer
 with story("Choose a Number"):
-    with background.each:
         with scenario("Pick new number"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("the Prospect has selected ++available number++ ++chosen available number++"):
                 pass
-            with and_("no ++MSISDN++ is in the ++Mavenir shopping cart++"):
+            with but_("no ++MSISDN++ is in the ++Mavenir shopping cart++"):
                 pass
             with when("the Prospect clicks Continue"):
                 pass
@@ -153,6 +165,9 @@ with story("Choose a Number"):
             with and_("the Prospect is forwarded to Select Sim"):
                 pass
         with scenario("Pick new number — replace existing"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++"):
                 pass
             with and_("the Prospect has selected ++available number++ ++chosen available number++"):
@@ -166,6 +181,9 @@ with story("Choose a Number"):
             with and_("the Prospect is forwarded to Select Sim"):
                 pass
         with scenario("Keep current number"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++"):
                 pass
             with when("the Prospect clicks Keep current number"):
@@ -175,11 +193,13 @@ with story("Choose a Number"):
 
 # Story: Submit Reserve Number Request to Mid-Tier
 with story("Submit Reserve Number Request to Mid-Tier"):
-    with background.each:
         with scenario("Reserve number"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("++available number++ ++chosen available number++ is selected"):
                 pass
-            with and_("no ++MSISDN++ is in the ++Mavenir shopping cart++"):
+            with but_("no ++MSISDN++ is in the ++Mavenir shopping cart++"):
                 pass
             with when("My Paradise posts a reserve request to Midtier for ++available number++ ++chosen available number++"):
                 pass
@@ -188,6 +208,9 @@ with story("Submit Reserve Number Request to Mid-Tier"):
             with and_("My Paradise submits a patch cart request with ++available number++ ++chosen available number++ through the Midtier"):
                 pass
         with scenario("Reserve number — replace existing"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++"):
                 pass
             with and_("++available number++ ++chosen available number++ is selected"):
@@ -199,18 +222,20 @@ with story("Submit Reserve Number Request to Mid-Tier"):
             with and_("My Paradise submits a patch cart request with ++available number++ ++chosen available number++ through the Midtier"):
                 pass
         with scenario("Reserve number request fails"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("++available number++ ++chosen available number++ is selected"):
                 pass
             with when("My Paradise posts a reserve request to Midtier for ++available number++ ++chosen available number++"):
                 pass
-            with and_("Midtier returns an error"):
+            with but_("Midtier returns an error"):
                 pass
             with then("My Paradise shows *Failed to reserve your number.*"):
                 pass
 
 # Story: Submit Reserve Msisdn
 with story("Submit Reserve Msisdn"):
-    with background.each:
         with scenario("Reserve temporary MSISDN for porting"):
             with given("++MSISDN++ ++available number++ ++held available number++ is locked"):
                 pass
@@ -243,7 +268,6 @@ with story("Submit Reserve Msisdn"):
 
 # Story: Reserve Msisdn Resource
 with story("Reserve Msisdn Resource"):
-    with background.each:
         with scenario("Reserve MSISDN resource as temporary port-in number"):
             with given("++MSISDN++ ++available number++ ++held available number++ is locked in Mavenir inventory"):
                 pass
@@ -276,7 +300,6 @@ with story("Reserve Msisdn Resource"):
 
 # Story: Submit Patch Cart With Number Request to Mid-Tier
 with story("Submit Patch Cart With Number Request to Mid-Tier"):
-    with background.each:
         with scenario("Patch cart with number"):
             with given("++MSISDN++ ++available number++ ++chosen available number++ has been reserved"):
                 pass
@@ -291,14 +314,13 @@ with story("Submit Patch Cart With Number Request to Mid-Tier"):
                 pass
             with when("My Paradise patches the ++Mavenir shopping cart++ with ++available number++ ++chosen available number++ through the Midtier"):
                 pass
-            with and_("Midtier returns an error"):
+            with but_("Midtier returns an error"):
                 pass
             with then("My Paradise shows *Failed to update your cart.*"):
                 pass
 
 # Story: Patch Cart With Number
 with story("Patch Cart With Number"):
-    with background.each:
         with scenario("Patch cart with MSISDN"):
             with given("a ++PML customer++ with a ++Mavenir shopping cart++"):
                 pass
@@ -313,7 +335,6 @@ with story("Patch Cart With Number"):
 
 # Story: Patch Shopping Cart
 with story("Patch Shopping Cart"):
-    with background.each:
         with scenario("Patch shopping cart with portability"):
             with given("a ++Mavenir shopping cart++ with a plan bundle cart item and temporary ++MSISDN++ ++available number++ ++held available number++"):
                 pass
@@ -326,7 +347,7 @@ with story("Patch Shopping Cart"):
         with scenario("Patch shopping cart with MSISDN"):
             with given("a ++Mavenir shopping cart++ with a plan bundle cart item"):
                 pass
-            with and_("no MSISDN characteristic on the cart item"):
+            with but_("no MSISDN characteristic on the cart item"):
                 pass
             with when("Mavenir is asked to patch the ++Mavenir shopping cart++ with ++MSISDN++ ++available number++ ++chosen available number++ as a cart item characteristic"):
                 pass
@@ -345,10 +366,14 @@ with story("Patch Shopping Cart"):
                 pass
 
 # Story: Bring a Number
+# background-examples: {"valid portability": {"portability": "portability", "example": "valid portability", "donorOperator": "Digicel", "portNumber": "4412345678", "accountNumber": "12345", "userType": "Residential", "accountType": "Postpaid", "device": "Iphone", "group": "portability"}}
 with story("Bring a Number"):
-    with background.each:
+    with background.background:
         with scenario("Bring a number"):
-            with then("no Transfer Code is on Bring your mobile number"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            with but_("no Transfer Code is on Bring your mobile number"):
                 pass
             with when("the Prospect clicks Get started on Bring your mobile number"):
                 pass
@@ -375,6 +400,9 @@ with story("Bring a Number"):
             with and_("the Prospect is forwarded to Select Sim"):
                 pass
         with scenario("Number to be ported is incomplete"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with when("the Prospect leaves Number to be ported as the Bermuda prefix only"):
                 pass
             with then("Number to be ported shows *Please enter the full Bermuda number.*"):
@@ -382,6 +410,9 @@ with story("Bring a Number"):
             with and_("the Continue operation stays disabled"):
                 pass
         with scenario("Provider not selected"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with when("the Prospect blurs Your current provider without selecting a provider"):
                 pass
             with then("Your current provider shows *Please select a provider.*"):
@@ -391,8 +422,12 @@ with story("Bring a Number"):
 
 # Story: Confirm Number Already With Paradise
 with story("Confirm Number Already With Paradise"):
-    with background.each:
         with scenario("Confirm the number is not already with Paradise"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: And | the Prospect has entered ++portability++ ++valid portability++
+            # background-step: But | no ++portability++ is in the ++Mavenir shopping cart++
             with when("the Prospect proceeds to confirming whether their number is already with Paradise"):
                 pass
             with then("the Prospect can confirm whether the ++MSISDN++ is already with Paradise"):
@@ -404,6 +439,11 @@ with story("Confirm Number Already With Paradise"):
             with and_("the Prospect is forwarded to Select Sim"):
                 pass
         with scenario("Confirm the number is already with Paradise"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: And | the Prospect has entered ++portability++ ++valid portability++
+            # background-step: But | no ++portability++ is in the ++Mavenir shopping cart++
             with when("the Prospect proceeds to confirming whether their number is already with Paradise"):
                 pass
             with then("the Prospect can confirm whether the ++MSISDN++ is already with Paradise"):
@@ -417,7 +457,6 @@ with story("Confirm Number Already With Paradise"):
 
 # Story: Evaluate Porting Two Factor Flag
 with story("Evaluate Porting Two Factor Flag"):
-    with background.each:
         with scenario("Porting two factor flag enabled (Intended)"):
             with given("`porting-2fa` is enabled in GrowthBook"):
                 pass
@@ -441,8 +480,11 @@ with story("Evaluate Porting Two Factor Flag"):
 
 # Story: Submit Portability Request to Mid-Tier
 with story("Submit Portability Request to Mid-Tier"):
-    with background.each:
         with scenario("Submit portability request — porting-2fa off (live)"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: But | no ++portability++ is in the ++Mavenir shopping cart++
             with given("the Prospect has entered ++portability++ ++valid portability++"):
                 pass
             with when("My Paradise posts a portability request to Midtier with ++portability++ ++valid portability++"):
@@ -454,6 +496,10 @@ with story("Submit Portability Request to Mid-Tier"):
             with and_("the Prospect is forwarded to Select Sim"):
                 pass
         with scenario("Submit portability request — porting-2fa on, SMS sent (Intended)"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: But | no ++portability++ is in the ++Mavenir shopping cart++
             with given("the Prospect has entered ++portability++ ++valid portability++"):
                 pass
             with and_("`porting-2fa` is enabled"):
@@ -467,36 +513,47 @@ with story("Submit Portability Request to Mid-Tier"):
             with and_("My Paradise presents the Confirm your number for porting step"):
                 pass
         with scenario("Submit portability request — rate limited, bypass (Intended)"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: But | no ++portability++ is in the ++Mavenir shopping cart++
             with given("`porting-2fa` is enabled"):
                 pass
             with when("My Paradise posts a ++portability request++"):
                 pass
-            with and_("Midtier returns `{ status: rate_limited, canBypass: true, temporaryNumber: ++available number++ ++held available number++ }`"):
+            with but_("Midtier returns `{ status: rate_limited, canBypass: true, temporaryNumber: ++available number++ ++held available number++ }`"):
                 pass
             with then("My Paradise stores ++portability++ ++valid portability++ and ++available number++ ++held available number++ with `verified: true` in the ++Mavenir shopping cart++"):
                 pass
             with and_("the Prospect is forwarded to Select Sim"):
                 pass
         with scenario("Submit portability request — invalid number (Intended)"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: But | no ++portability++ is in the ++Mavenir shopping cart++
             with given("`porting-2fa` is enabled"):
                 pass
             with when("My Paradise posts a ++portability request++"):
                 pass
-            with and_("Midtier returns `{ status: invalid_number }`"):
+            with but_("Midtier returns `{ status: invalid_number }`"):
                 pass
             with then("My Paradise shows *This number is invalid.* on Number to be ported"):
                 pass
         with scenario("Submit portability request fails"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: But | no ++portability++ is in the ++Mavenir shopping cart++
             with when("My Paradise posts a ++portability request++"):
                 pass
-            with and_("Midtier returns an error"):
+            with but_("Midtier returns an error"):
                 pass
             with then("My Paradise shows *Failed to save your portability.*"):
                 pass
 
 # Story: Patch Cart With Portability
 with story("Patch Cart With Portability"):
-    with background.each:
         with scenario("Patch cart with portability"):
             with given("a ++PML customer++ with a ++Mavenir shopping cart++"):
                 pass
@@ -513,7 +570,6 @@ with story("Patch Cart With Portability"):
 
 # Story: Send Port Verification
 with story("Send Port Verification"):
-    with background.each:
         with scenario("Send port verification SMS"):
             with given("`porting-2fa` is enabled"):
                 pass
@@ -530,7 +586,7 @@ with story("Send Port Verification"):
                 pass
             with when("Midtier sends port verification"):
                 pass
-            with and_("Twilio rate limits the request"):
+            with but_("Twilio rate limits the request"):
                 pass
             with then("Midtier returns `{ status: rate_limited, canBypass: true, temporaryNumber: ++available number++ ++held available number++ }` to My Paradise"):
                 pass
@@ -539,14 +595,13 @@ with story("Send Port Verification"):
                 pass
             with when("Midtier sends port verification"):
                 pass
-            with and_("Twilio rejects the number as invalid"):
+            with but_("Twilio rejects the number as invalid"):
                 pass
             with then("Midtier returns `{ status: invalid_number }` to My Paradise"):
                 pass
 
 # Story: Send Verification Sms
 with story("Send Verification Sms"):
-    with background.each:
         with scenario("Send verification SMS"):
             with given("`porting-2fa` is enabled"):
                 pass
@@ -563,15 +618,21 @@ with story("Send Verification Sms"):
                 pass
             with when("Twilio is asked to send a verification SMS"):
                 pass
-            with and_("the rate limit for ++portability++ ++valid portability++ portNumber is exceeded"):
+            with but_("the rate limit for ++portability++ ++valid portability++ portNumber is exceeded"):
                 pass
             with then("Twilio returns `rate_limited` to Midtier"):
                 pass
 
 # Story: Enter Porting Sms Code
+# background-examples: {"valid porting SMS code": {"porting SMS code": "porting SMS code", "example": "valid porting SMS code", "code": "123456", "group": "porting SMS code"}, "mismatch porting SMS code": {"porting SMS code": "porting SMS code", "example": "mismatch porting SMS code", "code": "Invalid verification code.", "group": "porting SMS code"}, "example": {"porting SMS code": "porting SMS code", "example": "example", "code": "helper", "group": "porting SMS code"}}
 with story("Enter Porting Sms Code"):
-    with background.each:
+    with background.background:
         with scenario("Enter ++porting SMS code++"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: And | ++portability++ ++valid portability++ is in the ++Mavenir shopping cart++
+            # background-step: And | My Paradise has SMSed a ++porting SMS code++ through the Midtier
             with when("the Prospect proceeds to confirming their number for porting"):
                 pass
             with then("the Prospect sees the code was sent to the ++portability++ number"):
@@ -599,11 +660,21 @@ with story("Enter Porting Sms Code"):
             with and_("the Prospect is forwarded to Select Sim"):
                 pass
         with scenario("Verify with unusable ++porting SMS code++"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: And | ++portability++ ++valid portability++ is in the ++Mavenir shopping cart++
+            # background-step: And | My Paradise has SMSed a ++porting SMS code++ through the Midtier
             with when("the Prospect clicks Verify code with ++porting SMS code++ ++mismatch porting SMS code++"):
                 pass
             with then("Enter SMS code shows helper text *Invalid verification code.*"):
                 pass
         with scenario("Resend ++porting SMS code++"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: And | ++portability++ ++valid portability++ is in the ++Mavenir shopping cart++
+            # background-step: And | My Paradise has SMSed a ++porting SMS code++ through the Midtier
             with when("the Prospect clicks Resend"):
                 pass
             with then("My Paradise SMSes a ++porting SMS code++ through the Midtier"):
@@ -615,8 +686,11 @@ with story("Enter Porting Sms Code"):
 
 # Story: Check Port Verification
 with story("Check Port Verification"):
-    with background.each:
         with scenario("Check port verification — code valid"):
+            # background: background
+            # background-step: Given | a ++PML customer++ with a ++Mavenir shopping cart++
+            # background-step: And | ++portability++ ++valid portability++ is in the ++Mavenir shopping cart++
+            # background-step: And | a ++porting SMS code++ was sent to ++portability++ ++valid portability++ portNumber
             with when("Midtier is asked to check ++porting SMS code++ ++valid porting SMS code++ against ++portability++ ++valid portability++ portNumber"):
                 pass
             with then("Midtier checks the ++porting SMS code++ with Twilio"):
@@ -628,6 +702,10 @@ with story("Check Port Verification"):
             with and_("Midtier returns `{ verified: true }` to My Paradise"):
                 pass
         with scenario("Check port verification — code mismatch"):
+            # background: background
+            # background-step: Given | a ++PML customer++ with a ++Mavenir shopping cart++
+            # background-step: And | ++portability++ ++valid portability++ is in the ++Mavenir shopping cart++
+            # background-step: And | a ++porting SMS code++ was sent to ++portability++ ++valid portability++ portNumber
             with when("Midtier is asked to check ++porting SMS code++ ++mismatch porting SMS code++ against ++portability++ ++valid portability++ portNumber"):
                 pass
             with then("Midtier checks the ++porting SMS code++ with Twilio"):
@@ -639,8 +717,9 @@ with story("Check Port Verification"):
 
 # Story: Check Verification
 with story("Check Verification"):
-    with background.each:
         with scenario("Check verification — code valid"):
+            # background: background
+            # background-step: Given | a verification was sent to ++portability++ ++valid portability++ portNumber
             with when("Twilio is asked to check ++porting SMS code++ ++valid porting SMS code++ against ++portability++ ++valid portability++ portNumber"):
                 pass
             with then("Twilio creates a verification check (`verificationChecks.create`)"):
@@ -648,6 +727,8 @@ with story("Check Verification"):
             with and_("Twilio returns `approved` to Midtier"):
                 pass
         with scenario("Check verification — code mismatch"):
+            # background: background
+            # background-step: Given | a verification was sent to ++portability++ ++valid portability++ portNumber
             with when("Twilio is asked to check ++porting SMS code++ ++mismatch porting SMS code++ against ++portability++ ++valid portability++ portNumber"):
                 pass
             with then("Twilio creates a verification check"):
@@ -658,7 +739,6 @@ with story("Check Verification"):
 # Story: Sweep Stale Number Reservations
 # Actor: Care
 with story("Sweep Stale Number Reservations"):
-    with background.each:
         with scenario("Sweep stale number reservations"):
             with given("++MSISDN++ resources have been reserved but have no active order"):
                 pass

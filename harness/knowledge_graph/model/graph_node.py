@@ -16,6 +16,8 @@ class Kind:
     OWNS = "owns"
     BELONGS_TO = "belongsTo"
     ASSOCIATES = "associates"
+    COMPOSITION = "composition"
+    AGGREGATION = "aggregation"
     DEPENDS_ON = "dependsOn"
     HAS_TYPE = "hasType"
     HAS_PARAMETER = "hasParameter"
@@ -40,10 +42,17 @@ class Kind:
 class Relationship:
     """Explicit edge: from — kind — to."""
 
-    def __init__(self, kind: str, from_node: "Node", to_node: "Node") -> None:
+    def __init__(
+        self,
+        kind: str,
+        from_node: "Node",
+        to_node: "Node",
+        cardinality: str = "",
+    ) -> None:
         self.kind = kind
         self.from_node = from_node
         self.to_node = to_node
+        self.cardinality = cardinality
 
     @property
     def from_id(self) -> str:
@@ -126,8 +135,8 @@ class NodeWalk:
 class NodeRelations:
     """Record and read this node's relationships."""
 
-    def relate(self, kind: str, to: "Node") -> Relationship:
-        return self.graph.relate(Relationship(kind, self, to))
+    def relate(self, kind: str, to: "Node", cardinality: str = "") -> Relationship:
+        return self.graph.relate(Relationship(kind, self, to, cardinality=cardinality))
 
     def related(self, kind: Optional[str] = None, *, direction: str = "out") -> List["Node"]:
         if direction == "out":
@@ -191,6 +200,16 @@ class NodeRelations:
             seen.add(node.node_id)
             out.append(node)
         return out
+
+
+def ownership_kind(kind: str) -> str:
+    """Map a property relationship onto the graph edge kind."""
+    lowered = (kind or "").lower()
+    if lowered == "composition":
+        return Kind.COMPOSITION
+    if lowered == "aggregation":
+        return Kind.AGGREGATION
+    return Kind.ASSOCIATES
 
 
 class NodeView:

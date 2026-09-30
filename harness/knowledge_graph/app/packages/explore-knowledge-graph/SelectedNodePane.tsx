@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { callBodiesIn, classBodiesIn, directCallsIn, type CallBody, type ClassBody } from './call-expansion';
 import {
   stepTitle,
   type ListedRule,
@@ -22,20 +23,51 @@ export function SelectedNodePane({
   selectedRule,
   sourceFile,
   violations = false,
+  showRules = true,
 }: {
   selectedNode: SelectedNode | null;
   selectedTree?: ListedTreeNode | null;
   selectedRule: ListedRule | null;
   sourceFile: SourceRangeDto | null;
   violations?: boolean;
+  showRules?: boolean;
 }) {
-  const [sourcesOpen, setSourcesOpen] = useState(true);
-  const [sourceOverrides, setSourceOverrides] = useState<Record<string, boolean>>({});
+  const selectedId = selectedTree?.node_id ?? selectedNode?.name ?? '';
+  const [openState, setOpenState] = useState<{
+    id: string;
+    sourcesOpen: boolean | null;
+    overrides: Record<string, boolean>;
+  }>({ id: '', sourcesOpen: null, overrides: {} });
+  const sourcesOpen = openState.id === selectedId ? openState.sourcesOpen : null;
+  const sourceOverrides = openState.id === selectedId ? openState.overrides : {};
+  const rootType = selectedTree?.semantic_type ?? selectedNode?.semantic_type ?? '';
+  const calls = useMemo(
+    () => (selectedTree ? callBodiesIn(selectedTree) : undefined),
+    [selectedTree],
+  );
+  const classes = useMemo(
+    () => (selectedTree ? classBodiesIn(selectedTree) : undefined),
+    [selectedTree],
+  );
+  const anchored = useMemo(
+    () =>
+      selectedTree && (rootType === 'Step' || rootType === 'Example')
+        ? directCallsIn(selectedTree)
+        : undefined,
+    [selectedTree, rootType],
+  );
+  const listClasses = rootType === 'Step' || rootType === 'Example';
   const sections = selectedTree
-    ? flattenSections(selectedTree, violations)
+    ? flattenSections(
+        selectedTree,
+        violations,
+        rootType === 'Operation' || rootType === 'Property' ? '1' : '',
+      )
     : selectedNode
       ? [
           {
+            sectionKey: selectedNode.name,
+            number: '',
             node_id: selectedNode.name,
             name: selectedNode.name,
             path: selectedNode.name,
@@ -46,24 +78,40 @@ export function SelectedNodePane({
           },
         ]
       : [];
-  if (sections.length === 0) {
+  const visibleSections = showRules
+    ? sections
+    : sections.map((section) => ({ ...section, rules: [] }));
+  if (visibleSections.length === 0) {
     return (
       <p className="empty-state">
         Select a node to open its source and nested rules.
       </p>
     );
   }
-  const panePrompt = paneCopyText(sections, violations);
-  const sourceIsOpen = (id: string) =>
-    id in sourceOverrides ? sourceOverrides[id] : sourcesOpen;
-  const hasSource = sections.some(
+  const panePrompt = paneCopyText(visibleSections, violations);
+  const nestsCalls = rootType === 'Operation' || rootType === 'Property';
+  const sourceIsOpen = (section: (typeof visibleSections)[number]) => {
+    if (section.sectionKey in sourceOverrides) {
+      return sourceOverrides[section.sectionKey];
+    }
+    if (sourcesOpen === false) {
+      return false;
+    }
+    if (sourcesOpen === true) {
+      return true;
+    }
+    return section.semantic_type === 'Operation' || section.semantic_type === 'Property'
+      ? true
+      : !(nestsCalls && section.semantic_type === 'OoadClass');
+  };
+  const hasSource = visibleSections.some(
     (section) => section.source?.text || section.origin?.text,
   );
   const allSourcesClosed =
     hasSource &&
-    sections
+    visibleSections
       .filter((section) => section.source?.text || section.origin?.text)
-      .every((section) => !sourceIsOpen(section.node_id));
+      .every((section) => !sourceIsOpen(section));
   return (
     <div className="selected-node-pane" data-testid="selected-subtree">
       {panePrompt || hasSource ? (
@@ -75,8 +123,11 @@ export function SelectedNodePane({
               data-testid="pane-toggle-all"
               aria-expanded={!allSourcesClosed}
               onClick={() => {
-                setSourcesOpen(allSourcesClosed);
-                setSourceOverrides({});
+                setOpenState({
+                  id: selectedId,
+                  sourcesOpen: allSourcesClosed,
+                  overrides: {},
+                });
               }}
             >
               {allSourcesClosed ? 'Expand all' : 'Collapse all'}
@@ -94,10 +145,11 @@ export function SelectedNodePane({
           ) : null}
       </div>
       ) : null}
-      {sections.map((section, index) => (
+      {visibleSections.map((section, index) => (
         <NodeSection
-          key={section.node_id}
+          key={section.sectionKey}
           nested={index > 0}
+          number={section.number}
           name={section.name}
           path={section.path}
           semanticType={section.semantic_type}
@@ -106,35 +158,61 @@ export function SelectedNodePane({
           }
           source={section.source}
           origin={section.origin}
-          sourceOpen={sourceIsOpen(section.node_id)}
+          sourceOpen={sourceIsOpen(section)}
           onToggleSource={() =>
-            setSourceOverrides((current) => ({
-              ...current,
-              [section.node_id]: !sourceIsOpen(section.node_id),
-            }))
+            setOpenState({
+              id: selectedId,
+              sourcesOpen,
+              overrides: {
+                ...sourceOverrides,
+                [section.sectionKey]: !sourceIsOpen(section),
+              },
+            })
           }
           collapseAll={
             index === 0 && hasSource
               ? {
                   closed: allSourcesClosed,
                   onToggle: () => {
-                    setSourcesOpen(allSourcesClosed);
-                    setSourceOverrides({});
+                    setOpenState({
+                      id: selectedId,
+                      sourcesOpen: allSourcesClosed,
+                      overrides: {},
+                    });
                   },
                 }
               : null
           }
           selectedRuleSlug={selectedRule?.slug ?? null}
+          calls={index === 0 ? calls : undefined}
+          classes={index === 0 ? classes : undefined}
+          anchored={index === 0 ? anchored : undefined}
+          listClasses={index === 0 && listClasses}
         />
       ))}
     </div>
   );
 }
 
+function excerptSource(node: ListedTreeNode): SourceRangeDto | null {
+  if (node.source?.text) {
+    return node.source;
+  }
+  if (node.semantic_type === 'Step' || node.semantic_type === 'Example') {
+    return { file: '', start_line: 1, end_line: 1, text: node.name };
+  }
+  return node.source;
+}
+
 function flattenSections(
   node: ListedTreeNode,
   violations: boolean,
+  number = '',
+  keyPrefix = 'root',
+  includeSelf = true,
 ): Array<{
+  sectionKey: string;
+  number: string;
   node_id: string;
   name: string;
   path: string;
@@ -152,22 +230,48 @@ function flattenSections(
               child.failed > 0,
       )
     : node.children;
+  const callable = node.semantic_type === 'Operation' || node.semantic_type === 'Property';
+  const inline =
+    callable || node.semantic_type === 'Step' || node.semantic_type === 'Example';
+  let callCount = 0;
+  const own = includeSelf
+    ? [
+        {
+          sectionKey: `${keyPrefix}:${node.node_id}`,
+          number: callable ? number : '',
+          node_id: node.node_id,
+          name: node.name,
+          path: node.path,
+          semantic_type: node.semantic_type,
+          source: excerptSource(node),
+          origin: node.origin,
+          rules: node.rules,
+        },
+      ]
+    : [];
+  if (inline && includeSelf) {
+    return own;
+  }
   return [
-    {
-      node_id: node.node_id,
-      name: node.name,
-      path: node.path,
-      semantic_type: node.semantic_type,
-      source: node.source,
-      origin: node.origin,
-      rules: node.rules,
-    },
-    ...children.flatMap((child) => flattenSections(child, violations)),
+    ...own,
+    ...children.flatMap((child, index) => {
+      const childCallable =
+        child.semantic_type === 'Operation' || child.semantic_type === 'Property';
+      const childNumber = childCallable ? `${number}.${++callCount}` : '';
+      return flattenSections(
+        child,
+        violations,
+        childNumber,
+        `${keyPrefix}.${index}`,
+        !(callable && childCallable),
+      );
+    }),
   ];
 }
 
 function NodeSection({
   nested = false,
+  number = '',
   name,
   path,
   semanticType,
@@ -178,8 +282,13 @@ function NodeSection({
   onToggleSource,
   collapseAll = null,
   selectedRuleSlug = null,
+  calls,
+  classes,
+  anchored,
+  listClasses = false,
 }: {
   nested?: boolean;
+  number?: string;
   name: string;
   path: string;
   semanticType: string;
@@ -190,10 +299,15 @@ function NodeSection({
   onToggleSource?: () => void;
   collapseAll?: { closed: boolean; onToggle: () => void } | null;
   selectedRuleSlug?: string | null;
+  calls?: ReturnType<typeof callBodiesIn>;
+  classes?: ClassBody[];
+  anchored?: CallBody[];
+  listClasses?: boolean;
 }) {
   const shown = source?.text ? source : nested ? null : origin?.text ? origin : null;
   const typeLabel = kindLabel(semanticType, false);
   const title = stepTitle(name, semanticType, '', shown?.text ?? source?.text ?? origin?.text ?? '');
+  const heading = number ? `${number}${number.includes('.') ? '' : '.'} ${title}` : title;
   const allToggle = collapseAll ? (
     <button
       type="button"
@@ -209,12 +323,14 @@ function NodeSection({
   return (
     <div
       className="node-report"
+      data-nested={nested ? 'true' : 'false'}
+      data-kind={semanticType}
       data-testid={nested ? 'child-node-report' : 'source-section'}
     >
       {shown ? (
         <SourceSnippetEditor
           source={shown}
-          label={title}
+          label={heading}
           typeLabel={typeLabel}
           excerpt={!nested}
           open={sourceOpen}
@@ -225,13 +341,22 @@ function NodeSection({
               ? collapseAll.closed
                 ? 'Expand all'
                 : 'Collapse all'
-              : undefined
+              : semanticType === 'OoadClass'
+                ? sourceOpen
+                  ? 'Collapse class'
+                  : 'Expand class'
+                : undefined
           }
+          mark={semanticType === 'OoadClass' ? 'class' : 'chevron'}
+          calls={calls}
+          classes={classes}
+          anchored={anchored}
+          listClasses={listClasses}
         />
       ) : (
         <h2 className="node-heading">
           {allToggle}
-          {title} <span className="source-type">({typeLabel})</span>
+          {heading} <span className="source-type">({typeLabel})</span>
         </h2>
       )}
       {rules.length > 0 ? (
@@ -278,9 +403,10 @@ function RuleReport({
         <span aria-hidden="true">{open ? '▼' : '▶'}</span>
         rules ({rules.length})
       </button>
-      {open
-        ? rules.map((entry) => (
-            <article key={entry.slug} className={`rule-card ${entry.status}`}>
+      {open ? (
+        <article className="rule-card" data-testid="rule-section">
+          {rules.map((entry) => (
+            <div key={entry.slug} className={`rule-line ${entry.status}`}>
               <h3>
                 {entry.slug}{' '}
                 <span className={`rule-status ${entry.status}`}>{entry.status}</span>
@@ -330,9 +456,10 @@ function RuleReport({
                   </button>
                 </div>
               ) : null}
-            </article>
-          ))
-        : null}
+            </div>
+          ))}
+        </article>
+      ) : null}
     </div>
   );
 }

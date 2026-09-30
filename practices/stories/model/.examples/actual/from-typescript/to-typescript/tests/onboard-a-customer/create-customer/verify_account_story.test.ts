@@ -1,15 +1,34 @@
 /**
  * Epic: Verify Account
+ * Orders: 0.0.0.3
  */
 
 import { scenario, story } from "tests/story-test";
+import { enteredValidAccountCredentials } from "./examples";
+
 
 /**
  * Story: Enter Validation Code
  */
 
 story('Enter Validation Code', () => {
+  background('each', ({ given }) => {
+    given('the User has submitted valid account credentials', () => {
+      // TODO: implement step
+    })
+      .and('Cognito has an unconfirmed Cognito user', () => {
+        // TODO: implement step
+      })
+      .and('Cognito has sent a validation code to the User', () => {
+        // TODO: implement step
+      })
+      .and('the User has account credentials with valid email and password', () => {
+        // TODO: implement step
+      });
+  });
+
   scenario('Enter validation code', ({ given, when, then }) => {
+    // examples: enteredValidAccountCredentials
     when('the User activates the account with the emailed validation code', () => {
       // TODO: implement step
     });

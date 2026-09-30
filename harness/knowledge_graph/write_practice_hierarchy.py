@@ -94,10 +94,6 @@ def _slugs_for(graph: PracticeGraph, practices: tuple[str, ...]) -> RuleSlugs:
 
 _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py"}
 _STORY_CODE = re.compile(r".+_story\.(test|spec)\.[jt]sx?$|.+\.examples\.[jt]sx?$")
-_CLASS_DECL = re.compile(
-    r"(?:export\s+)?(?:abstract\s+)?class\s+([A-Z][A-Za-z0-9_]*)"
-)
-_PY_CLASS_DECL = re.compile(r"^class\s+([A-Z][A-Za-z0-9_]*)\b", re.M)
 _MODULE_CONTEXT_NAMES = ("module-context.md", "architecture-context.md")
 
 
@@ -129,70 +125,6 @@ def _load_ce_folders(graph: PracticeGraph, workspace: Path) -> None:
             continue
         parent.modules.append(module)
         parent.relate(Kind.OWNS, module)
-    _load_ce_classes(graph, workspace, modules)
-
-
-def _load_ce_classes(graph: PracticeGraph, workspace: Path, modules: dict) -> None:
-    """A source class is a clean-engineering class. A DDD stereotype of the same name is not it."""
-    from practices.clean_engineering.model.codeql.codeql_model import OoadClass
-    from practices.stories.model.source_location import SourceLocation
-
-    order = 0
-    seen: set[str] = set()
-    for folder, rel in _ce_code_dirs(workspace):
-        for path in folder.iterdir():
-            if not path.is_file() or path.suffix.lower() not in _CODE_SUFFIXES:
-                continue
-            if path.name.endswith(".d.ts") or _STORY_CODE.match(path.name):
-                continue
-            text = path.read_text(encoding="utf-8", errors="replace")
-            pattern = _PY_CLASS_DECL if path.suffix.lower() == ".py" else _CLASS_DECL
-            rel_file = path.relative_to(workspace).as_posix()
-            for match in pattern.finditer(text):
-                name = match.group(1)
-                if name in seen:
-                    continue
-                seen.add(name)
-                order += 1
-                cls = OoadClass(name, order)
-                cls.source = SourceLocation(rel_file, text[: match.start()].count("\n") + 1)
-                graph.register(cls)
-                owner = _module_for_file(modules, rel)
-                if owner is None:
-                    continue
-                owner.classes.append(cls)
-                owner.relate(Kind.OWNS, cls)
-
-
-def _ce_code_dirs(workspace: Path):
-    found: list[tuple[Path, str]] = []
-
-    def visit(folder: Path, rel: str) -> None:
-        try:
-            children = list(folder.iterdir())
-        except OSError:
-            return
-        if rel:
-            found.append((folder, rel))
-        for child in children:
-            if not child.is_dir() or _skip_ce_dir(child.name, rel):
-                continue
-            child_rel = f"{rel}/{child.name}" if rel else child.name
-            visit(child, child_rel)
-
-    visit(workspace, "")
-    return found
-
-
-def _module_for_file(modules: dict, rel_dir: str):
-    owner = None
-    prefix = rel_dir
-    while prefix:
-        owner = modules.get(prefix)
-        if owner is not None:
-            return owner
-        prefix = "/".join(prefix.split("/")[:-1])
-    return owner
 
 
 def _ce_folders(workspace: Path) -> dict[str, Path | None]:
@@ -490,6 +422,7 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
                 "kind": edge.kind,
                 "from_id": edge.from_id,
                 "to_id": edge.to_id,
+                "cardinality": getattr(edge, "cardinality", "") or "",
             }
         )
     all_nodes = [
@@ -657,7 +590,7 @@ def _load_practice_trees(graph: PracticeGraph, workspace: Path, log) -> None:
 
     from harness.knowledge_graph.model.codeql_query import query_workspace
     from harness.knowledge_graph.model.loader import GraphLoader
-    from practices.stories.model.codeql.codeql_model import StoryMap
+    from practices.stories.model.codeql.codeql_model import StoryModel
 
     loader = GraphLoader.from_graph(graph)
     try:
@@ -714,7 +647,7 @@ def _load_practice_trees(graph: PracticeGraph, workspace: Path, log) -> None:
             "example_exports": [asdict(example) for example in export.example_exports],
         }
         if raw["stories"] or raw["example_exports"]:
-            StoryMap().ensure(graph, raw)
+            StoryModel().ensure(graph, raw)
             print(
                 f"stories tree: {len(raw['stories'])} stories, "
                 f"{len(raw['scenarios'])} scenarios",

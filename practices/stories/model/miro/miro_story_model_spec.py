@@ -22,14 +22,14 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error, contain
 
-from practices.stories.model.story_model import StoryMap, StoryType
+from practices.stories.model.story_model import StoryModel, StoryType
 from practices.stories.model.story_model import Scenario
 from practices.stories.model.miro.nodes import (
     MiroEpic,
     MiroIncrement,
     MiroParseError,
     MiroStory,
-    MiroStoryMap,
+    MiroStoryModel,
     MiroEpic,
 )
 
@@ -39,8 +39,8 @@ from practices.stories.model.miro.nodes import (
 # ---------------------------------------------------------------------------
 
 class SpecFixture:
-    def story_map_with_4_epics_and_3_epics_and_1_story(self) -> StoryMap:
-        story_map = MiroStoryMap()
+    def story_map_with_4_epics_and_3_epics_and_1_story(self) -> StoryModel:
+        story_map = MiroStoryModel()
         for i in range(1, 5):
             story_map.append_epic(MiroEpic(f"Epic {i}", i))
         first_epic = story_map.epics[0]
@@ -80,7 +80,7 @@ fixture = SpecFixture()
 
 with description("a Miro Story Map (story-map fidelity)") as self:
     with before.each:
-        self.miro = MiroStoryMap()
+        self.miro = MiroStoryModel()
 
     with context(
         "that holds a rendered diagram Story Map with 4 Epics and 3 Epics under the first Epic"
@@ -153,7 +153,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
 
     with context("that stacks nested sub-epics by depth (parent above children)"):
         with before.each:
-            self.source = MiroStoryMap()
+            self.source = MiroStoryModel()
             epic = MiroEpic("Create Hero", 1)
             compose = MiroEpic("Compose Powers", 1)
             attack = MiroEpic("Compose Attack Power", 1)
@@ -199,7 +199,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
 
     with context("that lays stories out as a story-map backbone"):
         with before.each:
-            self.source = MiroStoryMap()
+            self.source = MiroStoryModel()
             epic = MiroEpic("Onboard A Customer", 1)
             capability = MiroEpic("Get Sign Up Plan", 1)
             first = MiroStory("Open Plan Deep Link", 1, StoryType.USER)
@@ -262,9 +262,9 @@ with description("a Miro Story Map (story-map fidelity)") as self:
 
 with description("a Miro Story Map (thin-slice fidelity)") as self:
     with before.each:
-        self.miro = MiroStoryMap()
+        self.miro = MiroStoryModel()
 
-    with context("rendering the thin-slice view for a StoryMap with 2 increments"):
+    with context("rendering the thin-slice view for a StoryModel with 2 increments"):
         with before.each:
             self.source = fixture.story_map_with_4_epics_and_3_epics_and_1_story()
             inc_a = MiroIncrement(

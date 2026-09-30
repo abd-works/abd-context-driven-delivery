@@ -24,7 +24,7 @@ from practices.stories.model.story_model import (
     Scenario,
     Step,
     Story,
-    StoryMap,
+    StoryModel,
     StoryType,
     Epic,
 )
@@ -44,8 +44,8 @@ class SpecFixture:
     def then(self, text: str, order: int = 1) -> Step:
         return self.step(text, StepType.THEN, order)
 
-    def fresh_story_map_with_4_epics(self) -> StoryMap:
-        story_map = StoryMap()
+    def fresh_story_map_with_4_epics(self) -> StoryModel:
+        story_map = StoryModel()
         for i in range(1, 5):
             story_map.append_epic(Epic(f"Epic {i}", i))
         return story_map
@@ -123,10 +123,10 @@ with description("an Increment") as self:
                 expect(self.target.stories).to(have_len(2))
 
     with context(
-        "that references a story name not present in any Story on the StoryMap"
+        "that references a story name not present in any Story on the StoryModel"
     ):
         with before.each:
-            self.story_map = StoryMap()
+            self.story_map = StoryModel()
             epic = Epic("Route transfer", 1)
             sub = Epic("Route inside window", 1)
             sub.stories.append(Story("Route transfer before cutoff", 1))
@@ -141,7 +141,7 @@ with description("an Increment") as self:
                 # scanners detect the inconsistency, not the model.
                 expect(len(self.story_map.increments)).to(equal(1))
 
-        with context("a scanner walking the StoryMap"):
+        with context("a scanner walking the StoryModel"):
             with it(
                 "should be able to detect the orphan reference by comparing name lists"
             ):
@@ -296,11 +296,11 @@ with description("a Scenario") as self:
 
 with description("a Story Map") as self:
     with it("should hold no Epics"):
-        story_map = StoryMap()
+        story_map = StoryModel()
         expect(story_map.epics).to(have_len(0))
 
     with it("should hold no Increments"):
-        story_map = StoryMap()
+        story_map = StoryModel()
         expect(story_map.increments).to(have_len(0))
 
     with context("with 4 Epics in sequential order"):
@@ -612,7 +612,7 @@ with description("a Story Map") as self:
 
     with context("with 2 Increments in sequential order"):
         with before.each:
-            self.story_map = StoryMap()
+            self.story_map = StoryModel()
             for inc in fixture.fresh_increments(2):
                 self.story_map.append_increment(inc)
 
@@ -825,9 +825,9 @@ with description("a StoryNode") as self:
                     )
                 )
 
-with description("a StoryMap being translated from another StoryMap") as self:
+with description("a StoryModel being translated from another StoryModel") as self:
     with before.each:
-        self.source = StoryMap()
+        self.source = StoryModel()
         for i in range(1, 3):
             self.source.append_epic(Epic(f"Epic {i}", i))
         self.source.append_increment(Increment("Increment 1", 1))

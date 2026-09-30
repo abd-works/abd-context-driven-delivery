@@ -26,19 +26,19 @@ from practices.stories.model.story_model import Scenario
 from practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramStory,
-    DiagramStoryMap,
+    DiagramStoryModel,
     DiagramEpic,
 )
 
 
 class SpecFixture:
-    def four_epics_diagram(self) -> DiagramStoryMap:
-        diagram = DiagramStoryMap()
+    def four_epics_diagram(self) -> DiagramStoryModel:
+        diagram = DiagramStoryModel()
         for i in range(1, 5):
             diagram.append_epic(DiagramEpic(f"Epic {i}", i))
         return diagram
 
-    def first_epic_with_3_epics_diagram(self) -> DiagramStoryMap:
+    def first_epic_with_3_epics_diagram(self) -> DiagramStoryModel:
         diagram = self.four_epics_diagram()
         first = diagram.epics[0]
         for j in range(1, 4):
@@ -51,7 +51,7 @@ fixture = SpecFixture()
 
 with description("a diagram Story Map") as self:
     with it("should hold no Epics"):
-        diagram = DiagramStoryMap()
+        diagram = DiagramStoryModel()
         expect(diagram.epics).to(have_len(0))
 
     with context("with 4 Epics in sequential order"):
@@ -68,26 +68,26 @@ with description("a diagram Story Map") as self:
 
             with it("should sit at the X of its sequential position on the Epic row"):
                 xs = [e.x for e in self.diagram.epics]
-                expect(xs).to(equal([0, DiagramStoryMap.base_width, 2 * DiagramStoryMap.base_width, 3 * DiagramStoryMap.base_width]))
+                expect(xs).to(equal([0, DiagramStoryModel.base_width, 2 * DiagramStoryModel.base_width, 3 * DiagramStoryModel.base_width]))
 
             with it("should span its own base width when it holds no Epics"):
                 for epic in self.diagram.epics:
-                    expect(epic.width).to(equal(DiagramStoryMap.base_width))
+                    expect(epic.width).to(equal(DiagramStoryModel.base_width))
 
         with context("the Epic row for depth 0"):
             with it("should sit directly below the Epic row"):
-                expect(self.diagram.epics[0].y + self.diagram.epics[0].height).to(equal(DiagramStoryMap.row_height))
+                expect(self.diagram.epics[0].y + self.diagram.epics[0].height).to(equal(DiagramStoryModel.row_height))
 
         with context("the actor row"):
             with it("should sit directly below the deepest Epic row"):
                 expect(self.diagram.actor_y).to(
-                    equal((self.diagram.max_sub_epic_depth + 2) * DiagramStoryMap.row_height)
+                    equal((self.diagram.max_sub_epic_depth + 2) * DiagramStoryModel.row_height)
                 )
 
         with context("the Story row"):
             with it("should sit directly below the actor row"):
-                expect(self.diagram.actor_y + DiagramStoryMap.row_height).to(
-                    equal((self.diagram.max_sub_epic_depth + 3) * DiagramStoryMap.row_height)
+                expect(self.diagram.actor_y + DiagramStoryModel.row_height).to(
+                    equal((self.diagram.max_sub_epic_depth + 3) * DiagramStoryModel.row_height)
                 )
 
         with context("with a fifth Epic appended"):
@@ -106,7 +106,7 @@ with description("a diagram Story Map") as self:
 
                 with it("should sit at the rightmost X on the Epic row"):
                     fifth = self.diagram.epics[-1]
-                    expect(fifth.x).to(equal(4 * DiagramStoryMap.base_width))
+                    expect(fifth.x).to(equal(4 * DiagramStoryModel.base_width))
 
             with context("the first four Epics"):
                 with it("should keep their previous X positions"):
@@ -139,22 +139,22 @@ with description("a diagram Story Map") as self:
 
                 with it("should widen to span the combined width of its 3 Epics"):
                     expect(self.first_epic.width).to(
-                        equal(3 * DiagramStoryMap.base_width)
+                        equal(3 * DiagramStoryModel.base_width)
                     )
 
             with context("every Epic of the first Epic"):
                 with it("should sit on the Epic row for depth 0"):
                     for sub in self.first_epic.epics:
-                        expect(sub.y).to(equal(DiagramStoryMap.row_height))
+                        expect(sub.y).to(equal(DiagramStoryModel.row_height))
 
                 with it("should sit at the X of its sequential position within the first Epic's span"):
                     xs = [s.x for s in self.first_epic.epics]
-                    expect(xs).to(equal([0, DiagramStoryMap.base_width, 2 * DiagramStoryMap.base_width]))
+                    expect(xs).to(equal([0, DiagramStoryModel.base_width, 2 * DiagramStoryModel.base_width]))
 
             with context("every Epic to the right of the first Epic"):
                 with it("should shift right to accommodate the first Epic's new width"):
                     expect(self.diagram.epics[1].x).to(
-                        equal(3 * DiagramStoryMap.base_width)
+                        equal(3 * DiagramStoryModel.base_width)
                     )
 
             with context("with a Epic appended to the first Epic"):
@@ -167,20 +167,20 @@ with description("a diagram Story Map") as self:
 
                     with it("should widen to span 4 Epics"):
                         expect(self.first_epic.width).to(
-                            equal(4 * DiagramStoryMap.base_width)
+                            equal(4 * DiagramStoryModel.base_width)
                         )
 
                 with context("the appended Epic"):
                     with it("should sit at the rightmost X within the first Epic's span"):
                         appended = self.first_epic.epics[-1]
                         expect(appended.x).to(
-                            equal(3 * DiagramStoryMap.base_width)
+                            equal(3 * DiagramStoryModel.base_width)
                         )
 
                 with context("every Epic to the right of the first Epic"):
                     with it("should shift right by the width of one Epic"):
                         expect(self.diagram.epics[1].x).to(
-                            equal(4 * DiagramStoryMap.base_width)
+                            equal(4 * DiagramStoryModel.base_width)
                         )
 
             with context("with the first Epic of the first Epic removed"):
@@ -196,7 +196,7 @@ with description("a diagram Story Map") as self:
 
                     with it("should narrow to span 2 Epics"):
                         expect(self.first_epic.width).to(
-                            equal(2 * DiagramStoryMap.base_width)
+                            equal(2 * DiagramStoryModel.base_width)
                         )
 
                     with it("should discard the Stories that lived under the removed Epic"):
@@ -208,7 +208,7 @@ with description("a diagram Story Map") as self:
                 with context("every Epic to the right of the first Epic"):
                     with it("should shift left by the width of one Epic"):
                         expect(self.diagram.epics[1].x).to(
-                            equal(2 * DiagramStoryMap.base_width)
+                            equal(2 * DiagramStoryModel.base_width)
                         )
 
             with context("with the first Epic of the first Epic renamed"):
@@ -240,28 +240,28 @@ with description("a diagram Story Map") as self:
                     with it("should widen to span its nested Epic"):
                         expect(
                             self.first_epic.epics[0].width
-                        ).to(equal(DiagramStoryMap.base_width))
+                        ).to(equal(DiagramStoryModel.base_width))
 
                 with context("the nested Epic"):
                     with it("should sit on the Epic row for depth 1"):
-                        expect(self.nested.y).to(equal(2 * DiagramStoryMap.row_height))
+                        expect(self.nested.y).to(equal(2 * DiagramStoryModel.row_height))
 
                 with context("the Epic row for depth 1"):
                     with it("should sit directly below the depth 0 row"):
                         expect(self.nested.y).to(
-                            equal(self.nested.parent.y + DiagramStoryMap.row_height)
+                            equal(self.nested.parent.y + DiagramStoryModel.row_height)
                         )
 
                 with context("the actor row"):
                     with it("should shift down to sit below the depth 1 row"):
                         expect(self.diagram.actor_y).to(
-                            equal(self.nested.y + DiagramStoryMap.row_height)
+                            equal(self.nested.y + DiagramStoryModel.row_height)
                         )
 
                 with context("the Story row"):
                     with it("should shift down to sit below the actor row"):
-                        expect(self.diagram.actor_y + DiagramStoryMap.row_height).to(
-                            equal((self.diagram.max_sub_epic_depth + 3) * DiagramStoryMap.row_height)
+                        expect(self.diagram.actor_y + DiagramStoryModel.row_height).to(
+                            equal((self.diagram.max_sub_epic_depth + 3) * DiagramStoryModel.row_height)
                         )
 
             with context(
@@ -284,7 +284,7 @@ with description("a diagram Story Map") as self:
 
                     with it("should narrow to span 2 Epics"):
                         expect(self.first_epic.width).to(
-                            equal(2 * DiagramStoryMap.base_width)
+                            equal(2 * DiagramStoryModel.base_width)
                         )
 
                 with context("the second Epic"):
@@ -293,7 +293,7 @@ with description("a diagram Story Map") as self:
 
                     with it("should widen to accommodate the additional Epic"):
                         expect(self.second_epic.width).to(
-                            equal(DiagramStoryMap.base_width)
+                            equal(DiagramStoryModel.base_width)
                         )
 
                 with context("the moved Epic"):
@@ -322,7 +322,7 @@ with description("a diagram Story Map") as self:
                     with it("should sit on the Story row"):
                         for story in self.first_sub_epic.stories:
                             expect(story.y).to(
-                                equal(self.diagram.actor_y + DiagramStoryMap.row_height)
+                                equal(self.diagram.actor_y + DiagramStoryModel.row_height)
                             )
 
                     with it("should sit at the X of its parent Epic"):

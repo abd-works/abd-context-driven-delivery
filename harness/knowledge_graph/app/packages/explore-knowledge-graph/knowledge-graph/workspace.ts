@@ -135,7 +135,7 @@ const TS_SKIP = new Set([
 ]);
 
 export type SourceDefinition = {
-  semantic_type: 'OoadClass' | 'Operation';
+  semantic_type: 'OoadClass' | 'Operation' | 'Property';
   name: string;
   source: SourceRangeDto;
 };
@@ -155,6 +155,15 @@ export function definitionsInFile(file: WorkspaceFile): SourceDefinition[] {
     if (node.source) {
       found.push({
         semantic_type: 'Operation',
+        name: node.name,
+        source: node.source,
+      });
+    }
+  }
+  for (const node of _propertiesIn(file)) {
+    if (node.source) {
+      found.push({
+        semantic_type: 'Property',
         name: node.name,
         source: node.source,
       });
@@ -451,6 +460,86 @@ function _pythonClasses(file: WorkspaceFile): NodeDto[] {
 }
 
 function _typeNode(
+  file: WorkspaceFile,
+  semanticType: string,
+  name: string,
+  startOffset: number,
+  endOffset: number,
+): NodeDto {
+  const startLine = _lineAt(file.text, startOffset);
+  const endLine = _lineAt(file.text, endOffset);
+  const normalized = file.relativePath.replaceAll('\\', '/');
+  return {
+    node_id: `ce:${semanticType}:${normalized}:${name}`,
+    name,
+    practice: 'clean_engineering',
+    semantic_type: semanticType,
+    properties: {},
+    applicable_rules: [],
+    violations: [],
+    source: {
+      file: normalized,
+      start_line: startLine,
+      end_line: endLine,
+      text: file.text.slice(startOffset, endOffset),
+    },
+  };
+}
+
+function _propertiesIn(file: WorkspaceFile): NodeDto[] {
+  if (file.relativePath.endsWith('.py')) {
+    return _pythonProperties(file);
+  }
+  if (/\.(ts|tsx|js|jsx)$/.test(file.relativePath) && !file.relativePath.endsWith('.d.ts')) {
+    return _scriptProperties(file);
+  }
+  return [];
+}
+
+function _scriptProperties(file: WorkspaceFile): NodeDto[] {
+  return _fieldLines(file, (line) => {
+    if (line.includes('(') || /\bclass\s+/.test(line)) {
+      return null;
+    }
+    const matched = line.match(
+      /^(?:\s+)(?:(?:public|private|protected|readonly|static|declare|abstract|override)\s+)*([A-Za-z_][A-Za-z0-9_]*)\??\s*(?::\s*[^=;{]+)?\s*(?:=|;)/,
+    );
+    return matched && !TS_SKIP.has(matched[1]) ? matched[1] : null;
+  });
+}
+
+function _pythonProperties(file: WorkspaceFile): NodeDto[] {
+  return _fieldLines(file, (line) => {
+    const matched = line.match(/^(\s+)([A-Za-z_][A-Za-z0-9_]*)\s*[:=]/);
+    if (!matched || matched[1].length === 0) {
+      return null;
+    }
+    const name = matched[2];
+    if (['def', 'class', 'async', 'if', 'for', 'while', 'return', 'import', 'from'].includes(name)) {
+      return null;
+    }
+    return name;
+  });
+}
+
+function _fieldLines(
+  file: WorkspaceFile,
+  nameOn: (line: string) => string | null,
+): NodeDto[] {
+  const found: NodeDto[] = [];
+  const lines = file.text.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const name = nameOn(lines[index]);
+    if (!name) {
+      continue;
+    }
+    const start = _offsetAtLine(file.text, index);
+    found.push(_memberNode(file, 'Property', name, start, start + lines[index].length));
+  }
+  return found;
+}
+
+function _memberNode(
   file: WorkspaceFile,
   semanticType: string,
   name: string,

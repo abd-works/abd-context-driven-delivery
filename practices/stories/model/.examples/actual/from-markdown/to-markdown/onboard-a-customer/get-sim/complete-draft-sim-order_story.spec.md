@@ -8,6 +8,7 @@
 *And* the Customer's line has ++SIM type++ pSIM
 *But* the Customer never entered an ++ICCID++
 *And* the ++Mavenir customer++ has ++waiting pSIM++ Active
+
 *Given* Care opens the ++Mavenir customer++ record in Mavenir DEP
 *And* Care sees the draft order in the orders grid (`22-dep-orders-grid.png`)
 *When* Care attaches the ++ICCID++ to the draft order and completes it

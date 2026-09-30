@@ -421,11 +421,7 @@ class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
             if src_cls is None:
                 continue
             kind = self._ARROW_TO_KIND.get(arrow, "association")
-            already = any(
-                r.target == tgt_name for r in src_cls.relationships
-            )
-            if not already:
-                src_cls.relationships.append(Relationship(target=tgt_name, kind=kind))
+            src_cls.place_relationship(Relationship(target=tgt_name, kind=kind))
 
         return model
 

@@ -276,8 +276,9 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             tgt_cls = id_to_class.get(tgt_id)
             tgt_name = tgt_cls.name if tgt_cls else id_to_name.get(tgt_id, tgt_id)
             kind = self._classify_edge(cell.get('style', ''))
-            src_cls.relationships.append(Relationship(target=tgt_name, kind=kind))
             self._bind_edge_to_property(src_cls, tgt_name, kind)
+        for oclass in id_to_class.values():
+            self._bind_class_properties(oclass)
         return model
 
     def _parse_classes_multipage(self, diagrams: List[ET.Element]) -> 'DrawIOCleanEngineeringModel':
@@ -334,10 +335,15 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             tgt_cls = self._id_to_class.get(tgt_id)
             tgt_name = tgt_cls.name if tgt_cls is not None else self._id_to_name.get(tgt_id, tgt_id)
             kind = self._classify_edge(cell.get('style', ''))
-            already = any((r.target == tgt_name and (r.kind or 'association') == kind for r in src_cls.relationships))
-            if not already:
-                src_cls.relationships.append(Relationship(target=tgt_name, kind=kind))
             self._bind_edge_to_property(src_cls, tgt_name, kind)
+        for oclass in self._id_to_class.values():
+            self._bind_class_properties(oclass)
+
+    def _bind_class_properties(self, oclass: OoadClass) -> None:
+        from practices.clean_engineering.model.property import bind_property_relationship
+
+        for prop in oclass.properties:
+            bind_property_relationship(prop)
 
     def _bind_edge_to_property(self, oclass: OoadClass, target: str, kind: str) -> None:
         """The arrow is the property whose type names the target. Kind lives on that property."""
@@ -351,6 +357,9 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             current = (getattr(prop, "stereotype", "") or "").lower()
             if rank.get((kind or "").lower(), 0) >= rank.get(current, 0):
                 prop.stereotype = (kind or "association").lower()
+            from practices.clean_engineering.model.property import bind_property_relationship
+
+            bind_property_relationship(prop)
 
     def render(self, canonical: CleanEngineeringModel) -> str:
         if self._is_modules_view(canonical):

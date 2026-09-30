@@ -12,16 +12,16 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import describe, context, it, before, shared_context, included_context
 
-from practices.stories.model.drawio.nodes import DrawIOStoryMap
-from practices.stories.model.json.nodes import JsonStoryMap
-from practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryMap
-from practices.stories.model.miro.nodes import MiroStoryMap
-from practices.stories.model.story_model import StoryMap, StoryModelFactory
-from practices.stories.model.java.java_story_model import JavaStoryMap
-from practices.stories.model.javascript.javascript_story_model import JavaScriptStoryMap
-from practices.stories.model.python.python_story_model import PythonStoryMap
-from practices.stories.model.codeql.codeql_model import StoryMap as CodeQLStoryMap
-from practices.stories.model.typescript.typescript_story_model import TypeScriptStoryMap
+from practices.stories.model.drawio.nodes import DrawIOStoryModel
+from practices.stories.model.json.nodes import JsonStoryModel
+from practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
+from practices.stories.model.miro.nodes import MiroStoryModel
+from practices.stories.model.story_model import StoryModel, StoryModelFactory
+from practices.stories.model.java.java_story_model import JavaStoryModel
+from practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
+from practices.stories.model.python.python_story_model import PythonStoryModel
+from practices.stories.model.codeql.codeql_model import StoryModel as CodeQLStoryModel
+from practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 from practices.stories.model.code_story_model import CodeStoryNode
 
 EXPECTED = Path(__file__).resolve().parent / ".examples" / "expected"
@@ -37,7 +37,7 @@ def _kebab(name: str) -> str:
     return re.sub(r"[^0-9a-z]+", "-", name.strip().lower()).strip("-") or "unnamed"
 
 
-def walk(story_map: StoryMap) -> list:
+def walk(story_map: StoryModel) -> list:
     """Every epic, story, background, scenario, step, and, and increment, in map order."""
     rows = []
 
@@ -226,8 +226,8 @@ def _read_tree(folder: Path) -> dict:
     return files
 
 
-def _write_markdown(source: StoryMap, folder: Path) -> None:
-    _write(folder / "story-map.md", MarkdownStoryMap(source).save())
+def _write_markdown(source: StoryModel, folder: Path) -> None:
+    _write(folder / "story-map.md", MarkdownStoryModel(source).save())
 
     def visit(epic, parts: list) -> None:
         for story in epic.stories:
@@ -235,7 +235,11 @@ def _write_markdown(source: StoryMap, folder: Path) -> None:
                 continue
             _write(
                 folder.joinpath(*parts, f"{_kebab(story.name)}_story.spec.md"),
-                MarkdownScenario.render_scenarios(story.scenarios, story_name=story.name),
+                MarkdownScenario.render_scenarios(
+                    story.scenarios,
+                    story_name=story.name,
+                    story_backgrounds=story.backgrounds,
+                ),
             )
         for child in epic.epics:
             visit(child, parts + [_kebab(child.name)])
@@ -257,40 +261,40 @@ def _expected_typescript() -> dict:
     return files
 
 
-def load_source(name: str) -> StoryMap:
+def load_source(name: str) -> StoryModel:
     if name == "markdown":
         return StoryModelFactory.load(str(EXPECTED))
     if name == "drawio":
-        return DrawIOStoryMap().load((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
-    return TypeScriptStoryMap().load(_expected_typescript())
+        return DrawIOStoryModel().load((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
+    return TypeScriptStoryModel().load(_expected_typescript())
 
 
-def save_channel(source_name: str, target: str, source: StoryMap) -> StoryMap:
+def save_channel(source_name: str, target: str, source: StoryModel) -> StoryModel:
     folder = ACTUAL / f"from-{source_name}" / f"to-{target}"
     if folder.exists():
         shutil.rmtree(folder)
     folder.mkdir(parents=True)
     if target == "markdown":
         _write_markdown(source, folder)
-        return MarkdownStoryMap.from_workspace(folder)
+        return MarkdownStoryModel.from_workspace(folder)
     if target == "json":
-        copied = JsonStoryMap(source)
-        _write(folder / "story-graph.json", JsonStoryMap().render(copied))
-        return JsonStoryMap().parse((folder / "story-graph.json").read_text(encoding="utf-8"))
+        copied = JsonStoryModel(source)
+        _write(folder / "story-graph.json", JsonStoryModel().render(copied))
+        return JsonStoryModel().parse((folder / "story-graph.json").read_text(encoding="utf-8"))
     if target == "drawio":
-        _write(folder / "story-map.drawio", DrawIOStoryMap(source).save())
-        return DrawIOStoryMap().load((folder / "story-map.drawio").read_text(encoding="utf-8"))
+        _write(folder / "story-map.drawio", DrawIOStoryModel(source).save())
+        return DrawIOStoryModel().load((folder / "story-map.drawio").read_text(encoding="utf-8"))
     if target == "miro":
-        _write(folder / "story-map.svg", MiroStoryMap(source).save())
-        return MiroStoryMap().load((folder / "story-map.svg").read_text(encoding="utf-8"))
+        _write(folder / "story-map.svg", MiroStoryModel(source).save())
+        return MiroStoryModel().load((folder / "story-map.svg").read_text(encoding="utf-8"))
     if target == "codeql":
-        _write_tree(folder, TypeScriptStoryMap(source).save())
-        return CodeQLStoryMap.load_folder(folder)
+        _write_tree(folder, TypeScriptStoryModel(source).save())
+        return CodeQLStoryModel.load_content(folder)
     maps = {
-        "typescript": TypeScriptStoryMap,
-        "python": PythonStoryMap,
-        "javascript": JavaScriptStoryMap,
-        "java": JavaStoryMap,
+        "typescript": TypeScriptStoryModel,
+        "python": PythonStoryModel,
+        "javascript": JavaScriptStoryModel,
+        "java": JavaStoryModel,
     }
     story_map_type = maps[target]
     _write_tree(folder, story_map_type(source).save())
@@ -390,12 +394,17 @@ with shared_context("a story map saved through a channel"):
                 check_epics(actual_epic.epics, expected_epic.epics)
 
         check_epics(actual.epics, expected.epics)
+        if self.channel == "codeql":
+            from practices.clean_engineering.model.codeql.codeql_model import OoadClass
+
+            if self.loaded.graph.nodes_of_type(OoadClass):
+                _expect_clean_engineering_relationships(self.loaded)
 
 
 def _open_codeql(example, source_name: str) -> None:
     _open(example, source_name, "codeql")
     folder = ACTUAL / f"from-{source_name}" / "to-codeql"
-    example.source = TypeScriptStoryMap().load(_read_tree(folder))
+    example.source = TypeScriptStoryModel().load(_read_tree(folder))
 
 
 def _open(example, source_name: str, target: str) -> None:
@@ -589,3 +598,40 @@ with describe("a story map"):
                 _open_codeql(self, "typescript")
             with included_context("a story map saved through a channel"):
                 pass
+
+with describe("a story model populated from the stored codeql database"):
+    with it("should write the typescript stories and keep the clean engineering associations"):
+        from harness.knowledge_graph.model.graph_node import Kind
+        from practices.stories.model.codeql.codeql_model import Example
+
+        populated = CodeQLStoryModel.load_content(EXPECTED / "codeql")
+        expected = TypeScriptStoryModel().load(_expected_typescript())
+        expect(_story_names(walk(populated))).to(equal(_story_names(walk(expected))))
+        written = TypeScriptStoryModel(populated).save()
+        again = TypeScriptStoryModel().load(written)
+        expect(_story_names(walk(again))).to(equal(_story_names(walk(populated))))
+        _expect_clean_engineering_relationships(populated)
+
+
+def _expect_clean_engineering_relationships(populated) -> None:
+    """Story edges that name a class, and the class-model edges those classes hold."""
+    from harness.knowledge_graph.model.graph_node import Kind
+    from practices.clean_engineering.model.codeql.codeql_model import OoadClass
+    from practices.stories.model.codeql.codeql_model import Example
+
+    graph = populated.graph
+    linked = [
+        example
+        for example in graph.nodes_of_type(Example)
+        if example.related(Kind.DEMONSTRATES)
+    ]
+    expect(len(linked) > 0).to(equal(True))
+    classes = graph.nodes_of_type(OoadClass)
+    expect(len(classes) > 0).to(equal(True))
+    owned_members = [
+        node
+        for cls in classes
+        for node in cls.related(Kind.OWNS)
+        if node.semantic_type() in ("Operation", "Property")
+    ]
+    expect(len(owned_members) > 0).to(equal(True))

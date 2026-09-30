@@ -11,11 +11,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from practices.stories.model.code_story_model import CodeStoryMapError
-from practices.stories.model.javascript.javascript_story_model import JavaScriptStoryMap
+from practices.stories.model.code_story_model import CodeStoryModelError
+from practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from practices.stories.model.story_model import StepType, Scenario, Step
-from practices.stories.model.story_model import StoryMap
+from practices.stories.model.story_model import StoryModel
 
 
 def _make_scenario(name: str, order: int, given_text: str = "a context") -> Scenario:
@@ -28,8 +28,8 @@ def _make_scenario(name: str, order: int, given_text: str = "a context") -> Scen
     return sc
 
 
-def _story_map_with_stories() -> StoryMap:
-    story_map = StoryMap()
+def _story_map_with_stories() -> StoryModel:
+    story_map = StoryModel()
     for i in range(1, 5):
         story_map.append_epic(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
@@ -50,7 +50,7 @@ def _story_map_with_stories() -> StoryMap:
 
 with description("a JavaScript story-spec Story Map") as self:
     with before.each:
-        self.js = JavaScriptStoryMap()
+        self.js = JavaScriptStoryModel()
 
     with context(
         "that holds a rendered code Story Map with 4 Epics and 3 Epics under the first Epic"
@@ -101,7 +101,7 @@ with description("a JavaScript story-spec Story Map") as self:
 
     with context("that is not a valid JavaScript story-spec tree"):
         with it("should reject parse"):
-            expect(lambda: self.js.parse("not a tree")).to(raise_error(CodeStoryMapError))
+            expect(lambda: self.js.parse("not a tree")).to(raise_error(CodeStoryModelError))
 
     with context("for explore/spec story files"):
         with before.each:

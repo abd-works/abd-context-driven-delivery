@@ -1,5 +1,6 @@
 /**
  * Epic: Create Customer
+ * Orders: 0.0.1
  */
 
 import { scenario, story } from "tests/story-test";
@@ -31,7 +32,6 @@ story('Enter Validation Code', () => {
 
 /**
  * Story: Confirm Cognito User
- * Actor: My Paradise
  */
 
 story('Confirm Cognito User', () => {
@@ -40,7 +40,6 @@ story('Confirm Cognito User', () => {
 
 /**
  * Story: Issue Account Token To Browser Session
- * Actor: My Paradise
  */
 
 story('Issue Account Token To Browser Session', () => {
@@ -49,7 +48,6 @@ story('Issue Account Token To Browser Session', () => {
 
 /**
  * Story: Validate Mavenir Customer in Cognito User Attributes
- * Actor: My Paradise
  */
 
 story('Validate Mavenir Customer in Cognito User Attributes', () => {
@@ -58,7 +56,6 @@ story('Validate Mavenir Customer in Cognito User Attributes', () => {
 
 /**
  * Story: Submit Create Customer Request to Mid-Tier
- * Actor: My Paradise
  */
 
 story('Submit Create Customer Request to Mid-Tier', () => {
@@ -67,7 +64,6 @@ story('Submit Create Customer Request to Mid-Tier', () => {
 
 /**
  * Story: Validate Cognito User
- * Actor: My Paradise
  */
 
 story('Validate Cognito User', () => {
@@ -76,7 +72,6 @@ story('Validate Cognito User', () => {
 
 /**
  * Story: Submit Create Mavenir Customer
- * Actor: My Paradise
  */
 
 story('Submit Create Mavenir Customer', () => {
@@ -94,7 +89,6 @@ story('Create Customer', () => {
 
 /**
  * Story: Store Mavenir Customer Id on Cognito User
- * Actor: My Paradise
  */
 
 story('Store Mavenir Customer Id on Cognito User', () => {
@@ -103,7 +97,6 @@ story('Store Mavenir Customer Id on Cognito User', () => {
 
 /**
  * Story: Load My Paradise Customer From Midtier And Store In Session
- * Actor: My Paradise
  */
 
 story('Load My Paradise Customer From Midtier And Store In Session', () => {
@@ -112,7 +105,6 @@ story('Load My Paradise Customer From Midtier And Store In Session', () => {
 
 /**
  * Story: Get Mavenir Customer and Transform To My Paradise Customer And Return
- * Actor: My Paradise
  */
 
 story('Get Mavenir Customer and Transform To My Paradise Customer And Return', () => {
@@ -121,7 +113,6 @@ story('Get Mavenir Customer and Transform To My Paradise Customer And Return', (
 
 /**
  * Story: Get Mavenir Customer
- * Actor: My Paradise
  */
 
 story('Get Mavenir Customer', () => {
@@ -130,7 +121,6 @@ story('Get Mavenir Customer', () => {
 
 /**
  * Story: Ensure Cart on Customer
- * Actor: My Paradise
  */
 
 story('Ensure Cart on Customer', () => {
@@ -139,7 +129,6 @@ story('Ensure Cart on Customer', () => {
 
 /**
  * Story: Fix Orphan Cognito Account
- * Actor: My Paradise
  */
 
 story('Fix Orphan Cognito Account', () => {
@@ -148,7 +137,6 @@ story('Fix Orphan Cognito Account', () => {
 
 /**
  * Story: Read False Initial Activation
- * Actor: My Paradise
  */
 
 story('Read False Initial Activation', () => {
@@ -157,7 +145,6 @@ story('Read False Initial Activation', () => {
 
 /**
  * Story: Sign In With Existing Account
- * Actor: My Paradise
  */
 
 story('Sign In With Existing Account', () => {

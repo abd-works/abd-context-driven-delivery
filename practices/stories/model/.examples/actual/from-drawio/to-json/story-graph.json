@@ -77,55 +77,37 @@
               "name": "Confirm Cognito User",
               "sequentialOrder": 4,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Issue Account Token To Browser Session",
               "sequentialOrder": 5,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Validate Mavenir Customer in Cognito User Attributes",
               "sequentialOrder": 6,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Submit Create Customer Request to Mid-Tier",
               "sequentialOrder": 7,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Validate Cognito User",
               "sequentialOrder": 8,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Submit Create Mavenir Customer",
               "sequentialOrder": 9,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Create Customer",
@@ -140,73 +122,49 @@
               "name": "Store Mavenir Customer Id on Cognito User",
               "sequentialOrder": 11,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Load My Paradise Customer From Midtier And Store In Session",
               "sequentialOrder": 12,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Get Mavenir Customer and Transform To My Paradise Customer And Return",
               "sequentialOrder": 13,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Get Mavenir Customer",
               "sequentialOrder": 14,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Ensure Cart on Customer",
               "sequentialOrder": 15,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Fix Orphan Cognito Account",
               "sequentialOrder": 16,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Read False Initial Activation",
               "sequentialOrder": 17,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Sign In With Existing Account",
               "sequentialOrder": 18,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             }
           ]
         },
@@ -228,37 +186,25 @@
               "name": "Query Msisdn Inventory",
               "sequentialOrder": 2,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "List Msisdn Resources",
               "sequentialOrder": 3,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Search Msisdn Inventory",
               "sequentialOrder": 4,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Search Msisdn Resources",
               "sequentialOrder": 5,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Choose a Number",
@@ -273,145 +219,97 @@
               "name": "Submit Reserve Number Request to Mid-Tier",
               "sequentialOrder": 7,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Submit Reserve Msisdn",
               "sequentialOrder": 8,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Reserve Msisdn Resource",
               "sequentialOrder": 9,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Submit Patch Cart With Number Request to Mid-Tier",
               "sequentialOrder": 10,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Patch Cart With Number",
               "sequentialOrder": 11,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Patch Shopping Cart",
               "sequentialOrder": 12,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Bring a Number",
               "sequentialOrder": 13,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Confirm Number Already With Paradise",
               "sequentialOrder": 14,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Evaluate Porting Two Factor Flag",
               "sequentialOrder": 15,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Submit Portability Request to Mid-Tier",
               "sequentialOrder": 16,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Patch Cart With Portability",
               "sequentialOrder": 17,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Send Port Verification",
               "sequentialOrder": 18,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Send Verification Sms",
               "sequentialOrder": 19,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Enter Porting Sms Code",
               "sequentialOrder": 20,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Check Port Verification",
               "sequentialOrder": 21,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Check Verification",
               "sequentialOrder": 22,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Keep Current Number",
@@ -472,28 +370,19 @@
               "name": "Patch Cart With Plan",
               "sequentialOrder": 5,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Patch Shopping Cart",
               "sequentialOrder": 6,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Keep Current Plan",
               "sequentialOrder": 7,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             }
           ]
         },
@@ -515,37 +404,25 @@
               "name": "Request a Paradise Sim Card",
               "sequentialOrder": 2,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Enter Existing Sim",
               "sequentialOrder": 3,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Activate Sim",
               "sequentialOrder": 4,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Complete Draft Sim Order",
               "sequentialOrder": 5,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             }
           ]
         },
@@ -592,19 +469,13 @@
               "name": "Upgrade To Data Freedom",
               "sequentialOrder": 2,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Change Plan From Review",
               "sequentialOrder": 3,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             }
           ]
         },
@@ -626,10 +497,7 @@
               "name": "Evaluate Payment Flags",
               "sequentialOrder": 2,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Authorize Card",
@@ -644,10 +512,7 @@
               "name": "Provide Apple Pay Certificate",
               "sequentialOrder": 4,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "Adjust Credit Manually",
@@ -678,10 +543,7 @@
               "name": "Create Product Order",
               "sequentialOrder": 2,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "My Paradise"
-              ]
+              "scenarios": []
             },
             {
               "name": "View Order Result",
@@ -752,28 +614,19 @@
               "name": "Reset Password",
               "sequentialOrder": 2,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Edit Profile",
               "sequentialOrder": 3,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Sign Out",
               "sequentialOrder": 4,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             }
           ]
         },
@@ -795,19 +648,13 @@
               "name": "Pay Now",
               "sequentialOrder": 2,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Enter New Payment Method",
               "sequentialOrder": 3,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             }
           ]
         },
@@ -829,28 +676,19 @@
               "name": "Change Plan",
               "sequentialOrder": 2,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Request Line Portability",
               "sequentialOrder": 3,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Purchase Device",
               "sequentialOrder": 4,
               "storyType": "user",
-              "scenarios": [],
-              "actors": [
-                "Customer"
-              ]
+              "scenarios": []
             },
             {
               "name": "Send Support Request",

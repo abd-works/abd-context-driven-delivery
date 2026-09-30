@@ -14,7 +14,6 @@ from practices.clean_engineering.model.base_class_model import (
     OoadClass as SourceClass,
 )
 from practices.clean_engineering.model.codeql.codeql_model import File as SourceFile
-from practices.clean_engineering.model.field_types import Relationship
 from practices.clean_engineering.model.operation import Operation
 from practices.clean_engineering.model.property import Property
 from practices.clean_engineering.model.operation import Operation as SourceOperation
@@ -86,20 +85,18 @@ class OoadClassTransformer(Transformer, SourceClass):
     @property
     def base_imports(self) -> list[ImportBinding]:
         index = getattr(self, "class_index", {})
-        bindings = []
-        for rel in self.relationships:
-            if rel.kind != "inheritance":
-                continue
-            target = index.get(rel.target)
-            if target is None:
-                continue
-            file_module = _to_snake(rel.target)
-            if target.module_name == self.module_name:
-                module = f".{file_module}"
-            else:
-                module = f"{_to_snake(target.module_name)}.{file_module}"
-            bindings.append(ImportBinding(module, rel.target))
-        return bindings
+        base = getattr(self, "extends", "") or ""
+        if not base:
+            return []
+        target = index.get(base)
+        if target is None:
+            return []
+        file_module = _to_snake(base)
+        if target.module_name == self.module_name:
+            module = f".{file_module}"
+        else:
+            module = f"{_to_snake(target.module_name)}.{file_module}"
+        return [ImportBinding(module, base)]
 
     def children(self) -> list:
         return list(self.property_nodes) + list(self.operation_nodes)
@@ -200,11 +197,10 @@ def _add_class(
         return None
     name, base = _split_base(stripped)
     oclass = OoadClassTransformer(name, _next_order(host.classes))
+    oclass.extends = base or ""
     oclass.module_name = host.name
     oclass.class_index = host.class_index
     host.class_index[name] = oclass
-    if base:
-        oclass.relationships.append(Relationship(target=base, kind="inheritance"))
     host.classes.append(oclass)
     return oclass
 

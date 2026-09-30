@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from story_test import and_, background, given, scenario, story, then, when
+from examples import enteredValidAccountCredentials, storedAccountCredentialsWithToken
+
 
 # Epic: Load Customer
+# Orders: 0.0.0.2
 
 # Story: Load My Paradise Customer From Midtier And Store In Session
 with story("Load My Paradise Customer From Midtier And Store In Session"):
@@ -10,6 +13,7 @@ with story("Load My Paradise Customer From Midtier And Store In Session"):
         with given("Mavenir has a customer and the Cognito user holds its id"):
             pass
         with scenario("Load My Paradise Customer From Midtier And Store In Session"):
+            # examples: enteredValidAccountCredentials
             with when("My Paradise loads the customer through Midtier"):
                 pass
             with then("My Paradise calls Midtier with the correct customer id"):
@@ -26,6 +30,7 @@ with story("Load My Paradise Customer From Midtier And Store In Session"):
             with and_("My Paradise shows Something went wrong when loading your account"):
                 pass
         with scenario("Terminated account"):
+            # examples: storedAccountCredentialsWithToken
             with given("the Customer has an account token"):
                 pass
             with and_("the Mavenir customer billing state is terminated"):

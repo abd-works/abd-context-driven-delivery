@@ -1,0 +1,11 @@
+[2026-09-29 22:21:53] This is codeql database run-queries --threads=0 --quiet C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql -- C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\classes.ql C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\operations.ql C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\parameters.ql C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\properties.ql C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\calls.ql
+[2026-09-29 22:21:53] Log file was started late.
+[2026-09-29 22:21:53] Calling plumbing command: codeql resolve ram --dataset=C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript --format=json
+[2026-09-29 22:21:53] Plumbing command codeql resolve ram completed:
+                      [
+                        "-J-Xmx1800M",
+                        "--off-heap-ram=1299"
+                      ]
+[2026-09-29 22:21:54] Spawning plumbing command: execute queries -J-Xmx1800M --off-heap-ram=1299 --verbosity=warnings --logdir=C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\log --evaluator-log-level=5 --threads=0 --warnings=show --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --dynamic-join-order-mode=none --output=C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\results -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\classes.ql C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\operations.ql C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\parameters.ql C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\properties.ql C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\codeql\javascript\calls.ql
+[2026-09-29 22:22:16] Plumbing command codeql execute queries terminated with status 0.
+[2026-09-29 22:22:16] Exiting with code 0

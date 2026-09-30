@@ -22,6 +22,7 @@ _CODEQL_QUERIES = (
     / "model"
     / "codeql"
 )
+_FACT_QUERIES = ("classes", "operations", "parameters", "properties", "calls")
 _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet")
 
 
@@ -335,11 +336,21 @@ class CodeQL:
                 return
             time.sleep(0.4)
 
+    def _query_pack(self, language: str) -> Path:
+        pack = _CODEQL_QUERIES / language
+        if (pack / "qlpack.yml").is_file():
+            return pack
+        return _CODEQL_QUERIES
+
+    def _fact_query(self, name: str) -> tuple[Path, Path]:
+        language = self.detect_language()
+        self._database_language = language
+        return self._query_pack(language) / f"{name}.ql", self.ensure_database(language)
+
     def class_rows(self, tuples: List[list] | None = None) -> Rows:
         if tuples is None:
-            tuples = self.run_query_tuples(
-                _CODEQL_QUERIES / "classes.ql", self.ensure_database("python")
-            )
+            query, database = self._fact_query("classes")
+            tuples = self.run_query_tuples(query, database)
         return Rows(
             {
                 "name": self._cell(row, 0),
@@ -354,9 +365,8 @@ class CodeQL:
 
     def operation_rows(self, tuples: List[list] | None = None) -> Rows:
         if tuples is None:
-            tuples = self.run_query_tuples(
-                _CODEQL_QUERIES / "operations.ql", self.ensure_database("python")
-            )
+            query, database = self._fact_query("operations")
+            tuples = self.run_query_tuples(query, database)
         return Rows(
             {
                 "class_name": self._cell(row, 0),
@@ -372,9 +382,8 @@ class CodeQL:
 
     def parameter_rows(self, tuples: List[list] | None = None) -> Rows:
         if tuples is None:
-            tuples = self.run_query_tuples(
-                _CODEQL_QUERIES / "parameters.ql", self.ensure_database("python")
-            )
+            query, database = self._fact_query("parameters")
+            tuples = self.run_query_tuples(query, database)
         return Rows(
             {
                 "class_name": self._cell(row, 0),
@@ -390,9 +399,8 @@ class CodeQL:
 
     def property_rows(self, tuples: List[list] | None = None) -> Rows:
         if tuples is None:
-            tuples = self.run_query_tuples(
-                _CODEQL_QUERIES / "properties.ql", self.ensure_database("python")
-            )
+            query, database = self._fact_query("properties")
+            tuples = self.run_query_tuples(query, database)
         return Rows(
             {
                 "class_name": self._cell(row, 0),
@@ -401,6 +409,10 @@ class CodeQL:
                 "line": self._int_cell(row, 3),
                 "file": self._cell(row, 4),
                 "end_line": self._int_cell(row, 5),
+                "type_hint": self._cell(row, 6),
+                "stereotype": self._cell(row, 7),
+                "cardinality": self._cell(row, 8),
+                "origin": self._cell(row, 9),
             }
             for row in tuples
             if self._cell(row, 0) and self._cell(row, 1)
@@ -408,9 +420,8 @@ class CodeQL:
 
     def call_rows(self, tuples: List[list] | None = None) -> Rows:
         if tuples is None:
-            tuples = self.run_query_tuples(
-                _CODEQL_QUERIES / "calls.ql", self.ensure_database("python")
-            )
+            query, database = self._fact_query("calls")
+            tuples = self.run_query_tuples(query, database)
         return Rows(
             {
                 "caller_class": self._cell(row, 0),
@@ -871,8 +882,8 @@ class CodeQL:
         if not populate and database is None:
             return
         db = database if database is not None else self.ensure_database(language)
-        self._write_subject_filter(_CODEQL_QUERIES, path_root=self._ql_path_root(db))
         populate_queries = self._populate_query_paths()
+        self._write_subject_filter(populate_queries[0].parent, path_root=self._ql_path_root(db))
         print(f"run-queries populate ({len(populate_queries)} queries) ...", flush=True)
         started = time.perf_counter()
         batch = self.run_queries(populate_queries, db)
@@ -887,13 +898,8 @@ class CodeQL:
         self._apply_fact_batch(graph)
 
     def _populate_query_paths(self) -> List[Path]:
-        return [
-            _CODEQL_QUERIES / "classes.ql",
-            _CODEQL_QUERIES / "operations.ql",
-            _CODEQL_QUERIES / "parameters.ql",
-            _CODEQL_QUERIES / "properties.ql",
-            _CODEQL_QUERIES / "calls.ql",
-        ]
+        pack = self._query_pack(self._database_language)
+        return [pack / f"{name}.ql" for name in _FACT_QUERIES]
 
     def _ready_database(self, language: str = "python") -> Path | None:
         working = self.root / ".codeql" / f"{language}-working-copy"
@@ -905,8 +911,6 @@ class CodeQL:
         return None
 
     def _load_cached_facts(self, graph: PracticeGraph) -> bool:
-        if self.detect_language() != "python":
-            return False
         try:
             self.load_existing_facts(graph, results_path=self._pending_results)
             return True
@@ -979,7 +983,7 @@ class CodeQL:
             CleanEngineeringModel,
             GraphMemberRows,
         )
-        from practices.stories.model.codeql.codeql_model import StoryMap
+        from practices.stories.model.codeql.codeql_model import StoryModel
 
         model = CleanEngineeringModel("CleanEngineering", 1)
         rows = GraphMemberRows(class_rows, property_rows)
@@ -991,7 +995,7 @@ class CodeQL:
         )
         model.wire_calls(graph, call_rows)
         if raw:
-            StoryMap().ensure(graph, raw)
+            StoryModel().ensure(graph, raw)
 
     def _optional_json(self, results_path) -> Optional[dict]:
         path = self.results_path(Path(results_path) if results_path else None)

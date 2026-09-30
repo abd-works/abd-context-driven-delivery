@@ -1,5 +1,6 @@
 /**
  * Epic: Manage Billing
+ * Orders: 0.1.1
  */
 
 import { scenario, story } from "tests/story-test";
@@ -15,7 +16,6 @@ story('View Billing', () => {
 
 /**
  * Story: Pay Now
- * Actor: Customer
  */
 
 story('Pay Now', () => {
@@ -24,7 +24,6 @@ story('Pay Now', () => {
 
 /**
  * Story: Enter New Payment Method
- * Actor: Customer
  */
 
 story('Enter New Payment Method', () => {

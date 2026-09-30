@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from story_test import and_, background, given, scenario, story, then, when
+from examples import enteredValidAccountCredentials
+
 
 # Epic: Verify Account
+# Orders: 0.0.0.3
 
 # Story: Enter Validation Code
 with story("Enter Validation Code"):
@@ -16,6 +19,7 @@ with story("Enter Validation Code"):
         with and_("the User has account credentials with valid email and password"):
             pass
         with scenario("Enter validation code"):
+            # examples: enteredValidAccountCredentials
             with when("the User activates the account with the emailed validation code"):
                 pass
             with then("My Paradise sends the correct confirmation request to Cognito"):
@@ -24,7 +28,7 @@ with story("Enter Validation Code"):
                 pass
             with and_("Cognito issues an account token for the browser session"):
                 pass
-            with and_("no Mavenir customer exists for those account credentials"):
+            with but_("no Mavenir customer exists for those account credentials"):
                 pass
         with scenario("Resend validation code"):
             with when("more than 60 seconds has passed"):

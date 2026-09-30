@@ -118,7 +118,9 @@ class CartRepository {
 }
 
 class CartException {
+  // << association >>
   operation: CartOperation;
+  // << association >>
   customer: Customer;
   message: string;
   cause: Error;

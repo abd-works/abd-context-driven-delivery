@@ -24,8 +24,9 @@ from practices.stories.model.codeql.codeql_model import (
     Scenario,
     Step,
     Story,
-    StoryMap,
+    StoryModel,
 )
+from practices.stories.model.story_model import StepType
 
 _FILE = "stories/load_customer_story.test.ts"
 
@@ -34,8 +35,12 @@ def _names(nodes) -> list:
     return [node.name for node in nodes]
 
 
+def self_examples(node) -> list:
+    return [child for child in node.related(Kind.OWNS) if child.semantic_type() == "Example"]
+
+
 with description("Stories CodeQL cross-practice relationships"):
-    with it("should wire step phase edges and roll invokes and observes up to the story"):
+    with it("should own examples on the step and roll invokes up to the story"):
         graph = PracticeGraph(_REPO_ROOT)
         module = Module("Customer", 1)
         graph.register(module)
@@ -52,7 +57,7 @@ with description("Stories CodeQL cross-practice relationships"):
         customer.relate(Kind.OWNS, identity)
         identity.relate(Kind.BELONGS_TO, customer)
 
-        StoryMap().ensure(
+        StoryModel().ensure(
             graph,
             {
                 "stories": [
@@ -153,24 +158,73 @@ with description("Stories CodeQL cross-practice relationships"):
         then = next(step for step in steps if step.text == "the identity is stored")
         expect(given_steps).to(have_length(2))
         for given in given_steps:
-            expect(_names(given.related(Kind.LOADS))).to(contain("storedCustomer"))
+            expect(_names(self_examples(given))).to(contain("storedCustomer"))
         expect(when.related(Kind.INVOKES)).to(equal([load]))
-        expect(_names(then.related(Kind.OBSERVES))).to(equal(["storedCustomer"]))
-        expect(then.related(Kind.OBSERVES)[0].related(Kind.RETRIEVED_USING)).to(equal([identity]))
-        expect(then.related(Kind.OBSERVES)[0].related(Kind.DEMONSTRATES)).to(equal([customer]))
+        owned = self_examples(then)
+        expect(_names(owned)).to(equal(["storedCustomer"]))
+        expect(owned[0].related(Kind.RETRIEVED_USING)).to(equal([identity]))
+        expect(owned[0].related(Kind.DEMONSTRATES)).to(equal([customer]))
 
         scenario = graph.nodes_of_type(Scenario)[0]
         expect(scenario.related(Kind.INVOKES)).to(equal([load]))
-        expect(_names(scenario.related(Kind.OBSERVES))).to(equal(["storedCustomer"]))
+        expect(self_examples(scenario)).to(equal([]))
 
         story = graph.nodes_of_type(Story)[0]
         expect(story.related(Kind.INVOKES)).to(equal([load]))
-        expect(_names(story.related(Kind.OBSERVES))).to(equal(["storedCustomer"]))
+        expect(self_examples(story)).to(equal([]))
 
         background = graph.nodes_of_type(Background)[0]
-        expect(_names(background.related(Kind.LOADS))).to(equal(["storedCustomer"]))
+        expect(_names(self_examples(background))).to(equal(["storedCustomer"]))
 
         epics = graph.nodes_of_type(Epic)
         for epic in epics:
             expect(epic.related(Kind.USES)).to(have_length(1))
             expect(epic.related(Kind.USES)[0]).to(equal(module))
+
+    with it("should invoke the operation a when step calls in its body"):
+        import tempfile
+
+        folder = Path(tempfile.mkdtemp())
+        story_file = folder / _FILE
+        story_file.parent.mkdir(parents=True)
+        story_file.write_text(
+            "\n" * 13
+            + "      when('My Paradise loads the customer', () => {\n"
+            + "        customerRepository.load(id);\n"
+            + "      });\n",
+            encoding="utf-8",
+        )
+        graph = PracticeGraph(folder)
+        module = Module("Customer", 1)
+        graph.register(module)
+        repository = OoadClass("CustomerRepository", 1)
+        graph.register(repository)
+        module.relate(Kind.OWNS, repository)
+        load = Operation("load", 1)
+        graph.register(load)
+        repository.relate(Kind.OWNS, load)
+        load.relate(Kind.BELONGS_TO, repository)
+        StoryModel().ensure(
+            graph,
+            {
+                "stories": [
+                    {"name": "Load customer", "file": _FILE, "line": 1, "epic": "Onboard"}
+                ],
+                "scenarios": [
+                    {"name": "customer exists", "story": "Load customer", "file": _FILE, "line": 10}
+                ],
+                "steps": [
+                    {
+                        "keyword": "when",
+                        "text": "My Paradise loads the customer",
+                        "story": "Load customer",
+                        "file": _FILE,
+                        "line": 14,
+                        "end_line": 16,
+                        "scenario": "customer exists",
+                    }
+                ],
+            },
+        )
+        when = next(step for step in graph.nodes_of_type(Step) if step.step_type == StepType.WHEN)
+        expect(when.related(Kind.INVOKES)).to(equal([load]))

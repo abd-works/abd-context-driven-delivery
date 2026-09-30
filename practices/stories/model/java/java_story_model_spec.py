@@ -10,15 +10,15 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from practices.stories.model.code_story_model import CodeStoryMapError
-from practices.stories.model.java.java_story_model import JavaStoryMap
+from practices.stories.model.code_story_model import CodeStoryModelError
+from practices.stories.model.java.java_story_model import JavaStoryModel
 from practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from practices.stories.model.story_model import Scenario
-from practices.stories.model.story_model import StoryMap
+from practices.stories.model.story_model import StoryModel
 
 
-def _story_map_with_stories() -> StoryMap:
-    story_map = StoryMap()
+def _story_map_with_stories() -> StoryModel:
+    story_map = StoryModel()
     for i in range(1, 5):
         story_map.append_epic(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
@@ -34,7 +34,7 @@ def _story_map_with_stories() -> StoryMap:
 
 with description("a Java runnable-story Story Map") as self:
     with before.each:
-        self.java = JavaStoryMap()
+        self.java = JavaStoryModel()
 
     with context("that holds rendered stories"):
         with before.each:
@@ -64,4 +64,4 @@ with description("a Java runnable-story Story Map") as self:
 
     with context("invalid parse input"):
         with it("should reject"):
-            expect(lambda: self.java.parse("not a tree")).to(raise_error(CodeStoryMapError))
+            expect(lambda: self.java.parse("not a tree")).to(raise_error(CodeStoryModelError))

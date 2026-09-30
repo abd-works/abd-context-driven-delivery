@@ -3,13 +3,15 @@ from __future__ import annotations
 from story_test import and_, background, given, scenario, story, then, when
 
 # Epic: Get Verified Profile
+# Orders: 0.0.5
 
 # Story: Customer Complete Persona Kyc
 # Actor: Customer
 with story("Customer Complete Persona Kyc"):
-    with background.each:
         with scenario("Persona verification required"):
-            with then("no idNumber on ++identity++"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
+            with but_("no idNumber on ++identity++"):
                 pass
             with when("the Customer validates whether a Persona inquiry is required"):
                 pass
@@ -18,6 +20,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the Customer is on the Profile KYC step"):
                 pass
         with scenario("Persona verification already complete"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the Customer has ++identity++ with an idNumber"):
                 pass
             with when("the Customer validates whether a Persona inquiry is required"):
@@ -27,6 +31,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the Customer is forwarded to Checkout"):
                 pass
         with scenario("Create a completed Persona inquiry"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the Customer has no idNumber on ++identity++"):
                 pass
             with when("the Customer creates a Persona inquiry"):
@@ -48,6 +54,8 @@ with story("Customer Complete Persona Kyc"):
             with then("++identity++ expiry date is the ++Persona document++ expiration date"):
                 pass
         with scenario("Persona inquiry not completed"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with when("the Customer creates a Persona inquiry"):
                 pass
             with then("My Paradise sends the inquiry request to Persona with the Customer email"):
@@ -59,6 +67,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("++identity++ and ++address++ stay empty"):
                 pass
         with scenario("No government ID document on inquiry"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the completed ++Persona inquiry++ has no government ID document"):
                 pass
             with when("the Customer creates a Persona inquiry"):
@@ -72,6 +82,8 @@ with story("Customer Complete Persona Kyc"):
             with then("++identity++ expiry date is empty"):
                 pass
         with scenario("Persona errors on inquiry load"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with when("the Customer creates a Persona inquiry"):
                 pass
             with then("My Paradise sends the inquiry request to Persona"):
@@ -83,6 +95,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("++identity++ stays empty"):
                 pass
         with scenario("Document not found"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("Persona has no ++Persona document++ for that document ID"):
                 pass
             with when("the Customer creates a Persona inquiry"):
@@ -94,6 +108,8 @@ with story("Customer Complete Persona Kyc"):
             with then("++identity++ expiry date is empty"):
                 pass
         with scenario("Document email mismatch"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the ++Persona document++ email does not match the Customer email"):
                 pass
             with when("the Customer creates a Persona inquiry"):
@@ -105,6 +121,8 @@ with story("Customer Complete Persona Kyc"):
             with then("++identity++ expiry date is empty"):
                 pass
         with scenario("Verify later"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the Customer has a ++My Paradise customer++ with no idNumber on ++identity++"):
                 pass
             with when("the Customer proceeds without a Persona inquiry"):
@@ -116,6 +134,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the Customer is still on the Profile KYC step"):
                 pass
         with scenario("Enter valid identity and address"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the Customer has a ++My Paradise customer++ in session"):
                 pass
             with when("the Customer enters ++identity++ ++valid identity++ and ++address++ ++valid address++"):
@@ -125,6 +145,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the Customer can confirm their identity"):
                 pass
         with scenario("Enter identity after a verified Persona inquiry"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the Customer has a verified ++Persona inquiry++ mapped onto ++identity++ ++valid identity++"):
                 pass
             with when("the Customer enters the mapped ++identity++ and ++address++"):
@@ -134,6 +156,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the ID fields are present on ++identity++"):
                 pass
         with scenario("Re-enter a verified identity"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the Customer has ++identity++ ++valid identity++ already verified"):
                 pass
             with when("the Customer re-enters ++identity++ ++valid identity++"):
@@ -143,6 +167,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the Customer can confirm their identity again"):
                 pass
         with scenario("Enter incomplete identity or address"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with when("the Customer enters ++identity++ and ++address++ with {field} empty"):
                 pass
             with then("{field} is missing"):
@@ -150,6 +176,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the Customer cannot confirm their identity"):
                 pass
         with scenario("Confirm identity with a verified Persona inquiry"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the Customer has entered ++identity++ ++valid identity++ and ++address++ ++valid address++"):
                 pass
             with and_("the Customer has a verified ++Persona inquiry++"):
@@ -169,6 +197,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the ++Persona inquiry++ is cleared"):
                 pass
         with scenario("Profile requirements unmet"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("the Customer has not entered ++identity++ or ++address++"):
                 pass
             with when("the Customer confirms their identity"):
@@ -178,6 +208,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("My Paradise does not send a profile patch to Mavenir"):
                 pass
         with scenario("Customer already exists"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("another Mavenir customer already has ++identity++ idNumber I1234562"):
                 pass
             with when("the Customer confirms their identity"):
@@ -187,6 +219,8 @@ with story("Customer Complete Persona Kyc"):
             with and_("the identity cannot be confirmed because a customer with that information already exists"):
                 pass
         with scenario("Mavenir profile patch error"):
+            # background: background
+            # background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
             with given("Mavenir returns a profile patch error"):
                 pass
             with when("the Customer confirms their identity"):
@@ -199,7 +233,6 @@ with story("Customer Complete Persona Kyc"):
 # Story: Collect Identity With Brand Amassador
 # Actor: Ambassador
 with story("Collect Identity With Brand Amassador"):
-    with background.each:
         with scenario("Collect identity with Brand Ambassador"):
             with given("the Customer is choosing how to verify their ID"):
                 pass

@@ -1,8 +1,11 @@
 /**
  * Epic: Load Customer
+ * Orders: 0.0.0.2
  */
 
 import { background, scenario, story } from "../../story-test.js";
+import { enteredValidAccountCredentials, storedAccountCredentialsWithToken } from "./examples";
+
 
 /**
  * Story: Load My Paradise Customer From Midtier And Store In Session
@@ -11,7 +14,9 @@ import { background, scenario, story } from "../../story-test.js";
 story('Load My Paradise Customer From Midtier And Store In Session', () => {
   background('each', ({ given }) => {
     given('Mavenir has a customer and the Cognito user holds its id', () => {});
+  });
     scenario('Load My Paradise Customer From Midtier And Store In Session', ({ given, when, then }) => {
+      // examples: enteredValidAccountCredentials
       when('My Paradise loads the customer through Midtier', () => {});
       then('My Paradise calls Midtier with the correct customer id', () => {}).and('Midtier maps the Mavenir contact medium to Paradise identity and address', () => {});
     });
@@ -21,9 +26,9 @@ story('Load My Paradise Customer From Midtier And Store In Session', () => {
       then('My Paradise signs the User out', () => {}).and('My Paradise shows Something went wrong when loading your account', () => {});
     });
     scenario('Terminated account', ({ given, when, then }) => {
+      // examples: storedAccountCredentialsWithToken
       given('the Customer has an account token', () => {}).and('the Mavenir customer billing state is terminated', () => {});
       when('My Paradise loads the customer', () => {});
       then('My Paradise signs the Customer out', () => {}).and('the Customer account is terminated', () => {});
     });
-  });
 });

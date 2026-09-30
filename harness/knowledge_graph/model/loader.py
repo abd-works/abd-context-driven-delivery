@@ -10,7 +10,7 @@ from practices.clean_engineering.model.base_class_model import CleanEngineeringM
 from practices.ddd.model.nodes import Aggregate, BoundedContext, Entity as DddEntity
 from practices.clean_engineering.model.operation import Operation as CeOperation
 from practices.clean_engineering.model.property import Property as CeProperty
-from practices.clean_engineering.model.type_refs import pascal_type_names
+from practices.clean_engineering.model.type_refs import domain_type_names, pascal_type_names
 from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
 from practices.stories.model.story_model import (
     Background,
@@ -19,11 +19,11 @@ from practices.stories.model.story_model import (
     Scenario,
     Step,
     Story,
-    StoryMap,
+    StoryModel,
     Epic,
 )
 
-from .graph_node import Kind
+from .graph_node import Kind, ownership_kind
 from practices.ddd.model import (
     is_identity_property,
     load_bounded_context_map,
@@ -55,7 +55,7 @@ from .nodes import (
     GraphScenario,
     GraphStep,
     GraphStory,
-    GraphStoryMap,
+    GraphStoryModel,
     GraphEpic,
     GraphValueObject,
     graph_ddd_class_for,
@@ -125,7 +125,7 @@ class GraphLoader:
         return loader
 
     def load(self, *, evaluate: bool = True) -> PracticeGraph:
-        self.graph.story_map = self._load_story_map(StoryMap.load(self.root))
+        self.graph.story_map = self._load_story_map(StoryModel.load(self.root))
         self.graph.ce_model = self._load_ce_model()
         self._index_story_epics()
         if self.graph.ce_model is not None:
@@ -133,9 +133,13 @@ class GraphLoader:
             self._wire_ddd_model()
         else:
             self._load_ddd_structure_from_map()
-        from .codeql_populate import populate_from_codeql
+        from .codeql import CodeQL
 
-        populate_from_codeql(self.graph, self.root, results_path=self._codeql_results)
+        CodeQL(self.root).populate(
+            self.graph,
+            populate=False,
+            results_path=self._codeql_results,
+        )
         self._derive_cross_module_dependencies()
         self._load_bdd_descriptions()
         if evaluate:
@@ -145,8 +149,8 @@ class GraphLoader:
     def attach(self, paths: list[Path]) -> None:
         return
 
-    def _load_story_map(self, story_map: StoryMap) -> GraphStoryMap:
-        target = GraphStoryMap.clone(story_map)
+    def _load_story_map(self, story_map: StoryModel) -> GraphStoryModel:
+        target = GraphStoryModel.clone(story_map)
         self.graph.register(target)
         return target
 
@@ -309,10 +313,15 @@ class GraphLoader:
             self._register_property(oclass, prop)
 
     def _wire_class_associations(self, oclass: OoadClass) -> None:
-        for rel in oclass.relationships:
+        props = oclass.property_nodes or oclass.properties
+        for prop in props:
+            rel = getattr(prop, "relationship", None)
+            if rel is None:
+                continue
             target = self.graph.class_named(rel.target)
-            if target is not None:
-                oclass.relate(Kind.ASSOCIATES, target)
+            if target is None:
+                continue
+            oclass.relate(ownership_kind(rel.kind), target, cardinality=rel.cardinality)
 
     def _wire_class_operations(self, oclass: OoadClass) -> None:
         self._owner_class_name = oclass.name
@@ -356,7 +365,7 @@ class GraphLoader:
         self._wire_type_hints(param, param.type_hint)
 
     def _wire_type_hints(self, node, type_hint: str) -> None:
-        for type_name in pascal_type_names(type_hint):
+        for type_name in domain_type_names(type_hint):
             target = self.graph.class_named(type_name)
             if target is not None:
                 node.relate(Kind.HAS_TYPE, target)
@@ -601,7 +610,8 @@ class GraphLoader:
     def _wire_identity_type(self, entity: DddEntity, prop) -> None:
         if prop.name != "identity":
             return
-        type_name = prop.type_hint.split("|")[0].strip().rstrip("[]")
+        names = domain_type_names(prop.type_hint)
+        type_name = names[0] if names else ""
         identity_cls = self.graph.class_named(type_name)
         if identity_cls is None:
             return
@@ -655,9 +665,10 @@ class GraphLoader:
             return
         self._external = {}
         self._collect_owned_externals(oclass)
-        for target in oclass.related(Kind.ASSOCIATES):
-            if isinstance(target, OoadClass):
-                self._maybe_external(oclass, target)
+        for kind in (Kind.ASSOCIATES, Kind.COMPOSITION, Kind.AGGREGATION):
+            for target in oclass.related(kind):
+                if isinstance(target, OoadClass):
+                    self._maybe_external(oclass, target)
         self._relate_module_dependencies()
 
     def _collect_owned_externals(self, oclass) -> None:

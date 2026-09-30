@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import type { KnowledgeGraphDto, NodeDto, SourceRangeDto } from './knowledge-graph';
 import {
   definitionsInFile,
-  pythonBlockEnd,
   SKIP_DIR,
   type SourceDefinition,
   type WorkspaceFile,
@@ -33,6 +32,9 @@ export function overlayWorkspaceTree(dto: KnowledgeGraphDto): KnowledgeGraphDto 
   const folders = collectRelativeFolders(root);
   addFolderPackages(dto, folders);
   fillSourceBodies(dto, root);
+  attachClassMembers(dto, root);
+  attachStepInvokes(dto, root);
+  attachMemberInvokes(dto);
   return dto;
 }
 
@@ -115,33 +117,284 @@ function addFolderPackages(dto: KnowledgeGraphDto, folders: string[]) {
   });
 }
 
+const CALL_SKIP = new Set([
+  'expect',
+  'vi',
+  'console',
+  'Math',
+  'JSON',
+  'Object',
+  'Promise',
+  'Array',
+  'describe',
+  'it',
+  'test',
+  'beforeEach',
+  'afterEach',
+]);
+
+function attachStepInvokes(dto: KnowledgeGraphDto, root: string) {
+  const operations = new Map<string, string>();
+  for (const graph of dto.practice_graphs) {
+    const classes = new Map(
+      graph.nodes
+        .filter((node) => node.semantic_type === 'OoadClass')
+        .map((node) => [node.node_id, node]),
+    );
+    for (const edge of graph.relationships) {
+      if (edge.kind !== 'owns') {
+        continue;
+      }
+      const owner = classes.get(edge.from_id);
+      const child = graph.nodes.find((node) => node.node_id === edge.to_id);
+      if (!owner || !child || child.semantic_type !== 'Operation') {
+        continue;
+      }
+      operations.set(`${owner.name.toLowerCase()}.${child.name}`, child.node_id);
+    }
+  }
+  const call = /\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+  for (const graph of dto.practice_graphs) {
+    for (const step of graph.nodes) {
+      if (!isWhenStep(step)) {
+        continue;
+      }
+      const seen = new Set<string>();
+      for (const match of stepBody(root, step).matchAll(call)) {
+        if (CALL_SKIP.has(match[1])) {
+          continue;
+        }
+        const target = operations.get(`${match[1].toLowerCase()}.${match[2]}`);
+        if (!target || seen.has(target)) {
+          continue;
+        }
+        seen.add(target);
+        const linked = graph.relationships.some(
+          (edge) => edge.kind === 'invokes' && edge.from_id === step.node_id && edge.to_id === target,
+        );
+        if (linked) {
+          continue;
+        }
+        graph.relationships.push({ kind: 'invokes', from_id: step.node_id, to_id: target });
+      }
+    }
+  }
+}
+
+function attachMemberInvokes(dto: KnowledgeGraphDto) {
+  const operations = new Map<string, string>();
+  const properties = new Map<string, string>();
+  const ownerName = new Map<string, string>();
+  for (const graph of dto.practice_graphs) {
+    const classes = new Map(
+      graph.nodes
+        .filter((node) => node.semantic_type === 'OoadClass')
+        .map((node) => [node.node_id, node]),
+    );
+    for (const edge of graph.relationships) {
+      if (edge.kind !== 'owns') {
+        continue;
+      }
+      const owner = classes.get(edge.from_id);
+      const child = graph.nodes.find((node) => node.node_id === edge.to_id);
+      if (!owner || !child) {
+        continue;
+      }
+      const key = `${owner.name.toLowerCase()}.${child.name}`;
+      if (child.semantic_type === 'Operation') {
+        operations.set(key, child.node_id);
+      }
+      if (child.semantic_type === 'Property') {
+        properties.set(key, child.node_id);
+      }
+      ownerName.set(child.node_id, owner.name);
+    }
+  }
+  const call = /\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b/g;
+  for (const graph of dto.practice_graphs) {
+    for (const member of graph.nodes) {
+      if (member.semantic_type !== 'Operation' && member.semantic_type !== 'Property') {
+        continue;
+      }
+      const seen = new Set<string>();
+      for (const match of (member.source?.text ?? '').matchAll(call)) {
+        if (CALL_SKIP.has(match[1])) {
+          continue;
+        }
+        const receiver =
+          match[1] === 'this' || match[1] === 'self'
+            ? (ownerName.get(member.node_id) ?? match[1])
+            : match[1];
+        const target =
+          operations.get(`${receiver.toLowerCase()}.${match[2]}`) ??
+          properties.get(`${receiver.toLowerCase()}.${match[2]}`);
+        if (!target || target === member.node_id || seen.has(target)) {
+          continue;
+        }
+        seen.add(target);
+        const linked = graph.relationships.some(
+          (edge) => edge.kind === 'invokes' && edge.from_id === member.node_id && edge.to_id === target,
+        );
+        if (linked) {
+          continue;
+        }
+        graph.relationships.push({ kind: 'invokes', from_id: member.node_id, to_id: target });
+      }
+    }
+  }
+}
+
+function isWhenStep(step: NodeDto): boolean {
+  if (step.semantic_type !== 'Step') {
+    return false;
+  }
+  const keyword = (step.keyword ?? '').toLowerCase();
+  return keyword === 'when' || step.name.startsWith('When ');
+}
+
+function stepBody(root: string, step: NodeDto): string {
+  const source = step.source;
+  if (!source?.file) {
+    return source?.text ?? '';
+  }
+  const full = join(root, source.file);
+  if (!existsSync(full)) {
+    return source.text ?? '';
+  }
+  let lines: string[];
+  try {
+    lines = readFileSync(full, 'utf8').split(/\r?\n/);
+  } catch {
+    return source.text ?? '';
+  }
+  const start = Math.max((source.start_line || 1) - 1, 0);
+  let end = source.end_line || source.start_line || start + 1;
+  if (end <= (source.start_line || 1)) {
+    end = callbackEnd(lines, start);
+  }
+  return lines.slice(start, end).join('\n');
+}
+
+function callbackEnd(lines: string[], start: number): number {
+  const text = lines.slice(start).join('\n');
+  const openAt = text.indexOf('{');
+  if (openAt < 0) {
+    return start + 1;
+  }
+  let depth = 0;
+  for (let index = openAt; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return start + text.slice(0, index + 1).split('\n').length;
+      }
+    }
+  }
+  return Math.min(start + 40, lines.length);
+}
+
+function attachClassMembers(dto: KnowledgeGraphDto, root: string) {
+  const catalog = indexDefinitions(root).filter(
+    (entry) => entry.semantic_type === 'Operation' || entry.semantic_type === 'Property',
+  );
+  for (const graph of dto.practice_graphs) {
+    const classes = graph.nodes.filter(
+      (node) =>
+        node.semantic_type === 'OoadClass' &&
+        node.source?.file &&
+        node.source.start_line >= 1,
+    );
+    const owned = new Map<string, Set<string>>();
+    for (const edge of graph.relationships) {
+      if (edge.kind !== 'owns') {
+        continue;
+      }
+      const child = graph.nodes.find((node) => node.node_id === edge.to_id);
+      if (!child) {
+        continue;
+      }
+      const names = owned.get(edge.from_id) ?? new Set<string>();
+      names.add(`${child.semantic_type}:${child.name}`);
+      owned.set(edge.from_id, names);
+    }
+    for (const member of catalog) {
+      const file = member.source.file.replaceAll('\\', '/');
+      const start = member.source.start_line;
+      const end = member.source.end_line || start;
+      if (member.semantic_type === 'Property' && insideOperation(catalog, file, start)) {
+        continue;
+      }
+      const owner = smallestClass(classes, file, start, end);
+      if (!owner) {
+        continue;
+      }
+      const names = owned.get(owner.node_id) ?? new Set<string>();
+      const key = `${member.semantic_type}:${member.name}`;
+      if (names.has(key)) {
+        continue;
+      }
+      const nodeId = `ce:${member.semantic_type}:${file}:${owner.name}:${member.name}`;
+      if (graph.nodes.some((node) => node.node_id === nodeId)) {
+        continue;
+      }
+      graph.nodes.push({
+        node_id: nodeId,
+        name: member.name,
+        practice: 'clean_engineering',
+        semantic_type: member.semantic_type,
+        properties: {},
+        applicable_rules: [],
+        violations: [],
+        source: member.source,
+      });
+      graph.relationships.push({ kind: 'owns', from_id: owner.node_id, to_id: nodeId });
+      graph.relationships.push({ kind: 'belongsTo', from_id: nodeId, to_id: owner.node_id });
+      names.add(key);
+      owned.set(owner.node_id, names);
+    }
+  }
+}
+
+function insideOperation(catalog: SourceDefinition[], file: string, line: number): boolean {
+  return catalog.some((entry) => {
+    if (entry.semantic_type !== 'Operation') {
+      return false;
+    }
+    const start = entry.source.start_line;
+    const end = entry.source.end_line || start;
+    return entry.source.file.replaceAll('\\', '/') === file && line >= start && line <= end;
+  });
+}
+
+function smallestClass(classes: NodeDto[], file: string, start: number, end: number): NodeDto | null {
+  let owner: NodeDto | null = null;
+  let span = Number.POSITIVE_INFINITY;
+  for (const cls of classes) {
+    const clsFile = cls.source?.file.replaceAll('\\', '/') ?? '';
+    const clsStart = cls.source?.start_line ?? 0;
+    const clsEnd = cls.source?.end_line ?? clsStart;
+    if (clsFile !== file || start < clsStart || end > clsEnd) {
+      continue;
+    }
+    const size = clsEnd - clsStart;
+    if (size < span) {
+      span = size;
+      owner = cls;
+    }
+  }
+  return owner;
+}
+
 function fillSourceBodies(dto: KnowledgeGraphDto, root: string) {
   const catalog = indexDefinitions(root);
   const owners = ownership(dto);
+  const files = new Map<string, string[] | null>();
   for (const graph of dto.practice_graphs) {
     for (const node of graph.nodes) {
-      if (node.semantic_type !== 'OoadClass') {
-        continue;
-      }
-      node.source = resolveBody(root, node, catalog, owners, null);
-    }
-  }
-  for (const graph of dto.practice_graphs) {
-    for (const node of graph.nodes) {
-      if (node.semantic_type !== 'Operation') {
-        continue;
-      }
-      const ownerClass = owners.classOf.get(node.node_id);
-      const classFile = ownerClass
-        ? owners.nodeById.get(ownerClass)?.source?.file ?? null
-        : null;
-      node.source = resolveBody(
-        root,
-        node,
-        catalog,
-        owners,
-        classFile || node.source?.file || null,
-      );
+      node.source = sourceForNode(root, node, catalog, owners, files);
     }
   }
 }
@@ -245,28 +498,33 @@ function collectSourceFiles(root: string, relative: string): WorkspaceFile[] {
   return files;
 }
 
-function resolveBody(
+function sourceForNode(
   root: string,
   node: NodeDto,
   catalog: SourceDefinition[],
-  owners: { moduleFolder: Map<string, string> },
-  preferFile: string | null,
+  owners: { moduleFolder: Map<string, string>; classOf: Map<string, string>; nodeById: Map<string, NodeDto> },
+  files: Map<string, string[] | null>,
 ): SourceRangeDto | null {
-  const kind = node.semantic_type === 'OoadClass' ? 'OoadClass' : 'Operation';
-  const folder = owners.moduleFolder.get(node.node_id) ?? '';
+  if (node.source?.file && node.source.start_line >= 1) {
+    return readSpan(root, node.source, files);
+  }
+  if (node.semantic_type !== 'OoadClass' && node.semantic_type !== 'Operation') {
+    return node.source;
+  }
+  const ownerClass = owners.classOf.get(node.node_id);
+  const classFile = ownerClass
+    ? owners.nodeById.get(ownerClass)?.source?.file ?? null
+    : null;
   const hit = pickDefinition(
     catalog,
-    kind,
+    node.semantic_type,
     node.name,
-    folder,
-    preferFile,
+    owners.moduleFolder.get(node.node_id) ?? '',
+    classFile || node.source?.file || null,
     node.source?.start_line ?? 0,
   );
   if (hit) {
-    return expandSource(root, hit.source, node.name);
-  }
-  if (node.source?.file && node.source.start_line >= 1) {
-    return expandSource(root, node.source, node.name);
+    return readSpan(root, hit.source, files);
   }
   return node.source;
 }
@@ -313,94 +571,40 @@ function pickDefinition(
   return scored[0]?.entry ?? null;
 }
 
-function expandSource(
+function readSpan(
   root: string,
   source: SourceRangeDto,
-  expectedName?: string,
+  files: Map<string, string[] | null>,
 ): SourceRangeDto {
-  const full = join(root, source.file);
-  if (!existsSync(full)) {
-    return source;
-  }
-  let text = '';
-  try {
-    text = readFileSync(full, 'utf8');
-  } catch {
-    return source;
-  }
-  const lines = text.split(/\r?\n/);
-  let start = Math.max(source.start_line, 1);
-  if (expectedName) {
-    const named = defLineIndex(lines, expectedName, start);
-    if (named >= 0) {
-      start = named + 1;
+  const file = source.file.replaceAll('\\', '/');
+  let lines = files.get(file);
+  if (lines === undefined) {
+    const full = join(root, file);
+    if (!existsSync(full)) {
+      files.set(file, null);
+      lines = null;
+    } else {
+      try {
+        lines = readFileSync(full, 'utf8').split(/\r?\n/);
+      } catch {
+        lines = null;
+      }
+      files.set(file, lines);
     }
   }
+  if (!lines) {
+    return source;
+  }
+  const start = Math.max(source.start_line, 1);
+  const end = Math.min(Math.max(source.end_line || start, start), lines.length);
   if (start > lines.length) {
     return source;
   }
-  const header = lines[start - 1] ?? '';
-  const onHeader = /(?:async\s+)?(?:class|def)\b/.test(header) || /\{/.test(header);
-  let end = start;
-  if (source.file.endsWith('.py')) {
-    end = pythonBlockEnd(lines, start - 1) + 1;
-  } else if (/\.(ts|tsx|js|jsx)$/.test(source.file)) {
-    end = braceBlockEnd(lines, start - 1) + 1;
-  } else {
-    end = Math.max(source.end_line || start, start);
-  }
-  if (!onHeader && !expectedName) {
-    end = Math.max(end, source.end_line || start);
-  }
-  end = Math.min(end, lines.length);
   return {
     ...source,
+    file,
     start_line: start,
     end_line: end,
     text: lines.slice(start - 1, end).join('\n'),
   };
-}
-
-function defLineIndex(lines: string[], name: string, hintLine: number): number {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const python = new RegExp(
-    `^(?:\\s*)(?:async\\s+)?def\\s+${escaped}\\s*\\(`,
-  );
-  const klass = new RegExp(`^(?:\\s*)class\\s+${escaped}\\b`);
-  const script = new RegExp(
-    `(?:(?:export|public|private|protected|static|async)\\s+)*${escaped}\\s*\\(`,
-  );
-  const matches: number[] = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (python.test(line) || klass.test(line) || script.test(line)) {
-      matches.push(index);
-    }
-  }
-  if (matches.length === 0) {
-    return -1;
-  }
-  const hint = Math.max(hintLine - 1, 0);
-  return matches.reduce((best, index) =>
-    Math.abs(index - hint) < Math.abs(best - hint) ? index : best,
-  );
-}
-
-function braceBlockEnd(lines: string[], startIndex: number): number {
-  let depth = 0;
-  let seen = false;
-  for (let index = startIndex; index < lines.length; index += 1) {
-    for (const ch of lines[index]) {
-      if (ch === '{') {
-        depth += 1;
-        seen = true;
-      } else if (ch === '}') {
-        depth -= 1;
-        if (seen && depth === 0) {
-          return index;
-        }
-      }
-    }
-  }
-  return startIndex;
 }

@@ -19,8 +19,11 @@
         <mxCell id="cart--mavenirshoppingcart" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Cart»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;MavenirShoppingCart&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ customerId: string&lt;br/&gt;+ lineCount: number&lt;br/&gt;+ serviceProviderId: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="600" y="3086" width="260" height="142" as="geometry" />
         </mxCell>
+        <mxCell id="cart--voucher" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Cart»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Voucher&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: string&lt;br/&gt;+ campaign: string&lt;br/&gt;+ expired: boolean&lt;br/&gt;+ redeemed: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="320" y="3256" width="260" height="142" as="geometry" />
+        </mxCell>
         <mxCell id="subscription--mavenirproductorder" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Subscription»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;MavenirProductOrder&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="320" y="3290" width="260" height="94" as="geometry" />
+          <mxGeometry x="600" y="3534" width="260" height="94" as="geometry" />
         </mxCell>
         <mxCell id="subscription--subscription" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Subscription»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Subscription&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ status: string&lt;br/&gt;+ line: Line&lt;br/&gt;+ bundle: Bundle&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="600" y="2740" width="260" height="142" as="geometry" />
@@ -32,7 +35,7 @@
           <mxGeometry x="324" y="700" width="260" height="126" as="geometry" />
         </mxCell>
         <mxCell id="customer--midtiercustomerservice" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MidtierCustomerService&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ MidtierCustomerService(...)&lt;br/&gt;+ validate(accountToken: AccountToken): string | Error&lt;br/&gt;+ create(accountToken: AccountToken): string | Error&lt;br/&gt;+ read(accountToken: AccountToken): MavenirCustomer | Error&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="40" y="1652" width="260" height="110" as="geometry" />
+          <mxGeometry x="324" y="1652" width="260" height="110" as="geometry" />
         </mxCell>
         <mxCell id="customer--customerexception" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CustomerException&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ operation: CustomerOperation&lt;br/&gt;+ accountCredentials: AccountCredentials&lt;br/&gt;+ message: string&lt;br/&gt;+ cause: Error&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CustomerException(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
           <mxGeometry x="608" y="1652" width="260" height="126" as="geometry" />
@@ -53,34 +56,34 @@
           <mxGeometry x="40" y="466" width="260" height="110" as="geometry" />
         </mxCell>
         <mxCell id="customer--validationcoderesendwaitexception" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ValidationCodeResendWaitException&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ availableAt: Date&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ValidationCodeResendWaitException(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="40" y="1854" width="260" height="80" as="geometry" />
+          <mxGeometry x="608" y="1806" width="260" height="80" as="geometry" />
         </mxCell>
         <mxCell id="customer--accountcredentialrequirement" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialRequirement&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ field: string&lt;br/&gt;+ requirement: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ AccountCredentialRequirement(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="324" y="1854" width="260" height="94" as="geometry" />
+          <mxGeometry x="40" y="1652" width="260" height="94" as="geometry" />
         </mxCell>
         <mxCell id="customer--accountcredentialrequirements" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialRequirements&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ emailRequired: AccountCredentialRequirement&lt;br/&gt;+ emailFormat: AccountCredentialRequirement&lt;br/&gt;+ passwordRequired: AccountCredentialRequirement&lt;br/&gt;+ passwordLetters: AccountCredentialRequirement&lt;br/&gt;+ passwordNumber: AccountCredentialRequirement&lt;br/&gt;+ passwordSymbol: AccountCredentialRequirement&lt;br/&gt;+ passwordLength: AccountCredentialRequirement&lt;br/&gt;+ confirmRequired: AccountCredentialRequirement&lt;br/&gt;+ confirmMismatch: AccountCredentialRequirement&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ AccountCredentialRequirements(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
           <mxGeometry x="324" y="466" width="260" height="206" as="geometry" />
         </mxCell>
         <mxCell id="customer--amplifyservice" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AmplifyService&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ AmplifyService(...)&lt;br/&gt;+ signUp(email: string, password: string): CognitoUser | Error&lt;br/&gt;+ signIn(email: string, password: string): CognitoUser | Error&lt;br/&gt;+ confirmSignUp(email: string, validationCode: ValidationCode): CognitoUser | Error&lt;br/&gt;+ resendSignUp(email: string): ValidationCodeSend | Error&lt;br/&gt;+ signOut(): void&lt;br/&gt;+ fetchUserAttributes(email: string): CognitoUser | Error&lt;br/&gt;+ getUser(email: string): CognitoUser | null&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="324" y="1652" width="260" height="174" as="geometry" />
+          <mxGeometry x="40" y="1806" width="260" height="174" as="geometry" />
         </mxCell>
         <mxCell id="customer--cognitouser" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CognitoUser&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+ confirmed: boolean&lt;br/&gt;+ customerId: string | null&lt;br/&gt;+ validationCodeSentAt: Date | null&lt;br/&gt;+ accountToken: AccountToken | null&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CognitoUser(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="608" y="1854" width="260" height="142" as="geometry" />
+          <mxGeometry x="40" y="2008" width="260" height="142" as="geometry" />
         </mxCell>
         <mxCell id="customer--accounttoken" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountToken&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+ customerId: string | null&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ AccountToken(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="40" y="2024" width="260" height="94" as="geometry" />
+          <mxGeometry x="324" y="1806" width="260" height="94" as="geometry" />
         </mxCell>
         <mxCell id="customer--validationcode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ValidationCode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ValidationCode(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="324" y="2024" width="260" height="80" as="geometry" />
+          <mxGeometry x="324" y="2008" width="260" height="80" as="geometry" />
         </mxCell>
         <mxCell id="customer--validationcodesend" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ValidationCodeSend&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: string&lt;br/&gt;+ sentAt: Date&lt;br/&gt;+ kind: initial | resend&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ValidationCodeSend(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="608" y="2024" width="260" height="110" as="geometry" />
+          <mxGeometry x="608" y="2008" width="260" height="110" as="geometry" />
         </mxCell>
         <mxCell id="customer--mavenircustomer" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MavenirCustomer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ productOrder: MavenirProductOrder | null&lt;br/&gt;+ billingAccount: MavenirBillingAccount | null&lt;br/&gt;+ phoneVerified: boolean&lt;br/&gt;+ waitingPsim: string | null&lt;br/&gt;+ done: string | null&lt;br/&gt;+ inquiryId: string | null&lt;br/&gt;+ voucher: Voucher | null&lt;br/&gt;+ shoppingCart: MavenirShoppingCart | null&lt;br/&gt;+ contactMedium: ContactMedium&lt;br/&gt;+ engagedParty: EngagedParty&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ MavenirCustomer(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
           <mxGeometry x="40" y="1216" width="260" height="238" as="geometry" />
         </mxCell>
         <mxCell id="customer--portalgateway" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PortalGateway&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PortalGateway(...)&lt;br/&gt;+ create(email: string): MavenirCustomer | Error&lt;br/&gt;+ read(id: string): MavenirCustomer | Error&lt;br/&gt;+ patchPhoneVerified(mavenirCustomerId: string): MavenirCustomer | Error&lt;br/&gt;+ patchWaitingPsim(mavenirCustomerId: string, waitingPsim: boolean): MavenirCustomer | Error&lt;br/&gt;+ patchProfile(mavenirCustomer: MavenirCustomer, engagedParty: EngagedParty, contactMedium: ContactMedium): MavenirCustomer | Error&lt;br/&gt;+ patchVoucher(mavenirCustomer: MavenirCustomer, voucher: Voucher): MavenirCustomer | Error&lt;br/&gt;+ removeVoucher(mavenirCustomer: MavenirCustomer): MavenirCustomer | Error&lt;br/&gt;+ patchDone(mavenirCustomerId: string): MavenirCustomer | Error&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="40" y="2162" width="260" height="190" as="geometry" />
+          <mxGeometry x="40" y="2178" width="260" height="190" as="geometry" />
         </mxCell>
         <mxCell id="customer--contactmedium" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ContactMedium&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ emailAddress: string&lt;br/&gt;+ phoneNumber: string&lt;br/&gt;+ street1: string&lt;br/&gt;+ street2: string&lt;br/&gt;+ city: string&lt;br/&gt;+ stateOrProvince: string&lt;br/&gt;+ postCode: string&lt;br/&gt;+ country: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ContactMedium(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
           <mxGeometry x="324" y="1216" width="260" height="190" as="geometry" />
@@ -97,7 +100,7 @@
         <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="customer--identity" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentials" target="customer--accountcredentialserrors" parent="1">
+        <mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentials" target="customer--accountcredentialserrors" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="customer--engagedparty" target="customer--individualidentification" parent="1">
@@ -118,24 +121,23 @@
         <mxCell id="10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentials" target="customer--accountcredentialrequirements" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="customer--accountcredentials" parent="1">
+        <mxCell id="11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;" edge="1" source="customer--cognitouser" target="customer--accounttoken" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="170" y="690" />
-              <mxPoint x="604" y="690" />
-              <mxPoint x="604" y="448" />
-              <mxPoint x="170" y="448" />
+              <mxPoint x="170" y="1998" />
+              <mxPoint x="888" y="1998" />
+              <mxPoint x="888" y="1970" />
+              <mxPoint x="454" y="1970" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="customer--cognitouser" target="customer--accounttoken" parent="1">
+        <mxCell id="12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.15;entryY=1.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="customer--accountcredentials" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="596" y="1925" />
-              <mxPoint x="596" y="1985" />
-              <mxPoint x="20" y="1985" />
-              <mxPoint x="312" y="1985" />
-              <mxPoint x="312" y="2071" />
+              <mxPoint x="170" y="690" />
+              <mxPoint x="20" y="690" />
+              <mxPoint x="20" y="448" />
+              <mxPoint x="79" y="448" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -145,31 +147,121 @@
               <mxPoint x="454" y="836" />
               <mxPoint x="888" y="836" />
               <mxPoint x="888" y="1642" />
+              <mxPoint x="454" y="1642" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.15;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="363" y="682" />
+              <mxPoint x="-260" y="682" />
+              <mxPoint x="-260" y="1630" />
+              <mxPoint x="79" y="1630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.237;exitY=1.0;exitDx=0;exitDy=0;entryX=0.237;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="386" y="682" />
+              <mxPoint x="1168" y="682" />
+              <mxPoint x="1168" y="1642" />
+              <mxPoint x="102" y="1642" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.325;exitY=1.0;exitDx=0;exitDy=0;entryX=0.325;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="408" y="682" />
+              <mxPoint x="1168" y="682" />
+              <mxPoint x="1168" y="1642" />
+              <mxPoint x="124" y="1642" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.412;exitY=1.0;exitDx=0;exitDy=0;entryX=0.412;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="431" y="682" />
+              <mxPoint x="1168" y="682" />
+              <mxPoint x="1168" y="1642" />
+              <mxPoint x="147" y="1642" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="454" y="682" />
+              <mxPoint x="1168" y="682" />
+              <mxPoint x="1168" y="1642" />
               <mxPoint x="170" y="1642" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountrepository" target="customer--amplifyservice" parent="1">
+        <mxCell id="19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.588;exitY=1.0;exitDx=0;exitDy=0;entryX=0.588;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="454" y="224" />
-              <mxPoint x="1168" y="224" />
-              <mxPoint x="1168" y="1630" />
-              <mxPoint x="454" y="1630" />
+              <mxPoint x="477" y="682" />
+              <mxPoint x="1168" y="682" />
+              <mxPoint x="1168" y="1642" />
+              <mxPoint x="193" y="1642" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.383;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--mavenircustomer" target="billing--mavenirbillingaccount" parent="1">
+        <mxCell id="20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.675;exitY=1.0;exitDx=0;exitDy=0;entryX=0.675;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="140" y="1464" />
-              <mxPoint x="20" y="1464" />
-              <mxPoint x="20" y="2906" />
+              <mxPoint x="500" y="682" />
+              <mxPoint x="1168" y="682" />
+              <mxPoint x="1168" y="1642" />
+              <mxPoint x="216" y="1642" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.762;exitY=1.0;exitDx=0;exitDy=0;entryX=0.762;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="522" y="682" />
+              <mxPoint x="1168" y="682" />
+              <mxPoint x="1168" y="1642" />
+              <mxPoint x="238" y="1642" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.85;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="545" y="682" />
+              <mxPoint x="1168" y="682" />
+              <mxPoint x="1168" y="1642" />
+              <mxPoint x="261" y="1642" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountcredentials" target="customer--accounttoken" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="79" y="448" />
+              <mxPoint x="-300" y="448" />
+              <mxPoint x="-300" y="1796" />
+              <mxPoint x="454" y="1796" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.325;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--mavenircustomer" target="billing--mavenirbillingaccount" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="124" y="1464" />
+              <mxPoint x="-260" y="1464" />
+              <mxPoint x="-260" y="2906" />
               <mxPoint x="450" y="2906" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.57;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="billing--billing" parent="1">
+        <mxCell id="25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.57;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="billing--billing" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="188" y="932" />
@@ -179,17 +271,37 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="care--personainquiry" parent="1">
+        <mxCell id="26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.85;entryY=1.0;entryDx=0;entryDy=0;" edge="1" source="customer--customerexception" target="customer--accountcredentials" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="261" y="932" />
-              <mxPoint x="1168" y="932" />
-              <mxPoint x="1168" y="2184" />
-              <mxPoint x="730" y="2184" />
+              <mxPoint x="738" y="1642" />
+              <mxPoint x="884" y="1642" />
+              <mxPoint x="884" y="460" />
+              <mxPoint x="261" y="460" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.43;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="cart--cart" parent="1">
+        <mxCell id="27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--accountrepository" target="customer--amplifyservice" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="454" y="224" />
+              <mxPoint x="1208" y="224" />
+              <mxPoint x="1208" y="1784" />
+              <mxPoint x="170" y="1784" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="care--personainquiry" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="261" y="932" />
+              <mxPoint x="-260" y="932" />
+              <mxPoint x="-260" y="2172" />
+              <mxPoint x="730" y="2172" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.43;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="cart--cart" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="152" y="932" />
@@ -199,33 +311,43 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--mavenircustomer" target="subscription--mavenirproductorder" parent="1">
+        <mxCell id="30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--mavenircustomer" target="cart--voucher" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="79" y="1464" />
+              <mxPoint x="170" y="1464" />
               <mxPoint x="-260" y="1464" />
-              <mxPoint x="-260" y="3280" />
-              <mxPoint x="450" y="3280" />
+              <mxPoint x="-260" y="3246" />
+              <mxPoint x="450" y="3246" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.617;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--mavenircustomer" target="cart--mavenirshoppingcart" parent="1">
+        <mxCell id="31" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.675;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--mavenircustomer" target="cart--mavenirshoppingcart" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="200" y="1464" />
-              <mxPoint x="1168" y="1464" />
-              <mxPoint x="1168" y="3076" />
+              <mxPoint x="216" y="1464" />
+              <mxPoint x="-260" y="1464" />
+              <mxPoint x="-260" y="3076" />
               <mxPoint x="730" y="3076" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.71;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="subscription--subscription" parent="1">
+        <mxCell id="32" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.71;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--customer" target="subscription--subscription" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="225" y="932" />
-              <mxPoint x="1168" y="932" />
-              <mxPoint x="1168" y="2730" />
+              <mxPoint x="-260" y="932" />
+              <mxPoint x="-260" y="2730" />
               <mxPoint x="730" y="2730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="customer--mavenircustomer" target="subscription--mavenirproductorder" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="79" y="1464" />
+              <mxPoint x="-260" y="1464" />
+              <mxPoint x="-260" y="3524" />
+              <mxPoint x="730" y="3524" />
             </Array>
           </mxGeometry>
         </mxCell>

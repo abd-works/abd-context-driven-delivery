@@ -16,15 +16,25 @@ class ProfileRequirement {
  * Catalog of required Identity / Address rows. Optional preferredName, otherPhoneNumber, complement, city, country are not in this catalog. Persona does not create these rows. `mapInquiry` copies a `# Care` ++PersonaInquiry++ onto the party's Identity / Address; `missing` then lists which catalog rows are still unmet.
  */
 class ProfileRequirements {
+  // << association >>
   nameRequired: ProfileRequirement;
+  // << association >>
   lastNameRequired: ProfileRequirement;
+  // << association >>
   dateOfBirthRequired: ProfileRequirement;
+  // << association >>
   idNationalityRequired: ProfileRequirement;
+  // << association >>
   idTypeRequired: ProfileRequirement;
+  // << association >>
   idNumberRequired: ProfileRequirement;
+  // << association >>
   expiryRequired: ProfileRequirement;
+  // << association >>
   streetRequired: ProfileRequirement;
+  // << association >>
   parishRequired: ProfileRequirement;
+  // << association >>
   postalCodeRequired: ProfileRequirement;
 
   constructor(nameRequired: ProfileRequirement, lastNameRequired: ProfileRequirement, dateOfBirthRequired: ProfileRequirement, idNationalityRequired: ProfileRequirement, idTypeRequired: ProfileRequirement, idNumberRequired: ProfileRequirement, expiryRequired: ProfileRequirement, streetRequired: ProfileRequirement, parishRequired: ProfileRequirement, postalCodeRequired: ProfileRequirement) {

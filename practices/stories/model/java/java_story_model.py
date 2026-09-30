@@ -1,14 +1,14 @@
-"""JavaStoryMap - runnable `{Story}Story.java` per Story."""
+"""JavaStoryModel - runnable `{Story}Story.java` per Story."""
 
 from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from practices.stories.model.code_story_model import CodeStoryMap, CodeStoryMapError
+from practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
 from practices.stories.model.java.nodes import JavaEpic, JavaStory
 
 
-class JavaStoryMap(CodeStoryMap):
+class JavaStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "Story.java"
     LANGUAGE_LINE_COMMENT = "//"
     epic_type = JavaEpic
@@ -32,11 +32,12 @@ class JavaStoryMap(CodeStoryMap):
             if p.endswith(self.LEAF_EXTENSION) and not p.endswith("Helper.java")
         )
 
-    def load(self, external: Dict[str, str]) -> "JavaStoryMap":
+    def load(self, external: Dict[str, str]) -> "JavaStoryModel":
         if not isinstance(external, dict):
-            raise CodeStoryMapError("Java story map parse expects a path->content dict")
+            raise CodeStoryModelError("Java story map parse expects a path->content dict")
         self.epics.clear()
-        for path, content in sorted(external.items()):
+        for path in self._ordered_paths(external):
+            content = external[path]
             if not path.endswith(self.LEAF_EXTENSION) or path.endswith("Helper.java"):
                 continue
             if "Spec" in path.split("/")[-1]:

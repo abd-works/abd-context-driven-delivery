@@ -16,4 +16,5 @@ where
     file.getBaseName().matches("%_story.test.ts") or
     file.getBaseName().matches("%_story.spec.ts")
   )
-select call, name.getValue(), file.getRelativePath(), call.getLocation().getStartLine()
+select call, name.getValue(), file.getRelativePath(), call.getLocation().getStartLine(),
+  call.getLocation().getEndLine()

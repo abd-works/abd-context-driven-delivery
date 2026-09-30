@@ -115,7 +115,9 @@ class MidtierCustomerService {
  * One typed Customer failure carrying enough domain context for callers to handle and report repository and aggregate failures safely.
  */
 class CustomerException {
+  // << association >>
   operation: CustomerOperation;
+  // << association >>
   accountCredentials: AccountCredentials;
   message: string;
   cause: Error;
@@ -188,6 +190,7 @@ class AccountCredentials {
   validationCode: string;
   // from CognitoUser.confirmed when constructed from CognitoUser
   verified: boolean;
+  // << association >>
   // derived from CognitoUser.accountToken
   token: AccountToken | null;
   // derived from CognitoUser.customerId
@@ -345,14 +348,23 @@ class AccountCredentialRequirement {
  * Catalog of rules. `missingRequirements()` returns the unmet subset.
  */
 class AccountCredentialRequirements {
+  // << association >>
   emailRequired: AccountCredentialRequirement;
+  // << association >>
   emailFormat: AccountCredentialRequirement;
+  // << association >>
   passwordRequired: AccountCredentialRequirement;
+  // << association >>
   passwordLetters: AccountCredentialRequirement;
+  // << association >>
   passwordNumber: AccountCredentialRequirement;
+  // << association >>
   passwordSymbol: AccountCredentialRequirement;
+  // << association >>
   passwordLength: AccountCredentialRequirement;
+  // << association >>
   confirmRequired: AccountCredentialRequirement;
+  // << association >>
   confirmMismatch: AccountCredentialRequirement;
 
   constructor(emailRequired: AccountCredentialRequirement, emailFormat: AccountCredentialRequirement, passwordRequired: AccountCredentialRequirement, passwordLetters: AccountCredentialRequirement, passwordNumber: AccountCredentialRequirement, passwordSymbol: AccountCredentialRequirement, passwordLength: AccountCredentialRequirement, confirmRequired: AccountCredentialRequirement, confirmMismatch: AccountCredentialRequirement) {
@@ -469,6 +481,7 @@ class MavenirCustomer {
   // inquiryID
   // from PersonaInquiry.inquiryId when present
   inquiryId: string | null;
+  // << association >>
   // JSON-encoded Voucher characteristic
   // Cart.applyVoucher writes this
   // absent after Cart.removeVoucher

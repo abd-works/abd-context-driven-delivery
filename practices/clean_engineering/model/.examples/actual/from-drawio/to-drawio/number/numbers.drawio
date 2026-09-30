@@ -34,39 +34,16 @@
         <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="numbers-and-sims--msisdninventoryrepository" target="numbers-and-sims--availablenumber" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="numbers-and-sims--inventorygateway" target="numbers-and-sims--mavenirmsisdnresource" parent="1">
+        <mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.0;exitY=0.85;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="numbers-and-sims--iccidinventoryrepository" target="numbers-and-sims--inventorygateway" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="numbers-and-sims--inventorygateway" target="numbers-and-sims--mavenirsimresource" parent="1">
+        <mxCell id="5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="numbers-and-sims--msisdninventoryrepository" target="numbers-and-sims--inventorygateway" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="261" y="484" />
-              <mxPoint x="320" y="484" />
-              <mxPoint x="320" y="602" />
-              <mxPoint x="170" y="602" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.0;exitY=0.85;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="numbers-and-sims--iccidinventoryrepository" target="numbers-and-sims--inventorygateway" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="numbers-and-sims--msisdninventoryrepository" target="numbers-and-sims--inventorygateway" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="363" y="192" />
+              <mxPoint x="454" y="192" />
               <mxPoint x="20" y="192" />
               <mxPoint x="20" y="302" />
               <mxPoint x="170" y="302" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="numbers-and-sims--msisdninventoryrepository" target="numbers-and-sims--searchterm" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="545" y="192" />
-              <mxPoint x="604" y="192" />
-              <mxPoint x="604" y="736" />
-              <mxPoint x="170" y="736" />
             </Array>
           </mxGeometry>
         </mxCell>

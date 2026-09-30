@@ -1,5 +1,6 @@
 /**
  * Epic: Get Number
+ * Orders: 0.0.2
  */
 
 import { scenario, story } from "tests/story-test";
@@ -9,9 +10,21 @@ import { scenario, story } from "tests/story-test";
  * Actor: Customer
  */
 
+// background-examples: {"held available number": {"available number": "available number", "example": "held available number", "number": "4415550100", "group": "available number"}, "chosen available number": {"available number": "available number", "example": "chosen available number", "number": "4415550101", "group": "available number"}, "James search": {"search term": "search term", "example": "James search", "input": "JAMES", "converted": "52637", "group": "search term"}}
 story('Determine Number', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('View available numbers', ({ given, when, then }) => {
-    then('no ++MSISDN++ is in the ++Mavenir shopping cart++', () => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    but('no ++MSISDN++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     });
     when('the Prospect proceeds to selecting their number', () => {
@@ -44,6 +57,14 @@ story('Determine Number', () => {
   });
 
   scenario('View available numbers — MSISDN in cart', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     });
@@ -68,6 +89,14 @@ story('Determine Number', () => {
   });
 
   scenario('Refresh available numbers', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect clicks Refresh', () => {
       // TODO: implement step
     });
@@ -83,10 +112,18 @@ story('Determine Number', () => {
   });
 
   scenario('Search for a number', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect enters ++search term++ ++James search++ in the search field', () => {
       // TODO: implement step
     });
-    then('the search field helper shows Your number: JAMES (52637)', () => {
+    then('the search field helper shows *Your number: JAMES (52637)*', () => {
       // TODO: implement step
     });
     when('the Prospect triggers the search', () => {
@@ -111,7 +148,7 @@ story('Query Msisdn Inventory', () => {
       .and('++portability++ is in the portability request', () => {
         // TODO: implement step
       });
-    when('Midtier queries ++MSISDN++ inventory for a temporary port-in number (count: 1)', () => {
+    when('Midtier queries ++MSISDN++ inventory for a temporary port-in number (`count: 1`)', () => {
       // TODO: implement step
     });
     then('Midtier queries Mavenir for 1 available ++MSISDN++ resource', () => {
@@ -148,7 +185,7 @@ story('List Msisdn Resources', () => {
     given('++MSISDN++ resources with available status are in the Mavenir inventory', () => {
       // TODO: implement step
     });
-    when('Mavenir is asked to list 1 ++MSISDN++ resource (/updateAndGetAvailableResources, size: 1)', () => {
+    when('Mavenir is asked to list 1 ++MSISDN++ resource (`/updateAndGetAvailableResources`, `size: 1`)', () => {
       // TODO: implement step
     });
     then('Mavenir transitions 1 ++MSISDN++ resource from available to locked', () => {
@@ -163,7 +200,7 @@ story('List Msisdn Resources', () => {
     given('++MSISDN++ resources with available status are in the Mavenir inventory', () => {
       // TODO: implement step
     });
-    when('Mavenir is asked to list ++MSISDN++ resources (/updateAndGetAvailableResources, size: 5)', () => {
+    when('Mavenir is asked to list ++MSISDN++ resources (`/updateAndGetAvailableResources`, `size: 5`)', () => {
       // TODO: implement step
     });
     then('Mavenir transitions 5 ++MSISDN++ resources from available to locked', () => {
@@ -185,10 +222,10 @@ story('Search Msisdn Inventory', () => {
     given('a ++PML customer++ is authenticated in Midtier', () => {
       // TODO: implement step
     });
-    when('Midtier is asked to search ++MSISDN++ inventory for ++search term++ ++James search++ (52637)', () => {
+    when('Midtier is asked to search ++MSISDN++ inventory for ++search term++ ++James search++ (`52637`)', () => {
       // TODO: implement step
     });
-    then('Midtier queries Mavenir for available ++MSISDN++ resources matching 52637', () => {
+    then('Midtier queries Mavenir for available ++MSISDN++ resources matching `52637`', () => {
       // TODO: implement step
     })
       .and('Midtier returns matching ++available number++ values to My Paradise', () => {
@@ -207,7 +244,7 @@ story('Search Msisdn Resources', () => {
     given('++MSISDN++ resources with available status are in the Mavenir inventory', () => {
       // TODO: implement step
     });
-    when('Mavenir is asked to search ++MSISDN++ resources with pattern_search: 52637 (/updateAndGetAvailableResources)', () => {
+    when('Mavenir is asked to search ++MSISDN++ resources with `pattern_search: 52637` (`/updateAndGetAvailableResources`)', () => {
       // TODO: implement step
     });
     then('Mavenir transitions matching ++MSISDN++ resources from available to locked', () => {
@@ -227,6 +264,14 @@ story('Search Msisdn Resources', () => {
 
 story('Choose a Number', () => {
   scenario('Pick new number', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the Prospect has selected ++available number++ ++chosen available number++', () => {
       // TODO: implement step
     })
@@ -248,6 +293,14 @@ story('Choose a Number', () => {
   });
 
   scenario('Pick new number — replace existing', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     })
@@ -269,6 +322,14 @@ story('Choose a Number', () => {
   });
 
   scenario('Keep current number', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     });
@@ -288,6 +349,14 @@ story('Choose a Number', () => {
 
 story('Submit Reserve Number Request to Mid-Tier', () => {
   scenario('Reserve number', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++available number++ ++chosen available number++ is selected', () => {
       // TODO: implement step
     })
@@ -306,6 +375,14 @@ story('Submit Reserve Number Request to Mid-Tier', () => {
   });
 
   scenario('Reserve number — replace existing', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     })
@@ -324,6 +401,14 @@ story('Submit Reserve Number Request to Mid-Tier', () => {
   });
 
   scenario('Reserve number request fails', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++available number++ ++chosen available number++ is selected', () => {
       // TODO: implement step
     });
@@ -333,7 +418,7 @@ story('Submit Reserve Number Request to Mid-Tier', () => {
       .but('Midtier returns an error', () => {
         // TODO: implement step
       });
-    then('My Paradise shows Failed to reserve your number.', () => {
+    then('My Paradise shows *Failed to reserve your number.*', () => {
       // TODO: implement step
     });
   });
@@ -349,7 +434,7 @@ story('Submit Reserve Msisdn', () => {
     given('++MSISDN++ ++available number++ ++held available number++ is locked', () => {
       // TODO: implement step
     });
-    when('Midtier reserves ++available number++ ++held available number++ as a port-in temporary number (portin: true)', () => {
+    when('Midtier reserves ++available number++ ++held available number++ as a port-in temporary number (`portin: true`)', () => {
       // TODO: implement step
     });
     then('Midtier reserves ++available number++ ++held available number++ in Mavenir with the port-in flag', () => {
@@ -404,13 +489,13 @@ story('Reserve Msisdn Resource', () => {
     given('++MSISDN++ ++available number++ ++held available number++ is locked in Mavenir inventory', () => {
       // TODO: implement step
     });
-    when('Mavenir is asked to reserve ++available number++ ++held available number++ with kv_tempNumber: true (/updateResources, locked → reserved, relatedParty: Paradise Mobile)', () => {
+    when('Mavenir is asked to reserve ++available number++ ++held available number++ with `kv_tempNumber: true` (`/updateResources`, locked → reserved, relatedParty: Paradise Mobile)', () => {
       // TODO: implement step
     });
     then('Mavenir transitions ++available number++ ++held available number++ from locked to reserved', () => {
       // TODO: implement step
     })
-      .and('Mavenir marks ++available number++ ++held available number++ as a temporary port-in number (kv_tempNumber)', () => {
+      .and('Mavenir marks ++available number++ ++held available number++ as a temporary port-in number (`kv_tempNumber`)', () => {
         // TODO: implement step
       });
   });
@@ -419,7 +504,7 @@ story('Reserve Msisdn Resource', () => {
     given('++MSISDN++ ++available number++ ++chosen available number++ is locked in Mavenir inventory', () => {
       // TODO: implement step
     });
-    when('Mavenir is asked to reserve ++available number++ ++chosen available number++ (/updateResources, locked → reserved, relatedParty: Paradise Mobile)', () => {
+    when('Mavenir is asked to reserve ++available number++ ++chosen available number++ (`/updateResources`, locked → reserved, relatedParty: Paradise Mobile)', () => {
       // TODO: implement step
     });
     then('Mavenir transitions ++available number++ ++chosen available number++ from locked to reserved', () => {
@@ -480,7 +565,7 @@ story('Submit Patch Cart With Number Request to Mid-Tier', () => {
       .but('Midtier returns an error', () => {
         // TODO: implement step
       });
-    then('My Paradise shows Failed to update your cart.', () => {
+    then('My Paradise shows *Failed to update your cart.*', () => {
       // TODO: implement step
     });
   });
@@ -571,9 +656,21 @@ story('Patch Shopping Cart', () => {
  * Story: Bring a Number
  */
 
+// background-examples: {"valid portability": {"portability": "portability", "example": "valid portability", "donorOperator": "Digicel", "portNumber": "4412345678", "accountNumber": "12345", "userType": "Residential", "accountType": "Postpaid", "device": "Iphone", "group": "portability"}}
 story('Bring a Number', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Bring a number', ({ given, when, then }) => {
-    then('no Transfer Code is on Bring your mobile number', () => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    but('no Transfer Code is on Bring your mobile number', () => {
       // TODO: implement step
     });
     when('the Prospect clicks Get started on Bring your mobile number', () => {
@@ -615,10 +712,18 @@ story('Bring a Number', () => {
   });
 
   scenario('Number to be ported is incomplete', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect leaves Number to be ported as the Bermuda prefix only', () => {
       // TODO: implement step
     });
-    then('Number to be ported shows Please enter the full Bermuda number.', () => {
+    then('Number to be ported shows *Please enter the full Bermuda number.*', () => {
       // TODO: implement step
     })
       .and('the Continue operation stays disabled', () => {
@@ -627,10 +732,18 @@ story('Bring a Number', () => {
   });
 
   scenario('Provider not selected', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect blurs Your current provider without selecting a provider', () => {
       // TODO: implement step
     });
-    then('Your current provider shows Please select a provider.', () => {
+    then('Your current provider shows *Please select a provider.*', () => {
       // TODO: implement step
     })
       .and('the Continue operation stays disabled', () => {
@@ -646,6 +759,20 @@ story('Bring a Number', () => {
 
 story('Confirm Number Already With Paradise', () => {
   scenario('Confirm the number is not already with Paradise', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('the Prospect has entered ++portability++ ++valid portability++', () => {
+          // TODO: implement step
+        })
+        .but('no ++portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect proceeds to confirming whether their number is already with Paradise', () => {
       // TODO: implement step
     });
@@ -664,6 +791,20 @@ story('Confirm Number Already With Paradise', () => {
   });
 
   scenario('Confirm the number is already with Paradise', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('the Prospect has entered ++portability++ ++valid portability++', () => {
+          // TODO: implement step
+        })
+        .but('no ++portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect proceeds to confirming whether their number is already with Paradise', () => {
       // TODO: implement step
     });
@@ -689,13 +830,13 @@ story('Confirm Number Already With Paradise', () => {
 
 story('Evaluate Porting Two Factor Flag', () => {
   scenario('Porting two factor flag enabled (Intended)', ({ given, when, then }) => {
-    given('porting-2fa is enabled in GrowthBook', () => {
+    given('`porting-2fa` is enabled in GrowthBook', () => {
       // TODO: implement step
     })
       .and('the Prospect is in Account Setup', () => {
         // TODO: implement step
       });
-    when('GrowthBook evaluates the porting-2fa flag', () => {
+    when('GrowthBook evaluates the `porting-2fa` flag', () => {
       // TODO: implement step
     });
     then('My Paradise mounts the SMS verification step in the porting wizard', () => {
@@ -707,13 +848,13 @@ story('Evaluate Porting Two Factor Flag', () => {
   });
 
   scenario('Porting two factor flag disabled (live)', ({ given, when, then }) => {
-    given('porting-2fa is disabled in GrowthBook', () => {
+    given('`porting-2fa` is disabled in GrowthBook', () => {
       // TODO: implement step
     })
       .and('the Prospect is in Account Setup', () => {
         // TODO: implement step
       });
-    when('GrowthBook evaluates the porting-2fa flag', () => {
+    when('GrowthBook evaluates the `porting-2fa` flag', () => {
       // TODO: implement step
     });
     then('My Paradise omits the SMS verification step from the porting wizard', () => {
@@ -729,6 +870,17 @@ story('Evaluate Porting Two Factor Flag', () => {
 
 story('Submit Portability Request to Mid-Tier', () => {
   scenario('Submit portability request — porting-2fa off (live)', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .but('no ++portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the Prospect has entered ++portability++ ++valid portability++', () => {
       // TODO: implement step
     });
@@ -747,16 +899,27 @@ story('Submit Portability Request to Mid-Tier', () => {
   });
 
   scenario('Submit portability request — porting-2fa on, SMS sent (Intended)', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .but('no ++portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('the Prospect has entered ++portability++ ++valid portability++', () => {
       // TODO: implement step
     })
-      .and('porting-2fa is enabled', () => {
+      .and('`porting-2fa` is enabled', () => {
         // TODO: implement step
       });
     when('My Paradise posts a portability request to Midtier with ++portability++ ++valid portability++', () => {
       // TODO: implement step
     });
-    then('Midtier returns { status: sent, temporaryNumber: ++available number++ ++held available number++ }', () => {
+    then('Midtier returns `{ status: sent, temporaryNumber: ++available number++ ++held available number++ }`', () => {
       // TODO: implement step
     })
       .and('My Paradise stores ++portability++ ++valid portability++ and ++available number++ ++held available number++ in the ++Mavenir shopping cart++', () => {
@@ -768,16 +931,27 @@ story('Submit Portability Request to Mid-Tier', () => {
   });
 
   scenario('Submit portability request — rate limited, bypass (Intended)', ({ given, when, then }) => {
-    given('porting-2fa is enabled', () => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .but('no ++portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    given('`porting-2fa` is enabled', () => {
       // TODO: implement step
     });
     when('My Paradise posts a ++portability request++', () => {
       // TODO: implement step
     })
-      .but('Midtier returns { status: rate_limited, canBypass: true, temporaryNumber: ++available number++ ++held available number++ }', () => {
+      .but('Midtier returns `{ status: rate_limited, canBypass: true, temporaryNumber: ++available number++ ++held available number++ }`', () => {
         // TODO: implement step
       });
-    then('My Paradise stores ++portability++ ++valid portability++ and ++available number++ ++held available number++ with verified: true in the ++Mavenir shopping cart++', () => {
+    then('My Paradise stores ++portability++ ++valid portability++ and ++available number++ ++held available number++ with `verified: true` in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     })
       .and('the Prospect is forwarded to Select Sim', () => {
@@ -786,28 +960,50 @@ story('Submit Portability Request to Mid-Tier', () => {
   });
 
   scenario('Submit portability request — invalid number (Intended)', ({ given, when, then }) => {
-    given('porting-2fa is enabled', () => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .but('no ++portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    given('`porting-2fa` is enabled', () => {
       // TODO: implement step
     });
     when('My Paradise posts a ++portability request++', () => {
       // TODO: implement step
     })
-      .but('Midtier returns { status: invalid_number }', () => {
+      .but('Midtier returns `{ status: invalid_number }`', () => {
         // TODO: implement step
       });
-    then('My Paradise shows This number is invalid. on Number to be ported', () => {
+    then('My Paradise shows *This number is invalid.* on Number to be ported', () => {
       // TODO: implement step
     });
   });
 
   scenario('Submit portability request fails', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .but('no ++portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     when('My Paradise posts a ++portability request++', () => {
       // TODO: implement step
     })
       .but('Midtier returns an error', () => {
         // TODO: implement step
       });
-    then('My Paradise shows Failed to save your portability.', () => {
+    then('My Paradise shows *Failed to save your portability.*', () => {
       // TODO: implement step
     });
   });
@@ -848,7 +1044,7 @@ story('Patch Cart With Portability', () => {
 
 story('Send Port Verification', () => {
   scenario('Send port verification SMS', ({ given, when, then }) => {
-    given('porting-2fa is enabled', () => {
+    given('`porting-2fa` is enabled', () => {
       // TODO: implement step
     })
       .and('++portability++ ++valid portability++ is in the ++Mavenir shopping cart++', () => {
@@ -860,13 +1056,13 @@ story('Send Port Verification', () => {
     then('Midtier initiates a Twilio SMS verification to ++portability++ ++valid portability++ portNumber', () => {
       // TODO: implement step
     })
-      .and('Midtier returns { status: sent, temporaryNumber: ++available number++ ++held available number++ } to My Paradise', () => {
+      .and('Midtier returns `{ status: sent, temporaryNumber: ++available number++ ++held available number++ }` to My Paradise', () => {
         // TODO: implement step
       });
   });
 
   scenario('Send port verification — rate limited', ({ given, when, then }) => {
-    given('porting-2fa is enabled', () => {
+    given('`porting-2fa` is enabled', () => {
       // TODO: implement step
     });
     when('Midtier sends port verification', () => {
@@ -875,13 +1071,13 @@ story('Send Port Verification', () => {
       .but('Twilio rate limits the request', () => {
         // TODO: implement step
       });
-    then('Midtier returns { status: rate_limited, canBypass: true, temporaryNumber: ++available number++ ++held available number++ } to My Paradise', () => {
+    then('Midtier returns `{ status: rate_limited, canBypass: true, temporaryNumber: ++available number++ ++held available number++ }` to My Paradise', () => {
       // TODO: implement step
     });
   });
 
   scenario('Send port verification — invalid number', ({ given, when, then }) => {
-    given('porting-2fa is enabled', () => {
+    given('`porting-2fa` is enabled', () => {
       // TODO: implement step
     });
     when('Midtier sends port verification', () => {
@@ -890,7 +1086,7 @@ story('Send Port Verification', () => {
       .but('Twilio rejects the number as invalid', () => {
         // TODO: implement step
       });
-    then('Midtier returns { status: invalid_number } to My Paradise', () => {
+    then('Midtier returns `{ status: invalid_number }` to My Paradise', () => {
       // TODO: implement step
     });
   });
@@ -903,7 +1099,7 @@ story('Send Port Verification', () => {
 
 story('Send Verification Sms', () => {
   scenario('Send verification SMS', ({ given, when, then }) => {
-    given('porting-2fa is enabled', () => {
+    given('`porting-2fa` is enabled', () => {
       // TODO: implement step
     })
       .and('++portability++ ++valid portability++ portNumber is a valid Bermuda number', () => {
@@ -912,16 +1108,16 @@ story('Send Verification Sms', () => {
     when('Twilio is asked to send a verification SMS to ++portability++ ++valid portability++ portNumber', () => {
       // TODO: implement step
     });
-    then('Twilio creates a verification for ++portability++ ++valid portability++ portNumber (channel: sms)', () => {
+    then('Twilio creates a verification for ++portability++ ++valid portability++ portNumber (`channel: sms`)', () => {
       // TODO: implement step
     })
-      .and('Twilio returns sent to Midtier', () => {
+      .and('Twilio returns `sent` to Midtier', () => {
         // TODO: implement step
       });
   });
 
   scenario('Send verification SMS — rate limited', ({ given, when, then }) => {
-    given('porting-2fa is enabled', () => {
+    given('`porting-2fa` is enabled', () => {
       // TODO: implement step
     });
     when('Twilio is asked to send a verification SMS', () => {
@@ -930,7 +1126,7 @@ story('Send Verification Sms', () => {
       .but('the rate limit for ++portability++ ++valid portability++ portNumber is exceeded', () => {
         // TODO: implement step
       });
-    then('Twilio returns rate_limited to Midtier', () => {
+    then('Twilio returns `rate_limited` to Midtier', () => {
       // TODO: implement step
     });
   });
@@ -941,8 +1137,26 @@ story('Send Verification Sms', () => {
  * Story: Enter Porting Sms Code
  */
 
+// background-examples: {"valid porting SMS code": {"porting SMS code": "porting SMS code", "example": "valid porting SMS code", "code": "123456", "group": "porting SMS code"}, "mismatch porting SMS code": {"porting SMS code": "porting SMS code", "example": "mismatch porting SMS code", "code": "Invalid verification code.", "group": "porting SMS code"}, "example": {"porting SMS code": "porting SMS code", "example": "example", "code": "helper", "group": "porting SMS code"}}
 story('Enter Porting Sms Code', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Enter ++porting SMS code++', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('++portability++ ++valid portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('My Paradise has SMSed a ++porting SMS code++ through the Midtier', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect proceeds to confirming their number for porting', () => {
       // TODO: implement step
     });
@@ -985,22 +1199,50 @@ story('Enter Porting Sms Code', () => {
   });
 
   scenario('Verify with unusable ++porting SMS code++', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('++portability++ ++valid portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('My Paradise has SMSed a ++porting SMS code++ through the Midtier', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect clicks Verify code with ++porting SMS code++ ++mismatch porting SMS code++', () => {
       // TODO: implement step
     });
-    then('Enter SMS code shows helper text Invalid verification code.', () => {
+    then('Enter SMS code shows helper text *Invalid verification code.*', () => {
       // TODO: implement step
     });
   });
 
   scenario('Resend ++porting SMS code++', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('++portability++ ++valid portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('My Paradise has SMSed a ++porting SMS code++ through the Midtier', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect clicks Resend', () => {
       // TODO: implement step
     });
     then('My Paradise SMSes a ++porting SMS code++ through the Midtier', () => {
       // TODO: implement step
     })
-      .and('the Prospect sees A new code was sent to the ++portability++ number', () => {
+      .and('the Prospect sees *A new code was sent to* the ++portability++ number', () => {
         // TODO: implement step
       })
       .and('Resend is disabled for 30 seconds before it can be used again', () => {
@@ -1016,24 +1258,46 @@ story('Enter Porting Sms Code', () => {
 
 story('Check Port Verification', () => {
   scenario('Check port verification — code valid', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('a ++PML customer++ with a ++Mavenir shopping cart++', () => {
+        // TODO: implement step
+      })
+        .and('++portability++ ++valid portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('a ++porting SMS code++ was sent to ++portability++ ++valid portability++ portNumber', () => {
+          // TODO: implement step
+        });
+    });
     when('Midtier is asked to check ++porting SMS code++ ++valid porting SMS code++ against ++portability++ ++valid portability++ portNumber', () => {
       // TODO: implement step
     });
     then('Midtier checks the ++porting SMS code++ with Twilio', () => {
       // TODO: implement step
     })
-      .and('Twilio returns approved', () => {
+      .and('Twilio returns `approved`', () => {
         // TODO: implement step
       })
       .and('Midtier marks the ++PML customer++ phone as verified', () => {
         // TODO: implement step
       })
-      .and('Midtier returns { verified: true } to My Paradise', () => {
+      .and('Midtier returns `{ verified: true }` to My Paradise', () => {
         // TODO: implement step
       });
   });
 
   scenario('Check port verification — code mismatch', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('a ++PML customer++ with a ++Mavenir shopping cart++', () => {
+        // TODO: implement step
+      })
+        .and('++portability++ ++valid portability++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('a ++porting SMS code++ was sent to ++portability++ ++valid portability++ portNumber', () => {
+          // TODO: implement step
+        });
+    });
     when('Midtier is asked to check ++porting SMS code++ ++mismatch porting SMS code++ against ++portability++ ++valid portability++ portNumber', () => {
       // TODO: implement step
     });
@@ -1043,7 +1307,7 @@ story('Check Port Verification', () => {
       .and('Twilio returns a non-approved status', () => {
         // TODO: implement step
       })
-      .and('Midtier returns { verified: false } to My Paradise', () => {
+      .and('Midtier returns `{ verified: false }` to My Paradise', () => {
         // TODO: implement step
       });
   });
@@ -1056,18 +1320,28 @@ story('Check Port Verification', () => {
 
 story('Check Verification', () => {
   scenario('Check verification — code valid', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('a verification was sent to ++portability++ ++valid portability++ portNumber', () => {
+        // TODO: implement step
+      });
+    });
     when('Twilio is asked to check ++porting SMS code++ ++valid porting SMS code++ against ++portability++ ++valid portability++ portNumber', () => {
       // TODO: implement step
     });
-    then('Twilio creates a verification check (verificationChecks.create)', () => {
+    then('Twilio creates a verification check (`verificationChecks.create`)', () => {
       // TODO: implement step
     })
-      .and('Twilio returns approved to Midtier', () => {
+      .and('Twilio returns `approved` to Midtier', () => {
         // TODO: implement step
       });
   });
 
   scenario('Check verification — code mismatch', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('a verification was sent to ++portability++ ++valid portability++ portNumber', () => {
+        // TODO: implement step
+      });
+    });
     when('Twilio is asked to check ++porting SMS code++ ++mismatch porting SMS code++ against ++portability++ ++valid portability++ portNumber', () => {
       // TODO: implement step
     });

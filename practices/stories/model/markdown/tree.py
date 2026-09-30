@@ -1,9 +1,9 @@
 """Markdown tree adapter for the stories CLI.
 
-Given a `StoryMap`, produce a `{path: contents}` mapping the CLI can dump to
+Given a `StoryModel`, produce a `{path: contents}` mapping the CLI can dump to
 disk. Today only `story-map.md` is emitted, because that is the only
 Markdown artifact practices/stories/src has a first-class renderer for
-(`MarkdownStoryMap` in `markdown_story_map.py`).
+(`MarkdownStoryModel` in `markdown_story_map.py`).
 
 When adapters for `thin-slice.md`, `scenarios/*.md`, and `story-context.md`
 land, this function is the single place to grow - the CLI does not need to
@@ -12,7 +12,7 @@ change.
 Signature parity with the code backends
 ---------------------------------------
 
-- `story_map` - canonical StoryMap (matches `render_ts_tree` etc.).
+- `story_map` - canonical StoryModel (matches `render_ts_tree` etc.).
 - `tests_root` - sub-folder prefix. Defaults to `""` because Markdown
   artifacts sit at the workspace root by convention (`story-map.md`,
   `thin-slice.md`) - no `tests/` intermediary.
@@ -24,12 +24,12 @@ from __future__ import annotations
 
 from typing import Dict
 
-from practices.stories.model.markdown.nodes import MarkdownStoryMap
-from practices.stories.model.story_model import StoryMap
+from practices.stories.model.markdown.nodes import MarkdownStoryModel
+from practices.stories.model.story_model import StoryModel
 
 
 def render_md_tree(
-    story_map: StoryMap,
+    story_map: StoryModel,
     *,
     tests_root: str = "",
     include_shared: bool = True,
@@ -44,7 +44,7 @@ def render_md_tree(
     if not story_map or not story_map.epics:
         return {}
 
-    md = MarkdownStoryMap()
+    md = MarkdownStoryModel()
     prefix = tests_root.strip("/")
     story_map_path = f"{prefix}/story-map.md" if prefix else "story-map.md"
     return {story_map_path: md.render(story_map)}

@@ -1,4 +1,4 @@
-"""Story map nodes: StoryNode, StoryMap, Epic, Story, Scenario, Step, Background, Example, Increment.
+"""Story map nodes: StoryNode, StoryModel, Epic, Story, Scenario, Step, Background, Example, Increment.
 
 A nested epic is an epic whose parent is an epic. Each node type implements clone.
 """
@@ -143,7 +143,7 @@ class Increment(StoryNode):
             name=source.name if source is not None else name,
             sequential_order=source.sequential_order if source is not None else sequential_order,
         )
-        self.parent: Optional["StoryMap"] = None
+        self.parent: Optional["StoryModel"] = None
         self.outcome: str = source.outcome if source is not None else ""
         self.slicing_notes: str = source.slicing_notes if source is not None else ""
         self.decision_prompt: str = source.decision_prompt if source is not None else ""
@@ -537,13 +537,13 @@ class Story(StoryNode):
         return cloned
 
 
-class StoryMap(StoryNode):
-    _semantic_type_name = "StoryMap"
+class StoryModel(StoryNode):
+    _semantic_type_name = "StoryModel"
     epic_type = Epic
     story_type = Story
 
-    def __init__(self, source: Optional["StoryMap"] = None) -> None:
-        super().__init__(name="StoryMap", sequential_order=0)
+    def __init__(self, source: Optional["StoryModel"] = None) -> None:
+        super().__init__(name="StoryModel", sequential_order=0)
         self.epics: List[Epic] = []
         self.increments: List[Increment] = []
         self.examples = Examples(self)
@@ -556,32 +556,32 @@ class StoryMap(StoryNode):
             self.append_increment(increment_type(increment, story_class=self.story_type))
 
     @classmethod
-    def load(cls, root) -> "StoryMap":
+    def load(cls, root) -> "StoryModel":
         """Read the story map, scenarios, and increments from a folder."""
         from pathlib import Path
 
-        from practices.stories.model.json.nodes import JsonStoryMap
-        from practices.stories.model.markdown.nodes import MarkdownStoryMap
+        from practices.stories.model.json.nodes import JsonStoryModel
+        from practices.stories.model.markdown.nodes import MarkdownStoryModel
 
         root = Path(root).resolve()
         story_map_root = root.parent if root.is_file() else root
-        story_map = cls._story_map_at(story_map_root, JsonStoryMap, MarkdownStoryMap)
+        story_map = cls._story_map_at(story_map_root, JsonStoryModel, MarkdownStoryModel)
         if story_map.epics:
             return story_map
         for name in ("story_map.md", "story-map.md"):
             candidate = root / name
             if not candidate.is_file():
                 continue
-            parsed = MarkdownStoryMap.from_workspace(candidate)
+            parsed = MarkdownStoryModel.from_workspace(candidate)
             if parsed and parsed.epics:
                 return parsed
-        parsed = MarkdownStoryMap.from_workspace(root)
+        parsed = MarkdownStoryModel.from_workspace(root)
         if parsed and parsed.epics:
             return parsed
         return story_map
 
     @staticmethod
-    def _story_map_at(story_map_root, json_story_map, markdown_story_map) -> "StoryMap":
+    def _story_map_at(story_map_root, json_story_map, markdown_story_map) -> "StoryModel":
         story_map_dir = story_map_root
         while story_map_dir and story_map_dir != story_map_dir.parent:
             candidate = story_map_dir / "story-map.md"
@@ -593,7 +593,7 @@ class StoryMap(StoryNode):
         return (
             json_story_map.from_workspace(story_map_root)
             or markdown_story_map.from_workspace(story_map_root)
-            or StoryMap()
+            or StoryModel()
         )
 
     # -- Epic mutations -------------------------------------------------------
@@ -610,7 +610,7 @@ class StoryMap(StoryNode):
         self.increments.append(increment)
         self._renumber(self.increments)
 
-    def clone(self) -> "StoryMap":
+    def clone(self) -> "StoryModel":
         cloned = type(self)()
         for epic in self.epics:
             cloned.append_epic(epic.clone())
@@ -627,15 +627,15 @@ class StoryMap(StoryNode):
 
 
 class StoryModelFactory:
-    """Pick the channel story map from a file or a folder and return a StoryMap."""
+    """Pick the channel story map from a file or a folder and return a StoryModel."""
 
     @staticmethod
-    def load(path: str) -> StoryMap:
+    def load(path: str) -> StoryModel:
         from pathlib import Path
 
         target = Path(path)
         if target.is_file() and target.suffix == ".drawio":
-            from practices.stories.model.drawio.nodes import DrawIOStoryMap
+            from practices.stories.model.drawio.nodes import DrawIOStoryModel
 
-            return DrawIOStoryMap().load(target.read_text(encoding="utf-8"))
-        return StoryMap.load(path)
+            return DrawIOStoryModel().load(target.read_text(encoding="utf-8"))
+        return StoryModel.load(path)

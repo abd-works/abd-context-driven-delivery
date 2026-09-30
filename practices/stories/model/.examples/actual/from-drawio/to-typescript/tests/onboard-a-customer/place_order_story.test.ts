@@ -1,5 +1,6 @@
 /**
  * Epic: Place Order
+ * Orders: 0.0.8
  */
 
 import { scenario, story } from "tests/story-test";
@@ -15,7 +16,6 @@ story('Create Billing Account', () => {
 
 /**
  * Story: Create Product Order
- * Actor: My Paradise
  */
 
 story('Create Product Order', () => {

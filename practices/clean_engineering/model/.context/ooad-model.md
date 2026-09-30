@@ -51,12 +51,14 @@ model = CleanEngineeringModelFactory.load(path)
 + load(path: str): CleanEngineeringModel
 	// stores path, then runs the same walk for every channel
 	self.path = path
-	self.load_model_content()
+	self.load_content()
 	self.load_modules()
 + save(): str
 	// every channel writes its path with this operation
-- load_model_content(): None
-	// channel prepares its cursor over path
+- load_content(): None
+	// each channel overrides this. load calls this one operation
+	// a file channel prepares its cursor over the path
+	// CodeQL runs once over the database. Its cursor is the row lists
 - load_modules(): None
 	// while has_more_module: append load_next_module()
 - has_more_module(): bool
@@ -126,7 +128,7 @@ model = CleanEngineeringModelFactory.load(path)
 + operations: list[Operation]
 	// composition
 + relationships: list[Relationship]
-	// composition — kind is composition, aggregation, or association
+	// read from properties that have a relationship. The class does not store this list
 + property_type: type
 	// the channel class this class uses to build the next property. JsonOoadClass sets JsonProperty. A property's own type hint stays on Property
 + operation_type: type
@@ -163,11 +165,13 @@ model = CleanEngineeringModelFactory.load(path)
 + access: str
 	// readable, writable, or both
 + stereotype: str
-	// composition, aggregation, or association. The relationship is this property
+	// composition, aggregation, or association. Copied onto relationship.kind
 + cardinality: str
-	// 0..1, 0..*, 1, written as a // line under the field
+	// the // line. Copied onto relationship.cardinality
 + origin: str
 	// the module the field comes from, written // from Billing
++ relationship: Relationship | None
+	// set when the type names a domain class. A primitive or a third-party type such as string, Error, or Collection has none. Collection<Customer> relates to Customer
 + invariants: list[Invariant]
 	// composition. Each // line under the field, in file order
 
@@ -209,6 +213,8 @@ A rule that must stay true for one property or one operation. The text is the //
 
 ## Relationship
 
+Optional on a property. Cardinality lives here. A class reads these from its properties.
+
 + Relationship(source: Relationship)
 	// copies target, kind, cardinality, description, and order
 ------
@@ -229,7 +235,7 @@ A rule that must stay true for one property or one operation. The text is the //
 ------
 + module_type: MarkdownModule
 ----
-- load_model_content(): None
+- load_content(): None
 	// cursor is the markdown headings in the file. One file
 - has_more_module(): bool
 - get_next_module_from_file(): MarkdownModule
@@ -262,7 +268,7 @@ A rule that must stay true for one property or one operation. The text is the //
 ------
 + module_type: JsonModule
 ----
-- load_model_content(): None
+- load_content(): None
 	// cursor is the JSON module array in the file. One file
 - has_more_module(): bool
 - get_next_module_from_file(): JsonModule
@@ -389,7 +395,7 @@ A rule that must stay true for one property or one operation. The text is the //
 ------
 + module_type: DrawIOModule
 ----
-- load_model_content(): None
+- load_content(): None
 	// cursor is the vertex cells in the file. One file
 - has_more_module(): bool
 - get_next_module_from_file(): DrawIOModule
@@ -420,7 +426,7 @@ A rule that must stay true for one property or one operation. The text is the //
 ------
 + module_type: MiroModule
 ----
-- load_model_content(): None
+- load_content(): None
 	// cursor is the Miro items in the file. One file
 - has_more_module(): bool
 - get_next_module_from_file(): MiroModule
@@ -452,7 +458,7 @@ A rule that must stay true for one property or one operation. The text is the //
 ------
 + module_type: CodeModule
 ----
-- load_model_content(): None
+- load_content(): None
 	// cursor is module folders, then nested module folders, then one class file per class
 - has_more_module(): bool
 - get_next_module_from_file(): CodeModule
@@ -554,4 +560,152 @@ A rule that must stay true for one property or one operation. The text is the //
 - get_next_operation_from_file(): CodeOperation
 - get_next_parameter_from_file(): Parameter
 
-Python, TypeScript, JavaScript, and Java extend the code types: model, module, and class. There is no language property type and no language parameter type. A language class reads the property, the operation, and the parameter. A nested module is a module whose parent is a module. `CleanEngineeringModel` loads the top modules. `Module` loads its child modules and its classes. `load_properties`, `load_operations`, and `load_relationships` stay on `OoadClass`. `load_parameters` stays on `Operation`. Every model implements `save(): str`. Markdown and JSON are one file and continue through parameters and relationships. A code path is a folder of module folders and one class file per class. Draw.io and Miro extend `DiagramCleanEngineeringModel`. A modules view stops at classes. A class view continues through properties and operations. `DiagramNode` owns `geometry`, `height`, `keep_or_place`, `overlaps`, and `draw`. `DiagramCleanEngineeringModel.place_modules` lays out module columns. `DiagramModule.size` and `place_children` lay out the nested grid. `place_classes` clusters classes. `DiagramClass.place_below` puts a base above its subtypes. `ImportedClass` sits above or beside. A Draw.io node is a `DrawIONode`: `style`, `html`, and `cell`. `DrawIORelationship.route` draws the orthogonal edge. A Miro node is a `MiroNode`: `mermaid_id` and `mermaid_lines`. An `ImportedClass` is a `DiagramClass` owned by another module. A code node is a `CodeOoadNode`: `slug` and `name_from_slug`. A markdown node is a `MarkdownOoadNode`: `strip_markup`. A JSON node is a `JsonOoadNode`: `record`. A channel overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its path contains.
+## CodeQL class model
+
+CodeQL mixes the graph node into the class-model types. `Node` is that common node: identity, edges, and the graph. `CodeQLOoadNode` adds the clean-engineering behavior every CodeQL class-model type uses. Each type then adds only its own links. CodeQL runs over the database built from a folder, or a collection of folders. It does not copy another model. Its `load_content` is that one run, and it returns five row lists: classes, operations, properties, parameters, and calls. `load_next` reads the next row for the node it is building. `named()` looks up a node that run already loaded. Markdown, JSON, Draw.io, Miro, and the code languages do not resolve it.
+
+## Node
+
+The same graph node the story types mix in.
+
++ practice: str
++ source
+	// the file and line this node was read from
++ node_id: str
+	// the same id is the same node
++ graph
+	// the practice graph this node has joined
+----
++ semantic_type(): str
++ slug(name: str): str
++ join(graph): Node
+	// registers this node and sets node_id
++ relate(kind, to): Relationship
+	// one edge from this node to another
++ related(kind): list
+	// the nodes on that edge. Incoming edges are read with direction in
++ children(): list
+	// the nodes this node owns
+
+## CodeQLOoadNode : Node
+
++ practice: clean_engineering
++ home_module: Node
+	// the module this node belongs to, or empty
+----
+- relate_once(kind, to): None
+	// relate when this kind does not already hold that node_id
+- named(name, semantic_type): Node
+	// the node this run already loaded, with this name and type
+
+## CodeQLCleanEngineeringModel : CleanEngineeringModel, CodeQLOoadNode
+
++ CodeQLCleanEngineeringModel()
+	// empty until load
+	// the database holds a folder, or a collection of folders
+------
++ module_type: CodeQLModule
+----
+- load_content(): None
+	// CodeQL override: one run over the database
+	// cursor is the class rows, operation rows, property rows, parameter rows, and call rows
+- has_more_module(): bool
+	// another class row names a module not yet built
+- get_next_module_from_file(): CodeQLModule
+	// the module named on that class row
++ save(): str
+	// no-op. The graph is the structure this model built
+
+## CodeQLModule : Module, CodeQLOoadNode
+
++ CodeQLModule()
+	// built from the module name on a class row
+	// owns is each child module and each class row for this module
+	// depends_on is each module a call row leaves for another module
+------
++ owns
+	// each child module and class. The child belongs to this module
++ depends_on
+	// a module whose operation this module's operation invokes
+----
+- load_next_module(): CodeQLModule
+	// the next class row names a child module. relate_once stores owns, and the child belongs to this module
+- load_next_class(): CodeQLOoadClass
+	// the next class row for this module. relate_once stores owns, and the class belongs to this module
+	// a class whose name carries a DDD stereotype is that DDD graph class
+
+## CodeQLOoadClass : OoadClass, CodeQLOoadNode
+
++ CodeQLOoadClass()
+	// the next class row
+	// owns is each property row and operation row for this class
+	// depends_on is each class a call row leaves for another class
+------
++ owns
+	// each property and operation. The member belongs to this class
++ depends_on
+	// a class whose operation this class's operation invokes
+----
+- load_next_property(): CodeQLProperty
+	// the next property row for this class. relate_once stores owns, and the property belongs to this class
+	// -> property.load_has_type()
+	// -> property.load_relationship()
+- load_next_operation(): CodeQLOperation
+	// the next operation row for this class. relate_once stores owns, and the operation belongs to this class
+	// -> operation.load_parameters()
+	// -> operation.load_returns()
+	// -> operation.load_invokes()
+
+## CodeQLProperty : Property, CodeQLOoadNode
+
++ CodeQLProperty()
+	// the next property row for this class
+	// has_type and the relationship are the class named on that row
+------
++ has_type
+	// the class named by the type hint. A primitive or a third-party type has none
+----
+- load_has_type(): None
+	// named() finds the class this run already loaded. relate_once stores it on has_type
+- load_relationship(): None
+	// composition, aggregation, or associates, from the property stereotype
+	// relate_once stores that edge from this class to the same class
+
+## CodeQLOperation : Operation, CodeQLOoadNode
+
++ CodeQLOperation()
+	// the next operation row for this class
+	// has_parameter is each parameter row for this operation
+	// returns and invokes are the call rows and the return named on this operation row
+------
++ has_parameter
+	// each parameter. The parameter belongs to this operation
++ returns
+	// the class named by the return type, or empty
++ invokes
+	// each operation this operation calls. The operation includes its class
+----
+- load_parameters(): None
+	// the next parameter row for this operation. relate_once stores has_parameter, and the parameter belongs to this operation
+- load_returns(): None
+	// named() finds the class this run already loaded. relate_once stores it on returns
+- load_invokes(): None
+	// the next call row for this operation. named() finds the callee this run already loaded. relate_once stores it on invokes
+	// a callee on another class: relate_once stores depends_on on this class
+	// a callee in another module: relate_once stores depends_on on this module
+
+## CodeQLParameter : Parameter, CodeQLOoadNode
+
++ CodeQLParameter()
+	// the next parameter row for this operation
+
+A transform builds the other channel from this model. The copy traverses owns, belongs to, has type, the relationship, has parameter, returns, invokes, and depends on, and writes each related node in that channel's format.
+
+```
+markdown = MarkdownCleanEngineeringModel(codeql_model)
+markdown.save()
+```
+
+`codeql_model.save()` returns an empty string.
+
+Python, TypeScript, JavaScript, and Java extend the code types: model, module, and class. There is no language property type and no language parameter type. A language class reads the property, the operation, and the parameter. A nested module is a module whose parent is a module. `CleanEngineeringModel` loads the top modules. `Module` loads its child modules and its classes. `load_properties`, `load_operations`, and `load_relationships` stay on `OoadClass`. `load_parameters` stays on `Operation`. `CodeQLCleanEngineeringModel.save` returns an empty string. Every other model implements `save(): str`. Markdown and JSON are one file and continue through parameters and relationships. A code path is a folder of module folders and one class file per class. Draw.io and Miro extend `DiagramCleanEngineeringModel`. A modules view stops at classes. A class view continues through properties and operations. `DiagramNode` owns `geometry`, `height`, `keep_or_place`, `overlaps`, and `draw`. `DiagramCleanEngineeringModel.place_modules` lays out module columns. `DiagramModule.size` and `place_children` lay out the nested grid. `place_classes` clusters classes. `DiagramClass.place_below` puts a base above its subtypes. `ImportedClass` sits above or beside. A Draw.io node is a `DrawIONode`: `style`, `html`, and `cell`. `DrawIORelationship.route` draws the orthogonal edge. A Miro node is a `MiroNode`: `mermaid_id` and `mermaid_lines`. An `ImportedClass` is a `DiagramClass` owned by another module. A code node is a `CodeOoadNode`: `slug` and `name_from_slug`. A markdown node is a `MarkdownOoadNode`: `strip_markup`. A JSON node is a `JsonOoadNode`: `record`. A channel overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its path contains.

@@ -9,15 +9,15 @@ from practices.stories.model.story_model import Background, StepType, Story
 
 
 class PythonScenario(CodeScenario):
-    _CALL = re.compile(r'with (?P<kw>given|when|then|and_)\("(?P<text>(?:\\.|[^"\\])*)"\)')
+    _CALL = re.compile(r'with (?P<kw>given|when|then|and_|but_)\("(?P<text>(?:\\.|[^"\\])*)"\)')
     _SCENARIO = re.compile(r'with scenario\("(?P<name>(?:\\.|[^"\\])*)"\)\s*:')
     _IMPORT = re.compile(r"from\s+\S*examples\S*\s+import\s+(?P<names>.+)")
 
     def calls_in(self, body: str) -> List[tuple]:
         calls = []
         for match in self._CALL.finditer(body):
-            keyword = "and" if match.group("kw") == "and_" else match.group("kw")
-            calls.append((keyword, match.group("text")))
+            keyword = {"and_": "and", "but_": "but"}.get(match.group("kw"), match.group("kw"))
+            calls.append((keyword, _unescape(match.group("text"))))
         return calls
 
     @classmethod
@@ -48,20 +48,24 @@ class PythonScenario(CodeScenario):
         for match in cls._IMPORT.finditer(content):
             for part in match.group("names").split(","):
                 name = part.strip().split(" as ")[-1].strip()
-                if name and name != "(":
+                if name and name != "(" and name not in names:
+                    names.append(name)
+        for match in re.finditer(r"examples:\s*(.+)", content):
+            for part in match.group(1).split(","):
+                name = part.strip()
+                if name and name not in names:
                     names.append(name)
         return names
 
     @classmethod
     def create(cls, scenario) -> List[str]:
         lines: List[str] = []
-        for step in scenario.steps_in(StepType.GIVEN):
-            lines.extend(cls._step("given", step, 12))
-        for when_steps, then_steps in scenario.when_then_runs():
-            for index, step in enumerate(when_steps):
-                lines.extend(cls._step("when" if index == 0 else "and_", step, 12))
-            for index, step in enumerate(then_steps):
-                lines.extend(cls._step("then" if index == 0 else "and_", step, 12))
+        lines.extend(CodeScenario.background_lines(scenario, "            # "))
+        if scenario.examples:
+            lines.append("            # examples: " + ", ".join(scenario.examples))
+        for step in scenario.steps:
+            verb = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And": "and_"}.get(step.keyword, "then")
+            lines.extend(cls._step(verb, step, 12))
         if not lines:
             lines.append("            pass")
         return lines
@@ -74,11 +78,16 @@ class PythonScenario(CodeScenario):
             f"{pad}    pass",
         ]
         for extra in step.ands:
+            verb = "but_" if extra.keyword == "But" else "and_"
             lines.extend([
-                f'{pad}with and_("{_quote(extra.text)}"):',
+                f'{pad}with {verb}("{_quote(extra.text)}"):',
                 f"{pad}    pass",
             ])
         return lines
+
+
+def _unescape(value: str) -> str:
+    return value.replace('\\"', '"').replace("\\\\", "\\")
 
 
 def _quote(value: str) -> str:
@@ -121,11 +130,16 @@ class PythonStory(CodeStory):
             lines.append(f"# Actor: {actor}")
         if story.domain_terms:
             lines.append("# Domain terms: " + ", ".join(story.domain_terms))
+        example_line = CodeStory.background_example_line(story, "# ")
+        if example_line:
+            lines.append(example_line)
         lines.append(f'with story("{_quote(story.name)}"):')
-        lines.append("    with background.each:")
-        for background in story.backgrounds:
-            for step in background.steps:
-                lines.extend(PythonScenario._step("given", step, 8))
+        if story.backgrounds:
+            scope = story.backgrounds[0].name if re.fullmatch(r"\w+", story.backgrounds[0].name or "") else "each"
+            lines.append(f"    with background.{scope}:")
+            for background in story.backgrounds:
+                for step in background.steps:
+                    lines.extend(PythonScenario._step("given", step, 8))
         if not story.scenarios and not story.backgrounds:
             lines.append("        pass")
         for scenario in story.scenarios:
@@ -145,6 +159,16 @@ class PythonStory(CodeStory):
         ])
 
 
+def _example_names(stories) -> List[str]:
+    names = []
+    for story in stories:
+        for scenario in story.scenarios:
+            for name in scenario.examples:
+                if name not in names:
+                    names.append(name)
+    return names
+
+
 class PythonEpic(CodeEpic):
     def _file_stories(self):
         return [story for story in self.stories if story.scenarios]
@@ -154,12 +178,16 @@ class PythonEpic(CodeEpic):
         if not stories:
             return
         blocks = "\n".join(PythonStory.story_text(story) for story in stories)
+        names = _example_names(stories)
+        example_import = [f"from examples import {', '.join(names)}", ""] if names else []
         files[f"{parent}/{self.snake()}_story.test.py"] = "\n".join([
             "from __future__ import annotations",
             "",
             "from story_test import and_, background, given, scenario, story, then, when",
+            *example_import,
             "",
             f"# Epic: {self.name}",
+            f"# Orders: {self.order_path()}",
             "",
             blocks,
         ])

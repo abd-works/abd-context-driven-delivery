@@ -112,8 +112,11 @@ def _hierarchy_line(depth: int, node: Node) -> str:
         return f"{indent}Step: {keyword} {display}"
     if semantic == "Property":
         type_hint = getattr(node, "type_hint", "") or ""
+        rel = getattr(node, "relationship", None)
+        kind = f"<< {rel.kind} >> " if rel is not None and rel.kind else ""
+        cardinality = f" {rel.cardinality}" if rel is not None and rel.cardinality else ""
         suffix = f": {type_hint}" if type_hint else ""
-        return f"{indent}Property: {name}{suffix}"
+        return f"{indent}Property: {kind}{name}{suffix}{cardinality}"
     if semantic == "Operation":
         return_type = getattr(node, "return_type", "") or ""
         suffix = f": {return_type}" if return_type else ""

@@ -59,6 +59,20 @@ story('Nest Class Folder', () => {
       expect(customer?.children.map((node) => node.name)).toContain(
         'processEverything',
       );
+    }).and('builds operation nodes from the class source when the graph has none', () => {
+      const dto = codeQlClassWithoutSource();
+      const graph = dto.practice_graphs[0];
+      graph.nodes = graph.nodes.filter((node) => node.semantic_type !== 'Operation');
+      graph.relationships = graph.relationships.filter(
+        (edge) =>
+          edge.to_id !== 'ce:Operation:processEverything' &&
+          edge.from_id !== 'ce:Operation:processEverything',
+      );
+      const tree = KnowledgeGraph.fromDto(overlayWorkspaceTree(dto)).present().listed_tree;
+      const customer = findTreeNode(tree, 'Customer');
+      const names = customer?.children.map((node) => node.name) ?? [];
+      expect(names).toContain('load');
+      expect(names).toContain('processEverything');
     }).and('still nest them when owns points at the class', () => {
       const dto = codeQlClassWithoutSource();
       dto.practice_graphs[0]?.relationships.push({

@@ -1,5 +1,6 @@
 /**
  * Epic: Get Payment
+ * Orders: 0.0.7
  */
 
 import { scenario, story } from "tests/story-test";
@@ -15,7 +16,6 @@ story('Enter Payment', () => {
 
 /**
  * Story: Evaluate Payment Flags
- * Actor: Customer
  */
 
 story('Evaluate Payment Flags', () => {
@@ -33,7 +33,6 @@ story('Authorize Card', () => {
 
 /**
  * Story: Provide Apple Pay Certificate
- * Actor: My Paradise
  */
 
 story('Provide Apple Pay Certificate', () => {

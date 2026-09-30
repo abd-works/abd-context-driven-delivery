@@ -1,5 +1,6 @@
 /**
  * Epic: Get Onboarding Plan
+ * Orders: 0.0.3
  */
 
 import { scenario, story } from "tests/story-test";
@@ -40,7 +41,6 @@ story('Choose Onboarding Plan', () => {
 
 /**
  * Story: Patch Cart With Plan
- * Actor: Customer
  */
 
 story('Patch Cart With Plan', () => {
@@ -49,7 +49,6 @@ story('Patch Cart With Plan', () => {
 
 /**
  * Story: Patch Shopping Cart
- * Actor: Customer
  */
 
 story('Patch Shopping Cart', () => {
@@ -58,7 +57,6 @@ story('Patch Shopping Cart', () => {
 
 /**
  * Story: Keep Current Plan
- * Actor: Customer
  */
 
 story('Keep Current Plan', () => {

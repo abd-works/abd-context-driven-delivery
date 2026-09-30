@@ -1,5 +1,6 @@
 /**
  * Epic: Get Onboarding Plan
+ * Orders: 0.0.3
  */
 
 import { scenario, story } from "tests/story-test";
@@ -73,7 +74,15 @@ story('Load Plan Catalog', () => {
 
 story('Choose Onboarding Plan', () => {
   scenario('Choose Onboarding Plan', ({ given, when, then }) => {
-    then('no ++plan++ is in the ++Mavenir shopping cart++', () => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
+    but('no ++plan++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     })
       .and('Keep current plan is not shown', () => {
@@ -106,6 +115,14 @@ story('Choose Onboarding Plan', () => {
   });
 
   scenario('Choose a different ++plan++', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++plan++ ++Essentials++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     });
@@ -139,6 +156,14 @@ story('Choose Onboarding Plan', () => {
   });
 
   scenario('Select the ++plan++ already in the cart', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('++plan++ ++Essentials++ is in the ++Mavenir shopping cart++', () => {
       // TODO: implement step
     });
@@ -151,6 +176,14 @@ story('Choose Onboarding Plan', () => {
   });
 
   scenario('Failed to update plan', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     given('Midtier PATCH to ++Mavenir shopping cart++ returns a server error', () => {
       // TODO: implement step
     });
@@ -274,6 +307,17 @@ story('Patch Shopping Cart', () => {
 
 story('Keep Current Plan', () => {
   scenario('Keep Current Plan', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Prospect is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .and('++plan++ ++Essentials++ is in the ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        });
+    });
     when('the Prospect clicks Keep current plan', () => {
       // TODO: implement step
     });

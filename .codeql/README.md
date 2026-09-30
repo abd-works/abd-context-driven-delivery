@@ -13,7 +13,7 @@ Markdown tells you *what the stories say*. CodeQL tells you *what the code actua
 <workspace>/
   .codeql/
     results/
-      practice-graph.json    ← consumed by populate_from_codeql
+      practice-graph.json    ← consumed by CodeQL.populate
     logs/
     *-db/                    ← extracted CodeQL database (gitignored)
 ```

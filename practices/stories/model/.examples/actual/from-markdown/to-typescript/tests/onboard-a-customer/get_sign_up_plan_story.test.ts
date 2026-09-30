@@ -1,5 +1,6 @@
 /**
  * Epic: Get Sign Up Plan
+ * Orders: 0.0.0
  */
 
 import { scenario, story } from "tests/story-test";
@@ -20,6 +21,14 @@ story('Hand Off Sign Up To Onboarding', () => {
 
 story('Open Plan Deep Link', () => {
   scenario('Open Plan Deep Link', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      })
+        .and('the Customer arrived at sign-up from the Paradise Mobile website', () => {
+          // TODO: implement step
+        });
+    });
     when('the Customer opens a plan deep link for ++plan++ ++{scenario}++', () => {
       // TODO: implement step
     });
@@ -32,6 +41,14 @@ story('Open Plan Deep Link', () => {
   });
 
   scenario('Unknown plan deep link', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      })
+        .and('the Customer arrived at sign-up from the Paradise Mobile website', () => {
+          // TODO: implement step
+        });
+    });
     given('the plan catalog contains purchasable plans', () => {
       // TODO: implement step
     })
@@ -64,6 +81,11 @@ story('Load Plan Catalog', () => {
 
 story('Apply Catalog Voucher', () => {
   scenario('Apply Catalog Voucher via deep link', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      });
+    });
     given('Vouchera has ++catalog voucher++ ++valid catalog voucher++', () => {
       // TODO: implement step
     });
@@ -85,6 +107,11 @@ story('Apply Catalog Voucher', () => {
   });
 
   scenario('Apply Catalog Voucher manually', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer is selecting a plan', () => {
       // TODO: implement step
     })
@@ -109,6 +136,11 @@ story('Apply Catalog Voucher', () => {
   });
 
   scenario('Short catalog voucher code is rejected', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer is selecting a plan', () => {
       // TODO: implement step
     });
@@ -124,6 +156,11 @@ story('Apply Catalog Voucher', () => {
   });
 
   scenario('Remove Catalog Voucher', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer is selecting a plan with ++catalog voucher++ ++valid catalog voucher++ applied', () => {
       // TODO: implement step
     });
@@ -136,6 +173,11 @@ story('Apply Catalog Voucher', () => {
   });
 
   scenario('Apply unusable catalog voucher', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      });
+    });
     given('the Customer is selecting a plan', () => {
       // TODO: implement step
     })

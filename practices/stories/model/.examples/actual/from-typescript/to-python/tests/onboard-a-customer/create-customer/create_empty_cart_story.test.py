@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from story_test import and_, background, given, scenario, story, then, when
+from examples import storedAccountCredentialsWithToken, newMavenirShoppingCart
+
 
 # Epic: Create Empty Cart
+# Orders: 0.0.0.0
 
 # Story: Ensure Cart on Customer
 with story("Ensure Cart on Customer"):
-    with background.each:
         with scenario("Load Cart — no cart"):
+            # examples: storedAccountCredentialsWithToken
             with given("the Customer enters the onboarding journey with a valid account token and no cart"):
                 pass
             with when("My Paradise loads the cart for the customer"):
@@ -15,6 +18,7 @@ with story("Ensure Cart on Customer"):
             with then("My Paradise finds no cart on the customer"):
                 pass
         with scenario("Create Cart"):
+            # examples: storedAccountCredentialsWithToken
             with given("the Customer enters the onboarding journey with a valid account token and no cart"):
                 pass
             with when("My Paradise creates a cart for the customer"):
@@ -28,6 +32,7 @@ with story("Ensure Cart on Customer"):
             with and_("the Customer proceeds to Get Number"):
                 pass
         with scenario("customer already has a Mavenir shopping cart"):
+            # examples: storedAccountCredentialsWithToken, newMavenirShoppingCart
             with given("the Customer enters the onboarding journey with a valid account token"):
                 pass
             with and_("the customer has a Mavenir shopping cart"):
@@ -39,6 +44,7 @@ with story("Ensure Cart on Customer"):
             with and_("the Customer proceeds to Get Number"):
                 pass
         with scenario("cart already exists"):
+            # examples: storedAccountCredentialsWithToken, newMavenirShoppingCart
             with given("the Customer enters the onboarding journey and already has a cart loaded"):
                 pass
             with when("My Paradise creates a cart for the customer"):

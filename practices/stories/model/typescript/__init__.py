@@ -1,3 +1,3 @@
-from .typescript_story_model import TypeScriptStoryMap
+from .typescript_story_model import TypeScriptStoryModel
 
-__all__ = ["TypeScriptStoryMap"]
+__all__ = ["TypeScriptStoryModel"]

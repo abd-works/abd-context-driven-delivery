@@ -32,6 +32,8 @@ export const RELATIONSHIP_KINDS = [
   'owns',
   'belongsTo',
   'associates',
+  'composition',
+  'aggregation',
   'dependsOn',
   'hasType',
   'hasParameter',
@@ -45,6 +47,8 @@ export const RELATIONSHIP_KINDS = [
   'uses',
   'demonstrates',
   'demonstratedThrough',
+  'loads',
+  'retrievedUsing',
   'describes',
   'namesState',
   'observes',
@@ -61,6 +65,8 @@ export const INVERSE_KIND: Record<string, string> = {
   uses: 'usedBy',
   usedBy: 'uses',
   associates: 'associates',
+  composition: 'composition',
+  aggregation: 'aggregation',
 };
 
 /** Fidelity → stage from each practice markdown **Stage:** block. */
@@ -91,6 +97,50 @@ export const RULE_GUIDANCE: Record<string, string> = {
   'extensions-live-with-the-domain':
     'Domain extensions of a framework belong in the domain module — a nested package under that domain is fine. Do not host them in the base framework package.',
 };
+
+const FIDELITY_ORDER: Record<string, string[]> = {
+  stories: ['acceptance_tests', 'scenarios', 'story_map'],
+  clean_engineering: ['code', 'model', 'modules', 'language'],
+  ddd: ['tactics', 'building_blocks', 'bounded_context'],
+  bdd: ['behavior'],
+  ux: ['front_end_code', 'mockup', 'ia'],
+};
+
+const FIDELITY_SCOPE: Record<string, Record<string, string[]>> = {
+  stories: {
+    acceptance_tests: ['Step', 'Example'],
+    scenarios: ['Scenario', 'Background', 'Step', 'Example'],
+    story_map: ['Epic', 'Story', 'StoryModel'],
+  },
+  clean_engineering: {
+    code: ['OoadClass', 'Property', 'Operation', 'Parameter', 'Module', 'File'],
+    model: ['Module', 'File', 'OoadClass', 'Property', 'Operation', 'Parameter', 'CleanEngineeringModel'],
+    modules: ['Module', 'CleanEngineeringModel'],
+    language: ['Module', 'CleanEngineeringModel'],
+  },
+  ddd: {
+    tactics: ['Entity', 'EntityRoot', 'ValueObject', 'Repository', 'DomainEvent', 'DomainService'],
+    building_blocks: ['Entity', 'EntityRoot', 'ValueObject', 'Repository', 'DomainEvent', 'DomainService', 'Aggregate', 'BoundedContext'],
+    bounded_context: ['BoundedContext', 'Aggregate', 'Module'],
+  },
+  bdd: {
+    behavior: ['Description', 'Context', 'Observation'],
+  },
+  ux: {
+    front_end_code: ['Screen'],
+    mockup: ['Screen'],
+    ia: ['Screen'],
+  },
+};
+
+export function closestFidelity(practice: string, semanticType: string): string {
+  for (const fidelity of FIDELITY_ORDER[practice] ?? []) {
+    if ((FIDELITY_SCOPE[practice]?.[fidelity] ?? []).includes(semanticType)) {
+      return fidelity;
+    }
+  }
+  return '';
+}
 
 export function stageFor(fidelity: string | null | undefined): string {
   if (!fidelity) {

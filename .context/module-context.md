@@ -543,8 +543,6 @@
 
 #### CodeQLOperation
 
-#### CodeQLPopulate
-
 #### CodeQLPracticeGraphExport
 
 #### CodeQLProperty

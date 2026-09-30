@@ -30,7 +30,7 @@ _NAMED_IMPORT = re.compile(
     re.M,
 )
 _NEW_CLASS = re.compile(r"\bnew\s+([A-Z][A-Za-z0-9_]*)")
-_CALL_NAMES = {"story", "scenario", "background", "given", "when", "then"}
+_CALL_NAMES = {"story", "scenario", "background", "given", "when", "then", "and", "but"}
 _CHAIN_NAMES = {"and", "but"}
 _KEYWORD = {
     "given": "Given",
@@ -190,6 +190,10 @@ class StorySourceQuery:
         backgrounds: List[CodeQLBackground] = []
         for call in self._background_calls:
             end_line = self._source[: max(call.body_end, call.start)].count("\n") + 1
+            scenario_name = ""
+            for scenario in self._scenario_calls:
+                if scenario.contains(call.start):
+                    scenario_name = scenario.text
             backgrounds.append(
                 CodeQLBackground(
                     call.text or "background",
@@ -198,6 +202,7 @@ class StorySourceQuery:
                     line=call.line,
                     end_line=end_line,
                     scope=call.text if call.text in {"each", "all"} else "each",
+                    scenario=scenario_name,
                 )
             )
         return backgrounds
@@ -353,12 +358,15 @@ class StorySourceQuery:
             example.used_by = list(self._example_uses.get((example.file, example.export_name), []))
 
     def _step_parent(self, pos: int) -> Tuple[str, str]:
+        scenario_name = ""
         for scenario in self._scenario_calls:
             if scenario.contains(pos):
-                return scenario.text, ""
+                scenario_name = scenario.text
         for background in self._background_calls:
             if background.contains(pos):
-                return "", background.text or "background"
+                return scenario_name, background.text or "background"
+        if scenario_name:
+            return scenario_name, ""
         return "", ""
 
     def _owner_chain(self, rel: str) -> List[str]:
@@ -625,8 +633,12 @@ class StorySourceQuery:
         while i < n:
             ch = source[i]
             if ch == "\\" and i + 1 < n:
-                chars.append(ch)
-                chars.append(source[i + 1])
+                nxt = source[i + 1]
+                if nxt in "'\"\\":
+                    chars.append(nxt)
+                else:
+                    chars.append(ch)
+                    chars.append(nxt)
                 i += 2
                 continue
             if quote == "`" and ch == "$" and i + 1 < n and source[i + 1] == "{":

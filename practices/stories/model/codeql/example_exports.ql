@@ -7,8 +7,24 @@
 
 import javascript
 
-from ExportVarDecl decl, File file
+from ExportNamedDeclaration decl, VarDecl exported, VariableDeclarator declarator, File file, string className
 where
   file = decl.getFile() and
-  file.getBaseName().matches("%.examples.ts")
-select decl, decl.getName(), file.getRelativePath(), decl.getLocation().getStartLine()
+  file.getBaseName().matches("%.examples.ts") and
+  exported = decl.getADecl() and
+  declarator.getBindingPattern().getABindingVarRef() = exported and
+  (
+    exists(NewExpr neu |
+      neu.getParent*() = declarator.getInit() and
+      className = neu.getCalleeName()
+    )
+    or
+    not exists(NewExpr neu |
+      exists(declarator.getInit()) and
+      neu.getParent*() = declarator.getInit() and
+      exists(neu.getCalleeName())
+    ) and
+    className = ""
+  )
+select exported, exported.getName(), file.getRelativePath(),
+  exported.getLocation().getStartLine(), className, exported.getLocation().getEndLine()

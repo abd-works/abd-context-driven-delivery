@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from practices.clean_engineering.model.base_class_model import (
@@ -16,28 +15,83 @@ from practices.clean_engineering.model.operation import (
     Operation as SourceOperation,
     Parameter as SourceParameter,
 )
-from practices.clean_engineering.model.property import Property as SourceProperty
+from practices.clean_engineering.model.property import (
+    Property as SourceProperty,
+    bind_property_relationship,
+)
+from practices.clean_engineering.model.type_refs import domain_type_names
 from practices.ddd.model.nodes import Aggregate, BoundedContext
 from practices.ddd.model.stereotypes import ddd_class_kind
 
 from practices.stories.model.source_location import SourceLocation
-from harness.knowledge_graph.model.graph_node import Kind, Node
+from harness.knowledge_graph.model.graph_node import Kind, Node, ownership_kind
 
 if TYPE_CHECKING:
     from harness.knowledge_graph.model.practice_graph import PracticeGraph
 
 
-class Property(SourceProperty, Node):
+class CodeQLOoadNode(Node):
+    """Shared graph behavior for every CodeQL class-model type."""
+
+    practice = "clean_engineering"
+
+    def relate_once(self, kind: str, to: Optional[Node], cardinality: str = "") -> None:
+        if to is None:
+            return
+        if to.node_id in {node.node_id for node in self.related(kind)}:
+            return
+        self.relate(kind, to, cardinality=cardinality)
+
+    def named(self, name: str, semantic_type: str) -> Optional[Node]:
+        plain = (name or "").strip()
+        graph = getattr(self, "_graph", None)
+        if not plain or graph is None:
+            return None
+        for node in graph.nodes.values():
+            if getattr(node, "name", None) == plain and node.semantic_type() == semantic_type:
+                return node
+        return None
+
+
+class Property(SourceProperty, CodeQLOoadNode):
     practice = "clean_engineering"
     _semantic_type_name = "Property"
 
+    def load_invokes(self, callee) -> None:
+        if callee is None:
+            return
+        self.relate_once(Kind.INVOKES, callee)
 
-class Parameter(SourceParameter, Node):
+    def load_has_type(self) -> None:
+        names = domain_type_names(getattr(self, "type_hint", "") or "")
+        target = self.named(names[0], "OoadClass") if names else None
+        if target is None and names and getattr(self, "_graph", None) is not None:
+            target = self.graph.class_named(names[0])
+        self.relate_once(Kind.HAS_TYPE, target)
+
+    def load_relationship(self) -> None:
+        if self.relationship is None:
+            return
+        names = domain_type_names(getattr(self, "type_hint", "") or "")
+        target = self.named(names[0], "OoadClass") if names else None
+        if target is None and names and getattr(self, "_graph", None) is not None:
+            target = self.graph.class_named(names[0])
+        owner = next(iter(self.related(Kind.BELONGS_TO)), None)
+        if owner is None:
+            return
+        owner.relate_once(
+            ownership_kind(self.relationship.kind),
+            target,
+            cardinality=self.relationship.cardinality,
+        )
+
+
+class Parameter(SourceParameter, CodeQLOoadNode):
     practice = "clean_engineering"
     _semantic_type_name = "Parameter"
 
 
-class Operation(SourceOperation, Node):
+class Operation(SourceOperation, CodeQLOoadNode):
     practice = "clean_engineering"
     _semantic_type_name = "Operation"
 
@@ -50,26 +104,36 @@ class Operation(SourceOperation, Node):
         param = self.load_parameter(SourceParameter(name, len(self.parameters) + 1))
         self.parameters.append(param)
         self.graph.register(param)
-        self.relate(Kind.HAS_PARAMETER, param)
-        param.relate(Kind.BELONGS_TO, self)
+        self.relate_once(Kind.HAS_PARAMETER, param)
+        param.relate_once(Kind.BELONGS_TO, self)
         return param
 
     def invokes(self, callee: "Operation") -> None:
         if self._unresolved_init_call(callee):
             return
-        self.relate(Kind.INVOKES, callee)
+        self.relate_once(Kind.INVOKES, callee)
         caller_cls = next(iter(self.related(Kind.BELONGS_TO)), None)
         callee_cls = next(iter(callee.related(Kind.BELONGS_TO)), None)
         if caller_cls is not None and callee_cls is not None and caller_cls is not callee_cls:
-            caller_cls.relate(Kind.DEPENDS_ON, callee_cls)
+            caller_cls.relate_once(Kind.DEPENDS_ON, callee_cls)
         caller_mod = caller_cls.home_module if caller_cls is not None else None
         callee_mod = callee_cls.home_module if callee_cls is not None else None
         if caller_mod is None or callee_mod is None or caller_mod is callee_mod:
             return
-        caller_mod.relate(Kind.DEPENDS_ON, callee_mod)
+        caller_mod.relate_once(Kind.DEPENDS_ON, callee_mod)
         names = getattr(caller_mod, "dependencies", None)
         if names is not None and callee_mod.name not in names:
             names.append(callee_mod.name)
+
+    def load_invokes(self, callee: "Operation") -> None:
+        self.invokes(callee)
+
+    def load_returns(self, return_type: str) -> None:
+        plain = (return_type or "").split("|")[0].strip().rstrip("[]")
+        target = self.named(plain, "OoadClass")
+        if target is None and getattr(self, "_graph", None) is not None:
+            target = self.graph.class_named(plain)
+        self.relate_once(Kind.RETURNS, target)
 
     def _unresolved_init_call(self, callee: "Operation") -> bool:
         if self.name != "__init__" or callee.name != "__init__":
@@ -92,12 +156,7 @@ class Operation(SourceOperation, Node):
 
 class _Members:
     def load_property(self, source: SourceProperty) -> Property:
-        return Property(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
+        return Property.from_field(source, source.sequential_order)
 
     def load_operation(self, source: SourceOperation) -> Operation:
         node = Operation(
@@ -114,19 +173,30 @@ class _Members:
         ]
         return node
 
-    def accept_property(self, name: str, type_hint: str = "") -> Optional[Property]:
+    def accept_property(
+        self,
+        name: str,
+        type_hint: str = "",
+        stereotype: str = "",
+        cardinality: str = "",
+        origin: str = "",
+    ) -> Optional[Property]:
         if any(p.name == name for p in self.property_nodes):
             return None
         if not self.property_nodes and self.properties:
             self.sync_tree_from_legacy()
         node = self.load_property(Property(name, len(self.property_nodes) + 1, type_hint=type_hint))
+        node.stereotype = stereotype
+        node.cardinality = cardinality
+        node.origin = origin
+        bind_property_relationship(node)
         self.property_nodes.append(node)
         self.graph.register(node)
-        self.relate(Kind.OWNS, node)
-        node.relate(Kind.BELONGS_TO, self)
-        target = self.graph.class_named((type_hint or "").split("|")[0].strip().rstrip("[]"))
-        if target is not None:
-            node.relate(Kind.HAS_TYPE, target)
+        self.relate_once(Kind.OWNS, node)
+        node.relate_once(Kind.BELONGS_TO, self)
+        node._graph = self.graph
+        node.load_has_type()
+        node.load_relationship()
         return node
 
     def accept_operation(self, name: str, return_type: str = "", parameters=None) -> Optional[Operation]:
@@ -140,15 +210,14 @@ class _Members:
             node._sync_parameters_from_legacy()
         self.operation_nodes.append(node)
         self.graph.register(node)
-        self.relate(Kind.OWNS, node)
-        node.relate(Kind.BELONGS_TO, self)
-        ret = self.graph.class_named((return_type or "").split("|")[0].strip().rstrip("[]"))
-        if ret is not None:
-            node.relate(Kind.RETURNS, ret)
+        self.relate_once(Kind.OWNS, node)
+        node.relate_once(Kind.BELONGS_TO, self)
+        node._graph = self.graph
+        node.load_returns(return_type)
         return node
 
 
-class OoadClass(_Members, SourceClass, Node):
+class OoadClass(_Members, SourceClass, CodeQLOoadNode):
     practice = "clean_engineering"
     _semantic_type_name = "OoadClass"
 
@@ -167,7 +236,7 @@ class OoadClass(_Members, SourceClass, Node):
         return [cls for cls in self.related(Kind.DEPENDS_ON) if isinstance(cls, OoadClass)]
 
 
-class Module(SourceModule, Node):
+class Module(SourceModule, CodeQLOoadNode):
     practice = "clean_engineering"
     _semantic_type_name = "Module"
 
@@ -212,7 +281,7 @@ class Module(SourceModule, Node):
         return [mod for mod in self.used_by if isinstance(mod, Module)]
 
 
-class File(_Members, OoadNode, Node):
+class File(_Members, OoadNode, CodeQLOoadNode):
     practice = "clean_engineering"
     _semantic_type_name = "File"
 
@@ -269,93 +338,8 @@ class SourceSpan:
         hi = max(location.end_line or lo, lo)
         if lo > len(lines):
             return lo, hi, ""
-        if location.file.endswith(".py"):
-            hi = max(hi, self._python_block_end(lines, lo - 1) + 1)
-        elif location.file.endswith((".ts", ".tsx", ".js", ".jsx")):
-            hi = max(hi, self._brace_block_end(lines, lo - 1) + 1)
         hi = min(hi, len(lines))
         return lo, hi, "\n".join(lines[lo - 1 : hi])
-
-    def _python_block_end(self, lines: list[str], start_index: int) -> int:
-        header = lines[start_index]
-        matched = re.match(r"^(\s*)(?:async\s+)?(?:class|def)\b", header)
-        if not matched:
-            return start_index
-        indent = len(matched.group(1))
-        end = self._signature_end(lines, start_index)
-        for index in range(end + 1, len(lines)):
-            line = lines[index]
-            if line.strip() == "":
-                end = index
-                continue
-            if len(line) - len(line.lstrip(" ")) <= indent:
-                break
-            end = index
-        return end
-
-    def _signature_end(self, lines: list[str], start_index: int) -> int:
-        depth = 0
-        for index in range(start_index, len(lines)):
-            line = lines[index]
-            depth += line.count("(") - line.count(")")
-            if depth <= 0 and ":" in line:
-                return index
-        return start_index
-
-    def _brace_block_end(self, lines: list[str], start_index: int) -> int:
-        depth = 0
-        seen = False
-        saw_arrow = False
-        arrow_body = False
-        for index in range(start_index, len(lines)):
-            line = lines[index]
-            i = 0
-            while i < len(line):
-                ch = line[i]
-                if ch in "'\"`":
-                    i = self._skip_quoted(line, i)
-                    continue
-                if line.startswith("=>", i):
-                    saw_arrow = True
-                    i += 2
-                    continue
-                if ch == "{":
-                    if saw_arrow and not arrow_body:
-                        arrow_body = True
-                        depth = 1
-                        seen = True
-                        i += 1
-                        continue
-                    depth += 1
-                    seen = True
-                elif ch == "}":
-                    depth -= 1
-                    if seen and depth == 0:
-                        if not arrow_body and self._arrow_ahead(lines, index, i + 1):
-                            seen = False
-                            i += 1
-                            continue
-                        return index
-                i += 1
-        return start_index
-
-    def _arrow_ahead(self, lines: list[str], index: int, column: int) -> bool:
-        window = lines[index][column:]
-        if index + 1 < len(lines):
-            window += "\n" + lines[index + 1]
-        return "=>" in window
-
-    def _skip_quoted(self, line: str, start: int) -> int:
-        quote = line[start]
-        i = start + 1
-        while i < len(line):
-            if line[i] == "\\":
-                i += 2
-                continue
-            if line[i] == quote:
-                return i + 1
-            i += 1
-        return len(line)
 
 
 class GraphMemberRows:
@@ -366,7 +350,7 @@ class GraphMemberRows:
         self.parameters: List[dict] = []
 
 
-class CleanEngineeringModel(SourceModel, Node):
+class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
     practice = "clean_engineering"
     _semantic_type_name = "CleanEngineeringModel"
 
@@ -389,6 +373,22 @@ class CleanEngineeringModel(SourceModel, Node):
         return mod
 
 
+    def save(self) -> str:
+        return ""
+
+    @classmethod
+    def load_content(cls, database) -> "CleanEngineeringModel":
+        """One run over the database, through CodeQL.populate."""
+        from pathlib import Path
+
+        from harness.knowledge_graph.model.codeql import CodeQL
+        from harness.knowledge_graph.model.practice_graph import PracticeGraph
+
+        root = Path(database)
+        graph = PracticeGraph(root)
+        CodeQL(root).populate(graph, database=root)
+        return graph.ce_model
+
     def ensure(self, graph: "PracticeGraph", rows: GraphMemberRows) -> None:
         self._rows = rows
         self._graph = graph
@@ -396,7 +396,7 @@ class CleanEngineeringModel(SourceModel, Node):
             graph.ce_model = type(self)("CleanEngineering", 1)
             graph.register(graph.ce_model)
         self._model = graph.ce_model
-        self._modules = {mod.name.lower(): mod for mod in graph.nodes_of_type(Module)}
+        self._modules = self._indexed_modules()
         self._classes, self._files = self._indexed_types()
         self._order = 1
         self._span = SourceSpan(getattr(graph, "root", None))
@@ -404,15 +404,54 @@ class CleanEngineeringModel(SourceModel, Node):
         self._ensure_properties()
         self._ensure_operations()
 
-    def _indexed_types(self) -> tuple[Dict[str, OoadClass], Dict[str, File]]:
-        classes: Dict[str, OoadClass] = {}
+    def _indexed_modules(self) -> Dict[str, Module]:
+        indexed: Dict[str, Module] = {}
+        for mod in self._graph.nodes_of_type(Module):
+            indexed[mod.name.lower()] = mod
+            folder = str(getattr(mod, "folder", "") or "").replace("\\", "/").strip("/")
+            if not folder:
+                continue
+            indexed[folder.lower()] = mod
+            indexed[folder.replace("/", ".").lower()] = mod
+        return indexed
+
+    def _indexed_types(self) -> tuple[Dict[str, List[OoadClass]], Dict[str, File]]:
+        classes: Dict[str, List[OoadClass]] = {}
         files: Dict[str, File] = {}
         for node in self._graph.nodes.values():
-            if isinstance(node, OoadClass):
-                classes[node.name.lower()] = node
+            if node.semantic_type() == "OoadClass":
+                classes.setdefault(node.name.lower(), []).append(node)
             if isinstance(node, File):
                 files[node.name.replace("\\", "/").lower()] = node
         return classes, files
+
+    def _remember_class(self, name: str, node: OoadClass) -> None:
+        bucket = self._classes.setdefault(name.lower(), [])
+        if node not in bucket:
+            bucket.append(node)
+
+    def _class_in_file(self, row: dict) -> Optional[OoadClass]:
+        name = str(row.get("name") or "").replace("\\", "/").split("/")[-1].lower()
+        file_name = str(row.get("file") or "").replace("\\", "/")
+        for node in self._classes.get(name, []):
+            if file_name and self._node_file(node) == file_name:
+                return node
+        return None
+
+    def _class_for(self, row: dict, *, name_key: str = "class_name") -> Optional[OoadClass]:
+        name = str(row.get(name_key) or "").replace("\\", "/").split("/")[-1].lower()
+        hits = self._classes.get(name, [])
+        file_name = str(row.get("file") or "").replace("\\", "/")
+        for node in hits:
+            if file_name and self._node_file(node) == file_name:
+                return node
+        if len(hits) == 1 and (not file_name or not self._node_file(hits[0])):
+            return hits[0]
+        return None
+
+    def _node_file(self, node) -> str:
+        source = getattr(node, "source", None)
+        return str(getattr(source, "file", "") or "").replace("\\", "/")
 
     def _ensure_classes(self) -> None:
         for entry in self._rows.classes:
@@ -425,37 +464,70 @@ class CleanEngineeringModel(SourceModel, Node):
                 mod = self._model.module_named(module_name, order=self._order)
                 self._order += 1
                 self._modules[module_name.lower()] = mod
-            if name.lower() in self._classes:
-                self._span.bind(self._classes[name.lower()], entry)
+            existing = self._class_in_file(entry)
+            if existing is not None:
+                self._span.bind(existing, entry)
                 continue
-            self._classes[name.lower()] = mod.accept_class(name, entry.get("stereotypes") or [])
-            self._span.bind(self._classes[name.lower()], entry)
+            created = mod.accept_class(name, entry.get("stereotypes") or [])
+            self._remember_class(name, created)
+            self._span.bind(created, entry)
+
+    def _owned_member(self, owner, collection: str, name: str):
+        return next((node for node in getattr(owner, collection, []) if node.name == name), None)
+
+    def _keep_on_graph(self, owner, node) -> None:
+        if node is None or getattr(node, "_graph", None) is not None:
+            return
+        self._graph.register(node)
+        if hasattr(owner, "relate_once"):
+            owner.relate_once(Kind.OWNS, node)
+        else:
+            owner.relate(Kind.OWNS, node)
+        node.relate(Kind.BELONGS_TO, owner)
 
     def _ensure_properties(self) -> None:
         for prop in self._rows.properties:
-            owned = self._classes.get(str(prop.get("class_name") or "").replace("\\", "/").lower())
+            owned = self._class_for(prop)
             if owned is None:
                 continue
-            owned.accept_property(prop.get("name") or "", prop.get("type_hint") or "")
-            node = next((p for p in owned.property_nodes if p.name == (prop.get("name") or "")), None)
-            if node is not None:
-                self._span.bind(node, prop)
+            name = prop.get("name") or ""
+            if hasattr(owned, "accept_property"):
+                owned.accept_property(
+                    name,
+                    prop.get("type_hint") or "",
+                    prop.get("stereotype") or "",
+                    prop.get("cardinality") or "",
+                    prop.get("origin") or "",
+                )
+            node = self._owned_member(owned, "property_nodes", name)
+            if node is None:
+                node = Property(name, len(getattr(owned, "property_nodes", [])) + 1, type_hint=prop.get("type_hint") or "")
+                if hasattr(owned, "property_nodes"):
+                    owned.property_nodes.append(node)
+            self._keep_on_graph(owned, node)
+            self._span.bind(node, prop)
 
     def _ensure_operations(self) -> None:
         for op in self._rows.operations:
             owned = self._member_owner(op)
             if owned is None:
                 continue
-            owned.accept_operation(op.get("name") or "", op.get("return_type") or "", op.get("parameters") or [])
-            node = next((o for o in owned.operation_nodes if o.name == (op.get("name") or "")), None)
-            if node is not None:
-                self._span.bind(node, op)
+            name = op.get("name") or ""
+            if hasattr(owned, "accept_operation"):
+                owned.accept_operation(name, op.get("return_type") or "", op.get("parameters") or [])
+            node = self._owned_member(owned, "operation_nodes", name)
+            if node is None:
+                node = Operation(name, len(getattr(owned, "operation_nodes", [])) + 1, return_type=op.get("return_type") or "")
+                if hasattr(owned, "operation_nodes"):
+                    owned.operation_nodes.append(node)
+            self._keep_on_graph(owned, node)
+            self._span.bind(node, op)
         for row in self._rows.parameters:
             owned = self._member_owner(row)
             if owned is None:
                 continue
-            operation = next((o for o in owned.operation_nodes if o.name == row.get("operation")), None)
-            if operation is None:
+            operation = self._owned_member(owned, "operation_nodes", row.get("operation") or "")
+            if operation is None or not hasattr(operation, "accept_parameter"):
                 continue
             operation.accept_parameter(row.get("name") or "")
             param = next((p for p in operation.parameters if p.name == (row.get("name") or "")), None)
@@ -463,10 +535,10 @@ class CleanEngineeringModel(SourceModel, Node):
                 self._span.bind(param, row)
 
     def _member_owner(self, row):
-        class_name = str(row.get("class_name") or "").replace("\\", "/")
-        owned = self._classes.get(class_name.lower())
+        owned = self._class_for(row)
         if owned is not None:
             return owned
+        class_name = str(row.get("class_name") or "").replace("\\", "/")
         if "/" not in class_name and not class_name.endswith(".py"):
             return None
         key = class_name.lower()
@@ -508,7 +580,27 @@ class CleanEngineeringModel(SourceModel, Node):
             if key in seen:
                 continue
             seen.add(key)
-            caller = graph.operation_named(call.get("caller_class") or "", call.get("caller_operation") or "")
-            callee = graph.operation_named(call.get("callee_class") or "", call.get("callee_operation") or "")
-            if isinstance(caller, Operation) and isinstance(callee, Operation):
-                caller.invokes(callee)
+            caller = self._member_named(
+                graph, call.get("caller_class") or "", call.get("caller_operation") or ""
+            )
+            callee = self._member_named(
+                graph, call.get("callee_class") or "", call.get("callee_operation") or ""
+            )
+            if caller is not None and callee is not None and caller is not callee and hasattr(caller, "load_invokes"):
+                caller.load_invokes(callee)
+
+    def _member_named(self, graph, owner_name: str, member_name: str):
+        owner = graph.class_named(owner_name)
+        if owner is None:
+            wanted = (owner_name or "").lower()
+            for node in graph.nodes.values():
+                if node.semantic_type() == "OoadClass" and node.name.lower() == wanted:
+                    owner = node
+                    break
+        if owner is None:
+            return None
+        for kind in ("Operation", "Property"):
+            for node in owner.related(Kind.OWNS):
+                if node.semantic_type() == kind and node.name == member_name:
+                    return node
+        return None

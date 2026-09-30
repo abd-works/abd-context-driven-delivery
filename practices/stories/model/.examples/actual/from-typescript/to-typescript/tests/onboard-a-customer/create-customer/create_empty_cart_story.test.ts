@@ -1,8 +1,11 @@
 /**
  * Epic: Create Empty Cart
+ * Orders: 0.0.0.0
  */
 
 import { scenario, story } from "tests/story-test";
+import { storedAccountCredentialsWithToken, newMavenirShoppingCart } from "./examples";
+
 
 /**
  * Story: Ensure Cart on Customer
@@ -10,6 +13,7 @@ import { scenario, story } from "tests/story-test";
 
 story('Ensure Cart on Customer', () => {
   scenario('Load Cart — no cart', ({ given, when, then }) => {
+    // examples: storedAccountCredentialsWithToken
     given('the Customer enters the onboarding journey with a valid account token and no cart', () => {
       // TODO: implement step
     });
@@ -22,6 +26,7 @@ story('Ensure Cart on Customer', () => {
   });
 
   scenario('Create Cart', ({ given, when, then }) => {
+    // examples: storedAccountCredentialsWithToken
     given('the Customer enters the onboarding journey with a valid account token and no cart', () => {
       // TODO: implement step
     });
@@ -43,6 +48,7 @@ story('Ensure Cart on Customer', () => {
   });
 
   scenario('customer already has a Mavenir shopping cart', ({ given, when, then }) => {
+    // examples: storedAccountCredentialsWithToken, newMavenirShoppingCart
     given('the Customer enters the onboarding journey with a valid account token', () => {
       // TODO: implement step
     })
@@ -61,6 +67,7 @@ story('Ensure Cart on Customer', () => {
   });
 
   scenario('cart already exists', ({ given, when, then }) => {
+    // examples: storedAccountCredentialsWithToken, newMavenirShoppingCart
     given('the Customer enters the onboarding journey and already has a cart loaded', () => {
       // TODO: implement step
     });

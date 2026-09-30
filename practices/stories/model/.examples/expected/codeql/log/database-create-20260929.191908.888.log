@@ -1,0 +1,1027 @@
+[2026-09-29 19:19:08] This is codeql database create C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql --language=javascript --source-root=C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src --build-mode=none --overwrite
+[2026-09-29 19:19:08] Log file was started late.
+[2026-09-29 19:19:08] [PROGRESS] database create> Initializing database at C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql.
+[2026-09-29 19:19:09] Running plumbing command: codeql database init --overwrite --language=javascript --extractor-options-verbosity=1 --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --build-mode=none --source-root=C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src --allow-missing-source-root=false --allow-already-existing -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql
+[2026-09-29 19:19:09] Calling plumbing command: codeql resolve languages --extractor-options-verbosity=1 --format=betterjson
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Scanning for [codeql-extractor.yml] from C:\Users\thoma\AppData\Local\codeql-install\codeql\.codeqlmanifest.json
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\actions\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\cpp\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\csharp\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\csv\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\go\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\html\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\java\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\properties\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\python\codeql-extractor.yml.
+[2026-09-29 19:19:10] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\ruby\codeql-extractor.yml.
+[2026-09-29 19:19:11] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\rust\codeql-extractor.yml.
+[2026-09-29 19:19:11] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\swift\codeql-extractor.yml.
+[2026-09-29 19:19:11] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\xml\codeql-extractor.yml.
+[2026-09-29 19:19:11] [DETAILS] resolve languages> Parsing C:\Users\thoma\AppData\Local\codeql-install\codeql\yaml\codeql-extractor.yml.
+[2026-09-29 19:19:11] Plumbing command codeql resolve languages completed:
+                      {
+                        "aliases" : {
+                          "c" : "cpp",
+                          "c++" : "cpp",
+                          "c-c++" : "cpp",
+                          "c-cpp" : "cpp",
+                          "c#" : "csharp",
+                          "java-kotlin" : "java",
+                          "kotlin" : "java",
+                          "javascript-typescript" : "javascript",
+                          "typescript" : "javascript"
+                        },
+                        "extractors" : {
+                          "actions" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\actions",
+                              "extractor_options" : { }
+                            }
+                          ],
+                          "cpp" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\cpp",
+                              "extractor_options" : {
+                                "scale_timeouts" : {
+                                  "title" : "Value to scale compiler introspection timeouts with",
+                                  "description" : "The extractor attempts to determine what compiler the source code being extracted is compiled with. To this end the extractor makes additional calls to the compiler, some of which are expected to return within a certain fixed time (either 10s or 15s). On some systems that are under high load this time might be too short, and can be scaled up using this option.\n",
+                                  "type" : "string",
+                                  "pattern" : "[0-9]+"
+                                },
+                                "log_verbosity" : {
+                                  "title" : "Verbosity of the extractor logging",
+                                  "description" : "Set the verbosity of the extractor logging to 'quiet' (0), 'normal' (1), 'chatty' (2), or 'noisy' (3). The default is 'normal'.\n",
+                                  "type" : "string",
+                                  "pattern" : "[0-3]"
+                                }
+                              }
+                            }
+                          ],
+                          "csharp" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\csharp",
+                              "extractor_options" : {
+                                "trap" : {
+                                  "title" : "Options pertaining to TRAP.",
+                                  "description" : "Options pertaining to TRAP.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "compression" : {
+                                      "title" : "Controls compression for the TRAP files written by the extractor.",
+                                      "description" : "This option is only intended for use in debugging the extractor. Accepted values are 'brotli' (the default, to write brotli-compressed TRAP), 'gzip', and 'none' (to write uncompressed TRAP).\n",
+                                      "type" : "string",
+                                      "pattern" : "^(none|gzip|brotli)$"
+                                    }
+                                  }
+                                },
+                                "buildless" : {
+                                  "title" : "DEPRECATED - Whether to use buildless (standalone) extraction.",
+                                  "description" : "DEPRECATED: Use `--build-mode none` instead.\nA value indicating, which type of extraction the autobuilder should perform. If 'true', then the standalone extractor will be used, otherwise tracing extraction will be performed. The default is 'false'. Note that buildless extraction will generally yield less accurate analysis results, and should only be used in cases where it is not possible to build the code (for example if it uses inaccessible dependencies).\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                },
+                                "logging" : {
+                                  "title" : "Options pertaining to logging.",
+                                  "description" : "Options pertaining to logging.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "verbosity" : {
+                                      "title" : "Extractor logging verbosity level.",
+                                      "description" : "Controls the level of verbosity of the extractor. The supported levels are (in order of increasing verbosity):\n  - off\n  - errors\n  - warnings\n  - info or progress\n  - debug or progress+\n  - trace or progress++\n  - progress+++\n",
+                                      "type" : "string",
+                                      "pattern" : "^(off|errors|warnings|(info|progress)|(debug|progress\\+)|(trace|progress\\+\\+)|progress\\+\\+\\+)$"
+                                    }
+                                  }
+                                },
+                                "binlog" : {
+                                  "title" : "Binlog",
+                                  "description" : "[EXPERIMENTAL] The value is a path to the MsBuild binary log file that should be extracted. This option only works when `--build-mode none` is also specified.\n",
+                                  "type" : "array"
+                                },
+                                "buildless_dependency_dir" : {
+                                  "title" : "The path where buildless (standalone) extraction should keep dependencies.",
+                                  "description" : "If set, the buildless (standalone) extractor will store dependencies in this directory.\n",
+                                  "type" : "string"
+                                }
+                              }
+                            }
+                          ],
+                          "csv" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\csv"
+                            }
+                          ],
+                          "go" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\go",
+                              "extractor_options" : {
+                                "extract_tests" : {
+                                  "title" : "Whether to include Go test files in the CodeQL database.",
+                                  "description" : "A value indicating whether Go test files should be included in the CodeQL database. The default is 'false'.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                },
+                                "extract_vendor_dirs" : {
+                                  "title" : "Whether to include Go vendor directories in the CodeQL database.",
+                                  "description" : "A value indicating whether Go vendor directories should be included in the CodeQL database. The default is 'false'.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                }
+                              }
+                            }
+                          ],
+                          "html" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\html"
+                            }
+                          ],
+                          "java" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\java",
+                              "extractor_options" : {
+                                "exclude" : {
+                                  "title" : "A glob excluding files from analysis.",
+                                  "description" : "A glob indicating what files to exclude from the analysis. This accepts glob patterns that are supported by Java's 'getPathMatcher' implementation.\n",
+                                  "type" : "string"
+                                },
+                                "add_prefer_source" : {
+                                  "title" : "Whether to always prefer source files over class files.",
+                                  "description" : "A value indicating whether source files should be preferred over class files. If set to 'true', the extraction adds '-Xprefer:source' to the javac command line. If set to 'false', the extraction uses the default javac behavior ('-Xprefer:newer'). The default is 'true'.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                },
+                                "buildless" : {
+                                  "title" : "Whether to use buildless (standalone) extraction (experimental).",
+                                  "description" : "A value indicating, which type of extraction the autobuilder should perform. If 'true', then the standalone extractor will be used, otherwise tracing extraction will be performed. The default is 'false'. Note that buildless extraction will generally yield less accurate analysis results, and should only be used in cases where it is not possible to build the code (for example if it uses inaccessible dependencies).\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                },
+                                "buildless_dependency_dir" : {
+                                  "title" : "The path where buildless (standalone) extraction should keep dependencies.",
+                                  "description" : "If set, the buildless (standalone) extractor will store dependencies in this directory.\n",
+                                  "type" : "string"
+                                },
+                                "minimize_dependency_jars" : {
+                                  "title" : "Whether to rewrite and minimize downloaded JAR dependencies (experimental).",
+                                  "description" : "If 'true', JAR dependencies downloaded during extraction will be rewritten to remove unneeded data, such as method bodies. The default is 'false'.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                }
+                              }
+                            }
+                          ],
+                          "javascript" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\javascript",
+                              "extractor_options" : {
+                                "skip_types" : {
+                                  "title" : "Skip type extraction for TypeScript",
+                                  "description" : "Whether to skip the extraction of types in a TypeScript application",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                }
+                              }
+                            }
+                          ],
+                          "properties" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\properties"
+                            }
+                          ],
+                          "python" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\python",
+                              "extractor_options" : {
+                                "logging" : {
+                                  "title" : "Options pertaining to logging.",
+                                  "description" : "Options pertaining to logging.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "verbosity" : {
+                                      "title" : "Python extractor logging verbosity level.",
+                                      "description" : "Controls the level of verbosity of the CodeQL Python extractor.\nThe supported levels are (in order of increasing verbosity):\n\n  - off\n  - errors\n  - warnings\n  - info or progress\n  - debug or progress+\n  - trace or progress++\n  - progress+++\n",
+                                      "type" : "string",
+                                      "pattern" : "^(off|errors|warnings|(info|progress)|(debug|progress\\+)|(trace|progress\\+\\+)|progress\\+\\+\\+)$"
+                                    }
+                                  }
+                                },
+                                "python_executable_name" : {
+                                  "title" : "Controls the name of the Python executable used by the Python extractor.",
+                                  "description" : "The Python extractor uses platform-dependent heuristics to determine the name of the Python executable to use. Specifying a value for this option overrides the name of the Python executable used by the extractor. Accepted values are py, python and python3. Use this setting with caution, the Python extractor requires Python 3 to run.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(py|python|python3)$"
+                                }
+                              }
+                            }
+                          ],
+                          "ruby" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\ruby",
+                              "extractor_options" : {
+                                "trap" : {
+                                  "title" : "Options pertaining to TRAP.",
+                                  "description" : "Options pertaining to TRAP.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "compression" : {
+                                      "title" : "Controls compression for the TRAP files written by the extractor.",
+                                      "description" : "This option is only intended for use in debugging the extractor. Accepted values are 'gzip' (the default, to write gzip-compressed TRAP) 'zstd' (to write Zstandard-compressed TRAP) and 'none' (to write uncompressed TRAP).\n",
+                                      "type" : "string",
+                                      "pattern" : "^(none|gzip|zstd)$"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "rust" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\rust",
+                              "extractor_options" : {
+                                "trap" : {
+                                  "title" : "Options pertaining to TRAP.",
+                                  "description" : "Options pertaining to TRAP.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "compression" : {
+                                      "title" : "Controls compression for the TRAP files written by the extractor.",
+                                      "description" : "This option is only intended for use in debugging the extractor. Accepted values are 'gzip' (to write gzip-compressed TRAP) 'zstd' (the default, to write Zstandard-compressed TRAP) and 'none' (to write uncompressed TRAP).\n",
+                                      "type" : "string",
+                                      "pattern" : "^(none|gzip|zstd)$"
+                                    }
+                                  }
+                                },
+                                "cargo_target_dir" : {
+                                  "title" : "Directory to use for cargo output files.",
+                                  "description" : "This value is an optional path to use as `CARGO_TARGET_DIR` for the internal cargo commands the extractor uses. Pointing it to a persistent directory may reduce execution time of consecutive extractor runs. By default, a new scratch directory is used for each extraction, while qltests use the test's `target` directory so artifacts can be reused across runs.\n",
+                                  "type" : "string"
+                                },
+                                "cargo_target" : {
+                                  "title" : "Target architecture",
+                                  "description" : "Target architecture to use for analysis, analogous to `cargo --target`. By default the host architecture is used.\n",
+                                  "type" : "string"
+                                },
+                                "cargo_features" : {
+                                  "title" : "Cargo features to turn on",
+                                  "description" : "Comma-separated list of features to turn on. By default all features are enabled. If any features are specified, then only those features are enabled. The `default` feature must be explicitly specified if only default features are desired. Can be repeated.\n",
+                                  "type" : "array"
+                                },
+                                "cargo_cfg_overrides" : {
+                                  "title" : "Cargo cfg overrides",
+                                  "description" : "Comma-separated list of cfg settings to enable, or disable if prefixed with `-`. Can be repeated.\n",
+                                  "type" : "array"
+                                },
+                                "logging" : {
+                                  "title" : "Options pertaining to logging.",
+                                  "description" : "Options pertaining to logging.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "verbosity" : {
+                                      "title" : "Extractor logging verbosity level.",
+                                      "description" : "Controls the level of verbosity of the extractor. The supported levels are (in order of increasing verbosity):\n  - off\n  - errors\n  - warnings\n  - info or progress\n  - debug or progress+\n  - trace or progress++\n  - progress+++\n",
+                                      "type" : "string",
+                                      "pattern" : "^(off|errors|warnings|(info|progress)|(debug|progress\\+)|(trace|progress\\+\\+)|progress\\+\\+\\+)$"
+                                    },
+                                    "flamegraph" : {
+                                      "title" : "[Experimental] File path for write flame graph log",
+                                      "description" : "Collect flame graph data using the `tracing-flame` crate. To render a flame graph or chart, run the `inferno-flamegraph` command. See also: https://crates.io/crates/tracing-flame\n",
+                                      "type" : "string"
+                                    }
+                                  }
+                                },
+                                "extract_dependencies_as_source" : {
+                                  "title" : "Extract dependencies as source code",
+                                  "description" : "Extract the full source code of dependencies instead of only extracting signatures.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                }
+                              }
+                            }
+                          ],
+                          "swift" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\swift"
+                            }
+                          ],
+                          "xml" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\xml"
+                            }
+                          ],
+                          "yaml" : [
+                            {
+                              "extractor_root" : "C:\\Users\\thoma\\AppData\\Local\\codeql-install\\codeql\\yaml"
+                            }
+                          ]
+                        }
+                      }
+[2026-09-29 19:19:11] [PROGRESS] database init> Calculating baseline information in C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src
+[2026-09-29 19:19:11] [SPAMMY] database init> Ignoring the following directories when processing baseline information: .git, .hg, .svn.
+[2026-09-29 19:19:11] [DETAILS] database init> Running command in C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src: C:\Users\thoma\AppData\Local\codeql-install\codeql\tools\win64\scc.exe --no-config --by-file --exclude-dir .git,.hg,.svn --format json --no-large --no-min .
+[2026-09-29 19:19:12] Using configure-baseline script C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\configure-baseline.cmd.
+[2026-09-29 19:19:12] [PROGRESS] database init> Running command in C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src: [C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\configure-baseline.cmd]
+[2026-09-29 19:19:13] [SPAMMY] database init> Found 54 baseline files for javascript.
+[2026-09-29 19:19:13] [PROGRESS] database init> Calculated baseline information for languages: javascript (1.2s).
+[2026-09-29 19:19:13] [PROGRESS] database init> Resolving extractor javascript.
+[2026-09-29 19:19:13] [DETAILS] database init> Found candidate extractor root for javascript: C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript.
+[2026-09-29 19:19:13] [PROGRESS] database init> Successfully loaded extractor JavaScript/TypeScript (javascript) from C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript.
+[2026-09-29 19:19:13] [PROGRESS] database init> Created skeleton CodeQL database at C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql. This in-progress database is ready to be populated by an extractor.
+[2026-09-29 19:19:13] Plumbing command codeql database init completed.
+[2026-09-29 19:19:13] [PROGRESS] database create> Running build command: []
+[2026-09-29 19:19:13] Running plumbing command: codeql database trace-command --working-dir=C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src --index-traceless-dbs --no-db-cluster -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql
+[2026-09-29 19:19:13] Using autobuild script C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\autobuild.cmd.
+[2026-09-29 19:19:13] [PROGRESS] database trace-command> Running command in C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src: [C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\autobuild.cmd]
+[2026-09-29 19:19:14] [build-stdout] Single-threaded extraction.
+[2026-09-29 19:19:15] [build-stdout] Found Node.js at: node
+[2026-09-29 19:19:15] [build-stdout] Found Node.js version: v22.16.0
+[2026-09-29 19:19:15] [build-stdout] Memory for TypeScript process: 2000 MB, and 400 MB reserve
+[2026-09-29 19:19:16] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\examples\cognito-user.examples.ts
+[2026-09-29 19:19:16] [build-stderr] WARNING: A restricted method in java.lang.System has been called
+[2026-09-29 19:19:16] [build-stderr] WARNING: java.lang.System::load has been called by com.semmle.util.files.SubstResolver in an unnamed module (file:/C:/Users/thoma/AppData/Local/codeql-install/codeql/javascript/tools/extractor-javascript.jar)
+[2026-09-29 19:19:16] [build-stderr] WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+[2026-09-29 19:19:16] [build-stderr] WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\examples\cognito-user.examples.ts (588 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\examples\mavenir-customer.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\examples\mavenir-customer.examples.ts (17 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\examples\mavenir-shopping-cart.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\examples\mavenir-shopping-cart.examples.ts (41 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\examples\validation-code.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\examples\validation-code.examples.ts (51 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\examples\available-number.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\examples\available-number.examples.ts (28 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\examples\cart.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\examples\cart.examples.ts (115 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\examples\portability.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\examples\portability.examples.ts (129 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\examples\porting-sms-code.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\examples\porting-sms-code.examples.ts (27 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-order-review\examples\check-order.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-order-review\examples\check-order.examples.ts (47 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-order-review\examples\plan-upgrade.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-order-review\examples\plan-upgrade.examples.ts (35 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\examples\apple-pay-certificate.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\examples\apple-pay-certificate.examples.ts (64 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\examples\checkout-cart.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\examples\checkout-cart.examples.ts (30 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\examples\payment-authorization.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\examples\payment-authorization.examples.ts (25 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\examples\payment-status.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\examples\payment-status.examples.ts (26 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sign-up-plan\examples\catalog-voucher.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sign-up-plan\examples\catalog-voucher.examples.ts (176 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sign-up-plan\examples\catalog.examples.ts
+[2026-09-29 19:19:17] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sign-up-plan\examples\catalog.examples.ts (59 ms)
+[2026-09-29 19:19:17] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sim\examples\iccid.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sim\examples\iccid.examples.ts (42 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sim\examples\sim-cart.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sim\examples\sim-cart.examples.ts (64 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-verified-profile\examples\persona-inquiry.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-verified-profile\examples\persona-inquiry.examples.ts (34 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-verified-profile\examples\profile.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-verified-profile\examples\profile.examples.ts (147 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-voucher-credit\examples\credit-adjustment.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-voucher-credit\examples\credit-adjustment.examples.ts (46 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-voucher-credit\examples\voucher-redemption.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-voucher-credit\examples\voucher-redemption.examples.ts (84 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-voucher-credit\examples\voucher.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-voucher-credit\examples\voucher.examples.ts (41 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\place-order\examples\place-order.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\place-order\examples\place-order.examples.ts (118 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\sign-in-with-existing-account\examples\cognito-user.examples.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\sign-in-with-existing-account\examples\cognito-user.examples.ts (75 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\create_customer_story.spec.ts
+[2026-09-29 19:19:18] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\create_customer_story.spec.ts (121 ms)
+[2026-09-29 19:19:18] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\create_empty_cart_story.spec.ts
+[2026-09-29 19:19:19] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\create_empty_cart_story.spec.ts (737 ms)
+[2026-09-29 19:19:19] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\create_unconfirmed_user_story.spec.ts
+[2026-09-29 19:19:19] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\create_unconfirmed_user_story.spec.ts (204 ms)
+[2026-09-29 19:19:19] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\load_customer_story.spec.ts
+[2026-09-29 19:19:19] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\load_customer_story.spec.ts (123 ms)
+[2026-09-29 19:19:19] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\verify_account_story.spec.ts
+[2026-09-29 19:19:19] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\create-customer\verify_account_story.spec.ts (147 ms)
+[2026-09-29 19:19:19] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\examples\account-credentials.examples.ts
+[2026-09-29 19:19:20] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\examples\account-credentials.examples.ts (52 ms)
+[2026-09-29 19:19:20] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\examples\purchasable-plans.examples.ts
+[2026-09-29 19:19:20] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\examples\purchasable-plans.examples.ts (33 ms)
+[2026-09-29 19:19:20] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\enter_porting_number_story.spec.ts
+[2026-09-29 19:19:20] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\enter_porting_number_story.spec.ts (191 ms)
+[2026-09-29 19:19:20] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\get_new_number_story.spec.ts
+[2026-09-29 19:19:20] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\get_new_number_story.spec.ts (293 ms)
+[2026-09-29 19:19:20] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\verify_ported_number_story.spec.ts
+[2026-09-29 19:19:20] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-number\verify_ported_number_story.spec.ts (54 ms)
+[2026-09-29 19:19:20] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-onboarding-plan\get_onboarding_plan_story.spec.ts
+[2026-09-29 19:19:20] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-onboarding-plan\get_onboarding_plan_story.spec.ts (86 ms)
+[2026-09-29 19:19:20] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-order-review\get_order_review_story.spec.ts
+[2026-09-29 19:19:20] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-order-review\get_order_review_story.spec.ts (117 ms)
+[2026-09-29 19:19:20] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\get_payment_story.spec.ts
+[2026-09-29 19:19:21] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-payment\get_payment_story.spec.ts (305 ms)
+[2026-09-29 19:19:21] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sign-up-plan\get_sign_up_plan_story.spec.ts
+[2026-09-29 19:19:21] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sign-up-plan\get_sign_up_plan_story.spec.ts (194 ms)
+[2026-09-29 19:19:21] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sim\get_sim_story.spec.ts
+[2026-09-29 19:19:21] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-sim\get_sim_story.spec.ts (214 ms)
+[2026-09-29 19:19:21] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-verified-profile\get_verified_profile_story.spec.ts
+[2026-09-29 19:19:21] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-verified-profile\get_verified_profile_story.spec.ts (167 ms)
+[2026-09-29 19:19:21] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-voucher-credit\get_voucher_credit_story.spec.ts
+[2026-09-29 19:19:21] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\get-voucher-credit\get_voucher_credit_story.spec.ts (87 ms)
+[2026-09-29 19:19:21] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\place-order\place_order_story.spec.ts
+[2026-09-29 19:19:21] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\place-order\place_order_story.spec.ts (126 ms)
+[2026-09-29 19:19:21] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\sign-in-with-existing-account\sign_in_with_existing_account_story.spec.ts
+[2026-09-29 19:19:22] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\onboard-a-customer\sign-in-with-existing-account\sign_in_with_existing_account_story.spec.ts (199 ms)
+[2026-09-29 19:19:22] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\billing\Billing.ts
+[2026-09-29 19:19:22] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\billing\Billing.ts (136 ms)
+[2026-09-29 19:19:22] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\billing\payments.ts
+[2026-09-29 19:19:22] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\billing\payments.ts (85 ms)
+[2026-09-29 19:19:22] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\care\care.ts
+[2026-09-29 19:19:22] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\care\care.ts (78 ms)
+[2026-09-29 19:19:22] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\cart\Cart.ts
+[2026-09-29 19:19:23] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\cart\Cart.ts (972 ms)
+[2026-09-29 19:19:23] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\customer\Customer.ts
+[2026-09-29 19:19:23] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\customer\Customer.ts (297 ms)
+[2026-09-29 19:19:23] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\KYC\kyc.ts
+[2026-09-29 19:19:23] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\KYC\kyc.ts (26 ms)
+[2026-09-29 19:19:23] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\number\Numbers.ts
+[2026-09-29 19:19:23] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\number\Numbers.ts (49 ms)
+[2026-09-29 19:19:23] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\number\porting.ts
+[2026-09-29 19:19:23] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\number\porting.ts (28 ms)
+[2026-09-29 19:19:23] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\plans\plans.ts
+[2026-09-29 19:19:23] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\plans\plans.ts (24 ms)
+[2026-09-29 19:19:23] [build-stdout] Extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\subscription\Subscription.ts
+[2026-09-29 19:19:23] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\Temp\cdd-expected-codeql-src\subscription\Subscription.ts (37 ms)
+[2026-09-29 19:19:23] [build-stderr] No externs trap cache found
+[2026-09-29 19:19:23] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es2016.js
+[2026-09-29 19:19:23] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es2016.js (71 ms)
+[2026-09-29 19:19:23] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es2017.js
+[2026-09-29 19:19:24] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es2017.js (43 ms)
+[2026-09-29 19:19:24] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es3.js
+[2026-09-29 19:19:24] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es3.js (640 ms)
+[2026-09-29 19:19:24] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es5.js
+[2026-09-29 19:19:24] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es5.js (169 ms)
+[2026-09-29 19:19:24] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es6.js
+[2026-09-29 19:19:25] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es6.js (292 ms)
+[2026-09-29 19:19:25] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es6_collections.js
+[2026-09-29 19:19:25] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\es6_collections.js (86 ms)
+[2026-09-29 19:19:25] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\intl.js
+[2026-09-29 19:19:25] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\intl.js (84 ms)
+[2026-09-29 19:19:25] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\proxy.js
+[2026-09-29 19:19:25] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\es\proxy.js (90 ms)
+[2026-09-29 19:19:25] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\lib\bdd.js
+[2026-09-29 19:19:25] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\lib\bdd.js (143 ms)
+[2026-09-29 19:19:25] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\lib\jquery-3.2.js
+[2026-09-29 19:19:26] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\lib\jquery-3.2.js (550 ms)
+[2026-09-29 19:19:26] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\lib\should.js
+[2026-09-29 19:19:26] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\lib\should.js (126 ms)
+[2026-09-29 19:19:26] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\lib\vows.js
+[2026-09-29 19:19:26] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\lib\vows.js (112 ms)
+[2026-09-29 19:19:26] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\assert.js
+[2026-09-29 19:19:26] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\assert.js (70 ms)
+[2026-09-29 19:19:26] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\assert_legacy.js
+[2026-09-29 19:19:26] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\assert_legacy.js (39 ms)
+[2026-09-29 19:19:26] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\buffer.js
+[2026-09-29 19:19:26] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\buffer.js (78 ms)
+[2026-09-29 19:19:26] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\child_process.js
+[2026-09-29 19:19:26] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\child_process.js (397 ms)
+[2026-09-29 19:19:26] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\cluster.js
+[2026-09-29 19:19:27] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\cluster.js (233 ms)
+[2026-09-29 19:19:27] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\console.js
+[2026-09-29 19:19:27] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\console.js (50 ms)
+[2026-09-29 19:19:27] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\constants.js
+[2026-09-29 19:19:27] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\constants.js (194 ms)
+[2026-09-29 19:19:27] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\crypto.js
+[2026-09-29 19:19:27] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\crypto.js (144 ms)
+[2026-09-29 19:19:27] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\dgram.js
+[2026-09-29 19:19:27] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\dgram.js (64 ms)
+[2026-09-29 19:19:27] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\dns.js
+[2026-09-29 19:19:27] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\dns.js (69 ms)
+[2026-09-29 19:19:27] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\domain.js
+[2026-09-29 19:19:27] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\domain.js (85 ms)
+[2026-09-29 19:19:27] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\events.js
+[2026-09-29 19:19:27] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\events.js (55 ms)
+[2026-09-29 19:19:27] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\fs.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\fs.js (258 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\globals.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\globals.js (243 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\http.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\http.js (104 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\https.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\https.js (49 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\module.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\module.js (83 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\net.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\net.js (126 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\os.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\os.js (52 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\path.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\path.js (109 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\process.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\process.js (42 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\punycode.js
+[2026-09-29 19:19:28] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\punycode.js (66 ms)
+[2026-09-29 19:19:28] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\querystring.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\querystring.js (69 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\readline.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\readline.js (57 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\repl.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\repl.js (63 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\stream.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\stream.js (112 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\string_decoder.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\string_decoder.js (56 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\sys.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\sys.js (35 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\timers.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\timers.js (56 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\tls.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\tls.js (81 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\tty.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\tty.js (43 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\url.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\url.js (62 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\util.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\util.js (173 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\v8.js
+[2026-09-29 19:19:29] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\v8.js (87 ms)
+[2026-09-29 19:19:29] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\vm.js
+[2026-09-29 19:19:30] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\vm.js (129 ms)
+[2026-09-29 19:19:30] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\zlib.js
+[2026-09-29 19:19:30] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\nodejs\zlib.js (167 ms)
+[2026-09-29 19:19:30] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\vm\jsshell.js
+[2026-09-29 19:19:30] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\vm\jsshell.js (528 ms)
+[2026-09-29 19:19:30] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\vm\rhino.js
+[2026-09-29 19:19:30] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\vm\rhino.js (40 ms)
+[2026-09-29 19:19:30] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\vm\spidermonkey.js
+[2026-09-29 19:19:30] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\vm\spidermonkey.js (28 ms)
+[2026-09-29 19:19:30] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\vm\v8.js
+[2026-09-29 19:19:30] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\vm\v8.js (46 ms)
+[2026-09-29 19:19:30] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\chrome.js
+[2026-09-29 19:19:30] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\chrome.js (92 ms)
+[2026-09-29 19:19:30] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\fetchapi.js
+[2026-09-29 19:19:31] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\fetchapi.js (133 ms)
+[2026-09-29 19:19:31] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\fileapi.js
+[2026-09-29 19:19:31] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\fileapi.js (273 ms)
+[2026-09-29 19:19:31] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\flash.js
+[2026-09-29 19:19:31] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\flash.js (44 ms)
+[2026-09-29 19:19:31] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_css.js
+[2026-09-29 19:19:31] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_css.js (50 ms)
+[2026-09-29 19:19:31] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_dom.js
+[2026-09-29 19:19:31] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_dom.js (106 ms)
+[2026-09-29 19:19:31] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_event.js
+[2026-09-29 19:19:31] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_event.js (75 ms)
+[2026-09-29 19:19:31] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_ext.js
+[2026-09-29 19:19:31] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_ext.js (38 ms)
+[2026-09-29 19:19:31] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_xml.js
+[2026-09-29 19:19:31] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\gecko_xml.js (46 ms)
+[2026-09-29 19:19:31] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\html5.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\html5.js (563 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\ie_css.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\ie_css.js (114 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\ie_dom.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\ie_dom.js (194 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\ie_event.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\ie_event.js (112 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\ie_vml.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\ie_vml.js (28 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\intl.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\intl.js (73 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\iphone.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\iphone.js (37 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\mediasource.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\mediasource.js (61 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\page_visibility.js
+[2026-09-29 19:19:32] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\page_visibility.js (71 ms)
+[2026-09-29 19:19:32] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\streamsapi.js
+[2026-09-29 19:19:33] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\streamsapi.js (104 ms)
+[2026-09-29 19:19:33] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\url.js
+[2026-09-29 19:19:33] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\url.js (61 ms)
+[2026-09-29 19:19:33] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_anim_timing.js
+[2026-09-29 19:19:33] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_anim_timing.js (52 ms)
+[2026-09-29 19:19:33] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_batterystatus.js
+[2026-09-29 19:19:33] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_batterystatus.js (54 ms)
+[2026-09-29 19:19:33] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_css.js
+[2026-09-29 19:19:33] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_css.js (354 ms)
+[2026-09-29 19:19:33] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_css3d.js
+[2026-09-29 19:19:33] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_css3d.js (193 ms)
+[2026-09-29 19:19:33] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_device_sensor_event.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_device_sensor_event.js (205 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_dom1.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_dom1.js (74 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_dom2.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_dom2.js (279 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_dom3.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_dom3.js (126 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_dom4.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_dom4.js (30 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_elementtraversal.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_elementtraversal.js (31 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_encoding.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_encoding.js (44 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_event.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_event.js (73 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_event3.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_event3.js (34 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_gamepad.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_gamepad.js (36 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_geolocation.js
+[2026-09-29 19:19:34] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_geolocation.js (41 ms)
+[2026-09-29 19:19:34] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_indexeddb.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_indexeddb.js (247 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_midi.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_midi.js (84 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_navigation_timing.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_navigation_timing.js (67 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_permissions.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_permissions.js (47 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_pointer_events.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_pointer_events.js (50 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_range.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_range.js (53 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_requestidlecallback.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_requestidlecallback.js (42 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_rtc.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_rtc.js (331 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_screen_orientation.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_screen_orientation.js (43 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_selectors.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_selectors.js (48 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_serviceworker.js
+[2026-09-29 19:19:35] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_serviceworker.js (155 ms)
+[2026-09-29 19:19:35] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_touch_event.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_touch_event.js (63 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_webcrypto.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_webcrypto.js (99 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_xml.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\w3c_xml.js (109 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webgl.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webgl.js (299 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_css.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_css.js (112 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_dom.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_dom.js (64 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_event.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_event.js (38 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_notifications.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_notifications.js (47 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_usercontent.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webkit_usercontent.js (41 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webstorage.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\webstorage.js (44 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\whatwg_encoding.js
+[2026-09-29 19:19:36] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\whatwg_encoding.js (38 ms)
+[2026-09-29 19:19:36] [build-stdout] Extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\window.js
+[2026-09-29 19:19:37] [build-stdout] Done extracting C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\tools\data\externs\web\window.js (63 ms)
+[2026-09-29 19:19:37] Plumbing command codeql database trace-command completed.
+[2026-09-29 19:19:37] [PROGRESS] database create> Finalizing database at C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql.
+[2026-09-29 19:19:37] Running plumbing command: codeql database finalize --no-db-cluster -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql
+[2026-09-29 19:19:37] [PROGRESS] database finalize> Running TRAP import for CodeQL database at C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql...
+[2026-09-29 19:19:38] Running plumbing command: codeql dataset import --dbscheme=C:\Users\thoma\AppData\Local\codeql-install\codeql\javascript\semmlecode.javascript.dbscheme -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\trap\javascript
+[2026-09-29 19:19:39] Clearing disk cache since the version file C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript\default\cache\version does not exist
+[2026-09-29 19:19:39] Tuple pool not found. Clearing relations with cached strings
+[2026-09-29 19:19:39] Trimming disk cache at C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript\default\cache in mode clear.
+[2026-09-29 19:19:39] Sequence stamp origin is -5862785067074506184
+[2026-09-29 19:19:39] Pausing evaluation to hard-clear memory at sequence stamp o+0
+[2026-09-29 19:19:39] Unpausing evaluation
+[2026-09-29 19:19:39] Pausing evaluation to quickly trim disk at sequence stamp o+1
+[2026-09-29 19:19:39] Unpausing evaluation
+[2026-09-29 19:19:39] Pausing evaluation to zealously trim disk at sequence stamp o+2
+[2026-09-29 19:19:39] Unpausing evaluation
+[2026-09-29 19:19:39] Trimming completed (75ms): Purged everything.
+[2026-09-29 19:19:40] Scanning for files in C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\trap\javascript
+[2026-09-29 19:19:40] Found 165 TRAP files (10.72 MiB)
+[2026-09-29 19:19:40] [PROGRESS] dataset import> Importing TRAP files
+[2026-09-29 19:19:41] Importing kyc.ts.trap.gz (1 of 165)
+[2026-09-29 19:19:42] Importing Billing.ts.trap.gz (2 of 165)
+[2026-09-29 19:19:42] Importing payments.ts.trap.gz (3 of 165)
+[2026-09-29 19:19:42] Importing care.ts.trap.gz (4 of 165)
+[2026-09-29 19:19:42] Importing Cart.ts.trap.gz (5 of 165)
+[2026-09-29 19:19:42] Importing Customer.ts.trap.gz (6 of 165)
+[2026-09-29 19:19:42] Importing Numbers.ts.trap.gz (7 of 165)
+[2026-09-29 19:19:42] Importing porting.ts.trap.gz (8 of 165)
+[2026-09-29 19:19:42] Importing create_customer_story.spec.ts.trap.gz (9 of 165)
+[2026-09-29 19:19:42] Importing create_empty_cart_story.spec.ts.trap.gz (10 of 165)
+[2026-09-29 19:19:42] Importing create_unconfirmed_user_story.spec.ts.trap.gz (11 of 165)
+[2026-09-29 19:19:43] Importing cognito-user.examples.ts.trap.gz (12 of 165)
+[2026-09-29 19:19:43] Importing mavenir-customer.examples.ts.trap.gz (13 of 165)
+[2026-09-29 19:19:43] Importing mavenir-shopping-cart.examples.ts.trap.gz (14 of 165)
+[2026-09-29 19:19:43] Importing validation-code.examples.ts.trap.gz (15 of 165)
+[2026-09-29 19:19:43] Importing load_customer_story.spec.ts.trap.gz (16 of 165)
+[2026-09-29 19:19:43] Importing verify_account_story.spec.ts.trap.gz (17 of 165)
+[2026-09-29 19:19:43] Importing account-credentials.examples.ts.trap.gz (18 of 165)
+[2026-09-29 19:19:43] Importing purchasable-plans.examples.ts.trap.gz (19 of 165)
+[2026-09-29 19:19:43] Importing enter_porting_number_story.spec.ts.trap.gz (20 of 165)
+[2026-09-29 19:19:43] Importing available-number.examples.ts.trap.gz (21 of 165)
+[2026-09-29 19:19:43] Importing cart.examples.ts.trap.gz (22 of 165)
+[2026-09-29 19:19:43] Importing portability.examples.ts.trap.gz (23 of 165)
+[2026-09-29 19:19:43] Importing porting-sms-code.examples.ts.trap.gz (24 of 165)
+[2026-09-29 19:19:43] Importing get_new_number_story.spec.ts.trap.gz (25 of 165)
+[2026-09-29 19:19:43] Importing verify_ported_number_story.spec.ts.trap.gz (26 of 165)
+[2026-09-29 19:19:43] Importing get_onboarding_plan_story.spec.ts.trap.gz (27 of 165)
+[2026-09-29 19:19:43] Importing check-order.examples.ts.trap.gz (28 of 165)
+[2026-09-29 19:19:43] Importing plan-upgrade.examples.ts.trap.gz (29 of 165)
+[2026-09-29 19:19:43] Importing get_order_review_story.spec.ts.trap.gz (30 of 165)
+[2026-09-29 19:19:43] Importing apple-pay-certificate.examples.ts.trap.gz (31 of 165)
+[2026-09-29 19:19:43] Importing checkout-cart.examples.ts.trap.gz (32 of 165)
+[2026-09-29 19:19:43] Importing payment-authorization.examples.ts.trap.gz (33 of 165)
+[2026-09-29 19:19:43] Importing payment-status.examples.ts.trap.gz (34 of 165)
+[2026-09-29 19:19:43] Importing get_payment_story.spec.ts.trap.gz (35 of 165)
+[2026-09-29 19:19:43] Importing catalog-voucher.examples.ts.trap.gz (36 of 165)
+[2026-09-29 19:19:43] Importing catalog.examples.ts.trap.gz (37 of 165)
+[2026-09-29 19:19:43] Importing get_sign_up_plan_story.spec.ts.trap.gz (38 of 165)
+[2026-09-29 19:19:44] Importing iccid.examples.ts.trap.gz (39 of 165)
+[2026-09-29 19:19:44] Importing sim-cart.examples.ts.trap.gz (40 of 165)
+[2026-09-29 19:19:44] Importing get_sim_story.spec.ts.trap.gz (41 of 165)
+[2026-09-29 19:19:44] Importing persona-inquiry.examples.ts.trap.gz (42 of 165)
+[2026-09-29 19:19:44] Importing profile.examples.ts.trap.gz (43 of 165)
+[2026-09-29 19:19:45] Importing get_verified_profile_story.spec.ts.trap.gz (44 of 165)
+[2026-09-29 19:19:45] Importing credit-adjustment.examples.ts.trap.gz (45 of 165)
+[2026-09-29 19:19:45] Importing voucher-redemption.examples.ts.trap.gz (46 of 165)
+[2026-09-29 19:19:45] Importing voucher.examples.ts.trap.gz (47 of 165)
+[2026-09-29 19:19:45] Importing get_voucher_credit_story.spec.ts.trap.gz (48 of 165)
+[2026-09-29 19:19:45] Importing place-order.examples.ts.trap.gz (49 of 165)
+[2026-09-29 19:19:45] Importing place_order_story.spec.ts.trap.gz (50 of 165)
+[2026-09-29 19:19:45] Importing cognito-user.examples.ts.trap.gz (51 of 165)
+[2026-09-29 19:19:45] Importing sign_in_with_existing_account_story.spec.ts.trap.gz (52 of 165)
+[2026-09-29 19:19:45] Importing plans.ts.trap.gz (53 of 165)
+[2026-09-29 19:19:45] Importing Subscription.ts.trap.gz (54 of 165)
+[2026-09-29 19:19:45] Importing es2016.js.trap.gz (55 of 165)
+[2026-09-29 19:19:45] Importing es2017.js.trap.gz (56 of 165)
+[2026-09-29 19:19:45] Importing es3.js.trap.gz (57 of 165)
+[2026-09-29 19:19:45] Importing es5.js.trap.gz (58 of 165)
+[2026-09-29 19:19:45] Importing es6.js.trap.gz (59 of 165)
+[2026-09-29 19:19:45] Importing es6_collections.js.trap.gz (60 of 165)
+[2026-09-29 19:19:46] Importing intl.js.trap.gz (61 of 165)
+[2026-09-29 19:19:46] Importing proxy.js.trap.gz (62 of 165)
+[2026-09-29 19:19:46] Importing bdd.js.trap.gz (63 of 165)
+[2026-09-29 19:19:46] Importing jquery-3.2.js.trap.gz (64 of 165)
+[2026-09-29 19:19:46] Importing should.js.trap.gz (65 of 165)
+[2026-09-29 19:19:46] Importing vows.js.trap.gz (66 of 165)
+[2026-09-29 19:19:46] Importing assert.js.trap.gz (67 of 165)
+[2026-09-29 19:19:46] Importing assert_legacy.js.trap.gz (68 of 165)
+[2026-09-29 19:19:46] Importing buffer.js.trap.gz (69 of 165)
+[2026-09-29 19:19:46] Importing child_process.js.trap.gz (70 of 165)
+[2026-09-29 19:19:46] Importing cluster.js.trap.gz (71 of 165)
+[2026-09-29 19:19:46] Importing console.js.trap.gz (72 of 165)
+[2026-09-29 19:19:46] Importing constants.js.trap.gz (73 of 165)
+[2026-09-29 19:19:47] Importing crypto.js.trap.gz (74 of 165)
+[2026-09-29 19:19:47] Importing dgram.js.trap.gz (75 of 165)
+[2026-09-29 19:19:47] Importing dns.js.trap.gz (76 of 165)
+[2026-09-29 19:19:47] Importing domain.js.trap.gz (77 of 165)
+[2026-09-29 19:19:47] Importing events.js.trap.gz (78 of 165)
+[2026-09-29 19:19:47] Importing fs.js.trap.gz (79 of 165)
+[2026-09-29 19:19:48] Importing globals.js.trap.gz (80 of 165)
+[2026-09-29 19:19:48] Importing http.js.trap.gz (81 of 165)
+[2026-09-29 19:19:48] Importing https.js.trap.gz (82 of 165)
+[2026-09-29 19:19:48] Importing module.js.trap.gz (83 of 165)
+[2026-09-29 19:19:48] Importing net.js.trap.gz (84 of 165)
+[2026-09-29 19:19:48] Importing os.js.trap.gz (85 of 165)
+[2026-09-29 19:19:48] Importing path.js.trap.gz (86 of 165)
+[2026-09-29 19:19:48] Importing process.js.trap.gz (87 of 165)
+[2026-09-29 19:19:48] Importing punycode.js.trap.gz (88 of 165)
+[2026-09-29 19:19:48] Importing querystring.js.trap.gz (89 of 165)
+[2026-09-29 19:19:48] Importing readline.js.trap.gz (90 of 165)
+[2026-09-29 19:19:48] Importing repl.js.trap.gz (91 of 165)
+[2026-09-29 19:19:48] Importing stream.js.trap.gz (92 of 165)
+[2026-09-29 19:19:48] Importing string_decoder.js.trap.gz (93 of 165)
+[2026-09-29 19:19:48] Importing sys.js.trap.gz (94 of 165)
+[2026-09-29 19:19:48] Importing timers.js.trap.gz (95 of 165)
+[2026-09-29 19:19:48] Importing tls.js.trap.gz (96 of 165)
+[2026-09-29 19:19:48] Importing tty.js.trap.gz (97 of 165)
+[2026-09-29 19:19:48] Importing url.js.trap.gz (98 of 165)
+[2026-09-29 19:19:48] Importing util.js.trap.gz (99 of 165)
+[2026-09-29 19:19:49] Importing v8.js.trap.gz (100 of 165)
+[2026-09-29 19:19:49] Importing vm.js.trap.gz (101 of 165)
+[2026-09-29 19:19:49] Importing zlib.js.trap.gz (102 of 165)
+[2026-09-29 19:19:49] Importing jsshell.js.trap.gz (103 of 165)
+[2026-09-29 19:19:49] Importing rhino.js.trap.gz (104 of 165)
+[2026-09-29 19:19:49] Importing spidermonkey.js.trap.gz (105 of 165)
+[2026-09-29 19:19:49] Importing v8.js.trap.gz (106 of 165)
+[2026-09-29 19:19:49] Importing chrome.js.trap.gz (107 of 165)
+[2026-09-29 19:19:49] Importing fetchapi.js.trap.gz (108 of 165)
+[2026-09-29 19:19:49] Importing fileapi.js.trap.gz (109 of 165)
+[2026-09-29 19:19:49] Importing flash.js.trap.gz (110 of 165)
+[2026-09-29 19:19:49] Importing gecko_css.js.trap.gz (111 of 165)
+[2026-09-29 19:19:49] Importing gecko_dom.js.trap.gz (112 of 165)
+[2026-09-29 19:19:49] Importing gecko_event.js.trap.gz (113 of 165)
+[2026-09-29 19:19:49] Importing gecko_ext.js.trap.gz (114 of 165)
+[2026-09-29 19:19:49] Importing gecko_xml.js.trap.gz (115 of 165)
+[2026-09-29 19:19:49] Importing html5.js.trap.gz (116 of 165)
+[2026-09-29 19:19:49] Importing ie_css.js.trap.gz (117 of 165)
+[2026-09-29 19:19:49] Importing ie_dom.js.trap.gz (118 of 165)
+[2026-09-29 19:19:49] Importing ie_event.js.trap.gz (119 of 165)
+[2026-09-29 19:19:49] Importing ie_vml.js.trap.gz (120 of 165)
+[2026-09-29 19:19:49] Importing intl.js.trap.gz (121 of 165)
+[2026-09-29 19:19:49] Importing iphone.js.trap.gz (122 of 165)
+[2026-09-29 19:19:49] Importing mediasource.js.trap.gz (123 of 165)
+[2026-09-29 19:19:49] Importing page_visibility.js.trap.gz (124 of 165)
+[2026-09-29 19:19:49] Importing streamsapi.js.trap.gz (125 of 165)
+[2026-09-29 19:19:49] Importing url.js.trap.gz (126 of 165)
+[2026-09-29 19:19:49] Importing w3c_anim_timing.js.trap.gz (127 of 165)
+[2026-09-29 19:19:49] Importing w3c_batterystatus.js.trap.gz (128 of 165)
+[2026-09-29 19:19:49] Importing w3c_css.js.trap.gz (129 of 165)
+[2026-09-29 19:19:50] Importing w3c_css3d.js.trap.gz (130 of 165)
+[2026-09-29 19:19:50] Importing w3c_device_sensor_event.js.trap.gz (131 of 165)
+[2026-09-29 19:19:50] Importing w3c_dom1.js.trap.gz (132 of 165)
+[2026-09-29 19:19:50] Importing w3c_dom2.js.trap.gz (133 of 165)
+[2026-09-29 19:19:50] Importing w3c_dom3.js.trap.gz (134 of 165)
+[2026-09-29 19:19:50] Importing w3c_dom4.js.trap.gz (135 of 165)
+[2026-09-29 19:19:50] Importing w3c_elementtraversal.js.trap.gz (136 of 165)
+[2026-09-29 19:19:50] Importing w3c_encoding.js.trap.gz (137 of 165)
+[2026-09-29 19:19:50] Importing w3c_event.js.trap.gz (138 of 165)
+[2026-09-29 19:19:50] Importing w3c_event3.js.trap.gz (139 of 165)
+[2026-09-29 19:19:51] Importing w3c_gamepad.js.trap.gz (140 of 165)
+[2026-09-29 19:19:51] Importing w3c_geolocation.js.trap.gz (141 of 165)
+[2026-09-29 19:19:51] Importing w3c_indexeddb.js.trap.gz (142 of 165)
+[2026-09-29 19:19:51] Importing w3c_midi.js.trap.gz (143 of 165)
+[2026-09-29 19:19:51] Importing w3c_navigation_timing.js.trap.gz (144 of 165)
+[2026-09-29 19:19:51] Importing w3c_permissions.js.trap.gz (145 of 165)
+[2026-09-29 19:19:51] Importing w3c_pointer_events.js.trap.gz (146 of 165)
+[2026-09-29 19:19:51] Importing w3c_range.js.trap.gz (147 of 165)
+[2026-09-29 19:19:51] Importing w3c_requestidlecallback.js.trap.gz (148 of 165)
+[2026-09-29 19:19:51] Importing w3c_rtc.js.trap.gz (149 of 165)
+[2026-09-29 19:19:51] Importing w3c_screen_orientation.js.trap.gz (150 of 165)
+[2026-09-29 19:19:51] Importing w3c_selectors.js.trap.gz (151 of 165)
+[2026-09-29 19:19:51] Importing w3c_serviceworker.js.trap.gz (152 of 165)
+[2026-09-29 19:19:52] Importing w3c_touch_event.js.trap.gz (153 of 165)
+[2026-09-29 19:19:52] Importing w3c_webcrypto.js.trap.gz (154 of 165)
+[2026-09-29 19:19:52] Importing w3c_xml.js.trap.gz (155 of 165)
+[2026-09-29 19:19:52] Importing webgl.js.trap.gz (156 of 165)
+[2026-09-29 19:19:52] Importing webkit_css.js.trap.gz (157 of 165)
+[2026-09-29 19:19:52] Importing webkit_dom.js.trap.gz (158 of 165)
+[2026-09-29 19:19:52] Importing webkit_event.js.trap.gz (159 of 165)
+[2026-09-29 19:19:52] Importing webkit_notifications.js.trap.gz (160 of 165)
+[2026-09-29 19:19:52] Importing webkit_usercontent.js.trap.gz (161 of 165)
+[2026-09-29 19:19:52] Importing webstorage.js.trap.gz (162 of 165)
+[2026-09-29 19:19:52] Importing whatwg_encoding.js.trap.gz (163 of 165)
+[2026-09-29 19:19:52] Importing window.js.trap.gz (164 of 165)
+[2026-09-29 19:19:53] Importing metadata.trap.gz (165 of 165)
+[2026-09-29 19:19:53] [PROGRESS] dataset import> Merging relations
+[2026-09-29 19:19:53] Merging 1 fragment for 'files'.
+[2026-09-29 19:19:53] Merged 604 bytes for 'files'.
+[2026-09-29 19:19:53] Merging 1 fragment for 'folders'.
+[2026-09-29 19:19:53] Merged 173 bytes for 'folders'.
+[2026-09-29 19:19:53] Merging 1 fragment for 'containerparent'.
+[2026-09-29 19:19:53] Merged 578 bytes for 'containerparent'.
+[2026-09-29 19:19:53] Merging 3 fragments for 'locations_default'.
+[2026-09-29 19:19:54] Merged 1033856 bytes (1009.62 KiB) for 'locations_default'.
+[2026-09-29 19:19:54] Merging 4 fragments for 'hasLocation'.
+[2026-09-29 19:19:54] Merged 663681 bytes (648.13 KiB) for 'hasLocation'.
+[2026-09-29 19:19:54] Merging 1 fragment for 'extraction_data'.
+[2026-09-29 19:19:54] Merged 738 bytes for 'extraction_data'.
+[2026-09-29 19:19:54] Merging 1 fragment for 'scopes'.
+[2026-09-29 19:19:54] Merged 6343 bytes (6.19 KiB) for 'scopes'.
+[2026-09-29 19:19:54] Merging 1 fragment for 'comments'.
+[2026-09-29 19:19:54] Merged 39285 bytes (38.36 KiB) for 'comments'.
+[2026-09-29 19:19:54] Merging 1 fragment for 'indentation'.
+[2026-09-29 19:19:55] Merged 36932 bytes (36.07 KiB) for 'indentation'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'numlines'.
+[2026-09-29 19:19:55] Merged 2229 bytes (2.18 KiB) for 'numlines'.
+[2026-09-29 19:19:55] Merging 2 fragments for 'tokeninfo'.
+[2026-09-29 19:19:55] Merged 658774 bytes (643.33 KiB) for 'tokeninfo'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'next_token'.
+[2026-09-29 19:19:55] Merged 21383 bytes (20.88 KiB) for 'next_token'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'jsdoc'.
+[2026-09-29 19:19:55] Merged 20598 bytes (20.12 KiB) for 'jsdoc'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'toplevels'.
+[2026-09-29 19:19:55] Merged 334 bytes for 'toplevels'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'variables'.
+[2026-09-29 19:19:55] Merged 61236 bytes (59.80 KiB) for 'variables'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'local_type_names'.
+[2026-09-29 19:19:55] Merged 1688 bytes (1.65 KiB) for 'local_type_names'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'stmts'.
+[2026-09-29 19:19:55] Merged 127511 bytes (124.52 KiB) for 'stmts'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'stmt_containers'.
+[2026-09-29 19:19:55] Merged 55266 bytes (53.97 KiB) for 'stmt_containers'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'exprs'.
+[2026-09-29 19:19:55] Merged 537801 bytes (525.20 KiB) for 'exprs'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'enclosing_stmt'.
+[2026-09-29 19:19:55] Merged 109929 bytes (107.35 KiB) for 'enclosing_stmt'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'expr_containers'.
+[2026-09-29 19:19:55] Merged 121996 bytes (119.14 KiB) for 'expr_containers'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'literals'.
+[2026-09-29 19:19:55] Merged 96555 bytes (94.29 KiB) for 'literals'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'decl'.
+[2026-09-29 19:19:55] Merged 17083 bytes (16.68 KiB) for 'decl'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'typedecl'.
+[2026-09-29 19:19:55] Merged 1304 bytes (1.27 KiB) for 'typedecl'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'scopenodes'.
+[2026-09-29 19:19:55] Merged 10979 bytes (10.72 KiB) for 'scopenodes'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'scopenesting'.
+[2026-09-29 19:19:55] Merged 7498 bytes (7.32 KiB) for 'scopenesting'.
+[2026-09-29 19:19:55] Merging 1 fragment for 'properties'.
+[2026-09-29 19:19:56] Merged 6748 bytes (6.59 KiB) for 'properties'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'typeexprs'.
+[2026-09-29 19:19:56] Merged 10024 bytes (9.79 KiB) for 'typeexprs'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_arguments_object'.
+[2026-09-29 19:19:56] Merged 4216 bytes (4.12 KiB) for 'is_arguments_object'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'bind'.
+[2026-09-29 19:19:56] Merged 24889 bytes (24.31 KiB) for 'bind'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_method'.
+[2026-09-29 19:19:56] Merged 185 bytes for 'is_method'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'typebind'.
+[2026-09-29 19:19:56] Merged 1148 bytes (1.12 KiB) for 'typebind'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'entry_cfg_node'.
+[2026-09-29 19:19:56] Merged 11379 bytes (11.11 KiB) for 'entry_cfg_node'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'exit_cfg_node'.
+[2026-09-29 19:19:56] Merged 11379 bytes (11.11 KiB) for 'exit_cfg_node'.
+[2026-09-29 19:19:56] Merging 2 fragments for 'successor'.
+[2026-09-29 19:19:56] Merged 216707 bytes (211.63 KiB) for 'successor'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'filetype'.
+[2026-09-29 19:19:56] Merged 340 bytes for 'filetype'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'extraction_time'.
+[2026-09-29 19:19:56] Merged 22175 bytes (21.66 KiB) for 'extraction_time'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'js_parse_errors'.
+[2026-09-29 19:19:56] Merged 128 bytes for 'js_parse_errors'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_optional_parameter_declaration'.
+[2026-09-29 19:19:56] Merged 34 bytes for 'is_optional_parameter_declaration'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_module'.
+[2026-09-29 19:19:56] Merged 166 bytes for 'is_module'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_es2015_module'.
+[2026-09-29 19:19:56] Merged 96 bytes for 'is_es2015_module'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'local_namespace_names'.
+[2026-09-29 19:19:56] Merged 1492 bytes (1.46 KiB) for 'local_namespace_names'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'regexpterm'.
+[2026-09-29 19:19:56] Merged 17014 bytes (16.62 KiB) for 'regexpterm'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'regexp_const_value'.
+[2026-09-29 19:19:56] Merged 4598 bytes (4.49 KiB) for 'regexp_const_value'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'namespacedecl'.
+[2026-09-29 19:19:56] Merged 1110 bytes (1.08 KiB) for 'namespacedecl'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'has_type_keyword'.
+[2026-09-29 19:19:56] Merged 91 bytes for 'has_type_keyword'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'array_size'.
+[2026-09-29 19:19:56] Merged 130 bytes for 'array_size'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_async'.
+[2026-09-29 19:19:56] Merged 243 bytes for 'is_async'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'isOptionalChaining'.
+[2026-09-29 19:19:56] Merged 142 bytes for 'isOptionalChaining'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'has_definite_assignment_assertion'.
+[2026-09-29 19:19:56] Merged 22 bytes for 'has_definite_assignment_assertion'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'guard_node'.
+[2026-09-29 19:19:56] Merged 290 bytes for 'guard_node'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_abstract_member'.
+[2026-09-29 19:19:56] Merged 97 bytes for 'is_abstract_member'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_optional_member'.
+[2026-09-29 19:19:56] Merged 58 bytes for 'is_optional_member'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_capture'.
+[2026-09-29 19:19:56] Merged 34 bytes for 'is_capture'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'namespacebind'.
+[2026-09-29 19:19:56] Merged 32 bytes for 'namespacebind'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'jsdoc_tags'.
+[2026-09-29 19:19:56] Merged 101327 bytes (98.95 KiB) for 'jsdoc_tags'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'jsdoc_tag_descriptions'.
+[2026-09-29 19:19:56] Merged 7322 bytes (7.15 KiB) for 'jsdoc_tag_descriptions'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'jsdoc_tag_names'.
+[2026-09-29 19:19:56] Merged 14995 bytes (14.64 KiB) for 'jsdoc_tag_names'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'jsdoc_type_exprs'.
+[2026-09-29 19:19:56] Merged 132908 bytes (129.79 KiB) for 'jsdoc_type_exprs'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'is_externs'.
+[2026-09-29 19:19:56] Merged 225 bytes for 'is_externs'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'jsdoc_prefix_qualifier'.
+[2026-09-29 19:19:56] Merged 1898 bytes (1.85 KiB) for 'jsdoc_prefix_qualifier'.
+[2026-09-29 19:19:56] Merging 1 fragment for 'jsdoc_errors'.
+[2026-09-29 19:19:57] Merged 1141 bytes (1.11 KiB) for 'jsdoc_errors'.
+[2026-09-29 19:19:57] Merging 1 fragment for 'jsdoc_record_field_name'.
+[2026-09-29 19:19:57] Merged 1638 bytes (1.60 KiB) for 'jsdoc_record_field_name'.
+[2026-09-29 19:19:57] Merging 1 fragment for 'jsdoc_has_new_parameter'.
+[2026-09-29 19:19:57] Merged 35 bytes for 'jsdoc_has_new_parameter'.
+[2026-09-29 19:19:57] Merging 1 fragment for 'is_nodejs'.
+[2026-09-29 19:19:57] Merged 86 bytes for 'is_nodejs'.
+[2026-09-29 19:19:57] Merging 1 fragment for 'sourceLocationPrefix'.
+[2026-09-29 19:19:57] Merged 17 bytes for 'sourceLocationPrefix'.
+[2026-09-29 19:19:57] Saving string and id pools to disk.
+[2026-09-29 19:19:57] Finished importing TRAP files.
+[2026-09-29 19:19:57] Read 56.51 MiB of uncompressed TRAP data.
+[2026-09-29 19:19:57] Uncompressed relation data size: 17.31 MiB
+[2026-09-29 19:19:57] Relation data size: 4.03 MiB (merge rate: 1.19 MiB/s)
+[2026-09-29 19:19:57] String pool size: 4.78 MiB
+[2026-09-29 19:19:57] ID pool size: 13.00 MiB
+[2026-09-29 19:19:57] [PROGRESS] dataset import> Finished writing database (relations: 4.03 MiB; string pool: 4.78 MiB).
+[2026-09-29 19:19:57] Pausing evaluation to close the cache at sequence stamp o+149
+[2026-09-29 19:19:57] The disk cache is freshly trimmed; leave it be.
+[2026-09-29 19:19:57] Unpausing evaluation
+[2026-09-29 19:19:57] Plumbing command codeql dataset import completed.
+[2026-09-29 19:19:57] [PROGRESS] database finalize> TRAP import complete (19.6s).
+[2026-09-29 19:19:57] Running plumbing command: codeql database cleanup -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql
+[2026-09-29 19:20:01] [PROGRESS] database cleanup> Cleaning up existing TRAP files after import...
+[2026-09-29 19:20:02] [PROGRESS] database cleanup> TRAP files cleaned up (127ms).
+[2026-09-29 19:20:02] [PROGRESS] database cleanup> Cleaning up scratch directory...
+[2026-09-29 19:20:02] [PROGRESS] database cleanup> Scratch directory cleaned up (1ms).
+[2026-09-29 19:20:02] Running plumbing command: codeql dataset cleanup -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript
+[2026-09-29 19:20:02] [PROGRESS] dataset cleanup> Cleaning up dataset in C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript.
+[2026-09-29 19:20:02] Trimming disk cache at C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript\default\cache in mode trim.
+[2026-09-29 19:20:02] Sequence stamp origin is -5862784968717451285
+[2026-09-29 19:20:02] Pausing evaluation to quickly trim memory at sequence stamp o+0
+[2026-09-29 19:20:02] Unpausing evaluation
+[2026-09-29 19:20:02] Pausing evaluation to zealously trim disk at sequence stamp o+1
+[2026-09-29 19:20:02] Unpausing evaluation
+[2026-09-29 19:20:02] Trimming completed (15ms): Trimmed disposable data from cache.
+[2026-09-29 19:20:02] Pausing evaluation to close the cache at sequence stamp o+2
+[2026-09-29 19:20:02] The disk cache is freshly trimmed; leave it be.
+[2026-09-29 19:20:02] Unpausing evaluation
+[2026-09-29 19:20:02] [PROGRESS] dataset cleanup> Trimmed disposable data from cache.
+[2026-09-29 19:20:02] [PROGRESS] dataset cleanup> Finalizing dataset in C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript
+[2026-09-29 19:20:02] [DETAILS] dataset cleanup> Finished deleting ID pool from C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript (7ms).
+[2026-09-29 19:20:02] Plumbing command codeql dataset cleanup completed.
+[2026-09-29 19:20:02] Plumbing command codeql database cleanup completed with status 0.
+[2026-09-29 19:20:02] [PROGRESS] database finalize> Finished zipping source archive (325.45 KiB).
+[2026-09-29 19:20:02] Plumbing command codeql database finalize completed.
+[2026-09-29 19:20:02] [PROGRESS] database create> Successfully created database at C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql.
+[2026-09-29 19:20:02] Terminating normally.

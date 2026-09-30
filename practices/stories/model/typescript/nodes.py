@@ -12,7 +12,7 @@ from practices.stories.model.story_model import Background, StepType, Story
 
 class TypeScriptScenario(CodeScenario):
     _CALL = re.compile(
-        r"(?P<kw>\.(?:and|but)|(?<![.\w])(?:given|when|then))\(\s*(?P<q>['\"])(?P<text>(?:\\.|(?!(?P=q)).)*)(?P=q)",
+        r"(?P<kw>\.(?:and|but)|(?<![.\w])(?:given|when|then|but))\(\s*(?P<q>['\"])(?P<text>(?:\\.|(?!(?P=q)).)*)(?P=q)",
         re.IGNORECASE,
     )
     _SCENARIO = re.compile(r"scenario\(\s*(?P<q>['\"])(?P<name>(?:\\.|(?!(?P=q)).)*)(?P=q)")
@@ -21,8 +21,25 @@ class TypeScriptScenario(CodeScenario):
         r"import\s*\{(?P<names>[^}]+)\}\s*from\s*['\"][^'\"]*examples[^'\"]*['\"]"
     )
 
+    def read(self, body: str, example_names: List[str] | None = None) -> None:
+        self.backgrounds = self.backgrounds_in(body)
+        super().read(self.without_background(body), example_names)
+
+    @classmethod
+    def without_background(cls, body: str) -> str:
+        while True:
+            match = cls._BACKGROUND.search(body)
+            if match is None:
+                return body
+            arrow = body.find("=>", match.end())
+            brace = body.find("{", arrow if arrow >= 0 else match.end())
+            if brace < 0:
+                return body[:match.start()] + body[match.end():]
+            inner = cls.balanced(body, brace)
+            body = body[:match.start()] + body[brace + len(inner) + 2:]
+
     def calls_in(self, body: str) -> List[tuple]:
-        return [(match.group("kw").lstrip("."), match.group("text")) for match in self._CALL.finditer(body)]
+        return [(match.group("kw").lstrip("."), _unescape(match.group("text"))) for match in self._CALL.finditer(body)]
 
     @classmethod
     def scenario_blocks(cls, content: str) -> List[tuple]:
@@ -38,6 +55,8 @@ class TypeScriptScenario(CodeScenario):
     def backgrounds_in(cls, content: str) -> List[Background]:
         found: List[Background] = []
         for match in cls._BACKGROUND.finditer(content):
+            if cls._inside_scenario(content, match.start()):
+                continue
             arrow = content.find("=>", match.end())
             brace = content.find("{", arrow if arrow >= 0 else match.end())
             if brace < 0:
@@ -52,32 +71,61 @@ class TypeScriptScenario(CodeScenario):
         return found
 
     @classmethod
+    def _inside_scenario(cls, content: str, pos: int) -> bool:
+        for match in cls._SCENARIO.finditer(content):
+            if match.start() >= pos:
+                break
+            brace = content.find("{", content.find("=>", match.end()))
+            if brace < 0:
+                continue
+            inner = cls.balanced(content, brace)
+            if brace <= pos <= brace + len(inner):
+                return True
+        return False
+
+    @classmethod
     def example_names(cls, content: str) -> List[str]:
         names: List[str] = []
         for match in cls._IMPORT.finditer(content):
             for part in match.group("names").split(","):
                 name = part.strip().split(" as ")[-1].strip()
-                if name:
+                if name and name not in names:
+                    names.append(name)
+        for match in re.finditer(r"examples:\s*(.+)", content):
+            for part in match.group(1).split(","):
+                name = part.strip()
+                if name and name not in names:
                     names.append(name)
         return names
 
     @classmethod
     def create(cls, scenario) -> List[str]:
         lines = [f"  scenario({_ts_string(scenario.name)}, ({{ given, when, then }}) => {{"]
-        for step in scenario.steps_in(StepType.GIVEN):
-            lines.extend(_ts_call("    ", "given", step))
-        for when_steps, then_steps in scenario.when_then_runs():
-            if when_steps:
-                lines.extend(_ts_call("    ", "when", when_steps[0]))
-                for step in when_steps[1:]:
-                    lines.extend(_ts_call("      ", ".and", step))
-            if then_steps:
-                lines.extend(_ts_call("    ", "then", then_steps[0]))
-                for step in then_steps[1:]:
-                    lines.extend(_ts_call("      ", ".and", step))
+        for background in scenario.backgrounds:
+            scope = background.name if re.fullmatch(r"\w+", background.name or "") else "background"
+            lines.append(f"    background('{scope}', ({{ given }}) => {{")
+            for step in background.steps:
+                lines.extend(_ts_call("      ", _lead_verb(step, "given"), step))
+            lines.append("    });")
+        if scenario.examples:
+            lines.append("    // examples: " + ", ".join(scenario.examples))
+        for step in scenario.steps:
+            lines.extend(_ts_call("    ", _lead_verb(step, step.keyword.lower()), step))
         lines.append("  });")
         lines.append("")
         return lines
+
+
+def _lead_verb(step, fallback: str) -> str:
+    if step.keyword == "But":
+        return "but"
+    if step.keyword == "And":
+        return "and"
+    return fallback
+
+
+def _chain_verb(step) -> str:
+    return ".but" if step.keyword == "But" else ".and"
 
 
 def _ts_call(indent: str, verb: str, step) -> List[str]:
@@ -97,11 +145,22 @@ def _ts_call(indent: str, verb: str, step) -> List[str]:
     return lines
 
 
+def _example_names(stories) -> List[str]:
+    names = []
+    for story in stories:
+        for scenario in story.scenarios:
+            for name in scenario.examples:
+                if name not in names:
+                    names.append(name)
+    return names
+
+
+def _unescape(value: str) -> str:
+    return value.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
+
+
 def _ts_string(value: str) -> str:
-    cleaned = re.sub(r"`([^`]+)`", r"\1", value)
-    cleaned = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", cleaned)
-    cleaned = re.sub(r"\*\*([^*]+)\*\*", r"\1", cleaned)
-    escaped = cleaned.replace("\\", "\\\\").replace("'", "\\'")
+    escaped = value.replace("\\", "\\\\").replace("'", "\\'")
     return f"'{escaped}'"
 
 
@@ -110,9 +169,19 @@ class TypeScriptStory(CodeStory):
 
     @classmethod
     def load_all(cls, content: str) -> List["TypeScriptStory"]:
-        chunks = re.split(r"(?=/\*\*\s*\n \* Story:)", content)
-        stories = [cls.load(chunk, "") for chunk in chunks if "Story:" in chunk or "story(" in chunk]
-        return stories or [cls.load(content, "")]
+        comment_chunks = re.split(r"(?=/\*\*\s*\n \* Story:)", content)
+        named = [chunk for chunk in comment_chunks if re.search(r"\*\s*Story:", chunk)]
+        if named and content.count("story(") <= len(named):
+            stories = [cls.load(chunk, "") for chunk in comment_chunks if "Story:" in chunk or "story(" in chunk]
+            return stories or [cls.load(content, "")]
+        calls = list(re.finditer(r"(?m)^story\(", content))
+        if len(calls) <= 1:
+            return [cls.load(content, "")]
+        stories = []
+        for index, match in enumerate(calls):
+            end = calls[index + 1].start() if index + 1 < len(calls) else len(content)
+            stories.append(cls.load(content[match.start():end], ""))
+        return stories
 
     @classmethod
     def load(cls, content: str, story_slug: str) -> "TypeScriptStory":
@@ -136,7 +205,19 @@ class TypeScriptStory(CodeStory):
         lines: List[str] = ["/**", f" * Story: {story.name}"]
         if actor:
             lines.append(f" * Actor: {actor}")
-        lines.extend([" */", "", f"story({_ts_string(story.name)}, () => {{"])
+        lines.extend([" */", ""])
+        example_line = CodeStory.background_example_line(story, "// ")
+        if example_line:
+            lines.append(example_line)
+        lines.append(f"story({_ts_string(story.name)}, () => {{")
+        for background in story.backgrounds:
+            scope = background.name if re.fullmatch(r"\w+", background.name or "") else "each"
+            lines.append(f"  background('{scope}', ({{ given }}) => {{")
+            for step in background.steps:
+                if step.keyword.lower() == "given":
+                    lines.extend(_ts_call("    ", "given", step))
+            lines.append("  });")
+            lines.append("")
         if not story.scenarios:
             lines.append("  // TODO: add main-flow scenario")
         for scenario in story.scenarios:
@@ -176,12 +257,19 @@ class TypeScriptEpic(CodeEpic):
             return
         import_path = story_test_import_path(tests_root)
         blocks = "\n".join(TypeScriptStory.story_text(story) for story in stories)
+        example_names = _example_names(stories)
+        example_import = (
+            [f"import {{ {', '.join(example_names)} }} from \"./examples\";", ""]
+            if example_names else []
+        )
         files[f"{parent}/{self.snake()}_story.test.ts"] = "\n".join([
             "/**",
             f" * Epic: {self.name}",
+            f" * Orders: {self.order_path()}",
             " */",
             "",
             f'import {{ scenario, story }} from "{import_path}";',
+            *example_import,
             "",
             blocks,
         ])

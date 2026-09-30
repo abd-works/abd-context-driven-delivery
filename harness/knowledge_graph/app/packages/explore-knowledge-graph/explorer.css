@@ -560,6 +560,51 @@ ul.tree ul {
   color: var(--muted);
 }
 
+.node-report[data-nested='true'] {
+  margin-left: 1.25rem;
+}
+
+.node-report[data-kind='OoadClass'] .source-toggle {
+  color: var(--accent, #c2410c);
+}
+
+.source-snippet .call-fold {
+  cursor: pointer;
+}
+
+.source-snippet .call-fold.codicon::before,
+.source-snippet .call-fold::before {
+  content: '↳';
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  color: var(--accent, #c2410c);
+}
+
+.source-snippet .call-fold-open.codicon::before,
+.source-snippet .call-fold-open::before {
+  content: '↴';
+}
+
+.source-snippet .class-fold {
+  cursor: pointer;
+}
+
+.source-snippet .class-fold.codicon::before,
+.source-snippet .class-fold::before {
+  content: '▸';
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--muted);
+}
+
+.source-snippet .class-fold-open.codicon::before,
+.source-snippet .class-fold-open::before {
+  content: '▾';
+}
+
 .source-snippet .source-toggle {
   position: static;
   flex: none;
@@ -655,13 +700,23 @@ ul.tree ul {
 }
 
 .rule-card {
-  position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: var(--space-sm);
-  padding-bottom: calc(var(--space-sm) + 2.5rem);
+  padding: 0.2rem 0.45rem;
   margin-bottom: var(--space-sm);
   background: var(--raised);
+}
+
+.rule-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+  padding: 0.1rem 0;
+}
+
+.rule-line + .rule-line {
+  border-top: 1px solid var(--border);
 }
 
 .pane-actions {
@@ -711,31 +766,36 @@ ul.tree ul {
 }
 
 .rule-card .copy-prompt-actions {
-  position: absolute;
-  right: var(--space-sm);
-  bottom: var(--space-sm);
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
   gap: var(--space-2xs);
+  margin-left: auto;
 }
 
 .rule-card .copy-prompt {
   padding: 0.15rem 0.45rem;
 }
 
+.rule-card h3,
+.rule-card p {
+  margin: 0;
+  line-height: 1.25;
+}
+
 .rule-card h3 {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: 600;
-  margin-bottom: var(--space-2xs);
+}
+
+.rule-card .report-meta {
+  margin-bottom: 0;
 }
 
 .rule-card .violation {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--error);
-  margin-top: var(--space-2xs);
 }
 
 .node-report {

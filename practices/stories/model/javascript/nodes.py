@@ -10,7 +10,7 @@ from practices.stories.model.story_model import Background, StepType, Story
 
 class JavaScriptScenario(CodeScenario):
     _CALL = re.compile(
-        r"(?P<kw>\.(?:and|but)|(?<![.\w])(?:given|when|then))\(\s*(?P<q>['\"])(?P<text>(?:\\.|(?!(?P=q)).)*)(?P=q)",
+        r"(?P<kw>\.(?:and|but)|(?<![.\w])(?:given|when|then|but))\(\s*(?P<q>['\"])(?P<text>(?:\\.|(?!(?P=q)).)*)(?P=q)",
         re.IGNORECASE,
     )
     _SCENARIO = re.compile(r"scenario\(\s*(?P<q>['\"])(?P<name>(?:\\.|(?!(?P=q)).)*)(?P=q)")
@@ -20,7 +20,7 @@ class JavaScriptScenario(CodeScenario):
     )
 
     def calls_in(self, body: str) -> List[tuple]:
-        return [(match.group("kw").lstrip("."), match.group("text")) for match in self._CALL.finditer(body)]
+        return [(match.group("kw").lstrip("."), _unescape(match.group("text"))) for match in self._CALL.finditer(body)]
 
     @classmethod
     def scenario_blocks(cls, content: str) -> List[tuple]:
@@ -36,6 +36,8 @@ class JavaScriptScenario(CodeScenario):
     def backgrounds_in(cls, content: str) -> List[Background]:
         found: List[Background] = []
         for match in cls._BACKGROUND.finditer(content):
+            if cls._inside_scenario(content, match.start()):
+                continue
             arrow = content.find("=>", match.end())
             brace = content.find("{", arrow if arrow >= 0 else match.end())
             if brace < 0:
@@ -50,33 +52,65 @@ class JavaScriptScenario(CodeScenario):
         return found
 
     @classmethod
+    def _inside_scenario(cls, content: str, pos: int) -> bool:
+        for match in cls._SCENARIO.finditer(content):
+            if match.start() >= pos:
+                break
+            brace = content.find("{", content.find("=>", match.end()))
+            if brace < 0:
+                continue
+            inner = cls.balanced(content, brace)
+            if brace <= pos <= brace + len(inner):
+                return True
+        return False
+
+    @classmethod
     def example_names(cls, content: str) -> List[str]:
         names: List[str] = []
         for match in cls._IMPORT.finditer(content):
             for part in match.group("names").split(","):
                 name = part.strip().split(" as ")[-1].strip()
-                if name:
+                if name and name not in names:
+                    names.append(name)
+        for match in re.finditer(r"examples:\s*(.+)", content):
+            for part in match.group(1).split(","):
+                name = part.strip()
+                if name and name not in names:
                     names.append(name)
         return names
 
     @classmethod
     def create(cls, scenario) -> List[str]:
         lines = [f"    scenario({_js_string(scenario.name)}, ({{ given, when, then }}) => {{"]
-        for step in scenario.steps_in(StepType.GIVEN):
-            lines.append("      " + _js_chain("given", step) + ";")
-        for when_steps, then_steps in scenario.when_then_runs():
-            if when_steps:
-                line = _js_chain("when", when_steps[0])
-                for step in when_steps[1:]:
-                    line += _js_chain(".and", step)
-                lines.append("      " + line + ";")
-            if then_steps:
-                line = _js_chain("then", then_steps[0])
-                for step in then_steps[1:]:
-                    line += _js_chain(".and", step)
-                lines.append("      " + line + ";")
+        lines.extend(CodeScenario.background_lines(scenario, "      // "))
+        if scenario.examples:
+            lines.append("      // examples: " + ", ".join(scenario.examples))
+        for step in scenario.steps:
+            lines.append("      " + _js_chain(_lead_verb(step, step.keyword.lower()), step) + ";")
         lines.append("    });")
         return lines
+
+
+def _example_names(stories) -> List[str]:
+    names = []
+    for story in stories:
+        for scenario in story.scenarios:
+            for name in scenario.examples:
+                if name not in names:
+                    names.append(name)
+    return names
+
+
+def _lead_verb(step, fallback: str) -> str:
+    if step.keyword == "But":
+        return "but"
+    if step.keyword == "And":
+        return "and"
+    return fallback
+
+
+def _chain_verb(step) -> str:
+    return ".but" if step.keyword == "But" else ".and"
 
 
 def _js_chain(verb: str, step) -> str:
@@ -87,11 +121,12 @@ def _js_chain(verb: str, step) -> str:
     return call
 
 
+def _unescape(value: str) -> str:
+    return value.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
+
+
 def _js_string(value: str) -> str:
-    cleaned = re.sub(r"`([^`]+)`", r"\1", value)
-    cleaned = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", cleaned)
-    cleaned = re.sub(r"\*\*([^*]+)\*\*", r"\1", cleaned)
-    escaped = cleaned.replace("\\", "\\\\").replace("'", "\\'")
+    escaped = value.replace("\\", "\\\\").replace("'", "\\'")
     return f"'{escaped}'"
 
 
@@ -124,17 +159,23 @@ class JavaScriptStory(CodeStory):
         lines.extend([
             " */",
             "",
-            f"story({_js_string(story.name)}, () => {{",
-            "  background('each', ({ given }) => {",
         ])
-        for background in story.backgrounds:
-            for step in background.steps:
-                lines.append(f"    given({_js_string(step.text)}, () => {{}});")
+        example_line = CodeStory.background_example_line(story, "// ")
+        if example_line:
+            lines.append(example_line)
+        lines.append(f"story({_js_string(story.name)}, () => {{")
+        if story.backgrounds:
+            scope = story.backgrounds[0].name if re.fullmatch(r"\w+", story.backgrounds[0].name or "") else "each"
+            lines.append(f"  background('{scope}', ({{ given }}) => {{")
+            for background in story.backgrounds:
+                for step in background.steps:
+                    if step.keyword == "Given":
+                        lines.append("    " + _js_chain("given", step) + ";")
+            lines.append("  });")
         if not story.scenarios:
             lines.append("    // TODO: add main-flow scenario")
         for scenario in story.scenarios:
             lines.extend(JavaScriptScenario.create(scenario))
-        lines.append("  });")
         lines.append("});")
         lines.append("")
         return "\n".join(lines)
@@ -165,12 +206,19 @@ class JavaScriptEpic(CodeEpic):
             return
         relative = "../" * parent.count("/") + "story-test.js"
         blocks = "\n".join(JavaScriptStory.story_text(story) for story in stories)
+        names = _example_names(stories)
+        example_import = (
+            [f"import {{ {', '.join(names)} }} from \"./examples\";", ""]
+            if names else []
+        )
         files[f"{parent}/{self.snake()}_story.test.js"] = "\n".join([
             "/**",
             f" * Epic: {self.name}",
+            f" * Orders: {self.order_path()}",
             " */",
             "",
             f'import {{ background, scenario, story }} from "{relative}";',
+            *example_import,
             "",
             blocks,
         ])

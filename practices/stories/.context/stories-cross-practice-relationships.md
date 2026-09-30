@@ -17,9 +17,9 @@ Story -- invokes / observes --> union of its scenarios
 
 `OoadClass`, `Operation`, `Property`, and `Module` are the Clean Engineering nodes in `practices/clean_engineering/model/.context/ooad-model.md`. The class that owns an invoked member may be a DDD stereotype in `practices/ddd/model/.context/ddd-model.md`.
 
-## Python and TypeScript story classes
+## Base story model
 
-`python_story_model.py` and `typescript_story_model.py` read a test file into the story tree. They do not record these edges. Nothing in those channels has to change for the CodeQL graph. A later channel would add the same operations — `loads`, `invokes`, `observes`, `uses`, `retrieved_using` — only if that channel itself should hold the edges.
+The walk in `practices/stories/model/.context/story-model.md` loads the example on `Step`. The CodeQL extensions hold the other links: `CodeQLEpic.uses`, `CodeQLStory` and `CodeQLScenario` aggregate invokes and observes, `CodeQLBackground.loads`, `CodeQLStep` loads, invokes, and observes, and `CodeQLExample` demonstrates and is retrieved using. CodeQL resolves each name when its map is built. A transform to markdown or another language copies that map and traverses the edge. The copy reads the node already on the edge.
 
 ## Queries
 

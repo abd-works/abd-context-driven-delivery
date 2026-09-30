@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from typing import Optional
 
-from practices.stories.model.story_model import Epic, Increment, Story, StoryMap, StoryType
+from practices.stories.model.story_model import Epic, Increment, Story, StoryModel, StoryType
 
 
 class DiagramStoryNode:
     """Placement shared by a diagram epic, story, and increment."""
 
-    def _owning_map(self) -> Optional[StoryMap]:
+    def _owning_map(self) -> Optional[StoryModel]:
         node = self.parent
-        while node is not None and not isinstance(node, StoryMap):
+        while node is not None and not isinstance(node, StoryModel):
             node = node.parent
         return node
 
@@ -23,15 +23,15 @@ class DiagramStoryNode:
         if not isinstance(self, Epic):
             return 0
         if isinstance(self.parent, Epic):
-            return DiagramStoryMap.base_width * max(self.diagram_span_columns(), 1)
-        return DiagramStoryMap.base_width * self.span_columns()
+            return DiagramStoryModel.base_width * max(self.diagram_span_columns(), 1)
+        return DiagramStoryModel.base_width * self.span_columns()
 
     @property
     def height(self) -> int:
         if isinstance(self, Story):
             return self.size
         if isinstance(self, Epic):
-            return DiagramStoryMap.row_height
+            return DiagramStoryModel.row_height
         return 0
 
     @property
@@ -40,9 +40,9 @@ class DiagramStoryNode:
             story_map = self._owning_map()
             if story_map is None:
                 return 0
-            return story_map.actor_y + DiagramStoryMap.row_height
+            return story_map.actor_y + DiagramStoryModel.row_height
         if isinstance(self, Epic) and isinstance(self.parent, Epic):
-            return (self.depth + 1) * DiagramStoryMap.row_height
+            return (self.depth + 1) * DiagramStoryModel.row_height
         return 0
 
     @property
@@ -53,7 +53,7 @@ class DiagramStoryNode:
         if isinstance(parent, Epic):
             origin = parent.x
             siblings = parent.epics
-        elif isinstance(parent, StoryMap):
+        elif isinstance(parent, StoryModel):
             origin = 0
             siblings = parent.epics
         else:
@@ -140,7 +140,7 @@ class DiagramIncrement(Increment, DiagramStoryNode):
     stroke = "#666666"
 
 
-class DiagramStoryMap(StoryMap):
+class DiagramStoryModel(StoryModel):
     """Story map whose epics and stories are the diagram types."""
 
     base_width = 200

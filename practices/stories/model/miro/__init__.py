@@ -1,1 +1,1 @@
-from .nodes import MiroStoryMap, MiroParseError
+from .nodes import MiroStoryModel, MiroParseError

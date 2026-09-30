@@ -1,5 +1,6 @@
 /**
  * Epic: Create Customer
+ * Orders: 0.0.1
  */
 
 import { scenario, story } from "tests/story-test";
@@ -8,8 +9,20 @@ import { scenario, story } from "tests/story-test";
  * Story: Enter Account Credentials
  */
 
+// background-examples: {"email required": {"account credential requirements": "account credential requirements", "example": "email required", "field": "email", "requirement": "Email is required", "group": "Account credential requirements"}, "email format": {"account credential requirements": "account credential requirements", "example": "email format", "field": "email", "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)", "group": "Account credential requirements"}, "password letters": {"account credential requirements": "account credential requirements", "example": "password letters", "field": "password", "requirement": "Password must contain uppercase and lowercase letters", "group": "Account credential requirements"}, "password number": {"account credential requirements": "account credential requirements", "example": "password number", "field": "password", "requirement": "Password must have at least one number", "group": "Account credential requirements"}, "password symbol": {"account credential requirements": "account credential requirements", "example": "password symbol", "field": "password", "requirement": "Password must have at least one symbol", "group": "Account credential requirements"}, "password length": {"account credential requirements": "account credential requirements", "example": "password length", "field": "password", "requirement": "Length must be greater than 8 characters", "group": "Account credential requirements"}, "confirm required": {"account credential requirements": "account credential requirements", "example": "confirm required", "field": "confirmPassword", "requirement": "Confirm Password is required", "group": "Account credential requirements"}, "confirm mismatch": {"account credential requirements": "account credential requirements", "example": "confirm mismatch", "field": "confirmPassword", "requirement": "Passwords don't match", "group": "Account credential requirements"}, "example": {"account credential requirements": "account credentials", "example": "example", "field": "unmet", "requirement": "Create account", "group": "Account credential requirements"}, "valid account credentials": {"account credential requirements": "account credentials", "example": "valid account credentials", "field": "", "requirement": "enabled", "group": "Account credential requirements"}, "Paradise Mobile account credentials": {"account credential requirements": "account credentials", "example": "Paradise Mobile account credentials", "field": "", "requirement": "enabled", "group": "Account credential requirements"}, "invalid password letters": {"account credential requirements": "account credentials", "example": "invalid password letters", "field": "Password must contain uppercase and lowercase letters", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password number": {"account credential requirements": "account credentials", "example": "invalid password number", "field": "Password must have at least one number", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password symbol": {"account credential requirements": "account credentials", "example": "invalid password symbol", "field": "Password must have at least one symbol", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password length": {"account credential requirements": "account credentials", "example": "invalid password length", "field": "Length must be greater than 8 characters", "requirement": "disabled", "group": "Account credential requirements"}, "invalid confirm required": {"account credential requirements": "account credentials", "example": "invalid confirm required", "field": "Confirm Password is required", "requirement": "disabled", "group": "Account credential requirements"}, "invalid confirm mismatch": {"account credential requirements": "account credentials", "example": "invalid confirm mismatch", "field": "Passwords don't match", "requirement": "disabled", "group": "Account credential requirements"}, "invalid email required": {"account credential requirements": "account credentials", "example": "invalid email required", "field": "Email is required", "requirement": "disabled", "group": "Account credential requirements"}, "invalid email format": {"account credential requirements": "account credentials", "example": "invalid email format", "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)", "requirement": "disabled", "group": "Account credential requirements"}}
 story('Enter Account Credentials', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Enter new account credentials', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      })
+        .and('the User has selected ++plan++ ++Essentials++ on the Paradise Mobile site', () => {
+          // TODO: implement step
+        });
+    });
     when('the User proceeds to create an account from the Paradise Mobile website', () => {
       // TODO: implement step
     });
@@ -55,6 +68,14 @@ story('Enter Account Credentials', () => {
   });
 
   scenario('Paradise Mobile email', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      })
+        .and('the User has selected ++plan++ ++Essentials++ on the Paradise Mobile site', () => {
+          // TODO: implement step
+        });
+    });
     when('the User enters ++account credentials++ ++Paradise Mobile account credentials++', () => {
       // TODO: implement step
     });
@@ -64,6 +85,14 @@ story('Enter Account Credentials', () => {
   });
 
   scenario('Email already registered', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the plan catalog contains purchasable plans', () => {
+        // TODO: implement step
+      })
+        .and('the User has selected ++plan++ ++Essentials++ on the Paradise Mobile site', () => {
+          // TODO: implement step
+        });
+    });
     given('++account credentials++ ++already-registered account credentials++ are already registered', () => {
       // TODO: implement step
     });
@@ -83,6 +112,11 @@ story('Enter Account Credentials', () => {
 
 story('Create Unconfirmed Cognito User', () => {
   scenario('Create Unconfirmed Cognito User', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('no ++Cognito user++ exists for ++account credentials++ ++valid account credentials++', () => {
+        // TODO: implement step
+      });
+    });
     when('Cognito is asked to register ++account credentials++ ++valid account credentials++', () => {
       // TODO: implement step
     });
@@ -101,6 +135,11 @@ story('Create Unconfirmed Cognito User', () => {
   });
 
   scenario('Email already registered in Cognito', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('no ++Cognito user++ exists for ++account credentials++ ++valid account credentials++', () => {
+        // TODO: implement step
+      });
+    });
     given('++Cognito user++ ++unconfirmed Cognito user++ exists for ++account credentials++ ++already-registered account credentials++', () => {
       // TODO: implement step
     });
@@ -116,6 +155,11 @@ story('Create Unconfirmed Cognito User', () => {
   });
 
   scenario('Cognito register fails with another error', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('no ++Cognito user++ exists for ++account credentials++ ++valid account credentials++', () => {
+        // TODO: implement step
+      });
+    });
   });
 
 });
@@ -125,12 +169,24 @@ story('Create Unconfirmed Cognito User', () => {
  * Actor: My Paradise
  */
 
+// background-examples: {"valid validation code": {"validation code": "validation code", "example": "valid validation code", "code": "123456", "group": "validation code"}, "mismatch validation code": {"validation code": "validation code", "example": "mismatch validation code", "code": "Hmm. That code didn't work.", "group": "validation code"}, "expired validation code": {"validation code": "validation code", "example": "expired validation code", "code": "Hmm. That code didn't work.", "group": "validation code"}, "attempts exceeded validation code": {"validation code": "validation code", "example": "attempts exceeded validation code", "code": "Attempts limit exceeded. Please try again later.", "group": "validation code"}, "example": {"validation code": "validation code", "example": "example", "code": "helper", "group": "validation code"}}
 story('Enter Validation Code', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Enter validation code', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the User has submitted ++account credentials++ ++valid account credentials++', () => {
+        // TODO: implement step
+      })
+        .and('Cognito has an ++Cognito user++ ++unconfirmed Cognito user++', () => {
+          // TODO: implement step
+        });
+    });
     when('the User proceeds to check their email', () => {
       // TODO: implement step
     });
-    then('the User sees the code was sent to [Jeff.anderson@Abdworks.com](mailto:Jeff.anderson@Abdworks.com)', () => {
+    then('the User sees the code was sent to *[Jeff.anderson@Abdworks.com](mailto:Jeff.anderson@Abdworks.com)*', () => {
       // TODO: implement step
     })
       .and('the User can enter a ++validation code++ in Enter Validation Code', () => {
@@ -163,6 +219,14 @@ story('Enter Validation Code', () => {
   });
 
   scenario('Activate with unusable validation code', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the User has submitted ++account credentials++ ++valid account credentials++', () => {
+        // TODO: implement step
+      })
+        .and('Cognito has an ++Cognito user++ ++unconfirmed Cognito user++', () => {
+          // TODO: implement step
+        });
+    });
     when('the User clicks Activate account with ++validation code++ {scenario}', () => {
       // TODO: implement step
     });
@@ -172,13 +236,21 @@ story('Enter Validation Code', () => {
   });
 
   scenario('Resend validation code', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the User has submitted ++account credentials++ ++valid account credentials++', () => {
+        // TODO: implement step
+      })
+        .and('Cognito has an ++Cognito user++ ++unconfirmed Cognito user++', () => {
+          // TODO: implement step
+        });
+    });
     when('the User clicks Resend', () => {
       // TODO: implement step
     });
     then('the system emails a new ++validation code++ routing through Amplify to Cognito', () => {
       // TODO: implement step
     })
-      .and('the User sees We sent you a new code. Please check your email.', () => {
+      .and('the User sees *We sent you a new code. Please check your email.*', () => {
         // TODO: implement step
       })
       .and('Resend waits 60 seconds before it can be used again', () => {
@@ -192,8 +264,17 @@ story('Enter Validation Code', () => {
  * Story: Confirm Cognito User
  */
 
+// background-examples: {"mismatch validation code": {"validation code": "validation code", "example": "mismatch validation code", "error": "CodeMismatchException"}, "expired validation code": {"validation code": "validation code", "example": "expired validation code", "error": "ExpiredCodeException"}, "attempts exceeded validation code": {"validation code": "validation code", "example": "attempts exceeded validation code", "error": "LimitExceededException"}}
 story('Confirm Cognito User', () => {
+  background('background', ({ given }) => {
+  });
+
   scenario('Confirm Cognito User', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Cognito has an ++Cognito user++ ++unconfirmed Cognito user++', () => {
+        // TODO: implement step
+      });
+    });
     when('Cognito is asked to confirm the user with a ++validation code++ ++valid validation code++', () => {
       // TODO: implement step
     });
@@ -209,6 +290,11 @@ story('Confirm Cognito User', () => {
   });
 
   scenario('Confirm with unusable validation code', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Cognito has an ++Cognito user++ ++unconfirmed Cognito user++', () => {
+        // TODO: implement step
+      });
+    });
     when('Cognito is asked to confirm the user with ++validation code++ {scenario}', () => {
       // TODO: implement step
     });
@@ -228,6 +314,11 @@ story('Confirm Cognito User', () => {
 
 story('Issue Account Token To Browser Session', () => {
   scenario('Issue Account Token To Browser Session', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Cognito has a ++Cognito user++ ++confirmed Cognito user++', () => {
+        // TODO: implement step
+      });
+    });
     when('Cognito is asked to authenticate ++account credentials++ ++valid account credentials++', () => {
       // TODO: implement step
     });
@@ -247,6 +338,14 @@ story('Issue Account Token To Browser Session', () => {
 
 story('Validate Mavenir Customer in Cognito User Attributes', () => {
   scenario('Cognito User already has a Mavenir Customer id', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the User is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('Cognito has issued an ++account token++ for ++account credentials++ ++valid account credentials++', () => {
+          // TODO: implement step
+        });
+    });
     given('the ++Cognito user++ has a ++Mavenir customer++ id', () => {
       // TODO: implement step
     });
@@ -265,7 +364,15 @@ story('Validate Mavenir Customer in Cognito User Attributes', () => {
   });
 
   scenario('Cognito User has no Mavenir Customer id', ({ given, when, then }) => {
-    then('no ++Mavenir customer++ exists for those ++account credentials++', () => {
+    background('background', ({ given }) => {
+      given('the User is in Account Setup', () => {
+        // TODO: implement step
+      })
+        .and('Cognito has issued an ++account token++ for ++account credentials++ ++valid account credentials++', () => {
+          // TODO: implement step
+        });
+    });
+    but('no ++Mavenir customer++ exists for those ++account credentials++', () => {
       // TODO: implement step
     });
     when('the User proceeds to Account Setup', () => {
@@ -287,6 +394,14 @@ story('Validate Mavenir Customer in Cognito User Attributes', () => {
 
 story('Submit Create Customer Request to Mid-Tier', () => {
   scenario('Submit Create Customer Request to Mid-Tier', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the ++Cognito user++ has no ++Mavenir customer++ id', () => {
+        // TODO: implement step
+      })
+        .and('the browser session has an ++account token++', () => {
+          // TODO: implement step
+        });
+    });
     when('My Paradise finds no ++Mavenir customer++ id on the ++Cognito user++', () => {
       // TODO: implement step
     });
@@ -296,37 +411,61 @@ story('Submit Create Customer Request to Mid-Tier', () => {
   });
 
   scenario('Email already has a Mavenir Customer', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the ++Cognito user++ has no ++Mavenir customer++ id', () => {
+        // TODO: implement step
+      })
+        .and('the browser session has an ++account token++', () => {
+          // TODO: implement step
+        });
+    });
     given('a ++Mavenir customer++ already exists for that email', () => {
       // TODO: implement step
     });
     when('My Paradise finds no ++Mavenir customer++ id on the ++Cognito user++', () => {
       // TODO: implement step
     });
-    then('My Paradise shows Could not create customer.', () => {
+    then('My Paradise shows *Could not create customer.*', () => {
       // TODO: implement step
     });
   });
 
   scenario('Invalid Account Token', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the ++Cognito user++ has no ++Mavenir customer++ id', () => {
+        // TODO: implement step
+      })
+        .and('the browser session has an ++account token++', () => {
+          // TODO: implement step
+        });
+    });
     given('the ++account token++ is invalid', () => {
       // TODO: implement step
     });
     when('My Paradise finds no ++Mavenir customer++ id on the ++Cognito user++', () => {
       // TODO: implement step
     });
-    then('My Paradise shows Could not create customer.', () => {
+    then('My Paradise shows *Could not create customer.*', () => {
       // TODO: implement step
     });
   });
 
   scenario('Mavenir is unreachable', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the ++Cognito user++ has no ++Mavenir customer++ id', () => {
+        // TODO: implement step
+      })
+        .and('the browser session has an ++account token++', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir has no HTTP response', () => {
       // TODO: implement step
     });
     when('My Paradise finds no ++Mavenir customer++ id on the ++Cognito user++', () => {
       // TODO: implement step
     });
-    then('My Paradise shows Could not create customer.', () => {
+    then('My Paradise shows *Could not create customer.*', () => {
       // TODO: implement step
     });
   });
@@ -339,6 +478,11 @@ story('Submit Create Customer Request to Mid-Tier', () => {
 
 story('Validate Cognito User', () => {
   scenario('Validate Cognito User', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the User has an ++account token++', () => {
+        // TODO: implement step
+      });
+    });
     when('Midtier is asked to validate the ++account token++', () => {
       // TODO: implement step
     });
@@ -364,6 +508,14 @@ story('Validate Cognito User', () => {
 
 story('Submit Create Mavenir Customer', () => {
   scenario('Submit Create Mavenir Customer', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Midtier has verified the ++account token++', () => {
+        // TODO: implement step
+      })
+        .and('the ++account token++ has an email', () => {
+          // TODO: implement step
+        });
+    });
     when('Midtier receives a Paradise request to create a ++PML customer++ with the email from the ++account token++', () => {
       // TODO: implement step
     });
@@ -385,6 +537,14 @@ story('Submit Create Mavenir Customer', () => {
   });
 
   scenario('Mavenir customer already exists', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Midtier has verified the ++account token++', () => {
+        // TODO: implement step
+      })
+        .and('the ++account token++ has an email', () => {
+          // TODO: implement step
+        });
+    });
     given('a ++Mavenir customer++ already exists for that email', () => {
       // TODO: implement step
     });
@@ -403,6 +563,14 @@ story('Submit Create Mavenir Customer', () => {
   });
 
   scenario('Mavenir is unreachable', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Midtier has verified the ++account token++', () => {
+        // TODO: implement step
+      })
+        .and('the ++account token++ has an email', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir has no HTTP response', () => {
       // TODO: implement step
     });
@@ -426,6 +594,14 @@ story('Submit Create Mavenir Customer', () => {
 
 story('Create Customer', () => {
   scenario('Create Customer', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('no ++Mavenir customer++ for that email', () => {
+        // TODO: implement step
+      })
+        .and('Mavenir has that ++account token++ on the create request', () => {
+          // TODO: implement step
+        });
+    });
     when('Mavenir is asked to create a ++Mavenir customer++ for that email', () => {
       // TODO: implement step
     });
@@ -438,6 +614,14 @@ story('Create Customer', () => {
   });
 
   scenario('Email already has a Mavenir Customer', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('no ++Mavenir customer++ for that email', () => {
+        // TODO: implement step
+      })
+        .and('Mavenir has that ++account token++ on the create request', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir has a ++Mavenir customer++ for that email', () => {
       // TODO: implement step
     });
@@ -457,6 +641,14 @@ story('Create Customer', () => {
 
 story('Store Mavenir Customer Id on Cognito User', () => {
   scenario('Store Mavenir Customer Id on Cognito User', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('My Paradise has added a ++Mavenir customer++ through the Midtier', () => {
+        // TODO: implement step
+      })
+        .and('that add returned a ++Mavenir customer++ id', () => {
+          // TODO: implement step
+        });
+    });
     when('My Paradise has a ++Mavenir customer++ id from the Midtier', () => {
       // TODO: implement step
     });
@@ -476,6 +668,17 @@ story('Store Mavenir Customer Id on Cognito User', () => {
 
 story('Load My Paradise Customer From Midtier And Store In Session', () => {
   scenario('Load My Paradise Customer From Midtier And Store In Session', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the browser session has an ++account token++', () => {
+        // TODO: implement step
+      })
+        .and('the ++Cognito user++ has a ++Mavenir customer++ id', () => {
+          // TODO: implement step
+        })
+        .and('the ++My Paradise customer++ is not in session', () => {
+          // TODO: implement step
+        });
+    });
     when('the User proceeds to Account Setup or My Paradise', () => {
       // TODO: implement step
     });
@@ -488,6 +691,17 @@ story('Load My Paradise Customer From Midtier And Store In Session', () => {
   });
 
   scenario('Billing account is terminated', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the browser session has an ++account token++', () => {
+        // TODO: implement step
+      })
+        .and('the ++Cognito user++ has a ++Mavenir customer++ id', () => {
+          // TODO: implement step
+        })
+        .and('the ++My Paradise customer++ is not in session', () => {
+          // TODO: implement step
+        });
+    });
     given('the ++Mavenir customer++ billing state is terminated', () => {
       // TODO: implement step
     });
@@ -503,13 +717,24 @@ story('Load My Paradise Customer From Midtier And Store In Session', () => {
   });
 
   scenario('Load customer fails', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the browser session has an ++account token++', () => {
+        // TODO: implement step
+      })
+        .and('the ++Cognito user++ has a ++Mavenir customer++ id', () => {
+          // TODO: implement step
+        })
+        .and('the ++My Paradise customer++ is not in session', () => {
+          // TODO: implement step
+        });
+    });
     when('the User proceeds to Account Setup or My Paradise', () => {
       // TODO: implement step
     });
     then('My Paradise signs the User out', () => {
       // TODO: implement step
     })
-      .and('My Paradise shows Something went wrong when loading your account', () => {
+      .and('My Paradise shows *Something went wrong when loading your account*', () => {
         // TODO: implement step
       });
   });
@@ -522,6 +747,17 @@ story('Load My Paradise Customer From Midtier And Store In Session', () => {
 
 story('Get Mavenir Customer and Transform To My Paradise Customer And Return', () => {
   scenario('Get Mavenir Customer and Transform To My Paradise Customer And Return', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Midtier has verified the ++account token++', () => {
+        // TODO: implement step
+      })
+        .and('the ++account token++ has a ++Mavenir customer++ id', () => {
+          // TODO: implement step
+        })
+        .and('Mavenir has a new Mavenir customer (`++new Mavenir customer++` row)', () => {
+          // TODO: implement step
+        });
+    });
     when('Midtier receives a Paradise request to get a ++PML customer++', () => {
       // TODO: implement step
     });
@@ -550,6 +786,11 @@ story('Get Mavenir Customer and Transform To My Paradise Customer And Return', (
 
 story('Get Mavenir Customer', () => {
   scenario('Get Mavenir Customer', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Mavenir has a new Mavenir customer (`++new Mavenir customer++` row)', () => {
+        // TODO: implement step
+      });
+    });
     when('Mavenir is asked to get the ++Mavenir customer++', () => {
       // TODO: implement step
     });
@@ -574,6 +815,20 @@ story('Ensure Cart on Customer', () => {
 
 story('Fix Orphan Cognito Account', () => {
   scenario('Fix Orphan Cognito Account', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the User has clicked Create account with ++account credentials++ ++valid account credentials++', () => {
+        // TODO: implement step
+      })
+        .and('Cognito has an ++Cognito user++ ++unconfirmed Cognito user++', () => {
+          // TODO: implement step
+        })
+        .but('the User has not entered a ++validation code++', () => {
+          // TODO: implement step
+        })
+        .and('no ++account token++ is issued', () => {
+          // TODO: implement step
+        });
+    });
     when('Care is asked to fix the orphan ++Cognito user++', () => {
       // TODO: implement step
     });
@@ -593,6 +848,17 @@ story('Fix Orphan Cognito Account', () => {
 
 story('Read False Initial Activation', () => {
   scenario('Read False Initial Activation', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('Mavenir has a ++Mavenir customer++', () => {
+        // TODO: implement step
+      })
+        .and('that ++Mavenir customer++ has a ++Mavenir shopping cart++', () => {
+          // TODO: implement step
+        })
+        .but('that ++Mavenir customer++ has no ++billing account++', () => {
+          // TODO: implement step
+        });
+    });
     when('Care is asked to read the ++Mavenir customer++ in DEP', () => {
       // TODO: implement step
     });

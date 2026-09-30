@@ -3,11 +3,11 @@ from __future__ import annotations
 from story_test import and_, background, given, scenario, story, then, when
 
 # Epic: Get Voucher Credit
+# Orders: 0.0.9
 
 # Story: Redeem Voucher and Apply Credit
 # Actor: My Paradise
 with story("Redeem Voucher and Apply Credit"):
-    with background.each:
         with scenario("Redeem a plan-restricted voucher that matches the cart bundle"):
             with given("the Customer is in Order Creation with ++voucher++ ++{voucher}++ applied"):
                 pass
@@ -57,7 +57,7 @@ with story("Redeem Voucher and Apply Credit"):
         with scenario("Skip redeem when the cart bundle is not in the voucher plan list"):
             with given("the Customer is in Order Creation with ++voucher++ ++amount-off voucher++ applied"):
                 pass
-            with and_("the ++Mavenir shopping cart++ carries ++plan++ ++Ace++ (id `100000000042`) which is not in ++voucher++ ++amount-off voucher++ planIds"):
+            with but_("the ++Mavenir shopping cart++ carries ++plan++ ++Ace++ (id `100000000042`) which is not in ++voucher++ ++amount-off voucher++ planIds"):
                 pass
             with when("the Customer redeems the voucher"):
                 pass

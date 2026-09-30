@@ -1,4 +1,4 @@
-"""CodeStoryMap - a StoryMap stored as a source-code tree.
+"""CodeStoryModel - a StoryModel stored as a source-code tree.
 
 Layout produced (identical shape across TS/Python/Java backends):
 
@@ -42,11 +42,11 @@ from practices.stories.model.story_model import (
     Step,
     StepType,
     Story,
-    StoryMap,
+    StoryModel,
 )
 
 
-class CodeStoryMapError(Exception):
+class CodeStoryModelError(Exception):
     """Raised when a folder tree is not a valid code story map."""
 
 
@@ -86,10 +86,44 @@ class CodeScenario(Scenario, CodeStoryNode):
     }
 
     def read(self, body: str, example_names: List[str] | None = None) -> None:
+        body = self._take_background_comments(body)
         self.steps = self.steps_from(self.calls_in(body))
         for name in example_names or []:
             if re.search(rf"\b{re.escape(name)}\b", body):
                 self.examples[name] = name
+
+    @staticmethod
+    def background_lines(scenario, prefix: str) -> List[str]:
+        lines: List[str] = []
+        for background in scenario.backgrounds:
+            lines.append(f"{prefix}background: {background.name}")
+            for step in background.steps:
+                lines.append(f"{prefix}background-step: {step.keyword} | {step.text}")
+                for extra in step.ands:
+                    lines.append(f"{prefix}background-step: {extra.keyword} | {extra.text}")
+        return lines
+
+    def _take_background_comments(self, body: str) -> str:
+        kept: List[str] = []
+        calls: List[tuple] = []
+        name = "background"
+        seen = False
+        for line in body.splitlines(keepends=True):
+            heading = re.match(r"\s*(?:#|//|\*)\s*background:\s*(.+)", line)
+            step = re.match(r"\s*(?:#|//|\*)\s*background-step:\s*(\w+)\s*\|\s*(.*)", line)
+            if heading:
+                name = heading.group(1).strip()
+                seen = True
+                continue
+            if step:
+                calls.append((step.group(1), step.group(2).strip()))
+                continue
+            kept.append(line)
+        if seen or calls:
+            background = Background(name, 1)
+            background.steps = self.steps_from(calls)
+            self.backgrounds = [background]
+        return "".join(kept)
 
     def calls_in(self, body: str) -> List[tuple]:
         raise NotImplementedError
@@ -116,13 +150,19 @@ class CodeScenario(Scenario, CodeStoryNode):
         previous: Optional[Step] = None
         for keyword, text in calls:
             word = keyword.lower()
-            if word in ("and", "but") and previous is not None:
+            if word == "and" and previous is not None:
                 previous.ands = [
                     *previous.ands,
                     Step(text, previous.step_type, len(previous.ands) + 1, keyword=word),
                 ]
                 continue
-            step_type = cls._STEP_TYPES.get(word)
+            if word == "but" and previous is not None:
+                previous.ands = [
+                    *previous.ands,
+                    Step(text, previous.step_type, len(previous.ands) + 1, keyword=word),
+                ]
+                continue
+            step_type = StepType.THEN if word == "but" else cls._STEP_TYPES.get(word)
             if step_type is None:
                 continue
             step = Step(text, step_type, len(steps) + 1, keyword=word)
@@ -178,12 +218,43 @@ class CodeStory(Story, CodeStoryNode):
         scenario.read(body, example_names)
         self.scenarios.append(scenario)
 
+    @staticmethod
+    def background_example_line(story: Story, prefix: str) -> str:
+        import json
+
+        if not story.backgrounds or not story.backgrounds[0].examples:
+            return ""
+        payload = {
+            name: example.cells()
+            for name, example in story.backgrounds[0].examples.items()
+        }
+        return f"{prefix}background-examples: {json.dumps(payload, ensure_ascii=False)}"
+
+    def _take_background_examples(self, content: str) -> None:
+        import json
+
+        match = re.search(r"background-examples:\s*(\{.*\})", content)
+        if match is None or not self.backgrounds:
+            return
+        payload = json.loads(match.group(1))
+        if not isinstance(payload, dict):
+            return
+        for name, cells in payload.items():
+            self.backgrounds[0].examples[name] = cells if isinstance(cells, dict) else name
+
     def fill(self, content: str) -> None:
         scenario_type = type(self).scenario_type
         self.backgrounds = scenario_type.backgrounds_in(content)
+        self._take_background_examples(content)
         examples = scenario_type.example_names(content)
         for name, body in scenario_type.scenario_blocks(content):
             self.add_scenario(name, body, examples)
+        if self.backgrounds and self.backgrounds[0].examples:
+            for scenario in self.scenarios:
+                for background in scenario.backgrounds:
+                    if background.examples:
+                        continue
+                    background.examples = self.backgrounds[0].examples.clone(background)
 
     @classmethod
     def load(cls, content: str, story_slug: str) -> "CodeStory":
@@ -236,8 +307,23 @@ class CodeEpic(Epic, CodeStoryNode):
         match = re.search(r"Epic:\s*(.+)", content)
         return match.group(1).strip() if match else ""
 
+    def order_path(self) -> str:
+        orders = []
+        node = self
+        while node is not None and hasattr(node, "sequential_order"):
+            parent = getattr(node, "parent", None)
+            siblings = getattr(parent, "epics", None) if parent is not None else None
+            if siblings is not None and node in siblings:
+                orders.append(str(siblings.index(node)))
+            else:
+                orders.append(str(getattr(node, "sequential_order", 0) or 0))
+            if parent is None or parent is node:
+                break
+            node = parent
+        return ".".join(reversed(orders))
 
-class CodeStoryMap(StoryMap):
+
+class CodeStoryModel(StoryModel):
     """Source-tree story map. The epics and stories are the story map. load and save are the files."""
 
     LEAF_EXTENSION: str = ""
@@ -246,7 +332,7 @@ class CodeStoryMap(StoryMap):
     story_type = CodeStory
     increment_type = CodeIncrement
 
-    def __init__(self, source: "StoryMap | str | None" = None, tests_root: str | None = None):
+    def __init__(self, source: "StoryModel | str | None" = None, tests_root: str | None = None):
         if isinstance(source, str):
             tests_root = source
             source = None
@@ -283,18 +369,18 @@ class CodeStoryMap(StoryMap):
 
     def render(
         self,
-        canonical: StoryMap,
+        canonical: StoryModel,
         previous: Optional[Dict[str, str]] = None,
     ) -> Dict[str, str]:
         return type(self)(canonical, tests_root=self._tests_root).save(previous)
 
-    def load(self, external: Dict[str, str]) -> "CodeStoryMap":
+    def load(self, external: Dict[str, str]) -> "CodeStoryModel":
         """Read source files into this story map's epics and stories."""
         if not isinstance(external, dict):
-            raise CodeStoryMapError("Tree must be a mapping of paths to file content")
+            raise CodeStoryModelError("Tree must be a mapping of paths to file content")
         self.epics.clear()
         epics_by_slug: Dict[str, Epic] = {}
-        for path in sorted(external):
+        for path in self._ordered_paths(external):
             parts = path.split("/")
             if not parts or parts[0] != self._tests_root:
                 continue
@@ -314,13 +400,21 @@ class CodeStoryMap(StoryMap):
                 self._leaf_content = external[path]
                 self._hydrate_leaf_sub_epic_from_content(current_sub_epic)
         if not self.epics and external:
-            raise CodeStoryMapError(
+            raise CodeStoryModelError(
                 "Tree contains no recognisable Epic folders under the tests root"
             )
         return self
 
-    def parse(self, external: Dict[str, str]) -> "CodeStoryMap":
+    def parse(self, external: Dict[str, str]) -> "CodeStoryModel":
         return type(self)(self._tests_root).load(external)
+
+    def _ordered_paths(self, external: Dict[str, str]) -> List[str]:
+        def key(path: str) -> tuple:
+            match = re.search(r"Orders:\s*([0-9.]+)", external.get(path, ""))
+            order = tuple(int(part) for part in match.group(1).split(".") if part) if match else (10**6,)
+            return (order, path)
+
+        return sorted(external, key=key)
 
     def epic_for(self, slug: str) -> Epic:
         for epic in self.epics:
@@ -331,23 +425,29 @@ class CodeStoryMap(StoryMap):
         return epic
 
     def take_sub_epic_file(self, parts: List[str], content: str) -> bool:
-        """A file named for the lowest sub-epic. Its folder is a parent epic.
+        """One file is one sub-epic. Every story in the file belongs to it.
 
-        A file whose folder slug matches the file slug is a story folder from
-        the older layout. That file stays with the language's story-folder load.
+        A parent folder with the same slug is that sub-epic, so the file is not a second level.
         """
         if len(parts) < 2:
             return False
-        filename = parts[-1]
-        stem_slug = self._file_stem_slug(filename)
-        if not stem_slug or parts[-2] == stem_slug:
+        stem_slug = self._file_stem_slug(parts[-1])
+        if not stem_slug:
             return False
         epic_name = CodeEpic.epic_name_in(content)
         leaf_slug = CodeEpic(epic_name).slug() if epic_name else stem_slug
         if not leaf_slug:
             return False
-        epic = self.epic_for(parts[0])
-        sub = self.sub_epic_for(epic, [*parts[1:-1], leaf_slug])
+        folders = list(parts[:-1])
+        if folders[-1] == stem_slug:
+            folders = folders[:-1]
+        if not folders:
+            return False
+        epic = self.epic_for(folders[0])
+        nested = folders[1:]
+        if not nested or nested[-1] != leaf_slug:
+            nested = [*nested, leaf_slug]
+        sub = self.sub_epic_for(epic, nested)
         if epic_name:
             sub.name = epic_name
         for story in self.story_type.load_all(content):
@@ -355,7 +455,7 @@ class CodeStoryMap(StoryMap):
         return True
 
     def _file_stem_slug(self, filename: str) -> str:
-        for suffix in ("_story.test.ts", "_story.test.py", "_story.test.js", "Story.java"):
+        for suffix in ("_story.test.ts", "_story.spec.ts", "_story.test.py", "_story.test.js", "Story.java"):
             if filename.endswith(suffix):
                 stem = filename[: -len(suffix)]
                 if suffix == "Story.java":
@@ -374,12 +474,12 @@ class CodeStoryMap(StoryMap):
             current = found
             parent = found
         if current is None:
-            raise CodeStoryMapError("A story file needs a sub-epic folder")
+            raise CodeStoryModelError("A story file needs a sub-epic folder")
         return current
 
     def _hydrate_leaf_sub_epic_from_content(self, current_sub_epic: Epic) -> None:
         # WHY: language backends override this to reconstruct story and scenario
-        # structure when parsing generated source trees back into StoryMap.
+        # structure when parsing generated source trees back into StoryModel.
         return None
 
     def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:

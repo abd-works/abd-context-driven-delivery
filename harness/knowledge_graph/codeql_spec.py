@@ -109,7 +109,7 @@ with description("CodeQL report runner"):
         expect(rows[0]["line"]).to(equal(251))
         expect(rows[0]["end_line"]).to(equal(300))
 
-    with it("should expand a class header to the whole class body"):
+    with it("should read the recorded class line span"):
         from practices.clean_engineering.model.codeql.codeql_model import SourceLocation, SourceSpan
 
         path = "harness/knowledge_graph/model/codeql.py"
@@ -119,20 +119,25 @@ with description("CodeQL report runner"):
             for index, line in enumerate(lines, 1)
             if line.startswith("class CodeQLRunError")
         )
+        end_line = next(
+            index
+            for index, line in enumerate(lines, 1)
+            if index > class_line and line.startswith("class ")
+        ) - 1
         location = SourceSpan(_REPO_ROOT).read(
             SourceLocation(
                 file=path,
                 line=class_line,
-                end_line=class_line,
+                end_line=end_line,
             )
         )
         start, end, text = location.line, location.end_line, location.text
-        expect("class CodeQLRunError" in text).to(equal(True))
-        expect('"""' in text).to(equal(True))
-        expect(end > start).to(equal(True))
-        expect("class QueryServerDown" in text).to(equal(False))
+        expect(start).to(equal(class_line))
+        expect(end).to(equal(end_line))
+        expect(text.splitlines()[0]).to(equal(lines[class_line - 1]))
+        expect(text.splitlines()[-1]).to(equal(lines[end_line - 1]))
 
-    with it("should expand a multi-line def header through the body"):
+    with it("should read the recorded operation line span"):
         from practices.clean_engineering.model.codeql.codeql_model import SourceLocation, SourceSpan
 
         path = "harness/knowledge_graph/model/codeql.py"
@@ -142,11 +147,12 @@ with description("CodeQL report runner"):
             for index, line in enumerate(lines, 1)
             if line.startswith("    def populate(")
         )
-        location = SourceSpan(_REPO_ROOT).read(SourceLocation(file=path, line=lo, end_line=lo))
+        hi = lo + 2
+        location = SourceSpan(_REPO_ROOT).read(SourceLocation(file=path, line=lo, end_line=hi))
         start, end, text = location.line, location.end_line, location.text
-        expect("self._apply_fact_batch" in text).to(equal(True))
-        expect("def load_existing_facts" in text).to(equal(False))
-        expect(end - start + 1 < 43).to(equal(True))
+        expect(start).to(equal(lo))
+        expect(end).to(equal(hi))
+        expect(text).to(equal("\n".join(lines[lo - 1 : hi])))
 
     with it("should populate by default"):
         expect(
@@ -218,3 +224,36 @@ with description("CodeQL.detect_language"):
             root = Path(folder)
             (root / "hello.py").write_text("class Hello:\n    pass\n", encoding="utf-8")
             expect(CodeQL(root).detect_language()).to(equal("python"))
+
+
+with description("CodeQL fact queries"):
+    with it("should open the same query names in the pack for the database language"):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "App.ts").write_text("export class App {}\n", encoding="utf-8")
+            codeql = CodeQL(root)
+            codeql._database_language = codeql.detect_language()
+            paths = codeql._populate_query_paths()
+            expect([path.name for path in paths]).to(equal([
+                "classes.ql",
+                "operations.ql",
+                "parameters.ql",
+                "properties.ql",
+                "calls.ql",
+            ]))
+            expect(paths[0].parent.name).to(equal("javascript"))
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "hello.py").write_text("class Hello:\n    pass\n", encoding="utf-8")
+            codeql = CodeQL(root)
+            codeql._database_language = codeql.detect_language()
+            paths = codeql._populate_query_paths()
+            expect([path.name for path in paths]).to(equal([
+                "classes.ql",
+                "operations.ql",
+                "parameters.ql",
+                "properties.ql",
+                "calls.ql",
+            ]))
+            expect(paths[0].parent.name).to(equal("codeql"))

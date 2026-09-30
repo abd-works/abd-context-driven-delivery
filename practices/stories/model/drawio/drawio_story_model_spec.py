@@ -14,7 +14,7 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from practices.stories.model.story_model import Story, StoryMap, StoryType
+from practices.stories.model.story_model import Story, StoryModel, StoryType
 from practices.stories.model.story_model import Increment
 from practices.stories.model.story_model import Scenario
 from practices.stories.model.diagram_story_model import DiagramEpic, DiagramEpic
@@ -23,7 +23,7 @@ from practices.stories.model.drawio.nodes import (
     DrawIOIncrement,
     DrawIOParseError,
     DrawIOStory,
-    DrawIOStoryMap,
+    DrawIOStoryModel,
     DrawIOEpic,
 )
 LEFT_MARGIN_X = DiagramEpic.left_margin
@@ -31,9 +31,9 @@ SUBEPIC_DEPTH_GAP = DiagramEpic.depth_gap
 SUBEPIC_HEIGHT = DiagramEpic.bar_height
 
 
-class DrawIOStoryMapFixture:
-    def with_4_epics_and_3_epics_and_1_story(self) -> StoryMap:
-        story_map = DrawIOStoryMap()
+class DrawIOStoryModelFixture:
+    def with_4_epics_and_3_epics_and_1_story(self) -> StoryModel:
+        story_map = DrawIOStoryModel()
         for i in range(1, 5):
             story_map.append_epic(DrawIOEpic(f"Epic {i}", i))
         first_epic = story_map.epics[0]
@@ -50,13 +50,13 @@ class DrawIOStoryMapFixture:
 
 with description("a DrawIO Story Map") as self:
     with before.each:
-        self.drawio = DrawIOStoryMap()
+        self.drawio = DrawIOStoryModel()
 
     with context(
         "that holds a rendered diagram Story Map with 4 Epics and 3 Epics under the first Epic"
     ):
         with before.each:
-            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
             self.text = self.source.clone()
 
         with it("should serialize as a valid DrawIO document"):
@@ -111,7 +111,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that has been rendered and parsed back without edits"):
         with before.each:
-            self.original = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
+            self.original = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
             self.parsed = self.drawio.load(self.original.clone())
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
@@ -132,9 +132,9 @@ with description("a DrawIO Story Map") as self:
                     raise_error(DrawIOParseError)
                 )
 
-    with context("rendering the thin-slice view for a StoryMap with 2 increments"):
+    with context("rendering the thin-slice view for a StoryModel with 2 increments"):
         with before.each:
-            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
             inc_a = Increment(
                 "Increment A - first outcome",
                 1,
@@ -195,7 +195,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that stacks nested sub-epics by depth (parent above children)"):
         with before.each:
-            self.source = DrawIOStoryMap()
+            self.source = DrawIOStoryModel()
             epic = DrawIOEpic("Create Hero", 1)
             compose = DrawIOEpic("Compose Powers", 1)
             attack = DrawIOEpic("Compose Attack Power", 1)
@@ -269,7 +269,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that renders a shaping outline with estimates and no phantom stories"):
         with before.each:
-            self.source = DrawIOStoryMap()
+            self.source = DrawIOStoryModel()
             epic = DrawIOEpic("Move money", 1)
             epic.estimate = "approx 22-27 total stories"
             compose = DrawIOEpic("Compose transfer", 1)

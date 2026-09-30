@@ -1,5 +1,6 @@
 /**
  * Epic: Get New Number
+ * Orders: 0.0.1.1
  */
 
 import { scenario, story } from "tests/story-test";
@@ -102,6 +103,13 @@ story('Determine Number', () => {
       });
   });
 
+});
+
+/**
+ * Story: Choose a Number
+ */
+
+story('Choose a Number', () => {
   scenario('Pick number', ({ given, when, then }) => {
     when('Mavenir confirms the reservation and patches the cart', () => {
       // TODO: implement step

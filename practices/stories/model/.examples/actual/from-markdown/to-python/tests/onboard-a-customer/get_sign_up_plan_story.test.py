@@ -3,12 +3,15 @@ from __future__ import annotations
 from story_test import and_, background, given, scenario, story, then, when
 
 # Epic: Get Sign Up Plan
+# Orders: 0.0.0
 
 # Story: Open Plan Deep Link
 # Actor: Customer
 with story("Open Plan Deep Link"):
-    with background.each:
         with scenario("Open Plan Deep Link"):
+            # background: background
+            # background-step: Given | the plan catalog contains purchasable plans
+            # background-step: And | the Customer arrived at sign-up from the Paradise Mobile website
             with when("the Customer opens a plan deep link for ++plan++ ++{scenario}++"):
                 pass
             with then("++{scenario}++ is selected"):
@@ -16,9 +19,12 @@ with story("Open Plan Deep Link"):
             with and_("the Customer continues to Enter Account Credentials"):
                 pass
         with scenario("Unknown plan deep link"):
+            # background: background
+            # background-step: Given | the plan catalog contains purchasable plans
+            # background-step: And | the Customer arrived at sign-up from the Paradise Mobile website
             with given("the plan catalog contains purchasable plans"):
                 pass
-            with and_("the deep-link plan id is not in the catalog"):
+            with but_("the deep-link plan id is not in the catalog"):
                 pass
             with when("the Customer opens a plan deep link"):
                 pass
@@ -28,8 +34,9 @@ with story("Open Plan Deep Link"):
 # Story: Apply Catalog Voucher
 # Actor: Customer
 with story("Apply Catalog Voucher"):
-    with background.each:
         with scenario("Apply Catalog Voucher via deep link"):
+            # background: background
+            # background-step: Given | the plan catalog contains purchasable plans
             with given("Vouchera has ++catalog voucher++ ++valid catalog voucher++"):
                 pass
             with when("the Customer applies ++catalog voucher++ ++valid catalog voucher++ from a promotional voucher link"):
@@ -43,6 +50,8 @@ with story("Apply Catalog Voucher"):
             with and_("the voucher discounts ++plan++ ++Essentials++, ++plan++ ++Data Freedom++, ++plan++ ++Ace++, and ++plan++ ++Atlas++ by 10 percent"):
                 pass
         with scenario("Apply Catalog Voucher manually"):
+            # background: background
+            # background-step: Given | the plan catalog contains purchasable plans
             with given("the Customer is selecting a plan"):
                 pass
             with and_("Vouchera has ++catalog voucher++ ++valid catalog voucher++"):
@@ -58,6 +67,8 @@ with story("Apply Catalog Voucher"):
             with and_("the voucher discounts ++plan++ ++Essentials++, ++plan++ ++Data Freedom++, ++plan++ ++Ace++, and ++plan++ ++Atlas++ by 10 percent"):
                 pass
         with scenario("Short catalog voucher code is rejected"):
+            # background: background
+            # background-step: Given | the plan catalog contains purchasable plans
             with given("the Customer is selecting a plan"):
                 pass
             with when("the Customer applies a catalog voucher shorter than 4 characters"):
@@ -67,6 +78,8 @@ with story("Apply Catalog Voucher"):
             with and_("Vouchera is not asked for the voucher"):
                 pass
         with scenario("Remove Catalog Voucher"):
+            # background: background
+            # background-step: Given | the plan catalog contains purchasable plans
             with given("the Customer is selecting a plan with ++catalog voucher++ ++valid catalog voucher++ applied"):
                 pass
             with when("the Customer removes ++catalog voucher++ ++valid catalog voucher++"):
@@ -74,6 +87,8 @@ with story("Apply Catalog Voucher"):
             with then("the catalog has no catalog voucher"):
                 pass
         with scenario("Apply unusable catalog voucher"):
+            # background: background
+            # background-step: Given | the plan catalog contains purchasable plans
             with given("the Customer is selecting a plan"):
                 pass
             with and_("Vouchera has ++catalog voucher++ ++{scenario}++"):

@@ -19,7 +19,7 @@ from mamba import before, description, it
 
 from harness.transformers.logical_dump import write_temp
 from harness.transformers.transformers import Transformers
-from practices.clean_engineering.model.field_types import Relationship
+from practices.clean_engineering.model.property import Property, bind_property_relationship
 from practices.clean_engineering.model.transformation.clean_engineering_transformer import (
     CleanEngineeringTransformer,
 )
@@ -176,7 +176,9 @@ with description("Transformers"):
             with before.each:
                 roots = Transformers().transform_sketch("ce:\n  shop/\n    Cart\n")
                 cart = roots[0].modules[0].classes[0]
-                cart.relationships.append(Relationship(target="Catalog", kind="association"))
+                catalog = Property(name="catalog", type_hint="Catalog")
+                bind_property_relationship(catalog)
+                cart.properties.append(catalog)
                 self.source = roots[0].render("logical")["src/shop/cart.py"]
 
             with it("should pass use-explicit-dependencies"):

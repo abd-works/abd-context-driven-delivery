@@ -4,7 +4,7 @@ Uses a thin concrete backend `_MinimalCodeBackend` to observe the abstract folde
 behavior - the language-specific leaf content is covered by the TS/Python/Java specs.
 
 Exercises the Uniform Callable Surface: the backend is stateless - every call
-passes the canonical StoryMap explicitly through `render(canonical, previous=None)`,
+passes the canonical StoryModel explicitly through `render(canonical, previous=None)`,
 `parse(external)`, and `sync(external, canonical)`.
 """
 
@@ -23,15 +23,15 @@ from expects import equal, have_len, be_true, be_false, expect, raise_error
 
 from practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from practices.stories.model.story_model import Scenario
-from practices.stories.model.story_model import StoryMap
+from practices.stories.model.story_model import StoryModel
 from practices.stories.model.code_story_model import (
     CodeEpic,
-    CodeStoryMap,
-    CodeStoryMapError,
+    CodeStoryModel,
+    CodeStoryModelError,
 )
 
 
-class _MinimalCodeBackend(CodeStoryMap):
+class _MinimalCodeBackend(CodeStoryModel):
     LEAF_EXTENSION = ".txt"
     LANGUAGE_LINE_COMMENT = "#"
 
@@ -45,8 +45,8 @@ class _MinimalCodeBackend(CodeStoryMap):
 
 
 class SpecFixture:
-    def story_map_with_4_epics_and_3_leaf_epics(self) -> StoryMap:
-        story_map = StoryMap()
+    def story_map_with_4_epics_and_3_leaf_epics(self) -> StoryModel:
+        story_map = StoryModel()
         for i in range(1, 5):
             story_map.append_epic(Epic(f"Epic {i}", i))
         first = story_map.epics[0]
@@ -68,12 +68,12 @@ with description("a code Story Map") as self:
         self.code_map = self.backend_cls()
 
     with it("should hold no folders under the tests root when rendered from an empty canonical Story Map"):
-        tree = self.code_map.render(StoryMap())
+        tree = self.code_map.render(StoryModel())
         expect(tree).to(equal({}))
 
     with context("with a canonical Story Map that has Epics but no Epics"):
         with before.each:
-            self.canonical = StoryMap()
+            self.canonical = StoryModel()
             for i in range(1, 5):
                 self.canonical.append_epic(Epic(f"Epic {i}", i))
             self.tree = self.code_map.render(self.canonical)
@@ -84,7 +84,7 @@ with description("a code Story Map") as self:
 
     with context("with a canonical Story Map of 4 Epics in sequential order"):
         with before.each:
-            self.canonical = StoryMap()
+            self.canonical = StoryModel()
             for i in range(1, 5):
                 self.canonical.append_epic(Epic(f"Epic {i}", i))
 
@@ -329,5 +329,5 @@ with description("a code Story Map") as self:
         with context("the parse"):
             with it("should be rejected"):
                 expect(lambda: self.code_map.parse("not a mapping")).to(
-                    raise_error(CodeStoryMapError)
+                    raise_error(CodeStoryModelError)
                 )

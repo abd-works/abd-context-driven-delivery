@@ -97,7 +97,13 @@ def walk(model: CleanEngineeringModel) -> list:
                         invariant.text,
                     ))
             for relationship in loaded.relationships:
-                rows.append(("relationship", depth + 2, relationship.kind, relationship.target))
+                rows.append((
+                    "relationship",
+                    depth + 2,
+                    relationship.kind,
+                    relationship.target,
+                    relationship.cardinality,
+                ))
         for child in module.modules:
             visit_module(child, depth + 1)
 
@@ -338,6 +344,16 @@ with shared_context("a class model saved through a channel"):
                 )
                 if drawn:
                     expect(actual_property.stereotype).to(equal(expected_property.stereotype))
+                    expected_relationship = expected_property.relationship
+                    actual_relationship = actual_property.relationship
+                    if expected_relationship is None:
+                        expect(actual_relationship).to(equal(None))
+                    else:
+                        expect(actual_relationship is not None).to(equal(True))
+                        expect(actual_relationship.target).to(equal(expected_relationship.target))
+                        expect(actual_relationship.kind).to(equal(expected_relationship.kind))
+                        if self.channel != "drawio":
+                            expect(actual_relationship.cardinality).to(equal(expected_relationship.cardinality))
                 if self.channel != "drawio":
                     expect(actual_property.cardinality).to(equal(expected_property.cardinality))
                     expect(actual_property.origin).to(equal(expected_property.origin))
@@ -583,3 +599,30 @@ with describe("a class model"):
                 pass
             with included_context("a typescript file"):
                 pass
+
+with describe("a class model populated from the stored codeql database"):
+    with it("should write the typescript classes"):
+        from practices.clean_engineering.model.codeql.codeql_model import (
+            CleanEngineeringModel as CodeQLCleanEngineeringModel,
+        )
+
+        database = (
+            Path(__file__).resolve().parents[2]
+            / "stories"
+            / "model"
+            / ".examples"
+            / "expected"
+            / "codeql"
+        )
+        populated = CodeQLCleanEngineeringModel.load_content(database)
+        expected_names = set()
+        for path in EXPECTED.rglob("*.ts"):
+            expected_names.update(re.findall(r"(?m)^class\s+(\w+)", path.read_text(encoding="utf-8")))
+        found = {item.name for module in populated.modules for item in module.classes}
+        expect(bool(found) and found <= expected_names).to(equal(True))
+        expect({"Customer", "AccountCredentials", "Plan"} <= found).to(equal(True))
+        written = set()
+        for module in populated.modules:
+            parsed = TypeScriptCleanEngineeringModel.parse(_render_typescript(_one_module(module)))
+            written.update(item.name for parsed_module in parsed.modules for item in parsed_module.classes)
+        expect(written).to(equal(found))

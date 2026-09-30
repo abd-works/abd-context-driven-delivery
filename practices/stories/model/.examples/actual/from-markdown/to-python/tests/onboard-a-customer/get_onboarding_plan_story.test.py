@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, background, given, scenario, story, then, when
 
 # Epic: Get Onboarding Plan
+# Orders: 0.0.3
 
 # Story: Query Product Offerings And Map To Catalog
 with story("Query Product Offerings And Map To Catalog"):
-    with background.each:
         with scenario("Query Product Offerings And Map To Catalog"):
             with given("Mavenir has returned product offerings for service provider 100000000"):
                 pass
@@ -27,7 +27,6 @@ with story("Query Product Offerings And Map To Catalog"):
 
 # Story: List Product Offerings
 with story("List Product Offerings"):
-    with background.each:
         with scenario("List Product Offerings"):
             with given("Mavenir catalog for service provider 100000000 is reachable"):
                 pass
@@ -39,9 +38,11 @@ with story("List Product Offerings"):
 # Story: Choose Onboarding Plan
 # Actor: Customer
 with story("Choose Onboarding Plan"):
-    with background.each:
         with scenario("Choose Onboarding Plan"):
-            with then("no ++plan++ is in the ++Mavenir shopping cart++"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            with but_("no ++plan++ is in the ++Mavenir shopping cart++"):
                 pass
             with and_("Keep current plan is not shown"):
                 pass
@@ -62,6 +63,9 @@ with story("Choose Onboarding Plan"):
             with and_("the Prospect is forwarded to Time to pick your number"):
                 pass
         with scenario("Choose a different ++plan++"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("++plan++ ++Essentials++ is in the ++Mavenir shopping cart++"):
                 pass
             with when("the Prospect arrives at Plan Selection from Checkout"):
@@ -83,6 +87,9 @@ with story("Choose Onboarding Plan"):
             with and_("the Prospect is forwarded to Checkout"):
                 pass
         with scenario("Select the ++plan++ already in the cart"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("++plan++ ++Essentials++ is in the ++Mavenir shopping cart++"):
                 pass
             with when("the Prospect clicks Select on ++plan++ ++Essentials++"):
@@ -90,6 +97,9 @@ with story("Choose Onboarding Plan"):
             with then("the Prospect stays on Plan Selection to choose a different ++plan++ or Keep current plan"):
                 pass
         with scenario("Failed to update plan"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++
             with given("Midtier PATCH to ++Mavenir shopping cart++ returns a server error"):
                 pass
             with when("the Prospect clicks Select on ++plan++ ++Data Freedom++"):
@@ -101,7 +111,6 @@ with story("Choose Onboarding Plan"):
 
 # Story: Patch Cart With Plan
 with story("Patch Cart With Plan"):
-    with background.each:
         with scenario("Patch Cart With Plan"):
             with given("a ++Mavenir customer++ with a ++Mavenir shopping cart++ (no bundle) in Mavenir"):
                 pass
@@ -129,7 +138,6 @@ with story("Patch Cart With Plan"):
 
 # Story: Patch Shopping Cart
 with story("Patch Shopping Cart"):
-    with background.each:
         with scenario("Patch shopping cart with portability"):
             with given("a ++Mavenir shopping cart++ with a plan bundle cart item and temporary ++MSISDN++ ++available number++ ++held available number++"):
                 pass
@@ -142,7 +150,7 @@ with story("Patch Shopping Cart"):
         with scenario("Patch shopping cart with MSISDN"):
             with given("a ++Mavenir shopping cart++ with a plan bundle cart item"):
                 pass
-            with and_("no MSISDN characteristic on the cart item"):
+            with but_("no MSISDN characteristic on the cart item"):
                 pass
             with when("Mavenir is asked to patch the ++Mavenir shopping cart++ with ++MSISDN++ ++available number++ ++chosen available number++ as a cart item characteristic"):
                 pass
@@ -162,8 +170,11 @@ with story("Patch Shopping Cart"):
 
 # Story: Keep Current Plan
 with story("Keep Current Plan"):
-    with background.each:
         with scenario("Keep Current Plan"):
+            # background: background
+            # background-step: Given | the Prospect is in Account Setup
+            # background-step: And | the Prospect has a ++My Paradise customer++ with a ++Mavenir shopping cart++
+            # background-step: And | ++plan++ ++Essentials++ is in the ++Mavenir shopping cart++
             with when("the Prospect clicks Keep current plan"):
                 pass
             with then("the Prospect is forwarded to Checkout"):

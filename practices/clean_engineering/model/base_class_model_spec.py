@@ -10,6 +10,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from practices.clean_engineering.model.property import bind_property_relationship
 from practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
@@ -100,6 +101,33 @@ with description("Relationship"):
             expect(self.rel.cardinality).to(equal(""))
 
 
+def _order_property() -> Property:
+    prop = Property(name="order", type_hint="Order")
+    prop.stereotype = "association"
+    prop.cardinality = "0..1"
+    bind_property_relationship(prop)
+    return prop
+
+
+with description("a property type"):
+    with it("should relate a domain class and keep the cardinality on that relationship"):
+        customers = Property(name="customers", type_hint="Collection<Customer>")
+        customers.stereotype = "aggregation"
+        customers.cardinality = "0..*"
+        bind_property_relationship(customers)
+        expect(customers.relationship.target).to(equal("Customer"))
+        expect(customers.relationship.kind).to(equal("aggregation"))
+        expect(customers.relationship.cardinality).to(equal("0..*"))
+
+    with it("should leave a primitive and a third-party type without a relationship"):
+        identifier = Property(name="id", type_hint="string")
+        cause = Property(name="cause", type_hint="Error")
+        bind_property_relationship(identifier)
+        bind_property_relationship(cause)
+        expect(identifier.relationship).to(equal(None))
+        expect(cause.relationship).to(equal(None))
+
+
 with description("OoadClass"):
     with context("constructed with name only"):
         with before.each:
@@ -129,9 +157,8 @@ with description("OoadClass"):
                 name="Cart",
                 sequential_order=1,
                 intent="Holds line items and places orders on behalf of the owner.",
-                properties=[Property(name="owner", type_hint="str")],
+                properties=[_order_property()],
                 operations=[Operation(name="place_order", return_type="Order")],
-                relationships=[Relationship(target="Order", kind="owns")],
                 collaborators=["Order", "LineItem"],
             )
 
@@ -140,15 +167,17 @@ with description("OoadClass"):
 
         with it("should store properties"):
             expect(self.cls.properties).to(have_len(1))
-            expect(self.cls.properties[0].name).to(equal("owner"))
+            expect(self.cls.properties[0].name).to(equal("order"))
 
         with it("should store operations"):
             expect(self.cls.operations).to(have_len(1))
             expect(self.cls.operations[0].name).to(equal("place_order"))
 
-        with it("should store relationships"):
+        with it("should store the relationship on the property"):
             expect(self.cls.relationships).to(have_len(1))
             expect(self.cls.relationships[0].target).to(equal("Order"))
+            expect(self.cls.relationships[0].cardinality).to(equal("0..1"))
+            expect(self.cls.properties[0].relationship.cardinality).to(equal("0..1"))
 
         with it("should store collaborators"):
             expect(self.cls.collaborators).to(equal(["Order", "LineItem"]))

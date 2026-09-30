@@ -79,7 +79,6 @@ class JavaScriptOoadClass(OoadClass):
         return [
             ChildCollectionPair(self.properties, source.properties, self.load_property_field),
             ChildCollectionPair(self.operations, source.operations, self.load_operation_field),
-            ChildCollectionPair(self.relationships, source.relationships, self.load_relationship),
         ]
 
     def update_self(self, source: OoadNode) -> None:

@@ -1,5 +1,6 @@
 /**
  * Epic: Place Order
+ * Orders: 0.0.8
  */
 
 import { scenario, story } from "tests/story-test";
@@ -11,6 +12,14 @@ import { scenario, story } from "tests/story-test";
 
 story('Create Billing Account', () => {
   scenario('Create billing account', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a configured cart', () => {
+        // TODO: implement step
+      })
+        .but('the Customer has no billing account', () => {
+          // TODO: implement step
+        });
+    });
     when('the Customer creates a billing account', () => {
       // TODO: implement step
     });
@@ -29,6 +38,14 @@ story('Create Billing Account', () => {
   });
 
   scenario('Billing account already exists', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a configured cart', () => {
+        // TODO: implement step
+      })
+        .but('the Customer has no billing account', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer already has a billing account', () => {
       // TODO: implement step
     });
@@ -44,6 +61,14 @@ story('Create Billing Account', () => {
   });
 
   scenario('Billing account creation fails', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a configured cart', () => {
+        // TODO: implement step
+      })
+        .but('the Customer has no billing account', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir returns an error for the billing account request', () => {
       // TODO: implement step
     });
@@ -67,6 +92,14 @@ story('Create Billing Account', () => {
 
 story('Create Product Order', () => {
   scenario('Create product order', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a billing account', () => {
+        // TODO: implement step
+      })
+        .and('the cart has plan, number, and SIM', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer is verified', () => {
       // TODO: implement step
     });
@@ -88,6 +121,14 @@ story('Create Product Order', () => {
   });
 
   scenario('Pay-up-front charge fails', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a billing account', () => {
+        // TODO: implement step
+      })
+        .and('the cart has plan, number, and SIM', () => {
+          // TODO: implement step
+        });
+    });
     given('the pay-up-front charge fails', () => {
       // TODO: implement step
     });
@@ -103,6 +144,14 @@ story('Create Product Order', () => {
   });
 
   scenario('Product order fails', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a billing account', () => {
+        // TODO: implement step
+      })
+        .and('the cart has plan, number, and SIM', () => {
+          // TODO: implement step
+        });
+    });
     given('Mavenir returns an error for the product order', () => {
       // TODO: implement step
     });
@@ -115,6 +164,14 @@ story('Create Product Order', () => {
   });
 
   scenario('Onboarding is already done', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a billing account', () => {
+        // TODO: implement step
+      })
+        .and('the cart has plan, number, and SIM', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer onboarding is already done', () => {
       // TODO: implement step
     });
@@ -130,6 +187,14 @@ story('Create Product Order', () => {
   });
 
   scenario('Unverified with no bypass and no portability', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a billing account', () => {
+        // TODO: implement step
+      })
+        .and('the cart has plan, number, and SIM', () => {
+          // TODO: implement step
+        });
+    });
     given('the Customer is not verified', () => {
       // TODO: implement step
     })
@@ -208,6 +273,14 @@ story('Create Order Ticket', () => {
 
 story('View Order History', () => {
   scenario('View Order History', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a product order in Mavenir', () => {
+        // TODO: implement step
+      })
+        .and('Care is in Customer Management → Order History', () => {
+          // TODO: implement step
+        });
+    });
     when('Care views Order History for the Customer', () => {
       // TODO: implement step
     });

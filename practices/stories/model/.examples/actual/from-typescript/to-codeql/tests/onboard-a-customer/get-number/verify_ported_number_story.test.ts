@@ -1,8 +1,11 @@
 /**
  * Epic: Verify Ported Number
+ * Orders: 0.0.1.2
  */
 
 import { scenario, story } from "tests/story-test";
+import { enteredValidPortability, validPortingSmscode, customerWithCartAndPortability, mismatchPortingSmscode } from "./examples";
+
 
 /**
  * Story: Check Port Verification
@@ -10,6 +13,7 @@ import { scenario, story } from "tests/story-test";
 
 story('Check Port Verification', () => {
   scenario('Enter porting SMS code', ({ given, when, then }) => {
+    // examples: enteredValidPortability, validPortingSmscode, customerWithCartAndPortability
     given('the Customer submitted portability and Twilio sent an SMS to the port number', () => {
       // TODO: implement step
     })
@@ -28,6 +32,7 @@ story('Check Port Verification', () => {
   });
 
   scenario('Verify with unusable porting SMS code', ({ given, when, then }) => {
+    // examples: enteredValidPortability, mismatchPortingSmscode, customerWithCartAndPortability
     given('the Customer submitted portability and has an incorrect verification code', () => {
       // TODO: implement step
     });
@@ -43,6 +48,7 @@ story('Check Port Verification', () => {
   });
 
   scenario('Resend porting SMS code', ({ given, when, then }) => {
+    // examples: enteredValidPortability, customerWithCartAndPortability
     given('the Customer submitted portability and Twilio sent an SMS to the port number', () => {
       // TODO: implement step
     });

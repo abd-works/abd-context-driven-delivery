@@ -1,16 +1,16 @@
-"""PythonStoryMap - runnable `*_story.test.py` per Story.
+"""PythonStoryModel - runnable `*_story.test.py` per Story.
 """
 
 from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from practices.stories.model.code_story_model import CodeStoryMap, CodeStoryMapError
+from practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
 from practices.stories.model.python.nodes import PythonEpic, PythonStory
 from practices.stories.model.story_model import Epic
 
 
-class PythonStoryMap(CodeStoryMap):
+class PythonStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "_story.test.py"
     LANGUAGE_LINE_COMMENT = "#"
     epic_type = PythonEpic
@@ -33,11 +33,12 @@ class PythonStoryMap(CodeStoryMap):
     def _epic_helper_path(self, epic_root: str, epic: Epic) -> str:
         return f"{epic_root}/{epic.snake()}_helper.py"
 
-    def load(self, external: Dict[str, str]) -> "PythonStoryMap":
+    def load(self, external: Dict[str, str]) -> "PythonStoryModel":
         if not isinstance(external, dict):
-            raise CodeStoryMapError("Python story map parse expects a path->content dict")
+            raise CodeStoryModelError("Python story map parse expects a path->content dict")
         self.epics.clear()
-        for path, content in sorted(external.items()):
+        for path in self._ordered_paths(external):
+            content = external[path]
             if not path.endswith(self.LEAF_EXTENSION):
                 continue
             parts = path.strip("/").split("/")

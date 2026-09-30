@@ -1,0 +1,2804 @@
+[2026-09-29 19:32:12] This is codeql execute queries -J-Xmx1800M --off-heap-ram=1299 --verbosity=warnings --logdir=C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\log --evaluator-log-level=5 --threads=0 --warnings=show --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --dynamic-join-order-mode=none --output=C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\results -- C:\dev\abd-context-driven-delivery\practices\stories\model\.examples\expected\codeql\db-javascript C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql
+[2026-09-29 19:32:12] Calling plumbing command: codeql resolve queries --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --format=json -- C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql
+[2026-09-29 19:32:13] [PROGRESS] resolve queries> Recording pack reference cdd/stories-graph-query at C:\dev\abd-context-driven-delivery\practices\stories\model\codeql.
+[2026-09-29 19:32:13] Plumbing command codeql resolve queries completed:
+                      [
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\stories.ql",
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\scenarios.ql",
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\backgrounds.ql",
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\steps.ql",
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\example_exports.ql"
+                      ]
+[2026-09-29 19:32:13] Refusing fancy output: Stderr is used for things other than fancy output
+[2026-09-29 19:32:13] Creating executor with 12 threads.
+[2026-09-29 19:32:14] [PROGRESS] execute queries> Resolving data extensions.
+[2026-09-29 19:32:14] Calling plumbing command: codeql resolve extensions --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --include-extension-row-locations C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql
+[2026-09-29 19:32:14] Calling plumbing command: codeql resolve queries --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --allow-library-packs --format startingpacks -- C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql
+[2026-09-29 19:32:14] [PROGRESS] resolve queries> Recording pack reference cdd/stories-graph-query at C:\dev\abd-context-driven-delivery\practices\stories\model\codeql.
+[2026-09-29 19:32:14] Plumbing command codeql resolve queries completed:
+                      [
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql"
+                      ]
+[2026-09-29 19:32:15] Calling plumbing command: codeql resolve extensions-by-pack --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --include-extension-row-locations -- C:\dev\abd-context-driven-delivery\practices\stories\model\codeql
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] cdd/stories-graph-query: not 0.0.1 {root: cdd/stories-graph-query@0.0.1}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] cdd/stories-graph-query: 0.0.1 {cdd/stories-graph-query: not 0.0.1 {root: cdd/stories-graph-query@0.0.1}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] cdd/stories-graph-query: * [*], codeql/javascript-all: not * [*] {dependency: cdd/stories-graph-query@* [*] requires codeql/javascript-all@*}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 1] cdd/stories-graph-query: 0.0.1
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/javascript-all: * [*] {cdd/stories-graph-query: * [*], codeql/javascript-all: not * [*] {dependency: cdd/stories-graph-query@* [*] requires codeql/javascript-all@*}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/concepts: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/concepts@0.0.32}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/dataflow: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/dataflow@2.1.14}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/mad: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/mad@1.0.58}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/regex: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/regex@1.0.58}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/ssa: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/ssa@2.0.34}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/threat-models: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/threat-models@1.0.58}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/tutorial: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/tutorial@1.0.58}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/typetracking: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/typetracking@2.0.42}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/util: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/xml: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/xml@1.0.58}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/yaml: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/yaml@1.0.58}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 2] codeql/javascript-all: 2.10.2
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/yaml: * [*] {codeql/javascript-all: * [*], codeql/yaml: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/yaml@1.0.58}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/xml: * [*] {codeql/javascript-all: * [*], codeql/xml: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/xml@1.0.58}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/util: * [*] {codeql/javascript-all: * [*], codeql/util: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/util@2.0.45}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/typetracking: * [*] {codeql/javascript-all: * [*], codeql/typetracking: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/typetracking@2.0.42}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/tutorial: * [*] {codeql/javascript-all: * [*], codeql/tutorial: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/tutorial@1.0.58}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/threat-models: * [*] {codeql/javascript-all: * [*], codeql/threat-models: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/threat-models@1.0.58}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/ssa: * [*] {codeql/javascript-all: * [*], codeql/ssa: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/ssa@2.0.34}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/regex: * [*] {codeql/javascript-all: * [*], codeql/regex: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/regex@1.0.58}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/mad: * [*] {codeql/javascript-all: * [*], codeql/mad: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/mad@1.0.58}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/dataflow: * [*] {codeql/javascript-all: * [*], codeql/dataflow: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/dataflow@2.1.14}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/concepts: * [*] {codeql/javascript-all: * [*], codeql/concepts: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/concepts@0.0.32}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/concepts: * [*], codeql/dataflow: not * [*] {dependency: codeql/concepts@* [*] requires codeql/dataflow@2.1.14}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/concepts: * [*], codeql/util: not * [*] {dependency: codeql/concepts@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 3] codeql/concepts: 0.0.32
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/dataflow: * [*], codeql/controlflow: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/controlflow@2.0.42}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/dataflow: * [*], codeql/ssa: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/ssa@2.0.34}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/dataflow: * [*], codeql/typetracking: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/typetracking@2.0.42}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/dataflow: * [*], codeql/util: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 4] codeql/dataflow: 2.1.14
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DERIVATION] codeql/controlflow: * [*] {codeql/dataflow: * [*], codeql/controlflow: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/controlflow@2.0.42}}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/controlflow: * [*], codeql/util: not * [*] {dependency: codeql/controlflow@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 5] codeql/controlflow: 2.0.42
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/mad: * [*], codeql/dataflow: not * [*] {dependency: codeql/mad@* [*] requires codeql/dataflow@2.1.14}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/mad: * [*], codeql/util: not * [*] {dependency: codeql/mad@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 6] codeql/mad: 1.0.58
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/regex: * [*], codeql/util: not * [*] {dependency: codeql/regex@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 7] codeql/regex: 1.0.58
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/ssa: * [*], codeql/controlflow: not * [*] {dependency: codeql/ssa@* [*] requires codeql/controlflow@2.0.42}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/ssa: * [*], codeql/util: not * [*] {dependency: codeql/ssa@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 8] codeql/ssa: 2.0.34
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 9] codeql/threat-models: 1.0.58
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 10] codeql/tutorial: 1.0.58
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/typetracking: * [*], codeql/util: not * [*] {dependency: codeql/typetracking@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 11] codeql/typetracking: 2.0.42
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 12] codeql/util: 2.0.45
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [INCOMPATIBILITY] codeql/xml: * [*], codeql/util: not * [*] {dependency: codeql/xml@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 13] codeql/xml: 1.0.58
+[2026-09-29 19:32:15] [SPAMMY] resolve extensions-by-pack> [DECISION 14] codeql/yaml: 1.0.58
+[2026-09-29 19:32:15] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\anthropic.model.yml.
+[2026-09-29 19:32:15] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 1 tuples.
+[2026-09-29 19:32:15] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 7 tuples.
+[2026-09-29 19:32:15] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\apollo-server.model.yml.
+[2026-09-29 19:32:15] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 1 tuples.
+[2026-09-29 19:32:15] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 2 tuples.
+[2026-09-29 19:32:15] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 10 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\aws-sdk.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 8 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 10 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 8 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 9 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\axios.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 1 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\call-me-maybe.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\cors.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\default-threat-models-fixup.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/threat-models:threatModelConfiguration: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\google-genai.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 1 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 13 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\graph-ql.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 1 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\hana-db-client.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 4 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 2 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 6 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\langchain.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 17 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 21 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\make-dir.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\markdown-table.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\mkdirp.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 2 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\open.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 2 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\openai.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 3 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 16 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\openrouter.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 3 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 6 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\react-relay-threat.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 10 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\react.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\rimraf.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 3 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\shelljs.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\tanstack.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 6 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\underscore.string.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 5 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 20 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\ext\vue.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 3 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 4 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\NoSQL.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 4 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\NodeJSLib.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 5 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\SQL.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 5 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 4 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\data\internal\empty.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sourceModel: 0 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 0 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 0 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:barrierModel: 0 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:barrierGuardModel: 0 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:neutralModel: 0 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 0 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeVariableModel: 0 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\helmet\Helmet.Required.Setting.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:requiredHelmetSecuritySetting: 2 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\minimongo\model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 75 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\mongodb\model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 26 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 611 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 32 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeVariableModel: 102 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\mssql\model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 34 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\mysql\model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 57 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 3 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\pg\model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 65 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 5 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeVariableModel: 23 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\sequelize\model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:sinkModel: 7 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 248 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 5 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeVariableModel: 2 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\spanner\model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 174 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeVariableModel: 5 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\frameworks\sqlite3\model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:typeModel: 15 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:summaryModel: 3 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\security\domains\IntegrityCheckingRequired\integrity_checking_required.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:isCdnDomainWithCheckingRequired: 3 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\security\domains\compromised\compromised_domains.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:isUntrustedDomain: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmle\javascript\security\domains\untrusted\untrusted_domains.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/javascript-all:isUntrustedDomain: 6 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\threat-models\1.0.58\ext\supported-threat-models.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/threat-models:threatModelConfiguration: 1 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\threat-models\1.0.58\ext\threat-model-grouping.model.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/threat-models:threatModelGrouping: 15 tuples.
+[2026-09-29 19:32:16] [PROGRESS] resolve extensions-by-pack> Loading data extensions in C:\Users\thoma\.codeql\packages\codeql\util\2.0.45\ext\default-alert-filter.yml.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/util:restrictAlertsTo: 0 tuples.
+[2026-09-29 19:32:16] [DETAILS] resolve extensions-by-pack>   Found extension targeting codeql/util:restrictAlertsToExactLocation: 0 tuples.
+[2026-09-29 19:32:17] Plumbing command codeql resolve extensions-by-pack completed:
+                      {
+                        "models" : [ ],
+                        "data" : {
+                          "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql" : [
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\anthropic.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 0,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\anthropic.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1,
+                              "rowCount" : 7,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=12+1*6",
+                                "columnNumbers" : "A=9*7"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\apollo-server.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 8,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\apollo-server.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 9,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=12+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\apollo-server.model.yml",
+                              "index" : 2,
+                              "firstRowId" : 11,
+                              "rowCount" : 10,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=19+1*9",
+                                "columnNumbers" : "A=9*10"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\aws-sdk.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 21,
+                              "rowCount" : 8,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*7",
+                                "columnNumbers" : "A=9*8"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\aws-sdk.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 29,
+                              "rowCount" : 10,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=18+1*9",
+                                "columnNumbers" : "A=9*10"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\aws-sdk.model.yml",
+                              "index" : 2,
+                              "firstRowId" : 39,
+                              "rowCount" : 8,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=32+1*7",
+                                "columnNumbers" : "A=9*8"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\aws-sdk.model.yml",
+                              "index" : 3,
+                              "firstRowId" : 47,
+                              "rowCount" : 9,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=44+1*8",
+                                "columnNumbers" : "A=9*9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\axios.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 56,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\axios.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 57,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=12",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\call-me-maybe.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 58,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\cors.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 59,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "threatModelConfiguration",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\default-threat-models-fixup.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 60,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=8",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\google-genai.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 61,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\google-genai.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 62,
+                              "rowCount" : 13,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=12+1*12",
+                                "columnNumbers" : "A=9*13"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\graph-ql.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 75,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\graph-ql.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 76,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=11",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\hana-db-client.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 77,
+                              "rowCount" : 4,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*3",
+                                "columnNumbers" : "A=9*4"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\hana-db-client.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 81,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=15+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\hana-db-client.model.yml",
+                              "index" : 2,
+                              "firstRowId" : 83,
+                              "rowCount" : 6,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=22+1*5",
+                                "columnNumbers" : "A=9*6"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\langchain.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 89,
+                              "rowCount" : 17,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*16",
+                                "columnNumbers" : "A=9*17"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\langchain.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 106,
+                              "rowCount" : 21,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=28+1*20",
+                                "columnNumbers" : "A=9*21"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\make-dir.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 127,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\markdown-table.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 128,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\mkdirp.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 129,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\open.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 131,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\openai.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 133,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\openai.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 136,
+                              "rowCount" : 16,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=14+1*15",
+                                "columnNumbers" : "A=9*16"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\openrouter.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 152,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\openrouter.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 155,
+                              "rowCount" : 6,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=14+1*5",
+                                "columnNumbers" : "A=9*6"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\react-relay-threat.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 161,
+                              "rowCount" : 10,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*9",
+                                "columnNumbers" : "A=9*10"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\react.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 171,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\rimraf.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 172,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\shelljs.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 175,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\tanstack.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 176,
+                              "rowCount" : 6,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*5",
+                                "columnNumbers" : "A=9*6"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\underscore.string.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 182,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\underscore.string.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 187,
+                              "rowCount" : 20,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=16+1*19",
+                                "columnNumbers" : "A=9*20"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\vue.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 207,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=8+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\vue.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 210,
+                              "rowCount" : 4,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=16+2*3",
+                                "columnNumbers" : "A=9*4"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\NoSQL.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 214,
+                              "rowCount" : 4,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=8+3+1*2",
+                                "columnNumbers" : "A=9*4"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\NodeJSLib.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 218,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\SQL.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 223,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\SQL.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 228,
+                              "rowCount" : 4,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=16+1*3",
+                                "columnNumbers" : "A=9*4"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 2,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "barrierModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 3,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "barrierGuardModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 4,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "neutralModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 5,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 6,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 7,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "requiredHelmetSecuritySetting",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\helmet\\Helmet.Required.Setting.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 232,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\minimongo\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 234,
+                              "rowCount" : 75,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*74",
+                                "columnNumbers" : "A=9*75"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mongodb\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 309,
+                              "rowCount" : 26,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*25",
+                                "columnNumbers" : "A=9*26"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mongodb\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 335,
+                              "rowCount" : 611,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=37+1*610",
+                                "columnNumbers" : "A=9*611"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mongodb\\model.yml",
+                              "index" : 2,
+                              "firstRowId" : 946,
+                              "rowCount" : 32,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=653+1*31",
+                                "columnNumbers" : "A=9*32"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mongodb\\model.yml",
+                              "index" : 3,
+                              "firstRowId" : 978,
+                              "rowCount" : 102,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=690+1*101",
+                                "columnNumbers" : "A=9*102"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mssql\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1080,
+                              "rowCount" : 34,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*33",
+                                "columnNumbers" : "A=9*34"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mysql\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1114,
+                              "rowCount" : 57,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*56",
+                                "columnNumbers" : "A=9*57"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mysql\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1171,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=68+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\pg\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1174,
+                              "rowCount" : 65,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*64",
+                                "columnNumbers" : "A=9*65"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\pg\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1239,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=76+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\pg\\model.yml",
+                              "index" : 2,
+                              "firstRowId" : 1244,
+                              "rowCount" : 23,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=86+1*22",
+                                "columnNumbers" : "A=9*23"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sequelize\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1267,
+                              "rowCount" : 7,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*6",
+                                "columnNumbers" : "A=9*7"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sequelize\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1274,
+                              "rowCount" : 248,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=18+1*247",
+                                "columnNumbers" : "A=9*248"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sequelize\\model.yml",
+                              "index" : 2,
+                              "firstRowId" : 1522,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=271+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sequelize\\model.yml",
+                              "index" : 3,
+                              "firstRowId" : 1527,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=281+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\spanner\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1529,
+                              "rowCount" : 174,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*173",
+                                "columnNumbers" : "A=9*174"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\spanner\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1703,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=185+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sqlite3\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1708,
+                              "rowCount" : 15,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*14",
+                                "columnNumbers" : "A=9*15"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sqlite3\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1723,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=26+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "isCdnDomainWithCheckingRequired",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\security\\domains\\IntegrityCheckingRequired\\integrity_checking_required.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1726,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "isUntrustedDomain",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\security\\domains\\compromised\\compromised_domains.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1729,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "isUntrustedDomain",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\security\\domains\\untrusted\\untrusted_domains.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1730,
+                              "rowCount" : 6,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=7+1+3+1*3",
+                                "columnNumbers" : "A=9*6"
+                              }
+                            },
+                            {
+                              "predicate" : "threatModelConfiguration",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58\\ext\\supported-threat-models.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1736,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "threatModelGrouping",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58\\ext\\threat-model-grouping.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1737,
+                              "rowCount" : 15,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=8+3+1+3+1*5+3+1+5+1*3",
+                                "columnNumbers" : "A=9*15"
+                              }
+                            },
+                            {
+                              "predicate" : "restrictAlertsTo",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45\\ext\\default-alert-filter.yml",
+                              "index" : 0,
+                              "firstRowId" : 1752,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "restrictAlertsToExactLocation",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45\\ext\\default-alert-filter.yml",
+                              "index" : 1,
+                              "firstRowId" : 1752,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            }
+                          ]
+                        },
+                        "threatModels" : {
+                          "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql" : {
+                            "extensions" : [
+                              {
+                                "data" : [ ],
+                                "addsTo" : {
+                                  "extensible" : "threatModelConfiguration",
+                                  "checkPresence" : true,
+                                  "packName" : "codeql/threat-models"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "extensionPacks" : [ ]
+                      }
+[2026-09-29 19:32:17] Plumbing command codeql resolve extensions completed:
+                      {
+                        "models" : [ ],
+                        "data" : {
+                          "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql" : [
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\anthropic.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 0,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\anthropic.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1,
+                              "rowCount" : 7,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=12+1*6",
+                                "columnNumbers" : "A=9*7"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\apollo-server.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 8,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\apollo-server.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 9,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=12+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\apollo-server.model.yml",
+                              "index" : 2,
+                              "firstRowId" : 11,
+                              "rowCount" : 10,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=19+1*9",
+                                "columnNumbers" : "A=9*10"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\aws-sdk.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 21,
+                              "rowCount" : 8,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*7",
+                                "columnNumbers" : "A=9*8"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\aws-sdk.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 29,
+                              "rowCount" : 10,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=18+1*9",
+                                "columnNumbers" : "A=9*10"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\aws-sdk.model.yml",
+                              "index" : 2,
+                              "firstRowId" : 39,
+                              "rowCount" : 8,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=32+1*7",
+                                "columnNumbers" : "A=9*8"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\aws-sdk.model.yml",
+                              "index" : 3,
+                              "firstRowId" : 47,
+                              "rowCount" : 9,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=44+1*8",
+                                "columnNumbers" : "A=9*9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\axios.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 56,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\axios.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 57,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=12",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\call-me-maybe.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 58,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\cors.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 59,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "threatModelConfiguration",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\default-threat-models-fixup.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 60,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=8",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\google-genai.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 61,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\google-genai.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 62,
+                              "rowCount" : 13,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=12+1*12",
+                                "columnNumbers" : "A=9*13"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\graph-ql.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 75,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\graph-ql.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 76,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=11",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\hana-db-client.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 77,
+                              "rowCount" : 4,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*3",
+                                "columnNumbers" : "A=9*4"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\hana-db-client.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 81,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=15+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\hana-db-client.model.yml",
+                              "index" : 2,
+                              "firstRowId" : 83,
+                              "rowCount" : 6,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=22+1*5",
+                                "columnNumbers" : "A=9*6"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\langchain.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 89,
+                              "rowCount" : 17,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*16",
+                                "columnNumbers" : "A=9*17"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\langchain.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 106,
+                              "rowCount" : 21,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=28+1*20",
+                                "columnNumbers" : "A=9*21"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\make-dir.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 127,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\markdown-table.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 128,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\mkdirp.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 129,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\open.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 131,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\openai.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 133,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\openai.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 136,
+                              "rowCount" : 16,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=14+1*15",
+                                "columnNumbers" : "A=9*16"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\openrouter.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 152,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\openrouter.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 155,
+                              "rowCount" : 6,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=14+1*5",
+                                "columnNumbers" : "A=9*6"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\react-relay-threat.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 161,
+                              "rowCount" : 10,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*9",
+                                "columnNumbers" : "A=9*10"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\react.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 171,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\rimraf.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 172,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\shelljs.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 175,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\tanstack.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 176,
+                              "rowCount" : 6,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*5",
+                                "columnNumbers" : "A=9*6"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\underscore.string.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 182,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\underscore.string.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 187,
+                              "rowCount" : 20,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=16+1*19",
+                                "columnNumbers" : "A=9*20"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\vue.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 207,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=8+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\ext\\vue.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 210,
+                              "rowCount" : 4,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=16+2*3",
+                                "columnNumbers" : "A=9*4"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\NoSQL.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 214,
+                              "rowCount" : 4,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=8+3+1*2",
+                                "columnNumbers" : "A=9*4"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\NodeJSLib.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 218,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\SQL.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 223,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\SQL.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 228,
+                              "rowCount" : 4,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=16+1*3",
+                                "columnNumbers" : "A=9*4"
+                              }
+                            },
+                            {
+                              "predicate" : "sourceModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 1,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 2,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "barrierModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 3,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "barrierGuardModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 4,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "neutralModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 5,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 6,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\data\\internal\\empty.model.yml",
+                              "index" : 7,
+                              "firstRowId" : 232,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "requiredHelmetSecuritySetting",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\helmet\\Helmet.Required.Setting.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 232,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\minimongo\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 234,
+                              "rowCount" : 75,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*74",
+                                "columnNumbers" : "A=9*75"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mongodb\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 309,
+                              "rowCount" : 26,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*25",
+                                "columnNumbers" : "A=9*26"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mongodb\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 335,
+                              "rowCount" : 611,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=37+1*610",
+                                "columnNumbers" : "A=9*611"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mongodb\\model.yml",
+                              "index" : 2,
+                              "firstRowId" : 946,
+                              "rowCount" : 32,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=653+1*31",
+                                "columnNumbers" : "A=9*32"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mongodb\\model.yml",
+                              "index" : 3,
+                              "firstRowId" : 978,
+                              "rowCount" : 102,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=690+1*101",
+                                "columnNumbers" : "A=9*102"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mssql\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1080,
+                              "rowCount" : 34,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*33",
+                                "columnNumbers" : "A=9*34"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mysql\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1114,
+                              "rowCount" : 57,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*56",
+                                "columnNumbers" : "A=9*57"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\mysql\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1171,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=68+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\pg\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1174,
+                              "rowCount" : 65,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*64",
+                                "columnNumbers" : "A=9*65"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\pg\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1239,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=76+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\pg\\model.yml",
+                              "index" : 2,
+                              "firstRowId" : 1244,
+                              "rowCount" : 23,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=86+1*22",
+                                "columnNumbers" : "A=9*23"
+                              }
+                            },
+                            {
+                              "predicate" : "sinkModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sequelize\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1267,
+                              "rowCount" : 7,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*6",
+                                "columnNumbers" : "A=9*7"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sequelize\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1274,
+                              "rowCount" : 248,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=18+1*247",
+                                "columnNumbers" : "A=9*248"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sequelize\\model.yml",
+                              "index" : 2,
+                              "firstRowId" : 1522,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=271+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sequelize\\model.yml",
+                              "index" : 3,
+                              "firstRowId" : 1527,
+                              "rowCount" : 2,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=281+1",
+                                "columnNumbers" : "A=9*2"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\spanner\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1529,
+                              "rowCount" : 174,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*173",
+                                "columnNumbers" : "A=9*174"
+                              }
+                            },
+                            {
+                              "predicate" : "typeVariableModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\spanner\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1703,
+                              "rowCount" : 5,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=185+1*4",
+                                "columnNumbers" : "A=9*5"
+                              }
+                            },
+                            {
+                              "predicate" : "typeModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sqlite3\\model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1708,
+                              "rowCount" : 15,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*14",
+                                "columnNumbers" : "A=9*15"
+                              }
+                            },
+                            {
+                              "predicate" : "summaryModel",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\frameworks\\sqlite3\\model.yml",
+                              "index" : 1,
+                              "firstRowId" : 1723,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : true,
+                              "locations" : {
+                                "lineNumbers" : "A=26+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "isCdnDomainWithCheckingRequired",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\security\\domains\\IntegrityCheckingRequired\\integrity_checking_required.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1726,
+                              "rowCount" : 3,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6+1*2",
+                                "columnNumbers" : "A=9*3"
+                              }
+                            },
+                            {
+                              "predicate" : "isUntrustedDomain",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\security\\domains\\compromised\\compromised_domains.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1729,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "isUntrustedDomain",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmle\\javascript\\security\\domains\\untrusted\\untrusted_domains.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1730,
+                              "rowCount" : 6,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=7+1+3+1*3",
+                                "columnNumbers" : "A=9*6"
+                              }
+                            },
+                            {
+                              "predicate" : "threatModelConfiguration",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58\\ext\\supported-threat-models.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1736,
+                              "rowCount" : 1,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=6",
+                                "columnNumbers" : "A=9"
+                              }
+                            },
+                            {
+                              "predicate" : "threatModelGrouping",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58\\ext\\threat-model-grouping.model.yml",
+                              "index" : 0,
+                              "firstRowId" : 1737,
+                              "rowCount" : 15,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A=8+3+1+3+1*5+3+1+5+1*3",
+                                "columnNumbers" : "A=9*15"
+                              }
+                            },
+                            {
+                              "predicate" : "restrictAlertsTo",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45\\ext\\default-alert-filter.yml",
+                              "index" : 0,
+                              "firstRowId" : 1752,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            },
+                            {
+                              "predicate" : "restrictAlertsToExactLocation",
+                              "file" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45\\ext\\default-alert-filter.yml",
+                              "index" : 1,
+                              "firstRowId" : 1752,
+                              "rowCount" : 0,
+                              "predicateHasOrigin" : false,
+                              "locations" : {
+                                "lineNumbers" : "A",
+                                "columnNumbers" : "A"
+                              }
+                            }
+                          ]
+                        },
+                        "threatModels" : {
+                          "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql" : {
+                            "extensions" : [
+                              {
+                                "data" : [ ],
+                                "addsTo" : {
+                                  "extensible" : "threatModelConfiguration",
+                                  "checkPresence" : true,
+                                  "packName" : "codeql/threat-models"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "extensionPacks" : [ ]
+                      }
+[2026-09-29 19:32:17] [PROGRESS] execute queries> Finished resolving data extensions.
+[2026-09-29 19:32:17] [SPAMMY] execute queries> Selected JGit Git client for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql because the repository uses SHA-1 object format.
+[2026-09-29 19:32:18] [PROGRESS] execute queries> Loading data extensions.
+[2026-09-29 19:32:18] [PROGRESS] execute queries> Finished loading data extensions.
+[2026-09-29 19:32:18] Calling plumbing command: codeql resolve library-paths --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml -- C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Resolving query at normalized path C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found enclosing pack 'cdd/stories-graph-query' at C:\dev\abd-context-driven-delivery\practices\stories\model\codeql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Adding compilation cache at C:\Users\thoma\.codeql\compile-cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Resolving library dependencies from C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\qlpack.yml.
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] cdd/stories-graph-query: not 0.0.1 {root: cdd/stories-graph-query@0.0.1}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] cdd/stories-graph-query: 0.0.1 {cdd/stories-graph-query: not 0.0.1 {root: cdd/stories-graph-query@0.0.1}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] cdd/stories-graph-query: * [*], codeql/javascript-all: not * [*] {dependency: cdd/stories-graph-query@* [*] requires codeql/javascript-all@*}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 1] cdd/stories-graph-query: 0.0.1
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/javascript-all: * [*] {cdd/stories-graph-query: * [*], codeql/javascript-all: not * [*] {dependency: cdd/stories-graph-query@* [*] requires codeql/javascript-all@*}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/concepts: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/concepts@0.0.32}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/dataflow: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/dataflow@2.1.14}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/mad: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/mad@1.0.58}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/regex: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/regex@1.0.58}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/ssa: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/ssa@2.0.34}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/threat-models: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/threat-models@1.0.58}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/tutorial: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/tutorial@1.0.58}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/typetracking: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/typetracking@2.0.42}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/util: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/xml: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/xml@1.0.58}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/javascript-all: * [*], codeql/yaml: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/yaml@1.0.58}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 2] codeql/javascript-all: 2.10.2
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/yaml: * [*] {codeql/javascript-all: * [*], codeql/yaml: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/yaml@1.0.58}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/xml: * [*] {codeql/javascript-all: * [*], codeql/xml: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/xml@1.0.58}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/util: * [*] {codeql/javascript-all: * [*], codeql/util: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/util@2.0.45}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/typetracking: * [*] {codeql/javascript-all: * [*], codeql/typetracking: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/typetracking@2.0.42}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/tutorial: * [*] {codeql/javascript-all: * [*], codeql/tutorial: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/tutorial@1.0.58}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/threat-models: * [*] {codeql/javascript-all: * [*], codeql/threat-models: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/threat-models@1.0.58}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/ssa: * [*] {codeql/javascript-all: * [*], codeql/ssa: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/ssa@2.0.34}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/regex: * [*] {codeql/javascript-all: * [*], codeql/regex: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/regex@1.0.58}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/mad: * [*] {codeql/javascript-all: * [*], codeql/mad: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/mad@1.0.58}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/dataflow: * [*] {codeql/javascript-all: * [*], codeql/dataflow: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/dataflow@2.1.14}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/concepts: * [*] {codeql/javascript-all: * [*], codeql/concepts: not * [*] {dependency: codeql/javascript-all@* [*] requires codeql/concepts@0.0.32}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/concepts: * [*], codeql/dataflow: not * [*] {dependency: codeql/concepts@* [*] requires codeql/dataflow@2.1.14}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/concepts: * [*], codeql/util: not * [*] {dependency: codeql/concepts@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 3] codeql/concepts: 0.0.32
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/dataflow: * [*], codeql/controlflow: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/controlflow@2.0.42}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/dataflow: * [*], codeql/ssa: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/ssa@2.0.34}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/dataflow: * [*], codeql/typetracking: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/typetracking@2.0.42}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/dataflow: * [*], codeql/util: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 4] codeql/dataflow: 2.1.14
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DERIVATION] codeql/controlflow: * [*] {codeql/dataflow: * [*], codeql/controlflow: not * [*] {dependency: codeql/dataflow@* [*] requires codeql/controlflow@2.0.42}}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/controlflow: * [*], codeql/util: not * [*] {dependency: codeql/controlflow@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 5] codeql/controlflow: 2.0.42
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/mad: * [*], codeql/dataflow: not * [*] {dependency: codeql/mad@* [*] requires codeql/dataflow@2.1.14}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/mad: * [*], codeql/util: not * [*] {dependency: codeql/mad@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 6] codeql/mad: 1.0.58
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/regex: * [*], codeql/util: not * [*] {dependency: codeql/regex@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 7] codeql/regex: 1.0.58
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/ssa: * [*], codeql/controlflow: not * [*] {dependency: codeql/ssa@* [*] requires codeql/controlflow@2.0.42}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/ssa: * [*], codeql/util: not * [*] {dependency: codeql/ssa@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 8] codeql/ssa: 2.0.34
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 9] codeql/threat-models: 1.0.58
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 10] codeql/tutorial: 1.0.58
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/typetracking: * [*], codeql/util: not * [*] {dependency: codeql/typetracking@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 11] codeql/typetracking: 2.0.42
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 12] codeql/util: 2.0.45
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [INCOMPATIBILITY] codeql/xml: * [*], codeql/util: not * [*] {dependency: codeql/xml@* [*] requires codeql/util@2.0.45}
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 13] codeql/xml: 1.0.58
+[2026-09-29 19:32:18] [SPAMMY] resolve library-paths> [DECISION 14] codeql/yaml: 1.0.58
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> QL pack dependencies for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql resolved OK.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found dbscheme through QL packs: C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmlecode.javascript.dbscheme.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Resolving query at normalized path C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found enclosing pack 'cdd/stories-graph-query' at C:\dev\abd-context-driven-delivery\practices\stories\model\codeql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Adding compilation cache at C:\Users\thoma\.codeql\compile-cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> QL pack dependencies for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql found in cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found dbscheme through QL packs: C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmlecode.javascript.dbscheme.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Resolving query at normalized path C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found enclosing pack 'cdd/stories-graph-query' at C:\dev\abd-context-driven-delivery\practices\stories\model\codeql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Adding compilation cache at C:\Users\thoma\.codeql\compile-cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> QL pack dependencies for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql found in cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found dbscheme through QL packs: C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmlecode.javascript.dbscheme.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Resolving query at normalized path C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found enclosing pack 'cdd/stories-graph-query' at C:\dev\abd-context-driven-delivery\practices\stories\model\codeql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Adding compilation cache at C:\Users\thoma\.codeql\compile-cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> QL pack dependencies for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql found in cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found dbscheme through QL packs: C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmlecode.javascript.dbscheme.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Resolving query at normalized path C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found enclosing pack 'cdd/stories-graph-query' at C:\dev\abd-context-driven-delivery\practices\stories\model\codeql.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Adding compilation cache at C:\Users\thoma\.codeql\compile-cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> QL pack dependencies for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql found in cache.
+[2026-09-29 19:32:18] [DETAILS] resolve library-paths> Found dbscheme through QL packs: C:\Users\thoma\.codeql\packages\codeql\javascript-all\2.10.2\semmlecode.javascript.dbscheme.
+[2026-09-29 19:32:18] Plumbing command codeql resolve library-paths completed:
+                      {
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\stories.ql" : {
+                          "libraryPath" : [
+                            "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\concepts\\0.0.32",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\dataflow\\2.1.14",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\controlflow\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\mad\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\regex\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\ssa\\2.0.34",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\tutorial\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\typetracking\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\xml\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\yaml\\1.0.58"
+                          ],
+                          "dbscheme" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmlecode.javascript.dbscheme",
+                          "compilationCache" : [
+                            "C:\\Users\\thoma\\.codeql\\compile-cache"
+                          ],
+                          "relativeName" : "cdd\\stories-graph-query\\stories.ql",
+                          "qlPackName" : "cdd/stories-graph-query"
+                        },
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\scenarios.ql" : {
+                          "libraryPath" : [
+                            "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\concepts\\0.0.32",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\dataflow\\2.1.14",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\controlflow\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\mad\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\regex\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\ssa\\2.0.34",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\tutorial\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\typetracking\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\xml\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\yaml\\1.0.58"
+                          ],
+                          "dbscheme" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmlecode.javascript.dbscheme",
+                          "compilationCache" : [
+                            "C:\\Users\\thoma\\.codeql\\compile-cache"
+                          ],
+                          "relativeName" : "cdd\\stories-graph-query\\scenarios.ql",
+                          "qlPackName" : "cdd/stories-graph-query"
+                        },
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\backgrounds.ql" : {
+                          "libraryPath" : [
+                            "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\concepts\\0.0.32",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\dataflow\\2.1.14",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\controlflow\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\mad\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\regex\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\ssa\\2.0.34",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\tutorial\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\typetracking\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\xml\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\yaml\\1.0.58"
+                          ],
+                          "dbscheme" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmlecode.javascript.dbscheme",
+                          "compilationCache" : [
+                            "C:\\Users\\thoma\\.codeql\\compile-cache"
+                          ],
+                          "relativeName" : "cdd\\stories-graph-query\\backgrounds.ql",
+                          "qlPackName" : "cdd/stories-graph-query"
+                        },
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\steps.ql" : {
+                          "libraryPath" : [
+                            "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\concepts\\0.0.32",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\dataflow\\2.1.14",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\controlflow\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\mad\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\regex\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\ssa\\2.0.34",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\tutorial\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\typetracking\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\xml\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\yaml\\1.0.58"
+                          ],
+                          "dbscheme" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmlecode.javascript.dbscheme",
+                          "compilationCache" : [
+                            "C:\\Users\\thoma\\.codeql\\compile-cache"
+                          ],
+                          "relativeName" : "cdd\\stories-graph-query\\steps.ql",
+                          "qlPackName" : "cdd/stories-graph-query"
+                        },
+                        "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql\\example_exports.ql" : {
+                          "libraryPath" : [
+                            "C:\\dev\\abd-context-driven-delivery\\practices\\stories\\model\\codeql",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\concepts\\0.0.32",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\dataflow\\2.1.14",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\controlflow\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\mad\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\regex\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\ssa\\2.0.34",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\threat-models\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\tutorial\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\typetracking\\2.0.42",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\util\\2.0.45",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\xml\\1.0.58",
+                            "C:\\Users\\thoma\\.codeql\\packages\\codeql\\yaml\\1.0.58"
+                          ],
+                          "dbscheme" : "C:\\Users\\thoma\\.codeql\\packages\\codeql\\javascript-all\\2.10.2\\semmlecode.javascript.dbscheme",
+                          "compilationCache" : [
+                            "C:\\Users\\thoma\\.codeql\\compile-cache"
+                          ],
+                          "relativeName" : "cdd\\stories-graph-query\\example_exports.ql",
+                          "qlPackName" : "cdd/stories-graph-query"
+                        }
+                      }
+[2026-09-29 19:32:18] [DETAILS] execute queries> Compiling in one thread due to RAM limits.
+[2026-09-29 19:32:18] [WARN] execute queries> Not caching stages during query-loading, since max heap size is only 1800 MB.
+[2026-09-29 19:32:18] [PROGRESS] execute queries> Compiling query plan for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql.
+[2026-09-29 19:32:18] [DETAILS] execute queries> Resolving imports for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql.
+[2026-09-29 19:32:21] Resolved file set for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql hashes to 185f8f0c196888f44b02fc18b08b1ee3.
+[2026-09-29 19:32:22] [DETAILS] execute queries> Compilation cache hit for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql.
+[2026-09-29 19:32:22] [WARN] execute queries> WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql:1,1-6,4)
+[2026-09-29 19:32:22] [WARN] execute queries> WARNING: A problem query must select a string in its 4th column. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql:19,55-88)
+[2026-09-29 19:32:22] [SPAMMY] execute queries> No database upgrade/downgrade needed for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql
+[2026-09-29 19:32:23] [PROGRESS] execute queries> [1/5] Found in cache: C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql.
+[2026-09-29 19:32:23] [PROGRESS] execute queries> Compiling query plan for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql.
+[2026-09-29 19:32:23] [DETAILS] execute queries> Resolving imports for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql.
+[2026-09-29 19:32:25] Resolved file set for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql hashes to cd8f9ff9395a8d1dc5c1d4cd74e4e281.
+[2026-09-29 19:32:25] [DETAILS] execute queries> Checking QL for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql.
+[2026-09-29 19:32:25] Stale frontend caches are invalidated based on import graph reachability.
+[2026-09-29 19:32:26] ExternalModuleBindingPass ...
+[2026-09-29 19:32:32] ExternalModuleBindingPass time: 00:05.464
+[2026-09-29 19:32:32] CollectInstantiationsPass ...
+[2026-09-29 19:32:34] CollectInstantiationsPass time: 00:01.895
+[2026-09-29 19:32:34] Ql checks ...
+[2026-09-29 19:32:51] Ql checks time: 00:17.369
+[2026-09-29 19:33:22] Compilation pipeline
+[2026-09-29 19:33:23] Type Inference ...
+[2026-09-29 19:33:23] CSV_TYPE_HIERARCHY: Best number of iterations,Maximum number of runs,Number of BDD variables,Size of BDD for typefacts
+[2026-09-29 19:33:23] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:33:23] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:33:23] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:33:23] CSV_TYPE_HIERARCHY: 0,0,256,397
+[2026-09-29 19:33:23] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:23] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:33:24] CSV_TYPE_HIERARCHY: 0,0,741,2715
+[2026-09-29 19:33:24] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,1063,211187
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,27,27
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,14,19
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,7,8
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,12,12
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,11,15
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,8,8
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,15,15
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,11,12
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,14,19
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,7,9
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:33:25] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,13,13
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,13,16
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,5,6
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,7,8
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,23,23
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,23,26
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,12,12
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,9,9
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,13,14
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,17,20
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,9,15
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,5,6
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,10,11
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,8,11
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,14,14
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,7,9
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:33:26] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:33:32] Type Inference time: 00:08.841
+[2026-09-29 19:33:34] [WARN] execute queries> WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql:1,1-6,4)
+[2026-09-29 19:33:34] [WARN] execute queries> WARNING: A problem query must select an even number of columns. The last column of the result pattern has a numeric type - if you intended to define a query with alert scores, make sure you've added the @scored tag to the query metadata. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql:10,1-22,110)
+[2026-09-29 19:33:34] [DETAILS] execute queries> Optimizing C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql.
+[2026-09-29 19:33:34] Processing compilation pipeline
+[2026-09-29 19:33:34] Started compiling a query
+[2026-09-29 19:33:34] Initialising compiler...
+[2026-09-29 19:33:34] 	 ... compiler initialised
+[2026-09-29 19:33:34] About to start query optimisation
+[2026-09-29 19:33:35] Compilation cache hit - skipping compilation.
+[2026-09-29 19:33:35] Compilation cache hit - skipping compilation.
+[2026-09-29 19:33:35] Compilation cache hit - skipping compilation.
+[2026-09-29 19:33:35] Compilation cache miss for 954333a73f79b87db0a47a9ff4e4672e.
+[2026-09-29 19:33:39] Stored compiled program for 954333a73f79b87db0a47a9ff4e4672e.
+[2026-09-29 19:33:39] CSV_COMPILATION: NONE,MISC,RA_TRANSLATION,OPTIMISATIONS
+[2026-09-29 19:33:39] CSV_COMPILATION: 421,609,633,2884
+[2026-09-29 19:33:39] [SPAMMY] execute queries> No database upgrade/downgrade needed for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql
+[2026-09-29 19:33:39] [PROGRESS] execute queries> [2/5 comp 1m16s] Compiled C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql.
+[2026-09-29 19:33:39] [PROGRESS] execute queries> Compiling query plan for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql.
+[2026-09-29 19:33:39] [DETAILS] execute queries> Resolving imports for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql.
+[2026-09-29 19:33:40] Resolved file set for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql hashes to c9ed926c44a46b60f84a934d6217cfff.
+[2026-09-29 19:33:40] [DETAILS] execute queries> Checking QL for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql.
+[2026-09-29 19:33:40] Stale frontend caches are invalidated based on import graph reachability.
+[2026-09-29 19:33:41] ExternalModuleBindingPass ...
+[2026-09-29 19:33:43] ExternalModuleBindingPass time: 00:02.059
+[2026-09-29 19:33:43] CollectInstantiationsPass ...
+[2026-09-29 19:33:43] CollectInstantiationsPass time: 00:00.510
+[2026-09-29 19:33:43] Ql checks ...
+[2026-09-29 19:33:54] Ql checks time: 00:10.648
+[2026-09-29 19:34:12] Compilation pipeline
+[2026-09-29 19:34:13] Type Inference ...
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: Best number of iterations,Maximum number of runs,Number of BDD variables,Size of BDD for typefacts
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: 0,0,256,397
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: 0,0,741,2715
+[2026-09-29 19:34:13] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,1063,211187
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,27,27
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,14,19
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,7,8
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,12,12
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,11,15
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,8,8
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,15,15
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,11,12
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,14,19
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,7,9
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,13,13
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,13,16
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,6
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,7,8
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,23,23
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,23,26
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,12,12
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,9,9
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,13,14
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,17,20
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,9,15
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,6
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,10,11
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,8,11
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,14,14
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,7,9
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:34:14] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:34:21] Type Inference time: 00:07.851
+[2026-09-29 19:34:21] [WARN] execute queries> WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql:1,1-6,4)
+[2026-09-29 19:34:21] [WARN] execute queries> WARNING: A problem query must select an even number of columns. The last column of the result pattern has a numeric type - if you intended to define a query with alert scores, make sure you've added the @scored tag to the query metadata. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql:10,1-22,111)
+[2026-09-29 19:34:21] [DETAILS] execute queries> Optimizing C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql.
+[2026-09-29 19:34:22] Processing compilation pipeline
+[2026-09-29 19:34:22] Started compiling a query
+[2026-09-29 19:34:22] Initialising compiler...
+[2026-09-29 19:34:22] 	 ... compiler initialised
+[2026-09-29 19:34:22] About to start query optimisation
+[2026-09-29 19:34:22] Compilation cache hit - skipping compilation.
+[2026-09-29 19:34:22] Compilation cache hit - skipping compilation.
+[2026-09-29 19:34:22] Compilation cache hit - skipping compilation.
+[2026-09-29 19:34:22] Compilation cache miss for ffc3151b0c614abf98bef7087e25cd61.
+[2026-09-29 19:34:24] Stored compiled program for ffc3151b0c614abf98bef7087e25cd61.
+[2026-09-29 19:34:24] CSV_COMPILATION: NONE,MISC,RA_TRANSLATION,OPTIMISATIONS
+[2026-09-29 19:34:24] CSV_COMPILATION: 311,580,440,1254
+[2026-09-29 19:34:24] [SPAMMY] execute queries> No database upgrade/downgrade needed for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql
+[2026-09-29 19:34:24] [PROGRESS] execute queries> [3/5 comp 45s] Compiled C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql.
+[2026-09-29 19:34:24] [PROGRESS] execute queries> Compiling query plan for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql.
+[2026-09-29 19:34:24] [DETAILS] execute queries> Resolving imports for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql.
+[2026-09-29 19:34:26] Resolved file set for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql hashes to 7403a7998ede495f24d7fc9fe1d41df1.
+[2026-09-29 19:34:26] [DETAILS] execute queries> Checking QL for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql.
+[2026-09-29 19:34:26] Stale frontend caches are invalidated based on import graph reachability.
+[2026-09-29 19:34:26] ExternalModuleBindingPass ...
+[2026-09-29 19:34:29] ExternalModuleBindingPass time: 00:03.160
+[2026-09-29 19:34:29] CollectInstantiationsPass ...
+[2026-09-29 19:34:30] CollectInstantiationsPass time: 00:00.750
+[2026-09-29 19:34:30] Ql checks ...
+[2026-09-29 19:34:41] Ql checks time: 00:11.376
+[2026-09-29 19:35:00] Compilation pipeline
+[2026-09-29 19:35:00] Type Inference ...
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: Best number of iterations,Maximum number of runs,Number of BDD variables,Size of BDD for typefacts
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: 0,0,256,397
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: 0,0,741,2715
+[2026-09-29 19:35:00] CSV_TYPE_HIERARCHY: 0,0,0,0
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,1063,211187
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,27,27
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,14,19
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,7,8
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,12,12
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,11,15
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,8,8
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,15,15
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:35:01] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,11,12
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,14,19
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,7,9
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,13,13
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,13,16
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,6
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,7,8
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,23,23
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,23,26
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,12,12
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,9,9
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,13,14
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,17,20
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,9,15
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,6
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,1,1
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,10,10
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,10,11
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,8,11
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,14,14
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,7,9
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,5,5
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,7,7
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,2,2
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,6,6
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,4,4
+[2026-09-29 19:35:02] CSV_TYPE_HIERARCHY: 0,0,3,3
+[2026-09-29 19:35:08] Type Inference time: 00:08.455
+[2026-09-29 19:35:10] [WARN] execute queries> WARNING: A problem query must define one of the following properties: @severity, @problem.severity. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql:1,1-6,4)
+[2026-09-29 19:35:10] [WARN] execute queries> WARNING: A problem query must select a string in its 8th column. (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql:59,106-139)
+[2026-09-29 19:35:10] [DETAILS] execute queries> Optimizing C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql.
+[2026-09-29 19:35:10] Processing compilation pipeline
+[2026-09-29 19:35:10] Started compiling a query
+[2026-09-29 19:35:10] Initialising compiler...
+[2026-09-29 19:35:10] 	 ... compiler initialised
+[2026-09-29 19:35:10] About to start query optimisation
+[2026-09-29 19:35:10] Compilation cache hit - skipping compilation.
+[2026-09-29 19:35:10] Compilation cache hit - skipping compilation.
+[2026-09-29 19:35:10] Compilation cache hit - skipping compilation.
+[2026-09-29 19:35:11] Compilation cache miss for f55b491684776a6a4a660d01d137a126.
+[2026-09-29 19:35:12] Stored compiled program for f55b491684776a6a4a660d01d137a126.
+[2026-09-29 19:35:12] CSV_COMPILATION: NONE,MISC,RA_TRANSLATION,OPTIMISATIONS
+[2026-09-29 19:35:12] CSV_COMPILATION: 213,337,323,926
+[2026-09-29 19:35:12] [SPAMMY] execute queries> No database upgrade/downgrade needed for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql
+[2026-09-29 19:35:12] [PROGRESS] execute queries> [4/5 comp 47.7s] Compiled C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql.
+[2026-09-29 19:35:12] [PROGRESS] execute queries> Compiling query plan for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql.
+[2026-09-29 19:35:12] [DETAILS] execute queries> Resolving imports for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql.
+[2026-09-29 19:35:13] Resolved file set for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql hashes to 275828481c2e69705de05c93a7e635d3.
+[2026-09-29 19:35:13] [DETAILS] execute queries> Checking QL for C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql.
+[2026-09-29 19:35:13] Stale frontend caches are invalidated based on import graph reachability.
+[2026-09-29 19:35:13] ExternalModuleBindingPass ...
+[2026-09-29 19:35:14] ExternalModuleBindingPass time: 00:00.783
+[2026-09-29 19:35:14] CollectInstantiationsPass ...
+[2026-09-29 19:35:14] CollectInstantiationsPass time: 00:00.317
+[2026-09-29 19:35:14] Ql checks ...
+[2026-09-29 19:35:21] Ql checks time: 00:06.941
+[2026-09-29 19:35:31] [ERROR] execute queries> ERROR: could not resolve type ExportVarDecl (C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql:10,6-19)
+[2026-09-29 19:35:31] Cancelling {1}C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\stories.ql with a CancellationException and message C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql had compilation errors..
+[2026-09-29 19:35:31] Cancelling {2}C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\scenarios.ql with a CancellationException and message C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql had compilation errors..
+[2026-09-29 19:35:31] Cancelling {3}C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\backgrounds.ql with a CancellationException and message C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql had compilation errors..
+[2026-09-29 19:35:31] Cancelling {4}C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\steps.ql with a CancellationException and message C:\dev\abd-context-driven-delivery\practices\stories\model\codeql\example_exports.ql had compilation errors..
+[2026-09-29 19:35:31] Sequence stamp origin is -5862781823096001693
+[2026-09-29 19:35:31] Pausing evaluation to sync to disk at sequence stamp o+0
+[2026-09-29 19:35:31] Unpausing evaluation
+[2026-09-29 19:35:31] Pausing evaluation to close the cache at sequence stamp o+1
+[2026-09-29 19:35:31] The disk cache is freshly trimmed; leave it be.
+[2026-09-29 19:35:31] Unpausing evaluation
+[2026-09-29 19:35:31] This NaiveBuddyAllocator requested 0 eviction rounds.
+[2026-09-29 19:35:31] Exiting with code 2

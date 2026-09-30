@@ -1,15 +1,25 @@
 /**
  * Epic: Load Customer
+ * Orders: 0.0.0.2
  */
 
 import { scenario, story } from "tests/story-test";
+import { enteredValidAccountCredentials, storedAccountCredentialsWithToken } from "./examples";
+
 
 /**
  * Story: Load My Paradise Customer From Midtier And Store In Session
  */
 
 story('Load My Paradise Customer From Midtier And Store In Session', () => {
+  background('each', ({ given }) => {
+    given('Mavenir has a customer and the Cognito user holds its id', () => {
+      // TODO: implement step
+    });
+  });
+
   scenario('Load My Paradise Customer From Midtier And Store In Session', ({ given, when, then }) => {
+    // examples: enteredValidAccountCredentials
     when('My Paradise loads the customer through Midtier', () => {
       // TODO: implement step
     });
@@ -37,6 +47,7 @@ story('Load My Paradise Customer From Midtier And Store In Session', () => {
   });
 
   scenario('Terminated account', ({ given, when, then }) => {
+    // examples: storedAccountCredentialsWithToken
     given('the Customer has an account token', () => {
       // TODO: implement step
     })

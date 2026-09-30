@@ -19,17 +19,7 @@
         <mxCell id="2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;exitX=0.0;exitY=0.15;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="plans--planrepository" target="plans--plan" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;" edge="1" source="plans--portalgateway" target="plans--mavenirproductoffering" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="170" y="370" />
-              <mxPoint x="604" y="370" />
-              <mxPoint x="604" y="204" />
-              <mxPoint x="170" y="204" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.0;exitY=0.85;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="plans--planrepository" target="plans--portalgateway" parent="1">
+        <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.0;exitY=0.85;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="plans--planrepository" target="plans--portalgateway" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>

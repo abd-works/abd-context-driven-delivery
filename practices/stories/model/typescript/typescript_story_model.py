@@ -1,12 +1,12 @@
-"""TypeScriptStoryMap - runnable `{story_snake}_story.test.ts` under epic / sub-epic / story."""
+"""TypeScriptStoryModel - runnable `{story_snake}_story.test.ts` under epic / sub-epic / story."""
 
 from __future__ import annotations
 
 from typing import Dict, List, Optional
 
 from practices.stories.model.code_story_model import (
-    CodeStoryMap,
-    CodeStoryMapError,
+    CodeStoryModel,
+    CodeStoryModelError,
 )
 from practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
 from practices.stories.model.typescript.story_file import story_test_file_path
@@ -17,7 +17,7 @@ _SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
 _STORY_TEST_SUFFIX = "_story.test.ts"
 
 
-class TypeScriptStoryMap(CodeStoryMap):
+class TypeScriptStoryModel(CodeStoryModel):
     LEAF_EXTENSION = ".ts"
     LANGUAGE_LINE_COMMENT = "//"
     epic_type = TypeScriptEpic
@@ -43,20 +43,22 @@ class TypeScriptStoryMap(CodeStoryMap):
             return False
         if "/examples/" in path.replace("\\", "/"):
             return False
-        return name.endswith(_STORY_TEST_SUFFIX)
+        return name.endswith(_STORY_TEST_SUFFIX) or name.endswith("_story.spec.ts")
 
     def _story_slug_from_filename(self, name: str) -> str | None:
-        if not name.endswith(_STORY_TEST_SUFFIX):
+        suffix = _STORY_TEST_SUFFIX if name.endswith(_STORY_TEST_SUFFIX) else "_story.spec.ts"
+        if not name.endswith(suffix):
             return None
-        stem = name[: -len(_STORY_TEST_SUFFIX)]
+        stem = name[: -len(suffix)]
         return stem.replace("_", "-")
 
-    def load(self, external: Dict[str, str]) -> "TypeScriptStoryMap":
+    def load(self, external: Dict[str, str]) -> "TypeScriptStoryModel":
         if not isinstance(external, dict):
-            raise CodeStoryMapError("TypeScript story map parse expects a path->content dict")
+            raise CodeStoryModelError("TypeScript story map parse expects a path->content dict")
         self.epics.clear()
         seen: set[tuple[str, ...]] = set()
-        for path, content in sorted(external.items()):
+        for path in self._ordered_paths(external):
+            content = external[path]
             if not self._is_gwt_leaf(path):
                 continue
             parts = path.strip("/").replace("\\", "/").split("/")
