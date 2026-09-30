@@ -10,7 +10,6 @@ from practices.bdd.model.transformation.bdd_transformer import BddTransformer
 from practices.clean_engineering.model.transformation.clean_engineering_transformer import (
     CleanEngineeringTransformer,
 )
-from practices.stories.model.transformation.story_map_transformer import StoryMapTransformer
 
 
 def write_temp(nodes: list, dest: Path) -> None:
@@ -27,8 +26,6 @@ def write_temp(nodes: list, dest: Path) -> None:
 
 
 def _label(node) -> str:
-    if isinstance(node, StoryMapTransformer):
-        return "stories"
     if isinstance(node, CleanEngineeringTransformer):
         return "ce"
     if isinstance(node, BddTransformer):

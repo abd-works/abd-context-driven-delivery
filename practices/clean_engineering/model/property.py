@@ -1,12 +1,86 @@
-"""Property — typed field on a Class (canonical OoadNode)."""
+"""Property — typed field on a class."""
 
 from __future__ import annotations
 
+import re
 from typing import List
 
 from practices.clean_engineering.model.base_class_model import OoadNode
-from practices.clean_engineering.model.field_types import PropertyField
 from practices.clean_engineering.model.update_report import ChildCollectionPair
+
+
+class Invariant(OoadNode):
+    """One rule that must stay true, in file order, on a property or an operation."""
+
+    _semantic_type_name = "Invariant"
+
+    def __init__(self, text: str, sequential_order: int = 0) -> None:
+        super().__init__(text, sequential_order)
+        self.text = text
+
+    def clone(self) -> "Invariant":
+        return type(self)(self.text, self.sequential_order)
+
+    def update_self(self, source: OoadNode) -> None:
+        assert isinstance(source, Invariant)
+        self.name = source.text
+        self.text = source.text
+        self.sequential_order = source.sequential_order
+
+    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
+        return []
+
+
+def append_invariant(owner: object, text: str) -> None:
+    """Append one // line. Description stays the same lines joined, for channels that still read it."""
+    cleaned = text.strip()
+    if not cleaned:
+        return
+    invariants = getattr(owner, "invariants")
+    invariants.append(Invariant(cleaned, len(invariants) + 1))
+    owner.description = "\n".join(item.text for item in invariants)
+
+
+_CARDINALITY = re.compile(r"^(?:\d+\.\.\*|\d+\.\.\d+|\*|\d+)$")
+_ORIGIN = re.compile(r"^from\s+([A-Z][\w ]*)$")
+_STEREOTYPE_NOTE = re.compile(r"^<<\s*(composition|aggregation|association)\s*>>$", re.I)
+
+
+def take_property_note(prop: "Property", text: str) -> None:
+    """A // line under a field is the stereotype, the cardinality, where it comes from, or an invariant."""
+    cleaned = text.strip()
+    if not cleaned:
+        return
+    stereotype = _STEREOTYPE_NOTE.match(cleaned)
+    if stereotype:
+        prop.stereotype = stereotype.group(1).lower()
+        return
+    if _CARDINALITY.match(cleaned):
+        prop.cardinality = cleaned
+        return
+    origin = _ORIGIN.match(cleaned)
+    if origin:
+        prop.origin = origin.group(1).strip()
+        return
+    append_invariant(prop, cleaned)
+
+
+def property_notes(prop: "Property") -> List[str]:
+    """Notes written back under the field, in file order: origin, cardinality, then invariants."""
+    lines: List[str] = []
+    if getattr(prop, "origin", ""):
+        lines.append(f"from {prop.origin}")
+    if getattr(prop, "cardinality", ""):
+        lines.append(prop.cardinality)
+    lines.extend(invariant_lines(prop))
+    return lines
+
+
+def invariant_lines(owner: object) -> List[str]:
+    invariants = getattr(owner, "invariants", None) or []
+    if invariants:
+        return [item.text for item in invariants]
+    return [line.strip() for line in (getattr(owner, "description", "") or "").splitlines() if line.strip()]
 
 
 class Property(OoadNode):
@@ -15,29 +89,35 @@ class Property(OoadNode):
     def __init__(
         self,
         name: str,
-        sequential_order: int,
+        sequential_order: int = 0,
         type_hint: str = "",
         description: str = "",
     ) -> None:
         super().__init__(name, sequential_order)
         self.type_hint = type_hint
         self.description = description
+        self.access = "both"
+        self.stereotype = ""
+        self.cardinality = ""
+        self.origin = ""
+        self.invariants: List[Invariant] = []
 
-    @classmethod
-    def from_field(cls, field: PropertyField, sequential_order: int) -> "Property":
-        return cls(
-            name=field.name,
-            sequential_order=sequential_order,
-            type_hint=field.type_hint,
-            description=field.description,
-        )
+    def clone(self) -> "Property":
+        cloned = type(self)(self.name, self.sequential_order, self.type_hint, self.description)
+        cloned.access = self.access
+        cloned.stereotype = self.stereotype
+        cloned.cardinality = self.cardinality
+        cloned.origin = self.origin
+        cloned.invariants = [item.clone() for item in self.invariants]
+        return cloned
 
-    def to_field(self) -> PropertyField:
-        return PropertyField(
-            name=self.name,
-            type_hint=self.type_hint,
-            description=self.description,
-        )
+    def save(self) -> str:
+        if self.type_hint:
+            return f"{self.name}: {self.type_hint}"
+        return self.name
+
+    def render(self) -> str:
+        return self.save()
 
     def as_record(self) -> dict:
         return {
@@ -46,15 +126,34 @@ class Property(OoadNode):
             "description": self.description,
         }
 
-    def render(self) -> str:
-        return self.to_field().render()
-
     def update_self(self, source: OoadNode) -> None:
         assert isinstance(source, Property)
         self.name = source.name
         self.sequential_order = source.sequential_order
         self.type_hint = source.type_hint
         self.description = source.description
+        self.access = getattr(source, "access", "both")
+        self.stereotype = getattr(source, "stereotype", "") or ""
+        self.cardinality = getattr(source, "cardinality", "") or ""
+        self.origin = getattr(source, "origin", "") or ""
+        self.invariants = [item.clone() for item in getattr(source, "invariants", [])]
 
     def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
         return []
+
+    @classmethod
+    def from_field(cls, field: object, sequential_order: int) -> "Property":
+        loaded = cls(
+            name=getattr(field, "name"),
+            sequential_order=sequential_order,
+            type_hint=getattr(field, "type_hint", ""),
+            description=getattr(field, "description", ""),
+        )
+        loaded.stereotype = getattr(field, "stereotype", "") or ""
+        loaded.cardinality = getattr(field, "cardinality", "") or ""
+        loaded.origin = getattr(field, "origin", "") or ""
+        loaded.invariants = [item.clone() for item in getattr(field, "invariants", [])]
+        return loaded
+
+    def to_field(self) -> "Property":
+        return self

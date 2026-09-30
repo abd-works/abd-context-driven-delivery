@@ -14,9 +14,9 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
-from practices.stories.model.scenario import Scenario
-from practices.stories.model.story_map import StoryMap
+from practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from practices.stories.model.story_model import Scenario
+from practices.stories.model.story_model import StoryMap
 from practices.stories.model.json.nodes import JsonParseError, JsonStoryMap
 
 
@@ -27,13 +27,13 @@ class SpecFixture:
             story_map.epics.append(Epic(f"Epic {i}", i))
         first = story_map.epics[0]
         for j in range(1, 4):
-            sub = SubEpic(f"SubEpic 1.{j}", j)
+            sub = Epic(f"Epic 1.{j}", j)
             story = Story(f"Story {j}", 1, StoryType.SYSTEM)
             story.scenarios.append(
                 Scenario(name="scenario text", sequential_order=1)
             )
             sub.stories.append(story)
-            first.sub_epics.append(sub)
+            first.epics.append(sub)
         return story_map
 
 
@@ -50,7 +50,7 @@ with description("a story-graph.json document") as self:
         expect(payload["epics"]).to(have_len(0))
 
     with context(
-        "that holds a serialized Story Map with 4 Epics and 3 SubEpics under the first Epic"
+        "that holds a serialized Story Map with 4 Epics and 3 Epics under the first Epic"
     ):
         with before.each:
             self.source = fixture.canonical_story_map()
@@ -61,11 +61,11 @@ with description("a story-graph.json document") as self:
             expect(self.payload["epics"]).to(have_len(4))
 
         with context("the first Epic entry"):
-            with it("should contain 3 SubEpic entries"):
+            with it("should contain 3 Epic entries"):
                 expect(self.payload["epics"][0]["subEpics"]).to(have_len(3))
 
         with context("every Story"):
-            with it("should be nested under its SubEpic entry"):
+            with it("should be nested under its Epic entry"):
                 for sub in self.payload["epics"][0]["subEpics"]:
                     expect(sub["stories"]).to(have_len(1))
 
@@ -96,13 +96,13 @@ with description("a story-graph.json document") as self:
 
         with context("with the first Epic removed and the document re-serialized"):
             with before.each:
-                self.source.remove_epic("Epic 1")
+                self.source.epics.pop(0)
                 self.new_payload = json_module.loads(self.json_map.render(self.source))
 
             with it("should contain 3 Epic entries"):
                 expect(self.new_payload["epics"]).to(have_len(3))
 
-            with it("should hold no orphan SubEpic entries"):
+            with it("should hold no orphan Epic entries"):
                 remaining_names = [e["name"] for e in self.new_payload["epics"]]
                 expect("Epic 1" in remaining_names).to(be_false)
 
@@ -114,38 +114,15 @@ with description("a story-graph.json document") as self:
 
         with context("the reconstructed Story Map"):
             with it(
-                "should hold every Epic, SubEpic, Story, and Scenario in sequential order"
+                "should hold every Epic, Epic, Story, and Scenario in sequential order"
             ):
                 expect(self.reconstructed.epics).to(have_len(4))
                 first_epic = self.reconstructed.epics[0]
-                expect(first_epic.sub_epics).to(have_len(3))
-                expect(first_epic.sub_epics[0].stories).to(have_len(1))
+                expect(first_epic.epics).to(have_len(3))
+                expect(first_epic.epics[0].stories).to(have_len(1))
                 expect(
-                    first_epic.sub_epics[0].stories[0].scenarios
+                    first_epic.epics[0].stories[0].scenarios
                 ).to(have_len(1))
-
-    with context("that has been edited and synced back against a canonical Story Map"):
-        with before.each:
-            self.canonical = fixture.canonical_story_map()
-            edited = fixture.canonical_story_map()
-            edited.epics[0].name = "Epic 1 (edited)"
-            edited.append_epic(Epic("Epic 5", 5))
-            edited_text = self.json_map.render(edited)
-            self.report = self.json_map.sync(edited_text, self.canonical)
-
-        with context("the returned UpdateReport"):
-            with it(
-                "should list every add, remove, rename, reorder, and move applied to the document"
-            ):
-                expect(
-                    len(self.report.adds()) + len(self.report.renames()) >= 2
-                ).to(be_true)
-
-        with context("the reconstructed Story Map"):
-            with it("should reflect every edit made to the document"):
-                names = [e.name for e in self.canonical.epics]
-                expect("Epic 1 (edited)" in names).to(be_true)
-                expect("Epic 5" in names).to(be_true)
 
     with context("that does not conform to the story-graph.json schema"):
         with context("the read"):

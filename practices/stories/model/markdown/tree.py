@@ -25,7 +25,7 @@ from __future__ import annotations
 from typing import Dict
 
 from practices.stories.model.markdown.nodes import MarkdownStoryMap
-from practices.stories.model.story_map import StoryMap
+from practices.stories.model.story_model import StoryMap
 
 
 def render_md_tree(

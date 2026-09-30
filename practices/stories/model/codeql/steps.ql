@@ -15,11 +15,14 @@ predicate isStepName(string name) {
   name = "but"
 }
 
-from CallExpr call, string callee, Expr arg, File file
+from CallExpr call, string callee, StringLiteral arg, File file
 where
   callee = call.getCalleeName() and
   isStepName(callee) and
   arg = call.getArgument(0) and
   file = call.getFile() and
-  file.getBaseName().matches("%_story.test.ts")
-select call, callee, arg, file.getRelativePath(), call.getLocation().getStartLine()
+  (
+    file.getBaseName().matches("%_story.test.ts") or
+    file.getBaseName().matches("%_story.spec.ts")
+  )
+select call, callee, arg.getValue(), file.getRelativePath(), call.getLocation().getStartLine()

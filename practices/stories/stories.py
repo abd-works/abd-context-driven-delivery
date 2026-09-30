@@ -25,22 +25,11 @@ class Stories(PracticeGuidance):
                 "json": ("stories.model.json.nodes", "JsonStoryMap"),
                 "drawio": ("stories.model.drawio.nodes", "DrawIOStoryMap"),
                 "miro": ("stories.model.miro.nodes", "MiroStoryMap"),
-                "python": ("stories.model.python.python_story_map", "PythonStoryMap"),
-                "typescript": ("stories.model.typescript.typescript_story_map", "TypeScriptStoryMap"),
-                "java": ("stories.model.java.java_story_map", "JavaStoryMap"),
-                "javascript": ("stories.model.javascript.javascript_story_map", "JavaScriptStoryMap"),
+                "python": ("stories.model.python.python_story_model", "PythonStoryMap"),
+                "typescript": ("stories.model.typescript.typescript_story_model", "TypeScriptStoryMap"),
+                "java": ("stories.model.java.java_story_model", "JavaStoryMap"),
+                "javascript": ("stories.model.javascript.javascript_story_model", "JavaScriptStoryMap"),
             },
         )
         if stage is not None:
             self._activate(stage=stage)
-
-    @property
-    def model(self):
-        from practices.stories.model.transformation.story_map_transformer import (
-            StoryMapTransformer,
-        )
-
-        class StoriesModel:
-            transformer = StoryMapTransformer
-
-        return StoriesModel()

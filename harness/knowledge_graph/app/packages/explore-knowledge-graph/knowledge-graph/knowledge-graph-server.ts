@@ -532,10 +532,39 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
   const dto = JSON.parse(line) as KnowledgeGraphDto;
   dto.folder = root;
   const graph = graphFromWorkspaceDto(dto);
-  if (_graphIsEmpty(graph) || !_hasDemonstrates(graph)) {
+  if (_graphIsEmpty(graph)) {
+    return _graphFromDisk(root) ?? graph;
+  }
+  if (!_hasDemonstrates(graph) && !_hasPracticeTree(graph)) {
     return _graphFromDisk(root) ?? graph;
   }
   return graph;
+}
+
+function _hasPracticeTree(graph: KnowledgeGraph): boolean {
+  const kinds = new Set([
+    'Epic',
+    'SubEpic',
+    'Story',
+    'Scenario',
+    'Step',
+    'Description',
+    'Context',
+    'Observation',
+    'BoundedContext',
+    'Aggregate',
+    'Entity',
+    'EntityRoot',
+  ]);
+  return graph.toDto().practice_graphs.some((item) =>
+    item.nodes.some(
+      (node) =>
+        kinds.has(node.semantic_type) ||
+        node.practice === 'stories' ||
+        node.practice === 'bdd' ||
+        node.practice === 'ddd',
+    ),
+  );
 }
 
 function _hasDemonstrates(graph: KnowledgeGraph): boolean {

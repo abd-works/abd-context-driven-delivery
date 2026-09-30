@@ -35,13 +35,11 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional
 
-from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
-from practices.stories.model.scenario import Scenario
+from practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from practices.stories.model.story_model import Scenario
 from practices.stories.model.source_location import SourceLocation
-from practices.stories.model.story_map import StoryMap
-from practices.stories.model.thin_slice import Increment
-from practices.stories.model.update_report import UpdateReport
-
+from practices.stories.model.story_model import StoryMap
+from practices.stories.model.story_model import Increment
 
 # -- Leaf node types -----------------------------------------------------------
 
@@ -59,17 +57,12 @@ class JsonStory(Story):
         return JsonScenario(source.name, source.sequential_order, source.story_name)
 
 
-class JsonSubEpic(SubEpic):
-    def load_sub_epic(self, source: SubEpic) -> "JsonSubEpic":
-        return JsonSubEpic(source.name, source.sequential_order)
+class JsonEpic(Epic):
+    def load_epic(self, source: Epic) -> "JsonEpic":
+        return JsonEpic(source.name, source.sequential_order)
 
     def load_story(self, source: Story) -> JsonStory:
         return JsonStory(source.name, source.sequential_order, source.story_type)
-
-
-class JsonEpic(Epic):
-    def load_sub_epic(self, source: SubEpic) -> JsonSubEpic:
-        return JsonSubEpic(source.name, source.sequential_order)
 
 
 # -- Root node + I/O -----------------------------------------------------------
@@ -79,6 +72,9 @@ class JsonParseError(Exception):
 
 
 class JsonStoryMap(StoryMap):
+    epic_type = JsonEpic
+    story_type = JsonStory
+    increment_type = JsonIncrement
     """JSON story-map I/O. IS the format-typed tree root.
 
     parse / render / sync implement the Uniform Callable Surface.
@@ -116,18 +112,12 @@ class JsonStoryMap(StoryMap):
             story_map.increments.append(self._increment_from_dict(inc_dict))
         return story_map
 
-    def sync(self, text: str, canonical: "JsonStoryMap") -> UpdateReport:
-        return canonical.translate_from(self.parse(text))
-
     def attach_source_locations(self, file_name: str) -> None:
         """Stamp a single SourceLocation (the JSON file) onto every node."""
         loc = SourceLocation(file_name, 0)
         for epic in self.epics:
             epic.source = loc
-        for sub in self.all_sub_epics():
-            sub.source = loc
-        for story in self.all_stories():
-            story.source = loc
+            epic._stamp_source(loc)
 
     @classmethod
     def from_workspace(cls, root: "Path") -> Optional["JsonStoryMap"]:
@@ -152,27 +142,21 @@ class JsonStoryMap(StoryMap):
         payload: Dict[str, Any] = {
             "name": epic.name,
             "sequentialOrder": epic.sequential_order,
-            "subEpics": [self._sub_epic_to_dict(s) for s in epic.sub_epics],
+            "subEpics": [self._sub_epic_to_dict(s) for s in epic.epics],
         }
         if epic.estimate:
             payload["estimate"] = epic.estimate
-        factories = list(getattr(epic, "example_factories", None) or [])
-        if factories:
-            payload["exampleFactories"] = factories
         return payload
 
-    def _sub_epic_to_dict(self, sub_epic: JsonSubEpic) -> Dict[str, Any]:
+    def _sub_epic_to_dict(self, sub_epic: JsonEpic) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "name": sub_epic.name,
             "sequentialOrder": sub_epic.sequential_order,
-            "subEpics": [self._sub_epic_to_dict(s) for s in sub_epic.sub_epics],
+            "subEpics": [self._sub_epic_to_dict(s) for s in sub_epic.epics],
             "stories": [self._story_to_dict(s) for s in sub_epic.stories],
         }
         if sub_epic.estimate:
             payload["estimate"] = sub_epic.estimate
-        factories = list(getattr(sub_epic, "example_factories", None) or [])
-        if factories:
-            payload["exampleFactories"] = factories
         return payload
 
     def _story_to_dict(self, story: JsonStory) -> Dict[str, Any]:
@@ -182,8 +166,8 @@ class JsonStoryMap(StoryMap):
             "storyType": story.story_type.value,
             "scenarios": [self._scenario_to_dict(s) for s in story.scenarios],
         }
-        if story.users:
-            payload["users"] = list(story.users)
+        if story.actors:
+            payload["actors"] = list(story.actors)
         if getattr(story, "domain_terms", None):
             payload["domainTerms"] = list(story.domain_terms)
         if getattr(story, "evidence", None):
@@ -195,7 +179,7 @@ class JsonStoryMap(StoryMap):
             "name": scenario.name,
             "sequentialOrder": scenario.sequential_order,
         }
-        rows = list(getattr(scenario, "example_rows", None) or [])
+        rows = scenario.examples.table()
         if rows:
             payload["exampleRows"] = rows
         return payload
@@ -204,7 +188,7 @@ class JsonStoryMap(StoryMap):
         payload: Dict[str, Any] = {
             "name": inc.name,
             "sequentialOrder": inc.sequential_order,
-            "stories": list(inc.stories),
+            "stories": [story.name for story in inc.stories],
         }
         if inc.outcome:
             payload["outcome"] = inc.outcome
@@ -227,21 +211,15 @@ class JsonStoryMap(StoryMap):
     def _epic_from_dict(self, epic_record: Dict[str, Any]) -> JsonEpic:
         epic = JsonEpic(epic_record["name"], int(epic_record.get("sequentialOrder", 0)))
         epic.estimate = str(epic_record.get("estimate", "") or "")
-        factories = epic_record.get("exampleFactories") or []
-        if factories:
-            epic.example_factories = list(factories)
         for sub in epic_record.get("subEpics", []):
-            epic.sub_epics.append(self._sub_epic_from_dict(sub))
+            epic.epics.append(self._sub_epic_from_dict(sub))
         return epic
 
-    def _sub_epic_from_dict(self, sub_epic_record: Dict[str, Any]) -> JsonSubEpic:
-        sub_epic = JsonSubEpic(sub_epic_record["name"], int(sub_epic_record.get("sequentialOrder", 0)))
+    def _sub_epic_from_dict(self, sub_epic_record: Dict[str, Any]) -> JsonEpic:
+        sub_epic = JsonEpic(sub_epic_record["name"], int(sub_epic_record.get("sequentialOrder", 0)))
         sub_epic.estimate = str(sub_epic_record.get("estimate", "") or "")
-        factories = sub_epic_record.get("exampleFactories") or []
-        if factories:
-            sub_epic.example_factories = list(factories)
         for nested in sub_epic_record.get("subEpics", []):
-            sub_epic.sub_epics.append(self._sub_epic_from_dict(nested))
+            sub_epic.epics.append(self._sub_epic_from_dict(nested))
         for story in sub_epic_record.get("stories", []):
             sub_epic.stories.append(self._story_from_dict(story))
         return sub_epic
@@ -252,11 +230,11 @@ class JsonStoryMap(StoryMap):
             int(story_record.get("sequentialOrder", 0)),
             StoryType(story_record.get("storyType", "user")),
         )
-        users = story_record.get("users")
-        if users is None and story_record.get("actor"):
-            users = [story_record["actor"]]
-        if users:
-            story.users = list(users) if isinstance(users, list) else [str(users)]
+        actors = story_record.get("actors")
+        if actors is None and story_record.get("actor"):
+            actors = [story_record["actor"]]
+        if actors:
+            story.actors = list(actors) if isinstance(actors, list) else [str(actors)]
         if story_record.get("domainTerms"):
             story.domain_terms = list(story_record["domainTerms"])
         if story_record.get("evidence"):
@@ -270,17 +248,21 @@ class JsonStoryMap(StoryMap):
             name=scenario_record.get("name", "Scenario"),
             sequential_order=int(scenario_record.get("sequentialOrder", 0)),
         )
-        rows = scenario_record.get("exampleRows") or []
-        if rows:
-            scenario.example_rows = list(rows)
+        for index, row in enumerate(scenario_record.get("exampleRows") or [], start=1):
+            label = str(row.get("example") or row.get("name") or f"example-{index}")
+            scenario.examples[label] = dict(row)
         return scenario
 
     def _increment_from_dict(self, increment_record: Dict[str, Any]) -> JsonIncrement:
+        stories = []
+        for index, name in enumerate(increment_record.get("stories", []), start=1):
+            story_name = name.get("name") if isinstance(name, dict) else str(name)
+            stories.append(Story(story_name, index))
         inc = JsonIncrement(
             name=increment_record["name"],
             sequential_order=int(increment_record.get("sequentialOrder", 0)),
+            stories=stories,
         )
-        inc.stories = list(increment_record.get("stories", []))
         inc.outcome = str(increment_record.get("outcome", "") or "")
         inc.decision_prompt = str(increment_record.get("decisionPrompt", "") or "")
         inc.slicing_notes = str(increment_record.get("slicingNotes", "") or "")

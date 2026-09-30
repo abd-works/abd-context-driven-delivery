@@ -40,16 +40,25 @@ def is_domain_event(name: str) -> bool:
 
 
 def is_domain_service(name: str) -> bool:
-    return "domain service" in class_stereotypes(name)
+    stereotypes = class_stereotypes(name)
+    if "system" in stereotypes:
+        return False
+    return "domain service" in stereotypes or "service" in stereotypes
+
+
+def is_specification(name: str) -> bool:
+    return "specification" in class_stereotypes(name)
 
 
 def ddd_class_kind(name: str) -> Optional[str]:
     """Return DDD stereotype name when class name carries tactical tags."""
     stereotypes = class_stereotypes(name)
-    if not stereotypes:
+    if not stereotypes or "system" in stereotypes:
         return None
     if is_aggregate_root(name):
         return "EntityRoot"
+    if is_specification(name):
+        return "Specification"
     if is_entity(name):
         return "Entity"
     if is_value_object(name):

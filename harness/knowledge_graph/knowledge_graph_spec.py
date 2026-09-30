@@ -16,7 +16,7 @@ from mamba import description, it
 
 from harness.knowledge_graph.model import Kind, Node, PracticeGraph
 from harness.knowledge_graph.model.nodes import GraphDescription, GraphStep
-from practices.stories.model.nodes import Epic
+from practices.stories.model.story_model import Epic
 
 
 _CATALOG = _REPO_ROOT / "practices" / "stories" / "catalog-examples"

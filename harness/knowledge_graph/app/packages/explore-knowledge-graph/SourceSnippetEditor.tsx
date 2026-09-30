@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { type OnMount } from '@monaco-editor/react';
 import type { SourceRangeDto } from './knowledge-graph';
 
 const LINE_HEIGHT = 20;
@@ -32,33 +32,73 @@ const SNIPPET_OPTIONS = {
 
 export function SourceSnippetEditor({
   source,
+  label,
+  typeLabel,
   excerpt = true,
+  open = true,
+  onToggle,
+  toggleTestId = 'toggle-source',
+  toggleLabel,
 }: {
   source: SourceRangeDto;
+  label: string;
+  typeLabel: string;
   excerpt?: boolean;
+  open?: boolean;
+  onToggle?: () => void;
+  toggleTestId?: string;
+  toggleLabel?: string;
 }) {
   const theme = useExplorerMonacoTheme();
   const value = source.text || '';
   const startLine = source.start_line || 1;
+  const [height, setHeight] = useState(() => editorHeight(value));
+  useEffect(() => {
+    setHeight(editorHeight(value));
+  }, [value]);
+  const fitHeight: OnMount = (editor) => {
+    const fit = () => {
+      const next = fittedHeight(editor.getContentHeight());
+      setHeight((current) => (current === next ? current : next));
+    };
+    fit();
+    editor.onDidContentSizeChange(fit);
+  };
   return (
     <div
       className="source-snippet"
       data-testid={excerpt ? 'source-excerpt' : 'nested-source'}
+      data-open={open ? 'true' : 'false'}
     >
-      <h2>
-        {source.file}:{source.start_line}–{source.end_line}
-      </h2>
-      <Editor
-        height={editorHeight(value)}
-        language={languageFor(source.file)}
-        value={value}
-        theme={theme}
-        loading={<pre className="source-loading">{value}</pre>}
-        options={{
-          ...SNIPPET_OPTIONS,
-          lineNumbers: (line) => String(startLine + line - 1),
-        }}
-      />
+      <div className="source-snippet-bar">
+        <button
+          type="button"
+          className="source-toggle"
+          data-testid={toggleTestId}
+          aria-expanded={open}
+          aria-label={toggleLabel ?? (open ? 'Collapse' : 'Expand')}
+          onClick={onToggle}
+        >
+          {open ? '▼' : '▶'}
+        </button>
+        <h2>
+          {label} <span className="source-type">({typeLabel})</span>
+        </h2>
+      </div>
+      {open ? (
+        <Editor
+          height={height}
+          language={languageFor(source.file)}
+          value={value}
+          theme={theme}
+          onMount={fitHeight}
+          loading={<pre className="source-loading">{value}</pre>}
+          options={{
+            ...SNIPPET_OPTIONS,
+            lineNumbers: (line) => String(startLine + line - 1),
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -81,8 +121,12 @@ function useExplorerMonacoTheme(): 'kg-light' | 'kg-dark' {
 }
 
 function editorHeight(value: string): number {
-  const lines = Math.max(value.split('\n').length, 4);
-  return Math.min(lines * LINE_HEIGHT + 20, MAX_HEIGHT);
+  const lines = Math.max(value.split('\n').length, 1);
+  return fittedHeight(lines * LINE_HEIGHT + 16);
+}
+
+function fittedHeight(contentHeight: number): number {
+  return Math.min(Math.max(Math.ceil(contentHeight), LINE_HEIGHT + 16), MAX_HEIGHT);
 }
 
 const LANGUAGE_BY_EXT: Record<string, string> = {

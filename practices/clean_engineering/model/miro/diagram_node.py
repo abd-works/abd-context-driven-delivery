@@ -31,7 +31,7 @@ class MiroClass(DiagramClass):
         for prop in self.properties:
             lines.append(f"        +{prop.type_hint or 'object'} {prop.name}")
         for operation in self.operations:
-            parameters = ', '.join(operation.parameters)
+            parameters = ', '.join(parameter.save() for parameter in operation.parameters)
             lines.append(
                 f'        +{operation.name}({parameters}) {operation.return_type or "void"}'
             )

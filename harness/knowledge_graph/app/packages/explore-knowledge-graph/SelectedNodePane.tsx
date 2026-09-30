@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import type { ListedRule, ListedTreeNode, SourceRangeDto } from './knowledge-graph';
+import {
+  stepTitle,
+  type ListedRule,
+  type ListedTreeNode,
+  type SourceRangeDto,
+} from './knowledge-graph/knowledge-graph';
+import { kindLabel } from './PracticeGraphTree';
 import { SourceSnippetEditor } from './SourceSnippetEditor';
 
 type SelectedNode = {
@@ -23,7 +29,8 @@ export function SelectedNodePane({
   sourceFile: SourceRangeDto | null;
   violations?: boolean;
 }) {
-  const [showGuidance, setShowGuidance] = useState(true);
+  const [sourcesOpen, setSourcesOpen] = useState(true);
+  const [sourceOverrides, setSourceOverrides] = useState<Record<string, boolean>>({});
   const sections = selectedTree
     ? flattenSections(selectedTree, violations)
     : selectedNode
@@ -47,18 +54,35 @@ export function SelectedNodePane({
     );
   }
   const panePrompt = paneCopyText(sections, violations);
+  const sourceIsOpen = (id: string) =>
+    id in sourceOverrides ? sourceOverrides[id] : sourcesOpen;
+  const hasSource = sections.some(
+    (section) => section.source?.text || section.origin?.text,
+  );
+  const allSourcesClosed =
+    hasSource &&
+    sections
+      .filter((section) => section.source?.text || section.origin?.text)
+      .every((section) => !sourceIsOpen(section.node_id));
   return (
     <div className="selected-node-pane" data-testid="selected-subtree">
+      {panePrompt || hasSource ? (
       <div className="pane-actions">
-        <label className="guidance-toggle" data-testid="toggle-guidance">
-          guidance
-          <input
-            type="checkbox"
-            checked={showGuidance}
-            onChange={(event) => setShowGuidance(event.target.checked)}
-          />
-        </label>
-        {panePrompt ? (
+          {hasSource ? (
+            <button
+              type="button"
+              className="pane-tool pane-toggle-all"
+              data-testid="pane-toggle-all"
+              aria-expanded={!allSourcesClosed}
+              onClick={() => {
+                setSourcesOpen(allSourcesClosed);
+                setSourceOverrides({});
+              }}
+            >
+              {allSourcesClosed ? 'Expand all' : 'Collapse all'}
+            </button>
+          ) : null}
+          {panePrompt ? (
           <button
             type="button"
             className="copy-prompt"
@@ -67,8 +91,9 @@ export function SelectedNodePane({
           >
             Copy pane to prompt
           </button>
-        ) : null}
+          ) : null}
       </div>
+      ) : null}
       {sections.map((section, index) => (
         <NodeSection
           key={section.node_id}
@@ -81,7 +106,25 @@ export function SelectedNodePane({
           }
           source={section.source}
           origin={section.origin}
-          showGuidance={showGuidance}
+          sourceOpen={sourceIsOpen(section.node_id)}
+          onToggleSource={() =>
+            setSourceOverrides((current) => ({
+              ...current,
+              [section.node_id]: !sourceIsOpen(section.node_id),
+            }))
+          }
+          collapseAll={
+            index === 0 && hasSource
+              ? {
+                  closed: allSourcesClosed,
+                  onToggle: () => {
+                    setSourcesOpen(allSourcesClosed);
+                    setSourceOverrides({});
+                  },
+                }
+              : null
+          }
+          selectedRuleSlug={selectedRule?.slug ?? null}
         />
       ))}
     </div>
@@ -131,7 +174,10 @@ function NodeSection({
   rules,
   source,
   origin,
-  showGuidance = true,
+  sourceOpen = true,
+  onToggleSource,
+  collapseAll = null,
+  selectedRuleSlug = null,
 }: {
   nested?: boolean;
   name: string;
@@ -140,38 +186,111 @@ function NodeSection({
   rules: ListedRule[];
   source: SourceRangeDto | null;
   origin: SourceRangeDto | null;
-  showGuidance?: boolean;
+  sourceOpen?: boolean;
+  onToggleSource?: () => void;
+  collapseAll?: { closed: boolean; onToggle: () => void } | null;
+  selectedRuleSlug?: string | null;
 }) {
-  const shown =
-    showGuidance && (source?.text ? source : nested ? null : origin?.text ? origin : null);
-  const listed = showGuidance ? rules : violatingRules(rules);
-  if (!showGuidance && listed.length === 0) {
-    return null;
-  }
+  const shown = source?.text ? source : nested ? null : origin?.text ? origin : null;
+  const typeLabel = kindLabel(semanticType, false);
+  const title = stepTitle(name, semanticType, '', shown?.text ?? source?.text ?? origin?.text ?? '');
+  const allToggle = collapseAll ? (
+    <button
+      type="button"
+      className="source-toggle pane-source-toggle"
+      data-testid="toggle-all-sources"
+      aria-expanded={!collapseAll.closed}
+      aria-label={collapseAll.closed ? 'Expand all' : 'Collapse all'}
+      onClick={collapseAll.onToggle}
+    >
+      {collapseAll.closed ? '▶' : '▼'}
+    </button>
+  ) : null;
   return (
     <div
       className="node-report"
       data-testid={nested ? 'child-node-report' : 'source-section'}
     >
-      <h2>{name}</h2>
-      <p className="report-meta">{semanticType}</p>
       {shown ? (
-        <SourceSnippetEditor source={shown} excerpt={!nested} />
+        <SourceSnippetEditor
+          source={shown}
+          label={title}
+          typeLabel={typeLabel}
+          excerpt={!nested}
+          open={sourceOpen}
+          onToggle={collapseAll ? collapseAll.onToggle : onToggleSource}
+          toggleTestId={collapseAll ? 'toggle-all-sources' : 'toggle-source'}
+          toggleLabel={
+            collapseAll
+              ? collapseAll.closed
+                ? 'Expand all'
+                : 'Collapse all'
+              : undefined
+          }
+        />
+      ) : (
+        <h2 className="node-heading">
+          {allToggle}
+          {title} <span className="source-type">({typeLabel})</span>
+        </h2>
+      )}
+      {rules.length > 0 ? (
+        <RuleReport
+          rules={rules}
+          path={path}
+          semanticType={semanticType}
+          source={source}
+          origin={origin}
+          selectedRuleSlug={selectedRuleSlug}
+        />
       ) : null}
-      {listed.length > 0 ? (
-        <div className="rule-report" data-testid="rule-report">
-          {listed.map((entry) => (
+    </div>
+  );
+}
+
+function RuleReport({
+  rules,
+  path,
+  semanticType,
+  source,
+  origin,
+  selectedRuleSlug,
+}: {
+  rules: ListedRule[];
+  path: string;
+  semanticType: string;
+  source: SourceRangeDto | null;
+  origin: SourceRangeDto | null;
+  selectedRuleSlug: string | null;
+}) {
+  const [open, setOpen] = useState(
+    Boolean(selectedRuleSlug && rules.some((entry) => entry.slug === selectedRuleSlug)),
+  );
+  return (
+    <div className="rule-report" data-testid="rule-report">
+      <button
+        type="button"
+        className="rules-toggle"
+        data-testid="expand-pane-rules"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span aria-hidden="true">{open ? '▼' : '▶'}</span>
+        rules ({rules.length})
+      </button>
+      {open
+        ? rules.map((entry) => (
             <article key={entry.slug} className={`rule-card ${entry.status}`}>
               <h3>
                 {entry.slug}{' '}
                 <span className={`rule-status ${entry.status}`}>{entry.status}</span>
               </h3>
-              {showGuidance && (entry.practice || entry.fidelity) ? (
+              {entry.practice || entry.fidelity ? (
                 <p className="report-meta">
                   {[entry.practice, entry.fidelity].filter(Boolean).join(' · ')}
                 </p>
               ) : null}
-              {showGuidance && entry.body ? <p>{entry.body}</p> : null}
+              {entry.body ? <p>{entry.body}</p> : null}
               {entry.message ? <p className="violation">{entry.message}</p> : null}
               {entry.status === 'violating' || entry.message ? (
                 <div className="copy-prompt-actions">
@@ -212,9 +331,8 @@ function NodeSection({
                 </div>
               ) : null}
             </article>
-          ))}
-        </div>
-      ) : null}
+          ))
+        : null}
     </div>
   );
 }

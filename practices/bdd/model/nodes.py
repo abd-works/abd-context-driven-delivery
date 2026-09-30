@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from practices.stories.model.story_node import StoryNode
-from practices.stories.model.update_report import ChildCollectionPair
+from practices.stories.model.story_model import StoryNode
 
 
 class Description(StoryNode):
@@ -15,23 +14,14 @@ class Description(StoryNode):
         super().__init__(name=name, sequential_order=sequential_order)
         self.contexts: List["Context"] = []
 
-    def update_self(self, source: StoryNode) -> None:
-        assert isinstance(source, Description)
-        self.name = source.name
-        self.sequential_order = source.sequential_order
+    def clone(self) -> "Description":
+        cloned = type(self)(self.name, self.sequential_order)
+        for context in self.contexts:
+            cloned.contexts.append(context.clone())
+        return cloned
 
     def load_context(self, source: "Context") -> "Context":
-        return Context(source.name, source.sequential_order)
-
-    def child_collections(self, source: StoryNode) -> List[ChildCollectionPair]:
-        assert isinstance(source, Description)
-        return [
-            ChildCollectionPair(
-                self_children=self.contexts,
-                source_children=source.contexts,
-                load=self.load_context,
-            )
-        ]
+        return source.clone()
 
 
 class Context(StoryNode):
@@ -42,31 +32,19 @@ class Context(StoryNode):
         self.observations: List["Observation"] = []
         self.contexts: List["Context"] = []
 
-    def update_self(self, source: StoryNode) -> None:
-        assert isinstance(source, Context)
-        self.name = source.name
-        self.sequential_order = source.sequential_order
+    def clone(self) -> "Context":
+        cloned = type(self)(self.name, self.sequential_order)
+        for observation in self.observations:
+            cloned.observations.append(observation.clone())
+        for context in self.contexts:
+            cloned.contexts.append(context.clone())
+        return cloned
 
     def load_observation(self, source: "Observation") -> "Observation":
-        return Observation(source.name, source.sequential_order)
+        return source.clone()
 
     def load_context(self, source: "Context") -> "Context":
-        return Context(source.name, source.sequential_order)
-
-    def child_collections(self, source: StoryNode) -> List[ChildCollectionPair]:
-        assert isinstance(source, Context)
-        return [
-            ChildCollectionPair(
-                self_children=self.observations,
-                source_children=source.observations,
-                load=self.load_observation,
-            ),
-            ChildCollectionPair(
-                self_children=self.contexts,
-                source_children=source.contexts,
-                load=self.load_context,
-            ),
-        ]
+        return source.clone()
 
 
 class Observation(StoryNode):
@@ -75,10 +53,5 @@ class Observation(StoryNode):
     def __init__(self, name: str, sequential_order: int = 1) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
 
-    def update_self(self, source: StoryNode) -> None:
-        assert isinstance(source, Observation)
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-
-    def child_collections(self, source: StoryNode) -> List[ChildCollectionPair]:
-        return []
+    def clone(self) -> "Observation":
+        return type(self)(self.name, self.sequential_order)

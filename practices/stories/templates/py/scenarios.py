@@ -8,7 +8,7 @@
 #
 # ## Artifact layout (`artifacts-mirror-story-hierarchy`)
 #
-# Mirror Epic → SubEpic → Story on disk:
+# Mirror Epic → Epic → Story on disk:
 #
 # ```
 # {epic-verb-noun}/                         # kebab-case folder

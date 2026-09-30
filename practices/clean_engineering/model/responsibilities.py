@@ -7,6 +7,7 @@ not a second job — only several distinct clusters on a large public surface co
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from typing import Dict, Iterable, List, Mapping, Set
 
@@ -33,17 +34,24 @@ class Responsibilities:
                 )
         return refined
 
-    def nouns_in(self, tokens: Iterable[str]) -> Set[str]:
-        words = [token.lower() for token in tokens if token]
+    def nouns_in(self, tokens: Iterable[str], operation: str = "") -> Set[str]:
+        """Nouns in the tokens. The operation's leading word is its verb."""
+        leading = self._leading_word(operation)
         nouns: Set[str] = set()
-        for index, word in enumerate(words):
+        for word in (token.lower() for token in tokens if token):
             as_noun = bool(wn.synsets(word, wn.NOUN))
             as_verb = bool(wn.synsets(word, wn.VERB))
-            if as_verb and (not as_noun or index == 0):
+            if word == leading and as_verb:
+                continue
+            if as_verb and not as_noun:
                 continue
             if as_noun:
                 nouns.add(self._stem_noun(word))
         return nouns
+
+    def _leading_word(self, operation: str) -> str:
+        spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", operation)
+        return spaced.lower().split("_", 1)[0]
 
     def _stem_noun(self, token: str) -> str:
         lemma = wn.morphy(token.lower(), wn.NOUN)
@@ -64,7 +72,7 @@ class Responsibilities:
                 parent[root_right] = root_left
 
         nouns_by_op = {
-            name: self.nouns_in(tokens) for name, tokens in tokens_by_operation.items()
+            name: self.nouns_in(tokens, name) for name, tokens in tokens_by_operation.items()
         }
         named = [name for name, nouns in nouns_by_op.items() if nouns]
         for index, left in enumerate(named):

@@ -12,8 +12,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from practices.stories.model.javascript.spec_file import render_story_spec_file
-from practices.stories.model.nodes import Story
-from practices.stories.model.scenario import Clause, Interaction, Phase, Scenario
+from practices.stories.model.story_model import Example, StepType, Scenario, Step, Story
 
 
 def load_story_dict(path: Path) -> dict:
@@ -33,41 +32,33 @@ def load_story_dict(path: Path) -> dict:
 
 def dict_to_story(data: dict) -> Story:
     story = Story(data["story"], 0)
-    story.users = [data["actor"]] if data.get("actor") else []
+    story.actors = [data["actor"]] if data.get("actor") else []
     story.domain_terms = list(data.get("domain_terms", ()))
     story.evidence = list(data.get("evidence", ()))
     flow = data.get("main_flow") or {}
     scenario = Scenario(flow.get("name", "main"), 0, story_name=story.name)
+    order = 0
     for text in flow.get("given", ()):
-        scenario.given.append(
-            Clause(
-                text=text,
-                phase=Phase.GIVEN,
-                is_continuation=text.startswith(("And ", "But ")),
-            )
+        order += 1
+        scenario.steps.append(
+            Step(text, StepType.GIVEN, order, is_continuation=text.startswith(("And ", "But ")))
         )
     for block in flow.get("interactions", ()):
-        interaction = Interaction()
         for text in block.get("when", ()):
-            interaction.when.append(
-                Clause(
-                    text=text,
-                    phase=Phase.WHEN,
-                    is_continuation=text.startswith(("And ", "But ")),
-                )
+            order += 1
+            scenario.steps.append(
+                Step(text, StepType.WHEN, order, is_continuation=text.startswith(("And ", "But ")))
             )
         for text in block.get("then", ()):
-            interaction.then.append(
-                Clause(
-                    text=text,
-                    phase=Phase.THEN,
-                    is_continuation=text.startswith(("And ", "But ")),
-                )
+            order += 1
+            scenario.steps.append(
+                Step(text, StepType.THEN, order, is_continuation=text.startswith(("And ", "But ")))
             )
-        scenario.interactions.append(interaction)
     if flow.get("examples"):
         scenario.is_outline = True
-        scenario.example_rows = list(flow["examples"])
+        for index, row in enumerate(flow["examples"], start=1):
+            label = str(row.get("example") or row.get("name") or f"example-{index}")
+            scenario.examples.append(Example(label, index, dict(row)))
     story.scenarios.append(scenario)
     return story
 

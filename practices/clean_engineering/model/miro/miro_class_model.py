@@ -37,6 +37,7 @@ from practices.clean_engineering.model.base_class_model import (
 )
 from practices.clean_engineering.model.diagram.diagram_node import (
     ContainmentForest,
+    DiagramCleanEngineeringModel,
     is_modules_view,
     module_tab_label,
     path_parent,
@@ -50,7 +51,7 @@ from practices.clean_engineering.model.miro.diagram_node import (
 )
 from practices.clean_engineering.model.update_report import UpdateReport
 
-class MiroCleanEngineeringModel(CleanEngineeringModel):
+class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def load_module(self, source: Module) -> MiroModule:
         loaded = MiroModule(name=source.name, sequential_order=source.sequential_order)
@@ -85,6 +86,15 @@ class MiroCleanEngineeringModel(CleanEngineeringModel):
     # ------------------------------------------------------------------
     # Uniform callable surface
     # ------------------------------------------------------------------
+
+    def load(self, text: str) -> "MiroCleanEngineeringModel":
+        return self.parse(text)
+
+    def save(self, canonical: CleanEngineeringModel | None = None, previous: Optional[str] = None) -> str:
+        return self.render(canonical if canonical is not None else self, previous)
+
+    def clone(self) -> str:
+        return super().clone().save()
 
     def render(
         self,

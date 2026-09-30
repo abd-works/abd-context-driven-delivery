@@ -4,20 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
-from practices.clean_engineering.model.field_types import OperationField, PropertyField, Relationship
+from practices.clean_engineering.model.field_types import Relationship
 from practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
 
 if TYPE_CHECKING:
     from practices.clean_engineering.model.operation import Operation
     from practices.clean_engineering.model.property import Property
 
-# Legacy aliases — format channels still emit field rows, not tree nodes.
-Property = PropertyField
-Operation = OperationField
-
 
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
-_EXAMPLE_FACTORY_SUFFIX = "ExampleFactory"
 
 
 def is_interface_name(name: str) -> bool:
@@ -49,20 +44,7 @@ def base_type_name_for(name: str) -> str:
     kind = example_extension_kind(name)
     if kind:
         return name[len(kind) :]
-    if is_example_factory_name(name):
-        core = name[: -len(_EXAMPLE_FACTORY_SUFFIX)]
-        return production_name_for(core) if is_interface_name(core) else core
     return production_name_for(name)
-
-
-def is_example_factory_name(name: str) -> bool:
-    """True for {Type}ExampleFactory or I{Type}ExampleFactory."""
-    return name.endswith(_EXAMPLE_FACTORY_SUFFIX) and len(name) > len(_EXAMPLE_FACTORY_SUFFIX)
-
-
-def example_factory_name_for(type_name: str) -> str:
-    """Cart or ICart -> CartExampleFactory."""
-    return f"{base_type_name_for(type_name)}{_EXAMPLE_FACTORY_SUFFIX}"
 
 
 def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str | None:
@@ -70,7 +52,7 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
 
     Resolves production Class -> IClass and Fake|Isolated|Production{Type} -> I{Type}.
     """
-    if is_interface_name(class_name) or is_example_factory_name(class_name):
+    if is_interface_name(class_name):
         return None
     known = set(known_names)
     candidate = interface_name_for(class_name)
@@ -82,47 +64,6 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
         if iface in known:
             return iface
     return None
-
-
-def ensure_example_factory_family(module: "Module", type_name: str) -> list["OoadClass"]:
-    """Ensure I{Type}, production {Type}, and {Type}ExampleFactory exist.
-
-    Does **not** add Fake/Isolated/Production subclasses - those are factory modes
-    (mock framework / ctor injection / real collaborators), not types.
-    ``type_name`` may be Cart, ICart, or a legacy FakeCart name (base is stripped).
-    Returns the classes that were added.
-    """
-    base = base_type_name_for(type_name)
-    iface = interface_name_for(base)
-    factory = example_factory_name_for(base)
-    wanted: list[tuple[str, str]] = [
-        (iface, f"Public seam for {base}."),
-        (base, f"Production {base} implementing {iface}."),
-        (
-            factory,
-            f"Loads examples[{{example_key}}] - Fake via mock framework; "
-            f"Isolated via {base} ctor injection; Production via real {base}.",
-        ),
-    ]
-    existing = {c.name for c in module.classes}
-    added: list[OoadClass] = []
-    order = max((c.sequential_order for c in module.classes), default=0) + 1
-    for name, intent in wanted:
-        if name in existing:
-            continue
-        oclass = module.load_class(
-            OoadClass(name=name, sequential_order=order, intent=intent)
-        )
-        oclass.intent = intent
-        if name == factory:
-            oclass.operations = [
-                OperationField(name="load_example_key", parameters=[], return_type=iface)
-            ]
-        module.classes.append(oclass)
-        added.append(oclass)
-        existing.add(name)
-        order += 1
-    return added
 
 
 class OoadNode:
@@ -198,8 +139,8 @@ class OoadClass(OoadNode):
         name: str,
         sequential_order: int,
         intent: str = "",
-        properties: List[PropertyField] | None = None,
-        operations: List[OperationField] | None = None,
+        properties: List["Property"] | None = None,
+        operations: List["Operation"] | None = None,
         relationships: List[Relationship] | None = None,
         collaborators: List[str] | None = None,
         line: int | None = None,
@@ -210,8 +151,8 @@ class OoadClass(OoadNode):
         self.docstring_parrots_name: bool = False
         self.narration_comment_lines: List[int] = []
         self.commented_code_lines: List[int] = []
-        self.properties: List[PropertyField] = properties if properties is not None else []
-        self.operations: List[OperationField] = operations if operations is not None else []
+        self.properties: List["Property"] = properties if properties is not None else []
+        self.operations: List["Operation"] = operations if operations is not None else []
         self.relationships: List[Relationship] = relationships if relationships is not None else []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
         self.property_nodes: List["Property"] = []
@@ -229,6 +170,24 @@ class OoadClass(OoadNode):
         elif not source.properties and not source.operations:
             self.sync_legacy_from_tree()
 
+    def clone(self) -> "OoadClass":
+        cloned = type(self)(
+            self.name,
+            self.sequential_order,
+            intent=self.intent,
+            collaborators=list(self.collaborators),
+            line=self.line,
+        )
+        cloned.docstring_parrots_name = self.docstring_parrots_name
+        cloned.narration_comment_lines = list(self.narration_comment_lines)
+        cloned.commented_code_lines = list(self.commented_code_lines)
+        cloned.properties = [item.clone() for item in self.properties]
+        cloned.operations = [item.clone() for item in self.operations]
+        cloned.relationships = [item.clone() for item in self.relationships]
+        cloned.property_nodes = [item.clone() for item in self.property_nodes]
+        cloned.operation_nodes = [item.clone() for item in self.operation_nodes]
+        return cloned
+
     def as_record(self) -> dict:
         return {
             "name": self.name,
@@ -240,15 +199,11 @@ class OoadClass(OoadNode):
             "collaborators": list(self.collaborators),
         }
 
-    def load_property_field(self, source: PropertyField) -> PropertyField:
-        loaded = PropertyField(name=source.name)
-        loaded.update_self(source)
-        return loaded
+    def load_property_field(self, source: "Property") -> "Property":
+        return self.load_property(source)
 
-    def load_operation_field(self, source: OperationField) -> OperationField:
-        loaded = OperationField(name=source.name)
-        loaded.update_self(source)
-        return loaded
+    def load_operation_field(self, source: "Operation") -> "Operation":
+        return self.load_operation(source)
 
     def load_relationship(self, source: Relationship) -> Relationship:
         loaded = Relationship(target=source.target)
@@ -258,12 +213,18 @@ class OoadClass(OoadNode):
     def load_property(self, source: "Property") -> "Property":
         from practices.clean_engineering.model.property import Property as PropertyNode
 
-        return PropertyNode(
+        loaded = PropertyNode(
             source.name,
             source.sequential_order,
             type_hint=source.type_hint,
             description=source.description,
         )
+        loaded.access = getattr(source, "access", "both")
+        loaded.stereotype = getattr(source, "stereotype", "") or ""
+        loaded.cardinality = getattr(source, "cardinality", "") or ""
+        loaded.origin = getattr(source, "origin", "") or ""
+        loaded.invariants = [item.clone() for item in getattr(source, "invariants", [])]
+        return loaded
 
     def load_operation(self, source: "Operation") -> "Operation":
         from practices.clean_engineering.model.operation import Operation as OperationNode
@@ -276,6 +237,7 @@ class OoadClass(OoadNode):
             callees=list(source.callees),
         )
         node.legacy_parameters = list(source.legacy_parameters)
+        node.invariants = [item.clone() for item in getattr(source, "invariants", [])]
         return node
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
@@ -293,6 +255,48 @@ class OoadClass(OoadNode):
             ),
         ]
 
+    def load_properties(self) -> None:
+        while self.has_more_property():
+            self.properties.append(self.load_next_property())
+
+    def has_more_property(self) -> bool:
+        return False
+
+    def load_next_property(self) -> "Property":
+        return self.get_next_property_from_file()
+
+    def get_next_property_from_file(self) -> "Property":
+        raise NotImplementedError(f"{type(self).__name__} must implement get_next_property_from_file")
+
+    def load_operations(self) -> None:
+        while self.has_more_operation():
+            operation = self.load_next_operation()
+            self.operations.append(operation)
+
+    def has_more_operation(self) -> bool:
+        return False
+
+    def load_next_operation(self) -> "Operation":
+        operation = self.get_next_operation_from_file()
+        operation.load_parameters()
+        return operation
+
+    def get_next_operation_from_file(self) -> "Operation":
+        raise NotImplementedError(f"{type(self).__name__} must implement get_next_operation_from_file")
+
+    def load_relationships(self) -> None:
+        while self.has_more_relationship():
+            self.relationships.append(self.load_next_relationship())
+
+    def has_more_relationship(self) -> bool:
+        return False
+
+    def load_next_relationship(self) -> Relationship:
+        return self.get_next_relationship_from_file()
+
+    def get_next_relationship_from_file(self) -> Relationship:
+        raise NotImplementedError(f"{type(self).__name__} must implement get_next_relationship_from_file")
+
     def sync_tree_from_legacy(self) -> None:
         from practices.clean_engineering.model.operation import Operation as OperationNode
         from practices.clean_engineering.model.property import Property as PropertyNode
@@ -307,8 +311,8 @@ class OoadClass(OoadNode):
         ]
 
     def sync_legacy_from_tree(self) -> None:
-        self.properties = [node.to_field() for node in self.property_nodes]
-        self.operations = [node.to_field() for node in self.operation_nodes]
+        self.properties = list(self.property_nodes)
+        self.operations = list(self.operation_nodes)
 
 
 class Module(OoadNode):
@@ -334,6 +338,7 @@ class Module(OoadNode):
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
         self.modules: List["Module"] = []
         self.classes: List[OoadClass] = []
+        self._class_blocks: List[str] = []
 
     def as_record(self) -> dict:
         return {
@@ -365,11 +370,67 @@ class Module(OoadNode):
         self.seam_terms = list(source.seam_terms)
         self.dependencies = list(source.dependencies)
 
+    def clone(self) -> "Module":
+        cloned = type(self)(
+            self.name,
+            self.sequential_order,
+            description=self.description,
+            seam=self.seam,
+            constraint=self.constraint,
+            seam_terms=list(self.seam_terms),
+            dependencies=list(self.dependencies),
+        )
+        cloned.modules = [module.clone() for module in self.modules]
+        cloned.classes = [oclass.clone() for oclass in self.classes]
+        return cloned
+
     def load_module(self, source: "Module") -> "Module":
         return Module(name=source.name, sequential_order=source.sequential_order)
 
     def load_class(self, source: OoadClass) -> OoadClass:
         return OoadClass(name=source.name, sequential_order=source.sequential_order)
+
+    def load(self) -> None:
+        self.load_modules()
+        self.load_classes()
+
+    def load_modules(self) -> None:
+        while self.has_more_module():
+            self.append_module(self.load_next_module())
+
+    def has_more_module(self) -> bool:
+        return False
+
+    def load_next_module(self) -> "Module":
+        child = self.get_next_module_from_file()
+        child.load()
+        return child
+
+    def get_next_module_from_file(self) -> "Module":
+        raise NotImplementedError(f"{type(self).__name__} must implement get_next_module_from_file")
+
+    def append_module(self, module: "Module") -> None:
+        self.modules.append(module)
+
+    def append_class(self, oclass: OoadClass) -> None:
+        self.classes.append(oclass)
+
+    def load_classes(self) -> None:
+        while self.has_more_class():
+            self.append_class(self.load_next_class())
+
+    def has_more_class(self) -> bool:
+        return bool(self._class_blocks)
+
+    def load_next_class(self) -> OoadClass:
+        oclass = self.get_next_class_from_file()
+        oclass.load_properties()
+        oclass.load_operations()
+        oclass.load_relationships()
+        return oclass
+
+    def get_next_class_from_file(self) -> OoadClass:
+        raise NotImplementedError(f"{type(self).__name__} must implement get_next_class_from_file")
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
         assert isinstance(source, Module)
@@ -392,6 +453,7 @@ class CleanEngineeringModel(OoadNode):
 
     def __init__(self, name: str = "", sequential_order: int = 1) -> None:
         super().__init__(name, sequential_order)
+        self.path = ""
         self.modules: List[Module] = []
 
     @property
@@ -414,6 +476,42 @@ class CleanEngineeringModel(OoadNode):
         assert isinstance(source, CleanEngineeringModel)
         self.name = source.name
 
+    def clone(self) -> "CleanEngineeringModel":
+        cloned = type(self)(self.name, self.sequential_order)
+        for module in self.modules:
+            cloned.modules.append(module.clone())
+        return cloned
+
+    module_type: type = None  # type: ignore[assignment]
+
+    def load(self, path: str) -> "CleanEngineeringModel":
+        self.path = path
+        self.modules = []
+        self.load_model_content()
+        self.load_modules()
+        return self
+
+    def save(self) -> str:
+        raise NotImplementedError(f"{type(self).__name__} must implement save")
+
+    def load_model_content(self) -> None:
+        return None
+
+    def load_modules(self) -> None:
+        while self.has_more_module():
+            self.modules.append(self.load_next_module())
+
+    def has_more_module(self) -> bool:
+        return False
+
+    def load_next_module(self) -> "Module":
+        module = self.get_next_module_from_file()
+        module.load()
+        return module
+
+    def get_next_module_from_file(self) -> "Module":
+        raise NotImplementedError(f"{type(self).__name__} must implement get_next_module_from_file")
+
     def load_module(self, source: Module) -> Module:
         return Module(name=source.name, sequential_order=source.sequential_order)
 
@@ -426,3 +524,61 @@ class CleanEngineeringModel(OoadNode):
                 load=self.load_module,
             )
         ]
+
+
+class CleanEngineeringModelFactory:
+    """Pick the channel model from a file or a folder and return a CleanEngineeringModel."""
+
+    @staticmethod
+    def load(path: str) -> CleanEngineeringModel:
+        from pathlib import Path
+
+        target = Path(path)
+        if target.is_dir() or target.suffix.lower() == ".py":
+            from practices.clean_engineering.model.python.python_class_model import (
+                PythonCleanEngineeringModel,
+            )
+
+            model = PythonCleanEngineeringModel()
+            if target.is_file():
+                return model.parse(target.read_text(encoding="utf-8"))
+            return model.load(str(target))
+        text = target.read_text(encoding="utf-8")
+        suffix = target.suffix.lower()
+        if suffix == ".drawio":
+            from practices.clean_engineering.model.drawio.drawio_class_model import (
+                DrawIOCleanEngineeringModel,
+            )
+
+            return DrawIOCleanEngineeringModel().load(text)
+        if suffix == ".json":
+            from practices.clean_engineering.model.json.json_class_model import (
+                JsonCleanEngineeringModel,
+            )
+
+            return JsonCleanEngineeringModel().parse(text)
+        if suffix in {".svg", ".html"}:
+            from practices.clean_engineering.model.miro.miro_class_model import (
+                MiroCleanEngineeringModel,
+            )
+
+            return MiroCleanEngineeringModel().load(text)
+        from practices.clean_engineering.model.markdown.markdown_class_model import (
+            MarkdownCleanEngineeringModel,
+        )
+
+        loaded = MarkdownCleanEngineeringModel()
+        loaded.path = str(target)
+        return loaded.load(str(target))
+
+
+def __getattr__(name: str):
+    if name == "Property":
+        from practices.clean_engineering.model.property import Property
+
+        return Property
+    if name in ("Operation", "Parameter"):
+        from practices.clean_engineering.model.operation import Operation, Parameter
+
+        return Operation if name == "Operation" else Parameter
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

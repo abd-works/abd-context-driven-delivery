@@ -24,18 +24,22 @@ from practices.ddd.model.nodes import (
     DomainEvent,
     DomainService,
     Entity,
-    EntityRoot,
     Repository,
+    Specification,
     ValueObject,
-    ddd_class_for,
 )
 from practices.ddd.model.stereotypes import plain_class_name
-from practices.stories.model.background import Background
-from practices.stories.model.example import Example
-from practices.stories.model.nodes import Epic, Story, SubEpic
-from practices.stories.model.scenario import Scenario
-from practices.stories.model.step import Step
-from practices.stories.model.story_map import StoryMap
+from practices.stories.model.story_model import (
+    Background,
+    Epic,
+    Example,
+    Increment,
+    Scenario,
+    Step,
+    Story,
+    StoryMap,
+    Epic,
+)
 
 from .graph_node import GraphNodeMixin, Kind
 
@@ -187,9 +191,13 @@ class GraphEntity(Entity, GraphNodeMixin):
         return node
 
 
-class GraphEntityRoot(EntityRoot, GraphNodeMixin):
+class GraphEntityRoot(Entity, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "EntityRoot"
+
+    def __init__(self, name: str, sequential_order: int, **kwargs) -> None:
+        super().__init__(name, sequential_order, **kwargs)
+        self.is_root = True
 
     def load_property(self, source: Property) -> "GraphProperty":
         return GraphProperty(
@@ -295,6 +303,11 @@ class GraphDomainEvent(DomainEvent, GraphNodeMixin):
         return node
 
 
+class GraphSpecification(Specification, GraphNodeMixin):
+    practice = "ddd"
+    _semantic_type_name = "Specification"
+
+
 class GraphDomainService(DomainService, GraphNodeMixin):
     practice = "ddd"
     _semantic_type_name = "DomainService"
@@ -329,31 +342,47 @@ _GRAPH_DDD_BY_KIND = {
     "Repository": GraphRepository,
     "DomainEvent": GraphDomainEvent,
     "DomainService": GraphDomainService,
+    "Specification": GraphSpecification,
 }
 
 
 def graph_ddd_class_for(source: OoadClass) -> OoadClass:
     """Promote a CE class to the matching graph DDD stereotype."""
-    base = ddd_class_for(source)
-    kind = base.semantic_type()
-    if kind == "OoadClass":
+    from practices.ddd.model.stereotypes import ddd_class_kind
+
+    kind = ddd_class_kind(source.name)
+    if isinstance(source, Entity) and source.is_root:
+        kind = "EntityRoot"
+    elif isinstance(source, (Entity, ValueObject, Repository, DomainEvent, DomainService, Specification)):
+        kind = source.semantic_type()
+    if kind in (None, "OoadClass"):
         return GraphClass(
             plain_class_name(source.name),
             source.sequential_order,
             intent=source.intent,
         )
+    if kind == "EntityRoot":
+        node = GraphEntityRoot(
+            plain_class_name(source.name),
+            source.sequential_order,
+            intent=source.intent,
+        )
+        node.is_root = True
+        if isinstance(source, Entity) and source.aggregate is not None:
+            node.aggregate = source.aggregate
+        if isinstance(source, Entity) and source.identity:
+            node.identity = list(source.identity)
+        return node
     graph_cls = _GRAPH_DDD_BY_KIND[kind]
     node = graph_cls(
         plain_class_name(source.name),
         source.sequential_order,
         intent=source.intent,
     )
-    if isinstance(base, Repository) and base.accesses is not None:
-        node.accesses = base.accesses
-    if isinstance(base, EntityRoot) and base.aggregate is not None:
-        node.aggregate = base.aggregate
-    if isinstance(base, Entity) and base.identity:
-        node.identity = list(base.identity)
+    if isinstance(source, Repository) and source.accesses is not None:
+        node.accesses = source.accesses
+    if isinstance(source, Entity) and source.identity:
+        node.identity = list(source.identity)
     return node
 
 
@@ -366,101 +395,114 @@ class GraphStoryMap(StoryMap, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "StoryMap"
 
+    @classmethod
+    def clone(cls, other: StoryMap) -> "GraphStoryMap":
+        cloned = cls()
+        for epic in other.epics:
+            cloned.epics.append(GraphEpic.clone(epic))
+        for increment in other.increments:
+            cloned.increments.append(Increment.clone(increment))
+        cloned.examples = other.examples.clone(cloned)
+        return cloned
+
     def load_epic(self, source: Epic) -> "GraphEpic":
-        return GraphEpic(source.name, source.sequential_order)
+        return GraphEpic.clone(source)
 
     def load_example(self, source: Example) -> "GraphExample":
-        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
+        return GraphExample.clone(source)
 
 
 class GraphEpic(Epic, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Epic"
 
-    def load_sub_epic(self, source: SubEpic) -> "GraphSubEpic":
-        return GraphSubEpic(source.name, source.sequential_order)
+    @classmethod
+    def clone(cls, other: Epic) -> "GraphEpic":
+        cloned = cls(other.name, other.sequential_order)
+        cloned.estimate = other.estimate or ""
+        for sub_epic in other.epics:
+            cloned.epics.append(GraphEpic.clone(sub_epic))
+        for story in other.stories:
+            cloned.stories.append(GraphStory.clone(story))
+        cloned.examples = other.examples.clone(cloned)
+        return cloned
 
-    def load_example(self, source: Example) -> "GraphExample":
-        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
-
-
-class GraphSubEpic(SubEpic, GraphNodeMixin):
-    practice = "stories"
-    _semantic_type_name = "SubEpic"
-
-    def load_sub_epic(self, source: SubEpic) -> "GraphSubEpic":
-        return GraphSubEpic(source.name, source.sequential_order)
+    def load_epic(self, source: Epic) -> "GraphEpic":
+        return GraphEpic.clone(source)
 
     def load_story(self, source: Story) -> "GraphStory":
-        return GraphStory(source.name, source.sequential_order, source.story_type)
+        return GraphStory.clone(source)
 
     def load_example(self, source: Example) -> "GraphExample":
-        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
+        return GraphExample.clone(source)
 
 
 class GraphStory(Story, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Story"
 
+    @classmethod
+    def clone(cls, other: Story) -> "GraphStory":
+        cloned = cls(other.name, other.sequential_order, other.story_type)
+        cloned.actors = list(other.actors)
+        cloned.domain_terms = list(other.domain_terms)
+        cloned.evidence = list(other.evidence)
+        for background in other.backgrounds:
+            cloned.backgrounds.append(GraphBackground.clone(background))
+        for scenario in other.scenarios:
+            cloned.scenarios.append(GraphScenario.clone(scenario))
+        return cloned
+
     def load_background(self, source: Background) -> "GraphBackground":
-        return GraphBackground(source.name, source.sequential_order)
+        return GraphBackground.clone(source)
 
     def load_scenario(self, source: Scenario) -> "GraphScenario":
-        return GraphScenario(source.name, source.sequential_order, source.story_name)
+        return GraphScenario.clone(source)
 
     def load_example(self, source: Example) -> "GraphExample":
-        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
+        return GraphExample.clone(source)
 
 
 class GraphScenario(Scenario, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Scenario"
 
+    @classmethod
+    def clone(cls, other: Scenario) -> "GraphScenario":
+        cloned = cls(other.name, other.sequential_order, other.story_name)
+        cloned.is_outline = other.is_outline
+        cloned.evidence = list(other.evidence)
+        cloned.source = other.source
+        for background in other.backgrounds:
+            cloned.backgrounds.append(GraphBackground.clone(background))
+        for step in other.steps:
+            cloned.steps.append(GraphStep.clone(step))
+        cloned.examples = other.examples.clone(cloned)
+        return cloned
+
     def load_background(self, source: Background) -> "GraphBackground":
-        return GraphBackground(source.name, source.sequential_order)
+        return GraphBackground.clone(source)
 
     def load_step(self, source: Step) -> "GraphStep":
-        return GraphStep(
-            text=source.text,
-            phase=source.phase,
-            sequential_order=source.sequential_order,
-            is_continuation=source.is_continuation,
-            keyword=getattr(source, "keyword", "") or "",
-            concepts=list(source.concepts),
-            values=list(source.values),
-            actor=source.actor,
-            source=source.source,
-            name=source.name,
-        )
+        return GraphStep.clone(source)
 
     def load_example(self, source: Example) -> "GraphExample":
-        return GraphExample(source.name, source.sequential_order, dict(source.fields), source.scope)
-
-    def sync_tree_from_legacy(self) -> None:
-        if self.steps:
-            return
-        if not (self.given or self.interactions or self.background):
-            return
-        super().sync_tree_from_legacy()
-
+        return GraphExample.clone(source)
 
 class GraphBackground(Background, GraphNodeMixin):
     practice = "stories"
     _semantic_type_name = "Background"
 
+    @classmethod
+    def clone(cls, other: Background) -> "GraphBackground":
+        cloned = cls(other.name, other.sequential_order)
+        for step in other.steps:
+            cloned.steps.append(GraphStep.clone(step))
+        cloned.examples = other.examples.clone(cloned)
+        return cloned
+
     def load_step(self, source: Step) -> "GraphStep":
-        return GraphStep(
-            text=source.text,
-            phase=source.phase,
-            sequential_order=source.sequential_order,
-            is_continuation=source.is_continuation,
-            keyword=getattr(source, "keyword", "") or "",
-            concepts=list(source.concepts),
-            values=list(source.values),
-            actor=source.actor,
-            source=source.source,
-            name=source.name,
-        )
+        return GraphStep.clone(source)
 
 
 class GraphStep(Step, GraphNodeMixin):
@@ -482,19 +524,35 @@ class GraphDescription(Description, GraphNodeMixin):
     practice = "bdd"
     _semantic_type_name = "Description"
 
+    @classmethod
+    def clone(cls, other: Description) -> "GraphDescription":
+        cloned = cls(other.name, other.sequential_order)
+        for context in other.contexts:
+            cloned.contexts.append(GraphContext.clone(context))
+        return cloned
+
     def load_context(self, source: Context) -> "GraphContext":
-        return GraphContext(source.name, source.sequential_order)
+        return GraphContext.clone(source)
 
 
 class GraphContext(Context, GraphNodeMixin):
     practice = "bdd"
     _semantic_type_name = "Context"
 
+    @classmethod
+    def clone(cls, other: Context) -> "GraphContext":
+        cloned = cls(other.name, other.sequential_order)
+        for observation in other.observations:
+            cloned.observations.append(GraphObservation.clone(observation))
+        for context in other.contexts:
+            cloned.contexts.append(GraphContext.clone(context))
+        return cloned
+
     def load_observation(self, source: Observation) -> "GraphObservation":
-        return GraphObservation(source.name, source.sequential_order)
+        return GraphObservation.clone(source)
 
     def load_context(self, source: Context) -> "GraphContext":
-        return GraphContext(source.name, source.sequential_order)
+        return GraphContext.clone(source)
 
 
 class GraphObservation(Observation, GraphNodeMixin):

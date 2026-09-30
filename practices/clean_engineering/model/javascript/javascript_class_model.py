@@ -22,11 +22,11 @@ from practices.clean_engineering.model.base_class_model import (
     base_type_name_for,
     companion_interface_name,
     example_extension_kind,
-    is_example_factory_name,
     is_interface_name,
 )
 from practices.clean_engineering.model.c_family_parse import CFamilyParse
-from practices.clean_engineering.model.field_types import OperationField, PropertyField
+from practices.clean_engineering.model.operation import Operation
+from practices.clean_engineering.model.property import Property
 from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 if TYPE_CHECKING:
@@ -44,7 +44,7 @@ def _camel_identifier(name: str) -> str:
     return parts[0] + "".join(part[:1].upper() + part[1:] for part in parts[1:] if part)
 
 
-class JavaScriptProperty(PropertyField):
+class JavaScriptProperty(Property):
     def render(self) -> str:
         camel = _camel_identifier(self.name)
         return f"    this.{camel} = {camel};"
@@ -53,21 +53,23 @@ class JavaScriptProperty(PropertyField):
         return _camel_identifier(self.name)
 
 
-class JavaScriptOperation(OperationField):
+class JavaScriptOperation(Operation):
     def render(self) -> str:
         access = "#" if self.name.startswith("_") else ""
         camel = _camel_identifier(self.name)
-        params = ", ".join(_camel_identifier(param) for param in self.parameters if param and param.strip())
+        params = ", ".join(
+            _camel_identifier(parameter.name) for parameter in self.parameters if parameter.name.strip()
+        )
         return f"  {access}{camel}({params}) {{ }}"
 
 
 class JavaScriptOoadClass(OoadClass):
-    def load_property_field(self, source: PropertyField) -> JavaScriptProperty:
+    def load_property_field(self, source: Property) -> JavaScriptProperty:
         loaded = JavaScriptProperty(name=source.name)
         loaded.update_self(source)
         return loaded
 
-    def load_operation_field(self, source: OperationField) -> JavaScriptOperation:
+    def load_operation_field(self, source: Operation) -> JavaScriptOperation:
         loaded = JavaScriptOperation(name=source.name)
         loaded.update_self(source)
         return loaded
@@ -98,8 +100,6 @@ class JavaScriptOoadClass(OoadClass):
         kind = example_extension_kind(self.name)
         if is_interface_name(self.name):
             return self._render_interface(lines)
-        if is_example_factory_name(self.name):
-            return self._render_example_factory(lines, iface)
         if kind:
             return self._render_deprecated_mode(kind)
         if iface:
@@ -116,18 +116,6 @@ class JavaScriptOoadClass(OoadClass):
         lines.append("}")
         return "\n".join(lines)
 
-    def _render_example_factory(self, lines: List[str], iface: Optional[str]) -> str:
-        lines.append("// example factory - plain class; no ExampleLoader base")
-        if iface:
-            lines.append(f"// implements {iface}")
-        lines.append(f"class {self.name} {{")
-        for operation in self.operations:
-            lines.append(operation.render())
-        if not self.operations and not self.properties:
-            lines.append("  // load{ExampleKey}() - examples[{example_key}] multi-type bundle")
-        lines.append("}")
-        return "\n".join(lines)
-
     def _render_deprecated_mode(self, kind: str) -> str:
         note = {
             "Fake": "mode: mock/stub framework + examples - not a generated class",
@@ -136,7 +124,7 @@ class JavaScriptOoadClass(OoadClass):
         }.get(kind, "")
         return (
             f"// {self.name} - deprecated as a type. {note}\n"
-            f"// Use {base_type_name_for(self.name)}ExampleFactory modes instead."
+            f"// Use {base_type_name_for(self.name)} directly."
         )
 
     def _render_production_class(self, lines: List[str]) -> str:

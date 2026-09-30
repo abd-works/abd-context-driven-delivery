@@ -1,53 +1,30 @@
-"""JavaScriptStoryMap - CodeStoryMap backend for runnable `*_story.js` files.
+"""JavaScriptStoryMap - a story map stored as `*_story.js` files.
 
-Explore / specification leaf shape (via ``story_file.render_story_file``):
-
-  export function createSubmitOrderStory(mode) {
-    story("Submit Order", () => {
-      scenario("...", ({ given, when, then }) => { ... });
-    });
-  }
-
-Per-epic ``<epic-slug>-helper.js`` carries ExampleFactory accessors when declared.
-Engineering: ``*_test_helper.{tier}.js`` per tier - every tier named explicitly, including ``domain``.
+Each story file is `story` / `background` / `scenario` / `given` / `when` / `then`.
 """
 
 from __future__ import annotations
 
-import re
 from typing import Dict, List, Optional
 
-from practices.stories.model.code_story_map import CodeStoryMap, CodeStoryMapError, to_kebab
-from practices.stories.model.javascript.tree import JavaScriptTree
-from practices.stories.model.javascript.nodes import (
-    JavaScriptEpic,
-    JavaScriptStoryMap as _JavaScriptStoryMap,
-    JavaScriptSubEpic,
-)
-from practices.stories.model.nodes import Epic, Story, SubEpic
-from practices.stories.model.scenario import Scenario
-from practices.stories.model.story_map import StoryMap
+from pathlib import Path
+
+from practices.stories.model.code_story_model import CodeStoryMap, CodeStoryMapError
+from practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
+from practices.stories.model.story_model import Epic
 
 
 class JavaScriptStoryMap(CodeStoryMap):
     LEAF_EXTENSION = "_story.test.js"
     LANGUAGE_LINE_COMMENT = "//"
+    epic_type = JavaScriptEpic
+    epic_type = JavaScriptEpic
+    story_type = JavaScriptStory
 
-    def _make_story_map(self) -> _JavaScriptStoryMap:
-        return _JavaScriptStoryMap()
-
-    def _make_epic(self, name: str, order: int) -> JavaScriptEpic:
-        return JavaScriptEpic(name, order)
-
-    def _make_sub_epic(self, name: str, order: int) -> JavaScriptSubEpic:
-        return JavaScriptSubEpic(name, order)
-
-    def render(
-        self,
-        canonical: StoryMap,
-        previous: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, str]:
-        tree = JavaScriptTree().render(canonical, self.tests_root)
+    def save(self, previous: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+        tree: Dict[str, str] = {f"{self.tests_root}/story-test.js": _story_test_js()}
+        for epic in self.epics:
+            epic.write(self.tests_root, tree, self.tests_root)
         if previous:
             for path, body in list(tree.items()):
                 if path in previous and path.endswith(self.LEAF_EXTENSION):
@@ -60,30 +37,21 @@ class JavaScriptStoryMap(CodeStoryMap):
         )
 
     def _epic_helper_path(self, epic_root: str, epic: Epic) -> str:
-        return f"{epic_root}/{to_kebab(epic.name)}-helper.js"
+        return f"{epic_root}/{epic.slug()}-helper.js"
 
-    def _render_epic_helper(self, epic: Epic) -> Optional[str]:
-        # render() uses tree.py; keep hook for CodeStoryMap base paths
-        return None
-
-    def _render_leaf_file(self, sub_epic: SubEpic, owning_epic: Epic) -> str:
-        raise NotImplementedError("JavaScriptStoryMap.render uses JavaScriptTree")
-
-    def parse(self, external: Dict[str, str]) -> StoryMap:
+    def load(self, external: Dict[str, str]) -> "JavaScriptStoryMap":
         if not isinstance(external, dict):
             raise CodeStoryMapError("JavaScript story map parse expects a path->content dict")
-        story_map = self._make_story_map()
+        self.epics.clear()
         # Group *_story.js by epic / sub-epic / story folder
         for path, content in sorted(external.items()):
             if not path.endswith(self.LEAF_EXTENSION):
                 continue
             parts = path.strip("/").split("/")
-            # tests/epic/sub/story/name_story.js  -> need >= 5 parts with tests root
-            if len(parts) < 4:
-                continue
-            # Drop tests_root if present
-            if parts[0] == self.tests_root:
+            if parts and parts[0] == self.tests_root:
                 parts = parts[1:]
+            if self.take_sub_epic_file(parts, content):
+                continue
             # epic / ...subs... / story-folder / file
             if len(parts) < 4:
                 continue
@@ -93,51 +61,17 @@ class JavaScriptStoryMap(CodeStoryMap):
             if not sub_slugs:
                 continue
 
-            epic = self._ensure_epic(story_map, epic_slug)
-            sub = self._ensure_sub_path(epic, sub_slugs)
-            story = self._parse_story_file(content, story_slug)
-            if story is not None:
-                sub.stories.append(story)
-        return story_map
+            epic = self.epic_for(epic_slug)
+            sub = self.sub_epic_for(epic, sub_slugs)
+            sub.append_story(self.story_type.load(content, story_slug))
+        return self
 
-    def _ensure_epic(self, story_map: StoryMap, epic_slug: str) -> Epic:
-        for epic in story_map.epics:
-            if to_kebab(epic.name) == epic_slug:
-                return epic
-        epic = self._make_epic(epic_slug.replace("-", " ").title(), len(story_map.epics) + 1)
-        story_map.append_epic(epic)
-        return epic
 
-    def _ensure_sub_path(self, epic: Epic, sub_slugs: List[str]) -> SubEpic:
-        parent_subs = epic.sub_epics
-        current: SubEpic | None = None
-        for slug in sub_slugs:
-            found = next((s for s in parent_subs if to_kebab(s.name) == slug), None)
-            if found is None:
-                found = self._make_sub_epic(
-                    slug.replace("-", " ").title(), len(parent_subs) + 1
-                )
-                parent_subs.append(found)
-            current = found
-            parent_subs = found.sub_epics
-        assert current is not None
-        return current
-
-    def _parse_story_file(self, content: str, story_slug: str) -> Story | None:
-        name_match = re.search(r'story\(\s*[\'"]([^\'"]+)[\'"]', content)
-        story_name = (
-            name_match.group(1)
-            if name_match
-            else story_slug.replace("-", " ").title()
-        )
-        story = Story(story_name, 1)
-
-        actor_match = re.search(r"\*\s*Actor:\s*(.+)", content)
-        if actor_match:
-            story.users = [actor_match.group(1).strip()]
-
-        for i, sc_name in enumerate(
-            re.findall(r'scenario\(\s*[\'"]([^\'"]+)[\'"]', content), start=1
-        ):
-            story.scenarios.append(Scenario(name=sc_name, sequential_order=i))
-        return story
+def _story_test_js() -> str:
+    seed = Path(__file__).resolve().parent / "seeds" / "story-test.js"
+    if seed.exists():
+        return seed.read_text(encoding="utf-8")
+    return (
+        'import { before, describe, it } from "node:test";\n\n'
+        "export function story(name, build) {\n  describe(name, build);\n}\n"
+    )

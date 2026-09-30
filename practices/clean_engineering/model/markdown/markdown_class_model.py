@@ -50,7 +50,16 @@ from practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
+from practices.clean_engineering.model.property import append_invariant, invariant_lines, property_notes, take_property_note
 from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
+
+
+def _class_heading_name(raw: str) -> str:
+    name = re.sub(r"<<[^>]+>>", "", raw)
+    name = name.replace("**", "").strip()
+    if " : " in name:
+        name = name.split(" : ", 1)[0].strip()
+    return name
 
 
 class MarkdownOoadClass(OoadClass):
@@ -91,18 +100,73 @@ class MarkdownOoadClass(OoadClass):
             f"{property_row.name}: {property_row.type_hint}" if property_row.type_hint else property_row.name
             for property_row in self.properties
         )
+        constructors = [
+            operation for operation in self.operations
+            if operation.name in {self.name, "constructor"}
+        ]
+        methods = [
+            operation for operation in self.operations
+            if operation.name not in {self.name, "constructor"}
+        ]
         if self.properties or self.operations:
-            lines.append(f"{self.name}({params})")
+            signature = self._constructor_signature(constructors[0]) if constructors else f"{self.name}({params})"
+            lines.append(self._public_line(signature))
+            for operation in constructors:
+                for callee in operation.callees:
+                    lines.append(f"\t-> {callee}")
+                for note in invariant_lines(operation):
+                    lines.append(f"\t// {note}")
             lines.append("------")
             for property_row in self.properties:
-                lines.append(property_row.render())
+                lines.append(self._property_line(property_row))
+                for note in property_notes(property_row):
+                    lines.append(f"\t// {note}")
             lines.append("----")
-            for operation in self.operations:
+            for operation in methods:
                 if is_interface_name(self.name) and operation.name.startswith("_"):
                     continue
-                lines.append(operation.render())
+                lines.append(self._public_line(operation.render()))
+                for callee in operation.callees:
+                    lines.append(f"\t-> {callee}")
+                for note in invariant_lines(operation):
+                    lines.append(f"\t// {note}")
         lines.append("")
         return "\n".join(lines)
+
+    def _constructor_signature(self, operation: Operation) -> str:
+        """Markdown names the constructor after the class. Code channels keep the word constructor."""
+        body = operation.save()
+        if operation.name == "constructor" and body.startswith("constructor"):
+            return f"{self.name}{body[len('constructor'):]}"
+        return body
+
+    def _public_line(self, body: str) -> str:
+        """Public members lead with +. A leading - is already the private mark."""
+        if body.startswith("+") or body.startswith("-"):
+            return body
+        return f"+ {body}"
+
+    def _property_line(self, prop: Property) -> str:
+        """Public field, with << composition|aggregation|association >> when an edge names its type."""
+        kind = (prop.stereotype or "").lower()
+        if kind not in {"composition", "aggregation", "association"}:
+            kind = self._relationship_kind(prop.type_hint)
+        stereo = f"<< {kind} >> " if kind else ""
+        return self._public_line(f"{stereo}{prop.save()}")
+
+    def _relationship_kind(self, type_hint: str) -> str:
+        if not type_hint:
+            return ""
+        by_target = {
+            relationship.target: (relationship.kind or "").lower()
+            for relationship in self.relationships
+            if relationship.kind
+        }
+        for name in re.findall(r"\b([A-Z][A-Za-z0-9]*)\b", type_hint):
+            kind = by_target.get(name, "")
+            if kind in {"composition", "aggregation", "association"}:
+                return kind
+        return ""
 
     @classmethod
     def parse_body(cls, name: str, body: str, sequential_order: int) -> "MarkdownOoadClass":
@@ -119,6 +183,13 @@ class MarkdownOoadClass(OoadClass):
 
 
 class MarkdownModule(Module):
+    def get_next_class_from_file(self) -> MarkdownOoadClass:
+        class_block = self._class_blocks.pop(0)
+        heading = re.match(r"^#{2,3}\s+(.+)", class_block)
+        class_name = _class_heading_name(heading.group(1)) if heading else ""
+        body = class_block[heading.end():].lstrip("\n") if heading else class_block
+        return MarkdownOoadClass.parse_body(class_name, body, len(self.classes) + 1)
+
     def load_class(self, source: OoadClass) -> MarkdownOoadClass:
         loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
         loaded.update_self(source)
@@ -163,6 +234,36 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         loaded.update_self(source)
         return loaded
 
+    module_type = None
+
+    def load_model_content(self) -> None:
+        from pathlib import Path
+
+        text = Path(self.path).read_text(encoding="utf-8")
+        self._blocks = [block for block in re.split(r"(?m)^(?=#\s)", text) if block.strip()]
+        self._block_index = 0
+        self._module_order = 1
+
+    def has_more_module(self) -> bool:
+        return self._block_index < len(getattr(self, "_blocks", []))
+
+    def get_next_module_from_file(self) -> "MarkdownModule":
+        block = self._blocks[self._block_index].strip()
+        self._block_index += 1
+        heading = re.match(r"^#\s+(.+)", block)
+        if heading is None:
+            module = self.module_type(name="", sequential_order=self._module_order)
+            self._module_order += 1
+            return module
+        body = block[heading.end():].lstrip("\n")
+        module = self.module_type(name=heading.group(1).strip(), sequential_order=self._module_order)
+        self._module_order += 1
+        parts = re.split(r"(?m)^(?=##\s)", body, maxsplit=1)
+        self._apply_module_preamble(module, parts[0].strip())
+        classes_text = parts[1] if len(parts) > 1 else ""
+        module._class_blocks = self._class_blocks_in(classes_text)
+        return module
+
     def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
         model = type(self)(name="", sequential_order=1)
         self._module_order = 1
@@ -202,8 +303,8 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         if seam_terms and not module.seam:
             module.seam = ", ".join(seam_terms)
 
-    def _append_h2_classes(self, module: MarkdownModule, classes_text: str) -> None:
-        class_order = 1
+    def _class_blocks_in(self, classes_text: str) -> List[str]:
+        blocks: List[str] = []
         for class_block in re.split(r"(?m)^(?=##\s)", classes_text):
             class_block = class_block.strip()
             heading = re.match(r"^##\s+(.+)", class_block) if class_block else None
@@ -212,10 +313,25 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             class_name = heading.group(1).strip()
             if class_name.lower() in self._MODULE_META_HEADINGS:
                 self._section_heading = class_name
-                self._apply_module_section(module, class_block[heading.end():])
                 continue
-            if " : " in class_name:
-                class_name = class_name.split(" : ", 1)[0].strip()
+            if re.search(r"(?m)^###\s+\*\*", class_block):
+                for nested in re.split(r"(?m)^(?=###\s)", class_block):
+                    nested = nested.strip()
+                    if nested.startswith("###"):
+                        blocks.append(nested)
+                continue
+            blocks.append(class_block)
+        return blocks
+
+    def _append_h2_classes(self, module: MarkdownModule, classes_text: str) -> None:
+        class_order = 1
+        for class_block in self._class_blocks_in(classes_text):
+            heading = re.match(r"^#{2,3}\s+(.+)", class_block)
+            if heading is None:
+                continue
+            class_name = _class_heading_name(heading.group(1))
+            if not class_name or class_name.lower().startswith("module "):
+                continue
             module.classes.append(
                 MarkdownOoadClass.parse_body(
                     class_name,
@@ -355,26 +471,51 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         pre6 = parts6[0] if parts6 else ""
         post6 = parts6[1] if len(parts6) > 1 else ""
 
-        intent = ""
+        intent_lines: List[str] = []
+        constructor_notes: List[str] = []
+        constructor_line = ""
+        seen_signature = False
         for line in pre6.splitlines():
             stripped = line.strip()
-            if stripped and not re.match(r"^\w[\w\s]*\(", stripped):
-                intent = stripped
-                break
+            if not stripped:
+                continue
+            if stripped.startswith("//"):
+                if seen_signature:
+                    constructor_notes.append(stripped[2:].strip())
+                continue
+            if stripped.startswith("->") or stripped.startswith("+") or stripped.startswith("-"):
+                seen_signature = True
+                if stripped.startswith("+") or stripped.startswith("-"):
+                    constructor_line = stripped
+                continue
+            if re.match(r"^\w[\w\s]*\(", stripped):
+                seen_signature = True
+                constructor_line = stripped
+                continue
+            if not seen_signature:
+                intent_lines.append(stripped)
+        intent = "\n".join(intent_lines)
 
         parts4 = re.split(r"(?m)^-{4}\s*$", post6, maxsplit=1)
         props_text = parts4[0] if parts4 else ""
         ops_text = parts4[1] if len(parts4) > 1 else ""
 
         props, rels = self._parse_properties_and_relationships(props_text)
-        ops, op_rels = self._parse_operations_and_relationships(ops_text)
+        ops, _op_rels = self._parse_operations_and_relationships(ops_text)
+        rels = self._relationships_from_properties(props)
+        if constructor_line:
+            constructors, _ = self._parse_operations_and_relationships(constructor_line)
+            for constructor in constructors:
+                for note in constructor_notes:
+                    append_invariant(constructor, note)
+                ops.insert(0, constructor)
         return MarkdownOoadClass(
             name=name,
             sequential_order=self._class_order,
             intent=intent,
             properties=props,
             operations=ops,
-            relationships=self._dedupe_relationships(rels + op_rels),
+            relationships=rels,
         )
 
 
@@ -422,9 +563,16 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
-            if stripped.startswith("//") or stripped.startswith("->"):
+            if stripped.startswith("//"):
+                if props:
+                    take_property_note(props[-1], stripped[2:])
                 continue
+            if stripped.startswith("->"):
+                continue
+            original = stripped
             stripped, rel_kind = self._strip_ce_prefix(stripped)
+            if "<<" in original and rel_kind is None:
+                continue
             if not stripped:
                 continue
             # Skip lines that look like operations
@@ -434,13 +582,11 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             m = re.match(r"^(\w+)\??:\s*(.+)", stripped)
             if m:
                 prop_name = m.group(1)
-                # Strip array marker and optional suffix (e.g. "Subscription[]" → "Subscription")
                 type_raw = m.group(2).strip()
-                # Remove trailing " | null" or "| None" suffix for relationship target resolution
-                type_clean = re.split(r"\s*\|", type_raw)[0].strip().rstrip("[]").strip()
-                props.append(Property(name=prop_name, type_hint=type_raw))
-                if rel_kind and type_clean and re.match(r"^[A-Z]\w*$", type_clean):
-                    rels.append(Relationship(kind=rel_kind, target=type_clean))
+                prop = Property(name=prop_name, type_hint=type_raw)
+                if rel_kind:
+                    prop.stereotype = rel_kind
+                props.append(prop)
             elif re.match(r"^\w+$", stripped):
                 props.append(Property(name=stripped))
         return props, rels
@@ -460,6 +606,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         "String", "Number", "Boolean", "Void", "Any", "Unknown", "Object",
         "Record", "Array", "Promise", "Partial", "Omit", "Pick", "RegExp",
         "Date", "Error", "Map", "Set", "Readonly", "Required", "NonNullable",
+        "Collection", "List", "Iterable", "Sequence", "Optional",
     })
 
 
@@ -475,6 +622,26 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             names.append(name)
         return names
 
+
+    def _relationships_from_properties(self, props: List[Property]) -> List[Relationship]:
+        """A relationship is the property that names its target. Operation signatures do not add a second edge."""
+        rels: List[Relationship] = []
+        seen: set[str] = set()
+        for prop in props:
+            kind = (prop.stereotype or "").lower()
+            if kind not in {"composition", "aggregation", "association"}:
+                continue
+            for target in self._domain_type_names(prop.type_hint):
+                if target in seen:
+                    continue
+                seen.add(target)
+                rels.append(Relationship(
+                    kind=kind,
+                    target=target,
+                    cardinality=prop.cardinality,
+                    description=prop.origin,
+                ))
+        return rels
 
     def _dedupe_relationships(self, rels: List[Relationship]) -> List[Relationship]:
         """One edge per target; stronger ownership (composition > aggregation > association) wins."""
@@ -512,7 +679,15 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
-            if stripped.startswith("//") or stripped.startswith("->"):
+            if stripped.startswith("//"):
+                if ops:
+                    append_invariant(ops[-1], stripped[2:])
+                continue
+            if stripped.startswith("->"):
+                if ops:
+                    callee = stripped[2:].strip()
+                    if callee and callee not in ops[-1].callees:
+                        ops[-1].callees.append(callee)
                 continue
             private = stripped.startswith("- ")
             body = stripped[2:].strip() if private else stripped
@@ -536,3 +711,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 for target in self._domain_type_names(pm.group(2)):
                     rels.append(Relationship(kind="association", target=target))
         return ops, rels
+
+
+MarkdownCleanEngineeringModel.module_type = MarkdownModule

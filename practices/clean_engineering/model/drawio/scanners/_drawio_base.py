@@ -689,11 +689,11 @@ class DrawioScanner:
         b_vert = abs(bx2 - bx1) < 2
         if a_horiz and b_horiz:
             if abs(ay1 - by1) < proximity:
-                if self._segments_overlap_1d(ax1, (ax2, bx1, bx2, None)):
+                if self._segments_overlap_1d(ax1, (ax2, bx1, bx2, 12)):
                     return True
         if a_vert and b_vert:
             if abs(ax1 - bx1) < proximity:
-                if self._segments_overlap_1d(ay1, (ay2, by1, by2, None)):
+                if self._segments_overlap_1d(ay1, (ay2, by1, by2, 12)):
                     return True
         return False
 
@@ -733,7 +733,7 @@ class DrawioScanner:
     def _first_segment_overlap(self, segs_a, segs_b):
         for sa in segs_a:
             for sb in segs_b:
-                if self._edge_segments_overlap(sa, (sb, None)):
+                if self._edge_segments_overlap(sa, (sb, 4)):
                     return f'segments {self._fmt_seg(sa)} and {self._fmt_seg(sb)} overlap'
         return None
 

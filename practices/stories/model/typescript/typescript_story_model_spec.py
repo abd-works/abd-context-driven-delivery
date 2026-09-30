@@ -10,21 +10,19 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from practices.stories.model.code_story_map import CodeStoryMapError
-from practices.stories.model.typescript.typescript_story_map import TypeScriptStoryMap
-from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
-from practices.stories.model.scenario import Clause, Interaction, Phase, Scenario
-from practices.stories.model.story_map import StoryMap
+from practices.stories.model.code_story_model import CodeStoryMapError
+from practices.stories.model.typescript.typescript_story_model import TypeScriptStoryMap
+from practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from practices.stories.model.story_model import StepType, Scenario, Step
+from practices.stories.model.story_model import StoryMap
 
 
 def _make_scenario(name: str, order: int) -> Scenario:
     sc = Scenario(name=name, sequential_order=order)
-    sc.given = [Clause(text="a context", phase=Phase.GIVEN)]
-    sc.interactions = [
-        Interaction(
-            when=[Clause(text="the action occurs", phase=Phase.WHEN)],
-            then=[Clause(text="the outcome is observed", phase=Phase.THEN)],
-        )
+    sc.steps = [
+        Step("a context", StepType.GIVEN, 1),
+        Step("the action occurs", StepType.WHEN, 2),
+        Step("the outcome is observed", StepType.THEN, 3),
     ]
     return sc
 
@@ -35,12 +33,12 @@ def _story_map_with_stories() -> StoryMap:
         story_map.append_epic(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
     for j in range(1, 4):
-        sub = SubEpic(f"SubEpic 1.{j}", j)
+        sub = Epic(f"Epic 1.{j}", j)
         story = Story("Redeem a voucher", 1, StoryType.USER)
-        story.users = ["shopper"]
+        story.actors = ["shopper"]
         story.scenarios.append(_make_scenario("Voucher is active", 1))
         sub.stories.append(story)
-        first.sub_epics.append(sub)
+        first.epics.append(sub)
     return story_map
 
 
@@ -53,10 +51,11 @@ with description("a TypeScript runnable-story Story Map") as self:
             self.tree = self.ts.render(_story_map_with_stories())
             self.leaf_paths = self.ts.leaf_files_of(self.tree)
 
-        with it("should emit `{story_snake}_story.test.ts` under epic/sub-epic/story-folder"):
+        with it("should emit one `{sub_epic_snake}_story.test.ts` in the parent epic folder"):
             for path in self.leaf_paths:
                 expect(path.endswith("_story.test.ts")).to(be_true)
-                expect("/redeem-a-voucher/redeem_a_voucher_story.test.ts" in path).to(be_true)
+                expect("/epic-1/epic_1_" in path).to(be_true)
+                expect("/redeem-a-voucher/" in path).to(equal(False))
 
         with it("should include givens.ts at epic and sub-epic"):
             expect(any(p.endswith("/givens.ts") for p in self.tree)).to(be_true)
@@ -98,24 +97,18 @@ with description("a TypeScript runnable-story Story Map") as self:
             ).to(be_true)
 
         with it("should import story-test from the stories workspace root"):
-            leaf = next(
-                p for p in self.tree if p.endswith("redeem_a_voucher_story.test.ts")
-            )
+            leaf = next(p for p in self.tree if p.endswith("_story.test.ts"))
             expect(self.tree[leaf]).to(contain('from "stories/story-test"'))
 
     with context("a scenario with two Then outcomes"):
         with it("should chain the second outcome with .and()"):
             story = Story("Select Plan", 1, StoryType.USER)
             sc = Scenario(name="catalog listed", sequential_order=1)
-            sc.given = [Clause(text="plans exist", phase=Phase.GIVEN)]
-            sc.interactions = [
-                Interaction(
-                    when=[Clause(text="they view the catalog", phase=Phase.WHEN)],
-                    then=[
-                        Clause(text="names are shown", phase=Phase.THEN),
-                        Clause(text="prices are shown", phase=Phase.THEN),
-                    ],
-                )
+            sc.steps = [
+                Step("plans exist", StepType.GIVEN, 1),
+                Step("they view the catalog", StepType.WHEN, 2),
+                Step("names are shown", StepType.THEN, 3),
+                Step("prices are shown", StepType.THEN, 4),
             ]
             story.scenarios.append(sc)
             from practices.stories.model.typescript.story_file import render_story_file
@@ -129,7 +122,7 @@ with description("a TypeScript runnable-story Story Map") as self:
             self.parsed = self.ts.parse(self.ts.render(_story_map_with_stories()))
 
         with it("should preserve story and scenario"):
-            story = self.parsed.epics[0].sub_epics[0].stories[0]
+            story = self.parsed.epics[0].epics[0].stories[0]
             expect(story.name).to(equal("Redeem a voucher"))
             expect(story.scenarios).to(have_len(1))
 

@@ -7,19 +7,21 @@ from pathlib import Path
 from typing import List, Optional
 
 from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
-from practices.ddd.model.nodes import Aggregate, BoundedContext, Entity as DddEntity, ddd_class_for
+from practices.ddd.model.nodes import Aggregate, BoundedContext, Entity as DddEntity
 from practices.clean_engineering.model.operation import Operation as CeOperation
 from practices.clean_engineering.model.property import Property as CeProperty
 from practices.clean_engineering.model.type_refs import pascal_type_names
 from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
-from practices.stories.model.nodes import Epic, Story, SubEpic
-from practices.stories.model.background import Background
-from practices.stories.model.example import Example
-from practices.stories.model.markdown.nodes import MarkdownScenario
-from practices.stories.model.scenario import Scenario
-from practices.stories.model.step import Step
-from practices.stories.model.story_map import StoryMap
-from practices.stories.model.workspace import Workspace
+from practices.stories.model.story_model import (
+    Background,
+    Epic,
+    Example,
+    Scenario,
+    Step,
+    Story,
+    StoryMap,
+    Epic,
+)
 
 from .graph_node import Kind
 from practices.ddd.model import (
@@ -54,7 +56,7 @@ from .nodes import (
     GraphStep,
     GraphStory,
     GraphStoryMap,
-    GraphSubEpic,
+    GraphEpic,
     GraphValueObject,
     graph_ddd_class_for,
     slug,
@@ -74,6 +76,10 @@ _GRAPH_DDD_CLASSES = (
 _DESCRIBE_RE = re.compile(r"""with\s+description\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
 _CONTEXT_RE = re.compile(r"""with\s+context\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
 _IT_RE = re.compile(r"""with\s+it\s*\(\s*['"](.+?)['"]\s*\)\s*:""")
+
+
+def _norm_label(label: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", label.lower()).strip()
 
 
 def load_practice_graph(
@@ -119,9 +125,7 @@ class GraphLoader:
         return loader
 
     def load(self, *, evaluate: bool = True) -> PracticeGraph:
-        workspace = Workspace.load(self.root)
-        story_map = self._resolve_story_map(workspace.story_map)
-        self.graph.story_map = self._load_story_map(story_map)
+        self.graph.story_map = self._load_story_map(StoryMap.load(self.root))
         self.graph.ce_model = self._load_ce_model()
         self._index_story_epics()
         if self.graph.ce_model is not None:
@@ -139,35 +143,10 @@ class GraphLoader:
         return self.graph
 
     def attach(self, paths: list[Path]) -> None:
-        self._attach_story_tests(paths)
-
-    def _resolve_story_map(self, story_map: StoryMap) -> StoryMap:
-        if story_map.epics:
-            return story_map
-        from practices.stories.model.markdown.nodes import MarkdownStoryMap
-
-        for name in ("story_map.md", "story-map.md"):
-            parsed = self._story_map_from_named_file(MarkdownStoryMap, name)
-            if parsed is not None:
-                return parsed
-        parsed = MarkdownStoryMap.from_workspace(self.root)
-        if parsed and parsed.epics:
-            return parsed
-        return story_map
-
-    def _story_map_from_named_file(self, markdown_story_map, name: str):
-        candidate = self.root / name
-        if not candidate.is_file():
-            return None
-        parsed = markdown_story_map.from_workspace(candidate)
-        if not parsed or not parsed.epics:
-            return None
-        parsed.attach_scenarios(MarkdownScenario.from_workspace(self.root))
-        return parsed
+        return
 
     def _load_story_map(self, story_map: StoryMap) -> GraphStoryMap:
-        target = GraphStoryMap()
-        target.translate_from(story_map)
+        target = GraphStoryMap.clone(story_map)
         self.graph.register(target)
         return target
 
@@ -201,14 +180,14 @@ class GraphLoader:
         self._scope = "epic"
         for example in getattr(epic, "examples", []):
             self._register_example(epic, example)
-        for sub in epic.sub_epics:
+        for sub in epic.epics:
             self._register_sub_epic(epic, sub)
-        if isinstance(epic, SubEpic):
+        if isinstance(epic, Epic):
             for story in epic.stories:
                 self._register_story(epic, story)
 
-    def _register_sub_epic(self, epic: Epic, sub: SubEpic) -> None:
-        if not isinstance(sub, GraphSubEpic):
+    def _register_sub_epic(self, epic: Epic, sub: Epic) -> None:
+        if not isinstance(sub, GraphEpic):
             return
         self.graph.register(sub)
         self.graph.epics[slug(sub.name)] = sub
@@ -217,7 +196,7 @@ class GraphLoader:
         for story in sub.stories:
             self._register_story(sub, story)
 
-    def _register_story(self, parent: SubEpic, story: Story) -> None:
+    def _register_story(self, parent: Epic, story: Story) -> None:
         if not isinstance(story, GraphStory):
             return
         self.graph.register(story)
@@ -231,7 +210,6 @@ class GraphLoader:
     def _register_scenario(self, story: GraphStory, scenario: Scenario) -> None:
         if not isinstance(scenario, GraphScenario):
             return
-        scenario.sync_tree_from_legacy()
         self.graph.register(scenario)
         story.relate(Kind.OWNS, scenario)
         self._wire_scenario_tree(scenario)
@@ -264,7 +242,7 @@ class GraphLoader:
             return
         self.graph.register(example)
         parent.relate(Kind.SCOPES, example)
-        example.scope = self._scope
+        example.scope = parent
 
     def _wire_ce_model(self, model: GraphCleanEngineeringModel) -> None:
         for module in model.modules:
@@ -391,7 +369,7 @@ class GraphLoader:
         target.dependencies = list(source.dependencies)
 
     def _promote_ce_class(self, source: OoadClass) -> OoadClass:
-        promoted = ddd_class_for(source)
+        promoted = graph_ddd_class_for(source)
         promoted.translate_from(source)
         return promoted
 
@@ -456,6 +434,91 @@ class GraphLoader:
             return
         for order, bc_entry in enumerate(bc_map, start=1):
             self._register_map_bounded_context(bc_entry, order)
+        self._load_domain_model_building_blocks()
+
+    def _load_domain_model_building_blocks(self) -> None:
+        """Attach tactical DDD types from domain-model.md onto the aggregate they belong to."""
+        path = self._domain_model_path()
+        if path is None:
+            return
+        text = path.read_text(encoding="utf-8", errors="replace")
+        aggregates = {
+            _norm_label(node.name): node for node in self.graph.nodes_of_type(GraphAggregate)
+        }
+        contexts = {
+            _norm_label(node.name): node for node in self.graph.nodes_of_type(GraphBoundedContext)
+        }
+        section = ""
+        owner = None
+        order = 0
+        heading = re.compile(r"^###\s+\*\*(.+?)\*\*(.*)$")
+        for line in text.splitlines():
+            if line.startswith("# ") and not line.startswith("# " * 2) and not line.startswith("##"):
+                section = line[2:].strip()
+                owner = self._match_named(section, aggregates)
+                if owner is None:
+                    context = self._match_named(section, contexts) or self._ensure_bounded_context(
+                        section, contexts
+                    )
+                    owner = self._ensure_aggregate(section, context, aggregates)
+                continue
+            match = heading.match(line.strip())
+            if match is None or owner is None:
+                continue
+            decorated = f"{match.group(1)} {match.group(2)}".strip()
+            kind = ddd_class_kind(decorated)
+            if kind is None:
+                continue
+            order += 1
+            node = graph_ddd_class_for(OoadClass(decorated, order))
+            self.graph.register(node)
+            if not hasattr(owner, "classes"):
+                owner.classes = []
+            owner.classes.append(node)
+            owner.relate(Kind.OWNS, node)
+
+    def _domain_model_path(self) -> Optional[Path]:
+        preferred = self.root / "domain" / "domain-model.md"
+        if preferred.is_file():
+            return preferred
+        skip = {".kilo", ".git", "node_modules", "deprecated"}
+        from harness.knowledge_graph.model.codeql_query import walk_files
+
+        found = [
+            path
+            for path in walk_files(self.root)
+            if path.name == "domain-model.md"
+            and not any(part in skip or part.startswith(".") for part in path.parts)
+        ]
+        return sorted(found)[0] if found else None
+
+    def _match_named(self, label: str, index: dict):
+        key = _norm_label(label)
+        if key in index:
+            return index[key]
+        words = key.split()
+        for name, node in index.items():
+            parts = name.split()
+            if parts and all(
+                any(word.startswith(part) or part.startswith(word) for word in words)
+                for part in parts
+            ):
+                return node
+        return None
+
+    def _ensure_bounded_context(self, name: str, contexts: dict):
+        node = GraphBoundedContext(name, len(contexts) + 1)
+        self.graph.register(node)
+        contexts[_norm_label(name)] = node
+        return node
+
+    def _ensure_aggregate(self, name: str, context, aggregates: dict):
+        node = GraphAggregate(name, len(aggregates) + 1)
+        self.graph.register(node)
+        aggregates[_norm_label(name)] = node
+        context.aggregates.append(node)
+        context.relate(Kind.OWNS, node)
+        return node
 
     def _register_map_bounded_context(self, bc_entry, order: int) -> None:
         self._map_bc = GraphBoundedContext(bc_entry.name, order)
@@ -661,8 +724,12 @@ class GraphLoader:
             self._parse_python_bdd_file(path)
 
     def _bdd_candidate_paths(self) -> list[Path]:
+        from harness.knowledge_graph.model.codeql_query import walk_files
+
         candidates: list[Path] = []
-        for path in sorted(self.root.glob("**/*.py")):
+        for path in walk_files(self.root):
+            if path.suffix.lower() != ".py":
+                continue
             if path.name in ("examples.py",) or self._is_python_spec(path):
                 candidates.append(path)
         return candidates
@@ -743,42 +810,3 @@ class GraphLoader:
         if not parts:
             return cleaned
         return parts[0][:1].upper() + parts[0][1:]
-
-    def _attach_story_tests(self, paths: list[Path]) -> None:
-        for path in paths:
-            if path.suffix.lower() not in {".ts", ".tsx"}:
-                continue
-            self._relative = str(path.resolve().relative_to(self.graph.root)).replace("\\", "/")
-            self._attach_suites_from(path)
-
-    def _attach_suites_from(self, path: Path) -> None:
-        from practices.stories.model.typescript.nodes import TypeScriptStoryMap
-
-        for suite in TypeScriptStoryMap.from_workspace(path):
-            self._register_parsed_story_suite(suite)
-
-    def _register_parsed_story_suite(self, suite) -> None:
-        from practices.stories.model.source_location import SourceLocation
-
-        story = GraphStory(suite.name, 1)
-        story.source = SourceLocation(self._relative, 1)
-        self.graph.register(story)
-        self._suite_story = story
-        self._suite_seen: set[str] = set()
-        for index, case in enumerate(suite.cases, start=1):
-            self._register_suite_case(case, index)
-
-    def _register_suite_case(self, case, index: int) -> None:
-        from practices.stories.model.source_location import SourceLocation
-
-        name = case.covers_scenario or case.name
-        if name in self._suite_seen:
-            return
-        self._suite_seen.add(name)
-        scenario = GraphScenario(name, index, self._suite_story.name)
-        scenario.source = SourceLocation(
-            self._relative,
-            case.story_source.line if case.story_source else 1,
-        )
-        self.graph.register(scenario)
-        self._suite_story.relate(Kind.OWNS, scenario)

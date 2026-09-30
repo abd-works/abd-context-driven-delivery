@@ -14,14 +14,7 @@ for _cat in ("practices", "tools"):
 from expects import equal, expect, have_length
 from mamba import description, it
 
-from practices.clean_engineering.model.base_class_model import OoadClass
-from practices.ddd.model import (
-    Aggregate,
-    BoundedContext,
-    ddd_class_for,
-    ddd_class_kind,
-    parse_bounded_context_map,
-)
+from practices.ddd.model import ddd_class_kind
 from harness.knowledge_graph import model as kg
 from harness.knowledge_graph.model import Kind, PracticeGraph
 
@@ -35,43 +28,6 @@ with description("DDD model nodes"):
         expect(ddd_class_kind("**ShoppingCartRepository** <<Repository>>")).to(
             equal("Repository")
         )
-
-    with it("should map CE classes to DDD stereotypes via ddd_class_for"):
-        source = OoadClass("**Discount** <<Value Object>>", sequential_order=1)
-        target = ddd_class_for(source)
-        expect(target.semantic_type()).to(equal("ValueObject"))
-        expect(target.name).to(equal("Discount"))
-
-    with it("should reconcile BoundedContext aggregates in child_collections"):
-        bc = BoundedContext("Sales", 1)
-        agg = Aggregate("ShoppingCart", 1)
-        bc.aggregates.append(agg)
-        other = BoundedContext("Sales", 1)
-        other.aggregates.append(Aggregate("ShoppingCart", 1))
-        bc.translate_from(other)
-        expect(len(bc.aggregates)).to(equal(1))
-        expect(bc.aggregates[0].name).to(equal("ShoppingCart"))
-
-    with it("should parse bounded context map BC to Aggregate tree"):
-        text = """# Bounded Context Map — Shop
-
-## Sales | custom
-
-### ShoppingCart
-
-- CartItem
-
-## Catalog | custom
-
-### Product
-
-- Product
-"""
-        contexts = parse_bounded_context_map(text)
-        expect(len(contexts)).to(equal(2))
-        expect(contexts[0].name).to(equal("Sales"))
-        expect(contexts[0].aggregates[0].name).to(equal("ShoppingCart"))
-        expect("CartItem" in contexts[0].aggregates[0].concepts).to(equal(True))
 
 
 with description("PracticeGraph DDD wiring"):
@@ -106,7 +62,7 @@ with description("PracticeGraph DDD wiring"):
         identity_vo.relate(Kind.OWNS, id_prop)
         id_prop.relate(Kind.BELONGS_TO, identity_vo)
 
-        root = kg.EntityRoot("Customer", 1)
+        root = kg.GraphEntityRoot("Customer", 1)
         ident_prop = kg.Property("identity", 1, type_hint="Identity")
         root.property_nodes = [ident_prop]
         graph.register(root)

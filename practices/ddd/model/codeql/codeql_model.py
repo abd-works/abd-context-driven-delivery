@@ -9,12 +9,11 @@ from practices.ddd.model.nodes import (
     DomainEvent as SourceDomainEvent,
     DomainService as SourceDomainService,
     Entity as SourceEntity,
-    EntityRoot as SourceEntityRoot,
     Repository as SourceRepository,
+    Specification as SourceSpecification,
     ValueObject as SourceValueObject,
-    ddd_class_for,
 )
-from practices.ddd.model.stereotypes import plain_class_name
+from practices.ddd.model.stereotypes import ddd_class_kind, plain_class_name
 
 from practices.clean_engineering.model.codeql.codeql_model import OoadClass, _Members
 from harness.knowledge_graph.model.graph_node import Node
@@ -41,9 +40,13 @@ class Entity(_Members, SourceEntity, Node):
     _semantic_type_name = "Entity"
 
 
-class EntityRoot(_Members, SourceEntityRoot, Node):
+class EntityRoot(_Members, SourceEntity, Node):
     practice = "ddd"
     _semantic_type_name = "EntityRoot"
+
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, **kwargs)
+        self.is_root = True
 
 
 class ValueObject(_Members, SourceValueObject, Node):
@@ -66,6 +69,11 @@ class DomainService(_Members, SourceDomainService, Node):
     _semantic_type_name = "DomainService"
 
 
+class Specification(_Members, SourceSpecification, Node):
+    practice = "ddd"
+    _semantic_type_name = "Specification"
+
+
 _BY_KIND = {
     "EntityRoot": EntityRoot,
     "Entity": Entity,
@@ -73,13 +81,17 @@ _BY_KIND = {
     "Repository": Repository,
     "DomainEvent": DomainEvent,
     "DomainService": DomainService,
+    "Specification": Specification,
 }
 
 
 def ddd_graph_class_for(source: SourceClass) -> SourceClass:
-    base = ddd_class_for(source)
-    kind = base._semantic_type_name
-    if kind == "OoadClass":
+    kind = ddd_class_kind(source.name)
+    if isinstance(source, SourceEntity) and source.is_root:
+        kind = "EntityRoot"
+    elif isinstance(source, (SourceEntity, SourceValueObject, SourceRepository, SourceDomainEvent, SourceDomainService, SourceSpecification)):
+        kind = source._semantic_type_name
+    if kind in (None, "OoadClass"):
         return OoadClass(
             plain_class_name(source.name),
             source.sequential_order,
@@ -91,10 +103,12 @@ def ddd_graph_class_for(source: SourceClass) -> SourceClass:
         source.sequential_order,
         intent=source.intent,
     )
-    if isinstance(base, SourceRepository) and base.accesses is not None:
-        node.accesses = base.accesses
-    if isinstance(base, SourceEntityRoot) and base.aggregate is not None:
-        node.aggregate = base.aggregate
-    if isinstance(base, SourceEntity) and base.identity:
-        node.identity = list(base.identity)
+    if kind == "EntityRoot":
+        node.is_root = True
+    if isinstance(source, SourceRepository) and source.accesses is not None:
+        node.accesses = source.accesses
+    if isinstance(source, SourceEntity) and source.aggregate is not None:
+        node.aggregate = source.aggregate
+    if isinstance(source, SourceEntity) and source.identity:
+        node.identity = list(source.identity)
     return node

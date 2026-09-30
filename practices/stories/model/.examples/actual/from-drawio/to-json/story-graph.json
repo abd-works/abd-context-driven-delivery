@@ -1,0 +1,869 @@
+{
+  "epics": [
+    {
+      "name": "Onboard A Customer",
+      "sequentialOrder": 1,
+      "subEpics": [
+        {
+          "name": "Get Sign Up Plan",
+          "sequentialOrder": 1,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Hand Off Sign Up To Onboarding",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Website"
+              ]
+            },
+            {
+              "name": "Open Plan Deep Link",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Load Plan Catalog",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Apply Catalog Voucher",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Create Customer",
+          "sequentialOrder": 2,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Enter Account Credentials",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": []
+            },
+            {
+              "name": "Create Unconfirmed Cognito User",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": []
+            },
+            {
+              "name": "Enter Validation Code",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Confirm Cognito User",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Issue Account Token To Browser Session",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Validate Mavenir Customer in Cognito User Attributes",
+              "sequentialOrder": 6,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Submit Create Customer Request to Mid-Tier",
+              "sequentialOrder": 7,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Validate Cognito User",
+              "sequentialOrder": 8,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Submit Create Mavenir Customer",
+              "sequentialOrder": 9,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Create Customer",
+              "sequentialOrder": 10,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Store Mavenir Customer Id on Cognito User",
+              "sequentialOrder": 11,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Load My Paradise Customer From Midtier And Store In Session",
+              "sequentialOrder": 12,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Get Mavenir Customer and Transform To My Paradise Customer And Return",
+              "sequentialOrder": 13,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Get Mavenir Customer",
+              "sequentialOrder": 14,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Ensure Cart on Customer",
+              "sequentialOrder": 15,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Fix Orphan Cognito Account",
+              "sequentialOrder": 16,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Read False Initial Activation",
+              "sequentialOrder": 17,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Sign In With Existing Account",
+              "sequentialOrder": 18,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Number",
+          "sequentialOrder": 3,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Determine Number",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Query Msisdn Inventory",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "List Msisdn Resources",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Search Msisdn Inventory",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Search Msisdn Resources",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Choose a Number",
+              "sequentialOrder": 6,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Submit Reserve Number Request to Mid-Tier",
+              "sequentialOrder": 7,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Submit Reserve Msisdn",
+              "sequentialOrder": 8,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Reserve Msisdn Resource",
+              "sequentialOrder": 9,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Submit Patch Cart With Number Request to Mid-Tier",
+              "sequentialOrder": 10,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Patch Cart With Number",
+              "sequentialOrder": 11,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Patch Shopping Cart",
+              "sequentialOrder": 12,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Bring a Number",
+              "sequentialOrder": 13,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Confirm Number Already With Paradise",
+              "sequentialOrder": 14,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Evaluate Porting Two Factor Flag",
+              "sequentialOrder": 15,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Submit Portability Request to Mid-Tier",
+              "sequentialOrder": 16,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Patch Cart With Portability",
+              "sequentialOrder": 17,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Send Port Verification",
+              "sequentialOrder": 18,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Send Verification Sms",
+              "sequentialOrder": 19,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Enter Porting Sms Code",
+              "sequentialOrder": 20,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Check Port Verification",
+              "sequentialOrder": 21,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Check Verification",
+              "sequentialOrder": 22,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Keep Current Number",
+              "sequentialOrder": 23,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Sweep Stale Number Reservations",
+              "sequentialOrder": 24,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Care"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Onboarding Plan",
+          "sequentialOrder": 4,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Query Product Offerings And Map To Catalog",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": []
+            },
+            {
+              "name": "List Product Offerings",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": []
+            },
+            {
+              "name": "Load Plan Catalog",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Choose Onboarding Plan",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Patch Cart With Plan",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Patch Shopping Cart",
+              "sequentialOrder": 6,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Keep Current Plan",
+              "sequentialOrder": 7,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Sim",
+          "sequentialOrder": 5,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Choose Esim",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Request a Paradise Sim Card",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Enter Existing Sim",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Activate Sim",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Complete Draft Sim Order",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Verified Profile",
+          "sequentialOrder": 6,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Customer Complete Persona Kyc",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Collect Identity With Brand Amassador",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Ambassador"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Order Review",
+          "sequentialOrder": 7,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Check The Order",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Upgrade To Data Freedom",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Change Plan From Review",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Payment",
+          "sequentialOrder": 8,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Enter Payment",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Evaluate Payment Flags",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Authorize Card",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Provide Apple Pay Certificate",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Adjust Credit Manually",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Care"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Place Order",
+          "sequentialOrder": 9,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Create Billing Account",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Create Product Order",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "View Order Result",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Create Order Ticket",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "View Order History",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Care"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Voucher Credit",
+          "sequentialOrder": 10,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Redeem Voucher and Apply Credit",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Self-Serve Subscription",
+      "sequentialOrder": 2,
+      "subEpics": [
+        {
+          "name": "Access Selfcare",
+          "sequentialOrder": 1,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Enter Sign In Credentials",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Reset Password",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Edit Profile",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Sign Out",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Manage Billing",
+          "sequentialOrder": 2,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "View Billing",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Pay Now",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Enter New Payment Method",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Manage Services",
+          "sequentialOrder": 3,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "View Dashboard",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Change Plan",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Request Line Portability",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Purchase Device",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Send Support Request",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

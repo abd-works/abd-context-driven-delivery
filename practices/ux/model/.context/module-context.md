@@ -1,9 +1,9 @@
 # ux_model (canonical UX map)
 
-**Purpose:** Canonical in-memory UX model — `UxMap` → screens → regions → controls/interactions, plus transitions, nav, and content types.
+**Purpose:** Keep the information architecture as one UX map — screens, regions, controls, and the transitions between screens — so a diagram, a JSON file, and an HTML mockup stay the same hierarchy every later fidelity reads.
 
-**Seam:** Shared model for all UX channels and scanners (parse into / render from this tree)
+**Seam (terms):** UxModelFactory, UxMap, Screen, Region, Control, StoryDemoControl, Interaction, Transition, ContentType, NavComponent, UxContext
 
-**Dependencies:** None outside this package for the core tree; channels and scanners consume it
+**Dependencies (one-way):** *(none)*
 
-**Public API:** `UxMap`, `Screen` (`apply_layout` sets the layout name only - no seeded regions), `Region`, `Control`, `StoryDemoControl`, `Transition`, `Workspace`, `ReferencePaths`. Layout vocabulary lives as reference files at `../specifications/generic/` (plus branded siblings under `../specifications/`), not as a code catalog.
+The walk is `ux-model.md` in this folder. `UxModelFactory.load` returns a `UxMap`. The channel class is that map. Each node loads its own children. A channel overrides `has_more_*` and `get_next_*_from_file`. Every channel saves through `save()`.

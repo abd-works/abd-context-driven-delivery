@@ -226,7 +226,8 @@ class CodeQL:
 
     def _create_database(self, database: Path) -> Path:
         language = getattr(self, "_database_language", "python")
-        source_root = self.root
+        source_root = self.root.resolve()
+        database = Path(database).resolve()
         database.parent.mkdir(parents=True, exist_ok=True)
         env = os.environ.copy()
         python = sys.executable

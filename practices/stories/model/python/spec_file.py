@@ -35,13 +35,13 @@ from __future__ import annotations
 import re
 from typing import Iterable, List
 
-from practices.stories.model.nodes import Story
+from practices.stories.model.story_model import StepType, Story
 
 
 def render_story_spec_file(story: Story) -> str:
     """Render one Story to a Python spec-file body."""
     constant = _screaming_snake(story.name)
-    actor = (story.users[0] if story.users else "").strip()
+    actor = (story.actors[0] if story.actors else "").strip()
 
     lines: List[str] = []
     lines.append('"""Story data - regeneratable. Do not add logic or imports."""')
@@ -73,19 +73,19 @@ def _render_scenario_block(scenario) -> List[str]:
     lines.append(f"    \"{key}\": {{")
     lines.append(f"        \"name\":         {_py_string(scenario.name)},")
     lines.append(f"        \"given\": (")
-    for clause in scenario.given:
-        lines.append(f"            {_py_string(clause.text)},")
+    for step in scenario.steps_in(StepType.GIVEN):
+        lines.append(f"            {_py_string(step.text)},")
     lines.append(f"        ),")
     lines.append(f"        \"interactions\": (")
-    for interaction in scenario.interactions:
+    for when_steps, then_steps in scenario.when_then_runs():
         lines.append("            {")
         lines.append("                \"when\": (")
-        for clause in interaction.when:
-            lines.append(f"                    {_py_string(clause.text)},")
+        for step in when_steps:
+            lines.append(f"                    {_py_string(step.text)},")
         lines.append("                ),")
         lines.append("                \"then\": (")
-        for clause in interaction.then:
-            lines.append(f"                    {_py_string(clause.text)},")
+        for step in then_steps:
+            lines.append(f"                    {_py_string(step.text)},")
         lines.append("                ),")
         lines.append("            },")
     lines.append("        ),")

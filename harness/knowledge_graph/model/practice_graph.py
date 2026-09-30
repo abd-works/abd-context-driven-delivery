@@ -149,6 +149,20 @@ class PracticeGraph:
                 return node
         return None
 
+    def ce_class_named(self, name: str) -> Optional[Node]:
+        """The clean-engineering class. A DDD stereotype of the same name is not this class."""
+        plain = (name or "").strip()
+        if not plain:
+            return None
+        for node in self.nodes.values():
+            if (
+                node.name == plain
+                and node.semantic_type() == "OoadClass"
+                and getattr(node, "practice", "") == "clean_engineering"
+            ):
+                return node
+        return None
+
     def operation_named(self, class_name: str, operation_name: str) -> Optional[Node]:
         owner = self.class_named(class_name)
         if owner is None:

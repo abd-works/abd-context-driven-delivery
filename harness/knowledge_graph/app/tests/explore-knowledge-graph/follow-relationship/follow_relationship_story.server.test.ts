@@ -1,6 +1,5 @@
 import { story, scenario } from '../../story-test';
 import { KnowledgeGraph } from '../../../packages/explore-knowledge-graph/knowledge-graph/knowledge-graph';
-import { RELATIONSHIP_KINDS } from '../../../packages/explore-knowledge-graph/knowledge-graph/catalog';
 import { ExplorePracticeGraphsServerHelper } from '../helpers/explore-practice-graphs.server';
 import {
   KEEP_OPERATIONS_SMALL_FOCUSED,
@@ -32,14 +31,14 @@ story('Follow Relationship', () => {
   scenario('a Class lists Relationship kinds including demonstratedThrough', ({ given, when, then }) => {
     given('a Class Node demonstrated through a stories Example', () => {});
     when('the Engineer opens relationships on that Class', () => {});
-    then('every Relationship kind is listed', () => {
+    then('only Relationship kinds with targets are listed', () => {
       const customer = findTreeNode(
         KnowledgeGraph.fromDto(classDemonstratedThroughExampleGraph()).present()
           .listed_tree,
         'Customer',
       );
       expect(customer?.relationships.map((group) => group.kind)).toEqual([
-        ...RELATIONSHIP_KINDS,
+        'demonstratedThrough',
       ]);
     }).and('demonstratedThrough lists the Example', () => {
       const customer = findTreeNode(

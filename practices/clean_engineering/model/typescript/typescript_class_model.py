@@ -14,6 +14,7 @@ _repo = Path(__file__).resolve().parents[3]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 
+from practices.clean_engineering.model.property import invariant_lines, property_notes
 from practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
@@ -23,7 +24,8 @@ from practices.clean_engineering.model.base_class_model import (
     is_interface_name,
 )
 from practices.clean_engineering.model.c_family_parse import CFamilyParse
-from practices.clean_engineering.model.field_types import OperationField, PropertyField
+from practices.clean_engineering.model.operation import Operation
+from practices.clean_engineering.model.property import Property
 from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 _TYPE_MAP = {
@@ -47,7 +49,7 @@ def _camel_identifier(name: str) -> str:
     return parts[0] + "".join(part.title() for part in parts[1:])
 
 
-class TypeScriptProperty(PropertyField):
+class TypeScriptProperty(Property):
     def ts_type(self) -> str:
         return _ts_type(self.type_hint) if self.type_hint else "any"
 
@@ -55,29 +57,40 @@ class TypeScriptProperty(PropertyField):
         return f"{_camel_identifier(self.name)}: {self.ts_type()}"
 
     def render(self) -> str:
-        return f"  {_camel_identifier(self.name)}: {self.ts_type()};"
+        lines = []
+        if self.stereotype:
+            lines.append(f"  // << {self.stereotype} >>")
+        lines.extend(f"  // {note}" for note in property_notes(self))
+        lines.append(f"  {_camel_identifier(self.name)}: {self.ts_type()};")
+        return "\n".join(lines)
 
 
-class TypeScriptOperation(OperationField):
+class TypeScriptOperation(Operation):
     def render(self, *, signature_only: bool = False) -> str:
         if self.name.startswith("_") and signature_only:
             return ""
-        params = ", ".join(self.parameters)
+        params = ", ".join(parameter.save() for parameter in self.parameters)
         ret = _ts_type(self.return_type) if self.return_type else "void"
         camel = _camel_identifier(self.name)
         if signature_only:
             return f"  {camel}({params}): {ret};"
         access = "private " if self.name.startswith("_") else ""
-        return f"  {access}{camel}({params}): {ret} {{ }}"
+        lines = [f"  {access}{camel}({params}): {ret} {{"]
+        for note in invariant_lines(self):
+            lines.append(f"    // {note}")
+        for callee in self.callees:
+            lines.append(f"    {callee}();")
+        lines.append("  }")
+        return "\n".join(lines)
 
 
 class TypeScriptOoadClass(OoadClass):
-    def load_property_field(self, source: PropertyField) -> TypeScriptProperty:
+    def load_property_field(self, source: Property) -> TypeScriptProperty:
         loaded = TypeScriptProperty(name=source.name)
         loaded.update_self(source)
         return loaded
 
-    def load_operation_field(self, source: OperationField) -> TypeScriptOperation:
+    def load_operation_field(self, source: Operation) -> TypeScriptOperation:
         loaded = TypeScriptOperation(name=source.name)
         loaded.update_self(source)
         return loaded
@@ -100,7 +113,11 @@ class TypeScriptOoadClass(OoadClass):
         names = known_names or []
         lines: List[str] = []
         if self.intent:
-            lines.append(f"/** {self.intent} */")
+            lines.append("/**")
+            for note in self.intent.splitlines():
+                if note.strip():
+                    lines.append(f" * {note.strip()}")
+            lines.append(" */")
         if is_interface_name(self.name):
             lines.append(f"interface {self.name} {{")
             for property_row in self.properties:
@@ -117,8 +134,17 @@ class TypeScriptOoadClass(OoadClass):
         else:
             lines.append(f"class {self.name} {{")
         for property_row in self.properties:
-            lines.append(property_row.render())
-        if self.properties:
+            rendered = property_row.render() if hasattr(property_row, "render") else f"  {property_row.name};"
+            lines.append(rendered)
+        constructors = [
+            operation for operation in self.operations
+            if operation.name in {self.name, "constructor"}
+        ]
+        methods = [
+            operation for operation in self.operations
+            if operation.name not in {self.name, "constructor"}
+        ]
+        if self.properties or constructors:
             lines.append("")
             params = ", ".join(
                 property_row.constructor_parameter()
@@ -127,13 +153,18 @@ class TypeScriptOoadClass(OoadClass):
                 for property_row in self.properties
             )
             lines.append(f"  constructor({params}) {{")
+            for operation in constructors:
+                for note in invariant_lines(operation):
+                    lines.append(f"    // {note}")
+                for callee in operation.callees:
+                    lines.append(f"    {callee}();")
             for property_row in self.properties:
                 camel = _camel_identifier(property_row.name)
                 lines.append(f"    this.{camel} = {camel};")
             lines.append("  }")
             lines.append("")
-        for operation in self.operations:
-            lines.append(operation.render())
+        for operation in methods:
+            lines.append(operation.render() if hasattr(operation, "render") else operation.name)
         lines.append("}")
         return "\n".join(lines)
 

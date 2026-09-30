@@ -44,6 +44,9 @@ class DiagramNode(ABC):
             return default
         return Geometry(saved[0], saved[1], saved[2], saved[3])
 
+    def overlaps(self, other: "DiagramNode") -> bool:
+        return self.geometry.overlaps(other.geometry)
+
     def draw(self, page) -> object:
         self.geometry = self.keep_or_place(self.geometry)
         return page.place(self)
@@ -71,6 +74,21 @@ class DiagramClass(OoadClass, DiagramNode):
         n = re.sub('\\*+', '', self.name)
         return [s.strip() for s in re.findall('<<[^>]+>>', n)]
 
+    def place_below(self, base: "DiagramClass") -> None:
+        siblings = [
+            node for node in getattr(base, "_row", []) if isinstance(node, DiagramClass)
+        ]
+        if self not in siblings:
+            siblings.append(self)
+        base._row = siblings
+        gap = 28.0
+        self.geometry = Geometry(
+            base.geometry.x + (len(siblings) - 1) * (CELL_WIDTH + gap),
+            base.geometry.y + base.geometry.height + gap,
+            float(CELL_WIDTH),
+            float(self.height()),
+        )
+
     def extends_base_name(self) -> Optional[str]:
         n = re.sub('\\*+', '', self.name)
         n = re.sub('<<[^>]+>>', '', n)
@@ -91,12 +109,28 @@ class ImportedClass(DiagramClass):
         super().__init__(name, sequential_order, **kwargs)
         self.from_module = from_module
 
+    def clone(self):
+        cloned = super().clone()
+        cloned.from_module = self.from_module
+        return cloned
+
     def height(self) -> int:
         n = min(4, len(self.properties)) + 2
         return max(CELL_MIN_HEIGHT - 10, 30 + n * LINE_HEIGHT + 2 * SECTION_PAD)
 
     def key_properties(self):
         return self.properties[:4]
+
+    def place_above(self) -> None:
+        self.geometry = Geometry(self.geometry.x, 40.0, self.geometry.width, float(self.height()))
+
+    def place_beside(self, local: DiagramClass) -> None:
+        self.geometry = Geometry(
+            local.geometry.x + local.geometry.width + 48.0,
+            local.geometry.y,
+            self.geometry.width or float(CELL_WIDTH),
+            float(self.height()),
+        )
 
 
 class DiagramModule(Module, DiagramNode):
@@ -136,6 +170,55 @@ class DiagramModule(Module, DiagramNode):
         if len(purpose_line) > MODULE_PURPOSE_MAX_CHARS:
             purpose_line = purpose_line[:MODULE_PURPOSE_MAX_CHARS - 1].rstrip() + '...'
         return purpose_line
+
+    def size(self) -> Geometry:
+        kids = [child for child in self.modules if isinstance(child, DiagramNode)]
+        if not kids:
+            return Geometry(self.geometry.x, self.geometry.y, float(MODULE_CELL_WIDTH), float(self.height()))
+        widths = [child.size().width for child in kids]
+        heights = [child.size().height for child in kids]
+        cols = min(2, len(kids))
+        rows = (len(kids) + cols - 1) // cols
+        col_widths = [0.0] * cols
+        row_heights = [0.0] * rows
+        for index, child in enumerate(kids):
+            column, row = index % cols, index // cols
+            col_widths[column] = max(col_widths[column], widths[index])
+            row_heights[row] = max(row_heights[row], heights[index])
+        gap = 12.0
+        grid_w = sum(col_widths) + gap * (cols - 1)
+        grid_h = sum(row_heights) + gap * (rows - 1)
+        width = max(float(MODULE_CELL_WIDTH), grid_w + 32)
+        height = float(self.header_height()) + grid_h + 24
+        return Geometry(self.geometry.x, self.geometry.y, width, height)
+
+    def place_children(self) -> None:
+        kids = [child for child in self.modules if isinstance(child, DiagramModule)]
+        if not kids:
+            self.geometry = self.size()
+            return
+        cols = min(2, len(kids))
+        sizes = [child.size() for child in kids]
+        col_widths = [0.0] * cols
+        rows = (len(kids) + cols - 1) // cols
+        row_heights = [0.0] * rows
+        for index, box in enumerate(sizes):
+            column, row = index % cols, index // cols
+            col_widths[column] = max(col_widths[column], box.width)
+            row_heights[row] = max(row_heights[row], box.height)
+        gap = 12.0
+        pad_x = 16.0
+        pad_y = 12.0
+        for index, child in enumerate(kids):
+            column, row = index % cols, index // cols
+            child.geometry = Geometry(
+                pad_x + sum(col_widths[:column]) + gap * column,
+                float(self.header_height()) + pad_y + sum(row_heights[:row]) + gap * row,
+                sizes[index].width,
+                sizes[index].height,
+            )
+            child.place_children()
+        self.geometry = self.size()
 
     def shown_seam_terms(self) -> List[str]:
         terms = self.public_terms()
@@ -280,3 +363,56 @@ class ContainmentForest:
         if cur in self.roots:
             return cur
         return None
+
+
+class DiagramCleanEngineeringModel(CleanEngineeringModel):
+    """Shared diagram channel. Draw.io and Miro extend this model."""
+
+    module_type = DiagramModule
+
+    def place_modules(self) -> None:
+        forest = ContainmentForest.build(self.modules, synthesize_parents=True)
+        x = 40.0
+        depths = sorted({forest.module_dep_depth(name) for name in forest.roots})
+        for depth in depths:
+            y = 100.0
+            column_width = 0.0
+            for name in forest.roots:
+                if forest.module_dep_depth(name) != depth:
+                    continue
+                module = forest.by_name[name]
+                if not isinstance(module, DiagramModule):
+                    continue
+                module.place_children()
+                box = module.size()
+                module.geometry = Geometry(x, y, box.width, box.height)
+                y += box.height + 32.0
+                column_width = max(column_width, box.width)
+            x += column_width + 48.0
+
+    def place_classes(self) -> None:
+        for module in self.modules:
+            if isinstance(module, DiagramModule):
+                self._place_module_classes(module)
+
+    def _place_module_classes(self, module: DiagramModule) -> None:
+        by_name = {
+            oclass.display_name(): oclass
+            for oclass in module.classes
+            if isinstance(oclass, DiagramClass)
+        }
+        cursor_x = module.geometry.x
+        cursor_y = module.geometry.y + module.geometry.height + 48.0
+        for oclass in module.classes:
+            if not isinstance(oclass, DiagramClass):
+                continue
+            base_name = oclass.extends_base_name()
+            base = by_name.get(base_name) if base_name else None
+            if isinstance(base, DiagramClass):
+                oclass.place_below(base)
+                continue
+            if isinstance(oclass, ImportedClass):
+                oclass.place_above()
+                continue
+            oclass.geometry = Geometry(cursor_x, cursor_y, float(CELL_WIDTH), float(oclass.height()))
+            cursor_x += CELL_WIDTH + 28.0

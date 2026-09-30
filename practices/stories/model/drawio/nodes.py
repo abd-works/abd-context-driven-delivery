@@ -1,9 +1,8 @@
 """DrawIO format story nodes - all seven StoryNode subtypes plus I/O.
 
-Three views:
-- story-map  render(canonical)            - Epic -> SubEpic -> Story grid
-- thin-slice render_thin_slice(canonical) - Epic/sub-epic column headers x increment swim-lane rows
-- scenario   render_scenario(canonical)   - Story + Scenario + Clause cells
+Two views:
+- story-map  render(canonical)            - Epic -> Epic -> Story grid
+- thin-slice DrawIOIncrement.save / DrawIOIncrement.load - increment rows across epic columns
 """
 
 from __future__ import annotations
@@ -12,115 +11,273 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
-from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
-from practices.stories.model.scenario import Scenario
-from practices.stories.model.story_map import StoryMap
-from practices.stories.model.thin_slice import Increment
-from practices.stories.model.update_report import UpdateReport
-from practices.stories.model.diagram_story_map import (
-    BASE_WIDTH, ROW_HEIGHT, DiagramStoryMap,
+from practices.stories.model.diagram_story_model import (
+    DiagramEpic,
+    DiagramIncrement,
+    DiagramStory,
+    DiagramStoryMap,
+    DiagramEpic,
 )
-
-CLAUSE_HEIGHT = 40
-CLAUSE_WIDTH = 480
-SCENARIO_WIDTH = 400
-STORY_WIDTH = 320
-INCREMENT_WIDTH = 480
-LANE_INDENT = 40
-SCENARIO_INDENT = 40
-CLAUSE_INDENT = 80
-BLOCK_GAP = 20
-
-LEFT_MARGIN_X = 20
-EPIC_ROW_Y = 120
-EPIC_HEIGHT = 60
-EPIC_CONTENT_INSET = 10
-EPIC_ESTIMATE_ROW_Y = EPIC_ROW_Y - 20
-EPIC_ESTIMATE_HEIGHT = 40
-SUBEPIC_ROW_Y = 195
-SHAPING_SUBEPIC_ROW_Y = 200
-SUBEPIC_HEIGHT = 60
-SUBEPIC_DEPTH_GAP = 8  # vertical gap between nested sub-epic rows
-STORY_ROW_Y = 345
-SHAPING_DETAIL_ROW_Y = 275
-STORY_SIZE = 50
-STORY_PITCH_X = 60
-ESTIMATE_STORY_GAP = 15
-FIRST_STORY_INSET = 10
-SUBEPIC_TIGHTEN = 5
-EPIC_TIGHTEN = 5
-EPIC_GAP = 10
-DETAIL_BELOW_SUBEPIC_PAD = 16  # pad under deepest sub-epic before actor/story row
-
-_STYLE_EPIC = (
-    "epic;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;fontSize=11;"
-)
-_STYLE_EPIC_ESTIMATE_TEXT = "text;whiteSpace=wrap;html=1;"
-_STYLE_STORY_TMPL = (
-    "story:{role};whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;"
-    "fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;"
-)
-_STYLE_ESTIMATE = (
-    "estimate;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=none;strokeColor=none;fontColor=#333333;fontSize=8;"
-    "align=left;spacingLeft=4;"
-)
-_STYLE_INC_LANE_BG = (
-    "inc-lane;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;fontSize=11;fontStyle=1;"
-)
-_STYLE_INC_LANE_LABEL = (
-    "inc-lane-label;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#e8e8e8;strokeColor=#666666;fontColor=#000000;fontSize=10;fontStyle=1;"
-    "align=right;spacingRight=8;verticalAlign=middle;"
-)
-_STYLE_INCREMENT_STORY = (
-    "increment-story;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;"
-)
-_STYLE_ACTOR = (
-    "actor;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;fontSize=7;"
-)
-
-INC_LANE_LABEL_WIDTH = 160                              # left label column width
-INC_LANE_TOP_Y = SUBEPIC_ROW_Y + SUBEPIC_HEIGHT + 10   # below sub-epic headers
-INC_LANE_HEIGHT = STORY_SIZE + 20                       # 70 px per lane
-INC_LANE_GAP = 5
-INC_STORY_Y_OFFSET = (INC_LANE_HEIGHT - STORY_SIZE) // 2  # vertically centre story in lane
-
-ACTOR_LABEL_HEIGHT = STORY_SIZE   # square, same size as story cells
-ACTOR_LABEL_GAP = 4               # gap between actor label bottom and story top
+from practices.stories.model.story_model import Epic, Increment, StoryMap, StoryType, Epic
 
 
-# -- Leaf node types -----------------------------------------------------------
+class DrawIOIncrement(DiagramIncrement):
+    width = 480
+    lane_indent = 40
+    lane_style = (
+        "inc-lane;whiteSpace=wrap;html=1;overflow=hidden;"
+        f"fillColor={DiagramIncrement.fill};strokeColor={DiagramIncrement.stroke};"
+        "fontColor=#000000;fontSize=11;fontStyle=1;"
+    )
+    label_style = (
+        "inc-lane-label;whiteSpace=wrap;html=1;overflow=hidden;"
+        "fillColor=#e8e8e8;strokeColor=#666666;fontColor=#000000;fontSize=10;fontStyle=1;"
+        "align=right;spacingRight=8;verticalAlign=middle;"
+    )
+    story_style = (
+        "increment-story;whiteSpace=wrap;html=1;overflow=hidden;"
+        f"fillColor={DiagramStory.fill};strokeColor={DiagramStory.stroke};"
+        "fontColor=#000000;fontSize=8;"
+    )
 
-class DrawIOIncrement(Increment):
-    pass
+    @classmethod
+    def lane_top_y(cls) -> int:
+        return DiagramEpic.row_y + DiagramEpic.bar_height + 10
+
+    @classmethod
+    def story_y_offset(cls) -> int:
+        return (cls.lane_height - DiagramStory.size) // 2
+
+    @classmethod
+    def save(cls, story_map: StoryMap) -> str:
+        return DrawIOStoryMap()._write_thin_slice(story_map)
+
+    @classmethod
+    def load(cls, text: str) -> List["DrawIOIncrement"]:
+        return DrawIOStoryMap()._read_thin_slice(text)
 
 
-class DrawIOScenario(Scenario):
-    def load_scenario(self, source: Scenario) -> "DrawIOScenario":
-        return DrawIOScenario(source.name, source.sequential_order, source.story_name)
+class DrawIOStory(DiagramStory):
+    shaping_row_y = 275
+    inset = 10
+    actor_style = (
+        "actor;whiteSpace=wrap;html=1;overflow=hidden;"
+        f"fillColor={DiagramStory.actor_fill};strokeColor={DiagramStory.actor_stroke};"
+        "fontColor=#000000;fontSize=7;"
+    )
+    style = (
+        "story:{role};whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;"
+        f"fillColor={DiagramStory.fill};strokeColor={DiagramStory.stroke};"
+        "fontColor=#000000;fontSize=8;"
+    )
+
+    @property
+    def slug(self) -> str:
+        slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
+        return slug or "node"
+
+    @property
+    def cell_slug(self) -> str:
+        parent = self.parent
+        if not isinstance(parent, Epic):
+            return self.slug
+        seen = 0
+        for story in parent.stories:
+            if story is self:
+                break
+            if story.slug == self.slug:
+                seen += 1
+        return self.slug if seen == 0 else f"{self.slug}-{seen + 1}"
+
+    @property
+    def x(self) -> int:
+        parent = self.parent
+        if not isinstance(parent, Epic):
+            return 0
+        index = parent.stories.index(self)
+        return parent.x + DrawIOEpic.tighten + index * self.pitch
+
+    @property
+    def y(self) -> int:
+        story_map = self._owning_map()
+        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryMap) else 0
+        shaping = isinstance(story_map, DrawIOStoryMap) and story_map.has_outline_estimates
+        base = DrawIOEpic.shaping_row_y if shaping else DrawIOEpic.row_y
+        deepest_bottom = base + depth * (DrawIOEpic.bar_height + DrawIOEpic.depth_gap) + DrawIOEpic.bar_height
+        if shaping:
+            return max(self.shaping_row_y, deepest_bottom + self.pad_below_sub_epic)
+        return max(
+            self.row_y,
+            deepest_bottom + self.actor_height + self.actor_gap + self.pad_below_sub_epic,
+        )
+
+    def cells(self, parent_id: str) -> List["DrawIOStoryMap.Vertex"]:
+        parent = self.parent
+        index = parent.stories.index(self) if isinstance(parent, Epic) else 0
+        actor = self.actors[0].strip() if self.actors else ""
+        previous = ""
+        if isinstance(parent, Epic) and index > 0:
+            prior = parent.stories[index - 1]
+            previous = prior.actors[0].strip() if prior.actors else ""
+        cell_id = f"{parent_id}/{self.cell_slug}"
+        drawn: List[DrawIOStoryMap.Vertex] = []
+        room = (
+            self.y >= parent.y + DrawIOEpic.bar_height + self.actor_height + self.actor_gap
+            if isinstance(parent, Epic) else False
+        )
+        if room and actor and actor != previous:
+            drawn.append(DrawIOStoryMap.Vertex.make(
+                f"{cell_id}/actor", actor, self.x,
+                self.y - self.actor_height - self.actor_gap,
+                self.size, self.actor_height, self.actor_style,
+            ))
+        drawn.append(DrawIOStoryMap.Vertex.make(
+            cell_id, self.name, self.x, self.y, self.size, self.size,
+            self.style.format(role=self.story_type.value),
+        ))
+        return drawn
 
 
-class DrawIOStory(Story):
-    def load_scenario(self, source: Scenario) -> DrawIOScenario:
-        return DrawIOScenario(source.name, source.sequential_order, source.story_name)
+class DrawIOEpic(DiagramEpic):
+    shaping_row_y = 200
+    estimate_gap = 15
+    estimate_row_y = DiagramEpic.row_y - 20
+    estimate_height = 40
+    epic_estimate_style = "text;whiteSpace=wrap;html=1;"
+    estimate_style = (
+        "estimate;whiteSpace=wrap;html=1;overflow=hidden;"
+        "fillColor=none;strokeColor=none;fontColor=#333333;fontSize=8;"
+        "align=left;spacingLeft=4;"
+    )
 
+    @property
+    def slug(self) -> str:
+        slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
+        return slug or "node"
 
-class DrawIOSubEpic(SubEpic):
-    def load_sub_epic(self, source: SubEpic) -> "DrawIOSubEpic":
-        return DrawIOSubEpic(source.name, source.sequential_order)
+    @property
+    def cell_id(self) -> str:
+        parent = self.parent
+        if isinstance(parent, DrawIOEpic):
+            return f"{parent.cell_id}/{self.slug}"
+        return self.slug
 
-    def load_story(self, source: Story) -> DrawIOStory:
-        return DrawIOStory(source.name, source.sequential_order, source.story_type)
+    @property
+    def width(self) -> int:
+        if isinstance(self.parent, Epic):
+            return max(self.diagram_span_columns(), 1) * DrawIOStory.pitch
+        return self.span_columns() * DiagramStory.pitch
 
+    @property
+    def bar_width(self) -> int:
+        return self.width - self.tighten * 2
 
-class DrawIOEpic(Epic):
-    def load_sub_epic(self, source: SubEpic) -> DrawIOSubEpic:
-        return DrawIOSubEpic(source.name, source.sequential_order)
+    @property
+    def height(self) -> int:
+        return self.bar_height
+
+    @property
+    def y(self) -> int:
+        if not isinstance(self.parent, Epic):
+            return self.row_y
+        story_map = self._owning_map()
+        shaping = isinstance(story_map, DrawIOStoryMap) and story_map.has_outline_estimates
+        base = self.shaping_row_y if shaping else self.nested_row_y
+        return base + self.depth * (self.bar_height + self.depth_gap)
+
+    @property
+    def x(self) -> int:
+        parent = self.parent
+        if isinstance(parent, Epic):
+            origin = parent.x + len(parent.stories) * DrawIOStory.pitch
+            siblings = parent.epics
+            offset = origin
+            for sibling in siblings:
+                if sibling is self:
+                    return offset
+                offset += sibling.width
+            return offset
+        offset = self.left_margin
+        if parent is None:
+            return offset
+        for epic in parent.epics:
+            if epic is self:
+                return offset
+            offset += epic.width + self.gap
+        return offset
+
+    @property
+    def style(self) -> str:
+        if isinstance(self.parent, Epic):
+            return (
+                f"subepic:{self.depth};rounded=1;whiteSpace=wrap;html=1;overflow=hidden;"
+                f"fillColor={self.nested_fill};strokeColor={self.nested_stroke};"
+                "fontColor=#000000;fontSize=10;"
+            )
+        return (
+            "epic;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;"
+            f"fillColor={DiagramEpic.fill};strokeColor={DiagramEpic.stroke};"
+            "fontColor=#000000;fontSize=11;"
+        )
+
+    def story_xs(self) -> Dict[str, int]:
+        found = {story.name: story.x for story in self.stories}
+        for child in self.epics:
+            found.update(child.story_xs())
+        return found
+
+    def cells(self) -> List["DrawIOStoryMap.Vertex"]:
+        if not isinstance(self.parent, Epic):
+            return self._epic_cells()
+        drawn = [DrawIOStoryMap.Vertex.make(
+            self.cell_id, self.name, self.x, self.y, self.bar_width, self.bar_height, self.style,
+        )]
+        for story in self.stories:
+            drawn.extend(story.cells(self.cell_id))
+        for child in self.epics:
+            drawn.extend(child.cells())
+        estimate = (self.estimate or "").strip()
+        if estimate:
+            label = estimate if estimate.startswith("*") else f"* {estimate}"
+            if self.stories:
+                last_story_x = self.x + self.tighten + (len(self.stories) - 1) * DiagramStory.pitch
+                estimate_x = last_story_x + DiagramStory.size + self.estimate_gap
+            else:
+                estimate_x = self.x + self.tighten
+            drawn.append(DrawIOStoryMap.Vertex.make(
+                f"{self.cell_id}/estimate", label, estimate_x, self.stories[0].y if self.stories else self._story_row(),
+                max(self.bar_width - (estimate_x - self.x) - self.tighten, 80),
+                DiagramStory.size, self.estimate_style,
+            ))
+        return drawn
+
+    def _epic_cells(self) -> List["DrawIOStoryMap.Vertex"]:
+        drawn = [DrawIOStoryMap.Vertex.make(
+            self.cell_id, self.name, self.x, self.y, self.width, self.height, self.style,
+        )]
+        estimate = (self.estimate or "").strip()
+        if estimate:
+            label = self.estimate_label()
+            drawn.append(DrawIOStoryMap.Vertex.make(
+                f"{self.cell_id}/epic-estimate", label, self.x, self.estimate_row_y,
+                min(160, self.width), self.estimate_height, self.epic_estimate_style,
+            ))
+        for child in self.epics:
+            drawn.extend(child.cells())
+        return drawn
+
+    def _story_row(self) -> int:
+        story_map = self._owning_map()
+        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryMap) else 0
+        shaping = isinstance(story_map, DrawIOStoryMap) and story_map.has_outline_estimates
+        base = self.shaping_row_y if shaping else self.row_y
+        deepest_bottom = base + depth * (self.bar_height + self.depth_gap) + self.bar_height
+        if shaping:
+            return max(DrawIOStory.shaping_row_y, deepest_bottom + DiagramStory.pad_below_sub_epic)
+        return max(
+            DiagramStory.row_y,
+            deepest_bottom + DiagramStory.actor_height + DiagramStory.actor_gap + DiagramStory.pad_below_sub_epic,
+        )
 
 
 # -- Root node + I/O -----------------------------------------------------------
@@ -129,11 +286,14 @@ class DrawIOParseError(Exception):
     """Raised when a document is not a valid Draw.io story map."""
 
 
-class DrawIOStoryMap(StoryMap):
+class DrawIOStoryMap(DiagramStoryMap):
+    epic_type = DrawIOEpic
+    story_type = DrawIOStory
+    increment_type = DrawIOIncrement
     """DrawIO story-map I/O. IS the format-typed tree root.
 
-    parse / render / sync implement the Uniform Callable Surface.
-    render_thin_slice and render_scenario are render-only views.
+    load reads a file into these nodes. save writes the nodes you edited.
+    The thin-slice table is DrawIOIncrement.save and DrawIOIncrement.load.
     """
 
     class Vertex:
@@ -147,34 +307,17 @@ class DrawIOStoryMap(StoryMap):
             self.style = ""
             self.extra_attributes = None
 
-    def load_epic(self, source: DrawIOEpic) -> DrawIOEpic:
-        return DrawIOEpic(source.name, source.sequential_order)
-
-    def load_increment(self, source: Increment) -> DrawIOIncrement:
-        return DrawIOIncrement(source.name, source.sequential_order)
-
-    def _slugify(self, name: str) -> str:
-        s = name.lower()
-        s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
-        return s or "node"
-
-
-    def _subepic_style(self, depth: int) -> str:
-        return (
-            f"subepic:{depth};rounded=1;whiteSpace=wrap;html=1;overflow=hidden;"
-            "fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;"
-        )
-
-
-    def _layout_columns(self, sub_epic: SubEpic) -> int:
-        return sub_epic.diagram_span_columns()
-
-
-    def _estimate_label(self, estimate: str) -> str:
-        text = estimate.strip()
-        if not text:
-            return ""
-        return text if text.startswith("*") else f"* {text}"
+        @classmethod
+        def make(cls, cell_id, label, x, y, width, height, style) -> "DrawIOStoryMap.Vertex":
+            vertex = cls()
+            vertex.cell_id = cell_id
+            vertex.label = label
+            vertex.x = x
+            vertex.y = y
+            vertex.width = width
+            vertex.height = height
+            vertex.style = style
+            return vertex
 
 
     def _parse_estimate_value(self, value: str) -> str:
@@ -182,75 +325,30 @@ class DrawIOStoryMap(StoryMap):
         return plain.strip().removeprefix("*").strip()
 
 
-    def _map_has_outline_estimates(self, story_map: StoryMap) -> bool:
-        if any(ep.estimate.strip() for ep in story_map.epics):
-            return True
-        return any(sub.estimate.strip() for sub in story_map.all_sub_epics())
-
-
-    def _max_sub_epic_depth(self, story_map: StoryMap) -> int:
-        """Deepest nested SubEpic depth (0 = direct child of Epic)."""
-
-        def _depth(sub: SubEpic, current: int) -> int:
-            if not sub.sub_epics:
-                return current
-            return max(_depth(child, current + 1) for child in sub.sub_epics)
-
-        deepest = 0
-        for epic in story_map.epics:
-            for sub in epic.sub_epics:
-                deepest = max(deepest, _depth(sub, 0))
-        return deepest
-
-
-    def _subepic_y_for_depth(self, base_y: int, depth: int) -> int:
-        """Parent sub-epics above children: depth 0 at base_y, depth 1 below, ..."""
-        return base_y + depth * (SUBEPIC_HEIGHT + SUBEPIC_DEPTH_GAP)
-
-
-    def _layout_rows(self, story_map: StoryMap) -> tuple[int, int]:
-        """Return (subepic_row_y_base, detail_row_y) for story-map layout.
-
-        Nested sub-epics stack downward by depth; stories sit below the deepest row
-        (with room for actor labels when not in shaping/estimate mode).
-        """
-        max_depth = self._max_sub_epic_depth(story_map)
-        if self._map_has_outline_estimates(story_map):
-            base = SHAPING_SUBEPIC_ROW_Y
-            deepest_bottom = self._subepic_y_for_depth(base, max_depth) + SUBEPIC_HEIGHT
-            # Shaping outline: keep stories closer; still clear nested bars
-            detail = max(SHAPING_DETAIL_ROW_Y, deepest_bottom + DETAIL_BELOW_SUBEPIC_PAD)
-            return base, detail
-        base = SUBEPIC_ROW_Y
-        deepest_bottom = self._subepic_y_for_depth(base, max_depth) + SUBEPIC_HEIGHT
-        detail = max(
-            STORY_ROW_Y,
-            deepest_bottom + ACTOR_LABEL_HEIGHT + ACTOR_LABEL_GAP + DETAIL_BELOW_SUBEPIC_PAD,
-        )
-        return base, detail
 
     # -- Uniform Callable Surface ----------------------------------------------
 
-    def render(self, canonical: "DrawIOStoryMap", previous: Optional[str] = None) -> str:
+    @property
+    def has_outline_estimates(self) -> bool:
+        return any(epic._has_estimate() for epic in self.epics)
+
+    def clone(self):
+        return super().clone().save()
+
+    def save(self) -> str:
         mxfile = ET.Element("mxfile", attrib={"host": "app.diagrams.net"})
         diagram = ET.SubElement(mxfile, "diagram", attrib={"name": "Story Map", "id": "story-map"})
         graph_model = ET.SubElement(diagram, "mxGraphModel")
         graph_root = ET.SubElement(graph_model, "root")
         ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
-
-        self._graph_root = graph_root
-        self._canonical = canonical
-        self._subepic_y, self._detail_y = self._layout_rows(canonical)
-        epic_x_cursor = LEFT_MARGIN_X
-        for epic in canonical.epics:
-            self._emit_epic(epic, epic_x_cursor)
-            epic_x_cursor += self._epic_width(epic) + EPIC_GAP
-
+        for epic in self.epics:
+            for vertex in epic.cells():
+                self._add_cell(graph_root, vertex)
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
 
-    def parse(self, text: str) -> "DrawIOStoryMap":
+    def load(self, text: str) -> "DrawIOStoryMap":
         try:
             root_el = ET.fromstring(text)
         except ET.ParseError as err:
@@ -267,28 +365,25 @@ class DrawIOStoryMap(StoryMap):
         cells = tree.findall(".//mxCell[@vertex='1']")
         story_map = DrawIOStoryMap()
         current_epic: DrawIOEpic | None = None
-        current_sub_epic_stack: List[DrawIOSubEpic] = []
+        current_sub_epic_stack: List[DrawIOEpic] = []
         current_actor = ""
 
         for cell in cells:
             style = cell.attrib.get("style", "")
             value = cell.attrib.get("value", "")
-            if style.startswith("epic"):
+            role = style.split(";", 1)[0]
+            if role == "epic":
                 current_epic = DrawIOEpic(value.strip(), len(story_map.epics) + 1)
-                story_map.epics.append(current_epic)
+                story_map.append_epic(current_epic)
                 current_sub_epic_stack = []
                 current_actor = ""
             elif style.startswith("subepic") and current_epic is not None:
                 depth = int(style.split(":", 1)[1].split(";", 1)[0]) if ":" in style else 0
                 while len(current_sub_epic_stack) > depth:
                     current_sub_epic_stack.pop()
-                parent_children = (
-                    current_sub_epic_stack[-1].sub_epics
-                    if current_sub_epic_stack
-                    else current_epic.sub_epics
-                )
-                sub_epic = DrawIOSubEpic(value, len(parent_children) + 1)
-                parent_children.append(sub_epic)
+                owner = current_sub_epic_stack[-1] if current_sub_epic_stack else current_epic
+                sub_epic = DrawIOEpic(value, len(owner.epics) + 1)
+                owner.append_epic(sub_epic)
                 current_sub_epic_stack.append(sub_epic)
                 current_actor = ""
             elif style.startswith("actor") and current_sub_epic_stack:
@@ -297,8 +392,8 @@ class DrawIOStoryMap(StoryMap):
                 parent = current_sub_epic_stack[-1]
                 story = DrawIOStory(value, len(parent.stories) + 1, StoryType.USER)
                 if current_actor:
-                    story.users = [current_actor]
-                parent.stories.append(story)
+                    story.actors = [current_actor]
+                parent.append_story(story)
             elif style.startswith("text") and current_epic is not None and not current_sub_epic_stack:
                 estimate = self._parse_estimate_value(value)
                 if estimate and ("approx" in estimate.lower() or value.strip().startswith("*")):
@@ -315,12 +410,9 @@ class DrawIOStoryMap(StoryMap):
 
         return story_map
 
-    def sync(self, text: str, canonical: "DrawIOStoryMap") -> UpdateReport:
-        return canonical.translate_from(self.parse(text))
-
     # -- Thin-slice view -------------------------------------------------------
 
-    def render_thin_slice(self, canonical: StoryMap) -> str:
+    def _write_thin_slice(self, canonical: StoryMap) -> str:
         """Render a swim-lane grid: epic/sub-epic columns x increment rows.
 
         Row 1: Epic headers (same positions as story-map view).
@@ -335,88 +427,74 @@ class DrawIOStoryMap(StoryMap):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
 
-        # Build story -> x-position map (same column positions as the story-map view).
         story_x: Dict[str, int] = {}
-        self._story_x = story_x
-        self._collect_story_x(canonical, story_x)
+        for epic in canonical.epics:
+            for sub_epic in epic.epics:
+                story_x.update(sub_epic.story_xs())
 
-        # Compute total grid width so lanes span the full column area.
         grid_width = (
-            sum(self._epic_width(ep) + EPIC_GAP for ep in canonical.epics) - EPIC_GAP
+            canonical.epics[-1].x + canonical.epics[-1].width - DiagramEpic.left_margin
             if canonical.epics else 200
         )
 
-        # Epic + sub-epic column headers (identical to story-map render).
-        epic_x_cursor = LEFT_MARGIN_X
         for epic in canonical.epics:
-            epic_width = self._epic_width(epic)
-            vertex = self._cell(self._slugify(epic.name), epic.name)
-            vertex.x = epic_x_cursor
-            vertex.y = EPIC_ROW_Y
-            vertex.width = epic_width
-            vertex.height = EPIC_HEIGHT
-            vertex.style = _STYLE_EPIC
+            vertex = self._cell(epic.slug, epic.name)
+            vertex.x = epic.x
+            vertex.y = epic.y
+            vertex.width = epic.width
+            vertex.height = epic.height
+            vertex.style = epic.style
             self._add_cell(graph_root, vertex)
-            sub_x_cursor = epic_x_cursor + EPIC_CONTENT_INSET
-            for sub in epic.sub_epics:
-                span = self._layout_columns(sub)
-                width = span * STORY_PITCH_X - SUBEPIC_TIGHTEN * 2
-                sub_vertex = self._cell(
-                    f"{self._slugify(epic.name)}/{self._slugify(sub.name)}",
-                    sub.name,
-                )
-                sub_vertex.x = sub_x_cursor
-                sub_vertex.y = SUBEPIC_ROW_Y
-                sub_vertex.width = width
-                sub_vertex.height = SUBEPIC_HEIGHT
-                sub_vertex.style = self._subepic_style(0)
+            for sub_epic in epic.epics:
+                sub_vertex = self._cell(sub_epic.cell_id, sub_epic.name)
+                sub_vertex.x = sub_epic.x
+                sub_vertex.y = sub_epic.y
+                sub_vertex.width = sub_epic.bar_width
+                sub_vertex.height = sub_epic.bar_height
+                sub_vertex.style = sub_epic.style
                 self._add_cell(graph_root, sub_vertex)
-                sub_x_cursor += width + SUBEPIC_TIGHTEN * 2
-            epic_x_cursor += epic_width + EPIC_GAP
 
-        # Increment swim lanes.
-        # Each lane = a grey background strip (left label area + story grid)
-        # + a right-aligned text label cell in the left column.
-        lane_start_x = LEFT_MARGIN_X - INC_LANE_LABEL_WIDTH
-        lane_total_width = INC_LANE_LABEL_WIDTH + grid_width
-        lane_y = INC_LANE_TOP_Y
+        lane_start_x = DiagramEpic.left_margin - DrawIOIncrement.label_width
+        lane_total_width = DrawIOIncrement.label_width + grid_width
+        lane_y = DrawIOIncrement.lane_top_y()
         for inc in canonical.increments:
-            inc_slug = self._slugify(inc.name)
+            inc_slug = inc.slug if hasattr(inc, "slug") else re.sub(r"[^a-z0-9]+", "-", inc.name.lower()).strip("-") or "node"
             # Background strip (no text).
             background = self._cell(f"inc-lane/{inc_slug}/bg", "")
             background.x = lane_start_x
             background.y = lane_y
             background.width = lane_total_width
-            background.height = INC_LANE_HEIGHT
-            background.style = _STYLE_INC_LANE_BG
+            background.height = DrawIOIncrement.lane_height
+            background.style = DrawIOIncrement.lane_style
             self._add_cell(graph_root, background)
             label = self._cell(f"inc-lane/{inc_slug}", inc.name)
             label.x = lane_start_x
             label.y = lane_y
-            label.width = INC_LANE_LABEL_WIDTH - 4
-            label.height = INC_LANE_HEIGHT
-            label.style = _STYLE_INC_LANE_LABEL
+            label.width = DrawIOIncrement.label_width - 4
+            label.height = DrawIOIncrement.lane_height
+            label.style = DrawIOIncrement.label_style
             self._add_cell(graph_root, label)
-            for story_name in inc.stories:
+            for story in inc.stories:
+                story_name = story.name
                 x = story_x.get(story_name)
                 if x is None:
                     continue
                 story_vertex = self._cell(
-                    f"inc-lane/{inc_slug}/{self._slugify(story_name)}",
+                    f"inc-lane/{inc_slug}/{re.sub(r'[^a-z0-9]+', '-', story_name.lower()).strip('-') or 'node'}",
                     story_name,
                 )
                 story_vertex.x = x
-                story_vertex.y = lane_y + INC_STORY_Y_OFFSET
-                story_vertex.width = STORY_SIZE
-                story_vertex.height = STORY_SIZE
-                story_vertex.style = _STYLE_INCREMENT_STORY
+                story_vertex.y = lane_y + DrawIOIncrement.story_y_offset()
+                story_vertex.width = DiagramStory.size
+                story_vertex.height = DiagramStory.size
+                story_vertex.style = DrawIOIncrement.story_style
                 self._add_cell(graph_root, story_vertex)
-            lane_y += INC_LANE_HEIGHT + INC_LANE_GAP
+            lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
 
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
 
-    def parse_thin_slice(self, text: str) -> List[DrawIOIncrement]:
+    def _read_thin_slice(self, text: str) -> List[DrawIOIncrement]:
         """Parse a thin-slicing.drawio document into increment nodes."""
         try:
             root_el = ET.fromstring(text)
@@ -448,212 +526,11 @@ class DrawIOStoryMap(StoryMap):
                     inc_slug = parts[1]
                     inc = slug_to_inc.get(inc_slug)
                     if inc is not None:
-                        inc.stories.append(value.strip())
+                        story = DrawIOStory(value.strip(), len(inc.stories) + 1)
+                        story.increment = inc
+                        inc.stories.append(story)
         return increments
 
-    # -- Scenario view ---------------------------------------------------------
-
-    def render_scenario(self, canonical: StoryMap) -> str:
-        root, graph_root, cell_id = self._new_document()
-        y = 0
-        for story in self._walk_stories_with_scenarios(canonical):
-            story_vertex = self._cell(cell_id, story.name)
-            story_vertex.x = 0
-            story_vertex.y = y
-            story_vertex.width = STORY_WIDTH
-            story_vertex.height = ROW_HEIGHT
-            story_vertex.style = "story:user"
-            cell_id = self._add_cell(graph_root, story_vertex)
-            y += ROW_HEIGHT
-            for scenario in story.scenarios:
-                scenario_vertex = self._cell(cell_id, scenario.name)
-                scenario_vertex.x = SCENARIO_INDENT
-                scenario_vertex.y = y
-                scenario_vertex.width = SCENARIO_WIDTH
-                scenario_vertex.height = ROW_HEIGHT
-                scenario_vertex.style = "scenario"
-                cell_id = self._add_cell(graph_root, scenario_vertex)
-                y += ROW_HEIGHT
-                for clause in scenario.given:
-                    cell_id = self._render_clause(graph_root, cell_id, clause, "Given", y)
-                    y += CLAUSE_HEIGHT
-                for interaction in scenario.interactions:
-                    for clause in interaction.when:
-                        cell_id = self._render_clause(graph_root, cell_id, clause, "When", y)
-                        y += CLAUSE_HEIGHT
-                    for clause in interaction.then:
-                        cell_id = self._render_clause(graph_root, cell_id, clause, "Then", y)
-                        y += CLAUSE_HEIGHT
-                y += BLOCK_GAP
-            y += BLOCK_GAP
-        return ET.tostring(root, encoding="unicode")
-
-    # -- Private helpers -------------------------------------------------------
-
-    def _emit_epic(self, epic: Epic, epic_x: int) -> None:
-        epic_slug = self._slugify(epic.name)
-        vertex = self._cell(epic_slug, epic.name)
-        vertex.x = epic_x
-        vertex.y = EPIC_ROW_Y
-        vertex.width = self._epic_width(epic)
-        vertex.height = EPIC_HEIGHT
-        vertex.style = _STYLE_EPIC
-        self._add_cell(self._graph_root, vertex)
-        if (epic.estimate or "").strip():
-            estimate = self._cell(f"{epic_slug}/epic-estimate", self._estimate_label(epic.estimate))
-            estimate.x = epic_x
-            estimate.y = EPIC_ESTIMATE_ROW_Y
-            estimate.width = min(160, self._epic_width(epic))
-            estimate.height = EPIC_ESTIMATE_HEIGHT
-            estimate.style = _STYLE_EPIC_ESTIMATE_TEXT
-            self._add_cell(self._graph_root, estimate)
-        self._parent_slug = epic_slug
-        self._depth = 0
-        self._first_story_col = self._next_story_col(self._canonical, epic)
-        sub_x_cursor = epic_x + EPIC_CONTENT_INSET
-        for sub in epic.sub_epics:
-            span = self._layout_columns(sub)
-            self._sub_x = sub_x_cursor
-            self._width = span * STORY_PITCH_X - SUBEPIC_TIGHTEN * 2
-            self._emit_sub_epic(sub)
-            sub_x_cursor += self._width + SUBEPIC_TIGHTEN * 2
-            self._first_story_col += span
-
-    def _emit_sub_epic(self, sub_epic: SubEpic) -> None:
-        saved = (
-            self._parent_slug, self._depth, self._sub_x, self._width, self._first_story_col
-        )
-        self._emit_sub_epic_bar(sub_epic)
-        self._emit_own_stories(sub_epic)
-        parent_x, parent_width = self._sub_x, self._width
-        self._emit_nested_sub_epics(sub_epic)
-        self._sub_x, self._width = parent_x, parent_width
-        self._emit_sub_epic_estimate(sub_epic)
-        (
-            self._parent_slug, self._depth, self._sub_x, self._width, self._first_story_col
-        ) = saved
-
-    def _emit_sub_epic_bar(self, sub_epic: SubEpic) -> None:
-        self._sub_slug = f"{self._parent_slug}/{self._slugify(sub_epic.name)}"
-        self._row_y = self._subepic_y_for_depth(self._subepic_y, self._depth)
-        vertex = self._cell(self._sub_slug, sub_epic.name)
-        vertex.x = self._sub_x
-        vertex.y = self._row_y
-        vertex.width = self._width
-        vertex.height = SUBEPIC_HEIGHT
-        vertex.style = self._subepic_style(self._depth)
-        self._add_cell(self._graph_root, vertex)
-
-    def _emit_own_stories(self, sub_epic: SubEpic) -> None:
-        current_actor = ""
-        seen_story_slugs: Dict[str, int] = {}
-        for i, story in enumerate(sub_epic.stories):
-            self._story_x_pos = self._sub_x + SUBEPIC_TIGHTEN + i * STORY_PITCH_X
-            actor = story.users[0] if story.users else ""
-            self._story_slug = self._unique_story_slug(story.name, seen_story_slugs)
-            self._story_index = i
-            self._current_actor = current_actor
-            if self._should_label_actor(actor):
-                self._emit_actor_label(actor)
-                current_actor = actor
-            self._emit_story_cell(story)
-
-    def _unique_story_slug(self, story_name: str, seen_story_slugs: Dict[str, int]) -> str:
-        base_slug = self._slugify(story_name)
-        count = seen_story_slugs.get(base_slug, 0)
-        seen_story_slugs[base_slug] = count + 1
-        return base_slug if count == 0 else f"{base_slug}-{count + 1}"
-
-    def _should_label_actor(self, actor: str) -> bool:
-        room = self._detail_y >= self._row_y + SUBEPIC_HEIGHT + ACTOR_LABEL_HEIGHT + ACTOR_LABEL_GAP
-        return bool(room and actor and (self._story_index == 0 or actor != self._current_actor))
-
-    def _emit_actor_label(self, actor: str) -> None:
-        vertex = self._cell(f"{self._sub_slug}/{self._story_slug}/actor", actor)
-        vertex.x = self._story_x_pos
-        vertex.y = self._detail_y - ACTOR_LABEL_HEIGHT - ACTOR_LABEL_GAP
-        vertex.width = STORY_SIZE
-        vertex.height = ACTOR_LABEL_HEIGHT
-        vertex.style = _STYLE_ACTOR
-        self._add_cell(self._graph_root, vertex)
-
-    def _emit_story_cell(self, story: Story) -> None:
-        vertex = self._cell(f"{self._sub_slug}/{self._story_slug}", story.name)
-        vertex.x = self._story_x_pos
-        vertex.y = self._detail_y
-        vertex.width = STORY_SIZE
-        vertex.height = STORY_SIZE
-        vertex.style = _STYLE_STORY_TMPL.format(role=story.story_type.value)
-        self._add_cell(self._graph_root, vertex)
-
-    def _emit_nested_sub_epics(self, sub_epic: SubEpic) -> None:
-        own_cols = len(sub_epic.stories)
-        col_cursor = self._first_story_col + own_cols
-        nested_origin_x = self._sub_x + own_cols * STORY_PITCH_X
-        parent_slug = self._sub_slug
-        depth = self._depth
-        first_story_col = self._first_story_col
-        for nested in sub_epic.sub_epics:
-            span = self._layout_columns(nested)
-            self._parent_slug = parent_slug
-            self._depth = depth + 1
-            self._sub_x = nested_origin_x + (col_cursor - first_story_col - own_cols) * STORY_PITCH_X
-            self._width = span * STORY_PITCH_X - SUBEPIC_TIGHTEN * 2
-            self._first_story_col = col_cursor
-            self._emit_sub_epic(nested)
-            col_cursor += span
-
-    def _emit_sub_epic_estimate(self, sub_epic: SubEpic) -> None:
-        estimate = (sub_epic.estimate or "").strip()
-        if not estimate:
-            return
-        if sub_epic.stories:
-            last_story_x = (
-                self._sub_x + SUBEPIC_TIGHTEN + (len(sub_epic.stories) - 1) * STORY_PITCH_X
-            )
-            est_x = last_story_x + STORY_SIZE + ESTIMATE_STORY_GAP
-        else:
-            est_x = self._sub_x + SUBEPIC_TIGHTEN
-        vertex = self._cell(f"{self._sub_slug}/estimate", self._estimate_label(estimate))
-        vertex.x = est_x
-        vertex.y = self._detail_y
-        vertex.width = max(self._width - (est_x - self._sub_x) - SUBEPIC_TIGHTEN, 80)
-        vertex.height = STORY_SIZE
-        vertex.style = _STYLE_ESTIMATE
-        self._add_cell(self._graph_root, vertex)
-
-    def _epic_width(self, epic: Epic) -> int:
-        if not epic.sub_epics:
-            return STORY_PITCH_X
-        return sum(self._layout_columns(sub) * STORY_PITCH_X for sub in epic.sub_epics)
-
-    def _next_story_col(self, story_map: StoryMap, epic: Epic) -> int:
-        col = 0
-        for candidate in story_map.epics:
-            if candidate is epic:
-                return col
-            for sub in candidate.sub_epics:
-                col += self._layout_columns(sub)
-        return col
-
-    def _collect_story_x(self, canonical: StoryMap, out: Dict[str, int]) -> None:
-        epic_x_cursor = LEFT_MARGIN_X
-        for epic in canonical.epics:
-            sub_x_cursor = epic_x_cursor + EPIC_CONTENT_INSET
-            for sub in epic.sub_epics:
-                self._collect_sub_epic_x(sub, sub_x_cursor)
-                sub_x_cursor += self._layout_columns(sub) * STORY_PITCH_X
-            epic_x_cursor += self._epic_width(epic) + EPIC_GAP
-
-    def _collect_sub_epic_x(self, sub_epic: SubEpic, sub_x: int) -> None:
-        if sub_epic.sub_epics:
-            col_cursor = sub_x
-            for nested in sub_epic.sub_epics:
-                self._collect_sub_epic_x(nested, col_cursor)
-                col_cursor += self._layout_columns(nested) * STORY_PITCH_X
-            return
-        for i, story in enumerate(sub_epic.stories):
-            self._story_x[story.name] = sub_x + SUBEPIC_TIGHTEN + i * STORY_PITCH_X
 
     def _new_document(self):
         root = ET.Element("mxGraphModel")
@@ -662,35 +539,11 @@ class DrawIOStoryMap(StoryMap):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
         return root, graph_root, 2
 
-    def _render_clause(self, graph_root, cell_id, clause, phase_keyword, y):
-        label = clause.text if clause.is_continuation else f"{phase_keyword} {clause.text}"
-        vertex = self._cell(cell_id, label)
-        vertex.x = CLAUSE_INDENT
-        vertex.y = y
-        vertex.width = CLAUSE_WIDTH
-        vertex.height = CLAUSE_HEIGHT
-        vertex.style = f"clause:{phase_keyword.lower()}"
-        return self._add_cell(graph_root, vertex)
-
     def _cell(self, cell_id, label) -> "DrawIOStoryMap.Vertex":
         vertex = self.Vertex()
         vertex.cell_id = cell_id
         vertex.label = label
         return vertex
-
-    def _walk_stories_with_scenarios(self, canonical: StoryMap) -> List[Story]:
-        result: List[Story] = []
-        for epic in canonical.epics:
-            for sub in epic.sub_epics:
-                self._collect_stories_with_scenarios(sub, result)
-        return result
-
-    def _collect_stories_with_scenarios(self, sub_epic: SubEpic, out: List[Story]) -> None:
-        for story in sub_epic.stories:
-            if getattr(story, "scenarios", None):
-                out.append(story)
-        for nested in sub_epic.sub_epics:
-            self._collect_stories_with_scenarios(nested, out)
 
     def _add_cell(self, graph_root, vertex):
         id_str = str(vertex.cell_id)

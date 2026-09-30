@@ -24,6 +24,14 @@ import {
   violatingClassWithPassingOps,
 } from '../helpers/story-graphs';
 
+function expandPaneRules(container: HTMLElement) {
+  for (const button of container.querySelectorAll('[data-testid="expand-pane-rules"]')) {
+    if (button.getAttribute('aria-expanded') === 'false') {
+      fireEvent.click(button);
+    }
+  }
+}
+
 const helper = new ExplorePracticeGraphsClientHelper();
 
 function visibleRuleTally(node: { rules: { status: string }[]; children: unknown[] } | undefined): {
@@ -204,7 +212,7 @@ story('Filter Graph', () => {
       const presented = KnowledgeGraph.fromDto(violatingClassWithPassingOps())
         .selectNode('ce:Operation:too_long')
         .present();
-      const { getByTestId } = render(
+      const { getByTestId, container } = render(
         <SelectedNodePane
           selectedNode={presented.selected_node}
           selectedTree={presented.selected_tree}
@@ -212,6 +220,7 @@ story('Filter Graph', () => {
           sourceFile={presented.source_file}
         />,
       );
+      expandPaneRules(container);
       fireEvent.click(getByTestId('copy-info-to-prompt'));
       expect(writeText).toHaveBeenCalled();
       const copied = String(writeText.mock.calls[0][0]);
@@ -232,7 +241,7 @@ story('Filter Graph', () => {
       const presented = KnowledgeGraph.fromDto(violatingClassWithPassingOps())
         .selectNode('ce:Operation:too_long')
         .present();
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText, container } = render(
         <SelectedNodePane
           selectedNode={presented.selected_node}
           selectedTree={presented.selected_tree}
@@ -240,6 +249,7 @@ story('Filter Graph', () => {
           sourceFile={presented.source_file}
         />,
       );
+      expandPaneRules(container);
       expect(getByText('Copy this rule is wrong prompt')).toBeTruthy();
       fireEvent.click(getByTestId('copy-this-rule-is-wrong-prompt'));
       const copied = String(writeText.mock.calls[0][0]);
@@ -288,37 +298,84 @@ story('Filter Graph', () => {
       expect(copied).not.toContain('Source:');
     });
   });
-  scenario('guidance off leaves only violation lines', ({ given, when, then }) => {
-    given('a violating class is open with rule guidance and source', () => {});
-    when('the Engineer turns guidance off', () => {});
-    then('the pane hides guidance body and source and keeps the violation', () => {
-      const presented = KnowledgeGraph.fromDto(violatingClassWithPassingOps())
-        .selectNode('ce:OoadClass:GraphClass')
-        .present();
-      const { getByTestId, queryByText, queryAllByText, container } = render(
+  scenario('source editors collapse one at a time and all at once', ({ given, when, then }) => {
+    given('a class pane with source editors', () => {});
+    when('the Engineer collapses one editor, then collapses and expands all', () => {});
+    then('only the chosen editor closes, then every editor follows the pane controls', () => {
+      const source = (file: string, text: string) => ({
+        file,
+        start_line: 1,
+        end_line: 2,
+        text,
+      });
+      const child = {
+        node_id: 'op',
+        name: 'checkout',
+        path: 'Cart.checkout',
+        practice: 'clean_engineering',
+        semantic_type: 'Operation',
+        is_file: false,
+        properties: {},
+        rule_statuses: {},
+        rules: [],
+        relationships: [],
+        source: source('cart.py', 'def checkout():\n    return\n'),
+        origin: null,
+        failed: 0,
+        total: 0,
+        children: [],
+      };
+      const selectedTree = {
+        node_id: 'class',
+        name: 'Cart',
+        path: 'Cart',
+        practice: 'clean_engineering',
+        semantic_type: 'OoadClass',
+        is_file: false,
+        properties: {},
+        rule_statuses: {},
+        rules: [],
+        relationships: [],
+        source: source('cart.py', 'class Cart:\n    pass\n'),
+        origin: null,
+        failed: 0,
+        total: 0,
+        children: [child],
+      };
+      const { getByTestId, container } = render(
         <SelectedNodePane
-          selectedNode={presented.selected_node}
-          selectedTree={presented.selected_tree}
+          selectedNode={{
+            name: 'Cart',
+            practice: 'clean_engineering',
+            stage: 'implementation',
+            semantic_type: 'OoadClass',
+            rules: [],
+          }}
+          selectedTree={selectedTree}
           selectedRule={null}
-          sourceFile={presented.source_file}
+          sourceFile={selectedTree.source}
         />,
       );
+      const editors = () =>
+        [...container.querySelectorAll('[data-testid="source-excerpt"], [data-testid="nested-source"]')];
+      const header = container.querySelector('[data-testid="source-excerpt"] h2');
+      expect(header?.textContent).toBe('Cart (Class)');
+      expect(container.querySelector('[data-testid="edit-source"]')).toBeNull();
+      expect(container.textContent ?? '').not.toContain('CART.PY');
+      expect(editors().some((editor) => editor.getAttribute('data-open') === 'true')).toBe(true);
       expect(
-        queryAllByText(/Keep each operation short enough to read as one thought/i)
-          .length,
-      ).toBeGreaterThan(0);
-      fireEvent.click(getByTestId('toggle-guidance').querySelector('input')!);
-      expect(
-        queryAllByText(/Keep each operation short enough to read as one thought/i),
-      ).toHaveLength(0);
-      expect(container.querySelector('[data-testid="source-excerpt"]')).toBeNull();
-      expect(container.querySelector('[data-testid="nested-source"]')).toBeNull();
-      expect(queryByText(/5 public operations/i)).not.toBeNull();
-      expect(queryByText(/too_long is 40 lines/i)).not.toBeNull();
-      expect(queryByText('load_property')).toBeNull();
-      expect(container.querySelectorAll('[data-testid="copy-info-to-prompt"]').length).toBe(
-        2,
+        container.querySelector('[data-testid="source-excerpt"] [data-testid="toggle-all-sources"]'),
+      ).toBeTruthy();
+      fireEvent.click(
+        container.querySelector('[data-testid="nested-source"] [data-testid="toggle-source"]')!,
       );
+      expect(editors()[0]?.getAttribute('data-open')).toBe('true');
+      expect(editors()[1]?.getAttribute('data-open')).toBe('false');
+      fireEvent.click(getByTestId('toggle-all-sources'));
+      expect(editors().every((editor) => editor.getAttribute('data-open') === 'false')).toBe(true);
+      fireEvent.click(getByTestId('toggle-all-sources'));
+      expect(editors().every((editor) => editor.getAttribute('data-open') === 'true')).toBe(true);
+      expect(container.querySelector('[data-testid="toggle-guidance"]')).toBeNull();
     });
   });
 });

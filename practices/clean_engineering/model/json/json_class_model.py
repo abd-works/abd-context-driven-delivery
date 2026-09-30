@@ -16,7 +16,9 @@ from practices.clean_engineering.model.base_class_model import (
     OoadClass,
     OoadNode,
 )
-from practices.clean_engineering.model.field_types import OperationField, PropertyField, Relationship
+from practices.clean_engineering.model.field_types import Relationship
+from practices.clean_engineering.model.operation import Operation
+from practices.clean_engineering.model.property import Property
 from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 
@@ -24,7 +26,7 @@ class JsonParseError(ValueError):
     pass
 
 
-class JsonProperty(PropertyField):
+class JsonProperty(Property):
     @classmethod
     def from_record(cls, record: dict) -> "JsonProperty":
         loaded = cls(
@@ -35,7 +37,7 @@ class JsonProperty(PropertyField):
         return loaded
 
 
-class JsonOperation(OperationField):
+class JsonOperation(Operation):
     @classmethod
     def from_record(cls, record: dict) -> "JsonOperation":
         return cls(
@@ -58,12 +60,12 @@ class JsonRelationship(Relationship):
 
 
 class JsonOoadClass(OoadClass):
-    def load_property_field(self, source: PropertyField) -> JsonProperty:
+    def load_property_field(self, source: Property) -> JsonProperty:
         loaded = JsonProperty(name=source.name)
         loaded.update_self(source)
         return loaded
 
-    def load_operation_field(self, source: OperationField) -> JsonOperation:
+    def load_operation_field(self, source: Operation) -> JsonOperation:
         loaded = JsonOperation(name=source.name)
         loaded.update_self(source)
         return loaded

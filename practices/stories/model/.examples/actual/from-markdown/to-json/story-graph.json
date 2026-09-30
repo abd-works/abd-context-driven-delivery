@@ -1,0 +1,1513 @@
+{
+  "epics": [
+    {
+      "name": "Onboard A Customer",
+      "sequentialOrder": 1,
+      "subEpics": [
+        {
+          "name": "Get Sign Up Plan",
+          "sequentialOrder": 1,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Hand Off Sign Up To Onboarding",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Website"
+              ]
+            },
+            {
+              "name": "Open Plan Deep Link",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Open Plan Deep Link",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Unknown plan deep link",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Load Plan Catalog",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Apply Catalog Voucher",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Apply Catalog Voucher via deep link",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Apply Catalog Voucher manually",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Short catalog voucher code is rejected",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Remove Catalog Voucher",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Apply unusable catalog voucher",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Create Customer",
+          "sequentialOrder": 2,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Enter Account Credentials",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Enter new account credentials",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Paradise Mobile email",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Email already registered",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Create Unconfirmed Cognito User",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Create Unconfirmed Cognito User",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Email already registered in Cognito",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Cognito register fails with another error",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Enter Validation Code",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Enter validation code",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Activate with unusable validation code",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Resend validation code",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Confirm Cognito User",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Confirm Cognito User",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Confirm with unusable validation code",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Issue Account Token To Browser Session",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Issue Account Token To Browser Session",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Validate Mavenir Customer in Cognito User Attributes",
+              "sequentialOrder": 6,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Cognito User already has a Mavenir Customer id",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Cognito User has no Mavenir Customer id",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Submit Create Customer Request to Mid-Tier",
+              "sequentialOrder": 7,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Submit Create Customer Request to Mid-Tier",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Email already has a Mavenir Customer",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Invalid Account Token",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Mavenir is unreachable",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Validate Cognito User",
+              "sequentialOrder": 8,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Validate Cognito User",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Submit Create Mavenir Customer",
+              "sequentialOrder": 9,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Submit Create Mavenir Customer",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Mavenir customer already exists",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Mavenir is unreachable",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Create Customer",
+              "sequentialOrder": 10,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Create Customer",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Email already has a Mavenir Customer",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Store Mavenir Customer Id on Cognito User",
+              "sequentialOrder": 11,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Store Mavenir Customer Id on Cognito User",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Load My Paradise Customer From Midtier And Store In Session",
+              "sequentialOrder": 12,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Load My Paradise Customer From Midtier And Store In Session",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Billing account is terminated",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Load customer fails",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Get Mavenir Customer and Transform To My Paradise Customer And Return",
+              "sequentialOrder": 13,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Get Mavenir Customer and Transform To My Paradise Customer And Return",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Get Mavenir Customer",
+              "sequentialOrder": 14,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Get Mavenir Customer",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Ensure Cart on Customer",
+              "sequentialOrder": 15,
+              "storyType": "user",
+              "scenarios": []
+            },
+            {
+              "name": "Fix Orphan Cognito Account",
+              "sequentialOrder": 16,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Fix Orphan Cognito Account",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Read False Initial Activation",
+              "sequentialOrder": 17,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Read False Initial Activation",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Sign In With Existing Account",
+              "sequentialOrder": 18,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Sign in with already-registered account credentials",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Email format is unmet",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Authenticate with incorrect account credentials",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Authenticate with unconfirmed account",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Password reset required",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "New password required",
+                  "sequentialOrder": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Number",
+          "sequentialOrder": 3,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Determine Number",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "View available numbers",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "View available numbers \u2014 MSISDN in cart",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Refresh available numbers",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Search for a number",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Query Msisdn Inventory",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Query MSISDN inventory for porting",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Query MSISDN inventory",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "List Msisdn Resources",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "List MSISDN resources for porting",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "List MSISDN resources",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Search Msisdn Inventory",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Search MSISDN inventory",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Search Msisdn Resources",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Search MSISDN resources by pattern",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Choose a Number",
+              "sequentialOrder": 6,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Pick new number",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Pick new number \u2014 replace existing",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Keep current number",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Submit Reserve Number Request to Mid-Tier",
+              "sequentialOrder": 7,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Reserve number",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Reserve number \u2014 replace existing",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Reserve number request fails",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Submit Reserve Msisdn",
+              "sequentialOrder": 8,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Reserve temporary MSISDN for porting",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Reserve MSISDN",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Reserve MSISDN \u2014 release previous",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Reserve Msisdn Resource",
+              "sequentialOrder": 9,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Reserve MSISDN resource as temporary port-in number",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Reserve MSISDN resource",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Reserve MSISDN resource \u2014 release previous",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Submit Patch Cart With Number Request to Mid-Tier",
+              "sequentialOrder": 10,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Patch cart with number",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Patch cart with number fails",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Patch Cart With Number",
+              "sequentialOrder": 11,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Patch cart with MSISDN",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Patch Shopping Cart",
+              "sequentialOrder": 12,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Patch shopping cart with portability",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Patch shopping cart with MSISDN",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Patch Shopping Cart",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Bring a Number",
+              "sequentialOrder": 13,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Bring a number",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Number to be ported is incomplete",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Provider not selected",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Confirm Number Already With Paradise",
+              "sequentialOrder": 14,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Confirm the number is not already with Paradise",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Confirm the number is already with Paradise",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Evaluate Porting Two Factor Flag",
+              "sequentialOrder": 15,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Porting two factor flag enabled (Intended)",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Porting two factor flag disabled (live)",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Submit Portability Request to Mid-Tier",
+              "sequentialOrder": 16,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Submit portability request \u2014 porting-2fa off (live)",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Submit portability request \u2014 porting-2fa on, SMS sent (Intended)",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Submit portability request \u2014 rate limited, bypass (Intended)",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Submit portability request \u2014 invalid number (Intended)",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Submit portability request fails",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Patch Cart With Portability",
+              "sequentialOrder": 17,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Patch cart with portability",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Send Port Verification",
+              "sequentialOrder": 18,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Send port verification SMS",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Send port verification \u2014 rate limited",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Send port verification \u2014 invalid number",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Send Verification Sms",
+              "sequentialOrder": 19,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Send verification SMS",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Send verification SMS \u2014 rate limited",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Enter Porting Sms Code",
+              "sequentialOrder": 20,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Enter ++porting SMS code++",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Verify with unusable ++porting SMS code++",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Resend ++porting SMS code++",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Check Port Verification",
+              "sequentialOrder": 21,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Check port verification \u2014 code valid",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Check port verification \u2014 code mismatch",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Check Verification",
+              "sequentialOrder": 22,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Check verification \u2014 code valid",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Check verification \u2014 code mismatch",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Keep Current Number",
+              "sequentialOrder": 23,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Sweep Stale Number Reservations",
+              "sequentialOrder": 24,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Sweep stale number reservations",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Care"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Onboarding Plan",
+          "sequentialOrder": 4,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Query Product Offerings And Map To Catalog",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Query Product Offerings And Map To Catalog",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "List Product Offerings",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "List Product Offerings",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Load Plan Catalog",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Choose Onboarding Plan",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Choose Onboarding Plan",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Choose a different ++plan++",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Select the ++plan++ already in the cart",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Failed to update plan",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Patch Cart With Plan",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Patch Cart With Plan",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Patch Cart With Plan \u2014 portability plan name updated",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Patch Shopping Cart",
+              "sequentialOrder": 6,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Patch shopping cart with portability",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Patch shopping cart with MSISDN",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Patch Shopping Cart",
+                  "sequentialOrder": 0
+                }
+              ]
+            },
+            {
+              "name": "Keep Current Plan",
+              "sequentialOrder": 7,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Keep Current Plan",
+                  "sequentialOrder": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Sim",
+          "sequentialOrder": 5,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Choose Esim",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Choose eSIM",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Choose eSIM \u2014 already on the line",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Choose eSIM \u2014 cart patch fails",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Request a Paradise Sim Card",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Request a Paradise SIM card",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Request a Paradise SIM card \u2014 already on the line",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Request a Paradise SIM card \u2014 cart patch fails",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Enter Existing Sim",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Enter existing SIM",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "ICCID contains spaces",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Inventory rejects ICCID",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Activate Sim",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Activate Sim",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "waiting pSIM is absent",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "waiting pSIM already completed",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Complete Draft Sim Order",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Complete Draft Sim Order",
+                  "sequentialOrder": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Verified Profile",
+          "sequentialOrder": 6,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Customer Complete Persona Kyc",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Persona verification required",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Persona verification already complete",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Create a completed Persona inquiry",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Persona inquiry not completed",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "No government ID document on inquiry",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Persona errors on inquiry load",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Document not found",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Document email mismatch",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Verify later",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Enter valid identity and address",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Enter identity after a verified Persona inquiry",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Re-enter a verified identity",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Enter incomplete identity or address",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Confirm identity with a verified Persona inquiry",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Profile requirements unmet",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Customer already exists",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Mavenir profile patch error",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Collect Identity With Brand Amassador",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Collect identity with Brand Ambassador",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Ambassador"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Order Review",
+          "sequentialOrder": 7,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Check The Order",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Check the order",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Check the order with port-in number",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Upgrade To Data Freedom",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Upgrade plan from review",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "No upsell shown on top-tier plan",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Change Plan From Review",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Select a different plan from review",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Keep current plan from review",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Select the plan already in the cart from review",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Plan update fails from review",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Payment",
+          "sequentialOrder": 8,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Enter Payment",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Enter Payment",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Pay upfront",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Payment authorization fails to load",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "FAC authorization timeout",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Evaluate Payment Flags",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": []
+            },
+            {
+              "name": "Authorize Card",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Payment completed",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Card not verified",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Maximum payment attempts",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Provide Apple Pay Certificate",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Provide Apple Pay certificate",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Adjust Credit Manually",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Adjust credit for pay-upfront or voucher",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Care"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Place Order",
+          "sequentialOrder": 9,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Create Billing Account",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Create billing account",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Billing account already exists",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Billing account creation fails",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "Create Product Order",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Create product order",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Pay-up-front charge fails",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Product order fails",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Onboarding is already done",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Unverified with no bypass and no portability",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "View Order Result",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "View order result",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Create Order Ticket",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Create order ticket",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "My Paradise"
+              ]
+            },
+            {
+              "name": "View Order History",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "View Order History",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "Care"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Voucher Credit",
+          "sequentialOrder": 10,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Redeem Voucher and Apply Credit",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [
+                {
+                  "name": "Redeem a plan-restricted voucher that matches the cart bundle",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Redeem an any-plan voucher",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Skip redeem when the cart bundle is not in the voucher plan list",
+                  "sequentialOrder": 0
+                },
+                {
+                  "name": "Failed voucher redemption",
+                  "sequentialOrder": 0
+                }
+              ],
+              "actors": [
+                "My Paradise"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Self-Serve Subscription",
+      "sequentialOrder": 2,
+      "subEpics": [
+        {
+          "name": "Access Selfcare",
+          "sequentialOrder": 1,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Enter Sign In Credentials",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Reset Password",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Edit Profile",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Sign Out",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Manage Billing",
+          "sequentialOrder": 2,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "View Billing",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Pay Now",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Enter New Payment Method",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Manage Services",
+          "sequentialOrder": 3,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "View Dashboard",
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Change Plan",
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Request Line Portability",
+              "sequentialOrder": 3,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            },
+            {
+              "name": "Purchase Device",
+              "sequentialOrder": 4,
+              "storyType": "user",
+              "scenarios": []
+            },
+            {
+              "name": "Send Support Request",
+              "sequentialOrder": 5,
+              "storyType": "user",
+              "scenarios": [],
+              "actors": [
+                "Customer"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

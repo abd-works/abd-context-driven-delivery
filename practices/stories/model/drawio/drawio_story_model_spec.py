@@ -1,11 +1,4 @@
-"""Mamba spec for `a DrawIO Story Map`. Mirrors ../../bdd-context.md `## Diagrams` -> `a DrawIO Story Map`.
-
-Exercises the Uniform Callable Surface: parse(external) -> StoryMap,
-render(canonical, previous=None) -> str, sync(external, canonical) ->
-UpdateReport. The DrawIO backend is stateless - every call passes the canonical
-StoryMap explicitly, and `DiagramStoryMap` positioning stays an internal detail
-of the backend.
-"""
+"""Mamba spec for a DrawIO story map. Render creates the document. Parse reads it back."""
 
 import sys
 import xml.etree.ElementTree as ET
@@ -21,33 +14,37 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
-from practices.stories.model.story_map import StoryMap
-from practices.stories.model.thin_slice import Increment
-from practices.stories.model.scenario import Clause, Interaction, Phase, Scenario
+from practices.stories.model.story_model import Story, StoryMap, StoryType
+from practices.stories.model.story_model import Increment
+from practices.stories.model.story_model import Scenario
+from practices.stories.model.diagram_story_model import DiagramEpic, DiagramEpic
 from practices.stories.model.drawio.nodes import (
+    DrawIOEpic,
+    DrawIOIncrement,
     DrawIOParseError,
+    DrawIOStory,
     DrawIOStoryMap,
-    LEFT_MARGIN_X,
-    SUBEPIC_DEPTH_GAP,
-    SUBEPIC_HEIGHT,
+    DrawIOEpic,
 )
+LEFT_MARGIN_X = DiagramEpic.left_margin
+SUBEPIC_DEPTH_GAP = DiagramEpic.depth_gap
+SUBEPIC_HEIGHT = DiagramEpic.bar_height
 
 
 class DrawIOStoryMapFixture:
-    def with_4_epics_and_3_sub_epics_and_1_story(self) -> StoryMap:
-        story_map = StoryMap()
+    def with_4_epics_and_3_epics_and_1_story(self) -> StoryMap:
+        story_map = DrawIOStoryMap()
         for i in range(1, 5):
-            story_map.append_epic(Epic(f"Epic {i}", i))
+            story_map.append_epic(DrawIOEpic(f"Epic {i}", i))
         first_epic = story_map.epics[0]
         for j in range(1, 4):
-            sub = SubEpic(f"SubEpic 1.{j}", j)
-            story = Story(f"Story 1.{j}.1", 1, StoryType.USER)
+            sub = DrawIOEpic(f"Epic 1.{j}", j)
+            story = DrawIOStory(f"Story 1.{j}.1", 1, StoryType.USER)
             story.scenarios.append(
                 Scenario(name="scenario step", sequential_order=1)
             )
-            sub.stories.append(story)
-            first_epic.sub_epics.append(sub)
+            sub.append_story(story)
+            first_epic.append_epic(sub)
         return story_map
 
 
@@ -56,11 +53,11 @@ with description("a DrawIO Story Map") as self:
         self.drawio = DrawIOStoryMap()
 
     with context(
-        "that holds a rendered diagram Story Map with 4 Epics and 3 SubEpics under the first Epic"
+        "that holds a rendered diagram Story Map with 4 Epics and 3 Epics under the first Epic"
     ):
         with before.each:
-            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
-            self.text = self.drawio.render(self.source)
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
+            self.text = self.source.clone()
 
         with it("should serialize as a valid DrawIO document"):
             tree = ET.fromstring(self.text)
@@ -75,8 +72,8 @@ with description("a DrawIO Story Map") as self:
 
         with context("with an Epic appended and the DrawIO document re-rendered"):
             with before.each:
-                self.source.append_epic(Epic("Epic 5", 5))
-                self.new_text = self.drawio.render(self.source)
+                self.source.append_epic(DrawIOEpic("Epic 5", 5))
+                self.new_text = self.source.clone()
 
             with context("the document"):
                 with it(
@@ -94,80 +91,59 @@ with description("a DrawIO Story Map") as self:
         with context("with the first Epic renamed and the DrawIO document re-rendered"):
             with before.each:
                 self.source.epics[0].name = "Epic 1 (renamed)"
-                self.new_text = self.drawio.render(self.source)
+                self.new_text = self.source.clone()
 
             with context("the shape for the first Epic"):
                 with it("should carry the new name as its label"):
                     expect("Epic 1 (renamed)" in self.new_text).to(be_true)
 
-        with context("with a SubEpic deleted and the DrawIO document re-rendered"):
+        with context("with a Epic deleted and the DrawIO document re-rendered"):
             with before.each:
-                self.source.epics[0].sub_epics.pop(0)
-                self.new_text = self.drawio.render(self.source)
+                self.source.epics[0].epics.pop(0)
+                self.new_text = self.source.clone()
 
             with context("the document"):
                 with it(
-                    "should no longer contain the shape for the deleted SubEpic or any of its descendants"
+                    "should no longer contain the shape for the deleted Epic or any of its descendants"
                 ):
-                    expect('value="SubEpic 1.1"' in self.new_text).to(be_false)
+                    expect('value="Epic 1.1"' in self.new_text).to(be_false)
                     expect('value="Story 1.1.1"' in self.new_text).to(be_false)
-
-    with context("that has been edited in the DrawIO document and synced back"):
-        with before.each:
-            self.canonical = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
-            edited = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
-            edited.epics[0].name = "Epic 1 (edited)"
-            edited.append_epic(Epic("Epic 5", 5))
-            edited_text = self.drawio.render(edited)
-            self.report = self.drawio.sync(edited_text, self.canonical)
-
-        with context("the returned UpdateReport"):
-            with it(
-                "should list every add, remove, rename, reorder, and move applied to the document"
-            ):
-                expect(
-                    len(self.report.adds()) + len(self.report.renames()) >= 2
-                ).to(be_true)
-
-        with context("the reconstructed Story Map"):
-            with it("should reflect every edit made to the document"):
-                names = [e.name for e in self.canonical.epics]
-                expect("Epic 1 (edited)" in names).to(be_true)
-                expect("Epic 5" in names).to(be_true)
 
     with context("that has been rendered and parsed back without edits"):
         with before.each:
-            self.original = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
-            self.parsed = self.drawio.parse(self.drawio.render(self.original))
+            self.original = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
+            self.parsed = self.drawio.load(self.original.clone())
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
-            first_story = self.parsed.epics[0].sub_epics[0].stories[0]
+            first_story = self.parsed.epics[0].epics[0].stories[0]
             expect(first_story.scenarios).to(have_len(0))
 
         with it("should preserve the actor shown above a Story"):
-            self.original.epics[0].sub_epics[0].stories[0].users = ["Customer"]
-            parsed = self.drawio.parse(self.drawio.render(self.original))
-            expect(parsed.epics[0].sub_epics[0].stories[0].users).to(
+            self.original.epics[0].epics[0].stories[0].actors = ["Customer"]
+            parsed = self.drawio.load(self.original.clone())
+            expect(parsed.epics[0].epics[0].stories[0].actors).to(
                 equal(["Customer"])
             )
 
     with context("that is not a valid DrawIO document"):
         with context("the parse"):
             with it("should be rejected"):
-                expect(lambda: self.drawio.parse("<not-drawio/>")).to(
+                expect(lambda: self.drawio.load("<not-drawio/>")).to(
                     raise_error(DrawIOParseError)
                 )
 
     with context("rendering the thin-slice view for a StoryMap with 2 increments"):
         with before.each:
-            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_sub_epics_and_1_story()
-            inc_a = Increment(name="Increment A - first outcome", sequential_order=1)
-            inc_a.stories = ["Story 1.1.1", "Story 1.2.1"]
-            inc_b = Increment(name="Increment B - second outcome", sequential_order=2)
-            inc_b.stories = ["Story 1.3.1"]
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
+            inc_a = Increment(
+                "Increment A - first outcome",
+                1,
+                [Story("Story 1.1.1", 1), Story("Story 1.2.1", 2)],
+            )
+            inc_b = Increment("Increment B - second outcome", 2, [Story("Story 1.3.1", 1)])
             self.source.append_increment(inc_a)
             self.source.append_increment(inc_b)
-            self.text = self.drawio.render_thin_slice(self.source)
+            self.text = DrawIOIncrement.save(self.source)
 
         with it("should serialize as a valid DrawIO document with mxfile envelope"):
             root_el = ET.fromstring(self.text)
@@ -217,80 +193,23 @@ with description("a DrawIO Story Map") as self:
             label_x = int(label.find("mxGeometry").attrib["x"])
             expect(label_x < LEFT_MARGIN_X).to(be_true)
 
-    with context("rendering the scenario view for a Story with one Scenario"):
-        with before.each:
-            self.source = StoryMap()
-            epic = Epic("Epic 1", 1)
-            sub = SubEpic("SubEpic 1.1", 1)
-            story = Story("Submit Order", 1, StoryType.USER)
-            scenario = Scenario(
-                name="Submit before cutoff settles same day",
-                story_name="Submit Order",
-            )
-            scenario.given = [Clause(text="a Treasurer with a funded Account", phase=Phase.GIVEN)]
-            scenario.interactions = [
-                Interaction(
-                    when=[Clause(text="the Treasurer submits a Transfer", phase=Phase.WHEN)],
-                    then=[
-                        Clause(text="the System returns a Confirmation", phase=Phase.THEN),
-                        Clause(
-                            text="And the Transfer is marked same-day",
-                            phase=Phase.THEN,
-                            is_continuation=True,
-                        ),
-                    ],
-                )
-            ]
-            story.scenarios.append(scenario)
-            sub.stories.append(story)
-            epic.sub_epics.append(sub)
-            self.source.append_epic(epic)
-            self.text = self.drawio.render_scenario(self.source)
-
-        with it("should serialize as a valid DrawIO document"):
-            tree = ET.fromstring(self.text)
-            expect(tree.tag).to(equal("mxGraphModel"))
-
-        with it("should render one story cell, one scenario cell, and one clause cell per Clause"):
-            tree = ET.fromstring(self.text)
-            story_cells = [
-                c for c in tree.findall(".//mxCell[@vertex='1']")
-                if c.attrib.get("style", "").startswith("story:")
-            ]
-            scenario_cells = [
-                c for c in tree.findall(".//mxCell[@vertex='1']")
-                if c.attrib.get("style") == "scenario"
-            ]
-            clause_cells = [
-                c for c in tree.findall(".//mxCell[@vertex='1']")
-                if c.attrib.get("style", "").startswith("clause:")
-            ]
-            expect(story_cells).to(have_len(1))
-            expect(scenario_cells).to(have_len(1))
-            expect(clause_cells).to(have_len(4))
-
-        with it("should prefix first-of-phase clauses with the phase keyword and leave continuations untouched"):
-            expect("Given a Treasurer with a funded Account" in self.text).to(be_true)
-            expect("When the Treasurer submits a Transfer" in self.text).to(be_true)
-            expect("Then the System returns a Confirmation" in self.text).to(be_true)
-            expect("And the Transfer is marked same-day" in self.text).to(be_true)
-
     with context("that stacks nested sub-epics by depth (parent above children)"):
         with before.each:
-            self.source = StoryMap()
-            epic = Epic("Create Hero", 1)
-            compose = SubEpic("Compose Powers", 1)
-            attack = SubEpic("Compose Attack Power", 1)
-            attack.stories.append(Story("Compose Damage Effect", 1, StoryType.USER))
-            extras = SubEpic("Apply Power Extra", 2)
-            extras.stories.append(Story("Apply Area Extra", 1, StoryType.USER))
-            delivery = SubEpic("Apply Delivery Extra", 1)
-            delivery.stories.append(Story("Apply Accurate Extra", 1, StoryType.USER))
-            extras.sub_epics.append(delivery)
-            compose.sub_epics.extend([attack, extras])
-            epic.sub_epics.append(compose)
+            self.source = DrawIOStoryMap()
+            epic = DrawIOEpic("Create Hero", 1)
+            compose = DrawIOEpic("Compose Powers", 1)
+            attack = DrawIOEpic("Compose Attack Power", 1)
+            attack.append_story(DrawIOStory("Compose Damage Effect", 1, StoryType.USER))
+            extras = DrawIOEpic("Apply Power Extra", 2)
+            extras.append_story(DrawIOStory("Apply Area Extra", 1, StoryType.USER))
+            delivery = DrawIOEpic("Apply Delivery Extra", 1)
+            delivery.append_story(DrawIOStory("Apply Accurate Extra", 1, StoryType.USER))
+            extras.append_epic(delivery)
+            compose.append_epic(attack)
+            compose.append_epic(extras)
+            epic.append_epic(compose)
             self.source.append_epic(epic)
-            self.text = self.drawio.render(self.source)
+            self.text = self.source.clone()
             self.tree = ET.fromstring(self.text)
             self.row_pitch = SUBEPIC_HEIGHT + SUBEPIC_DEPTH_GAP
 
@@ -338,29 +257,30 @@ with description("a DrawIO Story Map") as self:
             )
 
         with it("should round-trip nested hierarchy"):
-            parsed = self.drawio.parse(self.text)
-            compose = parsed.epics[0].sub_epics[0]
+            parsed = self.drawio.load(self.text)
+            compose = parsed.epics[0].epics[0]
             expect(compose.name).to(equal("Compose Powers"))
-            expect(compose.sub_epics).to(have_len(2))
-            extras = compose.sub_epics[1]
+            expect(compose.epics).to(have_len(2))
+            extras = compose.epics[1]
             expect(extras.name).to(equal("Apply Power Extra"))
             expect([s.name for s in extras.stories]).to(equal(["Apply Area Extra"]))
-            expect(extras.sub_epics).to(have_len(1))
-            expect(extras.sub_epics[0].name).to(equal("Apply Delivery Extra"))
+            expect(extras.epics).to(have_len(1))
+            expect(extras.epics[0].name).to(equal("Apply Delivery Extra"))
 
     with context("that renders a shaping outline with estimates and no phantom stories"):
         with before.each:
-            self.source = StoryMap()
-            epic = Epic("Move money", 1)
+            self.source = DrawIOStoryMap()
+            epic = DrawIOEpic("Move money", 1)
             epic.estimate = "approx 22-27 total stories"
-            compose = SubEpic("Compose transfer", 1)
-            compose.stories.append(Story("Draft transfer details", 1, StoryType.USER))
+            compose = DrawIOEpic("Compose transfer", 1)
+            compose.append_story(DrawIOStory("Draft transfer details", 1, StoryType.USER))
             compose.estimate = "approx 2-3 more stories (validation)"
-            approve = SubEpic("Approve transfer", 2)
+            approve = DrawIOEpic("Approve transfer", 2)
             approve.estimate = "approx 4-6 more stories (review)"
-            epic.sub_epics.extend([compose, approve])
+            epic.append_epic(compose)
+            epic.append_epic(approve)
             self.source.append_epic(epic)
-            self.text = self.drawio.render(self.source)
+            self.text = self.source.clone()
             self.tree = ET.fromstring(self.text)
 
         with it("should render * estimate labels below sub-epics beside stories"):
@@ -393,15 +313,15 @@ with description("a DrawIO Story Map") as self:
 
         with context("parsed back from the diagram"):
             with before.each:
-                self.parsed = self.drawio.parse(self.text)
+                self.parsed = self.drawio.load(self.text)
 
             with it("should round-trip estimates on epic and sub-epics"):
                 expect(self.parsed.epics[0].estimate).to(
                     equal("approx 22-27 total stories")
                 )
-                expect(self.parsed.epics[0].sub_epics[0].estimate).to(
+                expect(self.parsed.epics[0].epics[0].estimate).to(
                     equal("approx 2-3 more stories (validation)")
                 )
-                expect(self.parsed.epics[0].sub_epics[1].estimate).to(
+                expect(self.parsed.epics[0].epics[1].estimate).to(
                     equal("approx 4-6 more stories (review)")
                 )

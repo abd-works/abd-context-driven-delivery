@@ -305,16 +305,57 @@ class SourceSpan:
     def _brace_block_end(self, lines: list[str], start_index: int) -> int:
         depth = 0
         seen = False
+        saw_arrow = False
+        arrow_body = False
         for index in range(start_index, len(lines)):
-            for ch in lines[index]:
+            line = lines[index]
+            i = 0
+            while i < len(line):
+                ch = line[i]
+                if ch in "'\"`":
+                    i = self._skip_quoted(line, i)
+                    continue
+                if line.startswith("=>", i):
+                    saw_arrow = True
+                    i += 2
+                    continue
                 if ch == "{":
+                    if saw_arrow and not arrow_body:
+                        arrow_body = True
+                        depth = 1
+                        seen = True
+                        i += 1
+                        continue
                     depth += 1
                     seen = True
                 elif ch == "}":
                     depth -= 1
                     if seen and depth == 0:
+                        if not arrow_body and self._arrow_ahead(lines, index, i + 1):
+                            seen = False
+                            i += 1
+                            continue
                         return index
+                i += 1
         return start_index
+
+    def _arrow_ahead(self, lines: list[str], index: int, column: int) -> bool:
+        window = lines[index][column:]
+        if index + 1 < len(lines):
+            window += "\n" + lines[index + 1]
+        return "=>" in window
+
+    def _skip_quoted(self, line: str, start: int) -> int:
+        quote = line[start]
+        i = start + 1
+        while i < len(line):
+            if line[i] == "\\":
+                i += 2
+                continue
+            if line[i] == quote:
+                return i + 1
+            i += 1
+        return len(line)
 
 
 class GraphMemberRows:

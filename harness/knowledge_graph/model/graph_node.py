@@ -29,6 +29,8 @@ class Kind:
     USES = "uses"
     DEMONSTRATES = "demonstrates"
     DEMONSTRATED_THROUGH = "demonstratedThrough"
+    LOADS = "loads"
+    RETRIEVED_USING = "retrievedUsing"
     DESCRIBES = "describes"
     NAMES_STATE = "namesState"
     OBSERVES = "observes"

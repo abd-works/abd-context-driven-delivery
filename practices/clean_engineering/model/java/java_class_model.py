@@ -107,7 +107,7 @@ class JavaCleanEngineeringModel(CleanEngineeringModel):
                 if op.name.startswith("_"):
                     continue  # privates never on I{Class}
                 ret = _java_type(op.return_type) if op.return_type else "void"
-                params = ", ".join(op.parameters)
+                params = ", ".join(parameter.save() for parameter in op.parameters)
                 lines.append(f"    {ret} {_camel(op.name)}({params});")
             lines.append("}")
             return "\n".join(lines)
@@ -134,7 +134,7 @@ class JavaCleanEngineeringModel(CleanEngineeringModel):
         for op in oclass.operations:
             ret = _java_type(op.return_type) if op.return_type else "void"
             access = "private" if op.name.startswith("_") else "public abstract"
-            params = ", ".join(op.parameters)
+            params = ", ".join(parameter.save() for parameter in op.parameters)
             method_name = _camel(op.name)
             lines.append(f"    {access} {ret} {method_name}({params});")
         lines.append("}")

@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from typing import List, Optional, Tuple
 
 from practices.clean_engineering.model.base_class_model import OoadClass
+from practices.clean_engineering.model.field_types import Relationship
 from practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
@@ -97,7 +98,7 @@ class DrawIOClass(DiagramClass):
         bits = ''.join(
             (
                 f"{('- ' if op.name.startswith('_') else '+ ')}"
-                f"{html.escape(op.name)}({', '.join(op.parameters)})"
+                f"{html.escape(op.name)}({', '.join(parameter.save() for parameter in op.parameters)})"
                 f"{(': ' + html.escape(op.return_type) if op.return_type else '')}<br/>"
                 for op in self.operations
             )
@@ -201,3 +202,10 @@ class DrawIOModule(DiagramModule):
             if term and 'stack' not in term.lower():
                 terms.append(term)
         return terms
+
+
+class DrawIORelationship(Relationship):
+    """Orthogonal Draw.io edge between two class boxes."""
+
+    def route(self, model, source_box):
+        return model._route_waypoints(source_box)

@@ -43,47 +43,30 @@ fidelity: bounded_context
 
 {{ContextName}}
 
-  vendor: {{custom | bespoke | vendor name}}
+  owner: {{ name}}
+  system: {{ name}}
 
-  aggregates:
-
+  {Aggregate}:
     {{Root}}:
-
       emits:
-
         - {{EventName}}
-
       consumes:
-
         - {{EventName}}
-
       members:
-
+      - {{member}}
         - {{member}}
 
-        - {{member}}
-
-      refs:
-
+      Integrations:
         - {{OtherRoot}} (by {{IdType}})
-
-      depends:
-
-        {{UpstreamContext}}:
-
           pattern: {{Shared Kernel | Customer/Supplier | Conformist | ACL | Open Host | Separate Ways}}
-
-          crosses: {{concepts}}
-
-          integrate: {{concrete call site}}
-
-    {{Root}}:
+    
+    {AnotherAggregate}:
+      {{Root}}:
 
       …
-
   event_map:
 
-    - {{EventName}}: emitted by {{Root}}; consumed by {{Root}}, {{Root}}
+    - {{EventName}}: emitted by {{Root}}; consumed by {{Root}}, {{Root}}, {{Root}}
 
 ```
 

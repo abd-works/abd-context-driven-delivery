@@ -242,7 +242,7 @@ class CodeQLPopulate:
 
     def _demonstrate_classes(self, example: GraphExample, cls_names: List[str]) -> None:
         for class_name in cls_names:
-            cls = self.graph.find_class(class_name)
+            cls = self.graph.ce_class_named(class_name)
             if cls is None:
                 continue
             example.relate(Kind.DEMONSTRATES, cls)

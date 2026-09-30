@@ -23,7 +23,7 @@ from practices.clean_engineering.model.codeql.codeql_model import (
     Operation,
 )
 from practices.stories.model.codeql.codeql_model import Example, Step
-from practices.stories.model.scenario import Phase
+from practices.stories.model.story_model import StepType
 from practices.stories.model.source_location import SourceLocation
 
 _SLICE = _REPO_ROOT / "harness" / "knowledge_graph" / "examples" / "codeql-slice"
@@ -56,7 +56,7 @@ with description("CodeQL populate on PracticeGraph"):
         graph = PracticeGraph(_SLICE)
         step = Step(
             text="My Paradise loads the customer from Mavenir",
-            phase=Phase.WHEN,
+            step_type=StepType.WHEN,
             sequential_order=1,
             source=SourceLocation(
                 "stories/onboard-a-customer/create-customer/load-customer/load_customer_story.test.ts",

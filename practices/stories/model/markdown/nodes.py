@@ -3,10 +3,10 @@
 Layout produced:
 
     # Epic 1
-    ## SubEpic 1
+    ## Epic 1
     - Story 1
     - Story 2
-    ## SubEpic 2
+    ## Epic 2
     # Epic 2
 """
 
@@ -16,18 +16,11 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from practices.stories.model.markdown.example_factories import (
-    parse_md_factory_line,
-    render_md_factory_line,
-)
-from practices.stories.model.example import Example
-from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
-from practices.stories.model.scenario import Clause, Interaction, Phase, Scenario
+from practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from practices.stories.model.story_model import Background, StepType, Scenario, Step
 from practices.stories.model.source_location import SourceLocation
-from practices.stories.model.story_map import StoryMap
-from practices.stories.model.thin_slice import Increment
-from practices.stories.model.update_report import UpdateReport
-
+from practices.stories.model.story_model import StoryMap
+from practices.stories.model.story_model import Increment
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 _BULLET_PATTERN = re.compile(r"^(\s*)-\s+(.+)$")
 _NUMBERED_PATTERN = re.compile(r"^(\s*)\d+\.\s+(.+)$")
@@ -124,8 +117,23 @@ _ITALIC_STEP = re.compile(r"^\s*\*(Given|When|Then|And|But)\*\s+(.+?)\s*$", re.I
 _BULLET_STEP = re.compile(r"^\s*[-*]\s+(Given|When|Then|And|But)\b\s*(.+?)\s*$", re.IGNORECASE)
 _BOLD_TERM = re.compile(r"\*\*([^*]+)\*\*")
 _ITALIC_VALUE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
+_STEP_CONTINUATION = re.compile(r"^(And|But)\s+", re.IGNORECASE)
 _TABLE_ROW = re.compile(r"^\s*\|(.+)\|\s*$")
 _H1 = re.compile(r"^#\s+(.+)$")
+
+
+class MarkdownStep(Step):
+    """Step whose text may still carry a markdown And or But prefix."""
+
+    def display_text(self) -> str:
+        """Step text without a leading And or But. The keyword already says which."""
+        return _STEP_CONTINUATION.sub("", self.text).strip()
+
+    @classmethod
+    def prose(cls, step: Step) -> str:
+        if isinstance(step, cls):
+            return step.display_text()
+        return step.text
 
 
 class MarkdownScenario(Scenario):
@@ -141,7 +149,8 @@ class MarkdownScenario(Scenario):
         seen: set = set()
         for pattern in (
             "**/scenarios/*.md", "**/scenarios/**/*.md", "**/scenarios.md",
-            "**/md/*.md", "**/md/**/*.md", "**/*_story.test.md", "**/story-scenarios.md", "**/stories/**/*.md",
+            "**/md/*.md", "**/md/**/*.md", "**/*_story.test.md", "**/*_story.spec.md",
+            "**/story-scenarios.md", "**/stories/**/*.md",
         ):
             for md in root.glob(pattern):
                 rel = str(md.relative_to(root)).replace("\\", "/")
@@ -166,21 +175,18 @@ class MarkdownScenario(Scenario):
         self._lines = text.splitlines()
         self._path = Path(rel)
         self._story_name = self._infer_story_name()
-        self._background: List[Clause] = []
+        self._shared_background = Background("background", 1)
         self._scenarios: List[MarkdownScenario] = []
-        self._builder: Optional[_ScenarioBuilder] = None
+        self._current: Optional[MarkdownScenario] = None
         self._in_background = False
         self._in_examples = False
         self._example_headers: List[str] = []
         self._example_group = ""
-        self._story_examples: List[Example] = []
-        self._background_phase: Optional[Phase] = None
+        self._active_phase: Optional[StepType] = None
         self._clause_source: Optional[SourceLocation] = None
-        self._clause_is_continuation = False
         self._clause_keyword = ""
         self._parse_document_lines()
-        self._flush_builder()
-        self._attach_story_examples()
+        self._flush_current()
         return self._scenarios
 
     def _parse_document_lines(self) -> None:
@@ -203,11 +209,9 @@ class MarkdownScenario(Scenario):
         match = _STORY_H2.match(self._raw_line)
         if match is None:
             return False
-        self._flush_builder()
-        self._attach_story_examples()
+        self._flush_current()
         self._story_name = self._strip_markup(match.group(1))
-        self._background = []
-        self._story_examples = []
+        self._shared_background = Background("background", 1)
         self._example_group = ""
         self._in_background = False
         self._in_examples = False
@@ -217,14 +221,14 @@ class MarkdownScenario(Scenario):
         match = _SCENARIO_H3.match(self._raw_line)
         if match is None:
             return False
-        self._flush_builder()
-        self._builder = _ScenarioBuilder(
-            self,
-            self._strip_markup(match.group(1)),
-            self._story_name,
-            is_outline="outline" in self._raw_line.lower(),
-            source=SourceLocation(self._rel, self._line_index),
+        self._flush_current()
+        self._current = type(self)(
+            name=self._strip_markup(match.group(1)),
+            story_name=self._story_name,
         )
+        self._current.is_outline = "outline" in self._raw_line.lower()
+        self._current.source = SourceLocation(self._rel, self._line_index)
+        self._active_phase = None
         self._in_background = False
         self._in_examples = False
         return True
@@ -245,7 +249,6 @@ class MarkdownScenario(Scenario):
     def _begin_background(self) -> bool:
         self._in_background = True
         self._in_examples = False
-        self._background_phase = None
         return True
 
     def _begin_examples(self) -> bool:
@@ -276,8 +279,8 @@ class MarkdownScenario(Scenario):
         self._clause_source = SourceLocation(self._rel, self._line_index)
         if self._in_background:
             self._consume_background(keyword, step_text)
-        elif self._builder:
-            self._builder.accept(keyword, step_text)
+        elif self._current is not None:
+            self._accept_step(keyword, step_text)
         return True
 
     def _accept_example_row(self) -> None:
@@ -299,30 +302,22 @@ class MarkdownScenario(Scenario):
     def _record_example_row(self, row: dict) -> None:
         if self._example_group:
             row.setdefault("group", self._example_group)
-        if self._builder:
-            self._builder.append_example_row(row)
+        if self._current is not None:
+            index = len(self._current.examples) + 1
+            label = str(row.get("example") or row.get("name") or f"example-{index}")
+            self._current.examples[label] = row
             return
-        index = len(self._story_examples) + 1
-        label = str(
-            row.get("example") or row.get("name") or self._example_group or f"example-{index}"
-        )
-        self._story_examples.append(Example(label, index, row, scope="story"))
+        index = len(self._shared_background.examples) + 1
+        label = str(row.get("example") or row.get("name") or self._example_group or f"example-{index}")
+        self._shared_background.examples[label] = row
 
-    def _flush_builder(self) -> None:
-        if self._builder is None:
+    def _flush_current(self) -> None:
+        if self._current is None:
             return
-        self._scenarios.append(self._builder.build(self._background))
-        self._builder = None
-
-    def _attach_story_examples(self) -> None:
-        if not self._story_examples:
-            return
-        for scenario in self._scenarios:
-            if (scenario.story_name or "").strip() != (self._story_name or "").strip():
-                continue
-            existing = list(getattr(scenario, "story_examples", []) or [])
-            scenario.story_examples = existing + list(self._story_examples)
-            return
+        if self._shared_background.steps or self._shared_background.examples:
+            self._current.backgrounds = [self._shared_background.clone()]
+        self._scenarios.append(self._current)
+        self._current = None
 
     def strip_backticks(self, text: str) -> str:
         s = text.strip()
@@ -342,19 +337,12 @@ class MarkdownScenario(Scenario):
             return None
         return (match.group(1), match.group(2).strip())
 
-    def begin_clause(self, is_continuation: bool, keyword: str) -> None:
-        self._clause_is_continuation = is_continuation
-        self._clause_keyword = keyword
-
-    def make_clause(self, text: str, phase: Phase) -> Clause:
-        return self._make_clause(text, phase)
-
-    def _make_clause(self, text: str, phase: Phase) -> Clause:
+    def make_step(self, text: str, phase: StepType, sequential_order: int) -> MarkdownStep:
         match = _BOLD_TERM.search(text)
-        return Clause(
+        return MarkdownStep(
             text=text,
-            phase=phase,
-            is_continuation=self._clause_is_continuation,
+            step_type=phase,
+            sequential_order=sequential_order,
             keyword=self._clause_keyword,
             concepts=_BOLD_TERM.findall(text),
             values=[v.strip("`").strip() for v in _ITALIC_VALUE.findall(text) if v],
@@ -362,27 +350,31 @@ class MarkdownScenario(Scenario):
             source=self._clause_source,
         )
 
-    def _consume_background(self, keyword: str, text: str) -> None:
-        kw = keyword.lower()
-        if kw == "given":
-            self._clause_is_continuation = False
-            self._clause_keyword = "Given"
-            self._background.append(self._make_clause(text, Phase.GIVEN))
-            self._background_phase = Phase.GIVEN
-            return
-        if kw in ("and", "but"):
-            phase = self._background_phase or Phase.GIVEN
-            labeled = kw.capitalize()
-            self._clause_is_continuation = True
+    def _take_step(self, steps: List[Step], keyword: str, text: str) -> None:
+        word = keyword.lower()
+        if word in ("and", "but") and steps:
+            previous = steps[-1]
+            labeled = word.capitalize()
             self._clause_keyword = labeled
-            self._background.append(self._make_clause(f"{labeled} {text}", phase))
+            previous.ands = [
+                *previous.ands,
+                self.make_step(text, previous.step_type, len(previous.ands) + 1),
+            ]
             return
-        phase = Phase.WHEN if kw == "when" else Phase.THEN
-        labeled = "When" if kw == "when" else "Then"
-        self._clause_is_continuation = False
-        self._clause_keyword = labeled
-        self._background.append(self._make_clause(text, phase))
-        self._background_phase = phase
+        phase = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}.get(word, StepType.THEN)
+        self._clause_keyword = word.capitalize()
+        self._active_phase = phase
+        steps.append(self.make_step(text, phase, len(steps) + 1))
+
+    def _consume_background(self, keyword: str, text: str) -> None:
+        steps = list(self._shared_background.steps)
+        self._take_step(steps, keyword, text)
+        self._shared_background.steps = steps
+
+    def _accept_step(self, keyword: str, text: str) -> None:
+        steps = list(self._current.steps)
+        self._take_step(steps, keyword, text)
+        self._current.steps = steps
 
     @classmethod
     def render_scenarios(cls, scenarios: List["MarkdownScenario"], *, story_name: str = "") -> str:
@@ -395,19 +387,22 @@ class MarkdownScenario(Scenario):
             kind = "Scenario Outline" if getattr(sc, "is_outline", False) else "Scenario"
             lines.append(f"### {kind}: {sc.name}")
             lines.append("")
-            for clause in getattr(sc, "background", None) or []:
-                lines.append(f"*{clause.phase.value.capitalize()}* {clause.text}")
-            for clause in sc.given:
-                kw = "Given" if clause is sc.given[0] else "And"
-                lines.append(f"*{kw}* {clause.text}")
-            for interaction in sc.interactions:
-                for i, clause in enumerate(interaction.when):
-                    kw = "When" if i == 0 else "And"
-                    lines.append(f"*{kw}* {clause.text}")
-                for i, clause in enumerate(interaction.then):
-                    kw = "Then" if i == 0 else "And"
-                    lines.append(f"*{kw}* {clause.text}")
-            rows = list(getattr(sc, "example_rows", None) or [])
+            for background in sc.backgrounds:
+                if not background.steps:
+                    continue
+                lines.append("### Background")
+                lines.append("")
+                for step in background.steps:
+                    lines.extend(cls._step_lines(step))
+                lines.append("")
+            for step in sc.steps_in(StepType.GIVEN):
+                lines.extend(cls._step_lines(step))
+            for when_steps, then_steps in sc.when_then_runs():
+                for step in when_steps:
+                    lines.extend(cls._step_lines(step))
+                for step in then_steps:
+                    lines.extend(cls._step_lines(step))
+            rows = sc.examples.table()
             if rows:
                 lines.append("")
                 lines.append("### Examples")
@@ -419,6 +414,13 @@ class MarkdownScenario(Scenario):
                     lines.append("| " + " | ".join(str(row.get(h, "")) for h in headers) + " |")
             lines.append("")
         return "\n".join(lines).rstrip() + "\n"
+
+    @classmethod
+    def _step_lines(cls, step: Step) -> List[str]:
+        lines = [f"*{step.keyword}* {MarkdownStep.prose(step)}"]
+        for extra in step.ands:
+            lines.append(f"*{extra.keyword}* {MarkdownStep.prose(extra)}")
+        return lines
 
     def _infer_story_name(self) -> str:
         for line in self._lines[:20]:
@@ -435,97 +437,48 @@ class MarkdownScenario(Scenario):
         return self._path.stem.replace("-", " ")
 
 
-class _ScenarioBuilder:
-    def __init__(
-        self,
-        parser: MarkdownScenario,
-        name: str,
-        story_name: str,
-        is_outline: bool,
-        source: SourceLocation,
-    ) -> None:
-        self._parser = parser
-        self._scenario = type(parser)(name=name, story_name=story_name)
-        self._scenario.is_outline = is_outline
-        self._scenario.source = source
-        self._active_phase: Optional[Phase] = None
-        self._active_interaction: Optional[Interaction] = None
-
-    def accept(self, keyword: str, text: str) -> None:
-        kw = keyword.lower()
-        if kw == "given":
-            self._parser.begin_clause(False, "Given")
-            self._scenario.given.append(self._make_clause(text, Phase.GIVEN))
-            self._active_phase = Phase.GIVEN
-            self._active_interaction = None
-            return
-        if kw == "when":
-            self._start_when(text)
-            return
-        if kw == "then":
-            self._append_then(text)
-            return
-        if kw in ("and", "but"):
-            self._accept_continuation(kw, text)
-
-    def append_example_row(self, row: dict) -> None:
-        self._scenario.example_rows.append(row)
-
-    def _start_when(self, text: str) -> None:
-        self._active_interaction = Interaction()
-        self._scenario.interactions.append(self._active_interaction)
-        self._parser.begin_clause(False, "When")
-        self._active_interaction.when.append(self._make_clause(text, Phase.WHEN))
-        self._active_phase = Phase.WHEN
-
-    def _append_then(self, text: str) -> None:
-        if self._active_interaction is None:
-            self._active_interaction = Interaction()
-            self._scenario.interactions.append(self._active_interaction)
-        self._parser.begin_clause(False, "Then")
-        self._active_interaction.then.append(self._make_clause(text, Phase.THEN))
-        self._active_phase = Phase.THEN
-
-    def _accept_continuation(self, kw: str, text: str) -> None:
-        keyword = kw.capitalize()
-        prefixed = f"{keyword} {text}"
-        self._parser.begin_clause(True, keyword)
-        if self._active_phase is Phase.GIVEN:
-            self._scenario.given.append(self._make_clause(prefixed, Phase.GIVEN))
-            return
-        if self._active_phase is Phase.WHEN and self._active_interaction:
-            self._active_interaction.when.append(self._make_clause(prefixed, Phase.WHEN))
-            return
-        if self._active_phase is Phase.THEN and self._active_interaction:
-            self._active_interaction.then.append(self._make_clause(prefixed, Phase.THEN))
-
-    def _make_clause(self, text: str, phase: Phase) -> Clause:
-        return self._parser.make_clause(text, phase)
-
-    def build(self, background: List[Clause]) -> "MarkdownScenario":
-        self._scenario.background = list(background)
-        self._scenario.sync_tree_from_legacy()
-        return self._scenario
-
-
 # -- Leaf node types -----------------------------------------------------------
 
 class MarkdownStory(Story):
     def load_scenario(self, source: Scenario) -> MarkdownScenario:
         return MarkdownScenario(source.name, source.sequential_order, source.story_name)
 
+    def load_scenarios(self, root) -> None:
+        name = self.name.strip()
+        took_examples = False
+        for scenario in MarkdownScenario.from_workspace(root):
+            if (scenario.story_name or "").strip() != name:
+                continue
+            self.scenarios.append(scenario)
+            if took_examples:
+                continue
+            took_examples = self._take_background_examples(scenario)
 
-class MarkdownSubEpic(SubEpic):
-    def load_sub_epic(self, source: SubEpic) -> "MarkdownSubEpic":
-        return MarkdownSubEpic(source.name, source.sequential_order)
+    def _take_background_examples(self, scenario) -> bool:
+        took = False
+        for background in scenario.backgrounds:
+            if not background.examples:
+                continue
+            if not self.backgrounds:
+                self.backgrounds.append(Background("background", 1))
+            for example_name, example in background.examples.items():
+                self.backgrounds[0].examples[example_name] = example
+            took = True
+        return took
+
+
+class MarkdownEpic(Epic):
+    def load_epic(self, source: Epic) -> "MarkdownEpic":
+        return MarkdownEpic(source.name, source.sequential_order)
 
     def load_story(self, source: Story) -> MarkdownStory:
         return MarkdownStory(source.name, source.sequential_order, source.story_type)
 
-
-class MarkdownEpic(Epic):
-    def load_sub_epic(self, source: SubEpic) -> MarkdownSubEpic:
-        return MarkdownSubEpic(source.name, source.sequential_order)
+    def _load_scenarios(self, root) -> None:
+        for child in self.epics:
+            child._load_scenarios(root)
+        for story in self.stories:
+            story.load_scenarios(root)
 
 
 # -- Root node + I/O -----------------------------------------------------------
@@ -543,6 +496,8 @@ class MarkdownParseError(Exception):
 
 
 class MarkdownStoryMap(StoryMap):
+    epic_type = MarkdownEpic
+    story_type = MarkdownStory
     """Markdown story-map I/O. IS the format-typed tree root.
 
     parse / render / sync implement the Uniform Callable Surface.
@@ -585,9 +540,24 @@ class MarkdownStoryMap(StoryMap):
             if not getattr(merged, "source", None):
                 from practices.stories.model.source_location import SourceLocation as _SL
                 merged.source = _SL(rel, 1)
-        return merged if merged.epics else None
+        if not merged.epics:
+            return None
+        workspace = root.parent if root.is_file() else root
+        merged._attach_markdown(workspace)
+        return merged
+
+    def _attach_markdown(self, root) -> None:
+        for epic in self.epics:
+            epic._load_scenarios(root)
+        if self.increments:
+            return
+        for increment in MarkdownIncrement.from_workspace(root):
+            self.increments.append(increment)
 
     # -- Uniform Callable Surface ----------------------------------------------
+
+    def save(self) -> str:
+        return self.render(self)
 
     def render(self, story_map: "MarkdownStoryMap", previous: Optional[str] = None) -> str:
         if self._should_render_outline(story_map, previous):
@@ -598,20 +568,22 @@ class MarkdownStoryMap(StoryMap):
         return "\n".join(lines)
 
     def _should_render_outline(self, story_map: "MarkdownStoryMap", previous: Optional[str]) -> bool:
+        if any(epic.epics for epic in story_map.epics):
+            return True
         if previous and self._contains_outline_structure(previous.splitlines()):
             return True
         for epic in story_map.epics:
             if getattr(epic, "estimate", ""):
                 return True
-            for sub in epic.sub_epics:
+            for sub in epic.epics:
                 if self._sub_tree_has_outline_signal(sub):
                     return True
         return False
 
-    def _sub_tree_has_outline_signal(self, sub: MarkdownSubEpic) -> bool:
+    def _sub_tree_has_outline_signal(self, sub: MarkdownEpic) -> bool:
         if getattr(sub, "estimate", ""):
             return True
-        for nested in sub.sub_epics:
+        for nested in sub.epics:
             if self._sub_tree_has_outline_signal(nested):
                 return True
         return False
@@ -624,15 +596,12 @@ class MarkdownStoryMap(StoryMap):
         self._outline_indent = 4
         for epic in story_map.epics:
             self._outline_lines.append(f"(E) {self.strip_backticks(epic.name)}")
-            factory_line = render_md_factory_line(epic.collected_example_factories())
-            if factory_line:
-                self._outline_lines.append(f"    {factory_line}")
             if getattr(epic, "estimate", ""):
                 self._outline_lines.append(f"    * {epic.estimate}")
-            self._render_outline_sub_epics(epic.sub_epics)
+            self._render_outline_epics(epic.epics)
         return "\n".join(self._outline_lines)
 
-    def _render_outline_sub_epics(self, subs: List[MarkdownSubEpic]) -> None:
+    def _render_outline_epics(self, subs: List[MarkdownEpic]) -> None:
         pad = " " * self._outline_indent
         story_pad = " " * (self._outline_indent + 4)
         for sub in subs:
@@ -641,12 +610,12 @@ class MarkdownStoryMap(StoryMap):
             if getattr(sub, "estimate", ""):
                 self._outline_lines.append(f"{story_pad}* {sub.estimate}")
             self._outline_indent += 4
-            self._render_outline_sub_epics(sub.sub_epics)
+            self._render_outline_epics(sub.epics)
             self._outline_indent -= 4
 
-    def _render_outline_stories(self, sub: MarkdownSubEpic, story_pad: str) -> None:
+    def _render_outline_stories(self, sub: MarkdownEpic, story_pad: str) -> None:
         for story in sub.stories:
-            actor = story.users[0] if story.users else ""
+            actor = story.actors[0] if story.actors else ""
             name = self.strip_backticks(story.name)
             if actor:
                 actor_name = self.strip_backticks(actor)
@@ -682,7 +651,7 @@ class MarkdownStoryMap(StoryMap):
         story_map = MarkdownStoryMap()
         stories: dict[str, MarkdownStory] = {}
         epic = MarkdownEpic("Stories", 1)
-        sub = MarkdownSubEpic("Scenarios", 1)
+        sub = MarkdownEpic("Scenarios", 1)
         for scenario in scenarios:
             name = (scenario.story_name or "Story").strip()
             story = stories.get(name)
@@ -692,17 +661,14 @@ class MarkdownStoryMap(StoryMap):
                 sub.stories.append(story)
             story.scenarios.append(scenario)
         if stories:
-            epic.sub_epics.append(sub)
+            epic.epics.append(sub)
             story_map.epics.append(epic)
         return story_map
-
-    def sync(self, text: str, canonical: "MarkdownStoryMap") -> UpdateReport:
-        return canonical.translate_from(self.parse(text))
 
     # -- Source location stamping ----------------------------------------------
 
     def attach_source_locations(self, text: str, rel_file: str) -> None:
-        """Stamp SourceLocation onto each Epic/SubEpic/Story from the markdown text."""
+        """Stamp SourceLocation onto each Epic/Epic/Story from the markdown text."""
         lines = text.splitlines()
         is_outline = any(
             _OUTLINE_EPIC_RE.match(l) or _OUTLINE_STORY_RE.match(l) for l in lines
@@ -747,30 +713,25 @@ class MarkdownStoryMap(StoryMap):
                 self._stamp_story(m_bullet.group(2).strip(), SourceLocation(rel_file, i))
 
     def _stamp_sub_epic(self, name: str, loc: SourceLocation) -> None:
-        for sub in self.all_sub_epics():
-            if sub.name == name and not getattr(sub, "source", None):
-                sub.source = loc
+        for epic in self.epics:
+            if epic._stamp_epic(name, loc):
                 return
 
     def _stamp_story(self, name: str, loc: SourceLocation) -> None:
-        for story in self.all_stories():
-            if story.name == name and not getattr(story, "source", None):
-                story.source = loc
+        for epic in self.epics:
+            if epic._stamp_story(name, loc):
                 return
 
     # -- render helpers --------------------------------------------------------
 
     def _render_epic(self, epic: MarkdownEpic, lines: List[str], depth: int) -> None:
         lines.append(f"{'#' * depth} {epic.name}")
-        factory_line = render_md_factory_line(epic.collected_example_factories())
-        if factory_line:
-            lines.append(factory_line)
-        for sub in epic.sub_epics:
+        for sub in epic.epics:
             self._render_sub_epic(sub, lines, depth + 1)
 
-    def _render_sub_epic(self, sub: MarkdownSubEpic, lines: List[str], depth: int) -> None:
+    def _render_sub_epic(self, sub: MarkdownEpic, lines: List[str], depth: int) -> None:
         lines.append(f"{'#' * depth} {sub.name}")
-        for nested in sub.sub_epics:
+        for nested in sub.epics:
             self._render_sub_epic(nested, lines, depth + 1)
         for story in sub.stories:
             lines.append(f"- {story.name}")
@@ -798,7 +759,7 @@ class MarkdownStoryMap(StoryMap):
     def _parse_lines(self, lines: List[str]) -> "MarkdownStoryMap":
         self._story_map = MarkdownStoryMap()
         self._current_epic: Optional[MarkdownEpic] = None
-        self._sub_epic_stack: List[MarkdownSubEpic] = []
+        self._sub_epic_stack: List[MarkdownEpic] = []
         self._current_story: Optional[MarkdownStory] = None
         self._epic_heading_depth: Optional[int] = None
         self._ignored_heading_depth: Optional[int] = None
@@ -814,7 +775,6 @@ class MarkdownStoryMap(StoryMap):
                 continue
             if self._accept_map_numbered():
                 continue
-            self._accept_map_factory_line()
         return self._story_map
 
     def _skip_ignored_section(self) -> bool:
@@ -876,11 +836,11 @@ class MarkdownStoryMap(StoryMap):
         while len(self._sub_epic_stack) >= relative_depth:
             self._sub_epic_stack.pop()
         parent_children = (
-            self._sub_epic_stack[-1].sub_epics
+            self._sub_epic_stack[-1].epics
             if self._sub_epic_stack
-            else self._current_epic.sub_epics
+            else self._current_epic.epics
         )
-        sub = MarkdownSubEpic(name, len(parent_children) + 1)
+        sub = MarkdownEpic(name, len(parent_children) + 1)
         parent_children.append(sub)
         self._sub_epic_stack.append(sub)
         self._current_story = None
@@ -916,14 +876,6 @@ class MarkdownStoryMap(StoryMap):
         )
         return True
 
-    def _accept_map_factory_line(self) -> None:
-        factories = parse_md_factory_line(self._raw_line.strip())
-        if not factories or self._current_epic is None:
-            return
-        for factory in factories:
-            if factory not in self._current_epic.example_factories:
-                self._current_epic.example_factories.append(factory)
-
     def _is_document_title(self, name: str) -> bool:
         lower = name.lower()
         return any(lower.startswith(p) for p in _DOC_TITLE_PREFIXES)
@@ -931,14 +883,14 @@ class MarkdownStoryMap(StoryMap):
     def _is_non_story_section_heading(self, name: str) -> bool:
         return name.lower() in {"context gaps", "validation results"}
 
-    def _ensure_sub_epic(self) -> MarkdownSubEpic:
+    def _ensure_sub_epic(self) -> MarkdownEpic:
         if self._sub_epic_stack:
             return self._sub_epic_stack[-1]
         if self._current_epic is None:
             self._current_epic = MarkdownEpic("Imported", len(self._story_map.epics) + 1)
             self._story_map.epics.append(self._current_epic)
-        sub = MarkdownSubEpic(self._current_epic.name, len(self._current_epic.sub_epics) + 1)
-        self._current_epic.sub_epics.append(sub)
+        sub = MarkdownEpic(self._current_epic.name, len(self._current_epic.epics) + 1)
+        self._current_epic.epics.append(sub)
         self._sub_epic_stack.append(sub)
         return sub
 
@@ -956,7 +908,6 @@ class MarkdownStoryMap(StoryMap):
                 continue
             if self._accept_outline_estimate():
                 continue
-            self._accept_map_factory_line()
         return self._story_map
 
     def _accept_outline_epic(self) -> bool:
@@ -975,11 +926,11 @@ class MarkdownStoryMap(StoryMap):
         while len(self._sub_epic_stack) >= indent:
             self._sub_epic_stack.pop()
         parent_children = (
-            self._sub_epic_stack[-1].sub_epics
+            self._sub_epic_stack[-1].epics
             if self._sub_epic_stack
-            else self._current_epic.sub_epics
+            else self._current_epic.epics
         )
-        sub = MarkdownSubEpic(name, len(parent_children) + 1)
+        sub = MarkdownEpic(name, len(parent_children) + 1)
         parent_children.append(sub)
         self._sub_epic_stack.append(sub)
         return True
@@ -993,7 +944,7 @@ class MarkdownStoryMap(StoryMap):
         actor, story_name = self._split_outline_story(match.group(2))
         story = MarkdownStory(story_name, len(self._sub_epic_stack[-1].stories) + 1, StoryType.USER)
         if actor:
-            story.users = [actor]
+            story.actors = [actor]
         self._sub_epic_stack[-1].stories.append(story)
         return True
 

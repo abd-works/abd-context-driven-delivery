@@ -37,6 +37,7 @@ from practices.clean_engineering.model.base_class_model import CleanEngineeringM
 from practices.clean_engineering.model.diagram.diagram_node import (
     ContainmentForest,
     DiagramClass,
+    DiagramCleanEngineeringModel,
     is_modules_view,
     module_tab_label,
     path_parent,
@@ -45,6 +46,7 @@ from practices.clean_engineering.model.diagram.geometry import CELL_WIDTH, Geome
 from practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
+    DrawIORelationship,
     ImportedClass,
     MODULE_CHILD_STYLE,
     MODULE_STYLE,
@@ -80,7 +82,7 @@ MODULE_SUBTITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=
 _MODULE_MARKER = 'fillColor=#1a3a6e'
 _MODULE_CHILD_MARKER = 'fillColor=#dae8fc'
 
-class DrawIOCleanEngineeringModel(CleanEngineeringModel):
+class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def __init__(self, name: str='', sequential_order: int=1) -> None:
         super().__init__(name, sequential_order)
@@ -151,6 +153,15 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         loaded.update_self(source)
         loaded.classes = list(source.classes)
         return loaded
+
+    def load(self, text: str) -> "DrawIOCleanEngineeringModel":
+        return self.parse(text)
+
+    def save(self, canonical: CleanEngineeringModel | None = None) -> str:
+        return self.render(canonical if canonical is not None else self)
+
+    def clone(self) -> str:
+        return super().clone().save()
 
     def load_class(self, source: OoadClass) -> DrawIOClass:
         loaded = DrawIOClass(name=source.name, sequential_order=source.sequential_order)
@@ -235,6 +246,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         model = DrawIOCleanEngineeringModel(name='', sequential_order=1)
         order = 1
         id_to_class: dict[str, OoadClass] = {}
+        id_to_name: dict[str, str] = {}
         module = DrawIOModule(name='', sequential_order=1)
         for cell in mxcells:
             if cell.get('vertex') != '1':
@@ -243,9 +255,13 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             name, props, ops = self._parse_class_html(value)
             if not name:
                 continue
+            cell_id = cell.get('id', '')
+            id_to_name[cell_id] = self._plain_class_name(name) or name
+            if 'dashed=1' in cell.get('style', ''):
+                continue
             oclass = DrawIOClass(name=name, sequential_order=order, properties=props, operations=ops)
             module.classes.append(oclass)
-            id_to_class[cell.get('id', '')] = oclass
+            id_to_class[cell_id] = oclass
             order += 1
         if module.classes:
             model.modules.append(module)
@@ -258,9 +274,10 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             if src_cls is None:
                 continue
             tgt_cls = id_to_class.get(tgt_id)
-            tgt_name = tgt_cls.name if tgt_cls else tgt_id
+            tgt_name = tgt_cls.name if tgt_cls else id_to_name.get(tgt_id, tgt_id)
             kind = self._classify_edge(cell.get('style', ''))
             src_cls.relationships.append(Relationship(target=tgt_name, kind=kind))
+            self._bind_edge_to_property(src_cls, tgt_name, kind)
         return model
 
     def _parse_classes_multipage(self, diagrams: List[ET.Element]) -> 'DrawIOCleanEngineeringModel':
@@ -320,6 +337,20 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             already = any((r.target == tgt_name and (r.kind or 'association') == kind for r in src_cls.relationships))
             if not already:
                 src_cls.relationships.append(Relationship(target=tgt_name, kind=kind))
+            self._bind_edge_to_property(src_cls, tgt_name, kind)
+
+    def _bind_edge_to_property(self, oclass: OoadClass, target: str, kind: str) -> None:
+        """The arrow is the property whose type names the target. Kind lives on that property."""
+        if (kind or "").lower() == "inheritance":
+            return
+        rank = {"composition": 3, "aggregation": 2, "association": 1}
+        for prop in oclass.properties:
+            names = re.findall(r"\b([A-Z][A-Za-z0-9]*)\b", prop.type_hint or "")
+            if target not in names:
+                continue
+            current = (getattr(prop, "stereotype", "") or "").lower()
+            if rank.get((kind or "").lower(), 0) >= rank.get(current, 0):
+                prop.stereotype = (kind or "association").lower()
 
     def render(self, canonical: CleanEngineeringModel) -> str:
         if self._is_modules_view(canonical):
@@ -412,24 +443,47 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         return ET.tostring(mxfile, encoding='unicode', xml_declaration=False)
 
     def _render_classes(self, canonical) -> str:
-        name_to_id: dict[str, str] = {}
-        id_to_oclass: Dict[str, OoadClass] = {}
-        for oclass in canonical.classes:
-            cell_id = self._slug(oclass.name)
-            name_to_id[oclass.name] = cell_id
-            plain = self._plain_class_name(oclass.name)
-            if plain and plain != oclass.name:
-                name_to_id.setdefault(plain, cell_id)
-            id_to_oclass[cell_id] = oclass
-        self._name_to_id = name_to_id
-        self._id_to_oclass = id_to_oclass
-        self._relationships = self._collect_relationships(canonical.classes, name_to_id)
+        self._bind_class_ids(canonical)
+        self._relationships = self._collect_relationships(canonical.classes)
         self._id_to_module = self._class_module_labels(canonical.modules)
         self._modules = canonical.modules
         named_modules = [m for m in canonical.modules if m.classes]
         if len(named_modules) < 2:
             return self._render_classes_single_page(canonical)
         return self._render_classes_multipage(named_modules)
+
+    def _bind_class_ids(self, canonical) -> None:
+        """One cell id per class. The same name in two modules is two boxes."""
+        object_id: dict[int, str] = {}
+        ids_by_name: dict[str, list[str]] = {}
+        id_to_oclass: dict[str, OoadClass] = {}
+        module_of: dict[int, Module] = {}
+        for module in canonical.modules:
+            for oclass in module.classes:
+                cell_id = f"{self._slug(module.name)}--{self._slug(oclass.name)}"
+                if cell_id in id_to_oclass:
+                    cell_id = f"{cell_id}-{oclass.sequential_order}"
+                object_id[id(oclass)] = cell_id
+                id_to_oclass[cell_id] = oclass
+                module_of[id(oclass)] = module
+                ids_by_name.setdefault(oclass.name, []).append(cell_id)
+                plain = self._plain_class_name(oclass.name)
+                if plain and plain != oclass.name:
+                    ids_by_name.setdefault(plain, []).append(cell_id)
+        self._object_id = object_id
+        self._ids_by_name = ids_by_name
+        self._id_to_oclass = id_to_oclass
+        self._module_of = module_of
+        self._name_to_id = {name: ids[0] for name, ids in ids_by_name.items()}
+
+    def _resolve_target(self, source: OoadClass, target_name: str) -> Optional[str]:
+        module = self._module_of.get(id(source))
+        if module is not None:
+            for oclass in module.classes:
+                if oclass.name == target_name or self._plain_class_name(oclass.name) == target_name:
+                    return self._object_id[id(oclass)]
+        ids = self._ids_by_name.get(target_name) or []
+        return ids[0] if ids else None
 
     def _render_classes_multipage(self, named_modules) -> str:
         mxfile = ET.Element('mxfile')
@@ -442,7 +496,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
     def _render_one_module_page(self, mxfile, module) -> None:
         page_name = module.name.strip()
         root_el = self._add_diagram_page(mxfile, page_name)
-        local_ids = [self._slug(c.name) for c in module.classes]
+        local_ids = [self._object_id[id(c)] for c in module.classes]
         local_set = set(local_ids)
         self._local_module_name = page_name
         import_ids = self._direct_import_ids(local_set)
@@ -505,10 +559,10 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         if self.keep_positioning and previous:
             placements = self._layout_classes_keep_positioning(self._id_to_oclass)
         else:
-            placements = self._layout_classes_clustered(self._id_to_oclass)
+            placements = self.place_classes()
             placements = self._resolve_class_overlaps(placements)
         self._placements = placements
-        self._local_id_list = [self._name_to_id[c.name] for c in canonical.classes]
+        self._local_id_list = [self._object_id[id(c)] for c in canonical.classes]
         self._append_local_class_cells(root_el)
         kept_pairs = self._copy_kept_edges(root_el, prev_edges)
         page_rels = [(s, t, k) for s, t, k in self._relationships if (s, t) not in kept_pairs]
@@ -800,7 +854,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         self._id_to_oclass = {cid: id_to_oclass[cid] for cid in new_ids}
         self._relationships = [(src, tgt, kind) for src, tgt, kind in saved_rels if src in self._id_to_oclass and tgt in self._id_to_oclass]
         self._previous_positions = None
-        new_placements = self._layout_classes_clustered(self._id_to_oclass)
+        new_placements = self.place_classes()
         self._id_to_oclass = saved_id_to_oclass
         self._relationships = saved_rels
         self._previous_positions = saved_prev
@@ -850,18 +904,25 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         for module in modules:
             label = self._module_tab_label(module.name)
             for oclass in module.classes:
-                out[self._slug(oclass.name)] = label
-                plain = self._plain_class_name(oclass.name)
-                if plain:
-                    out.setdefault(self._slug(plain), label)
+                out[self._object_id[id(oclass)]] = label
         return out
 
-    def _collect_relationships(self, classes: List[OoadClass], name_to_id: dict[str, str]) -> List[Tuple[str, str, str]]:
-        relationships = [(name_to_id[c.name], name_to_id[rel.target], rel.kind or 'association') for c in classes for rel in c.relationships if rel.target in name_to_id]
+    def _collect_relationships(self, classes: List[OoadClass]) -> List[Tuple[str, str, str]]:
+        relationships = []
         for oclass in classes:
+            src = self._object_id.get(id(oclass))
+            if not src:
+                continue
+            for rel in oclass.relationships:
+                tgt = self._resolve_target(oclass, rel.target)
+                if tgt:
+                    relationships.append((src, tgt, rel.kind or 'association'))
             base = self._extends_base_name(oclass.name)
-            if base and base in name_to_id:
-                pair = (name_to_id[oclass.name], name_to_id[base], 'inheritance')
+            if not base:
+                continue
+            tgt = self._resolve_target(oclass, base)
+            if tgt:
+                pair = (src, tgt, 'inheritance')
                 if pair not in relationships:
                     relationships.append(pair)
         return relationships
@@ -1105,7 +1166,10 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         self._exit_x, self._exit_y = self._side_anchor(spec['exit_side'], spec['exit_frac'])
         self._entry_x, self._entry_y = self._side_anchor(spec['entry_side'], spec['entry_frac'])
         self._bind_route_from_spec()
-        self._waypoints = self._route_waypoints(self._placements[spec['src_id']])
+        self._waypoints = DrawIORelationship(
+            target=spec.get('tgt_name', ''),
+            kind=spec.get('kind', ''),
+        ).route(self, self._placements[spec['src_id']])
         self._route_trial_points = self._waypoints
         self._edge_src_id = spec['src_id']
         self._edge_tgt_id = spec['tgt_id']
@@ -1428,7 +1492,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         clusters: List[List[str]] = []
         seen: set[str] = set()
         for module in named_modules:
-            members = [self._slug(c.name) for c in module.classes if self._slug(c.name) in id_set]
+            members = [self._object_id[id(c)] for c in module.classes if self._object_id.get(id(c)) in id_set]
             members = [m for m in members if m not in seen]
             if members:
                 clusters.append(members)
@@ -1781,6 +1845,9 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         width = max_x - origin_x
         height = max(0.0, cursor_y - origin_y - INNER_ROW_GAP)
         return (placements, width, height)
+
+    def place_classes(self) -> Dict[str, Tuple[float, float, float, float]]:
+        return self._layout_classes_clustered(self._id_to_oclass)
 
     def _layout_classes_clustered(self, id_to_oclass) -> Dict[str, Tuple[float, float, float, float]]:
         """Place same-module / same-aggregate classes in tight islands.
@@ -2295,7 +2362,16 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         ops: List[Operation] = []
 
         def _items(sec: str) -> List[str]:
-            return [line.strip() for line in re.findall('[+\\-]\\s*([^<]+)', sec) if line.strip()]
+            # UML rows start after a tag. Stop at the next break, so Collection<Customer> stays intact.
+            return [
+                line.strip()
+                for line in re.findall(
+                    r'(?:^|>|<br\s*/?>)\s*[+\-]\s*(.+?)(?=<br\s*/?>|</)',
+                    sec,
+                    flags=re.IGNORECASE,
+                )
+                if line.strip()
+            ]
         if len(sections) >= 3:
             for raw in _items(sections[1]):
                 if ':' in raw:

@@ -14,7 +14,9 @@ from practices.clean_engineering.model.base_class_model import (
     OoadClass as SourceClass,
 )
 from practices.clean_engineering.model.codeql.codeql_model import File as SourceFile
-from practices.clean_engineering.model.field_types import OperationField, PropertyField, Relationship
+from practices.clean_engineering.model.field_types import Relationship
+from practices.clean_engineering.model.operation import Operation
+from practices.clean_engineering.model.property import Property
 from practices.clean_engineering.model.operation import Operation as SourceOperation
 from practices.clean_engineering.model.operation import Parameter as SourceParameter
 from practices.clean_engineering.model.property import Property as SourceProperty
@@ -216,7 +218,7 @@ def _add_member(oclass: OoadClassTransformer, stripped: str) -> OperationTransfo
     if len(tokens) == 1:
         prop = PropertyTransformer(name, len(oclass.property_nodes) + 1)
         oclass.property_nodes.append(prop)
-        oclass.properties.append(PropertyField(name=name))
+        oclass.properties.append(Property(name=name))
         return None
     param_names = [] if tokens[1:] == ["()"] else tokens[1:]
     operation = OperationTransformer(name, len(oclass.operation_nodes) + 1)
@@ -224,7 +226,7 @@ def _add_member(oclass: OoadClassTransformer, stripped: str) -> OperationTransfo
         operation.parameters.append(ParameterTransformer(param_name, index))
     operation.legacy_parameters = list(param_names)
     oclass.operation_nodes.append(operation)
-    oclass.operations.append(OperationField(name=name, parameters=list(param_names)))
+    oclass.operations.append(Operation(name=name, parameters=list(param_names)))
     return operation
 
 

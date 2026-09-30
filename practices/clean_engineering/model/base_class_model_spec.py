@@ -19,10 +19,7 @@ from practices.clean_engineering.model.base_class_model import (
     Relationship,
     base_type_name_for,
     companion_interface_name,
-    ensure_example_factory_family,
     example_extension_kind,
-    example_factory_name_for,
-    is_example_factory_name,
 )
 
 
@@ -39,6 +36,24 @@ with description("Property"):
 
         with it("should default description to empty string"):
             expect(self.prop.description).to(equal(""))
+
+        with it("should default invariants to an empty list"):
+            expect(self.prop.invariants).to(equal([]))
+
+    with context("given ordered invariant lines"):
+        with before.each:
+            from practices.clean_engineering.model.property import append_invariant
+
+            self.prop = Property(name="verified", type_hint="boolean")
+            append_invariant(self.prop, "persisted KYC on the party")
+            append_invariant(self.prop, "flips true on confirmIdentity when PersonaInquiry.verified")
+
+        with it("should keep each line in order"):
+            expect([item.sequential_order for item in self.prop.invariants]).to(equal([1, 2]))
+            expect([item.text for item in self.prop.invariants]).to(equal([
+                "persisted KYC on the party",
+                "flips true on confirmIdentity when PersonaInquiry.verified",
+            ]))
 
 
 with description("Operation"):
@@ -64,7 +79,7 @@ with description("Operation"):
             )
 
         with it("should store parameters"):
-            expect(self.op.parameters).to(equal(["rate: float"]))
+            expect([parameter.save() for parameter in self.op.parameters]).to(equal(["rate: float"]))
 
         with it("should store return_type"):
             expect(self.op.return_type).to(equal("float"))
@@ -293,7 +308,7 @@ with description("CleanEngineeringModel"):
             expect(self.model.classes[0].intent).to(equal("new intent"))
 
 
-with description("example factory naming"):
+with description("interface naming"):
     with context("Fake / Isolated / Production prefixes"):
         with it("should detect FakeCart as Fake"):
             expect(example_extension_kind("FakeCart")).to(equal("Fake"))
@@ -310,15 +325,9 @@ with description("example factory naming"):
         with it("should strip FakeCart to Cart"):
             expect(base_type_name_for("FakeCart")).to(equal("Cart"))
 
-        with it("should name CartExampleFactory from ICart"):
-            expect(example_factory_name_for("ICart")).to(equal("CartExampleFactory"))
-
-        with it("should recognize CartExampleFactory"):
-            expect(is_example_factory_name("CartExampleFactory")).to(be_true)
-
     with context("companion_interface_name for example extensions"):
         with before.each:
-            self.known = ["ICart", "FakeCart", "IsolatedCart", "ProductionCart", "CartExampleFactory"]
+            self.known = ["ICart", "FakeCart", "IsolatedCart", "ProductionCart"]
 
         with it("should resolve FakeCart to ICart"):
             expect(companion_interface_name("FakeCart", self.known)).to(equal("ICart"))
@@ -328,34 +337,3 @@ with description("example factory naming"):
 
         with it("should resolve ProductionCart to ICart"):
             expect(companion_interface_name("ProductionCart", self.known)).to(equal("ICart"))
-
-        with it("should not resolve ExampleFactory to an interface"):
-            expect(companion_interface_name("CartExampleFactory", self.known)).to(equal(None))
-
-    with context("ensure_example_factory_family"):
-        with before.each:
-            self.module = Module(name="checkout", sequential_order=1)
-            self.added = ensure_example_factory_family(self.module, "ICart")
-
-        with it("should add ICart Cart and CartExampleFactory only"):
-            names = {c.name for c in self.module.classes}
-            expect(names).to(
-                equal(
-                    {
-                        "ICart",
-                        "Cart",
-                        "CartExampleFactory",
-                    }
-                )
-            )
-
-        with it("should not add Fake Isolated or Production subclasses"):
-            names = {c.name for c in self.module.classes}
-            expect("FakeCart" in names).to(equal(False))
-            expect("IsolatedCart" in names).to(equal(False))
-            expect("ProductionCart" in names).to(equal(False))
-
-        with it("should be idempotent"):
-            again = ensure_example_factory_family(self.module, "Cart")
-            expect(again).to(equal([]))
-            expect(self.module.classes).to(have_len(3))

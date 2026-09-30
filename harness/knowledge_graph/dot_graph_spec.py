@@ -41,7 +41,7 @@ with description("PracticeGraph dot_graph"):
             if Node().slug(node.name) == "onboard-a-customer"
         )
         dot = epic.dot_graph
-        expect(dot).to(contain("SubEpic"))
+        expect(dot).to(contain("Epic"))
         expect(dot).to(contain("Story"))
         expect(dot).to(contain("Scenario"))
         expect(dot).to(contain("Step"))

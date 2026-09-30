@@ -6,6 +6,70 @@ from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
 
 from harness.knowledge_graph.model.codeql import CodeQL, Rows
+from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+
+_VAGUE_VERBS = {"handle", "process", "manage", "do", "perform"}
+_GENERIC_NOUNS = {"request", "data", "record", "item", "thing", "info"}
+
+
+def _story_words(label: str) -> List[str]:
+    return [part.lower() for part in (label or "").replace("_", " ").split() if part]
+
+
+def _rows_for_verb_noun(rows: Iterable[dict]) -> List[dict]:
+    refined: List[dict] = []
+    seen = set()
+    for row in rows:
+        label = row.get("message") or ""
+        if label in seen:
+            continue
+        words = _story_words(label)
+        if not words:
+            continue
+        first = words[0]
+        rest = words[1:]
+        vocabulary = VocabularyHelper()
+        gerund, _ = vocabulary.is_gerund(first)
+        verb = vocabulary.is_verb(first)
+        noun = any(vocabulary.is_noun(word) for word in rest)
+        if len(words) >= 2 and verb and noun and not gerund:
+            continue
+        seen.add(label)
+        refined.append(
+            {
+                "name": row.get("name") or "",
+                "message": f"Story '{label}' is not verb-noun format.",
+                "contributor": row.get("contributor") or "",
+            }
+        )
+    return refined
+
+
+def _rows_for_vague_mechanic(rows: Iterable[dict]) -> List[dict]:
+    refined: List[dict] = []
+    seen = set()
+    for row in rows:
+        label = row.get("message") or ""
+        if label in seen:
+            continue
+        words = _story_words(label)
+        if len(words) < 2:
+            continue
+        first = words[0]
+        rest = words[1:]
+        if not VocabularyHelper().is_verb(first) or first not in _VAGUE_VERBS:
+            continue
+        if not any(word in _GENERIC_NOUNS for word in rest):
+            continue
+        seen.add(label)
+        refined.append(
+            {
+                "name": row.get("name") or "",
+                "message": f"Story '{label}' does not name a system mechanic.",
+                "contributor": row.get("contributor") or "",
+            }
+        )
+    return refined
 
 
 def refine_rows(slug: str, rows: List[dict]) -> List[dict]:
@@ -14,13 +78,9 @@ def refine_rows(slug: str, rows: List[dict]) -> List[dict]:
 
         return Responsibilities().hits_for_keep_classes(rows)
     if slug == "verb-noun-format":
-        from practices.stories.model.story_names import StoryNames
-
-        return StoryNames().rows_for_verb_noun(rows)
+        return _rows_for_verb_noun(rows)
     if slug == "story-name-captures-system-mechanic":
-        from practices.stories.model.story_names import StoryNames
-
-        return StoryNames().rows_for_vague_mechanic(rows)
+        return _rows_for_vague_mechanic(rows)
     if slug == "domain-concepts-not-technical-names":
         from practices.ddd.model.technical_names import rows_for_technical_names
 

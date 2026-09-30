@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import uuid
 from collections import defaultdict
@@ -25,6 +26,7 @@ for _cat in ("practices", "harness", "tools", "actions"):
         sys.path.insert(0, _p)
 
 from harness.knowledge_graph.model import PracticeGraph, RuleSlugs
+from harness.knowledge_graph.model.graph_node import Kind
 from harness.knowledge_graph.model.codeql import (
     CodeQL,
     attach_query_server,
@@ -88,6 +90,163 @@ def _slugs_for(graph: PracticeGraph, practices: tuple[str, ...]) -> RuleSlugs:
             if rule.practice in wanted and rule.graph_evaluated
         ]
     )
+
+
+_CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py"}
+_STORY_CODE = re.compile(r".+_story\.(test|spec)\.[jt]sx?$|.+\.examples\.[jt]sx?$")
+_CLASS_DECL = re.compile(
+    r"(?:export\s+)?(?:abstract\s+)?class\s+([A-Z][A-Za-z0-9_]*)"
+)
+_PY_CLASS_DECL = re.compile(r"^class\s+([A-Z][A-Za-z0-9_]*)\b", re.M)
+_MODULE_CONTEXT_NAMES = ("module-context.md", "architecture-context.md")
+
+
+def _load_ce_folders(graph: PracticeGraph, workspace: Path) -> None:
+    """Modules are repo folders with module context, a child that has it, or non-story code."""
+    folders = _ce_folders(workspace)
+    if not folders:
+        return
+    modules: dict[str, Module] = {}
+    for index, rel in enumerate(sorted(folders), start=1):
+        module = Module(rel.split("/")[-1], index)
+        module.folder = rel
+        context = folders[rel]
+        if context is not None:
+            from practices.stories.model.source_location import SourceLocation
+
+            module.source = SourceLocation(
+                str(context.relative_to(workspace)).replace("\\", "/"),
+                1,
+            )
+        graph.register(module)
+        modules[rel] = module
+    for rel, module in modules.items():
+        parent_rel = "/".join(rel.split("/")[:-1])
+        while parent_rel and parent_rel not in modules:
+            parent_rel = "/".join(parent_rel.split("/")[:-1])
+        parent = modules.get(parent_rel)
+        if parent is None:
+            continue
+        parent.modules.append(module)
+        parent.relate(Kind.OWNS, module)
+    _load_ce_classes(graph, workspace, modules)
+
+
+def _load_ce_classes(graph: PracticeGraph, workspace: Path, modules: dict) -> None:
+    """A source class is a clean-engineering class. A DDD stereotype of the same name is not it."""
+    from practices.clean_engineering.model.codeql.codeql_model import OoadClass
+    from practices.stories.model.source_location import SourceLocation
+
+    order = 0
+    seen: set[str] = set()
+    for folder, rel in _ce_code_dirs(workspace):
+        for path in folder.iterdir():
+            if not path.is_file() or path.suffix.lower() not in _CODE_SUFFIXES:
+                continue
+            if path.name.endswith(".d.ts") or _STORY_CODE.match(path.name):
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            pattern = _PY_CLASS_DECL if path.suffix.lower() == ".py" else _CLASS_DECL
+            rel_file = path.relative_to(workspace).as_posix()
+            for match in pattern.finditer(text):
+                name = match.group(1)
+                if name in seen:
+                    continue
+                seen.add(name)
+                order += 1
+                cls = OoadClass(name, order)
+                cls.source = SourceLocation(rel_file, text[: match.start()].count("\n") + 1)
+                graph.register(cls)
+                owner = _module_for_file(modules, rel)
+                if owner is None:
+                    continue
+                owner.classes.append(cls)
+                owner.relate(Kind.OWNS, cls)
+
+
+def _ce_code_dirs(workspace: Path):
+    found: list[tuple[Path, str]] = []
+
+    def visit(folder: Path, rel: str) -> None:
+        try:
+            children = list(folder.iterdir())
+        except OSError:
+            return
+        if rel:
+            found.append((folder, rel))
+        for child in children:
+            if not child.is_dir() or _skip_ce_dir(child.name, rel):
+                continue
+            child_rel = f"{rel}/{child.name}" if rel else child.name
+            visit(child, child_rel)
+
+    visit(workspace, "")
+    return found
+
+
+def _module_for_file(modules: dict, rel_dir: str):
+    owner = None
+    prefix = rel_dir
+    while prefix:
+        owner = modules.get(prefix)
+        if owner is not None:
+            return owner
+        prefix = "/".join(prefix.split("/")[:-1])
+    return owner
+
+
+def _ce_folders(workspace: Path) -> dict[str, Path | None]:
+    found: dict[str, Path | None] = {}
+
+    def visit(folder: Path, rel: str) -> bool:
+        try:
+            children = list(folder.iterdir())
+        except OSError:
+            return False
+        context = _module_context(folder) if rel else None
+        code = _has_non_story_code(children) if rel else False
+        child_kept = False
+        for child in children:
+            if not child.is_dir() or _skip_ce_dir(child.name, rel):
+                continue
+            child_rel = f"{rel}/{child.name}" if rel else child.name
+            if visit(child, child_rel):
+                child_kept = True
+        if rel and (context is not None or code or child_kept):
+            found[rel] = context
+            return True
+        return child_kept
+
+    visit(workspace, "")
+    return found
+
+
+def _skip_ce_dir(name: str, parent_rel: str) -> bool:
+    if name in _SKIP_PACKAGES or name.startswith("."):
+        return True
+    rel = f"{parent_rel}/{name}" if parent_rel else name
+    return rel == "stories" or rel.startswith("stories/")
+
+
+def _module_context(folder: Path) -> Path | None:
+    for name in _MODULE_CONTEXT_NAMES:
+        direct = folder / name
+        if direct.is_file():
+            return direct
+        nested = folder / ".context" / name
+        if nested.is_file():
+            return nested
+    return None
+
+
+def _has_non_story_code(children: list[Path]) -> bool:
+    for child in children:
+        if not child.is_file() or child.suffix.lower() not in _CODE_SUFFIXES:
+            continue
+        if _STORY_CODE.match(child.name):
+            continue
+        return True
+    return False
 
 
 _SKIP_PACKAGES = {
@@ -232,6 +391,15 @@ def _nest_contained_modules(nodes: list[dict], relationships: list[dict]) -> Non
         )
 
 
+def _step_title(name: str, semantic: str, keyword: str) -> str:
+    if semantic != "Step" or not keyword:
+        return name
+    prefix = f"{keyword} "
+    if name.lower().startswith(prefix.lower()):
+        return name
+    return f"{keyword} {name}"
+
+
 def _source_dto(node, folder: Path) -> dict | None:
     src = getattr(node, "source", None)
     file = str(getattr(src, "file", "") or "").replace("\\", "/")
@@ -284,11 +452,17 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
         grouped[practice]["nodes"].append(
             {
                 "node_id": node.node_id,
-                "name": (getattr(node, "name", None) or semantic or node.node_id),
+                "name": _step_title(
+                    getattr(node, "name", None) or semantic or node.node_id,
+                    semantic,
+                    str(getattr(node, "keyword", "") or ""),
+                ),
                 "practice": practice,
                 "fidelity": closest_fidelity(practice, semantic),
                 "semantic_type": semantic,
-                "properties": {},
+                "sequential_order": int(getattr(node, "sequential_order", 0) or 0),
+                "keyword": str(getattr(node, "keyword", "") or ""),
+                "properties": {"folder": getattr(node, "folder", "") or ""},
                 "applicable_rules": [rule.slug for rule in matched],
                 "rule_tags": rule_tags,
                 "rule_catalog": rule_catalog,
@@ -375,6 +549,7 @@ def main(
         flush=True,
     )
     graph = PracticeGraph(workspace)
+    _load_practice_trees(graph, workspace, log)
     ctx = graph.working_context()
     hierarchy_path = ctx / "knowledge-graph-ce-hierarchy.txt"
     timings_path = ctx / "knowledge-graph-ce-rule-timings.txt"
@@ -474,6 +649,80 @@ def main(
     finally:
         if server is not None:
             detach_query_server(server)
+
+
+def _load_practice_trees(graph: PracticeGraph, workspace: Path, log) -> None:
+    """Load stories, DDD, and BDD trees. CodeQL fact queries only build the code index."""
+    from dataclasses import asdict
+
+    from harness.knowledge_graph.model.codeql_query import query_workspace
+    from harness.knowledge_graph.model.loader import GraphLoader
+    from practices.stories.model.codeql.codeql_model import StoryMap
+
+    loader = GraphLoader.from_graph(graph)
+    try:
+        _load_ce_folders(graph, workspace)
+        print(
+            f"clean engineering folders: {sum(1 for node in graph.nodes.values() if node.semantic_type() == 'Module')}",
+            file=log,
+            flush=True,
+        )
+    except Exception as error:
+        print(f"clean engineering folders did not load ({error})", file=log, flush=True)
+    try:
+        loader._load_bdd_descriptions()
+    except Exception as error:
+        print(f"bdd tree did not load ({error})", file=log, flush=True)
+    try:
+        loader._load_ddd_structure_from_map()
+    except Exception as error:
+        print(f"ddd tree did not load ({error})", file=log, flush=True)
+    try:
+        export = query_workspace(workspace)
+        raw = {
+            "stories": [
+                {
+                    "name": story.text,
+                    "file": story.file,
+                    "epic": story.epic,
+                    "sub_epic": story.sub_epic,
+                    "line": story.line,
+                    "actor": story.actor,
+                    "owners": list(story.owners),
+                }
+                for story in export.stories
+            ],
+            "scenarios": [
+                {
+                    "name": scenario.text,
+                    "story": scenario.story,
+                    "file": scenario.file,
+                    "line": scenario.line,
+                }
+                for scenario in export.scenarios
+            ],
+            "backgrounds": [
+                {
+                    "name": background.text,
+                    "story": background.story,
+                    "file": background.file,
+                    "line": background.line,
+                }
+                for background in export.backgrounds
+            ],
+            "steps": [asdict(step) for step in export.steps],
+            "example_exports": [asdict(example) for example in export.example_exports],
+        }
+        if raw["stories"] or raw["example_exports"]:
+            StoryMap().ensure(graph, raw)
+            print(
+                f"stories tree: {len(raw['stories'])} stories, "
+                f"{len(raw['scenarios'])} scenarios",
+                file=log,
+                flush=True,
+            )
+    except Exception as error:
+        print(f"stories tree did not load ({error})", file=log, flush=True)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

@@ -12,5 +12,8 @@ where
   call.getCalleeName() = "scenario" and
   name = call.getArgument(0) and
   file = call.getFile() and
-  file.getBaseName().matches("%_story.test.ts")
+  (
+    file.getBaseName().matches("%_story.test.ts") or
+    file.getBaseName().matches("%_story.spec.ts")
+  )
 select call, name.getValue(), file.getRelativePath(), call.getLocation().getStartLine()

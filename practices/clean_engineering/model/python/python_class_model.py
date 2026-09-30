@@ -462,7 +462,7 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         self._render_properties(lines, oclass)
         self._render_init(lines, oclass)
         for op in oclass.operations:
-            params = ", ".join(op.parameters)
+            params = ", ".join(parameter.save() for parameter in op.parameters)
             ret = op.return_type or "None"
             lines.append("    @abstractmethod")
             lines.append(f"    def {op.name}(self, {params}) -> {ret}: ...")

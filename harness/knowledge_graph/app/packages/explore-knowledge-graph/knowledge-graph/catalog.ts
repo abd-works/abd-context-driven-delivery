@@ -7,6 +7,21 @@ export const PRACTICES = [
   'stories',
 ] as const;
 
+/** Building blocks from the DDD practice, including types a workspace has not tagged yet. */
+export const NODE_TYPES_BY_PRACTICE: Record<string, string[]> = {
+  ddd: [
+    'BoundedContext',
+    'Aggregate',
+    'EntityRoot',
+    'Entity',
+    'ValueObject',
+    'Repository',
+    'DomainEvent',
+    'DomainService',
+    'Specification',
+  ],
+};
+
 export const STAGES = [
   'discovery',
   'specification',

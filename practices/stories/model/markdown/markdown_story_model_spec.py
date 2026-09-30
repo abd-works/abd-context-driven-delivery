@@ -13,9 +13,9 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from practices.stories.model.nodes import Epic, Story, StoryType, SubEpic
-from practices.stories.model.scenario import Scenario
-from practices.stories.model.story_map import StoryMap
+from practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from practices.stories.model.story_model import Scenario
+from practices.stories.model.story_model import StoryMap
 from practices.stories.model.markdown.nodes import (
     MarkdownParseError,
     MarkdownStoryMap,
@@ -23,20 +23,20 @@ from practices.stories.model.markdown.nodes import (
 
 
 class SpecFixture:
-    def canonical_story_map_4_epics_3_sub_epics(self) -> StoryMap:
+    def canonical_story_map_4_epics_3_epics(self) -> StoryMap:
         story_map = StoryMap()
         for i in range(1, 5):
             epic = Epic(f"Epic {i}", i)
             story_map.epics.append(epic)
         first = story_map.epics[0]
         for j in range(1, 4):
-            sub = SubEpic(f"SubEpic 1.{j}", j)
+            sub = Epic(f"Epic 1.{j}", j)
             story = Story(f"Story {j}", 1, StoryType.USER)
             story.scenarios.append(
                 Scenario(name=f"AC text {j}.1", sequential_order=1)
             )
             sub.stories.append(story)
-            first.sub_epics.append(sub)
+            first.epics.append(sub)
         return story_map
 
 
@@ -53,10 +53,10 @@ with description("a Markdown document") as self:
         expect(text.count("#")).to(equal(0))
 
     with context(
-        "that holds a rendered Story Map with 4 Epics and 3 SubEpics under the first Epic"
+        "that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic"
     ):
         with before.each:
-            self.source = fixture.canonical_story_map_4_epics_3_sub_epics()
+            self.source = fixture.canonical_story_map_4_epics_3_epics()
             self.text = self.markdown.render(self.source)
 
         with it("should contain 4 top-level headings"):
@@ -83,7 +83,7 @@ with description("a Markdown document") as self:
             ]
             expect(second_headings).to(have_len(3))
 
-        with it("should list every Story as a bullet under its SubEpic"):
+        with it("should list every Story as a bullet under its Epic"):
             lines = self.text.splitlines()
             story_bullets = [l for l in lines if l.startswith("- ")]
             expect(story_bullets).to(have_len(3))
@@ -126,7 +126,7 @@ with description("a Markdown document") as self:
             "with the first Epic removed in the source Story Map and re-rendered"
         ):
             with before.each:
-                self.source.remove_epic("Epic 1")
+                self.source.epics.pop(0)
                 self.new_text = self.markdown.render(self.source)
 
             with it("should contain 3 top-level headings"):
@@ -138,7 +138,7 @@ with description("a Markdown document") as self:
             with context("the headings for the removed Epic and its descendants"):
                 with it("should be absent"):
                     expect("# Epic 1" in self.new_text).to(be_false)
-                    expect("SubEpic 1.1" in self.new_text).to(be_false)
+                    expect("Epic 1.1" in self.new_text).to(be_false)
 
         with context(
             "with the first Epic renamed in the source Story Map and re-rendered"
@@ -156,50 +156,27 @@ with description("a Markdown document") as self:
 
             with context("the headings under it"):
                 with it("should be unchanged"):
-                    expect("## SubEpic 1.1" in self.new_text).to(be_true)
-                    expect("## SubEpic 1.2" in self.new_text).to(be_true)
-                    expect("## SubEpic 1.3" in self.new_text).to(be_true)
+                    expect("## Epic 1.1" in self.new_text).to(be_true)
+                    expect("## Epic 1.2" in self.new_text).to(be_true)
+                    expect("## Epic 1.3" in self.new_text).to(be_true)
 
     with context("that is being read back into a MarkdownStoryMap"):
         with before.each:
-            self.source = fixture.canonical_story_map_4_epics_3_sub_epics()
+            self.source = fixture.canonical_story_map_4_epics_3_epics()
             self.text = self.markdown.render(self.source)
             self.reconstructed = self.markdown.parse(self.text)
 
         with context("the reconstructed Story Map"):
             with it(
-                "should hold every Epic, SubEpic, Story, and Scenario in sequential order"
+                "should hold every Epic, Epic, Story, and Scenario in sequential order"
             ):
                 expect(self.reconstructed.epics).to(have_len(4))
                 first_epic = self.reconstructed.epics[0]
-                expect(first_epic.sub_epics).to(have_len(3))
-                expect(first_epic.sub_epics[0].stories).to(have_len(1))
-                expect(first_epic.sub_epics[0].stories[0].scenarios).to(
+                expect(first_epic.epics).to(have_len(3))
+                expect(first_epic.epics[0].stories).to(have_len(1))
+                expect(first_epic.epics[0].stories[0].scenarios).to(
                     have_len(1)
                 )
-
-    with context("that has been edited and synced back against a canonical Story Map"):
-        with before.each:
-            self.canonical = fixture.canonical_story_map_4_epics_3_sub_epics()
-            edited = fixture.canonical_story_map_4_epics_3_sub_epics()
-            edited.epics[0].name = "Epic 1 (edited)"
-            edited.append_epic(Epic("Epic 5", 5))
-            self.edited_text = self.markdown.render(edited)
-            self.report = self.markdown.sync(self.edited_text, self.canonical)
-
-        with context("the returned UpdateReport"):
-            with it(
-                "should list every add, remove, rename, reorder, and move applied to the document"
-            ):
-                expect(len(self.report.adds()) + len(self.report.renames()) >= 2).to(
-                    be_true
-                )
-
-        with context("the reconstructed Story Map"):
-            with it("should reflect every edit made to the document"):
-                names = [e.name for e in self.canonical.epics]
-                expect("Epic 1 (edited)" in names).to(be_true)
-                expect("Epic 5" in names).to(be_true)
 
     with context("that includes metadata and prose around valid story structure"):
         with before.each:
@@ -219,8 +196,8 @@ _Scope: mixed markdown content should be tolerated._
 
         with it("should ignore non-structural lines and still parse the story map"):
             expect(self.reconstructed.epics).to(have_len(1))
-            expect(self.reconstructed.epics[0].sub_epics).to(have_len(1))
-            checkout = self.reconstructed.epics[0].sub_epics[0]
+            expect(self.reconstructed.epics[0].epics).to(have_len(1))
+            checkout = self.reconstructed.epics[0].epics[0]
             expect(checkout.name).to(equal("Checkout"))
             expect(checkout.stories).to(have_len(1))
             expect(checkout.stories[0].scenarios).to(have_len(1))
@@ -241,11 +218,11 @@ _Scope: mixed markdown content should be tolerated._
 """
             self.reconstructed = self.markdown.parse(self.document)
 
-        with it("should parse Epics, SubEpics, and Stories from outline lines"):
+        with it("should parse Epics, Epics, and Stories from outline lines"):
             expect(self.reconstructed.epics).to(have_len(1))
             expect(self.reconstructed.epics[0].name).to(equal("Authenticate"))
-            expect(self.reconstructed.epics[0].sub_epics).to(have_len(1))
-            sign_in = self.reconstructed.epics[0].sub_epics[0]
+            expect(self.reconstructed.epics[0].epics).to(have_len(1))
+            sign_in = self.reconstructed.epics[0].epics[0]
             expect(sign_in.name).to(equal("Sign In"))
             expect(sign_in.stories).to(have_len(2))
             expect(sign_in.stories[0].name).to(equal("View Sign-In Form"))
@@ -261,13 +238,13 @@ _Scope: mixed markdown content should be tolerated._
 """
             self.reconstructed = self.markdown.parse(self.document)
 
-        with it("should synthesize a SubEpic so stories are not dropped"):
+        with it("should synthesize a Epic so stories are not dropped"):
             epic = self.reconstructed.epics[0]
             expect(epic.name).to(equal("Resolve Check"))
-            expect(epic.sub_epics).to(have_len(1))
-            expect(epic.sub_epics[0].stories).to(have_len(2))
-            expect(epic.sub_epics[0].stories[0].name).to(equal("Make Trait Check"))
-            expect(epic.sub_epics[0].stories[1].name).to(equal("Oppose Check"))
+            expect(epic.epics).to(have_len(1))
+            expect(epic.epics[0].stories).to(have_len(2))
+            expect(epic.epics[0].stories[0].name).to(equal("Make Trait Check"))
+            expect(epic.epics[0].stories[1].name).to(equal("Oppose Check"))
 
     with context("that uses outline estimate lines"):
         with before.each:
@@ -286,9 +263,9 @@ _Scope: mixed markdown content should be tolerated._
         with it("should attach estimates to epics and sub-epics"):
             epic = self.reconstructed.epics[0]
             expect(epic.estimate).to(equal("approx 22-27 total stories"))
-            compose = epic.sub_epics[0]
+            compose = epic.epics[0]
             expect(compose.estimate).to(equal("approx 2-3 more stories (validation and entry)"))
-            track = epic.sub_epics[1]
+            track = epic.epics[1]
             expect(track.estimate).to(equal("approx 2-3 more stories (status views)"))
             expect(track.stories).to(have_len(0))
 
@@ -296,7 +273,7 @@ _Scope: mixed markdown content should be tolerated._
             text = self.markdown.render(self.reconstructed)
             round_trip = self.markdown.parse(text)
             expect(round_trip.epics[0].estimate).to(equal("approx 22-27 total stories"))
-            expect(round_trip.epics[0].sub_epics[0].estimate).to(
+            expect(round_trip.epics[0].epics[0].estimate).to(
                 equal("approx 2-3 more stories (validation and entry)")
             )
 
@@ -314,7 +291,7 @@ _Scope: mixed markdown content should be tolerated._
 
         with it("should parse deep headings as Story nodes and numbered lines as Scenarios"):
             authenticate = self.reconstructed.epics[0]
-            sign_in = authenticate.sub_epics[0]
+            sign_in = authenticate.epics[0]
             expect(sign_in.stories).to(have_len(1))
             story = sign_in.stories[0]
             expect(story.name).to(equal("Submit Sign-In Credentials"))

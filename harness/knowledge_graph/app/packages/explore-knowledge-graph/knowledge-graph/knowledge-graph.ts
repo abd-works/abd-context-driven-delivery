@@ -11,14 +11,36 @@
 import { z } from 'zod';
 import {
   INVERSE_KIND,
+  NODE_TYPES_BY_PRACTICE,
   PRACTICES,
   RELATIONSHIP_KINDS,
   RULE_GUIDANCE,
-  STAGES,
   stageFor,
 } from './catalog';
 
 export const KEEP_OPERATIONS_SMALL_FOCUSED = 'keep-operations-small-focused';
+
+const STEP_KEYWORD = /^(Given|When|Then|And|But)\s/i;
+const STEP_CALL = /(?:^|\n)\s*\.?(given|when|then|and|but)\s*\(/i;
+
+export function stepTitle(
+  name: string,
+  semanticType: string,
+  keyword = '',
+  sourceText = '',
+): string {
+  if (semanticType !== 'Step' || STEP_KEYWORD.test(name)) {
+    return name;
+  }
+  const fromKeyword = keyword.trim();
+  const fromSource = sourceText.match(STEP_CALL)?.[1] ?? '';
+  const raw = fromKeyword || fromSource;
+  if (!raw) {
+    return name;
+  }
+  const label = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  return `${label} ${name}`;
+}
 
 export const SourceRangeSchema = z.object({
   file: z.string(),
@@ -42,6 +64,8 @@ export const NodeSchema = z.object({
   practice: z.string(),
   fidelity: z.string().nullable().default(null),
   semantic_type: z.string(),
+  sequential_order: z.number().optional(),
+  keyword: z.string().optional(),
   properties: z.record(z.string()).default({}),
   applicable_rules: z.array(z.string()).default([]),
   rule_catalog: z
@@ -123,6 +147,7 @@ export type ListedRelatedNode = {
   node_id: string;
   name: string;
   semantic_type: string;
+  practice: string;
 };
 
 export type ListedRelationshipKind = {
@@ -134,6 +159,7 @@ export type ListedTreeNode = {
   node_id: string;
   name: string;
   path: string;
+  practice: string;
   semantic_type: string;
   is_file: boolean;
   properties: Record<string, string>;
@@ -283,6 +309,14 @@ export class GraphNode {
 
   get semanticType(): string {
     return this.dto.semantic_type;
+  }
+
+  get sequentialOrder(): number {
+    return this.dto.sequential_order ?? 0;
+  }
+
+  get keyword(): string {
+    return this.dto.keyword ?? '';
   }
 
   get properties(): Record<string, string> {
@@ -582,6 +616,7 @@ export class KnowledgeGraph {
           node_id: other.nodeId,
           name: this._treeLabel(other),
           semantic_type: other.semanticType,
+          practice: other.practice,
         });
       };
       for (const edge of this._allEdges()) {
@@ -594,24 +629,27 @@ export class KnowledgeGraph {
         add(to.nodeId, INVERSE_KIND[edge.kind] ?? edge.kind, from);
       }
       const related = new Map<string, ListedRelationshipKind[]>();
+      const targetsFor = (byKind: Map<string, Map<string, ListedRelatedNode>>, kind: string) =>
+        [...(byKind.get(kind)?.values() ?? [])].sort((left, right) =>
+          left.name.localeCompare(right.name),
+        );
       for (const [nodeId, byKind] of grouped) {
         const extra = [...byKind.keys()].filter(
           (kind) => !(RELATIONSHIP_KINDS as readonly string[]).includes(kind),
         );
-        related.set(nodeId, [
-          ...RELATIONSHIP_KINDS.map((kind) => ({
-            kind,
-            targets: [...(byKind.get(kind)?.values() ?? [])].sort((left, right) =>
-              left.name.localeCompare(right.name),
-            ),
-          })),
-          ...extra.sort().map((kind) => ({
-            kind,
-            targets: [...(byKind.get(kind)?.values() ?? [])].sort((left, right) =>
-              left.name.localeCompare(right.name),
-            ),
-          })),
-        ]);
+        related.set(
+          nodeId,
+          [
+            ...RELATIONSHIP_KINDS.map((kind) => ({
+              kind,
+              targets: targetsFor(byKind, kind),
+            })),
+            ...extra.sort().map((kind) => ({
+              kind,
+              targets: targetsFor(byKind, kind),
+            })),
+          ].filter((group) => group.targets.length > 0),
+        );
       }
       this._related = related;
     }
@@ -619,15 +657,13 @@ export class KnowledgeGraph {
   }
 
   private _listedTree(): ListedTreeNode[] {
-    const { childrenByParent, childIds } = this._treeChildren();
+    const practiceTree = this._practiceListedTree();
+    if (practiceTree) {
+      return practiceTree;
+    }
+    const { childrenByParent } = this._treeChildren();
     const sortChildren = (nodes: GraphNode[]) =>
-      [...nodes].sort((left, right) => {
-        const rank = treeTypeRank(left.semanticType) - treeTypeRank(right.semanticType);
-        if (rank !== 0) {
-          return rank;
-        }
-        return this._treeLabel(left).localeCompare(this._treeLabel(right));
-      });
+      [...nodes].sort((left, right) => this._compareTreeNodes(left, right));
     const nest = (
       node: GraphNode,
       prefix: string,
@@ -636,16 +672,19 @@ export class KnowledgeGraph {
       const leaf = this._listedLeaf(node);
       const origin = leaf.source?.file ? leaf.source : parentOrigin;
       const path = prefix ? `${prefix}.${leaf.name}` : leaf.name;
-      const children = sortChildren(childrenByParent.get(node.nodeId) ?? []).map(
+      const nested = sortChildren(childrenByParent.get(node.nodeId) ?? []).map(
         (child) => nest(child, path, origin),
       );
+      const folded = this._foldBackground(node, leaf, nested);
       return {
         ...leaf,
+        name: folded.name,
+        source: folded.source,
         path,
         origin,
-        children,
-        failed: leaf.failed + children.reduce((sum, child) => sum + child.failed, 0),
-        total: leaf.total + children.reduce((sum, child) => sum + child.total, 0),
+        children: folded.children,
+        failed: leaf.failed + folded.failed,
+        total: leaf.total + folded.total,
       };
     };
     const folders = this._topLevelFolders();
@@ -654,20 +693,213 @@ export class KnowledgeGraph {
           (folder) => (childrenByParent.get(folder.nodeId) ?? []).length > 0,
         )
       : folders;
-    const practices = listed(
-      this.view.filter.practices,
-      this.view.filter.practice,
-    );
-    if (practices?.length === 1) {
-      const head = this._practiceHead(practices[0]);
-      if (head) {
-        for (const folder of listedRoots) {
-          this._adoptChild(childrenByParent, childIds, head.nodeId, folder);
+    return sortChildren(listedRoots).map((node) => nest(node, '', null));
+  }
+
+  private _practiceListedTree(): ListedTreeNode[] | null {
+    const practices = listed(this.view.filter.practices, this.view.filter.practice);
+    if (!practices) {
+      return null;
+    }
+    const closure = this._practiceClosure();
+    const structural = new Set(['StoryMap', 'CleanEngineeringModel']);
+    const parentOf = this._ownsParents(closure);
+    const parentsOf = (nodeId: string) =>
+      (parentOf.get(nodeId) ?? [])
+        .map((parentId) => closure.get(parentId))
+        .filter((parent): parent is GraphNode => Boolean(parent))
+        .filter(
+          (parent) =>
+            !structural.has(parent.semanticType) && parent.semanticType !== 'Package',
+        );
+    const roots = [...closure.values()].filter((node) => {
+      if (structural.has(node.semanticType) || this._isFileNode(node)) {
+        return false;
+      }
+      return parentsOf(node.nodeId).length === 0;
+    });
+    const sortNodes = (nodes: GraphNode[]) =>
+      [...nodes].sort((left, right) => this._compareTreeNodes(left, right));
+    const nest = (node: GraphNode, prefix: string, stack: Set<string>): ListedTreeNode => {
+      const leaf = this._listedLeaf(node);
+      const path = prefix ? `${prefix}.${leaf.name}` : leaf.name;
+      const next = new Set(stack);
+      next.add(node.nodeId);
+      const nested = sortNodes(
+        [...closure.values()].filter(
+          (child) =>
+            child.semanticType !== 'Example' &&
+            !next.has(child.nodeId) &&
+            (parentOf.get(child.nodeId) ?? []).includes(node.nodeId),
+        ),
+      ).map((child) => nest(child, path, next));
+      const folded = this._foldBackground(node, leaf, nested);
+      return {
+        ...leaf,
+        name: folded.name,
+        source: folded.source,
+        path,
+        origin: leaf.source?.file ? leaf.source : null,
+        children: folded.children,
+        failed: leaf.failed + folded.failed,
+        total: leaf.total + folded.total,
+      };
+    };
+    const heads = roots.filter((node) => this._practiceHead(node, practices));
+    return practices.map((practice) => {
+      const children = sortNodes(heads.filter((node) => node.practice === practice)).map((node) =>
+        nest(node, `${practice}.${node.name}`, new Set()),
+      );
+      return {
+        node_id: `practice:${practice}`,
+        name: practice,
+        path: practice,
+        practice,
+        semantic_type: 'Practice',
+        is_file: false,
+        properties: {},
+        rule_statuses: {},
+        rules: [],
+        relationships: [],
+        source: null,
+        origin: null,
+        children,
+        failed: children.reduce((sum, child) => sum + child.failed, 0),
+        total: children.reduce((sum, child) => sum + child.total, 0),
+      };
+    });
+  }
+
+  private _foldBackground(
+    node: GraphNode,
+    leaf: { name: string; source: SourceRangeDto | null },
+    children: ListedTreeNode[],
+  ): { name: string; source: SourceRangeDto | null; children: ListedTreeNode[]; failed: number; total: number } {
+    const failed = children.reduce((sum, child) => sum + child.failed, 0);
+    const total = children.reduce((sum, child) => sum + child.total, 0);
+    if (node.semanticType !== 'Background') {
+      return { name: leaf.name, source: leaf.source, children, failed, total };
+    }
+    const steps = children.filter((child) => child.semantic_type === 'Step');
+    const rest = children.filter((child) => child.semantic_type !== 'Step');
+    const given =
+      steps.find((step) =>
+        stepTitle(step.name, 'Step', '', step.source?.text ?? '').startsWith('Given '),
+      ) ?? steps[0];
+    const name = given
+      ? stepTitle(given.name, 'Step', '', given.source?.text ?? '')
+      : leaf.name;
+    const parts = steps
+      .map((step) => step.source?.text ?? '')
+      .filter((text) => text.length > 0);
+    const source = parts.length
+      ? {
+          file: given?.source?.file || leaf.source?.file || '',
+          start_line: given?.source?.start_line || leaf.source?.start_line || 1,
+          end_line:
+            steps[steps.length - 1]?.source?.end_line ||
+            given?.source?.end_line ||
+            leaf.source?.end_line ||
+            1,
+          text: parts.join('\n'),
         }
-        return [nest(head, '', null)];
+      : leaf.source;
+    const shown = rest.reduce(
+      (sum, child) => ({ failed: sum.failed + child.failed, total: sum.total + child.total }),
+      { failed: 0, total: 0 },
+    );
+    return { name, source, children: rest, failed: shown.failed, total: shown.total };
+  }
+
+  private _practiceHead(node: GraphNode, practices: string[]): boolean {
+    if (!practices.includes(node.practice) || this._isFileNode(node)) {
+      return false;
+    }
+    if (node.semanticType === 'Package' || node.semanticType === 'Example') {
+      return false;
+    }
+    if (node.practice === 'stories') {
+      return node.semanticType === 'Epic';
+    }
+    if (node.practice === 'ddd') {
+      return node.semanticType === 'BoundedContext';
+    }
+    if (node.practice === 'bdd') {
+      return node.semanticType === 'Description';
+    }
+    return true;
+  }
+
+  private _practiceClosure(): Map<string, GraphNode> {
+    const closure = new Map(this.listedNodes().map((node) => [node.nodeId, node]));
+    const edges = this._allEdges().filter(
+      (edge) => edge.kind === 'owns' || edge.kind === 'scopes',
+    );
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const edge of edges) {
+        if (closure.has(edge.to_id) && !closure.has(edge.from_id)) {
+          const parent = this._nodeById(edge.from_id);
+          if (parent) {
+            closure.set(parent.nodeId, parent);
+            grew = true;
+          }
+        }
+        if (closure.has(edge.from_id) && !closure.has(edge.to_id)) {
+          const child = this._nodeById(edge.to_id);
+          if (child && !this._isFileNode(child)) {
+            closure.set(child.nodeId, child);
+            grew = true;
+          }
+        }
       }
     }
-    return sortChildren(listedRoots).map((node) => nest(node, '', null));
+    return closure;
+  }
+
+  private _ownsParents(closure: Map<string, GraphNode>): Map<string, string[]> {
+    const parentOf = new Map<string, string[]>();
+    const owned = new Set<string>();
+    for (const edge of this._allEdges()) {
+      if (edge.kind !== 'owns' && edge.kind !== 'scopes') {
+        continue;
+      }
+      if (!closure.has(edge.from_id) || !closure.has(edge.to_id)) {
+        continue;
+      }
+      if (edge.kind === 'owns') {
+        const nextParent = closure.get(edge.from_id);
+        const currentId = parentOf.get(edge.to_id)?.[0];
+        const currentParent = currentId ? closure.get(currentId) : undefined;
+        const packageWouldReplace =
+          currentParent !== undefined &&
+          currentParent.semanticType !== 'Package' &&
+          nextParent?.semanticType === 'Package';
+        if (!packageWouldReplace) {
+          parentOf.set(edge.to_id, [edge.from_id]);
+          owned.add(edge.to_id);
+        }
+        continue;
+      }
+      if (owned.has(edge.to_id)) {
+        continue;
+      }
+      const parents = parentOf.get(edge.to_id) ?? [];
+      if (!parents.includes(edge.from_id)) {
+        parents.push(edge.from_id);
+        parentOf.set(edge.to_id, parents);
+      }
+    }
+    for (const [childId, parents] of parentOf) {
+      const stories = parents.filter(
+        (parentId) => closure.get(parentId)?.semanticType === 'Story',
+      );
+      if (stories.length > 0) {
+        parentOf.set(childId, stories);
+      }
+    }
+    return parentOf;
   }
 
   private _narrowsToHits(): boolean {
@@ -803,22 +1035,6 @@ export class KnowledgeGraph {
       current = parentOf.get(current);
     }
     return null;
-  }
-
-  private _practiceHead(practice: string): GraphNode | null {
-    const skipRoot = new Set(['CleanEngineeringModel', 'StoryMap']);
-    return (
-      this._allNodes().find(
-        (node) => node.practice === practice && skipRoot.has(node.semanticType),
-      ) ??
-      this._allNodes().find(
-        (node) =>
-          node.practice === practice &&
-          this._isTopLevelFolder(node) &&
-          this._treeLabel(node) === practice,
-      ) ??
-      null
-    );
   }
 
   private _isTopLevelFolder(node: GraphNode): boolean {
@@ -1190,12 +1406,28 @@ export class KnowledgeGraph {
     return dir !== fromPath && dir.startsWith(`${fromPath}/`);
   }
 
+  private _compareTreeNodes(left: GraphNode, right: GraphNode): number {
+    const rank = treeTypeRank(left.semanticType) - treeTypeRank(right.semanticType);
+    if (rank !== 0) {
+      return rank;
+    }
+    if (left.semanticType === 'Step' && right.semanticType === 'Step') {
+      const leftLine = left.source?.start_line ?? 0;
+      const rightLine = right.source?.start_line ?? 0;
+      if (leftLine > 0 && rightLine > 0 && leftLine !== rightLine) {
+        return leftLine - rightLine;
+      }
+      if (left.sequentialOrder !== right.sequentialOrder) {
+        return left.sequentialOrder - right.sequentialOrder;
+      }
+    }
+    return this._treeLabel(left).localeCompare(this._treeLabel(right));
+  }
+
   private _treeLabel(node: GraphNode): string {
     const path = this._modulePath(node);
-    if (path) {
-      return path.split('/').pop() ?? node.name;
-    }
-    return node.name;
+    const name = path ? (path.split('/').pop() ?? node.name) : node.name;
+    return stepTitle(name, node.semanticType, node.keyword, node.source?.text ?? '');
   }
 
   private _modulePath(node: GraphNode): string | null {
@@ -1228,35 +1460,52 @@ export class KnowledgeGraph {
   }
 
   private _filterOptions(): GraphFilterOptions {
-    const nodes = this._allNodes();
+    const except = (cleared: GraphFilter) =>
+      this._allNodes().filter((node) => this._matchesFacet(node, cleared));
+    const forPractices = except({ practices: undefined, practice: undefined });
+    const forStages = except({ stages: undefined, fidelity: undefined });
+    const forTypes = except({ nodeTypes: undefined, nodeType: undefined });
+    const forRelationships = except({
+      relationshipTypes: undefined,
+      relationshipType: undefined,
+      connectorKind: undefined,
+    });
+    const forRules = except({ rules: undefined, rule: undefined });
+    const forSources = except({ ruleSources: undefined });
     return {
       practices: unique([
         ...PRACTICES,
-        ...nodes.map((node) => node.practice),
+        ...forPractices.map((node) => node.practice).filter(Boolean),
       ]),
-      stages: [...STAGES],
-      node_types: unique(nodes.map((node) => node.semanticType)),
-      relationship_types: unique([
-        ...RELATIONSHIP_KINDS,
-        ...this._allEdges().map((edge) => edge.kind),
+      stages: unique(forStages.map((node) => node.stage).filter(Boolean)),
+      node_types: unique([
+        ...forTypes.map((node) => node.semanticType).filter(Boolean),
+        ...practiceNodeTypes(this.view.filter.practices),
       ]),
-      rules: this._ruleOptions(),
-      rule_sources: ['base', 'project'],
+      relationship_types: this._kindsOn(forRelationships),
+      rules: this._slugsOn(forRules),
+      rule_sources: this._sourcesOn(forSources),
     };
   }
 
-  private _ruleOptions(): string[] {
-    const practices = listed(this.view.filter.practices, this.view.filter.practice);
-    const stages = listed(this.view.filter.stages, this.view.filter.fidelity);
+  private _matchesFacet(node: GraphNode, cleared: GraphFilter): boolean {
+    const filter = { ...this.view.filter, ...cleared };
+    return this._matchesIdentity(node, filter) && this._matchesRules(node, filter);
+  }
+
+  private _kindsOn(nodes: GraphNode[]): string[] {
+    const ids = new Set(nodes.map((node) => node.nodeId));
+    return unique(
+      this._allEdges()
+        .filter((edge) => ids.has(edge.from_id) || ids.has(edge.to_id))
+        .map((edge) => edge.kind),
+    );
+  }
+
+  private _slugsOn(nodes: GraphNode[]): string[] {
     const sources = listed(this.view.filter.ruleSources);
     const slugs: string[] = [];
-    for (const node of this._allNodes()) {
-      if (!allows(practices, node.practice)) {
-        continue;
-      }
-      if (!allows(stages, node.stage)) {
-        continue;
-      }
+    for (const node of nodes) {
       for (const rule of node.rules.details()) {
         if (sources !== null && !sources.includes(rule.tag)) {
           continue;
@@ -1324,10 +1573,27 @@ export class KnowledgeGraph {
     return true;
   }
 
-  private _matchesRules(node: GraphNode): boolean {
-    const { violations } = this.view.filter;
-    const rules = listed(this.view.filter.rules, this.view.filter.rule);
-    const sources = listed(this.view.filter.ruleSources);
+  private _sourcesOn(nodes: GraphNode[]): string[] {
+    const tags: string[] = [];
+    for (const node of nodes) {
+      for (const rule of node.rules.details()) {
+        if (rule.tag) {
+          tags.push(rule.tag);
+        }
+      }
+      for (const hit of node.rules.violations) {
+        if (hit.tag) {
+          tags.push(hit.tag);
+        }
+      }
+    }
+    return unique(tags);
+  }
+
+  private _matchesRules(node: GraphNode, filter: GraphFilter = this.view.filter): boolean {
+    const { violations } = filter;
+    const rules = listed(filter.rules, filter.rule);
+    const sources = listed(filter.ruleSources);
     if (sources !== null) {
       const matching = node.rules.details().filter((rule) => {
         if (!sources.includes(rule.tag)) {
@@ -1401,10 +1667,22 @@ function catalogModuleIds(dto: KnowledgeGraphDto): Set<string> {
   const modules = dto.practice_graphs.flatMap((graph) =>
     graph.nodes.filter((node) => node.semantic_type === 'Module'),
   );
+  const moduleIds = new Set(modules.map((node) => node.node_id));
+  const ownsModule = new Set<string>();
+  for (const graph of dto.practice_graphs) {
+    for (const edge of graph.relationships) {
+      if (edge.kind === 'owns' && moduleIds.has(edge.from_id) && moduleIds.has(edge.to_id)) {
+        ownsModule.add(edge.from_id);
+      }
+    }
+  }
   const folders = modules.map(moduleFolderOf).filter(Boolean);
   return new Set(
     modules
       .filter((node) => {
+        if (ownsModule.has(node.node_id)) {
+          return false;
+        }
         const folder = moduleFolderOf(node);
         return folders.some((other) => other.startsWith(`${folder}/`));
       })
@@ -1615,8 +1893,29 @@ function asFolderPath(raw: string): string {
   return path;
 }
 
+function practiceNodeTypes(practices: string[] | undefined): string[] {
+  if (!practices || practices.length === 0 || practices.length >= PRACTICES.length) {
+    return [];
+  }
+  return practices.flatMap((practice) => NODE_TYPES_BY_PRACTICE[practice] ?? []);
+}
+
 function treeTypeRank(kind: string): number {
-  if (kind === 'Package') return 0;
+  if (kind === 'Practice' || kind === 'Package') return 0;
+  if (kind === 'Epic' || kind === 'BoundedContext' || kind === 'Description') return 1;
+  if (kind === 'SubEpic' || kind === 'Aggregate' || kind === 'Context') return 2;
+  if (kind === 'Story') return 3;
+  if (kind === 'Background') return 4;
+  if (kind === 'Scenario') return 5;
+  if (kind === 'Step' || kind === 'Observation') return 6;
+  if (kind === 'Example') return 20;
+  if (kind === 'EntityRoot') return 3;
+  if (kind === 'Entity') return 4;
+  if (kind === 'ValueObject') return 5;
+  if (kind === 'DomainEvent') return 6;
+  if (kind === 'Specification') return 7;
+  if (kind === 'Repository') return 8;
+  if (kind === 'DomainService') return 9;
   if (kind === 'Module') return 1;
   if (kind === 'CleanEngineeringModel' || kind === 'StoryMap') return 2;
   if (kind === 'Operation') return 4;
@@ -1643,7 +1942,8 @@ function containmentRank(kind: string): number {
     kind === 'ValueObject' ||
     kind === 'Repository' ||
     kind === 'DomainEvent' ||
-    kind === 'DomainService'
+    kind === 'DomainService' ||
+    kind === 'Specification'
   ) {
     return 2;
   }

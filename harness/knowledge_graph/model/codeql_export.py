@@ -73,6 +73,8 @@ class CodeQLStory:
     epic: str = ""
     sub_epic: str = ""
     line: int = 0
+    actor: str = ""
+    owners: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -81,6 +83,7 @@ class CodeQLScenario:
     story: str = ""
     file: str = ""
     line: int = 0
+    end_line: int = 0
 
 
 @dataclass
@@ -103,6 +106,8 @@ class CodeQLStep:
     scenario: str = ""
     background: str = ""
     phase: str = ""
+    end_line: int = 0
+    uses_examples: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -113,6 +118,8 @@ class CodeQLExampleExport:
     line: int = 0
     owner: str = ""
     owner_kind: str = ""
+    epics: list[str] = field(default_factory=list)
+    used_by: list[dict] = field(default_factory=list)
 
 
 @dataclass

@@ -23,7 +23,6 @@ from practices.clean_engineering.model.field_types import Relationship
 from practices.clean_engineering.model.transformation.clean_engineering_transformer import (
     CleanEngineeringTransformer,
 )
-from practices.stories.model.transformation.story_map_transformer import StoryMapTransformer
 
 _MM3E = _REPO_ROOT / "harness" / "transformers" / "fixtures" / "mm3e"
 _FIXTURE_SKETCH = _MM3E / "mm3e-sketch.md"
@@ -153,33 +152,15 @@ with description("Transformers"):
     with before.all:
         self.sketch = _FIXTURE_SKETCH.read_text(encoding="utf-8")
         self.roots = Transformers().transform_sketch(self.sketch)
-        self.story_map = next(
-            root for root in self.roots if isinstance(root, StoryMapTransformer)
-        )
         self.ce = next(
             root for root in self.roots if isinstance(root, CleanEngineeringTransformer)
         )
-        self.files = self.story_map.render("logical")
         self.ce_files = self.ce.render("logical")
         self.catalog = Mm3ePythonCatalog()
         self.fixture_ce = self.catalog.from_directory(_EXPECTED)
         self.emitted_ce = self.catalog.from_files(self.ce_files)
         self.ce_delta = self.catalog.compare(self.fixture_ce, self.emitted_ce)
         write_temp(self.roots, _ACTUAL)
-
-    with it("should load StoryMapTransformer from the stories lens"):
-        expect(self.story_map.epics[0].name).to(equal("Resolve Checks"))
-        expect(self.story_map.epics[0].sub_epics[0].name).to(equal("Make Check"))
-        expect(self.story_map.epics[0].sub_epics[0].stories[0].name).to(
-            equal("Make Trait Check")
-        )
-
-    with it("should write the python story file under the epic and sub-epic folders"):
-        path = (
-            "tests/resolve-checks/make-check/make-trait-check/"
-            "make_trait_check_story.test.py"
-        )
-        expect(path in self.files).to(equal(True))
 
     with it("should emit every class and member from the mm3e python fixture"):
         expect(self.ce_delta.get("missing_classes", [])).to(equal([]))

@@ -159,13 +159,13 @@ by design. See `../document/json/` for details.
 ```
 formats/code/
 +-- architecture-context.md           <- this file
-+-- code_story_map.py                 <- CodeStoryMap abstract base (render/parse/sync)
++-- code_story_model.py                 <- CodeStoryMap abstract base (render/parse/sync)
 +-- typescript/
-|   +-- typescript_story_map.py       <- TS spec-file render + parse
+|   +-- typescript_story_model.py       <- TS spec-file render + parse
 +-- python/
-|   +-- python_story_map.py           <- Python test-file render (write-once)
+|   +-- python_story_model.py           <- Python test-file render (write-once)
 +-- java/
-    +-- java_story_map.py             <- Java spec-file + test-file render
+    +-- java_story_model.py             <- Java spec-file + test-file render
 ```
 
 ---
@@ -222,8 +222,8 @@ marker comments inside a single file (the migrated story-graph-ops model) are
 **obsolete**: hand-written code lives in a physically separate file, so there
 is no need to fence it inside the generated file.
 
-> **Migration status.** The migrated adapter code (`code_story_map.py`,
-> `typescript_story_map.py`, etc.) currently supports render+parse of spec
+> **Migration status.** The migrated adapter code (`code_story_model.py`,
+> `typescript_story_model.py`, etc.) currently supports render+parse of spec
 > files and still carries the legacy `_preserve_hand_written` mechanism for
 > single-file backwards compatibility. The write-once policy for test files
 > is enforced by the caller, not the adapter, and lands as part of the

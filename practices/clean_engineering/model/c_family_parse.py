@@ -9,6 +9,8 @@ import re
 from typing import Callable
 
 from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation
+from practices.clean_engineering.model.field_types import Relationship
+from practices.clean_engineering.model.property import Property, append_invariant, take_property_note
 
 _CLASS_RE = re.compile(
     r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
@@ -42,6 +44,15 @@ _NARRATION = re.compile(
 _COMMENTED_CODE = re.compile(
     r"^\s*//\s*(function |class |if |for |while |return |throw |try)",
 )
+_FIELD_RE = re.compile(
+    r"^\s*(?:(?:public|private|protected|readonly|static)\s+)*(\w+)\s*:\s*([^;=]+);",
+    re.M,
+)
+_SKIP_TYPES = frozenset({
+    "String", "Number", "Boolean", "Void", "Any", "Unknown", "Object",
+    "Record", "Array", "Promise", "Partial", "Omit", "Pick", "Date", "Error",
+    "Map", "Set", "Readonly", "Required", "NonNullable",
+})
 
 
 class CFamilyParse:
@@ -92,6 +103,8 @@ class CFamilyParse:
                 self._loaded_operation(oclass, filled) for filled in self._methods_from_body(body, match.group(1))
             ]
             self._prepend_constructors(oclass, body)
+            oclass.properties = self._fields_from_body(oclass, body)
+            oclass.relationships = self._relationships_from_members(oclass)
             module.classes.append(oclass)
             class_order += 1
 
@@ -157,7 +170,11 @@ class CFamilyParse:
             method_body, _rel = self._brace_body(class_body, match.end() - 1)
             if method_body is None:
                 continue
-            op = Operation(name=op_name, parameters=self._split_params(match.group(2) or ""))
+            op = Operation(
+                name=op_name,
+                parameters=self._split_params(match.group(2) or ""),
+                return_type=(match.group(3) or "").strip(),
+            )
             op.line = self._line_at(self._text, self._body_start + match.start())
             filled = self._operation_from_body(op, method_body)
             prefix = class_body[max(0, match.start() - 12) : match.start()]
@@ -167,8 +184,21 @@ class CFamilyParse:
         return ops
 
     def _operation_from_body(self, op: Operation, body: str) -> Operation:
-        stripped = _STRING_RE.sub('""', body)
-        callees = [m.group(1) for m in _CALL_RE.finditer(stripped) if m.group(1) != op.name]
+        code_only = "\n".join(
+            line for line in body.splitlines() if not line.strip().startswith("//")
+        )
+        stripped = _STRING_RE.sub('""', code_only)
+        qualified = re.findall(r"(?<![\w.])([A-Z]\w*(?:\.[A-Za-z_]\w*)+)\s*\(", stripped)
+        bare = [m.group(1) for m in _CALL_RE.finditer(stripped) if m.group(1) != op.name]
+        suffixes = {item.split(".")[-1] for item in qualified}
+        callees = qualified + [name for name in bare if name not in suffixes]
+        notes = [
+            line.strip()[2:].strip()
+            for line in body.splitlines()
+            if line.strip().startswith("//")
+        ]
+        for note in notes:
+            append_invariant(op, note)
         base_line = op.line or 1
         op.param_count = len(op.parameters)
         op.line_count = body.count("\n") + 1
@@ -199,7 +229,7 @@ class CFamilyParse:
 
     def _assigned_names(self, op: Operation, body: str) -> list[tuple[str, int]]:
         base_line = op.line or 1
-        assigned = [(p, base_line) for p in op.parameters]
+        assigned = [(parameter.name, base_line) for parameter in op.parameters]
         assigned.extend(
             (m.group(1), base_line)
             for m in re.finditer(
@@ -237,9 +267,88 @@ class CFamilyParse:
             name = re.split(r"\s*:\s*", part)[0].strip()
             name = name.split()[-1] if name.split() else name
             name = name.lstrip("@")
+            type_hint = part.split(":", 1)[1].strip() if ":" in part else ""
             if name and name not in {"this", "self"}:
-                params.append(name)
+                params.append(f"{name}: {type_hint}" if type_hint else name)
         return params
+
+    def _fields_from_body(self, oclass: OoadClass, body: str) -> list:
+        outside = self._outside_braces(body)
+        props = []
+        load = getattr(oclass, "load_property_field", None)
+        cursor = 0
+        for index, match in enumerate(_FIELD_RE.finditer(outside), start=1):
+            prop = Property(name=match.group(1), sequential_order=index, type_hint=match.group(2).strip())
+            for note in self._comments_above(outside[cursor:match.start()]):
+                take_property_note(prop, note)
+            props.append(load(prop) if load is not None else prop)
+            cursor = match.end()
+        return props
+
+    def _comments_above(self, prefix: str) -> list[str]:
+        """// lines that sit immediately above a field. A blank line ends the run."""
+        notes: list[str] = []
+        for line in reversed(prefix.splitlines()):
+            stripped = line.strip()
+            if not stripped:
+                if notes:
+                    break
+                continue
+            if not stripped.startswith("//"):
+                break
+            notes.append(stripped[2:].strip())
+        notes.reverse()
+        return notes
+
+    def _outside_braces(self, body: str) -> str:
+        chars: list[str] = []
+        depth = 0
+        for ch in body:
+            if ch == "{":
+                depth += 1
+                chars.append(" ")
+            elif ch == "}":
+                depth = max(0, depth - 1)
+                chars.append(" ")
+            elif depth == 0:
+                chars.append(ch)
+            else:
+                chars.append(" ")
+        return "".join(chars)
+
+    def _relationships_from_members(self, oclass: OoadClass) -> list:
+        """Association to every domain type a field, parameter, or return names."""
+        seen: set[str] = set()
+        relationships = []
+        for prop in oclass.properties:
+            targets = self._domain_types(prop.type_hint)
+            if not targets:
+                continue
+            kind = (getattr(prop, "stereotype", "") or "association").lower()
+            if kind not in {"composition", "aggregation", "association"}:
+                kind = "association"
+            if not prop.stereotype:
+                prop.stereotype = kind
+            for target in targets:
+                if target in seen:
+                    continue
+                seen.add(target)
+                relationships.append(Relationship(
+                    target=target,
+                    kind=kind,
+                    cardinality=getattr(prop, "cardinality", ""),
+                    description=getattr(prop, "origin", ""),
+                ))
+        return relationships
+
+    def _domain_types(self, type_raw: str) -> list[str]:
+        names: list[str] = []
+        for match in re.finditer(r"\b([A-Z][A-Za-z0-9]*)\b", type_raw or ""):
+            name = match.group(1)
+            if name in _SKIP_TYPES or name in names:
+                continue
+            names.append(name)
+        return names
 
     def _brace_body(self, text: str, open_index: int) -> tuple[str | None, int]:
         while open_index < len(text) and text[open_index] != "{":

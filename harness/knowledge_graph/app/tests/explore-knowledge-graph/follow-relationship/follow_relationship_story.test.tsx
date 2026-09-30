@@ -2,7 +2,6 @@ import { fireEvent, render } from '@testing-library/react';
 import { story, scenario } from '../../story-test';
 import { PracticeGraphTree } from '../../../packages/explore-knowledge-graph/PracticeGraphTree';
 import { KnowledgeGraph } from '../../../packages/explore-knowledge-graph/knowledge-graph/knowledge-graph';
-import { RELATIONSHIP_KINDS } from '../../../packages/explore-knowledge-graph/knowledge-graph/catalog';
 import { overlayWorkspaceTree } from '../../../packages/explore-knowledge-graph/knowledge-graph/workspace-overlay';
 import { SelectedNodePane } from '../../../packages/explore-knowledge-graph/SelectedNodePane';
 import { ExplorePracticeGraphsClientHelper } from '../helpers/explore-practice-graphs.client';
@@ -55,13 +54,13 @@ story('Follow Relationship', () => {
       selectedId = null;
     });
     when('the Engineer opens relationships on that Class', () => {});
-    then('every Relationship kind is listed', () => {
+    then('only Relationship kinds with targets are listed, under the other practice', () => {
       const tree = KnowledgeGraph.fromDto(
         classDemonstratedThroughExampleGraph(),
       ).present().listed_tree;
       const customer = findTreeNode(tree, 'Customer');
       expect(customer?.relationships.map((group) => group.kind)).toEqual([
-        ...RELATIONSHIP_KINDS,
+        'demonstratedThrough',
       ]);
       const { container } = render(
         <PracticeGraphTree
@@ -72,12 +71,12 @@ story('Follow Relationship', () => {
       );
       expandNonRuleTwists(container);
       const row = customerRow(container);
+      expect(row.textContent ?? '').toContain('stories');
       expect(row.textContent ?? '').not.toContain('demonstratedThrough');
+      expect(row.textContent ?? '').not.toContain('owns');
       fireEvent.click(row.querySelector('[data-testid="tree-expand-relationships"]')!);
       expect(row.textContent ?? '').toContain('demonstratedThrough');
-      for (const kind of RELATIONSHIP_KINDS) {
-        expect(row.textContent ?? '').toContain(kind);
-      }
+      expect(row.querySelector('[data-practice="stories"]')).not.toBeNull();
     }).and('demonstratedThrough lists the Example', () => {
       const tree = KnowledgeGraph.fromDto(
         classDemonstratedThroughExampleGraph(),

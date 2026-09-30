@@ -1,0 +1,482 @@
+{
+  "epics": [
+    {
+      "name": "Onboard A Customer",
+      "sequentialOrder": 1,
+      "subEpics": [
+        {
+          "name": "Create Customer",
+          "sequentialOrder": 1,
+          "subEpics": [
+            {
+              "name": "Create Empty Cart",
+              "sequentialOrder": 1,
+              "subEpics": [],
+              "stories": [
+                {
+                  "name": "Ensure Cart on Customer",
+                  "sequentialOrder": 1,
+                  "storyType": "user",
+                  "scenarios": [
+                    {
+                      "name": "Load Cart \u2014 no cart",
+                      "sequentialOrder": 1,
+                      "exampleRows": [
+                        {
+                          "example": "storedAccountCredentialsWithToken"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Create Cart",
+                      "sequentialOrder": 2,
+                      "exampleRows": [
+                        {
+                          "example": "storedAccountCredentialsWithToken"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "customer already has a Mavenir shopping cart",
+                      "sequentialOrder": 3,
+                      "exampleRows": [
+                        {
+                          "example": "storedAccountCredentialsWithToken"
+                        },
+                        {
+                          "example": "newMavenirShoppingCart"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "cart already exists",
+                      "sequentialOrder": 4,
+                      "exampleRows": [
+                        {
+                          "example": "storedAccountCredentialsWithToken"
+                        },
+                        {
+                          "example": "newMavenirShoppingCart"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Create Unconfirmed User",
+              "sequentialOrder": 2,
+              "subEpics": [],
+              "stories": [
+                {
+                  "name": "Create Unconfirmed Cognito User",
+                  "sequentialOrder": 1,
+                  "storyType": "user",
+                  "scenarios": [
+                    {
+                      "name": "Display Create Account",
+                      "sequentialOrder": 1
+                    },
+                    {
+                      "name": "Enter Valid account credentials",
+                      "sequentialOrder": 2,
+                      "exampleRows": [
+                        {
+                          "example": "enteredValidAccountCredentials"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Email already registered",
+                      "sequentialOrder": 3,
+                      "exampleRows": [
+                        {
+                          "example": "enteredAlreadyRegisteredAccountCredentials"
+                        },
+                        {
+                          "example": "storedAlreadyRegisteredUnconfirmedCognitoUser"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Create Unconfirmed User",
+                      "sequentialOrder": 4,
+                      "exampleRows": [
+                        {
+                          "example": "enteredValidAccountCredentials"
+                        },
+                        {
+                          "example": "expectedValidAccountCredentials"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Email already registered in Cognito",
+                      "sequentialOrder": 5,
+                      "exampleRows": [
+                        {
+                          "example": "enteredAlreadyRegisteredAccountCredentials"
+                        },
+                        {
+                          "example": "storedAlreadyRegisteredUnconfirmedCognitoUser"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Load Customer",
+              "sequentialOrder": 3,
+              "subEpics": [],
+              "stories": [
+                {
+                  "name": "Load My Paradise Customer From Midtier And Store In Session",
+                  "sequentialOrder": 1,
+                  "storyType": "user",
+                  "scenarios": [
+                    {
+                      "name": "Load My Paradise Customer From Midtier And Store In Session",
+                      "sequentialOrder": 1,
+                      "exampleRows": [
+                        {
+                          "example": "enteredValidAccountCredentials"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Load customer fails",
+                      "sequentialOrder": 2
+                    },
+                    {
+                      "name": "Terminated account",
+                      "sequentialOrder": 3,
+                      "exampleRows": [
+                        {
+                          "example": "storedAccountCredentialsWithToken"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Verify Account",
+              "sequentialOrder": 4,
+              "subEpics": [],
+              "stories": [
+                {
+                  "name": "Enter Validation Code",
+                  "sequentialOrder": 1,
+                  "storyType": "user",
+                  "scenarios": [
+                    {
+                      "name": "Enter validation code",
+                      "sequentialOrder": 1,
+                      "exampleRows": [
+                        {
+                          "example": "enteredValidAccountCredentials"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Resend validation code",
+                      "sequentialOrder": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "stories": []
+        },
+        {
+          "name": "Get Number",
+          "sequentialOrder": 2,
+          "subEpics": [
+            {
+              "name": "Enter Porting Number",
+              "sequentialOrder": 1,
+              "subEpics": [],
+              "stories": [
+                {
+                  "name": "Submit Portability Request",
+                  "sequentialOrder": 1,
+                  "storyType": "user",
+                  "scenarios": [
+                    {
+                      "name": "Port the number",
+                      "sequentialOrder": 1,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "enteredValidPortability"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        },
+                        {
+                          "example": "reloadCart"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Port the number \u2014 SMS verification skipped",
+                      "sequentialOrder": 2,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "enteredValidPortability"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Get New Number",
+              "sequentialOrder": 2,
+              "subEpics": [],
+              "stories": [
+                {
+                  "name": "Determine Number",
+                  "sequentialOrder": 1,
+                  "storyType": "user",
+                  "scenarios": [
+                    {
+                      "name": "View available numbers",
+                      "sequentialOrder": 1,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "View available numbers \u2014 MSISDN in cart",
+                      "sequentialOrder": 2,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Refresh available numbers",
+                      "sequentialOrder": 3,
+                      "exampleRows": [
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Search for a number",
+                      "sequentialOrder": 4,
+                      "exampleRows": [
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Numbers locked by another customer are excluded from results",
+                      "sequentialOrder": 5,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Pick number",
+                      "sequentialOrder": 6,
+                      "exampleRows": [
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "expectedChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "reloadCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Pick number \u2014 replace existing",
+                      "sequentialOrder": 7,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "expectedChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "reloadCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Reserve number request fails",
+                      "sequentialOrder": 8,
+                      "exampleRows": [
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Patch cart with number fails",
+                      "sequentialOrder": 9,
+                      "exampleRows": [
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Verify Ported Number",
+              "sequentialOrder": 3,
+              "subEpics": [],
+              "stories": [
+                {
+                  "name": "Check Port Verification",
+                  "sequentialOrder": 1,
+                  "storyType": "user",
+                  "scenarios": [
+                    {
+                      "name": "Enter porting SMS code",
+                      "sequentialOrder": 1,
+                      "exampleRows": [
+                        {
+                          "example": "enteredValidPortability"
+                        },
+                        {
+                          "example": "validPortingSmscode"
+                        },
+                        {
+                          "example": "customerWithCartAndPortability"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Verify with unusable porting SMS code",
+                      "sequentialOrder": 2,
+                      "exampleRows": [
+                        {
+                          "example": "enteredValidPortability"
+                        },
+                        {
+                          "example": "mismatchPortingSmscode"
+                        },
+                        {
+                          "example": "customerWithCartAndPortability"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Resend porting SMS code",
+                      "sequentialOrder": 3,
+                      "exampleRows": [
+                        {
+                          "example": "enteredValidPortability"
+                        },
+                        {
+                          "example": "customerWithCartAndPortability"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "stories": []
+        }
+      ]
+    }
+  ]
+}

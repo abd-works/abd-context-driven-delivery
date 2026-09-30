@@ -1,108 +1,85 @@
-"""Format-specific StoryNode subtypes for the Java code format.
-
-JavaStoryMap also knows how to discover and parse Java test files.
-"""
+"""Java nodes: Java, then code, then the story model."""
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import List
 
-from practices.stories.model.nodes import Epic, Story, SubEpic
-from practices.stories.model.scenario import Scenario
-from practices.stories.model.source_location import SourceLocation
-from practices.stories.model.story_map import StoryMap
-from practices.stories.model.step_body import StepBody
-from practices.stories.model.test_file import Language, Test, TestCase, TestSuite, Tier, extract_bug_id
-
-_CLASS = re.compile(r"^\s*(?:public\s+)?class\s+(?P<name>\w+Test)\b", re.MULTILINE)
-_TEST = re.compile(
-    r"@Test\b[^\n]*\n\s*(?:public\s+)?void\s+(?P<name>\w+)\s*\(",
-    re.MULTILINE,
-)
-_ASSERT = re.compile(r"\b(assertEquals|assertTrue|assertNotNull|Assertions\.)")
-_TIER = re.compile(r"^(?:[A-Z][A-Za-z0-9]*?)(?P<tier>[A-Z][A-Za-z0-9]*)Test\.java$")
-_GLOBS = (
-    "**/tests/**/*Test.java",
-    "tests/**/*Test.java",
-)
+from practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
+from practices.stories.model.story_model import Background, Story
 
 
-class JavaScenario(Scenario):
-    pass
+class JavaScenario(CodeScenario):
+    _SCENARIO = re.compile(r"SCENARIO:\s*(.+)")
 
-
-class JavaStory(Story):
-    def load_scenario(self, source: Scenario) -> JavaScenario:
-        return JavaScenario(source.name, source.sequential_order, source.story_name)
-
-
-class JavaSubEpic(SubEpic):
-    def load_sub_epic(self, source: SubEpic) -> "JavaSubEpic":
-        return JavaSubEpic(source.name, source.sequential_order)
-
-    def load_story(self, source: Story) -> JavaStory:
-        return JavaStory(source.name, source.sequential_order, source.story_type)
-
-
-class JavaEpic(Epic):
-    def load_sub_epic(self, source: SubEpic) -> JavaSubEpic:
-        return JavaSubEpic(source.name, source.sequential_order)
-
-
-class JavaStoryMap(StoryMap):
-    """Format-typed root for the Java code format. Parses *Test.java files."""
-
-    def load_epic(self, source: JavaEpic) -> JavaEpic:
-        return JavaEpic(source.name, source.sequential_order)
+    def calls_in(self, body: str) -> List[tuple]:
+        return []
 
     @classmethod
-    def from_workspace(cls, root: Path) -> List[TestSuite]:
-        """Find and parse all Java test files under *root*."""
-        root = Path(root).resolve()
-        if root.is_file():
-            if root.suffix == ".java":
-                return [cls._parse_file(root, root.parent)]
-            return []
-        seen: set = set()
-        suites: List[TestSuite] = []
-        for pattern in _GLOBS:
-            for p in root.glob(pattern):
-                if p in seen or not p.is_file():
-                    continue
-                seen.add(p)
-                suites.append(cls._parse_file(p, root))
-        return suites
+    def scenario_blocks(cls, content: str) -> List[tuple]:
+        return [(match.group(1).strip(), "") for match in cls._SCENARIO.finditer(content)]
 
     @classmethod
-    def _parse_file(cls, path: Path, root: Path) -> TestSuite:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        rel = str(path.relative_to(root)).replace("\\", "/")
-        tier = cls()._tier(path.name)
-        describe = m.group("name") if (m := _CLASS.search(text)) else ""
-        cases: List[TestCase] = []
-        for func in _TEST.finditer(text):
-            offset = func.start()
-            body = text[offset: offset + 1200]
-            name = func.group("name")
-            assertions = len(_ASSERT.findall(body))
-            cases.append(TestCase(
-                tier=tier, name=name,
-                tests=[Test()], assertions_count=assertions,
-                has_real_assertion=assertions > 0,
-                has_unimplemented_body=StepBody().case_is_stub(body),
-                references_bug_id=extract_bug_id(body),
-                story_source=SourceLocation(rel, text.count("\n", 0, offset) + 1),
-                covers_scenario=re.sub(r"([a-z])([A-Z])", r"\1 \2", name).replace("_", " ").lower(),
-            ))
-        return TestSuite(
-            tier=tier, language=Language("java"),
-            name=describe, cases=cases,
-            imports_real=True,
-            source=SourceLocation(rel, 1),
-            unimplemented_steps=StepBody().unimplemented_java(text),
-        )
+    def backgrounds_in(cls, content: str) -> List[Background]:
+        return []
 
-    def _tier(self, name: str) -> Tier:
-        m = _TIER.search(name)
-        return Tier(m.group("tier").lower()) if m else Tier("")
+    @classmethod
+    def example_names(cls, content: str) -> List[str]:
+        return []
+
+    @classmethod
+    def create(cls, scenario) -> List[str]:
+        return [f" * SCENARIO: {scenario.name}"]
+
+
+class JavaStory(CodeStory):
+    scenario_type = JavaScenario
+
+    @classmethod
+    def load_all(cls, content: str) -> List["JavaStory"]:
+        chunks = re.split(r"(?=/\*\* Story:)", content)
+        stories = [cls.load(chunk, "") for chunk in chunks if "Story:" in chunk]
+        return stories or [cls.load(content, "")]
+
+    @classmethod
+    def load(cls, content: str, story_slug: str) -> "JavaStory":
+        name_match = re.search(r"Story:\s*(.+)", content)
+        story_name = name_match.group(1).strip() if name_match else story_slug.replace("-", " ").title()
+        story_name = re.sub(r"\s*\(tier-neutral\)\.?\s*$", "", story_name).strip()
+        story = cls(story_name, 1)
+        actor_match = re.search(r"Actor:\s*(.+)", content)
+        if actor_match:
+            story.actors = [actor_match.group(1).strip()]
+        story.fill(content)
+        return story
+
+    @classmethod
+    def story_text(cls, story: Story) -> str:
+        actor = (story.actors[0] if story.actors else "").strip()
+        lines = [f"/** Story: {story.name}"]
+        if actor:
+            lines.append(f" * Actor: {actor}")
+        for scenario in story.scenarios:
+            lines.extend(JavaScenario.create(scenario))
+        lines.append(" */")
+        lines.append("")
+        return "\n".join(lines)
+
+    @classmethod
+    def create(cls, story: Story, **kwargs) -> str:
+        return cls.story_text(story)
+
+
+class JavaEpic(CodeEpic):
+    def _file_stories(self):
+        return [story for story in self.stories if story.scenarios]
+
+    def _write_stories(self, parent: str, files: dict, tests_root: str) -> None:
+        stories = self._file_stories()
+        if not stories:
+            return
+        blocks = "\n".join(JavaStory.story_text(story) for story in stories)
+        files[f"{parent}/{self.pascal()}Story.java"] = "\n".join([
+            f"// Epic: {self.name}",
+            "",
+            blocks,
+        ])

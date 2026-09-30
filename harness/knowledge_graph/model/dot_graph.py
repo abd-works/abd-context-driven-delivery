@@ -15,7 +15,6 @@ _CHILD_RANK = {
     "Background": 1,
     "Scenario": 2,
     "Story": 3,
-    "SubEpic": 3,
     "Epic": 3,
     "Step": 4,
     "BoundedContext": 1,

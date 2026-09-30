@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import List
 
 from harness.guidance.rule import Rule
@@ -20,14 +21,19 @@ def load_graph_rules_from_markdown(root=None) -> List[GraphRule]:
     from practices.ux.ux import Ux
 
     wrapped: List[GraphRule] = []
-    for practice, guidance in (
-        ("stories", Stories()),
-        ("clean_engineering", CleanEngineering()),
-        ("ddd", Ddd()),
-            ("bdd", Bdd()),
-            ("ux", Ux()),
-            ("lern_domain_driven", LernDomainDriven()),
-        ):
+    for practice, factory in (
+        ("stories", Stories),
+        ("clean_engineering", CleanEngineering),
+        ("ddd", Ddd),
+        ("bdd", Bdd),
+        ("ux", Ux),
+        ("lern_domain_driven", LernDomainDriven),
+    ):
+        try:
+            guidance = factory()
+        except Exception as error:
+            print(f"skipped {practice} rules ({error})", file=sys.stderr)
+            continue
         wrapped.extend(_wrap(guidance.rules, practice=practice, shared=True))
         fidelities = getattr(guidance, "fidelities", None)
         if fidelities is not None:

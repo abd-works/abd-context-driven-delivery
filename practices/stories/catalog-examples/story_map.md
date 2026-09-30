@@ -49,7 +49,7 @@ format: md
 (E) Self-Serve Subscription
     (E) Access Selfcare
         (S) Customer --> Enter Sign In Credentials
-        (E) Customer --> Reset Password
+        (S) Customer --> Reset Password
         (S) Customer --> Edit Profile
         (S) Customer --> Sign Out
     (E) Manage Billing
