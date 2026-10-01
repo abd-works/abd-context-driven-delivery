@@ -50,43 +50,21 @@ _STAGE_SCOPES: dict[str, dict[str, str]] = {
     },
 }
 
-# Stage column bullets — approach-page scope chips (Outcome / Increment / Tests).
-_STAGE_POLICIES: dict[str, tuple[str, ...]] = {
-    "discovery": (
-        "Outcome",
-        "Experience",
-        "Architecture",
-    ),
-    "spec": (
-        "Increment",
-        "Prototype",
-        "Reference",
-    ),
-    "engineer": (
-        "Tests",
-        "Interface",
-        "Solution",
-    ),
-}
+def approach_board_stages(path: str | Path | None = None) -> dict[str, dict]:
+    """Stage chips and paragraphs keyed by board column, from approach markdown."""
+    from catalog_generator.approach_copy import APPROACH_MARKDOWN, load_approach_copy
 
-# Approach write-ups shown under each stage column during the tour.
-_STAGE_DESCRIPTIONS: dict[str, tuple[str, ...]] = {
-    "discovery": (
-        "Refine context into lower-fidelity artifacts that make it easier to align on the overarching solution, catch systemic errors, and avoid failure cascading downstream.",
-        "Focus on how outcomes translate to user journeys, and map those journeys to system behavior.",
-        "Define enough structure to establish how domain boundaries and technology modules connect.",
-    ),
-    "spec": (
-        "Create machine-executable specifications — one small slice of the journey at a time.",
-        "Refine the business understanding needed to modularize domain validity, access, persistence, consistency, and integration.",
-        "Write example-driven scenarios backed by domain-driven operations, and generate working UI prototypes that pass their tests.",
-    ),
-    "engineer": (
-        "Build each slice onto the target stack. AI oversees deterministic tools so the same input produces results guarded by safety and quality standards.",
-        "Automate scenario specifications to cover user, system, and module-connecting interfaces.",
-        "Evaluate every error — technical and functional — and feed results back into the growing knowledge repository.",
-    ),
-}
+    source = Path(path) if path is not None else APPROACH_MARKDOWN
+    copy = load_approach_copy(source)
+    return {
+        stage["board_key"]: stage
+        for stage in copy.stages
+        if stage.get("board_key")
+    }
+
+
+def _board_stage(stages: dict[str, dict], stage_key: str) -> dict:
+    return stages.get(stage_key) or {}
 
 # Board rows under the CDD header: Stories → CE → UX → BDD → DDD.
 FAMILY_ROW_ORDER: tuple[str, ...] = (
@@ -199,7 +177,12 @@ _STORM_BLURBS: dict[str, str] = {
 }
 
 
-def approach_principle_grid(practices: list[dict], kind: str) -> str:
+def approach_principle_grid(
+    practices: list[dict],
+    kind: str,
+    *,
+    approach_md_path: str | Path | None = None,
+) -> str:
     """Static board under one approach principle. ``kind`` is descriptions, windows, spec, or tickets."""
     by_name = {t["toolset_name"]: t for t in practices}
     row_order = ("stories", "ddd", "ux", "clean_engineering", "bdd")
@@ -308,16 +291,18 @@ def approach_principle_grid(practices: list[dict], kind: str) -> str:
         )
 
     if kind == "stages":
+        board_stages = approach_board_stages(approach_md_path)
         heads = [cdd_head]
         details = []
         for stage_key, stage_label in STAGES:
+            stage = _board_stage(board_stages, stage_key)
             fams = ("sdd", "uxd", "arc")
             chips = "".join(
                 f'<li class="approach-grid__chip approach-grid__chip--{fams[i % 3]}">{html.escape(item)}</li>'
-                for i, item in enumerate(_STAGE_POLICIES.get(stage_key, ()))
+                for i, item in enumerate(stage.get("items") or ())
             )
             paras = "".join(
-                f'<p>{html.escape(para)}</p>' for para in _STAGE_DESCRIPTIONS.get(stage_key, ())
+                f'<p>{html.escape(para)}</p>' for para in (stage.get("paras") or ())
             )
             shape = "solution" if stage_key == "discovery" else "sprint" if stage_key == "spec" else "story"
             heads.append(

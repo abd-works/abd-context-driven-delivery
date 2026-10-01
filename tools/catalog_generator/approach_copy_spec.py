@@ -16,6 +16,7 @@ from mamba import description, it
 
 from catalog_generator.approach_copy import load_approach_copy
 from catalog_generator.catalog_generator import Catalog
+from catalog_generator.foundry_chrome import approach_board_stages, render_hub_board
 from installation.installer import Installer  # noqa: F401
 
 _MINIMAL_MD = """# Approach
@@ -61,6 +62,63 @@ with description("load_approach_copy"):
         expect(copy.stages[0]["paras"][0]).to(equal("HAND-EDITABLE-STAGE-COPY"))
         expect(copy.practices[0]["slug"]).to(equal("product-engineering"))
         expect(copy.practices[0]["bullets"][0]).to(equal("HAND-EDITABLE-BULLET"))
+
+
+_BOARD_STAGE_MD = """# Approach
+
+Subhead
+
+## Stages
+
+### Discovery
+
+id: discovery
+board_key: discovery
+items: ZZ-CHIP
+
+ZZ-PARA
+
+### Specification
+
+id: specification
+board_key: spec
+items: Spec Chip
+
+Spec paragraph
+
+### Implement
+
+id: implementation
+board_key: engineer
+items: Engineer Chip
+
+Engineer paragraph
+"""
+
+
+with description("approach board stages"):
+    with it("reads stage chips and paragraphs from approach markdown"):
+        path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
+        path.write_text(_BOARD_STAGE_MD, encoding="utf-8")
+        stages = approach_board_stages(path)
+        expect(stages["discovery"]["items"]).to(equal(("ZZ-CHIP",)))
+        expect(stages["discovery"]["paras"][0]).to(equal("ZZ-PARA"))
+
+    with it("renders those chips on the catalog board"):
+        path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
+        path.write_text(_BOARD_STAGE_MD, encoding="utf-8")
+        html = render_hub_board([], [], [], approach_md_path=path)
+        expect("ZZ-CHIP" in html).to(equal(True))
+        expect("ZZ-PARA" in html).to(equal(True))
+
+
+with description("Catalog approach markdown folder"):
+    with it("reads approach copy from the generator markdown folder"):
+        catalog = Catalog(out_root=str(Path(tempfile.mkdtemp()) / "out"))
+        source = Path(__file__).resolve().parent / "markdown" / "cdd-approach.md"
+        expect(catalog.approach_md_path).to(equal(source))
+        expect(source.is_file()).to(equal(True))
+        expect("CDD harness" in catalog._approach_copy().subhead).to(equal(True))
 
 
 with description("Catalog approach page"):

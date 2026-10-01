@@ -7,6 +7,7 @@ from pathlib import Path
 
 _LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 _META = re.compile(r"^([a-z_]+):\s*(.*)$")
+APPROACH_MARKDOWN = Path(__file__).resolve().parent / "markdown" / "cdd-approach.md"
 
 
 @dataclass(frozen=True)

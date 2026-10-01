@@ -1707,10 +1707,10 @@ class Catalog:
         self.repo_url = repo_url or citation.repo_url
         self.ref = ref or citation.ref
         self.out_root = Path(out_root)
+        from catalog_generator.approach_copy import APPROACH_MARKDOWN
+
         self.approach_md_path = (
-            Path(approach_md_path)
-            if approach_md_path is not None
-            else _REPO_ROOT / "catalog" / "cdd-approach.md"
+            Path(approach_md_path) if approach_md_path is not None else APPROACH_MARKDOWN
         )
         self.brand = None
         from catalog_generator.foundry_chrome import Brand
