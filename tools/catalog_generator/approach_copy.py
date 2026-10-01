@@ -1,11 +1,13 @@
 """Load hand-editable approach page copy from markdown."""
 from __future__ import annotations
 
+import html
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 _LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+_EMPHASIS = re.compile(r"\*([^*]+)\*")
 _META = re.compile(r"^([a-z_]+):\s*(.*)$")
 APPROACH_MARKDOWN = Path(__file__).resolve().parent / "markdown" / "cdd-approach.md"
 
@@ -21,6 +23,57 @@ class ApproachCopy:
 
 def inline_markdown_links(text: str) -> str:
     return _LINK.sub(r'<a href="\2">\1</a>', text)
+
+
+def format_principle_bullet(text: str) -> str:
+    escaped = html.escape(text)
+    return _EMPHASIS.sub(r"<em>\1</em>", escaped)
+
+
+def so_what_row(bullets: tuple[str, ...] | list[str], *, modifier: str = "") -> str:
+    """Bold phrase over italic so-what; orange dots between columns."""
+    parts: list[str] = []
+    for index, item in enumerate(bullets):
+        phrase, separator, why = item.partition(" | ")
+        why_html = (
+            f'<p class="approach-so__why">{format_principle_bullet(why)}</p>'
+            if separator
+            else ""
+        )
+        parts.append(
+            '<li class="approach-so__item">'
+            f'<p class="approach-so__phrase">{format_principle_bullet(phrase)}</p>'
+            f"{why_html}</li>"
+        )
+        if index < len(bullets) - 1:
+            parts.append(
+                '<li class="approach-so__between" aria-hidden="true">'
+                '<span class="approach-so__dot"></span></li>'
+            )
+    classes = "approach-so"
+    if modifier:
+        classes += f" {modifier}"
+    return f'<ul class="{classes}">{"".join(parts)}</ul>'
+
+
+def product_engineering_layout(bullets: tuple[str, ...] | list[str]) -> str:
+    """Centered lead, three phrase/so-what columns, then a solo closing row."""
+    if not bullets:
+        return ""
+    lead = (
+        '<p class="approach-principle__lead approach-principle__lead--center">'
+        f"{format_principle_bullet(bullets[0])}</p>"
+    )
+    rest = list(bullets[1:])
+    parts: list[str] = ['<div class="approach-pe-intro">', lead]
+    if len(rest) >= 3:
+        parts.append(so_what_row(rest[:3], modifier="approach-so--pe-row"))
+    if len(rest) > 3:
+        parts.append(so_what_row(rest[3:], modifier="approach-so--solo"))
+    elif rest:
+        parts.append(so_what_row(rest, modifier="approach-so--solo"))
+    parts.append("</div>")
+    return "".join(parts)
 
 
 def load_approach_copy(path: str | Path) -> ApproachCopy:
@@ -71,6 +124,7 @@ def _parse_stages(body: str) -> list[dict]:
                 "scope_width": meta.get("scope_width", ""),
                 "paras": paras,
                 "board_key": meta.get("board_key", ""),
+                "example": meta.get("example", ""),
             }
         )
     return stages

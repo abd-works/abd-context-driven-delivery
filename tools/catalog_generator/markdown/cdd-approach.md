@@ -26,6 +26,7 @@ shape: solution
 scope_name: Whole solution
 scope_width: wide / shallow
 items: Outcome | Experience | Architecture
+example: story_map.png
 
 Refine context into lower-fidelity artifacts that make it easier to align on the overarching solution, catch systemic errors, and avoid failure cascading downstream.
 
@@ -41,6 +42,7 @@ shape: sprint
 scope_name: Sprint
 scope_width: narrow / deeper
 items: Increment | Prototype | Reference
+example: scenarios.md
 
 Create machine-executable specifications — one small slice of the journey at a time.
 
@@ -56,6 +58,7 @@ shape: story
 scope_name: Story
 scope_width: narrowest / deep
 items: Tests | Interface | Solution
+example: acceptance_tests.ts
 
 Build each slice onto the target stack. AI oversees deterministic tools so the same input produces results guarded by safety and quality standards.
 
@@ -84,9 +87,9 @@ Confirm feasibility for cost, risk, and operations, then inject that feedback ba
 slug: iterate-and-learn
 kind: windows
 
-- Limit each AI run to the cognitive load of the team, so people can guide, review, and adjust what it generates.
-- Keep the context window small. Even frontier models produce better output well under their maximum.
-- Layer context through successive generations. Each pass increases fidelity.
+- Limit each AI run to the cognitive load of the team | so people can guide, review, and adjust what it generates
+- Keep the context window small | Even frontier models produce better output well under their maximum window
+- Layer context with increased fidelity through successive generations | So humans and AI can focus on big decisions before small decisions
 
 The CDD harness includes [Sketch](https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md), a session where a person and AI probe, grill, illustrate, and align. Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback.
 
@@ -95,8 +98,11 @@ The CDD harness includes [Sketch](https://github.com/abd-works/abd-context-drive
 slug: product-engineering
 kind: descriptions
 
-- The fundamentals of product engineering have not changed.
-- Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.
+- The fundamentals of product engineering have not changed. Ground AI delivery in practices so you can
+- develop artifacts that are easy to drill down and roll up | so the right conversations and the right decisions are supported by the right level of detail
+- define specifications that also serve as automated tests | so context is not just defined to be machine readable, it's executed so it's machine validated
+- connect all context from outcomes to code using a single shared language that everyone can learn | so the impact of a change can be well understood by human and AI
+- force simplicity into the design from outcome and impact to build and operation | make it easier to guide generation toward the correct outcome
 
 ### Context Storming
 

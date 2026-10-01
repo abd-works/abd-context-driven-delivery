@@ -21,37 +21,9 @@ import {
 } from '../systems/mavenir/portal-gateway';
 import type { PortalGateway } from '../systems/mavenir/portal-gateway';
 
-export class ValidationCode {
-  constructor(public code: string, public sentAt: Date = new Date()) {}
-}
 
-export class Identity {
-  constructor(
-    public email: string,
-    public name = '',
-    public lastName = '',
-    public fullName = '',
-    public preferredName = '',
-    public expiryDate = '',
-    public dateOfBirth = '',
-    public idNationality = '',
-    public idNumber = '',
-    public idType = '',
-    public otherPhoneNumber = '',
-  ) {}
-}
-
-export class Address {
-  constructor(
-    public street = '',
-    public complement = '',
-    public city = '',
-    public parish = '',
-    public postalCode = '',
-    public country = '',
-  ) {}
-}
-
+//───── Customer Aggregate ─────
+//<<Entity | Root>>
 export class Customer {
   public id: string;
   public identity: Identity;
@@ -61,7 +33,6 @@ export class Customer {
   public profile: Profile | null = null;
   _repository?: CustomerRepository;
 
-  /** Canonical: `new Customer(accountCredentials)`. id, identity, and address are derived unless the repository passes richer Mavenir data. */
   constructor(
     public accountCredentials: AccountCredentials,
     id?: string,
@@ -121,6 +92,40 @@ export class Customer {
   }
 }
 
+//<<Entity>>
+export class Identity {
+  constructor(
+    public email: string,
+    public name = '',
+    public lastName = '',
+    public fullName = '',
+    public preferredName = '',
+    public expiryDate = '',
+    public dateOfBirth = '',
+    public idNationality = '',
+    public idNumber = '',
+    public idType = '',
+    public otherPhoneNumber = '',
+  ) {}
+}
+
+//<<Entity>>
+export class Address {
+  constructor(
+    public street = '',
+    public complement = '',
+    public city = '',
+    public parish = '',
+    public postalCode = '',
+    public country = '',
+  ) {}
+}
+
+//<<Value Object>>
+export class ValidationCode {
+  constructor(public code: string, public sentAt: Date = new Date()) {}
+}
+
 export const CustomerOperation = {
   ConfirmIdentity: 'confirmIdentity',
   Create: 'create',
@@ -141,9 +146,195 @@ export class CustomerException extends Error {
   }
 }
 
-// ── AccountCredentials ───────────────────────────────────────────────────────
+export class CustomerRepository {
+  constructor(private readonly portalGateway: PortalGateway) {}
+
+  async create(accountCredentials: AccountCredentials): Promise<Customer> {
+    const created = await this.persistCustomer(accountCredentials);
+    if (!created) {
+      throw this.exception(CustomerOperation.Create, accountCredentials, 'Could not create customer.', 'Customer already exists');
+    }
+    return created;
+  }
+
+  async load(accountCredentials: AccountCredentials): Promise<Customer> {
+    const customerId = accountCredentials.customerId ?? accountCredentials.token?.customerId;
+    if (!accountCredentials.token || !customerId)
+      throw this.exception(CustomerOperation.Load, accountCredentials, 'Something went wrong when loading your account', 'Invalid token');
+    const email = this.validateToken(accountCredentials.token);
+    if (email instanceof Error || !accountCredentials.token.customerId)
+      throw this.exception(CustomerOperation.Load, accountCredentials, 'Something went wrong when loading your account', 'Invalid token');
+    const customer = await this.read(accountCredentials.token.customerId, accountCredentials);
+    if (customer.billing?.state === BillingState.Terminated) {
+      await accountCredentials.signOut();
+      throw this.exception(
+        CustomerOperation.Load,
+        accountCredentials,
+        'Your account has been terminated.',
+        'Billing account is terminated',
+      );
+    }
+    return customer;
+  }
+
+  update(customer: Customer): MavenirCustomer | Error {
+    const mavenirCustomer = this.portalGateway.read(customer.id);
+    if (mavenirCustomer instanceof Error) return mavenirCustomer;
+    if (customer.profile?.inquiry) mavenirCustomer.inquiryId = customer.profile.inquiry.inquiryId;
+    const { party, medium } = this.translateUpdateRequest(customer);
+    return this.portalGateway.patchProfile(mavenirCustomer, party, medium);
+  }
+
+  translateUpdateRequest(customer: Customer): { party: EngagedParty; medium: ContactMedium } {
+    const givenName = formatName(customer.identity.name);
+    const familyName = formatName(customer.identity.lastName);
+    const preferredGivenName = customer.identity.preferredName
+      ? formatName(customer.identity.preferredName)
+      : givenName;
+    return {
+      party: new EngagedParty(
+        givenName,
+        familyName,
+        preferredGivenName,
+        customer.identity.dateOfBirth,
+        new IndividualIdentification(
+          customer.identity.idNumber,
+          customer.identity.idType,
+          customer.identity.idNationality,
+          customer.profile?.inquiry?.verified ?? customer.verified,
+          customer.identity.expiryDate,
+        ),
+      ),
+      medium: new ContactMedium(
+        customer.identity.email,
+        customer.identity.otherPhoneNumber,
+        customer.address.street,
+        customer.address.complement,
+        customer.address.city,
+        customer.address.parish,
+        customer.address.postalCode,
+        'Bermuda',
+      ),
+    };
+  }
+
+  translateUpdateResponse(mavenirCustomer: MavenirCustomer, accountCredentials: AccountCredentials): Customer {
+    return this.translateLoadResponse(mavenirCustomer, accountCredentials);
+  }
+
+  private async persistCustomer(accountCredentials: AccountCredentials): Promise<Customer | null> {
+    if (!accountCredentials.verified || !accountCredentials.token)
+      throw this.exception(CustomerOperation.Create, accountCredentials, 'Could not create customer.', 'Invalid token');
+    if (accountCredentials.customerId) return null;
+    const email = this.validateToken(accountCredentials.token);
+    if (email instanceof Error)
+      throw new CustomerException(CustomerOperation.Create, accountCredentials, 'Could not create customer.', email);
+    return this.persistNewCustomer(email, accountCredentials);
+  }
+
+  private async persistNewCustomer(email: string, accountCredentials: AccountCredentials): Promise<Customer> {
+    const request = this.translateCreateRequest(email);
+    const result = this.portalGateway.create(request);
+    if (result instanceof Error) {
+      throw new CustomerException(CustomerOperation.Create, accountCredentials, 'Could not create customer.', result);
+    }
+    return this.translateCreateResponse(result, accountCredentials);
+  }
+
+  private async read(customerId: string, accountCredentials: AccountCredentials): Promise<Customer> {
+    const mavenirCustomer = this.portalGateway.read(customerId);
+    if (mavenirCustomer instanceof Error) {
+      await accountCredentials.signOut();
+      throw new CustomerException(
+        CustomerOperation.Load,
+        accountCredentials,
+        'Something went wrong when loading your account',
+        mavenirCustomer,
+      );
+    }
+    return this.translateLoadResponse(mavenirCustomer, accountCredentials);
+  }
+
+  translateCreateRequest(email: string): MavenirCreateCustomerRequest {
+    return new MavenirCreateCustomerRequest(
+      email,
+      CreditServiceProviderId.Paradise,
+      MavenirCustomerSource.OnBoarding,
+      [
+        new MavenirCreateContactMedium(
+          true,
+          'ContactMedium',
+          { endDateTime: null, startDateTime: new Date().toISOString() },
+          { emailAddress: email },
+        ),
+      ],
+    );
+  }
+
+  translateCreateResponse(result: MavenirCreateCustomerResponse, accountCredentials: AccountCredentials): Customer {
+    return this.attach(new Customer(accountCredentials, result.id, new Identity(accountCredentials.email), new Address()));
+  }
+
+  private translateLoadResponse(mavenirCustomer: MavenirCustomer, accountCredentials: AccountCredentials): Customer {
+    const { contactMedium, engagedParty } = mavenirCustomer;
+    const identity = new Identity(
+      contactMedium.emailAddress,
+      engagedParty.givenName,
+      engagedParty.familyName,
+      `${engagedParty.givenName} ${engagedParty.familyName}`.trim(),
+      engagedParty.preferredGivenName,
+      engagedParty.individualIdentification.endDateTime,
+      engagedParty.birthDate,
+      engagedParty.individualIdentification.issuingAuthority,
+      engagedParty.individualIdentification.identificationId,
+      engagedParty.individualIdentification.identificationType,
+      contactMedium.phoneNumber,
+    );
+    const address = new Address(
+      contactMedium.street1,
+      contactMedium.street2,
+      contactMedium.city,
+      contactMedium.stateOrProvince,
+      contactMedium.postCode,
+      contactMedium.country,
+    );
+    const customer = new Customer(accountCredentials, mavenirCustomer.id, identity, address);
+    if (mavenirCustomer.billingAccount) {
+      customer.billing = new Billing(mavenirCustomer.billingAccount.id, customer, billingRepository);
+      customer.billing.state = (mavenirCustomer.billingAccount.state as BillingState) || BillingState.Active;
+      customer.billing.creditAdjustments = [...mavenirCustomer.billingAccount.creditAdjustments];
+    }
+    customer.verified = engagedParty.individualIdentification.validated;
+    customer.done = mavenirCustomer.done === 'true';
+    return this.attach(customer);
+  }
+
+  private attach(customer: Customer): Customer {
+    customer._repository = this;
+    return customer;
+  }
+
+  private validateToken(token: AccountToken): string | Error {
+    return token.jwt?.startsWith('token:') ? token.email : new Error('Invalid token');
+  }
+
+  private exception(
+    operation: CustomerOperation,
+    accountCredentials: AccountCredentials,
+    message: string,
+    cause: string,
+  ): CustomerException {
+    return new CustomerException(operation, accountCredentials, message, new Error(cause));
+  }
+}
+export const customerRepository = new CustomerRepository(portalGateway);
+
+// ── AccountCredentials Aggregatee ─────
 
 export class AccountCredentials {
+  errorMessage(errorMessage: any) {
+    throw new Error('Method not implemented.');
+  }
   static readonly RESEND_WAIT_MILLISECONDS = 60_000;
 
   readonly errors: AccountCredentialsErrors = emptyAccountCredentialsErrors();
@@ -437,187 +628,7 @@ function formatName(name: string): string {
     .join(' ');
 }
 
-export class CustomerRepository {
-  constructor(private readonly portalGateway: PortalGateway) {}
 
-  async create(accountCredentials: AccountCredentials): Promise<Customer> {
-    const created = await this.persistCustomer(accountCredentials);
-    if (!created) {
-      throw this.exception(CustomerOperation.Create, accountCredentials, 'Could not create customer.', 'Customer already exists');
-    }
-    return created;
-  }
-
-  async load(accountCredentials: AccountCredentials): Promise<Customer> {
-    const customerId = accountCredentials.customerId ?? accountCredentials.token?.customerId;
-    if (!accountCredentials.token || !customerId)
-      throw this.exception(CustomerOperation.Load, accountCredentials, 'Something went wrong when loading your account', 'Invalid token');
-    const email = this.validateToken(accountCredentials.token);
-    if (email instanceof Error || !accountCredentials.token.customerId)
-      throw this.exception(CustomerOperation.Load, accountCredentials, 'Something went wrong when loading your account', 'Invalid token');
-    const customer = await this.read(accountCredentials.token.customerId, accountCredentials);
-    if (customer.billing?.state === BillingState.Terminated) {
-      await accountCredentials.signOut();
-      throw this.exception(
-        CustomerOperation.Load,
-        accountCredentials,
-        'Your account has been terminated.',
-        'Billing account is terminated',
-      );
-    }
-    return customer;
-  }
-
-  update(customer: Customer): MavenirCustomer | Error {
-    const mavenirCustomer = this.portalGateway.read(customer.id);
-    if (mavenirCustomer instanceof Error) return mavenirCustomer;
-    if (customer.profile?.inquiry) mavenirCustomer.inquiryId = customer.profile.inquiry.inquiryId;
-    const { party, medium } = this.translateUpdateRequest(customer);
-    return this.portalGateway.patchProfile(mavenirCustomer, party, medium);
-  }
-
-  translateUpdateRequest(customer: Customer): { party: EngagedParty; medium: ContactMedium } {
-    const givenName = formatName(customer.identity.name);
-    const familyName = formatName(customer.identity.lastName);
-    const preferredGivenName = customer.identity.preferredName
-      ? formatName(customer.identity.preferredName)
-      : givenName;
-    return {
-      party: new EngagedParty(
-        givenName,
-        familyName,
-        preferredGivenName,
-        customer.identity.dateOfBirth,
-        new IndividualIdentification(
-          customer.identity.idNumber,
-          customer.identity.idType,
-          customer.identity.idNationality,
-          customer.profile?.inquiry?.verified ?? customer.verified,
-          customer.identity.expiryDate,
-        ),
-      ),
-      medium: new ContactMedium(
-        customer.identity.email,
-        customer.identity.otherPhoneNumber,
-        customer.address.street,
-        customer.address.complement,
-        customer.address.city,
-        customer.address.parish,
-        customer.address.postalCode,
-        'Bermuda',
-      ),
-    };
-  }
-
-  translateUpdateResponse(mavenirCustomer: MavenirCustomer, accountCredentials: AccountCredentials): Customer {
-    return this.translateLoadResponse(mavenirCustomer, accountCredentials);
-  }
-
-  private async persistCustomer(accountCredentials: AccountCredentials): Promise<Customer | null> {
-    if (!accountCredentials.verified || !accountCredentials.token)
-      throw this.exception(CustomerOperation.Create, accountCredentials, 'Could not create customer.', 'Invalid token');
-    if (accountCredentials.customerId) return null;
-    const email = this.validateToken(accountCredentials.token);
-    if (email instanceof Error)
-      throw new CustomerException(CustomerOperation.Create, accountCredentials, 'Could not create customer.', email);
-    return this.persistNewCustomer(email, accountCredentials);
-  }
-
-  private async persistNewCustomer(email: string, accountCredentials: AccountCredentials): Promise<Customer> {
-    const request = this.translateCreateRequest(email);
-    const result = this.portalGateway.create(request);
-    if (result instanceof Error) {
-      throw new CustomerException(CustomerOperation.Create, accountCredentials, 'Could not create customer.', result);
-    }
-    return this.translateCreateResponse(result, accountCredentials);
-  }
-
-  private async read(customerId: string, accountCredentials: AccountCredentials): Promise<Customer> {
-    const mavenirCustomer = this.portalGateway.read(customerId);
-    if (mavenirCustomer instanceof Error) {
-      await accountCredentials.signOut();
-      throw new CustomerException(
-        CustomerOperation.Load,
-        accountCredentials,
-        'Something went wrong when loading your account',
-        mavenirCustomer,
-      );
-    }
-    return this.translateLoadResponse(mavenirCustomer, accountCredentials);
-  }
-
-  translateCreateRequest(email: string): MavenirCreateCustomerRequest {
-    return new MavenirCreateCustomerRequest(
-      email,
-      CreditServiceProviderId.Paradise,
-      MavenirCustomerSource.OnBoarding,
-      [
-        new MavenirCreateContactMedium(
-          true,
-          'ContactMedium',
-          { endDateTime: null, startDateTime: new Date().toISOString() },
-          { emailAddress: email },
-        ),
-      ],
-    );
-  }
-
-  translateCreateResponse(result: MavenirCreateCustomerResponse, accountCredentials: AccountCredentials): Customer {
-    return this.attach(new Customer(accountCredentials, result.id, new Identity(accountCredentials.email), new Address()));
-  }
-
-  private translateLoadResponse(mavenirCustomer: MavenirCustomer, accountCredentials: AccountCredentials): Customer {
-    const { contactMedium, engagedParty } = mavenirCustomer;
-    const identity = new Identity(
-      contactMedium.emailAddress,
-      engagedParty.givenName,
-      engagedParty.familyName,
-      `${engagedParty.givenName} ${engagedParty.familyName}`.trim(),
-      engagedParty.preferredGivenName,
-      engagedParty.individualIdentification.endDateTime,
-      engagedParty.birthDate,
-      engagedParty.individualIdentification.issuingAuthority,
-      engagedParty.individualIdentification.identificationId,
-      engagedParty.individualIdentification.identificationType,
-      contactMedium.phoneNumber,
-    );
-    const address = new Address(
-      contactMedium.street1,
-      contactMedium.street2,
-      contactMedium.city,
-      contactMedium.stateOrProvince,
-      contactMedium.postCode,
-      contactMedium.country,
-    );
-    const customer = new Customer(accountCredentials, mavenirCustomer.id, identity, address);
-    if (mavenirCustomer.billingAccount) {
-      customer.billing = new Billing(mavenirCustomer.billingAccount.id, customer, billingRepository);
-      customer.billing.state = (mavenirCustomer.billingAccount.state as BillingState) || BillingState.Active;
-      customer.billing.creditAdjustments = [...mavenirCustomer.billingAccount.creditAdjustments];
-    }
-    customer.verified = engagedParty.individualIdentification.validated;
-    customer.done = mavenirCustomer.done === 'true';
-    return this.attach(customer);
-  }
-
-  private attach(customer: Customer): Customer {
-    customer._repository = this;
-    return customer;
-  }
-
-  private validateToken(token: AccountToken): string | Error {
-    return token.jwt?.startsWith('token:') ? token.email : new Error('Invalid token');
-  }
-
-  private exception(
-    operation: CustomerOperation,
-    accountCredentials: AccountCredentials,
-    message: string,
-    cause: string,
-  ): CustomerException {
-    return new CustomerException(operation, accountCredentials, message, new Error(cause));
-  }
-}
 export const accountRepository = new AccountRepository(amplifyService);
-export const customerRepository = new CustomerRepository(portalGateway);
+
 

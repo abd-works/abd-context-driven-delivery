@@ -65,7 +65,7 @@ Inject all feedback back into the context, so Ai benefts from compunded leanring
 
 ## Context Driven Delivery Practices
 
-**Product Engineering** — The fundamentals of product engineering have not changed. Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.
+**Product Engineering** — The fundamentals of product engineering have not changed. Ground AI delivery in practices so you can develop artifacts that are easy to drill down and roll up — so the right conversations and the right decisions are supported by the right level of detail — define specifications that also serve as automated tests so context is executed and machine validated, connect outcomes to code in one shared language, and force simplicity from outcome and impact through build and operation.
 
 **Iterate and Learn** — Layer context and limit AI runs to the cognitive load of what humans can absorb; guide, validate, and improve the system.
 

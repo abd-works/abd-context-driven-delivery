@@ -103,6 +103,7 @@ If this change will not stay here, follow `practices/ux.mdc`.
 
 - **`tab-states-are-separate-screens`** / **`screen-story-budget`** / **`ia-named-regions-only`** — as above.
 - **`system-stories-group-with-visible-trigger`** — System stories group with the closest user-visible screen.
+- **`in-scope-epics-only`** — Screens come from story-map epics this map covers. A deferred epic in `ux-context.md` stays off the IA and the mockup.
 
 ---
 
@@ -151,6 +152,7 @@ If this change will not stay here, follow `practices/ux/ia.mdc`.
 - **`key-interactions-wired`** — Nav/tabs via `data-goto` / interactions; story tracing via Story Demo mount (not bespoke product stubs).
 - **`story-demo-control-for-gwt`** — GWT-bound controls are `StoryDemoControl` in the model so HTML gets `data-story-steps`.
 - **`shell-from-template`** — Use `mockup_shell.html` / render channel; do not drop the explorer when generating screens.
+- **`in-scope-epics-only`** — Screens and `data-goto` targets follow the in-scope epics. A deferred epic in `ux-context.md` does not get screens or buttons.
 - **`brand-is-opt-in`** — Do not add css / design tokens / brand unless asked or pre-existing. Greybox is the default output.
 - **`stub-catalogue-honest`** — Every faked behaviour is listed in the html or a companion context note.
 

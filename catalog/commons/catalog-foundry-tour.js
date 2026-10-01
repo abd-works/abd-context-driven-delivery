@@ -9,12 +9,12 @@
     '<ul class="foundry-guide__bullets">' +
     '<li>Limit context to cognitive load of the team, so humans can guide, review, and adjust what AI generates.</li>' +
     '<li>Keeping context windows small leads to better output, even with frontier models.</li>' +
-    '<li>Layer context through successive generations — adjust fidelity based on what has already been produced.</li>' +
+    '<li>Layer context with increased fidelity through successive generations — so humans and AI can focus on big decisions before small decisions.</li>' +
     '</ul>';
 
   var PERSPECTIVES_LEAD_HTML =
     '<ul class="foundry-guide__bullets">' +
-    '<li>The fundamentals of product engineering have not changed. Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.</li>' +
+    '<li>The fundamentals of product engineering have not changed. Ground AI delivery in practices so you can develop artifacts that are easy to drill down and roll up — so the right conversations and decisions sit at the right level of detail — define specifications that also serve as automated tests so context is executed and machine validated, connect outcomes to code in one shared language, and force simplicity from outcome and impact through build and operation.</li>' +
     '<li>Guide AI through Customer Discovery, UX, Story Specs, DevOps, and Software Craftsmanship.</li>' +
     '</ul>';
 

@@ -54,34 +54,34 @@ DETAIL_BELOW_SUBEPIC_PAD = 16  # pad under deepest sub-epic before actor/story r
 
 _STYLE_EPIC = (
     "epic;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;fontSize=11;"
+    "fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;fontSize=8;"
 )
 _STYLE_EPIC_ESTIMATE_TEXT = "text;whiteSpace=wrap;html=1;"
 _STYLE_STORY_TMPL = (
     "story:{role};whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;"
-    "fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;"
+    "fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=6;"
 )
 _STYLE_ESTIMATE = (
     "estimate;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=none;strokeColor=none;fontColor=#333333;fontSize=8;"
+    "fillColor=none;strokeColor=none;fontColor=#333333;fontSize=6;"
     "align=left;spacingLeft=4;"
 )
 _STYLE_INC_LANE_BG = (
     "inc-lane;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;fontSize=11;fontStyle=1;"
+    "fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;fontSize=8;fontStyle=1;"
 )
 _STYLE_INC_LANE_LABEL = (
     "inc-lane-label;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#e8e8e8;strokeColor=#666666;fontColor=#000000;fontSize=10;fontStyle=1;"
+    "fillColor=#e8e8e8;strokeColor=#666666;fontColor=#000000;fontSize=8;fontStyle=1;"
     "align=right;spacingRight=8;verticalAlign=middle;"
 )
 _STYLE_INCREMENT_STORY = (
     "increment-story;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;"
+    "fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=6;"
 )
 _STYLE_ACTOR = (
     "actor;whiteSpace=wrap;html=1;overflow=hidden;"
-    "fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;fontSize=7;"
+    "fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;fontSize=5;"
 )
 
 INC_LANE_LABEL_WIDTH = 160                              # left label column width
@@ -162,7 +162,7 @@ class DrawIOStoryMap(StoryMap):
     def _subepic_style(self, depth: int) -> str:
         return (
             f"subepic:{depth};rounded=1;whiteSpace=wrap;html=1;overflow=hidden;"
-            "fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;"
+            "fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=8;"
         )
 
 

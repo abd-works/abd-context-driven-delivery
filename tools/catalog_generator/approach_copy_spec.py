@@ -16,6 +16,7 @@ from mamba import description, it
 
 from catalog_generator.approach_copy import load_approach_copy
 from catalog_generator.catalog_generator import Catalog
+from catalog_generator.approach_copy import APPROACH_MARKDOWN
 from catalog_generator.foundry_chrome import approach_board_stages, render_hub_board
 from installation.installer import Installer  # noqa: F401
 
@@ -134,3 +135,38 @@ with description("Catalog approach page"):
         expect("HAND-EDITABLE-STAGE-COPY" in html).to(equal(True))
         expect("HAND-EDITABLE-BULLET" in html).to(equal(True))
         expect("HAND-EDITABLE-LIBRARY" in html).to(equal(True))
+
+
+with description("stage example links"):
+    with it("hyperlinks discovery, specification, and implementation on the board"):
+        html = render_hub_board([], [], [], approach_md_path=APPROACH_MARKDOWN)
+        expect('href="examples/discovery.html"' in html).to(equal(True))
+        expect('href="examples/specification.html"' in html).to(equal(True))
+        expect('href="examples/implementation.html"' in html).to(equal(True))
+
+    with it("copies those assets and expands them under the Iterate and Learn diagram"):
+        tmp = Path(tempfile.mkdtemp())
+        catalog = Catalog(out_root=str(tmp / "out"), approach_md_path=APPROACH_MARKDOWN)
+        catalog._board_tools = []
+        catalog._write_approach_page()
+        html = (tmp / "out" / "cdd-approach.html").read_text(encoding="utf-8")
+        expect('id="approach-stage-examples"' in html).to(equal(True))
+        expect('data-stage-id="discovery"' in html).to(equal(True))
+        expect('data-stage-id="specification"' in html).to(equal(True))
+        expect('data-stage-id="implementation"' in html).to(equal(True))
+        expect("a simple graph is easier to change, compare, and reorganize" in html).to(equal(True))
+        expect(
+            "<em>a simple graph is easier to change, compare, and reorganize. Humans catch AI Order-of-Magnitude sizing errors.</em>"
+            in html
+        ).to(equal(True))
+        expect("viewer.diagrams.net" in html).to(equal(True))
+        expect("approach-stage-drawio-zoom" in html).to(equal(True))
+        expect("approach-stage-drawio" in html).to(equal(True))
+        expect("approach-stage-column" in html).to(equal(True))
+        expect("toggleStageColumn" in html).to(equal(True))
+        expect("openNextColumn" in html).to(equal(True))
+        expect("Display Create Account" in html).to(equal(True))
+        expect('id="catalog-monaco"' in html).to(equal(True))
+        expect("&quot;start&quot;:" in html).to(equal(True))
+        expect("showStageExample" in html).to(equal(True))
+        expect((tmp / "out" / "examples" / "story_map.png").is_file()).to(equal(True))

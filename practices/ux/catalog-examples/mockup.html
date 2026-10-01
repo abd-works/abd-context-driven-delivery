@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>UX — My Paradise</title>
+  <style>
+    :root { --ink: #222; --line: #666; --wash: #f0f0f0; --sel: #dbeafe; --emph: #2563eb; --tint: #fecaca; }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: ui-monospace, Consolas, monospace; color: var(--ink);
+           height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #fafafa; }
+    header.shell-bar { display: flex; gap: 0.75rem; align-items: center; padding: 0.75rem 1rem;
+                       border-bottom: 1px solid #ccc; background: #fff; }
+    header.shell-bar h1 { font-size: 1rem; margin: 0; flex: 1; }
+    #shell { display: grid; grid-template-columns: minmax(0, 1fr) 33rem; flex: 1; min-height: 0; overflow: hidden; }
+    #story-demo-frame, #explorer-frame { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+    #story-demo-frame { padding: 1rem; border-right: 1px solid #ccc; position: relative; }
+    #explorer-frame { padding: 0.35rem 0.75rem 0.75rem; }
+    .flow-zoom { position: sticky; top: 0.35rem; left: 0.35rem; z-index: 4; display: inline-flex; gap: 0.15rem; align-items: center; width: max-content; margin-bottom: 0.35rem; padding: 0.15rem; background: #fff; border: 1px solid #ccc; }
+    .flow-zoom button { font: inherit; min-width: 1.8rem; padding: 0.15rem 0.4rem; cursor: pointer; background: #fff; border: 1px solid #ccc; }
+    #mockup { zoom: 1; position: relative; width: 2700px; height: 920px; }
+    #mockup .screen { position: absolute; max-width: none; margin: 0; width: 210px; height: fit-content;
+      padding: 0.3rem 0.4rem 0.35rem; font-size: 11px; cursor: pointer; border: 1px dashed var(--line); background: #fff; box-sizing: border-box; }
+    #mockup .requirements-callout { position: absolute; left: 4px; top: 56px; width: 215px; padding: 0.3rem 0.35rem; border: 1px dashed #888; background: #fffdf5; font-size: 10px; pointer-events: none; box-sizing: border-box; }
+    #mockup .requirements-callout h3 { font-size: 10px; margin: 0 0 0.2rem; font-weight: 700; color: #555; }
+    #mockup .screen.current { outline: 2px solid var(--emph); }
+    #mockup h2 { font-size: 12px; margin: 0 0 0.25rem; }
+    #mockup h3, #mockup legend, #mockup caption { font-size: 10px; font-weight: 700; text-align: left; }
+    #mockup fieldset { border: 1px solid #ccc; margin: 0.15rem 0; padding: 0.2rem 0.3rem; }
+    #mockup .control { margin: 0.12rem 0; }
+    #mockup input[type="text"], #mockup select { min-width: 0; width: 100%; box-sizing: border-box; font: inherit; padding: 0.15rem 0.35rem; border: 1px solid var(--ink); background: #fff; }
+    #mockup .list-box, #mockup table { border: 1px solid #ccc; background: #fff; margin: 0.25rem 0; width: 100%; }
+    #mockup .list-box ul { margin: 0; padding-left: 1rem; }
+    #mockup table { border-collapse: collapse; }
+    #mockup th, #mockup td { border-bottom: 1px solid #ddd; padding: 0.1rem 0.25rem; text-align: left; font-weight: 400; }
+    #mockup th { background: #f0f0f0; font-weight: 700; }
+    #mockup .step-bar, #mockup .mini-nav { background: #f5f5f5; border: 1px solid #ccc; padding: 0.15rem; margin-bottom: 0.25rem; }
+    #mockup .status-line { margin: 0.25rem 0; }
+    #mockup .flow { position: absolute; left: 0; top: 0; pointer-events: none; }
+    #mockup .flow-labels { z-index: 1; }
+    #mockup .flow path { fill: none; stroke: #222; stroke-width: 1.25; }
+    #mockup .flow text { font: 9px ui-monospace, Consolas, monospace; fill: #222; }
+    #mockup .flow .label-bg { fill: #fff; stroke: none; }
+    #mockup .control.button { display: inline-block; margin-right: 0.35rem; margin-bottom: 0.2rem; padding: 0.25rem 0.6rem; border: 1px solid var(--ink); background: #eee; cursor: pointer; font: inherit; }
+    #mockup .control.button.primary { background: #e5e5e5; font-weight: 600; }
+    #mockup .control.button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #mockup .control.button.active { outline: 2px solid var(--emph); background: var(--sel); }
+    #mockup .helper, #mockup .field-error { color: #a00; font-size: 10px; margin: 0.15rem 0; }
+    #mockup .helper.ok { color: #166534; }
+    #mockup .screen-note { font-size: 9px; font-style: italic; color: #555; margin: 0 0 0.2rem; }
+    #mockup ul.requirements { margin: 0; padding-left: 0; font-size: 9px; line-height: 1.3; list-style: none; }
+    #mockup ul.requirements li { margin: 0.08rem 0; overflow-wrap: anywhere; }
+    #mockup ul.requirements li.met { color: #166534; }
+    #mockup ul.requirements li.unmet { color: #a00; }
+    #mockup .mode-bar { display: flex; flex-wrap: wrap; gap: 0.2rem; margin: 0.25rem 0; }
+    #mockup .demo-row { margin-top: 0.2rem; margin-bottom: 0; font-size: 9px; }
+    #mockup .screen-actions { margin-top: 0.15rem; }
+    #mockup .demo-row select { font: inherit; width: 100%; }
+    #mockup .number-row { display: flex; align-items: center; gap: 0.25rem; margin: 0.1rem 0; }
+    #mockup .number-row input { width: auto; }
+    #mockup [hidden] { display: none !important; }
+    .panel { border: 1px dashed var(--line); background: #fff; padding: 0.5rem 0.65rem 0.65rem; }
+    .panel-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
+    .panel-head h2 { margin: 0; font-size: 0.95rem; font-weight: 700; flex: 1; min-width: 0; }
+    #explorer-tree, #explorer-tree ul { margin: 0.12rem 0 0.12rem 0.7rem; padding: 0; list-style: none; }
+    #explorer-tree { margin-left: 0; font-size: 16.5px; }
+    #explorer-tree .twist, #explorer-tree .node-label { font: inherit; font-weight: 400; background: none; border: 0; padding: 0.02rem 0.12rem; cursor: pointer; text-align: left; }
+    #explorer-tree .node-label { display: inline-flex; align-items: center; gap: 0.3rem; }
+    #explorer-tree .glyph { width: 1.05rem; height: 1.05rem; flex: none; }
+    #explorer-tree .glyph * { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
+    #explorer-tree .twist { display: inline-flex; align-items: center; justify-content: center; width: 0.85rem; height: 0.85rem; padding: 0; vertical-align: middle; }
+    #explorer-tree .twist::before { content: ""; width: 0.32rem; height: 0.32rem; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); }
+    #explorer-tree .twist[aria-expanded="true"]::before { transform: rotate(45deg); }
+    #explorer-tree li.current > .node-label { background: var(--sel); font-weight: 600; }
+    #explorer-tree .step { font-size: 15px; font-weight: 400; cursor: pointer; }
+    #explorer-tree .step.current { background: var(--sel); }
+    #explorer-tree .step-kind.emph { font-weight: 700; }
+    #explorer-tree .step u { text-underline-offset: 2px; }
+    #explorer-tree .empty { color: #666; font-style: italic; }
+    .message { color: #a00; margin-top: 0.75rem; min-height: 1.2rem; }
+    .chrome { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+    .chrome button { font: inherit; padding: 0.15rem 0.45rem; cursor: pointer; background: #fff; border: 1px solid #ccc; }
+    .status { font-size: 0.8rem; color: #555; margin-top: 0.5rem; }
+    .toast { position: fixed; right: 1rem; bottom: 1rem; background: #222; color: #fff;
+              padding: 0.5rem 0.75rem; font-size: 0.85rem; display: none; z-index: 2; }
+    .toast.show { display: block; }
+  </style>
+</head>
+<body data-story-demo-shell data-map-mockup>
+  <header class="shell-bar">
+    <h1>My Paradise</h1>
+  </header>
+
+  <div id="shell" data-layout="split-screen">
+    <section id="story-demo-frame" aria-label="Product mockup">
+      <div class="flow-zoom" aria-label="Flow zoom">
+        <button type="button" data-flow-zoom="out" aria-label="Zoom out">−</button>
+        <button type="button" data-flow-zoom="reset" aria-label="Reset zoom">100%</button>
+        <button type="button" data-flow-zoom="in" aria-label="Zoom in">+</button>
+      </div>
+      <main id="mockup">
+<svg class="flow" width="2700" height="920" aria-hidden="true">
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#222"/></marker></defs>
+  <path d="M 282 128 L 221 128" marker-end="url(#arrow)"/>
+  <rect x="222" y="88" width="58" height="34" class="label-bg"/>
+  <text x="224" y="99"><tspan x="224">display</tspan><tspan x="224" dy="10">unmet</tspan><tspan x="224" dy="10">requirements</tspan></text>
+  <path d="M 492 104 L 548 104" marker-end="url(#arrow)"/>
+  <path d="M 758 104 L 814 104" marker-end="url(#arrow)"/>
+  <path d="M 1024 104 L 1080 104" marker-end="url(#arrow)"/>
+  <path d="M 1290 104 L 1346 104" marker-end="url(#arrow)"/>
+  <path d="M 1556 104 L 1612 104" marker-end="url(#arrow)"/>
+  <path d="M 1822 104 L 1878 104" marker-end="url(#arrow)"/>
+  <path d="M 2088 104 L 2144 104" marker-end="url(#arrow)"/>
+  <path d="M 2354 104 L 2410 104" marker-end="url(#arrow)"/>
+  <path d="M 397 278 L 397 318" marker-end="url(#arrow)"/>
+  <rect x="406" y="288" width="96" height="14" class="label-bg"/><text x="408" y="298">has an account</text>
+  <path d="M 653 56 L 653 18 L 1185 18 L 1185 56" marker-end="url(#arrow)"/>
+  <rect x="850" y="0" width="118" height="12" class="label-bg"/><text x="852" y="10">plan already chosen</text>
+  <path d="M 1983 56 L 1983 42 L 919 42 L 919 56" marker-end="url(#arrow)"/>
+  <rect x="1372" y="22" width="84" height="14" class="label-bg"/><text x="1374" y="33">changes plan</text>
+  <path d="M 1717 170 L 1717 420" marker-end="url(#arrow)"/>
+  <rect x="1726" y="280" width="84" height="14" class="label-bg"/><text x="1728" y="290">needs profile</text>
+  <path d="M 1195 402 L 1195 520" marker-end="url(#arrow)"/>
+  <rect x="1204" y="448" width="72" height="14" class="label-bg"/><text x="1206" y="458">port path</text>
+  <path d="M 1310 616 L 1346 616" marker-end="url(#arrow)"/>
+  <rect x="1318" y="603" width="24" height="14" class="label-bg"/><text x="1320" y="613">SMS</text>
+  <path d="M 1576 616 L 1612 616 L 1612 140 L 1346 140" marker-end="url(#arrow)"/>
+</svg>
+<div class="requirements-callout" data-mockup="create-account-requirements" aria-label="Account credential requirements"><h3>Requirements</h3><ul class="requirements" data-requirements></ul></div>
+<article class="screen" data-slug="Create Account" data-stories="Create Unconfirmed User" data-mockup="create-account" style="left:282px;top:56px;width:230px"><h2>Create Account</h2><fieldset><legend>Account</legend><label class="control">Email <input type="text" data-field="email" value="Jeff.anderson@Abdworks.com" placeholder="yourname@domain.com" autocomplete="off" /></label><label class="control">Password <input type="text" data-field="password" value="Spider-man99p" placeholder="________" autocomplete="off" /></label><label class="control">Confirm password <input type="text" data-field="confirmPassword" value="Spider-man99p" placeholder="________" autocomplete="off" /></label></fieldset><p class="helper" data-form-message hidden></p><button type="button" class="control button primary" data-action="create-account" disabled>Create account</button><button type="button" class="control button" data-goto="Sign In">Has an account</button></article>
+<article class="screen" data-slug="Validate Email" data-stories="Enter Validation Code, Create Customer, Load Customer" data-mockup="validate-email" style="left:548px;top:56px;width:230px"><h2>Validate Email</h2><fieldset><legend>Code</legend><label class="control">Validation code <input type="text" data-field="validationCode" placeholder="6 digits" autocomplete="off" /></label></fieldset><p class="helper" data-validation-error hidden></p><p class="status-line helper ok" data-resend-message hidden></p><button type="button" class="control button primary" data-action="activate-email">Activate</button><button type="button" class="control button" data-action="resend-code" data-resend-wait>Resend code</button><button type="button" class="control button" data-goto="Select Plan">No plan yet</button><button type="button" class="control button" data-goto="Line Number">Plan already chosen</button><label class="control demo-row">Try code <select data-demo="validate-email"><option value="">— choose —</option><option value="valid">valid code (123456)</option><option value="mismatch">mismatch (000000)</option><option value="expired">expired (111111)</option><option value="attempts">attempts exceeded (222222)</option></select></label></article>
+<article class="screen" data-slug="Select Plan" data-stories="Choose Onboarding Plan" style="left:814px;top:56px;width:210px"><h2>Select Plan</h2><p class="step-bar">Step bar</p><div class="list-box"><h3>Plans</h3><ul><li>Essentials · 20 GB · $45</li><li>Unlimited · unlimited · $70</li></ul><button type="button" class="control button" data-goto="Line Number">Select</button></div><button type="button" class="control button" data-goto="Order Review">Keep current plan</button></article>
+<article class="screen" data-slug="Line Number" data-stories="Determine Number, Pick Number" data-mockup="line-number" style="left:1080px;top:56px;width:230px"><h2>Line Number</h2><p class="step-bar">Step bar</p><div class="mode-bar"><button type="button" class="control button active" data-mode="browse">Available numbers</button><button type="button" class="control button" data-goto="Port Number">Port your number</button></div><fieldset><legend>Search</legend><label class="control">Pattern <input type="text" data-field="search" placeholder="JAMES → 52637" autocomplete="off" /></label><button type="button" class="control button" data-action="search-numbers">Search</button><button type="button" class="control button" data-action="refresh-numbers">Refresh</button></fieldset><div class="list-box"><h3>Numbers</h3><div data-number-list><label class="number-row"><input type="radio" name="line-number" value="441-555-0100" checked /> 441-555-0100 <em>(held)</em></label><label class="number-row"><input type="radio" name="line-number" value="441-555-0101" /> 441-555-0101</label><label class="number-row"><input type="radio" name="line-number" value="441-555-0144" /> 441-555-0144</label></div></div><p class="helper" data-line-message hidden></p><button type="button" class="control button primary" data-action="pick-number">Pick number</button><label class="control demo-row">Try outcome <select data-demo="line-number"><option value="">— pick number —</option><option value="reserve-fail">reserve fails</option><option value="cart-fail">cart patch fails</option></select></label></article>
+<article class="screen" data-slug="Port Number" data-stories="Enter Porting Number" data-mockup="port-number" style="left:1080px;top:520px;width:230px"><h2>Port Number</h2><p class="step-bar">Step bar</p><div class="mode-bar"><button type="button" class="control button" data-goto="Line Number">Pick a number</button><button type="button" class="control button active">Port your number</button></div><fieldset><legend>Portability</legend><label class="control">Port number <input type="text" data-field="portNumber" placeholder="441-555-9999" autocomplete="off" /></label><label class="control">Provider <select data-field="provider"><option>One</option><option>Two</option></select></label><label class="control">Account number <input type="text" data-field="accountNumber" placeholder="________" autocomplete="off" /></label></fieldset><p class="helper" data-port-message hidden></p><button type="button" class="control button primary" data-action="submit-port">Port number</button><button type="button" class="control button" data-action="port-skip-verify" data-goto="Select SIM">SMS rate-limited → SIM</button><label class="control demo-row">Try outcome <select data-demo="port-number"><option value="">— valid port —</option><option value="invalid">invalid portability</option></select></label></article>
+<article class="screen" data-slug="Verify Ported Number" data-stories="Verify Ported Number" data-mockup="verify-port" style="left:1346px;top:520px;width:230px"><h2>Verify Ported Number</h2><p class="step-bar">Step bar</p><fieldset><legend>SMS code</legend><label class="control">Verification code <input type="text" data-field="portCode" placeholder="6 digits" autocomplete="off" /></label></fieldset><p class="helper" data-port-verify-error hidden></p><p class="status-line helper ok" data-port-resend-message hidden></p><button type="button" class="control button primary" data-action="verify-port-code">Verify</button><button type="button" class="control button" data-action="resend-port-code">Resend SMS</button><button type="button" class="control button" data-goto="Select SIM">Verified → SIM</button><label class="control demo-row">Try code <select data-demo="verify-port"><option value="">— choose —</option><option value="valid">valid SMS code</option><option value="mismatch">incorrect code</option></select></label></article>
+<article class="screen" data-slug="Select SIM" data-stories="Select Sim, Enter Existing Sim, Activate Sim" style="left:1346px;top:56px;width:210px"><h2>Select SIM</h2><p class="step-bar">Step bar</p><div class="list-box"><h3>SIM</h3><ul><li>eSIM</li><li>Physical SIM</li></ul></div><p class="status-line"><strong>Existing SIM</strong> ICCID</p><div class="screen-actions"><button type="button" class="control button" data-goto="Verify Identity">eSIM</button><button type="button" class="control button" data-goto="Verify Identity">Physical SIM</button><button type="button" class="control button primary" data-goto="Verify Identity">SIM chosen</button></div></article>
+<article class="screen" data-slug="Verify Identity" data-stories="Customer Complete Persona Kyc" style="left:1612px;top:56px;width:210px"><h2>Verify Identity</h2><p class="step-bar">Step bar</p><p class="status-line"><strong>Identity check</strong> Inquiry status</p><button type="button" class="control button primary" data-goto="Order Review">Identity verified</button><button type="button" class="control button" data-goto="Identity Profile">Needs profile</button></article>
+<article class="screen" data-slug="Order Review" data-stories="Check The Order, Change Plan From Review" style="left:1878px;top:56px;width:210px"><h2>Order Review</h2><p class="step-bar">Step bar</p><table><caption>Order</caption><thead><tr><th>Plan</th><th>Number</th><th>SIM</th><th>Price</th></tr></thead><tbody><tr><td>Essentials</td><td>441-555-0101</td><td>eSIM</td><td>$45</td></tr></tbody></table><button type="button" class="control button primary" data-goto="Payment">Continue</button><button type="button" class="control button" data-goto="Select Plan">Change plan</button><button type="button" class="control button" data-goto="Identity Profile">Edit profile</button></article>
+<article class="screen" data-slug="Payment" data-stories="Enter Payment, Authorize Card, Provide Apple Pay Certificate" style="left:2144px;top:56px;width:210px"><h2>Payment</h2><p class="step-bar">Step bar</p><p class="status-line"><strong>Card</strong> hosted payment</p><p class="status-line"><strong>Apple Pay</strong> certificate</p><button type="button" class="control button primary" data-goto="Order Result">Place order</button></article>
+<article class="screen" data-slug="Order Result" data-stories="View Order Result, Create Billing Account, Create Product Order, Create Order Ticket" style="left:2410px;top:56px;width:210px"><h2>Order Result</h2><p class="status-line"><strong>Result</strong> Order status</p></article>
+
+<article class="screen" data-slug="Sign In" data-stories="Sign In With Existing Account" data-mockup="sign-in" style="left:282px;top:318px;width:230px"><h2>Sign In</h2><fieldset><legend>Credentials</legend><label class="control">Email <input type="text" data-field="email" placeholder="yourname@domain.com" autocomplete="off" /></label><label class="control">Password <input type="text" data-field="password" placeholder="________" autocomplete="off" /></label></fieldset><p class="helper" data-sign-in-error hidden></p><button type="button" class="control button primary" data-action="sign-in">Sign in</button><button type="button" class="control button" data-goto="Select Plan" data-sign-in-success hidden>Resumes onboarding</button><button type="button" class="control button" data-goto="Validate Email" data-sign-in-unconfirmed hidden>Confirm email</button><label class="control demo-row">Simulate Cognito <select data-demo="sign-in"><option value="">— choose response —</option><option value="success">authenticated</option><option value="invalid-email">email format unmet</option><option value="wrong-password">wrong password</option><option value="unknown-email">unknown email</option><option value="unconfirmed">CONFIRM_SIGN_UP</option><option value="password-reset">PasswordResetRequired</option><option value="new-password">NewPasswordRequired</option></select></label></article>
+
+
+<article class="screen" data-slug="Identity Profile" data-stories="Customer Complete Persona Kyc" style="left:1612px;top:420px;width:210px"><h2>Identity Profile</h2><p class="step-bar">Step bar</p><p class="status-line"><strong>Identity</strong> name · DOB · ID type · ID number</p><p class="status-line"><strong>Address</strong> contact address</p><button type="button" class="control button primary" data-goto="Order Review">Profile saved</button></article>
+
+
+        <svg class="flow flow-labels" width="2700" height="920" aria-hidden="true">
+  <rect x="494" y="84" width="52" height="14" class="label-bg"/><text x="496" y="95">submits</text>
+  <rect x="748" y="84" width="76" height="14" class="label-bg"/><text x="750" y="95">no plan yet</text>
+  <rect x="1014" y="84" width="76" height="14" class="label-bg"/><text x="1016" y="95">plan chosen</text>
+  <rect x="1276" y="84" width="84" height="14" class="label-bg"/><text x="1278" y="95">number ready</text>
+  <rect x="1548" y="84" width="72" height="14" class="label-bg"/><text x="1550" y="95">SIM chosen</text>
+  <rect x="1821" y="84" width="58" height="14" class="label-bg"/><text x="1823" y="95">verified</text>
+  <rect x="2084" y="84" width="64" height="14" class="label-bg"/><text x="2086" y="95">continues</text>
+  <rect x="2340" y="84" width="84" height="14" class="label-bg"/><text x="2342" y="95">order placed</text>
+</svg>
+      </main>
+    </section>
+
+    <section id="explorer-frame" aria-label="Site Map Explorer">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Site Map Explorer</h2>
+          <div class="chrome">
+            <button type="button" data-reset>Reset</button>
+            <button type="button" data-play-next>▶▶ Play next</button>
+          </div>
+        </div>
+        <ul id="explorer-tree" data-explorer-tree></ul>
+        <p class="message" data-explorer-message hidden></p>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script id="story-outline" type="application/json">[{"name":"Onboard A Customer","groups":[{"name":"Get Sign Up Plan","stories":["Open Plan Deep Link","Apply Catalog Voucher"]},{"name":"Create Customer","stories":["Create Unconfirmed User","Enter Validation Code","Create Customer","Load Customer"]},{"name":"Sign In With Existing Account","stories":["Sign In With Existing Account"]},{"name":"Get Number","stories":["Determine Number","Pick Number","Enter Porting Number","Verify Ported Number"]},{"name":"Get Onboarding Plan","stories":["Choose Onboarding Plan"]},{"name":"Get Sim","stories":["Select Sim","Enter Existing Sim","Activate Sim"]},{"name":"Get Verified Profile","stories":["Customer Complete Persona Kyc","Collect Identity With Brand Amassador"]},{"name":"Get Order Review","stories":["Check The Order","Change Plan From Review"]},{"name":"Get Payment","stories":["Enter Payment","Authorize Card","Provide Apple Pay Certificate"]},{"name":"Place Order","stories":["Create Billing Account","Create Product Order","View Order Result","Create Order Ticket"]},{"name":"Get Voucher Credit","stories":["Redeem Voucher and Apply Credit"]}]}]</script>
+  <script id="screen-stories" type="application/json">[{"name":"Create Account","stories":[{"name":"Create Unconfirmed User","scenarios":[{"name":"Display Create Account","steps":[{"kind":"when","label":"the User proceeds to create an account from the Paradise Mobile website"},{"kind":"then","label":"the User can enter account credentials"},{"kind":"and","label":"the email and password rules are unmet"},{"kind":"and","label":"the customer cannot save the customer account"}]},{"name":"Enter Invalid account credentials: ${example}","steps":[{"kind":"when","label":"the User registers When the requirements have not been met"},{"kind":"then","label":"the account cannot be registered"},{"kind":"and","label":"the ${unmet} requirement is unmet"}]},{"name":"Email already registered","steps":[{"kind":"given","label":"already-registered account credentials are already registered"},{"kind":"when","label":"the User registers already-registered account credentials"},{"kind":"then","label":"the email is already registered"}]},{"name":"Enter Valid account credentials","steps":[{"kind":"when","label":"the User enters valid account credentials"},{"kind":"then","label":"account credentials are validated continuously"},{"kind":"and","label":"the customer can save the customer account"}]},{"name":"Create Unconfirmed User","steps":[{"kind":"given","label":"the amplifyService.signUp spy is set up"},{"kind":"when","label":"the User creates their account"},{"kind":"then","label":"the system creates an unconfirmed Cognito user and emails a validation code"}]}]}]},{"name":"Validate Email","stories":[{"name":"Enter Validation Code","scenarios":[{"name":"Enter validation code","steps":[{"kind":"when","label":"the User activates the account with the emailed validation code"},{"kind":"then","label":"My Paradise sends the correct confirmation request to Cognito"},{"kind":"and","label":"the account is verified"},{"kind":"and","label":"Cognito issues an account token for the browser session"}]},{"name":"Activate with unusable validation code: ${example}","steps":[{"kind":"when","label":"the User activates with ${example}"},{"kind":"then","label":"Enter Validation Code shows ${helper}"}]},{"name":"Resend validation code","steps":[{"kind":"when","label":"more than 60 seconds has passed"},{"kind":"and","label":"the User resends the validation code"},{"kind":"then","label":"Cognito sends a new validation code"},{"kind":"and","label":"My Paradise shows the resend confirmation"},{"kind":"when","label":"less than 60 seconds has passed"},{"kind":"and","label":"the User resends the validation code"},{"kind":"then","label":"Resend waits 60 seconds before it can be used again"},{"kind":"and","label":"Cognito does not send another validation code during the wait"},{"kind":"when","label":"more than 60 seconds has passed"},{"kind":"and","label":"the User resends the validation code"},{"kind":"then","label":"Cognito sends another validation code"}]}]},{"name":"Create Customer","scenarios":[{"name":"Create customer","steps":[{"kind":"when","label":"the User creates their Paradise account"},{"kind":"then","label":"My Paradise sends the correct create request to Mavenir"},{"kind":"when","label":"Mavenir creates the customer"},{"kind":"then","label":"the customer has a Mavenir customer id"}]},{"name":"Mavenir customer already exists","steps":[{"kind":"given","label":"Mavenir already has a customer for that email"},{"kind":"when","label":"the User creates their Paradise account"},{"kind":"then","label":"My Paradise shows Could not create customer"}]}]},{"name":"Load Customer","scenarios":[{"name":"Load My Paradise customer and store in session","steps":[{"kind":"when","label":"My Paradise loads the customer from Mavenir"},{"kind":"then","label":"My Paradise calls Mavenir with the customer id"},{"kind":"and","label":"the result is a Paradise customer with identity and address from Mavenir"}]},{"name":"Load customer fails","steps":[{"kind":"given","label":"Mavenir no longer has that customer"},{"kind":"when","label":"My Paradise loads the customer"},{"kind":"then","label":"My Paradise signs the User out"},{"kind":"and","label":"My Paradise shows Something went wrong when loading your account"}]},{"name":"Terminated account","steps":[{"kind":"given","label":"the Customer has an account token"},{"kind":"and","label":"the Mavenir customer billing state is terminated"},{"kind":"when","label":"My Paradise loads the customer"},{"kind":"then","label":"My Paradise signs the Customer out"},{"kind":"and","label":"the Customer account is terminated"}]}]}]},{"name":"Select Plan","stories":[{"name":"Choose Onboarding Plan","scenarios":[{"name":"Load plan catalog","steps":[{"kind":"given","label":"the plan catalog is available"},{"kind":"when","label":"My Paradise loads the plan catalog"},{"kind":"then","label":"the catalog includes Essentials, Data Freedom, Ace, and Atlas"},{"kind":"and","label":"Internal Test Plan PROMO is excluded from the catalog"}]},{"name":"Select a plan","steps":[{"kind":"given","label":"no plan is in the Mavenir shopping cart"},{"kind":"when","label":"the Customer selects Essentials"},{"kind":"then","label":"My Paradise patches the Mavenir cart with the Essentials planId"},{"kind":"and","label":"the Customer is forwarded to Pick Number"},{"kind":"when","label":"Mavenir confirms the cart is patched with Essentials"},{"kind":"then","label":"the cart bundle is a snapshot of Essentials loaded from the gateway"}]},{"name":"Change an existing plan","steps":[{"kind":"given","label":"Essentials is in the Mavenir shopping cart"},{"kind":"when","label":"the Customer selects Data Freedom"},{"kind":"then","label":"My Paradise patches the Mavenir cart with the Data Freedom planId"},{"kind":"when","label":"Mavenir confirms the cart is patched with Data Freedom"},{"kind":"then","label":"the cart bundle is updated to a snapshot of Data Freedom loaded from the gateway"}]},{"name":"Failed to update plan","steps":[{"kind":"given","label":"the Mavenir cart patch returns an error"},{"kind":"when","label":"the Customer selects Essentials"},{"kind":"then","label":"the plan selection fails"},{"kind":"when","label":"My Paradise reloads the shopping cart"},{"kind":"then","label":"the cart bundle remains empty"}]}]}]},{"name":"Line Number","stories":[{"name":"Determine Number","scenarios":[{"name":"View available numbers","steps":[{"kind":"and","label":"++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir"},{"kind":"when","label":"the Customer loads available numbers"},{"kind":"then","label":"My Paradise sends the list resources request to Mavenir"},{"kind":"when","label":"Mavenir locks 20 MSISDN resources and returns the available number values"},{"kind":"then","label":"My Paradise returns the available numbers"},{"kind":"and","label":"++available number++ ++held available number++ and ++available number++ ++chosen available number++ are in the Available Number list"}]},{"name":"View available numbers — MSISDN in cart","steps":[{"kind":"given","label":"++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++"},{"kind":"and","label":"++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir"},{"kind":"when","label":"the Customer loads available numbers"},{"kind":"then","label":"My Paradise sends the list resources request to Mavenir"},{"kind":"when","label":"Mavenir locks 20 MSISDN resources and returns the available number values"},{"kind":"then","label":"the Customer sees their number is ++available number++ ++held available number++"},{"kind":"and","label":"My Paradise returns the available numbers"}]},{"name":"Refresh available numbers","steps":[{"kind":"given","label":"++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir"},{"kind":"when","label":"the Customer refreshes the number list"},{"kind":"then","label":"My Paradise sends the list resources request to Mavenir"},{"kind":"when","label":"Mavenir locks 20 MSISDN resources and returns the available numbers"},{"kind":"then","label":"My Paradise returns a fresh set of available numbers"}]},{"name":"Search for a number","steps":[{"kind":"given","label":"++available number++ ++James matching numbers++ are available in Mavenir"},{"kind":"when","label":"the Customer searches for numbers matching ++search term++ ++James search++"},{"kind":"then","label":"My Paradise sends the search request to Mavenir with pattern ++search term++ ++James search++"},{"kind":"when","label":"Mavenir locks MSISDN resources matching 52637 and returns matching values"},{"kind":"then","label":"My Paradise returns Available Numbers matching 52637"},{"kind":"and","label":"the matching numbers are stored on the line for selection"}]},{"name":"Numbers locked by another customer are excluded from results","steps":[{"kind":"given","label":"another customer has already locked ++available number++ ++held available number++ and ++available number++ ++chosen available number++ in Mavenir"},{"kind":"and","label":"++available number++ ++numbers locked by another customer++ are the currently available numbers"},{"kind":"when","label":"the Customer loads available numbers"},{"kind":"then","label":"My Paradise sends the list resources request to Mavenir"},{"kind":"when","label":"Mavenir returns only available numbers, excluding the locked ones"},{"kind":"then","label":"the locked numbers are not in the available numbers list"},{"kind":"and","label":"only the currently available numbers are returned"}]}]},{"name":"Pick Number","scenarios":[{"name":"Pick number","steps":[{"kind":"given","label":"Mavenir has locked ${enteredChosenAvailableNumber} in the available numbers list and no MSISDN is in the cart"},{"kind":"when","label":"My Paradise reserves ${enteredChosenAvailableNumber} in Mavenir and patches the shopping cart"},{"kind":"then","label":"My Paradise sends the reserve request to Mavenir with ${enteredChosenAvailableNumber}"},{"kind":"and","label":"My Paradise patches the Mavenir shopping cart with ${enteredChosenAvailableNumber}"},{"kind":"when","label":"Mavenir confirms the reservation and patches the cart"},{"kind":"then","label":"My Paradise stores ${expectedChosenAvailableNumber} on the line"},{"kind":"and","label":"the Customer is forwarded to Select Sim"}]},{"name":"Pick number — replace existing","steps":[{"kind":"given","label":"MSISDN ${storedHeldAvailableNumber} is in the cart and Mavenir has locked ${enteredChosenAvailableNumber} in the available numbers list"},{"kind":"when","label":"My Paradise reserves ${enteredChosenAvailableNumber} releasing ${storedHeldAvailableNumber}"},{"kind":"then","label":"My Paradise sends the reserve request to Mavenir with ${enteredChosenAvailableNumber} releasing ${storedHeldAvailableNumber}"},{"kind":"when","label":"Mavenir releases ${storedHeldAvailableNumber} and reserves ${enteredChosenAvailableNumber}"},{"kind":"then","label":"My Paradise stores ${expectedChosenAvailableNumber} on the line"}]},{"name":"Reserve number request fails","steps":[{"kind":"given","label":"Mavenir has locked ${enteredChosenAvailableNumber} in the available numbers list but reserve returns an error"},{"kind":"when","label":"My Paradise attempts to reserve ${enteredChosenAvailableNumber} but Mavenir returns an error"},{"kind":"then","label":"My Paradise shows Failed to reserve your number."}]},{"name":"Patch cart with number fails","steps":[{"kind":"given","label":"Mavenir has reserved ${enteredChosenAvailableNumber} but patching the cart returns an error"},{"kind":"when","label":"My Paradise patches the Mavenir shopping cart with ${enteredChosenAvailableNumber} but Mavenir returns an error"},{"kind":"then","label":"My Paradise shows Failed to update your cart."}]}]}]},{"name":"Port Number","stories":[{"name":"Enter Porting Number","scenarios":[{"name":"Port the number","steps":[{"kind":"given","label":"a My Paradise customer with a Mavenir shopping cart"},{"kind":"and","label":"${storedHeldAvailableNumber} is available as a temporary port-in MSISDN"},{"kind":"when","label":"the Customer enters valid portability and ports their number"},{"kind":"then","label":"My Paradise submits the portability request to Mavenir with the customer's portability details"},{"kind":"and","label":"Mavenir reserves the temporary MSISDN and Twilio sends an SMS verification to the port number"},{"kind":"when","label":"Mavenir assigns ${storedHeldAvailableNumber} as a temporary port-in MSISDN and patches the shopping cart, and Twilio sends the SMS verification"},{"kind":"then","label":"the Customer is forwarded to Verify Ported Number"}]},{"name":"Port the number — SMS verification skipped","steps":[{"kind":"given","label":"a My Paradise customer with a Mavenir shopping cart"},{"kind":"and","label":"Mavenir returns the temporary MSISDN and Twilio rate-limits the SMS send"},{"kind":"when","label":"the Customer enters valid portability and ports their number"},{"kind":"when","label":"Mavenir processes the portability request and Twilio rate-limits the SMS send"},{"kind":"then","label":"portability is stored on the line with verification skipped"},{"kind":"and","label":"the Customer is forwarded to Select Sim — no verification step required"}]},{"name":"Port the number: ${example}","steps":[{"kind":"given","label":"a My Paradise customer with a Mavenir shopping cart"},{"kind":"when","label":"the Customer submits portability and ports their number"},{"kind":"then","label":"submit returns error: ${expectedMessage}"}]}]}]},{"name":"Verify Ported Number","stories":[{"name":"Verify Ported Number","scenarios":[{"name":"Enter porting SMS code","steps":[{"kind":"given","label":"the Customer submitted portability and Twilio sent an SMS to the port number"},{"kind":"and","label":"Twilio is ready to confirm the SMS code as valid"},{"kind":"when","label":"the Customer enters verification code ${validPortingSmscode}"},{"kind":"then","label":"My Paradise sends the verification check to Twilio with the port number and code"},{"kind":"when","label":"Twilio creates the verification check"},{"kind":"then","label":"Twilio returns approved and the Customer is on the Select Sim step"}]},{"name":"Verify with unusable porting SMS code","steps":[{"kind":"given","label":"the Customer submitted portability and has an incorrect verification code"},{"kind":"when","label":"the Customer enters verification code ${mismatchPortingSmscode}"},{"kind":"then","label":"My Paradise sends the verification check to Twilio"},{"kind":"when","label":"Twilio creates a verification check and returns a non-approved status"},{"kind":"then","label":"the verification is rejected"}]},{"name":"Resend porting SMS code","steps":[{"kind":"given","label":"the Customer submitted portability and Twilio sent an SMS to the port number"},{"kind":"when","label":"the Customer requests a new verification code"},{"kind":"then","label":"My Paradise SMSes a porting verification code via Twilio"},{"kind":"when","label":"Twilio sends the SMS verification"},{"kind":"then","label":"the resend is confirmed"}]}]}]},{"name":"Select SIM","stories":[{"name":"Select Sim","scenarios":[{"name":"Choose ${example}","steps":[{"kind":"given","label":"no SIM type is on the line"},{"kind":"when","label":"the Customer selects ${example}"},{"kind":"then","label":"My Paradise sends the patch cart request to Mavenir with SIM type ${label}"},{"kind":"when","label":"Mavenir returns the updated Mavenir shopping cart with SIM type ${label}"},{"kind":"then","label":"My Paradise stores ${label} on the line"},{"kind":"and","label":"the Customer is forwarded to Verify ID"}]},{"name":"Choose ${example} — already on the line","steps":[{"kind":"given","label":"the line already has SIM type ${label}"},{"kind":"when","label":"the Customer selects ${example}"},{"kind":"then","label":"My Paradise skips the cart patch"}]},{"name":"Choose ${example} — cart patch fails","steps":[{"kind":"given","label":"Mavenir returns an error on cart patch"},{"kind":"when","label":"the Customer selects ${example}"},{"kind":"then","label":"the SIM selection fails"},{"kind":"when","label":"My Paradise reloads the shopping cart"},{"kind":"then","label":"the line has no SIM type"},{"kind":"and","label":"the line has no ICCID"}]}]},{"name":"Enter Existing Sim","scenarios":[{"name":"Enter existing SIM","steps":[{"kind":"given","label":"Mavenir has valid ICCID available in inventory"},{"kind":"when","label":"the Customer attaches valid ICCID"},{"kind":"then","label":"My Paradise sends the ICCID inventory request to Mavenir with valid ICCID"},{"kind":"and","label":"My Paradise sends the patch cart request to Mavenir with SIM type pSIM and valid ICCID"},{"kind":"when","label":"Mavenir returns the updated Mavenir shopping cart with SIM type pSIM and valid ICCID"},{"kind":"then","label":"My Paradise stores pSIM and valid ICCID on the line"},{"kind":"and","label":"the line has valid ICCID"},{"kind":"and","label":"the Customer is forwarded to Verify ID"}]},{"name":"ICCID contains spaces","steps":[{"kind":"given","label":"the Customer has ICCID with spaces"},{"kind":"when","label":"the Customer attaches ICCID with spaces"},{"kind":"then","label":"the ICCID format is rejected"},{"kind":"and","label":"My Paradise does not query inventory or patch the cart"}]},{"name":"Inventory rejects ICCID","steps":[{"kind":"given","label":"Mavenir does not have invalid ICCID available in inventory"},{"kind":"when","label":"the Customer attaches invalid ICCID"},{"kind":"then","label":"My Paradise sends the ICCID inventory request to Mavenir with invalid ICCID"},{"kind":"and","label":"My Paradise does not patch the cart"},{"kind":"and","label":"the ICCID is rejected"}]}]},{"name":"Activate Sim","scenarios":[{"name":"Activate Sim","steps":[{"kind":"given","label":"Mavenir has valid ICCID available in inventory"},{"kind":"when","label":"the Customer activates the SIM with valid ICCID"},{"kind":"then","label":"My Paradise sends the ICCID inventory request to Mavenir with valid ICCID"},{"kind":"and","label":"My Paradise sends the patch cart request to Mavenir with SIM type pSIM and valid ICCID"},{"kind":"and","label":"My Paradise sends the pSIM delivered order to Mavenir"},{"kind":"when","label":"Mavenir creates the product order and clears waiting pSIM"},{"kind":"then","label":"My Paradise stores valid ICCID on the line"}]},{"name":"waiting pSIM is absent","steps":[{"kind":"given","label":"Mavenir has valid ICCID available in inventory but the Mavenir customer has no waiting pSIM characteristic"},{"kind":"when","label":"the Customer activates the SIM with valid ICCID"},{"kind":"then","label":"the pSIM delivered order is rejected"}]},{"name":"waiting pSIM already completed","steps":[{"kind":"given","label":"Mavenir has valid ICCID available in inventory and the Mavenir customer has waiting pSIM false"},{"kind":"when","label":"the Customer activates the SIM with valid ICCID"},{"kind":"then","label":"the pSIM delivered order is rejected"}]}]}]},{"name":"Verify Identity","stories":[{"name":"Customer Complete Persona Kyc","scenarios":[{"name":"Persona verification required","steps":[{"kind":"given","label":"the Customer has a cart with a plan, number, and SIM and no idNumber"},{"kind":"when","label":"the Customer validates whether a Persona inquiry is required"},{"kind":"then","label":"a Persona inquiry is required"},{"kind":"and","label":"the Customer is on the Profile KYC step"}]},{"name":"Persona verification already complete","steps":[{"kind":"given","label":"the Customer has identity with an idNumber"},{"kind":"when","label":"the Customer validates whether a Persona inquiry is required"},{"kind":"then","label":"the Persona inquiry is already complete"},{"kind":"and","label":"the Customer is forwarded to Checkout"}]},{"name":"Create a completed Persona inquiry","steps":[{"kind":"given","label":"the Customer has no idNumber on identity"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise sends the inquiry request to Persona with the Customer email"},{"kind":"and","label":"My Paradise retrieves the Persona document"},{"kind":"when","label":"Persona returns the completed inquiry"},{"kind":"then","label":"the Customer has a verified Persona inquiry"},{"kind":"and","label":"My Paradise maps the inquiry onto identity and address"},{"kind":"and","label":"Customer verified stays false until the Customer confirms their identity"},{"kind":"when","label":"Persona returns the valid Persona document"},{"kind":"then","label":"identity expiry date is the Persona document expiration date"}]},{"name":"Persona inquiry not completed","steps":[{"kind":"given","label":"the Customer has no idNumber on identity"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise sends the inquiry request to Persona with the Customer email"},{"kind":"when","label":"Persona returns the failed Persona inquiry"},{"kind":"then","label":"the Customer has an unverified Persona inquiry"},{"kind":"and","label":"identity and address stay empty"}]},{"name":"No government ID document on inquiry","steps":[{"kind":"given","label":"the completed Persona inquiry has no government ID document"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise sends the inquiry request to Persona"},{"kind":"and","label":"My Paradise does not retrieve a Persona document"},{"kind":"when","label":"Persona returns the completed inquiry without a government ID"},{"kind":"then","label":"identity expiry date is empty"}]},{"name":"Persona errors on inquiry load","steps":[{"kind":"given","label":"the Customer has no idNumber on identity"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise sends the inquiry request to Persona"},{"kind":"when","label":"Persona returns an error"},{"kind":"then","label":"the Customer has an unverified Persona inquiry"},{"kind":"and","label":"identity stays empty"}]},{"name":"Document not found","steps":[{"kind":"given","label":"Persona has no Persona document for that document ID"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise retrieves the Persona document"},{"kind":"when","label":"Persona returns that the document is not found"},{"kind":"then","label":"identity expiry date is empty"}]},{"name":"Document email mismatch","steps":[{"kind":"given","label":"the Persona document email does not match the Customer email"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise retrieves the Persona document"},{"kind":"when","label":"Persona returns unauthorized"},{"kind":"then","label":"identity expiry date is empty"}]},{"name":"Verify later","steps":[{"kind":"given","label":"the Customer has no idNumber on identity"},{"kind":"when","label":"the Customer proceeds without a Persona inquiry"},{"kind":"then","label":"My Paradise does not send an inquiry request to Persona"},{"kind":"and","label":"no Persona inquiry is stored"},{"kind":"and","label":"the Customer is still on the Profile KYC step"}]},{"name":"Enter valid identity and address","steps":[{"kind":"given","label":"the Customer has a My Paradise customer in session"},{"kind":"when","label":"the Customer enters valid identity and address"},{"kind":"then","label":"all profile requirements are met"},{"kind":"and","label":"the Customer can confirm their identity"}]},{"name":"Enter identity after a verified Persona inquiry","steps":[{"kind":"given","label":"the Customer has a verified Persona inquiry mapped onto valid identity"},{"kind":"when","label":"the Customer enters the mapped identity and address"},{"kind":"then","label":"all profile requirements are met"},{"kind":"and","label":"the ID fields are present on identity"}]},{"name":"Re-enter a verified identity","steps":[{"kind":"given","label":"the Customer has valid identity already verified"},{"kind":"when","label":"the Customer re-enters valid identity"},{"kind":"then","label":"the identity is no longer verified"},{"kind":"and","label":"the Customer can confirm their identity again"}]},{"name":"Enter incomplete identity or address: ${example}","steps":[{"kind":"given","label":"the Customer has a My Paradise customer in session"},{"kind":"when","label":"the Customer enters identity and address with ${field} empty"},{"kind":"then","label":"${field} is missing"},{"kind":"and","label":"the Customer cannot confirm their identity"}]},{"name":"Confirm identity with a verified Persona inquiry","steps":[{"kind":"given","label":"the Customer has entered valid identity and address and has a verified Persona inquiry"},{"kind":"when","label":"the Customer confirms their identity"},{"kind":"then","label":"My Paradise maps identity and address onto the Mavenir engaged party and contact medium"},{"kind":"and","label":"My Paradise sends the profile patch to Mavenir"},{"kind":"when","label":"Mavenir patches the customer"},{"kind":"then","label":"the Customer identity is persisted"},{"kind":"and","label":"the Customer is verified"}]},{"name":"Customer already exists","steps":[{"kind":"given","label":"another Mavenir customer already has identity idNumber I1234562"},{"kind":"when","label":"the Customer confirms their identity"},{"kind":"then","label":"My Paradise sends the profile patch to Mavenir"},{"kind":"and","label":"the identity cannot be confirmed because a customer with that information already exists"}]},{"name":"Profile requirements unmet","steps":[{"kind":"given","label":"the Customer has not entered identity or address"},{"kind":"when","label":"the Customer confirms their identity"},{"kind":"then","label":"the identity cannot be confirmed"},{"kind":"and","label":"My Paradise does not send a profile patch to Mavenir"}]},{"name":"Mavenir profile patch error","steps":[{"kind":"given","label":"Mavenir returns a profile patch error"},{"kind":"when","label":"the Customer confirms their identity"},{"kind":"then","label":"My Paradise sends the profile patch to Mavenir"},{"kind":"and","label":"the identity cannot be confirmed"}]}]}]},{"name":"Identity Profile","stories":[{"name":"Customer Complete Persona Kyc","scenarios":[{"name":"Persona verification required","steps":[{"kind":"given","label":"the Customer has a cart with a plan, number, and SIM and no idNumber"},{"kind":"when","label":"the Customer validates whether a Persona inquiry is required"},{"kind":"then","label":"a Persona inquiry is required"},{"kind":"and","label":"the Customer is on the Profile KYC step"}]},{"name":"Persona verification already complete","steps":[{"kind":"given","label":"the Customer has identity with an idNumber"},{"kind":"when","label":"the Customer validates whether a Persona inquiry is required"},{"kind":"then","label":"the Persona inquiry is already complete"},{"kind":"and","label":"the Customer is forwarded to Checkout"}]},{"name":"Create a completed Persona inquiry","steps":[{"kind":"given","label":"the Customer has no idNumber on identity"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise sends the inquiry request to Persona with the Customer email"},{"kind":"and","label":"My Paradise retrieves the Persona document"},{"kind":"when","label":"Persona returns the completed inquiry"},{"kind":"then","label":"the Customer has a verified Persona inquiry"},{"kind":"and","label":"My Paradise maps the inquiry onto identity and address"},{"kind":"and","label":"Customer verified stays false until the Customer confirms their identity"},{"kind":"when","label":"Persona returns the valid Persona document"},{"kind":"then","label":"identity expiry date is the Persona document expiration date"}]},{"name":"Persona inquiry not completed","steps":[{"kind":"given","label":"the Customer has no idNumber on identity"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise sends the inquiry request to Persona with the Customer email"},{"kind":"when","label":"Persona returns the failed Persona inquiry"},{"kind":"then","label":"the Customer has an unverified Persona inquiry"},{"kind":"and","label":"identity and address stay empty"}]},{"name":"No government ID document on inquiry","steps":[{"kind":"given","label":"the completed Persona inquiry has no government ID document"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise sends the inquiry request to Persona"},{"kind":"and","label":"My Paradise does not retrieve a Persona document"},{"kind":"when","label":"Persona returns the completed inquiry without a government ID"},{"kind":"then","label":"identity expiry date is empty"}]},{"name":"Persona errors on inquiry load","steps":[{"kind":"given","label":"the Customer has no idNumber on identity"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise sends the inquiry request to Persona"},{"kind":"when","label":"Persona returns an error"},{"kind":"then","label":"the Customer has an unverified Persona inquiry"},{"kind":"and","label":"identity stays empty"}]},{"name":"Document not found","steps":[{"kind":"given","label":"Persona has no Persona document for that document ID"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise retrieves the Persona document"},{"kind":"when","label":"Persona returns that the document is not found"},{"kind":"then","label":"identity expiry date is empty"}]},{"name":"Document email mismatch","steps":[{"kind":"given","label":"the Persona document email does not match the Customer email"},{"kind":"when","label":"the Customer creates a Persona inquiry"},{"kind":"then","label":"My Paradise retrieves the Persona document"},{"kind":"when","label":"Persona returns unauthorized"},{"kind":"then","label":"identity expiry date is empty"}]},{"name":"Verify later","steps":[{"kind":"given","label":"the Customer has no idNumber on identity"},{"kind":"when","label":"the Customer proceeds without a Persona inquiry"},{"kind":"then","label":"My Paradise does not send an inquiry request to Persona"},{"kind":"and","label":"no Persona inquiry is stored"},{"kind":"and","label":"the Customer is still on the Profile KYC step"}]},{"name":"Enter valid identity and address","steps":[{"kind":"given","label":"the Customer has a My Paradise customer in session"},{"kind":"when","label":"the Customer enters valid identity and address"},{"kind":"then","label":"all profile requirements are met"},{"kind":"and","label":"the Customer can confirm their identity"}]},{"name":"Enter identity after a verified Persona inquiry","steps":[{"kind":"given","label":"the Customer has a verified Persona inquiry mapped onto valid identity"},{"kind":"when","label":"the Customer enters the mapped identity and address"},{"kind":"then","label":"all profile requirements are met"},{"kind":"and","label":"the ID fields are present on identity"}]},{"name":"Re-enter a verified identity","steps":[{"kind":"given","label":"the Customer has valid identity already verified"},{"kind":"when","label":"the Customer re-enters valid identity"},{"kind":"then","label":"the identity is no longer verified"},{"kind":"and","label":"the Customer can confirm their identity again"}]},{"name":"Enter incomplete identity or address: ${example}","steps":[{"kind":"given","label":"the Customer has a My Paradise customer in session"},{"kind":"when","label":"the Customer enters identity and address with ${field} empty"},{"kind":"then","label":"${field} is missing"},{"kind":"and","label":"the Customer cannot confirm their identity"}]},{"name":"Confirm identity with a verified Persona inquiry","steps":[{"kind":"given","label":"the Customer has entered valid identity and address and has a verified Persona inquiry"},{"kind":"when","label":"the Customer confirms their identity"},{"kind":"then","label":"My Paradise maps identity and address onto the Mavenir engaged party and contact medium"},{"kind":"and","label":"My Paradise sends the profile patch to Mavenir"},{"kind":"when","label":"Mavenir patches the customer"},{"kind":"then","label":"the Customer identity is persisted"},{"kind":"and","label":"the Customer is verified"}]},{"name":"Customer already exists","steps":[{"kind":"given","label":"another Mavenir customer already has identity idNumber I1234562"},{"kind":"when","label":"the Customer confirms their identity"},{"kind":"then","label":"My Paradise sends the profile patch to Mavenir"},{"kind":"and","label":"the identity cannot be confirmed because a customer with that information already exists"}]},{"name":"Profile requirements unmet","steps":[{"kind":"given","label":"the Customer has not entered identity or address"},{"kind":"when","label":"the Customer confirms their identity"},{"kind":"then","label":"the identity cannot be confirmed"},{"kind":"and","label":"My Paradise does not send a profile patch to Mavenir"}]},{"name":"Mavenir profile patch error","steps":[{"kind":"given","label":"Mavenir returns a profile patch error"},{"kind":"when","label":"the Customer confirms their identity"},{"kind":"then","label":"My Paradise sends the profile patch to Mavenir"},{"kind":"and","label":"the identity cannot be confirmed"}]}]}]},{"name":"Order Review","stories":[{"name":"Check The Order","scenarios":[{"name":"Check the order for a new number","steps":[{"kind":"given","label":"the Customer has completed account setup, number, SIM, and profile"},{"kind":"when","label":"My Paradise loads the order state from the Mavenir shopping cart"},{"kind":"then","label":"the Customer is forwarded to Checkout"},{"kind":"and","label":"the order summary shows the plan"},{"kind":"and","label":"the order summary shows the number and SIM"},{"kind":"and","label":"the order summary shows the profile"}]},{"name":"Check the order for a port-in number","steps":[{"kind":"given","label":"the Customer has completed account setup, port-in number, SIM, and profile"},{"kind":"when","label":"My Paradise loads the order state from the Mavenir shopping cart"},{"kind":"then","label":"the Customer is forwarded to Checkout"},{"kind":"and","label":"the order summary shows the plan"},{"kind":"and","label":"the order summary shows the port-in number and SIM"},{"kind":"and","label":"the order summary shows the profile"}]}]},{"name":"Change Plan From Review","scenarios":[{"name":"Upgrade plan from review: ${example}","steps":[{"kind":"given","label":"${currentPlan.name} is in the Mavenir shopping cart"},{"kind":"when","label":"My Paradise patches the Mavenir shopping cart with ${newPlan.name}"},{"kind":"then","label":"My Paradise sends the patch cart request to Mavenir with ${newPlan.name} bundleId"},{"kind":"when","label":"Mavenir returns the updated Mavenir shopping cart with ${newPlan.name}"},{"kind":"then","label":"My Paradise stores ${newPlan.name} as the cart bundle"}]},{"name":"Keep current plan from review","steps":[{"kind":"given","label":"the Customer has opened plan selection from review with Essentials in the cart"},{"kind":"when","label":"the Customer keeps their current plan"},{"kind":"then","label":"the cart bundle remains Essentials"},{"kind":"and","label":"the Customer is forwarded to Checkout"}]},{"name":"Plan update fails from review","steps":[{"kind":"given","label":"the Customer has opened plan selection from review with Essentials in the cart"},{"kind":"when","label":"My Paradise patches the Mavenir shopping cart with Data Freedom but Mavenir returns an error"},{"kind":"then","label":"My Paradise shows Failed to update new plan choice."},{"kind":"when","label":"My Paradise reloads the shopping cart"},{"kind":"then","label":"the cart bundle remains Essentials"}]}]}]},{"name":"Payment","stories":[{"name":"Enter Payment","scenarios":[{"name":"Enter Payment","steps":[{"kind":"given","label":"the Customer is at Checkout with Essentials"},{"kind":"and","label":"Mavenir CCS authorizes stub auth"},{"kind":"when","label":"the Customer proceeds to adding their payment"},{"kind":"then","label":"My Paradise sends the card authorization request to Mavenir with TotalAmount $1 and salesChannel ON-BOARDING"},{"kind":"when","label":"Mavenir authorizes the card and returns the hosted payment page"},{"kind":"then","label":"the payment has stub auth transaction id, amount $1, and sales channel ON-BOARDING"}]},{"name":"Payment authorization fails to load","steps":[{"kind":"given","label":"the Customer is at Checkout with Essentials"},{"kind":"when","label":"the Customer proceeds to adding their payment"},{"kind":"then","label":"My Paradise sends the card authorization request to Mavenir"},{"kind":"when","label":"Mavenir does not return a payment authorization"},{"kind":"then","label":"the payment authorization cannot be loaded"}]},{"name":"FAC authorization timeout","steps":[{"kind":"given","label":"the Customer is at Checkout with Essentials"},{"kind":"when","label":"the Customer proceeds to adding their payment"},{"kind":"then","label":"My Paradise sends the card authorization request to Mavenir"},{"kind":"when","label":"Mavenir does not return a transaction id"},{"kind":"then","label":"the payment authorization cannot be loaded"}]}]},{"name":"Authorize Card","scenarios":[{"name":"Payment completed","steps":[{"kind":"given","label":"the Customer has stub auth"},{"kind":"and","label":"Mavenir CCS has completed auth"},{"kind":"when","label":"the Customer authorizes their card"},{"kind":"then","label":"My Paradise sends the tokenized card request to Mavenir for stub auth"},{"kind":"when","label":"Mavenir returns completed auth"},{"kind":"then","label":"the payment is authorized"},{"kind":"and","label":"the payment step does not place the order"}]},{"name":"Card not verified","steps":[{"kind":"given","label":"the Customer has stub auth"},{"kind":"and","label":"Mavenir CCS has failed auth"},{"kind":"and","label":"payment attempts are under the maximum"},{"kind":"when","label":"the Customer authorizes their card"},{"kind":"then","label":"My Paradise sends the tokenized card request to Mavenir"},{"kind":"when","label":"Mavenir returns failed auth"},{"kind":"then","label":"the card is not verified"},{"kind":"and","label":"My Paradise requests a fresh payment authorization from Mavenir"}]},{"name":"Maximum payment attempts","steps":[{"kind":"given","label":"the Customer has stub auth"},{"kind":"and","label":"Mavenir CCS has failed auth"},{"kind":"and","label":"payment attempts equal the maximum"},{"kind":"when","label":"the Customer authorizes their card"},{"kind":"then","label":"My Paradise sends the tokenized card request to Mavenir for stub auth"},{"kind":"when","label":"Mavenir returns failed auth"},{"kind":"then","label":"My Paradise records the failed card addition with Zendesk"},{"kind":"and","label":"the payment step does not place the order"}]}]},{"name":"Provide Apple Pay Certificate","scenarios":[{"name":"Provide Apple Pay certificate","steps":[{"kind":"given","label":"the Apple Pay merchant certificate is available"},{"kind":"when","label":"My Paradise provides the Apple Pay certificate"},{"kind":"then","label":"My Paradise sends the certificate request to Apple"},{"kind":"when","label":"Apple returns Bermuda Apple Pay cert"},{"kind":"then","label":"My Paradise returns Bermuda Apple Pay cert"}]}]}]},{"name":"Order Result","stories":[{"name":"View Order Result","scenarios":[{"name":"View order result: ${example}","steps":[{"kind":"given","label":"the order result is ${example}"},{"kind":"when","label":"the Customer views their order result"}]}]},{"name":"Create Billing Account","scenarios":[{"name":"Create billing account","steps":[{"kind":"given","label":"the Customer has a configured cart and no billing account"},{"kind":"when","label":"the Customer creates a billing account"},{"kind":"then","label":"My Paradise sends the billing account request to Mavenir"},{"kind":"when","label":"Mavenir creates the billing account"},{"kind":"then","label":"the Customer has a billing account"},{"kind":"and","label":"the Customer is on the Done step"}]},{"name":"Billing account already exists","steps":[{"kind":"given","label":"the Customer already has a billing account"},{"kind":"when","label":"the Customer creates a billing account"},{"kind":"then","label":"the billing account is rejected"},{"kind":"and","label":"Mavenir does not receive a billing account request"}]},{"name":"Billing account creation fails","steps":[{"kind":"given","label":"Mavenir returns an error for the billing account request"},{"kind":"when","label":"the Customer creates a billing account"},{"kind":"then","label":"the billing account cannot be created"},{"kind":"when","label":"My Paradise reloads the customer"},{"kind":"then","label":"the Customer has no billing account"}]}]},{"name":"Create Product Order","scenarios":[{"name":"Create product order","steps":[{"kind":"given","label":"the Customer is verified and has a billing account, plan, number, and eSIM"},{"kind":"when","label":"the Customer places the product order"},{"kind":"then","label":"My Paradise sends the product order request to Mavenir"},{"kind":"when","label":"Mavenir creates the product order"},{"kind":"then","label":"the order succeeded with pay-up-front"},{"kind":"and","label":"the Customer onboarding is done"}]},{"name":"Pay-up-front charge fails","steps":[{"kind":"given","label":"the pay-up-front charge fails"},{"kind":"when","label":"the Customer places the product order"},{"kind":"then","label":"My Paradise does not send a product order to Mavenir"},{"kind":"when","label":"My Paradise reloads the cart"},{"kind":"then","label":"the order succeeded without pay-up-front"}]},{"name":"Product order fails","steps":[{"kind":"given","label":"Mavenir returns an error for the product order"},{"kind":"when","label":"the Customer places the product order"},{"kind":"then","label":"My Paradise sends the product order request to Mavenir"},{"kind":"when","label":"My Paradise reloads the cart"},{"kind":"then","label":"the order did not succeed"}]},{"name":"Onboarding is already done","steps":[{"kind":"given","label":"the Customer onboarding is already done"},{"kind":"when","label":"the Customer places the product order"},{"kind":"then","label":"the product order is rejected"},{"kind":"and","label":"Mavenir does not receive a product order request"}]},{"name":"Unverified with no bypass and no portability","steps":[{"kind":"given","label":"the Customer is not verified and the plan does not bypass verification"},{"kind":"when","label":"the Customer places the product order"},{"kind":"then","label":"My Paradise does not send a product order to Mavenir"},{"kind":"and","label":"the cart is marked to submit the order later"},{"kind":"when","label":"My Paradise reloads the cart"},{"kind":"then","label":"the Customer onboarding is done"}]}]},{"name":"Create Order Ticket","scenarios":[{"name":"Create order ticket: ${example}","steps":[{"kind":"given","label":"the Customer ${example}"},{"kind":"when","label":"the Customer creates the order ticket"},{"kind":"then","label":"My Paradise sends the ${subject} ticket to Zendesk"},{"kind":"when","label":"Zendesk creates the ticket"},{"kind":"then","label":"the ticket is created for the Customer"}]}]}]},{"name":"Sign In","stories":[{"name":"Sign In With Existing Account","scenarios":[{"name":"Sign in with already-registered account credentials","steps":[{"kind":"given","label":"Cognito has an already-registered Cognito user"},{"kind":"and","label":"the Customer is not signed in"},{"kind":"and","label":"the Customer has already-registered account credentials"},{"kind":"when","label":"the Customer authenticates already-registered account credentials"},{"kind":"then","label":"My Paradise sends the sign-in request to Cognito"},{"kind":"when","label":"Cognito authenticates the account and issues an account token"},{"kind":"then","label":"My Paradise stores the signed-in Cognito user"},{"kind":"and","label":"the Cognito user has the Mavenir customer id"}]},{"name":"Email format is unmet","steps":[{"kind":"given","label":"the Customer has invalid email format account credentials"},{"kind":"when","label":"the Customer authenticates invalid email format"},{"kind":"then","label":"My Paradise does not send a sign-in request to Cognito"},{"kind":"and","label":"the authentication is rejected"},{"kind":"and","label":"Cognito does not issue an account token"}]},{"name":"Authenticate with incorrect account credentials: ${example}","steps":[{"kind":"given","label":"Cognito has an already-registered Cognito user"},{"kind":"and","label":"the Customer is not signed in"},{"kind":"and","label":"the Customer has ${example}"},{"kind":"when","label":"the Customer authenticates ${example}"},{"kind":"then","label":"My Paradise sends the sign-in request to Cognito"},{"kind":"when","label":"Cognito returns NotAuthorizedException"},{"kind":"then","label":"the authentication is rejected"},{"kind":"and","label":"Cognito does not issue an account token"}]},{"name":"Authenticate with unconfirmed account","steps":[{"kind":"given","label":"Cognito has an unconfirmed Cognito user"},{"kind":"and","label":"the Customer is not signed in"},{"kind":"and","label":"the Customer has unconfirmed sign-in account credentials"},{"kind":"when","label":"the Customer authenticates unconfirmed sign-in"},{"kind":"then","label":"My Paradise sends the sign-in request to Cognito"},{"kind":"when","label":"Cognito returns CONFIRM_SIGN_UP"},{"kind":"then","label":"the authentication is rejected as unconfirmed"},{"kind":"and","label":"Cognito does not issue an account token"}]},{"name":"Password reset required","steps":[{"kind":"given","label":"Cognito has an already-registered Cognito user"},{"kind":"and","label":"Cognito requires a password reset for already-registered account credentials"},{"kind":"and","label":"the Customer is not signed in"},{"kind":"and","label":"the Customer has already-registered account credentials"},{"kind":"when","label":"the Customer authenticates already-registered account credentials"},{"kind":"then","label":"My Paradise sends the sign-in request to Cognito"},{"kind":"when","label":"Cognito returns PasswordResetRequiredException"},{"kind":"then","label":"the authentication requires a password reset"},{"kind":"and","label":"Cognito does not issue an account token"}]},{"name":"New password required","steps":[{"kind":"given","label":"Cognito has an already-registered Cognito user"},{"kind":"and","label":"Cognito requires a new password for already-registered account credentials"},{"kind":"and","label":"the Customer is not signed in"},{"kind":"and","label":"the Customer has already-registered account credentials"},{"kind":"when","label":"the Customer authenticates already-registered account credentials"},{"kind":"then","label":"My Paradise sends the sign-in request to Cognito"},{"kind":"when","label":"Cognito returns CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED"},{"kind":"then","label":"the authentication requires a new password"},{"kind":"and","label":"Cognito does not issue an account token"}]}]}]}]</script>
+  <script>
+/**
+ * Explorer tree: epic → sub-epic → screen → story → scenario → step.
+ * A screen sits on the epic when that epic has no sub-epic.
+ * The current screen's epic, sub-epic, and screen start expanded.
+ */
+
+function epicKey(name) {
+  return `epic:${name}`;
+}
+
+function subEpicKey(epic, name) {
+  return `subepic:${epic}/${name}`;
+}
+
+function screenKey(name, epic = "", sub = "") {
+  return epic ? `screen:${epic}/${sub}/${name}` : `screen:${name}`;
+}
+
+function storyKey(screen, story) {
+  return `story:${screen}/${story}`;
+}
+
+function scenarioKey(screen, story, scenario) {
+  return `scenario:${screen}/${story}/${scenario}`;
+}
+
+function storyNamesOnScreen(screenEl) {
+  const raw =
+    screenEl.getAttribute("data-stories") ||
+    screenEl.getAttribute("data-for-story") ||
+    "";
+  return raw
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+}
+
+/**
+ * @param {Element[]} screenEls
+ * @param {{ title?: string, story?: { name?: string, scenarios?: object[] } }[]} catalog
+ */
+function buildScreenNodes(screenEls, catalog) {
+  return screenEls.map((el) => {
+    const name =
+      el.getAttribute("data-slug") ||
+      el.querySelector("h2")?.textContent?.trim() ||
+      "";
+    const stories = storyNamesOnScreen(el).map((storyName) => {
+      const storyIndex = catalog.findIndex(
+        (entry) => entry.title === storyName || entry.story?.name === storyName,
+      );
+      const entry = storyIndex >= 0 ? catalog[storyIndex] : null;
+      const scenarios = (entry?.story?.scenarios ?? []).map((sc, scenarioIndex) => ({
+        name: sc.name,
+        scenarioIndex,
+        steps: (sc.steps ?? []).map((step) => ({
+          kind: step.kind,
+          label: step.label,
+        })),
+      }));
+      return { name: storyName, storyIndex, scenarios };
+    });
+    return { name, stories };
+  });
+}
+
+/**
+ * Place screens under the story-map outline.
+ * A group with a name is a sub-epic. A group without one hangs its screens on the epic.
+ * Groups with no matching screen are left off the tree.
+ * @param {{ name: string, stories?: object[] }[]} screens
+ * @param {{ name: string, groups?: { name?: string, stories?: string[] }[], stories?: string[] }[]} outline
+ */
+function nestScreens(screens, outline) {
+  const screenNodes = screens.map(toScreenNode);
+  if (!outline?.length) return screenNodes;
+  const epics = [];
+  for (const epic of outline) {
+    const children = [];
+    for (const group of epic.groups || []) {
+      const placed = placeScreens(screenNodes, group.stories || [], epic.name, group.name || "");
+      if (!placed.length) continue;
+      if (group.name) {
+        children.push({
+          kind: "subepic",
+          name: group.name,
+          key: subEpicKey(epic.name, group.name),
+          children: placed,
+        });
+      } else {
+        children.push(...placed);
+      }
+    }
+    if (epic.stories?.length) {
+      children.push(...placeScreens(screenNodes, epic.stories, epic.name, ""));
+    }
+    if (!children.length) continue;
+    epics.push({
+      kind: "epic",
+      name: epic.name,
+      key: epicKey(epic.name),
+      children,
+    });
+  }
+  return epics.length ? epics : screenNodes;
+}
+
+/** Keys to open so the named screen is visible: epic, sub-epic, and the screen. */
+function keysForCurrentScreen(nodes, screenName) {
+  let match = null;
+  function walk(node, trail) {
+    if (match || !node || node.kind === "step") return;
+    const next = node.key ? [...trail, node.key] : trail;
+    if (node.kind === "screen" && node.name === screenName) {
+      match = next;
+      return;
+    }
+    for (const child of node.children || []) walk(child, next);
+  }
+  for (const node of nodes || []) walk(node, []);
+  return match || [];
+}
+
+function toScreenNode(screen) {
+  return {
+    kind: "screen",
+    name: screen.name,
+    key: screenKey(screen.name),
+    children: (screen.stories || []).map((story) => storyToNode(screen.name, story)),
+  };
+}
+
+function storyToNode(screenName, story) {
+  return {
+    kind: "story",
+    name: story.name,
+    screenName,
+    key: storyKey(screenName, story.name),
+    storyIndex: story.storyIndex ?? -1,
+    children: (story.scenarios || []).map((scenario, index) => {
+      const key = scenarioKey(screenName, story.name, scenario.name);
+      return {
+        kind: "scenario",
+        name: scenario.name,
+        screenName,
+        key,
+        storyName: story.name,
+        storyIndex: story.storyIndex ?? -1,
+        scenarioIndex: scenario.scenarioIndex ?? index,
+        children: (scenario.steps || []).map((step) => ({
+          kind: "step",
+          screenName,
+          stepKind: step.kind,
+          label: step.label,
+          storyIndex: story.storyIndex ?? -1,
+          scenarioIndex: scenario.scenarioIndex ?? index,
+          scenarioKey: key,
+        })),
+      };
+    }),
+  };
+}
+
+function placeScreens(screenNodes, storyNames, epicName, subName) {
+  const order = new Map(storyNames.map((name, index) => [name, index]));
+  const placed = [];
+  for (const screen of screenNodes) {
+    const stories = (screen.children || [])
+      .filter((story) => order.has(story.name))
+      .sort((a, b) => order.get(a.name) - order.get(b.name));
+    if (!stories.length) continue;
+    placed.push({
+      rank: Math.min(...stories.map((story) => order.get(story.name))),
+      node: {
+        kind: "screen",
+        name: screen.name,
+        key: screenKey(screen.name, epicName, subName),
+        children: stories,
+      },
+    });
+  }
+  placed.sort((a, b) => a.rank - b.rank);
+  return placed.map((item) => item.node);
+}
+
+function twistButton(expanded, key, onToggle, onSelect) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "twist";
+  button.setAttribute("aria-expanded", expanded ? "true" : "false");
+  button.setAttribute("aria-label", expanded ? "Collapse" : "Expand");
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onSelect?.();
+    onToggle(key);
+  });
+  return button;
+}
+
+const SVG = "http://www.w3.org/2000/svg";
+
+function svgEl(name, attrs) {
+  const el = document.createElementNS(SVG, name);
+  for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
+  return el;
+}
+
+function glyph(kind) {
+  const svg = svgEl("svg", { viewBox: "0 0 16 16", class: "glyph", "aria-hidden": "true" });
+  const add = (name, attrs) => svg.appendChild(svgEl(name, attrs));
+  if (kind === "epic") {
+    add("rect", { x: "1.5", y: "2", width: "13", height: "3", rx: "0.6" });
+    add("rect", { x: "1.5", y: "6.5", width: "13", height: "3", rx: "0.6" });
+    add("rect", { x: "1.5", y: "11", width: "13", height: "3", rx: "0.6" });
+  } else if (kind === "subepic") {
+    add("path", { d: "M1.5 5.5 H6 L7.4 3.5 H14.5 V13.5 H1.5 Z" });
+  } else if (kind === "screen") {
+    add("rect", { x: "2", y: "1.5", width: "12", height: "13", rx: "1" });
+    add("path", { d: "M4 5 H12 M4 8 H12 M4 11 H9" });
+  } else if (kind === "story") {
+    add("path", { d: "M1.5 3.5 L8 5.2 V13.2 L1.5 11.5 Z M14.5 3.5 L8 5.2 V13.2 L14.5 11.5 Z" });
+  } else if (kind === "scenario") {
+    add("rect", { x: "3.2", y: "2.8", width: "9.6", height: "11", rx: "1" });
+    add("path", { d: "M6 1.6 H10 V3.6 H6 Z M5.4 7 H11 M5.4 9.4 H11 M5.4 11.8 H8.6" });
+  }
+  return svg;
+}
+
+const KIND_LABEL = {
+  epic: "Epic",
+  subepic: "Sub-epic",
+  screen: "Screen",
+  story: "Story",
+  scenario: "Scenario",
+  step: "Step",
+};
+
+const DOMAIN_NOUNS = [
+  "My Paradise",
+  "Mavenir shopping cart",
+  "Apple Pay",
+  "Mavenir",
+  "Cognito",
+  "Vouchera",
+  "Persona",
+  "Twilio",
+  "Zendesk",
+  "MSISDN",
+  "Customer",
+  "User",
+];
+
+function appendNouns(fragment, text) {
+  const pattern = new RegExp(
+    DOMAIN_NOUNS.map((noun) => noun.replace(/[.*+?^${}()|[\]\\]/g, "\\@@INLINE_SCRIPT@@")).join("|"),
+    "gi",
+  );
+  let cursor = 0;
+  let match = pattern.exec(text);
+  while (match) {
+    if (match.index > cursor) {
+      fragment.appendChild(document.createTextNode(text.slice(cursor, match.index)));
+    }
+    const noun = document.createElement("u");
+    noun.textContent = match[0];
+    fragment.appendChild(noun);
+    cursor = match.index + match[0].length;
+    match = pattern.exec(text);
+  }
+  if (cursor < text.length) fragment.appendChild(document.createTextNode(text.slice(cursor)));
+}
+
+function stepLabel(label) {
+  const fragment = document.createDocumentFragment();
+  const marked = /\+\+([^+]+)\+\+/g;
+  let cursor = 0;
+  let match = marked.exec(label);
+  while (match) {
+    if (match.index > cursor) appendNouns(fragment, label.slice(cursor, match.index));
+    const noun = document.createElement("u");
+    noun.textContent = match[1];
+    fragment.appendChild(noun);
+    cursor = match.index + match[0].length;
+    match = marked.exec(label);
+  }
+  if (cursor < label.length) appendNouns(fragment, label.slice(cursor));
+  return fragment;
+}
+
+function labelButton(text, className, kind, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `node-label ${className}`;
+  const kindName = KIND_LABEL[kind] || kind;
+  button.title = kindName;
+  button.setAttribute("aria-label", `${kindName} ${text}`);
+  button.appendChild(glyph(kind));
+  const span = document.createElement("span");
+  span.textContent = text;
+  button.appendChild(span);
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+function childList(expanded, nodes) {
+  const list = document.createElement("ul");
+  if (!expanded) list.hidden = true;
+  for (const node of nodes) list.appendChild(node);
+  return list;
+}
+
+const EMPTY = {
+  screen: "No story on this screen",
+  story: "No scenarios recorded",
+  scenario: "No steps recorded",
+};
+
+/** Scroll the explorer panel so the screen row for `screenName` is visible. */
+function scrollExplorerToScreen(container, screenName) {
+  if (!container || !screenName) return;
+  const scrollRoot = container.closest("#explorer-frame");
+  const node = [...container.querySelectorAll("li.screen-node")].find(
+    (li) => li.dataset.screen === screenName,
+  );
+  if (!node) return;
+  requestAnimationFrame(() => {
+    if (!scrollRoot) {
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    const rootRect = scrollRoot.getBoundingClientRect();
+    const nodeRect = node.getBoundingClientRect();
+    const target =
+      nodeRect.top - rootRect.top + scrollRoot.scrollTop - (rootRect.height - nodeRect.height) / 2;
+    scrollRoot.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+  });
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {{ nodes?: object[], screens?: object[], outline?: object[], expanded: Set<string>, currentScreen?: string, currentStory?: string, currentScenario?: string, currentStep?: { kind?: string, label?: string }, scrollToCurrentScreen?: boolean }} model
+ * @param {{ onToggle: (key: string) => void, onScreen: (name: string) => void, onStory: (storyIndex: number, name: string) => void, onScenario: (storyIndex: number, scenarioIndex: number, key: string) => void }} handlers
+ */
+function renderScreenTree(container, model, handlers) {
+  container.innerHTML = "";
+  const nodes = model.nodes || nestScreens(model.screens || [], model.outline || []);
+  for (const node of nodes) container.appendChild(renderBranch(node, model, handlers, false, ""));
+  if (model.scrollToCurrentScreen && model.currentScreen) {
+    scrollExplorerToScreen(container, model.currentScreen);
+  }
+}
+
+function renderBranch(node, model, handlers, activeScenario, owningScreen) {
+  if (node.kind === "step") return renderStep(node, model, handlers, activeScenario, owningScreen || node.screenName || "");
+  const screenName = node.kind === "screen" ? node.name : (owningScreen || node.screenName || "");
+  const selectScreen = () => {
+    if (screenName) handlers.onScreen?.(screenName);
+  };
+  const open = model.expanded.has(node.key);
+  const li = document.createElement("li");
+  li.className = `${node.kind}-node`;
+  if (screenName) li.dataset.owningScreen = screenName;
+  if (node.kind === "screen") li.dataset.screen = node.name;
+  if (isCurrent(node, model)) li.classList.add("current");
+  li.appendChild(twistButton(open, node.key, handlers.onToggle, selectScreen));
+  li.appendChild(
+    labelButton(node.name, `${node.kind}-label`, node.kind, () => {
+      if (!open) handlers.onToggle(node.key);
+      if (node.kind === "story") handlers.onStory(node.storyIndex ?? -1, node.name);
+      if (node.kind === "scenario") {
+        handlers.onScenario(node.storyIndex ?? -1, node.scenarioIndex ?? -1, node.key);
+      }
+      selectScreen();
+    }),
+  );
+  const children = (node.children || []).filter((child) => child.kind !== "step" || node.kind === "scenario");
+  const scenarioOpen = node.kind === "scenario" && isCurrent(node, model);
+  const body = children.length
+    ? children.map((child) => renderBranch(child, model, handlers, scenarioOpen, screenName))
+    : EMPTY[node.kind]
+      ? [emptyItem(EMPTY[node.kind])]
+      : [];
+  if (body.length) li.appendChild(childList(open, body));
+  return li;
+}
+
+function isCurrent(node, model) {
+  if (node.kind === "screen") return node.name === model.currentScreen;
+  if (node.kind === "story") return node.name === model.currentStory;
+  if (node.kind === "scenario") {
+    return node.name === model.currentScenario && (!model.currentStory || node.storyName === model.currentStory);
+  }
+  return false;
+}
+
+function renderStep(step, model, handlers, activeScenario, owningScreen) {
+  const screenName = owningScreen || step.screenName || "";
+  const stepLi = document.createElement("li");
+  stepLi.className = "step";
+  stepLi.title = KIND_LABEL.step;
+  if (screenName) stepLi.dataset.owningScreen = screenName;
+  stepLi.tabIndex = 0;
+  stepLi.addEventListener("click", () => {
+    handlers.onScenario?.(step.storyIndex ?? -1, step.scenarioIndex ?? -1, step.scenarioKey);
+    if (screenName) handlers.onScreen?.(screenName);
+  });
+  const kind = document.createElement("span");
+  kind.className = "step-kind";
+  if (step.stepKind === "when" || step.stepKind === "then") kind.classList.add("emph");
+  kind.textContent = step.stepKind;
+  stepLi.appendChild(kind);
+  stepLi.appendChild(document.createTextNode(" "));
+  stepLi.appendChild(stepLabel(step.label));
+  const current = model.currentStep;
+  if (
+    activeScenario &&
+    current &&
+    current.kind === step.stepKind &&
+    current.label === step.label
+  ) {
+    stepLi.classList.add("current");
+  }
+  return stepLi;
+}
+
+function emptyItem(text) {
+  const li = document.createElement("li");
+  li.className = "empty";
+  li.textContent = text;
+  return li;
+}
+
+
+function bindFlowZoom(pane, surface) {
+  if (!pane || !surface) return;
+  const readout = pane.querySelector('[data-flow-zoom="reset"]');
+  let zoom = 1;
+  const min = 0.25;
+  const max = 3;
+  function apply(next, point) {
+    next = Math.min(max, Math.max(min, Math.round(next * 100) / 100));
+    const previous = zoom;
+    const rect = pane.getBoundingClientRect();
+    const localX = point ? point.x - rect.left : pane.clientWidth / 2;
+    const localY = point ? point.y - rect.top : pane.clientHeight / 2;
+    const contentX = pane.scrollLeft + localX;
+    const contentY = pane.scrollTop + localY;
+    zoom = next;
+    surface.style.zoom = String(zoom);
+    if (previous) {
+      pane.scrollLeft = contentX * (zoom / previous) - localX;
+      pane.scrollTop = contentY * (zoom / previous) - localY;
+    }
+    if (readout) readout.textContent = `${Math.round(zoom * 100)}%`;
+  }
+  pane.querySelector('[data-flow-zoom="in"]')?.addEventListener("click", () => apply(zoom * 1.1));
+  pane.querySelector('[data-flow-zoom="out"]')?.addEventListener("click", () => apply(zoom / 1.1));
+  readout?.addEventListener("click", () => apply(1));
+  pane.addEventListener(
+    "wheel",
+    (event) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      apply(zoom * (event.deltaY < 0 ? 1.1 : 1 / 1.1), { x: event.clientX, y: event.clientY });
+    },
+    { passive: false },
+  );
+  document.querySelector("#explorer-frame")?.addEventListener(
+    "wheel",
+    (event) => {
+      if (event.ctrlKey || event.metaKey) event.preventDefault();
+    },
+    { passive: false },
+  );
+  document.addEventListener("keydown", (event) => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+    const zoomIn = event.key === "+" || event.key === "=";
+    const zoomOut = event.key === "-" || event.key === "_";
+    const reset = event.key === "0";
+    if (!zoomIn && !zoomOut && !reset) return;
+    event.preventDefault();
+    if (event.target.closest?.("#explorer-frame")) return;
+    if (zoomIn) apply(zoom * 1.1);
+    else if (zoomOut) apply(zoom / 1.1);
+    else apply(1);
+  });
+}
+
+
+function mountMapMockup(options = {}) {
+  const toast = document.querySelector("#toast");
+  const tree = document.querySelector("#explorer-tree");
+  const frame = document.querySelector("#story-demo-frame");
+  const screenCatalog = JSON.parse(document.querySelector("#screen-stories").textContent);
+  const expanded = new Set();
+  let openScreen = null;
+  const startScreen = options.startScreen || "Create Account";
+
+  function screens() {
+    return [...document.querySelectorAll("#mockup .screen")];
+  }
+
+  function flash(msg) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(flash._t);
+    flash._t = setTimeout(() => toast.classList.remove("show"), 1600);
+  }
+
+  const storyOutline = JSON.parse(document.querySelector("#story-outline").textContent);
+
+  function paintTree({ scrollToCurrentScreen = false } = {}) {
+    const name = document.querySelector("#mockup .screen.current")?.getAttribute("data-slug") || "";
+    const nodes = nestScreens(screenCatalog, storyOutline);
+    if (name && openScreen !== name) {
+      openScreen = name;
+      for (const key of keysForCurrentScreen(nodes, name)) expanded.add(key);
+    }
+    renderScreenTree(
+      tree,
+      {
+        nodes,
+        expanded,
+        currentScreen: name,
+        scrollToCurrentScreen,
+      },
+      {
+        onToggle(key) {
+          if (expanded.has(key)) expanded.delete(key);
+          else expanded.add(key);
+          paintTree();
+        },
+        onScreen(screenName) {
+          openScreen = null;
+          showScreen(screenName);
+        },
+        onStory() {},
+        onScenario() {},
+      },
+    );
+  }
+
+  function showScreen(name, scroll) {
+    const screen = screens().find(
+      (el) => el.getAttribute("data-slug") === name || el.querySelector("h2")?.textContent?.trim() === name,
+    );
+    if (!screen) return;
+    document.querySelectorAll(".screen.current").forEach((el) => el.classList.remove("current"));
+    screen.classList.add("current");
+    if (scroll !== false) {
+      screen.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }
+    paintTree({ scrollToCurrentScreen: true });
+  }
+
+  document.querySelector("#mockup")?.addEventListener("click", (event) => {
+    const mockup = document.querySelector("#mockup");
+    const goto = event.target.closest("[data-goto]");
+    if (goto && mockup.contains(goto)) {
+      showScreen(goto.getAttribute("data-goto"));
+      flash(`→ ${goto.getAttribute("data-goto")}`);
+      return;
+    }
+    const screen = event.target.closest(".screen");
+    if (!screen || !mockup.contains(screen)) return;
+    const name = screen.getAttribute("data-slug") || screen.querySelector("h2")?.textContent?.trim();
+    showScreen(name, false);
+  });
+
+  document.querySelector("[data-reset]")?.addEventListener("click", () => {
+    document.querySelectorAll(".screen.current").forEach((el) => el.classList.remove("current"));
+    expanded.clear();
+    openScreen = null;
+    frame?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    paintTree();
+  });
+
+  document.querySelector("[data-play-next]")?.addEventListener("click", () => {
+    const all = screens();
+    const current = document.querySelector("#mockup .screen.current");
+    const index = all.indexOf(current);
+    const next = all[(index + 1 + all.length) % all.length];
+    showScreen(next.getAttribute("data-slug"));
+  });
+
+  bindFlowZoom(frame, document.querySelector("#mockup"));
+  bindMockupInteractions({ showScreen, flash });
+
+  showScreen(startScreen, false);
+}
+
+const ACCOUNT_REQUIREMENTS = [
+  { key: "emailRequired", field: "email", label: "Email is required" },
+  { key: "emailFormat", field: "email", label: "Please use a valid email format: yourname@domain.com" },
+  { key: "passwordRequired", field: "password", label: "Password is required" },
+  { key: "passwordLetters", field: "password", label: "Password must contain uppercase and lowercase letters" },
+  { key: "passwordNumber", field: "password", label: "Password must have at least one number" },
+  { key: "passwordSymbol", field: "password", label: "Password must have at least one symbol" },
+  { key: "passwordLength", field: "password", label: "Length must be greater than 8 characters" },
+  { key: "confirmRequired", field: "confirmPassword", label: "Confirm Password is required" },
+  { key: "confirmMismatch", field: "confirmPassword", label: "Passwords don't match" },
+];
+
+const CREATE_ACCOUNT_DEMOS = {
+  empty: { email: "", password: "", confirmPassword: "" },
+  valid: { email: "Jeff.anderson@Abdworks.com", password: "Spider-man99p", confirmPassword: "Spider-man99p" },
+  "missing-email": { email: "", password: "Spider-man99p", confirmPassword: "Spider-man99p" },
+  "invalid-email-format": { email: "example.prospect", password: "Spider-man99p", confirmPassword: "Spider-man99p" },
+  "missing-password": { email: "Jeff.anderson@Abdworks.com", password: "", confirmPassword: "" },
+  "password-letters": { email: "Jeff.anderson@Abdworks.com", password: "spider-man99p", confirmPassword: "spider-man99p" },
+  "password-number": { email: "Jeff.anderson@Abdworks.com", password: "Spider-manpp", confirmPassword: "Spider-manpp" },
+  "password-symbol": { email: "Jeff.anderson@Abdworks.com", password: "Spiderman99", confirmPassword: "Spiderman99" },
+  "password-length": { email: "Jeff.anderson@Abdworks.com", password: "Sp1!Man", confirmPassword: "Sp1!Man" },
+  "confirm-missing": { email: "Jeff.anderson@Abdworks.com", password: "Spider-man99p", confirmPassword: "" },
+  "confirm-mismatch": { email: "Jeff.anderson@Abdworks.com", password: "Spider-man99p", confirmPassword: "Spider-man00p" },
+  "already-registered": { email: "Jeff.anderson@Agilebydesign.com", password: "Stub@12345", confirmPassword: "Stub@12345" },
+};
+
+function missingAccountRequirements({ email, password, confirmPassword }) {
+  const missing = [];
+  if (!email) missing.push("emailRequired");
+  else if (!email.includes("@")) missing.push("emailFormat");
+  if (!password) missing.push("passwordRequired");
+  else {
+    if (!/[a-z]/.test(password) || !/[A-Z]/.test(password)) missing.push("passwordLetters");
+    if (!/[0-9]/.test(password)) missing.push("passwordNumber");
+    if (!/[^a-zA-Z0-9]/.test(password)) missing.push("passwordSymbol");
+    if (password.length <= 8) missing.push("passwordLength");
+  }
+  if (!confirmPassword) missing.push("confirmRequired");
+  else if (confirmPassword !== password) missing.push("confirmMismatch");
+  return missing;
+}
+
+function unmetSignInRequirements({ email, password }) {
+  return missingAccountRequirements({ email, password, confirmPassword: password }).filter((key) =>
+    ["emailRequired", "emailFormat", "passwordRequired"].includes(key),
+  );
+}
+
+function readFields(screen, names) {
+  const values = {};
+  for (const name of names) {
+    values[name] = screen.querySelector(`[data-field="${name}"]`)?.value?.trim() ?? "";
+  }
+  return values;
+}
+
+function setHelper(el, text, ok = false) {
+  if (!el) return;
+  if (!text) {
+    el.hidden = true;
+    el.textContent = "";
+    el.classList.remove("ok");
+    return;
+  }
+  el.hidden = false;
+  el.textContent = text;
+  el.classList.toggle("ok", ok);
+}
+
+function bindMockupInteractions({ showScreen, flash }) {
+  const mockup = document.querySelector("#mockup");
+  if (!mockup) return;
+
+  const createFields = ["email", "password", "confirmPassword"];
+
+  const createScreen = mockup.querySelector('[data-mockup="create-account"]');
+  const reqPanel = mockup.querySelector('[data-mockup="create-account-requirements"]');
+  if (createScreen && reqPanel) {
+    const reqList = reqPanel.querySelector("[data-requirements]");
+    const message = createScreen.querySelector("[data-form-message]");
+    const submit = createScreen.querySelector('[data-action="create-account"]');
+
+    function paintRequirements() {
+      const values = readFields(createScreen, createFields);
+      const missing = missingAccountRequirements(values);
+      if (reqList) {
+        reqList.innerHTML = "";
+        for (const req of ACCOUNT_REQUIREMENTS) {
+          const li = document.createElement("li");
+          const met = !missing.includes(req.key);
+          li.className = met ? "met" : "unmet";
+          li.textContent = `${met ? "✓" : "✗"} ${req.label}`;
+          reqList.appendChild(li);
+        }
+      }
+      if (submit) submit.disabled = missing.length > 0;
+      setHelper(message, "");
+    }
+
+    for (const name of createFields) {
+      const input = createScreen.querySelector(`[data-field="${name}"]`);
+      input?.addEventListener("input", paintRequirements);
+      input?.addEventListener("change", paintRequirements);
+    }
+
+    submit?.addEventListener("click", () => {
+      const values = readFields(createScreen, createFields);
+      if (missingAccountRequirements(values).length) {
+        setHelper(message, "Account credential requirements are unmet");
+        flash("Requirements unmet");
+        return;
+      }
+      if (values.email === CREATE_ACCOUNT_DEMOS["already-registered"].email) {
+        setHelper(message, "This email is already registered");
+        flash("UsernameExistsException");
+        return;
+      }
+      setHelper(message, "");
+      flash("→ Validate Email");
+      showScreen("Validate Email");
+    });
+
+    paintRequirements();
+  }
+
+  const validateScreen = mockup.querySelector('[data-mockup="validate-email"]');
+  if (validateScreen) {
+    const codeInput = validateScreen.querySelector('[data-field="validationCode"]');
+    const error = validateScreen.querySelector("[data-validation-error]");
+    const resendMessage = validateScreen.querySelector("[data-resend-message]");
+    const resendButton = validateScreen.querySelector('[data-action="resend-code"]');
+    let resendAvailableAt = 0;
+
+    function paintResendButton() {
+      if (!resendButton) return;
+      const waitMs = Math.max(0, resendAvailableAt - Date.now());
+      if (waitMs > 0) {
+        resendButton.disabled = true;
+        resendButton.textContent = `Resend code (${Math.ceil(waitMs / 1000)}s)`;
+        setTimeout(paintResendButton, 500);
+      } else {
+        resendButton.disabled = false;
+        resendButton.textContent = "Resend code";
+      }
+    }
+
+    const codeHelpers = {
+      "000000": "Hmm. That code didn't work.",
+      "111111": "Hmm. That code didn't work.",
+      "222222": "Attempts limit exceeded. Please try again later.",
+    };
+
+    validateScreen.querySelector('[data-action="activate-email"]')?.addEventListener("click", () => {
+      const code = codeInput?.value?.trim() ?? "";
+      if (code === "123456") {
+        setHelper(error, "");
+        flash("Account verified");
+        return;
+      }
+      setHelper(error, codeHelpers[code] || (code ? "Hmm. That code didn't work." : "Enter the validation code"));
+      flash("Activation failed");
+    });
+
+    resendButton?.addEventListener("click", () => {
+      if (Date.now() < resendAvailableAt) {
+        setHelper(error, "Resend waits 60 seconds before it can be used again");
+        paintResendButton();
+        return;
+      }
+      resendAvailableAt = Date.now() + 60_000;
+      setHelper(error, "");
+      setHelper(resendMessage, "We sent you a new code. Please check your email.", true);
+      paintResendButton();
+      flash("New validation code sent");
+    });
+
+    validateScreen.querySelector('[data-demo="validate-email"]')?.addEventListener("change", (event) => {
+      const map = { valid: "123456", mismatch: "000000", expired: "111111", attempts: "222222" };
+      if (codeInput && map[event.target.value]) codeInput.value = map[event.target.value];
+    });
+
+    paintResendButton();
+  }
+
+  const signInScreen = mockup.querySelector('[data-mockup="sign-in"]');
+  if (signInScreen) {
+    const error = signInScreen.querySelector("[data-sign-in-error]");
+    const success = signInScreen.querySelector("[data-sign-in-success]");
+    const unconfirmed = signInScreen.querySelector("[data-sign-in-unconfirmed]");
+
+    function resetSignInOutcome() {
+      if (success) success.hidden = true;
+      if (unconfirmed) unconfirmed.hidden = true;
+      setHelper(error, "");
+    }
+
+    signInScreen.querySelector('[data-action="sign-in"]')?.addEventListener("click", () => {
+      resetSignInOutcome();
+      const values = readFields(signInScreen, ["email", "password"]);
+      const simulate = signInScreen.querySelector('[data-demo="sign-in"]')?.value;
+      if (unmetSignInRequirements(values).length || simulate === "invalid-email") {
+        setHelper(error, "Account credential requirements are unmet");
+        flash("Sign-in rejected locally");
+        return;
+      }
+      const outcome = simulate || "success";
+      if (outcome === "success") {
+        setHelper(error, "", true);
+        if (success) success.hidden = false;
+        flash("Signed in");
+        return;
+      }
+      if (outcome === "wrong-password" || outcome === "unknown-email") {
+        setHelper(error, "The email or password you entered did not match our records.");
+        flash("NotAuthorizedException");
+        return;
+      }
+      if (outcome === "unconfirmed") {
+        setHelper(error, "Please confirm your email before signing in.");
+        if (unconfirmed) unconfirmed.hidden = false;
+        flash("CONFIRM_SIGN_UP");
+        return;
+      }
+      if (outcome === "password-reset") {
+        setHelper(error, "Password reset required — go to reset password.");
+        flash("PasswordResetRequiredException");
+        return;
+      }
+      if (outcome === "new-password") {
+        setHelper(error, "A new password is required to continue.");
+        flash("CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED");
+        return;
+      }
+      setHelper(error, "Choose a Cognito response to simulate");
+    });
+
+    signInScreen.querySelector('[data-demo="sign-in"]')?.addEventListener("change", resetSignInOutcome);
+  }
+
+  const lineScreen = mockup.querySelector('[data-mockup="line-number"]');
+  if (lineScreen) {
+    const list = lineScreen.querySelector("[data-number-list]");
+    const message = lineScreen.querySelector("[data-line-message]");
+    const defaultNumbers = [
+      { value: "441-555-0100", label: "441-555-0100 (held)", held: true },
+      { value: "441-555-0101", label: "441-555-0101" },
+      { value: "441-555-0144", label: "441-555-0144" },
+    ];
+    const searchResults = [
+      { value: "526-371-2345", label: "526-371-2345" },
+      { value: "526-379-8765", label: "526-379-8765" },
+    ];
+    const refreshResults = [
+      { value: "441-555-0200", label: "441-555-0200" },
+      { value: "441-555-0201", label: "441-555-0201" },
+    ];
+
+    function paintNumbers(numbers) {
+      if (!list) return;
+      list.innerHTML = "";
+      for (const item of numbers) {
+        const label = document.createElement("label");
+        label.className = "number-row";
+        label.innerHTML = `<input type="radio" name="line-number" value="${item.value}" /> ${item.label}`;
+        list.appendChild(label);
+      }
+      const first = list.querySelector('input[type="radio"]');
+      if (first) first.checked = true;
+    }
+
+    lineScreen.querySelector('[data-action="search-numbers"]')?.addEventListener("click", () => {
+      const term = lineScreen.querySelector('[data-field="search"]')?.value?.trim().toUpperCase() ?? "";
+      const matched = term.includes("JAMES") || term === "52637";
+      paintNumbers(matched ? searchResults : defaultNumbers);
+      setHelper(
+        message,
+        matched ? "Available numbers matching 52637" : term ? "No numbers matched that pattern" : "Enter a search pattern (e.g. JAMES)",
+        matched,
+      );
+      flash(matched ? "Search results" : term ? "No pattern match" : "Showing default list");
+    });
+
+    lineScreen.querySelector('[data-action="refresh-numbers"]')?.addEventListener("click", () => {
+      paintNumbers(refreshResults);
+      setHelper(message, "Fresh available numbers loaded", true);
+      flash("List refreshed");
+    });
+
+    lineScreen.querySelector('[data-action="pick-number"]')?.addEventListener("click", () => {
+      const outcome = lineScreen.querySelector('[data-demo="line-number"]')?.value;
+      if (outcome === "reserve-fail") {
+        setHelper(message, "Failed to reserve your number.");
+        flash("Reserve failed");
+        return;
+      }
+      if (outcome === "cart-fail") {
+        setHelper(message, "Failed to update your cart.");
+        flash("Cart patch failed");
+        return;
+      }
+      const selected = list?.querySelector('input[type="radio"]:checked')?.value ?? "a number";
+      setHelper(message, `${selected} reserved on the line`, true);
+      flash("→ Select SIM");
+      showScreen("Select SIM");
+    });
+  }
+
+  const portScreen = mockup.querySelector('[data-mockup="port-number"]');
+  if (portScreen) {
+    const message = portScreen.querySelector("[data-port-message]");
+    portScreen.querySelector('[data-action="submit-port"]')?.addEventListener("click", () => {
+      const values = readFields(portScreen, ["portNumber", "accountNumber"]);
+      const outcome = portScreen.querySelector('[data-demo="port-number"]')?.value;
+      if (outcome === "invalid" || !values.portNumber || !values.accountNumber) {
+        setHelper(message, values.portNumber ? "Portability could not be submitted" : "Enter port number and account number");
+        flash("Port error");
+        return;
+      }
+      setHelper(message, "SMS verification sent — verify on next screen", true);
+      flash("→ Verify Ported Number");
+      showScreen("Verify Ported Number");
+    });
+  }
+
+  const verifyPortScreen = mockup.querySelector('[data-mockup="verify-port"]');
+  if (verifyPortScreen) {
+    const codeInput = verifyPortScreen.querySelector('[data-field="portCode"]');
+    const error = verifyPortScreen.querySelector("[data-port-verify-error]");
+    const resendMessage = verifyPortScreen.querySelector("[data-port-resend-message]");
+
+    verifyPortScreen.querySelector('[data-action="verify-port-code"]')?.addEventListener("click", () => {
+      const code = codeInput?.value?.trim() ?? "";
+      if (code === "654321") {
+        setHelper(error, "");
+        flash("Port verified → Select SIM");
+        showScreen("Select SIM");
+        return;
+      }
+      setHelper(error, code ? "Verification rejected" : "Enter the SMS verification code");
+      flash("Verification failed");
+    });
+
+    verifyPortScreen.querySelector('[data-action="resend-port-code"]')?.addEventListener("click", () => {
+      setHelper(error, "");
+      setHelper(resendMessage, "New porting SMS sent", true);
+      flash("Porting SMS resent");
+    });
+
+    verifyPortScreen.querySelector('[data-demo="verify-port"]')?.addEventListener("change", (event) => {
+      if (!codeInput) return;
+      if (event.target.value === "valid") codeInput.value = "654321";
+      if (event.target.value === "mismatch") codeInput.value = "000000";
+    });
+  }
+
+  mockup.addEventListener("click", (event) => {
+    if (event.target.closest("[data-action], [data-field], select")) event.stopPropagation();
+  });
+}
+
+    mountMapMockup({ startScreen: "Create Account" });
+  </script>
+  <!-- ux-map-json:
+{}
+  -->
+</body>
+</html>

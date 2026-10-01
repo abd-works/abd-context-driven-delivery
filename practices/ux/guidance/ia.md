@@ -8,6 +8,7 @@ IA answers: what screens exist, how users move between them, and what's on each 
 2. **Map the transitions** — how does the user get from one screen to another? Click a button, select a tab, follow a wizard step? Each transition is an explicit arc.
 3. **Name the regions** — each screen is divided into named slots: header, main content, sidebar, footer. At IA, these are just names — no control types yet.
 4. **Group system stories with visible triggers** — a system story (background sync, notification push) groups with the closest user-visible screen that triggers or displays it.
+5. **Stay inside the in-scope epics** — place screens for story-map epics that this map covers. Record a deferred epic in `ux-context.md`. Leave its screens, and the transitions that only reach them, off the diagram.
 
 ## Screen decomposition thinking
 

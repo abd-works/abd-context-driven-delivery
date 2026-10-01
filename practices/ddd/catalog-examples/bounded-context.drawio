@@ -1,0 +1,118 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="My Paradise" id="my-paradise">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1080" pageHeight="920" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="paradise" value="My Paradise" style="swimlane;startSize=48;rounded=1;fillColor=#1a3a6e;swimlaneFillColor=#16325f;strokeColor=#0e2547;fontColor=#ffffff;fontSize=18;fontStyle=1;html=1;strokeWidth=2;collapsible=0;container=1;horizontal=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="520" height="798" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="agg-customer" value="Customer" style="swimlane;startSize=32;rounded=1;fillColor=#4a86c8;swimlaneFillColor=#3d78b8;strokeColor=#1a3a6e;fontColor=#ffffff;fontSize=14;fontStyle=1;html=1;strokeWidth=2;collapsible=0;container=1;" vertex="1" parent="paradise">
+          <mxGeometry x="16" y="64" width="488" height="262" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-account" value="Account" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-customer">
+          <mxGeometry x="12" y="44" width="464" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-identity" value="Identity verification" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-customer">
+          <mxGeometry x="12" y="98" width="464" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-profile" value="Profile" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-customer">
+          <mxGeometry x="12" y="152" width="464" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-support" value="Support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-customer">
+          <mxGeometry x="12" y="206" width="464" height="44" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="agg-revenue" value="Revenue" style="swimlane;startSize=32;rounded=1;fillColor=#4a86c8;swimlaneFillColor=#3d78b8;strokeColor=#1a3a6e;fontColor=#ffffff;fontSize=14;fontStyle=1;html=1;strokeWidth=2;collapsible=0;container=1;" vertex="1" parent="paradise">
+          <mxGeometry x="16" y="346" width="488" height="208" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-subscription" value="Subscription" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-revenue">
+          <mxGeometry x="12" y="44" width="464" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-payment" value="Payment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-revenue">
+          <mxGeometry x="12" y="98" width="464" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-billing" value="Billing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-revenue">
+          <mxGeometry x="12" y="152" width="464" height="44" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="agg-inventory" value="Inventory" style="swimlane;startSize=32;rounded=1;fillColor=#4a86c8;swimlaneFillColor=#3d78b8;strokeColor=#1a3a6e;fontColor=#ffffff;fontSize=14;fontStyle=1;html=1;strokeWidth=2;collapsible=0;container=1;" vertex="1" parent="paradise">
+          <mxGeometry x="16" y="574" width="488" height="208" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-plans" value="Plans" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-inventory">
+          <mxGeometry x="12" y="44" width="464" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-numbers" value="Numbers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-inventory">
+          <mxGeometry x="12" y="98" width="464" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent-devices" value="Devices" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8f8;strokeColor=#1a3a6e;fontColor=#0e2547;fontSize=13;fontStyle=1;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="agg-inventory">
+          <mxGeometry x="12" y="152" width="464" height="44" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="sys-auth" value="Auth System" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="148" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-kyc" value="KYC System" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="202" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-bss-profile" value="Telco BSS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="256" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-crm" value="CRM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="310" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-bss-subscription" value="Telco BSS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="430" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-gateway" value="Payment Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="484" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-billing" value="Billing Hub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="538" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-catalog" value="Telco Product Catalog" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="658" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-port" value="Port Interchange" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="712" width="280" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="sys-devices" value="Device Inventory System" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="720" y="766" width="280" height="44" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e-account" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-account" target="sys-auth">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-identity" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-identity" target="sys-kyc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-profile" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-profile" target="sys-bss-profile">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-support" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-support" target="sys-crm">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-subscription" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-subscription" target="sys-bss-subscription">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-payment" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-payment" target="sys-gateway">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-billing" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-billing" target="sys-billing">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-plans" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-plans" target="sys-catalog">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-numbers" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-numbers" target="sys-port">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-devices" style="endArrow=block;endFill=1;endSize=10;html=1;strokeWidth=6;strokeColor=#1a3a6e;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ent-devices" target="sys-devices">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

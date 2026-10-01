@@ -1,0 +1,204 @@
+<mxfile host="65bd71144e">
+    <diagram name="Customer" id="page-customer-paradise">
+        <mxGraphModel dx="3727" dy="2840" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="10" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Aggregate Root»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Customer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ verified: boolean&lt;br/&gt;+ identity: Identity&lt;br/&gt;+ address: Address&lt;br/&gt;+ errors: CustomerErrors&lt;br/&gt;+ accountCredentials: AccountCredentials&lt;br/&gt;+ cart: Cart | null&lt;br/&gt;+ subscription: Subscription | null&lt;br/&gt;+ personaInquiry: PersonaInquiry | null&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ confirmIdentity(personaInquiry): Customer | CustomerErrors&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="10" y="-490" width="320" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="repo" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Repository»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;CustomerRepository&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; aggregation &amp;gt;&amp;gt; customers: Collection&amp;lt;Customer&amp;gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ create(accountCredentials: AccountCredentials): Customer | Error&lt;br/&gt;+ load(accountCredentials: AccountCredentials): Customer | Error&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="-490" y="-460" width="280" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Identity&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+ name: string&lt;br/&gt;+ lastName: string&lt;br/&gt;+ fullName: string&lt;br/&gt;+ preferredName: string&lt;br/&gt;+ expiryDate: string&lt;br/&gt;+ dateOfBirth: string&lt;br/&gt;+ idNationality: string&lt;br/&gt;+ idNumber: string&lt;br/&gt;+ idType: string&lt;br/&gt;+ otherPhoneNumber: string&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="410" y="-280" width="260" height="222" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Address&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ street: string&lt;br/&gt;+ complement: string&lt;br/&gt;+ city: string&lt;br/&gt;+ parish: string&lt;br/&gt;+ postalCode: string&lt;br/&gt;+ country: string&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="460" y="-550" width="260" height="142" as="geometry"/>
+                </mxCell>
+                <mxCell id="cognito" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«System»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;CognitoUser&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+ confirmed: boolean&lt;br/&gt;+ customerId: string | null&lt;br/&gt;+ accountToken: AccountToken | null&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="-20" y="400" width="280" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="token" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«System»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AccountToken&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+ customerId: string | null&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="560" width="260" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Aggregate Root»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentials&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+ password: string&lt;br/&gt;+ confirmPassword: string&lt;br/&gt;+ validationCode: string&lt;br/&gt;+ verified: boolean&lt;br/&gt;+ token: AccountToken | null&lt;br/&gt;+ customerId: string | null&lt;br/&gt;+ errors: AccountCredentialsErrors&lt;br/&gt;+ requirements: AccountCredentialRequirements&lt;br/&gt;+ cognitoUser: CognitoUser | null&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ missingRequirements(): AccountCredentialRequirement[]&lt;br/&gt;+ register(): void&lt;br/&gt;+ activate(validationCode: ValidationCode): void&lt;br/&gt;+ resendValidationCode(): void&lt;br/&gt;+ signOut(): void&lt;br/&gt;+ storeCustomerId(customerId: string): CognitoUser&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry y="-90" width="280" height="340" as="geometry"/>
+                </mxCell>
+                <mxCell id="credrepo" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Repository»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AccountRepository&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; aggregation &amp;gt;&amp;gt; accountCredentials: Collection&amp;lt;AccountCredentials&amp;gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ newAccount(credentials?: AccountCredentials): AccountCredentials&lt;br/&gt;+ persistNewAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors&lt;br/&gt;+ confirmAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors&lt;br/&gt;+ authenticateAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors&lt;br/&gt;+ resendAccountCode(accountCredentials: AccountCredentials): CognitoUser | null&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="-450" y="70" width="380" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="errors" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialsErrors&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ register: string | null&lt;br/&gt;+ signIn: string | null&lt;br/&gt;+ validationCode: string | null&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="100" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="reqs" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialRequirements&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ emailRequired: AccountCredentialRequirement&lt;br/&gt;+ emailFormat: AccountCredentialRequirement&lt;br/&gt;+ passwordRequired: AccountCredentialRequirement&lt;br/&gt;+ passwordLetters: AccountCredentialRequirement&lt;br/&gt;+ passwordNumber: AccountCredentialRequirement&lt;br/&gt;+ passwordSymbol: AccountCredentialRequirement&lt;br/&gt;+ passwordLength: AccountCredentialRequirement&lt;br/&gt;+ confirmRequired: AccountCredentialRequirement&lt;br/&gt;+ confirmMismatch: AccountCredentialRequirement&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="300" width="280" height="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialRequirement&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ field: string&lt;br/&gt;+ requirement: string&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="79" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="vcode" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«System»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ValidationCode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: string&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="-420" y="470" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="10" target="11" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="170" y="-169"/>
+                            <mxPoint x="320" y="-169"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="10" target="12" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="460" y="-440"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-cog-tok" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;" parent="1" source="cognito" target="token" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="320" y="490"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-cred-err" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;" parent="1" source="13" target="errors" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="300" y="150"/>
+                            <mxPoint x="300" y="150"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-cred-req" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;" parent="1" source="13" target="reqs" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="290" y="270"/>
+                            <mxPoint x="290" y="270"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-err-prs" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;" parent="1" source="reqs" target="14" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="740" y="405"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-cred-vc" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;" parent="1" source="13" target="vcode" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="60" y="360"/>
+                            <mxPoint x="-290" y="360"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-repo-cu" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;" parent="1" source="repo" target="10" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="-50" y="-340" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="-70" y="-350"/>
+                            <mxPoint x="-70" y="-350"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-repo-cred" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;dashed=1;html=1;" parent="1" source="repo" target="13" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="30" y="-240"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-cu-cred" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.35;exitY=1;exitDx=0;exitDy=0;entryX=0.436;entryY=0;entryDx=0;entryDy=0;" parent="1" source="10" target="13" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-credrepo" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;" parent="1" source="credrepo" target="13" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="-40" y="165"/>
+                            <mxPoint x="-40" y="165"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;" parent="1" source="13" target="cognito" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="120" y="340"/>
+                            <mxPoint x="120" y="340"/>
+                        </Array>
+                        <mxPoint x="149.99999999999955" y="-20" as="sourcePoint"/>
+                        <mxPoint x="149.99999999999955" y="89" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mavcustrepo" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Repository»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PortalGateway&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; aggregation &amp;gt;&amp;gt; mavenirCustomers: Collection&amp;lt;MavenirCustomer&amp;gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ create(email: string): MavenirCustomer | Error&lt;br/&gt;+ read(id: string): MavenirCustomer | Error&lt;br/&gt;+ patchPhoneVerified(mavenirCustomerId: string): MavenirCustomer | Error&lt;br/&gt;+ patchWaitingPsim(mavenirCustomerId: string, waitingPsim: boolean): MavenirCustomer | Error&lt;br/&gt;+ patchProfile(mavenirCustomer: MavenirCustomer, engagedParty: EngagedParty, contactMedium: ContactMedium): MavenirCustomer | Error&lt;br/&gt;+ patchVoucher(mavenirCustomer: MavenirCustomer, voucher: Voucher): MavenirCustomer | Error&lt;br/&gt;+ removeVoucher(mavenirCustomer: MavenirCustomer): MavenirCustomer | Error&lt;br/&gt;+ createBilling(mavenirCustomer: MavenirCustomer): MavenirBillingAccount | Error&lt;br/&gt;+ applyCredit(mavenirCustomer: MavenirCustomer, creditAdjustment: CreditAdjustment): CreditAdjustment&lt;br/&gt;+ createOrder(mavenirCustomer: MavenirCustomer): MavenirProductOrder | Error&lt;br/&gt;+ patchDone(mavenirCustomerId: string): MavenirCustomer | Error&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="1250" y="-820" width="620" height="380" as="geometry"/>
+                </mxCell>
+                <mxCell id="mavcust" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Aggregate Root»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;MavenirCustomer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ productOrder: MavenirProductOrder | null&lt;br/&gt;+ billingAccount: MavenirBillingAccount | null&lt;br/&gt;+ phoneVerified: boolean&lt;br/&gt;+ waitingPsim: string | null&lt;br/&gt;+ done: string | null&lt;br/&gt;+ inquiryId: string | null&lt;br/&gt;+ voucher: Voucher | null&lt;br/&gt;+ shoppingCart: MavenirShoppingCart | null&lt;br/&gt;+ contactMedium: ContactMedium&lt;br/&gt;+ engagedParty: EngagedParty&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="810" y="-350" width="300" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="engaged" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;EngagedParty&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ givenName: string&lt;br/&gt;+ familyName: string&lt;br/&gt;+ preferredGivenName: string&lt;br/&gt;+ birthDate: string&lt;br/&gt;+ individualIdentification: IndividualIdentification&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="-306" width="300" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="individ" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;IndividualIdentification&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ idNumber: string&lt;br/&gt;+ idType: string&lt;br/&gt;+ issuingAuthority: string&lt;br/&gt;+ validated: boolean&lt;br/&gt;+ endDateTime: string&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="1620" y="-290" width="300" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="contactmed" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ContactMedium&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ emailAddress: string&lt;br/&gt;+ phoneNumber: string&lt;br/&gt;+ street1: string&lt;br/&gt;+ street2: string&lt;br/&gt;+ city: string&lt;br/&gt;+ stateOrProvince: string&lt;br/&gt;+ postCode: string&lt;br/&gt;+ country: string&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="-58" width="300" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-mavrepo-mav" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;" parent="1" source="mavcustrepo" target="mavcust" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1020" y="-650"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-mav-engaged" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=1;exitY=0.4;exitDx=0;exitDy=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;" parent="1" source="mavcust" target="engaged" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-mav-contact" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="mavcust" target="contactmed" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="960"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-engaged-individ" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;" parent="1" source="engaged" target="individ" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1390" y="-100" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1450" y="-220"/>
+                            <mxPoint x="1450" y="-220"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cu-cartfrom" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Cart»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Aggregate Root»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Cart&lt;/b&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="-250" y="-684" width="220" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="cu-subfrom" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Subscription»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Aggregate Root»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Subscription&lt;/b&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="10" y="-684" width="220" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="cu-inqfrom" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Care»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«System»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«Entity»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Inquiry&lt;/b&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="270" y="-684" width="220" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-cu-cartfrom" value="0..1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.2;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="10" target="cu-cartfrom" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-cu-subfrom" value="0..1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="10" target="cu-subfrom" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-cu-inqfrom" value="0..1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.8;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="10" target="cu-inqfrom" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="0..1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;" parent="1" source="repo" target="mavcustrepo" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="84" y="-480" as="sourcePoint"/>
+                        <mxPoint x="-130" y="-610" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="-350" y="-740"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

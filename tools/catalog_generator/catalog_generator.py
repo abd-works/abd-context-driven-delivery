@@ -2008,8 +2008,14 @@ class Catalog:
         return self._approach_copy().practices
 
     def _write_approach_page(self) -> None:
-        from catalog_generator.foundry_chrome import page_shell
+        from catalog_generator.foundry_chrome import (
+            copy_practice_examples,
+            page_shell,
+            write_stage_example_pages,
+        )
 
+        copy_practice_examples(self.out_root)
+        example_hrefs = write_stage_example_pages(self.out_root, self._approach_copy().stages)
         page = page_shell(
             title="ABD Context Driven Delivery Harness",
             h1=self._harness_headline(),
@@ -2019,7 +2025,7 @@ class Catalog:
                 f'Get the repo <a href="{self.repo_url}" '
                 'target="_blank" rel="noopener noreferrer">here</a>.'
             ),
-            body_inner=self._approach_page_body(),
+            body_inner=self._approach_page_body(example_hrefs),
             commons_prefix="commons/",
             nav_prefix="",
             nav_current="",
@@ -2060,11 +2066,16 @@ class Catalog:
 
         from catalog_generator.foundry_chrome import page_shell
 
+        from catalog_generator.approach_copy import format_principle_bullet
+
         for practice in self._approach_practices():
             paras = "".join(
-                f'<p class="approach-practice__para">{para}</p>'
-                for para in practice["paras"]
+                f'<p class="approach-practice__para">{format_principle_bullet(item)}</p>'
+                for item in practice.get("bullets", ())
             )
+            caption = practice.get("caption", "")
+            if caption:
+                paras += f'<p class="approach-practice__para">{caption}</p>'
             body = (
                 '<article class="approach-practice">'
                 f'<p class="approach-practice__back"><a href="cdd-approach.html">← Back to the approach</a></p>'
@@ -2084,12 +2095,19 @@ class Catalog:
             )
             self.write_page(f'cdd-{practice["slug"]}.html', page)
 
-    def _approach_page_body(self) -> str:
+    def _approach_page_body(self, example_hrefs: dict[str, str] | None = None) -> str:
         import html as html_mod
+
+        from catalog_generator.approach_copy import (
+            format_principle_bullet,
+            product_engineering_layout,
+            so_what_row,
+        )
 
         copy = self._approach_copy()
         stages = copy.stages
         principles = copy.practices
+        example_hrefs = example_hrefs or {}
 
         stage_buttons: list[str] = []
         for index, stage in enumerate(stages):
@@ -2108,16 +2126,19 @@ class Catalog:
                 "</span></span>"
             )
             active = " is-active" if index == 0 else ""
+            label_html = (
+                f'<span class="approach-stage__label">{html_mod.escape(stage["label"])}</span>'
+            )
             stage_buttons.append(
-                f'<button type="button" class="approach-stage{active}" '
+                f'<div class="approach-stage{active}" role="button" tabindex="0" '
                 f'data-stage-index="{index}" data-stage-id="{html_mod.escape(stage["id"])}" '
                 f'aria-pressed="{"true" if index == 0 else "false"}">'
                 f'<span class="approach-stage__head">'
                 f'{shape}'
-                f'<span class="approach-stage__label">{html_mod.escape(stage["label"])}</span>'
+                f"{label_html}"
                 f"</span>"
                 f'<ul class="approach-stage__items">{items}</ul>'
-                "</button>"
+                "</div>"
             )
 
         first = stages[0]
@@ -2133,6 +2154,7 @@ class Catalog:
                         "detail_title": s["detail_title"],
                         "items": list(s["items"]),
                         "paras": list(s["paras"]),
+                        "example_href": example_hrefs.get(s["id"], ""),
                     }
                     for s in stages
                 ]
@@ -2151,21 +2173,36 @@ class Catalog:
         principle_cards: list[str] = []
         for number, practice in enumerate(principles, start=1):
             kind = practice.get("kind") or principle_kinds.get(practice["slug"], "tickets")
-            grid = approach_principle_grid(self._board_tools, kind)
+            grid = approach_principle_grid(
+                self._board_tools,
+                kind,
+                stages=stages if practice["slug"] == "iterate-and-learn" else None,
+            )
             caption = practice.get("caption", "")
             caption_html = (
                 f'<aside class="approach-principle__caption"><p class="approach-principle__caption-body">{caption}</p></aside>'
                 if caption
                 else ""
             )
-            bullet_items = "".join(
-                f"<li>{html_mod.escape(item)}</li>" for item in practice.get("bullets", ())
-            )
-            bullets_html = (
-                f'<ul class="approach-principle__bullets">{bullet_items}</ul>' if bullet_items else ""
-            )
+            bullet_list = list(practice.get("bullets", ()))
+            if practice["slug"] == "iterate-and-learn" and bullet_list:
+                bullets_html = (
+                    '<div class="approach-refine__layout approach-refine__layout--bullets">'
+                    '<div class="approach-refine__context" aria-hidden="true"></div>'
+                    + so_what_row(bullet_list, modifier="approach-so--stages")
+                    + "</div>"
+                )
+            elif practice["slug"] == "product-engineering" and bullet_list:
+                bullets_html = product_engineering_layout(bullet_list)
+            else:
+                bullet_items = "".join(
+                    f"<li>{format_principle_bullet(item)}</li>" for item in bullet_list
+                )
+                bullets_html = (
+                    f'<ul class="approach-principle__bullets">{bullet_items}</ul>' if bullet_items else ""
+                )
             principle_cards.append(
-                '<section class="approach-principle">'
+                f'<section class="approach-principle" data-principle="{html_mod.escape(practice["slug"])}">'
                 f'<button type="button" class="approach-principle__toggle" aria-expanded="false">'
                 f'<span class="approach-principle__num" aria-hidden="true">{number}</span>'
                 f'<span class="approach-principle__copy">'
@@ -2257,53 +2294,104 @@ class Catalog:
             "var stage=stages[index];"
             "if(!stage)return;"
             "titleEl.textContent=stage.detail_title;"
+            "showStageExample(stage,scroll&&started);"
             "bodyEl.classList.remove('is-enter');"
             "void bodyEl.offsetWidth;"
             "bodyEl.innerHTML=stage.paras.map(function(para){"
             "return '<li>'+para.replace(/</g,'&lt;')+'</li>';"
             "}).join('');"
             "bodyEl.classList.add('is-enter');"
-            "if(scroll&&!onPrinciples&&started)scrollRefineToTop();"
+            "if(scroll&&!onPrinciples&&started&&!(stage.example_href))scrollRefineToTop();"
+            "}"
+            "function showStageExample(){}"
+            "function openNextColumn(){"
+            "var host=document.getElementById('approach-stage-examples');"
+            "return !!(window.catalogRefineOpenNext&&window.catalogRefineOpenNext(host));"
+            "}"
+            "function closeLastColumn(){"
+            "var host=document.getElementById('approach-stage-examples');"
+            "return !!(window.catalogRefineCloseLast&&window.catalogRefineCloseLast(host));"
+            "}"
+            "function principleSlug(i){"
+            "return principles[i]?principles[i].getAttribute('data-principle'):'';"
+            "}"
+            "var peStep=-1;"
+            "function peSteps(){"
+            "var steps=[];"
+            "document.querySelectorAll('#pe-engineering .approach-refine-row').forEach(function(host){"
+            "['discovery','specification','implementation'].forEach(function(id){"
+            "if(host.querySelector('.approach-stage-column[data-stage-id=\"'+id+'\"]')){"
+            "steps.push({host:host,id:id});"
+            "}"
+            "});"
+            "});"
+            "return steps;"
+            "}"
+            "function walkPe(delta){"
+            "if(!window.catalogRefineSetStage)return false;"
+            "var steps=peSteps();"
+            "if(!steps.length)return false;"
+            "if(delta>0){"
+            "if(peStep>=steps.length-1)return false;"
+            "peStep+=1;"
+            "return window.catalogRefineSetStage(steps[peStep].host,steps[peStep].id,true);"
+            "}"
+            "if(peStep<0)return false;"
+            "window.catalogRefineSetStage(steps[peStep].host,steps[peStep].id,false);"
+            "peStep-=1;"
+            "return true;"
             "}"
             "function move(delta){"
             "started=true;"
+            "if(phase==='stages'){"
+            "if(delta>0&&index>=stages.length-1){"
+            "phase='principles';"
+            "closePrinciples();"
+            "if(principlesEl){"
+            "var nav=document.querySelector('.site-nav');"
+            "var navH=nav?nav.getBoundingClientRect().height:0;"
+            "var top=principlesEl.getBoundingClientRect().top+window.pageYOffset-(navH+16);"
+            "window.scrollTo(0,Math.max(0,top));"
+            "}"
+            "return;"
+            "}"
+            "if(delta<0&&index<=0)return;"
+            "index+=delta;"
+            "closePrinciples();"
+            "paint(false);"
+            "return;"
+            "}"
+            "if(phase==='travel'||phase==='library')phase='principles';"
             "if(delta>0){"
-            "if(principleIndex>=0){"
+            "if(principleIndex<0){showPrinciple(0,false);paint(false);return;}"
+            "if(principleSlug(principleIndex)==='iterate-and-learn'&&openNextColumn())return;"
+            "if(principleSlug(principleIndex)==='product-engineering'&&walkPe(1))return;"
             "if(principleIndex>=principles.length-1)return;"
-            "showPrinciple(principleIndex+1,true);"
+            "showPrinciple(principleIndex+1,false);"
+            "if(principleSlug(principleIndex)==='product-engineering')peStep=-1;"
             "paint(false);"
             "return;"
             "}"
-            "if(index===stages.length-1){"
-            "showPrinciple(0,true);"
-            "paint(false);"
-            "return;"
-            "}"
-            "index+=1;"
-            "paint(true);"
-            "return;"
-            "}"
-            "if(principleIndex>0){"
-            "showPrinciple(principleIndex-1,true);"
-            "paint(false);"
-            "return;"
-            "}"
-            "if(principleIndex===0){"
-            "showPrinciple(-1,false);"
+            "if(principleSlug(principleIndex)==='product-engineering'&&walkPe(-1))return;"
+            "if(principleSlug(principleIndex)==='iterate-and-learn'&&closeLastColumn())return;"
+            "if(principleIndex>0){showPrinciple(principleIndex-1,false);paint(false);return;}"
+            "if(principleIndex===0){closePrinciples();paint(false);return;}"
+            "phase='stages';"
             "index=stages.length-1;"
-            "paint(true);"
-            "return;"
-            "}"
-            "if(index===0)return;"
-            "index-=1;"
-            "paint(true);"
+            "paint(false);"
             "}"
             "buttons.forEach(function(btn,i){"
-            "btn.addEventListener('click',function(){"
-            "showPrinciple(-1,false);"
+            "btn.addEventListener('click',function(e){"
+            "if(e.target.closest&&e.target.closest('a'))return;"
             "started=true;"
+            "phase='stages';"
             "index=i;"
+            "if(!stages[i]||!stages[i].example_href)showPrinciple(-1,false);"
             "paint(ready);"
+            "});"
+            "btn.addEventListener('keydown',function(e){"
+            "if(e.target!==btn)return;"
+            "if(e.key==='Enter'||e.key===' '){e.preventDefault();btn.click();}"
             "});"
             "});"
             "principles.forEach(function(el,i){"
@@ -2311,8 +2399,10 @@ class Catalog:
             "if(!toggle)return;"
             "toggle.addEventListener('click',function(){"
             "started=true;"
+            "phase='principles';"
             "if(principleIndex===i){showPrinciple(-1,false);paint(false);return;}"
-            "showPrinciple(i,true);"
+            "showPrinciple(i,false);"
+            "if(principleSlug(i)==='product-engineering')peStep=-1;"
             "paint(false);"
             "});"
             "});"
@@ -2321,19 +2411,28 @@ class Catalog:
             "if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();move(1);}"
             "else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();move(-1);}"
             "});"
-            "var wheelLock=false;"
-            "document.addEventListener('wheel',function(e){"
-            "if(e.ctrlKey||e.metaKey)return;"
-            "if(e.target.closest('input,textarea,select'))return;"
-            "var dy=e.deltaY;"
-            "if(Math.abs(dy)<Math.abs(e.deltaX))dy=e.deltaX;"
-            "if(Math.abs(dy)<4)return;"
-            "e.preventDefault();"
-            "if(wheelLock)return;"
-            "wheelLock=true;"
-            "move(dy>0?1:-1);"
-            "window.setTimeout(function(){wheelLock=false;},480);"
-            "},{passive:false});"
+            "var phase='stages';"
+            "var dragClip=null,dragX=0,dragLeft=0;"
+            "document.addEventListener('pointerdown',function(e){"
+            "var clip=e.target.closest&&e.target.closest('.approach-stage-examples__clip');"
+            "if(!clip||e.button!==0)return;"
+            "if(e.target.closest('button,a,input,textarea,select,.catalog-monaco,.mxgraph,.skill-drawio-wrap'))return;"
+            "dragClip=clip;dragX=e.clientX;dragLeft=clip.scrollLeft;"
+            "clip.classList.add('is-dragging');"
+            "try{clip.setPointerCapture(e.pointerId);}catch(err){}"
+            "});"
+            "document.addEventListener('pointermove',function(e){"
+            "if(!dragClip)return;"
+            "dragClip.scrollLeft=dragLeft-(e.clientX-dragX);"
+            "});"
+            "document.addEventListener('pointerup',function(){"
+            "if(!dragClip)return;"
+            "dragClip.classList.remove('is-dragging');"
+            "dragClip=null;"
+            "});"
+            "function closePrinciples(){"
+            "showPrinciple(-1,false);"
+            "}"
             "paint(false);"
             "ready=true;"
             "})();</script>"
