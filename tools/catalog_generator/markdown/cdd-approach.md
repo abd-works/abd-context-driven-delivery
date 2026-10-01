@@ -104,16 +104,6 @@ kind: descriptions
 - connect all context from outcomes to code using a single shared language that everyone can learn | so the impact of a change can be well understood by human and AI
 - force simplicity into the design from outcome and impact to build and operation | make it easier to guide generation toward the correct outcome
 
-### Context Storming
-
-slug: context-storming
-kind: storm
-
-- Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.
-- Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.
-
-The CDD harness includes the [knowledge graph](https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph), the models and the relationships between them. CodeQL reads them out of the code.
-
 ### Code Is Context
 
 slug: code-is-context

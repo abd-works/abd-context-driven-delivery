@@ -167,31 +167,6 @@ _SPEC_BLURBS: dict[str, str] = {
     "ddd": "Templates that generate domain building blocks for the target architecture",
 }
 
-# Discovery-fidelity overviews, tightened to one or two sentences for Context Storming.
-_STORM_BLURBS: dict[str, str] = {
-    "stories": (
-        "Define the story map as Epic, Sub-Epic, and Story. "
-        "Change it while the nodes are still titles, because the same move costs much more after scenarios, screens, and tests exist."
-    ),
-    "ddd": (
-        "Draw where the language changes: context boundaries, the aggregates that protect invariants, and the dependency arcs between contexts. "
-        "Names and boundaries are cheap to change here, and expensive once building blocks, stories, and code depend on them."
-    ),
-    "ux": (
-        "Decide which screens exist and how users move between them. "
-        "Name screens, regions, and transitions in the user's language before controls or brand."
-    ),
-    "clean_engineering": (
-        "Partition the problem into modules a reader can understand on their own. "
-        "Name each module, its public seam, and its one-way dependencies."
-    ),
-    "bdd": (
-        "Name every observation as a nested describe/it signature. "
-        "Leave the test bodies empty until the behavior is agreed."
-    ),
-}
-
-
 def approach_principle_grid(
     practices: list[dict],
     kind: str,
@@ -231,15 +206,6 @@ def approach_principle_grid(
             body.append(label(tool))
             body.append(
                 f'<div class="approach-grid__cell">{html.escape(_SPEC_BLURBS.get(tool["toolset_name"], ""))}</div>'
-            )
-        return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
-
-    if kind == "storm":
-        body = []
-        for tool in rows:
-            body.append(label(tool))
-            body.append(
-                f'<div class="approach-grid__cell">{html.escape(_STORM_BLURBS.get(tool["toolset_name"], ""))}</div>'
             )
         return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
 

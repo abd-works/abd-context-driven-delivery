@@ -2168,7 +2168,6 @@ class Catalog:
             "product-engineering": "descriptions",
             "iterate-and-learn": "windows",
             "code-is-context": "spec",
-            "context-storming": "storm",
         }
         principle_cards: list[str] = []
         for number, practice in enumerate(principles, start=1):
