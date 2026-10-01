@@ -830,7 +830,8 @@ def catalog_examples_html(module_dir: Path, fidelity_key: str) -> str:
     """Collapsible Examples block for ``{practice}/catalog-examples/{fidelity}.*``.
 
     Every file with that stem is shown. Markdown renders as HTML, Draw.io
-    opens in the diagrams.net viewer, and other files stay as source.
+    opens in the diagrams.net viewer, images render as ``<img>``, and other
+    text files stay as source.
     """
     folder = Path(module_dir) / "catalog-examples"
     if not folder.is_dir() or not fidelity_key:
@@ -857,6 +858,22 @@ _EXAMPLE_SUFFIX_ORDER = {
     ".htm": 1,
     ".drawio": 2,
     ".dio": 2,
+    ".png": 3,
+    ".jpg": 3,
+    ".jpeg": 3,
+    ".gif": 3,
+    ".webp": 3,
+    ".svg": 3,
+}
+
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+_IMAGE_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
 }
 
 
@@ -876,6 +893,13 @@ def _render_catalog_example(path: Path) -> str:
         src = html.escape(_drawio_viewer_url(path.read_text(encoding="utf-8")), quote=True)
         inner = (
             f'<iframe class="catalog-drawio-frame" title="{name}" loading="lazy" src="{src}"></iframe>'
+        )
+    elif suffix in _IMAGE_SUFFIXES:
+        mime = _IMAGE_MIME[suffix]
+        payload = base64.b64encode(path.read_bytes()).decode("ascii")
+        inner = (
+            f'<img class="catalog-example__image" alt="{name}" '
+            f'src="data:{mime};base64,{payload}">'
         )
     else:
         lang = html.escape(suffix.lstrip(".") or "text")

@@ -15,7 +15,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from installation.installer import Installer  # noqa: F401 — load Destination before Catalog
-from catalog_generator.foundry_chrome import Brand
+from catalog_generator.foundry_chrome import Brand, catalog_examples_html
 
 
 with description("foundry chrome brand"):
@@ -98,3 +98,19 @@ with description("a catalog brands collection"):
             )
             expect(catalog.apply_brand("")).to(contain("acme"))
             expect(catalog.apply_brand("")).to(contain("abd-works"))
+
+
+with description("catalog examples"):
+    with it("renders a png as an image instead of source text"):
+        folder = Path(tempfile.mkdtemp())
+        examples = folder / "catalog-examples"
+        examples.mkdir()
+        png = bytes.fromhex(
+            "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+            "0000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082"
+        )
+        (examples / "story_map.png").write_bytes(png)
+        html = catalog_examples_html(folder, "story_map")
+        expect("<img" in html).to(equal(True))
+        expect("data:image/png;base64," in html).to(equal(True))
+        expect("<pre>" in html).to(equal(False))

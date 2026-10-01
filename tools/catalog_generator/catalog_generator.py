@@ -1375,6 +1375,16 @@ class CatalogFidelity:
             return False
         if "sketch" in path.name.lower() or "components" in path.parts:
             return False
+        if ".codeql" in path.parts or path.suffix.lower() in {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".pdf",
+            ".trap",
+        }:
+            return False
         return True
 
     def _scored_templates(self, templates_root: Path) -> list[tuple[int, Path]]:
@@ -1413,7 +1423,7 @@ class CatalogFidelity:
     def _path_frontmatter_tokens(self, path: Path) -> set[str]:
         try:
             text = path.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             return set()
         if not text:
             return set()
@@ -1691,11 +1701,17 @@ class Catalog:
         catalog_context_tool: CatalogContextTool | None = None,
         catalog_action: CatalogAction | None = None,
         catalog_utility: CatalogUtility | None = None,
+        approach_md_path: str | Path | None = None,
     ) -> None:
         citation = GitCitation.from_checkout()
         self.repo_url = repo_url or citation.repo_url
         self.ref = ref or citation.ref
         self.out_root = Path(out_root)
+        self.approach_md_path = (
+            Path(approach_md_path)
+            if approach_md_path is not None
+            else _REPO_ROOT / "catalog" / "cdd-approach.md"
+        )
         self.brand = None
         from catalog_generator.foundry_chrome import Brand
 
@@ -1979,122 +1995,17 @@ class Catalog:
         self._write_coming_soon_pages()
         self._write_readme_page()
 
+    def _approach_copy(self):
+        from catalog_generator.approach_copy import load_approach_copy
+
+        cached = getattr(self, "_approach_copy_cache", None)
+        if cached is None:
+            cached = load_approach_copy(self.approach_md_path)
+            self._approach_copy_cache = cached
+        return cached
+
     def _approach_practices(self) -> tuple[dict, ...]:
-        practices = (
-            {
-                "slug": "iterate-and-learn",
-                "title": "Iterate and Learn",
-                "summary": (
-                    "Limit each run to what the team can review. Each pass increases fidelity."
-                ),
-                "bullets": (
-                    "Limit each AI run to the cognitive load of the team, so people can guide, review, and adjust what it generates.",
-                    "Keep the context window small. Even frontier models produce better output well under their maximum.",
-                    "Layer context through successive generations. Each pass increases fidelity.",
-                ),
-                "paras": (
-                    "Limit each AI run to the cognitive load of the team, so people can guide, review, and adjust what it generates.",
-                    "Keep the context window small. Even frontier models produce better output well under their maximum.",
-                    "Layer context through successive generations. Each pass increases fidelity.",
-                    (
-                        "The CDD harness includes "
-                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md">Sketch</a>, '
-                        "a session where a person and AI probe, grill, illustrate, and align. "
-                        "Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback."
-                    ),
-                ),
-                "caption": (
-                    "The CDD harness includes "
-                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md">Sketch</a>, '
-                    "a session where a person and AI probe, grill, illustrate, and align. "
-                    "Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback."
-                ),
-            },
-            {
-                "slug": "product-engineering",
-                "title": "Product Engineering",
-                "summary": (
-                    "The fundamentals of product engineering have not changed."
-                ),
-                "paras": (
-                    "The fundamentals of product engineering have not changed.",
-                    "Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.",
-                ),
-                "bullets": (
-                    "The fundamentals of product engineering have not changed.",
-                    "Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.",
-                ),
-            },
-            {
-                "slug": "code-is-context",
-                "title": "Code Is Context",
-                "summary": (
-                    "Managing context is critical. With the right product engineering practices, your code is the "
-                    "primary source of truth for how the business and the technology work — linking, versioning, "
-                    "reviews, and auditing come practically for free."
-                ),
-                "bullets": (
-                    "Code is the source of truth for how the business and the technology work. Linking, versioning, reviews, and auditing come with it.",
-                    "Refine context into an executable specification that tests the actual solution.",
-                    "Write the code as a direct expression of the design, so it can be turned into docs and back.",
-                ),
-                "paras": (
-                    "Code is the source of truth for how the business and the technology work. Linking, versioning, reviews, and auditing come with it.",
-                    "Refine context into an executable specification that tests the actual solution.",
-                    "Write the code as a direct expression of the design, so it can be turned into docs and back.",
-                    (
-                        'The CDD harness includes <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md">Stories</a>, '
-                        "a practice that generates working code for both functional and business logic. "
-                        "Flipping between "
-                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md">documentation</a> '
-                        "and "
-                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts">code</a> '
-                        "is seamless."
-                    ),
-                ),
-                "caption": (
-                    'The CDD harness includes <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md">Stories</a>, '
-                    "a practice that generates working code for both functional and business logic. "
-                    "Flipping between "
-                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md">documentation</a> '
-                    "and "
-                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts">code</a> '
-                    "is seamless."
-                ),
-            },
-            {
-                "slug": "context-storming",
-                "title": "Context Storming",
-                "summary": (
-                    "Define and connect context across product, engineering, and operations. "
-                    "Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory."
-                ),
-                "bullets": (
-                    "Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.",
-                    "Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.",
-                ),
-                "paras": (
-                    "Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.",
-                    "Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.",
-                    (
-                        'The CDD harness includes the <a href="https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph">knowledge graph</a>, '
-                        "the models and the relationships between them. CodeQL reads them out of the code."
-                    ),
-                ),
-                "caption": (
-                    'The CDD harness includes the <a href="https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph">knowledge graph</a>, '
-                    "the models and the relationships between them. CodeQL reads them out of the code."
-                ),
-            },
-        )
-        by_slug = {practice["slug"]: practice for practice in practices}
-        order = (
-            "iterate-and-learn",
-            "product-engineering",
-            "context-storming",
-            "code-is-context",
-        )
-        return tuple(by_slug[slug] for slug in order)
+        return self._approach_copy().practices
 
     def _write_approach_page(self) -> None:
         from catalog_generator.foundry_chrome import page_shell
@@ -2103,10 +2014,7 @@ class Catalog:
             title="ABD Context Driven Delivery Harness",
             h1=self._harness_headline(),
             tagline="",
-            subhead=(
-                "The CDD harness helps you guide AI to refine unstructured context "
-                "in stages until it lives as working code."
-            ),
+            subhead=self._approach_copy().subhead,
             after_subhead=(
                 f'Get the repo <a href="{self.repo_url}" '
                 'target="_blank" rel="noopener noreferrer">here</a>.'
@@ -2179,84 +2087,9 @@ class Catalog:
     def _approach_page_body(self) -> str:
         import html as html_mod
 
-        stages = (
-            {
-                "id": "context",
-                "label": "Context",
-                "items": ("Business Model", "User Traction", "Operating Benchmarks"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "square",
-                "scope_name": "Context",
-                "scope_width": "square",
-                "detail_title": "Context",
-                "paras": (
-                    "Collect every source that describes the problem to be solved, the current conditions, constraints, and the intended solution — business, customer, and technology.",
-                    "Extract documentation. Interview experts.",
-                    "Parse code, instrument systems, and orchestrate running tests. Categorize and index the material so AI can consume it cleanly.",
-                ),
-            },
-            {
-                "id": "discovery",
-                "label": "Discovery",
-                "items": ("Outcome", "Experience", "Architecture"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "solution",
-                "scope_name": "Whole solution",
-                "scope_width": "wide / shallow",
-                "detail_title": "Discovery",
-                "paras": (
-                    "Refine context into lower-fidelity artifacts that make it easier to align on the overarching solution, catch systemic errors, and avoid failure cascading downstream.",
-                    "Focus on how outcomes translate to user journeys, and map those journeys to system behavior.",
-                    "Define enough structure to establish how domain boundaries and technology modules connect.",
-                ),
-            },
-            {
-                "id": "specification",
-                "label": "Specification",
-                "items": ("Increment", "Prototype", "Reference"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "sprint",
-                "scope_name": "Sprint",
-                "scope_width": "narrow / deeper",
-                "detail_title": "Specification",
-                "paras": (
-                    "Create machine-executable specifications — one small slice of the journey at a time.",
-                    "Refine the business understanding needed to modularize domain validity, access, persistence, consistency, and integration.",
-                    "Write example-driven scenarios backed by domain-driven operations, and generate working UI prototypes that pass their tests.",
-                ),
-            },
-            {
-                "id": "implementation",
-                "label": "Implement",
-                "items": ("Tests", "Interface", "Solution"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "story",
-                "scope_name": "Story",
-                "scope_width": "narrowest / deep",
-                "detail_title": "Implement",
-                "paras": (
-                    "Build each slice onto the target stack. AI oversees deterministic tools so the same input produces results guarded by safety and quality standards.",
-                    "Automate scenario specifications to cover user, system, and module-connecting interfaces.",
-                    "Evaluate every error — technical and functional — and feed results back into the growing knowledge repository.",
-                ),
-            },
-            {
-                "id": "validate",
-                "label": "Validate",
-                "items": ("Economics", "Impact", "Feasibility"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "story",
-                "scope_name": "Story",
-                "scope_width": "narrowest / deep",
-                "detail_title": "Validate",
-                "paras": (
-                    "Confirm the economics: revenue, growth, savings, or profit against the investment.",
-                    "Confirm user impact — does the intended value line up with the behavior that was observed?",
-                    "Confirm feasibility for cost, risk, and operations, then inject that feedback back into the context so AI compounds learning over time.",
-                ),
-            },
-        )
-        principles = self._approach_practices()
+        copy = self._approach_copy()
+        stages = copy.stages
+        principles = copy.practices
 
         stage_buttons: list[str] = []
         for index, stage in enumerate(stages):
@@ -2317,7 +2150,7 @@ class Catalog:
         }
         principle_cards: list[str] = []
         for number, practice in enumerate(principles, start=1):
-            kind = principle_kinds.get(practice["slug"], "tickets")
+            kind = practice.get("kind") or principle_kinds.get(practice["slug"], "tickets")
             grid = approach_principle_grid(self._board_tools, kind)
             caption = practice.get("caption", "")
             caption_html = (
@@ -2355,14 +2188,13 @@ class Catalog:
             "</div>"
             '<aside class="approach-principles" id="approach-principles" aria-labelledby="approach-principles-heading">'
             '<h2 class="approach-principles__title" id="approach-principles-heading">'
-            'Context Driven Delivery Practices'
+            f"{html_mod.escape(copy.principles_heading)}"
             "</h2>"
             f'<div class="approach-principles__list">{"".join(principle_cards)}</div>'
             "</aside>"
             '<section class="approach-library" aria-labelledby="approach-library-heading">'
             '<h2 class="approach-library__title" id="approach-library-heading">'
-            "Our CDD harness is a library of skills, agents and tools that bring the best of "
-            "agile product, delivery, and engineering practices into the age of AI."
+            f"{html_mod.escape(copy.library_heading)}"
             "</h2>"
             f"{approach_principle_grid(self._board_tools, 'tickets')}"
             "</section>"
