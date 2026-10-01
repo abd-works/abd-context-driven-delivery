@@ -77,52 +77,17 @@
 <section class="install-block fidelity-guidance" data-fidelity="scenarios" aria-label="Fidelity guidance"><h2>scenarios</h2>
 <h4>Overview</h4>
 <p><code>{epic}/{sub-epic}/{story}/{story_snake}_story.test.md</code> — same stem as the TypeScript or Python acceptance test; only the extension is <code>md</code>. One file per story. Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.</p>
-<details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">scenarios.md</figcaption><div class="skill-md-preview"><h1>Story: Determine Number</h1>
-<h4>Examples</h4>
-<p>##### available number</p>
-<table class="catalog-md-table">
-<thead><tr><th>available number</th><th>example</th><th>number</th></tr></thead>
-<tbody>
-<tr><td>available number</td><td>held available number</td><td>4415550100</td></tr>
-<tr><td>available number</td><td>chosen available number</td><td>4415550101</td></tr>
-<tr><td>available number</td><td>James matching numbers</td><td>5263712345, 5263798765</td></tr>
-<tr><td>available number</td><td>numbers locked by another customer</td><td>4415550200, 4415550201</td></tr>
-</tbody>
-</table>
-<p>##### search term</p>
-<table class="catalog-md-table">
-<thead><tr><th>search term</th><th>example</th><th>input</th><th>converted</th></tr></thead>
-<tbody>
-<tr><td>search term</td><td>James search</td><td>JAMES</td><td>52637</td></tr>
-</tbody>
-</table>
-<p>##### Mavenir shopping cart</p>
-<table class="catalog-md-table">
-<thead><tr><th>Mavenir shopping cart</th><th>example</th><th>id</th><th>customer</th><th>bundle</th><th>MSISDN</th></tr></thead>
-<tbody>
-<tr><td>Mavenir shopping cart</td><td>empty cart</td><td>cart_cus_1</td><td>cus_1</td><td></td><td></td></tr>
-<tr><td>Mavenir shopping cart</td><td>cart holding held available number</td><td>cart_cus_1</td><td>cus_1</td><td>plan_1</td><td>4415550100</td></tr>
-</tbody>
-</table>
-<p>##### account credentials</p>
-<table class="catalog-md-table">
-<thead><tr><th>account credentials</th><th>example</th><th>email</th><th>password</th><th>confirmPassword</th></tr></thead>
-<tbody>
-<tr><td>account credentials</td><td>valid account credentials</td><td>prospect@example.com</td><td>Valid-pass99</td><td>Valid-pass99</td></tr>
-</tbody>
-</table>
-<h4>Background</h4>
-<p><em>Given</em> a ++My Paradise customer++ with a ++Mavenir shopping cart++</p>
-<h4>Scenario: View available numbers</h4>
-<p><em>But</em> no ++MSISDN++ is in the ++Mavenir shopping cart++ <em>And</em> ++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir <em>When</em> the Customer loads available numbers <em>Then</em> My Paradise sends the list resources request to Mavenir <em>When</em> Mavenir locks 20 MSISDN resources and returns the available number values <em>Then</em> My Paradise returns the available numbers <em>And</em> ++available number++ ++held available number++ and ++available number++ ++chosen available number++ are in the Available Number list</p>
-<h4>Scenario: View available numbers — MSISDN in cart</h4>
-<p><em>Given</em> ++MSISDN++ ++available number++ ++held available number++ is in the ++Mavenir shopping cart++ <em>And</em> ++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir <em>When</em> the Customer loads available numbers <em>Then</em> My Paradise sends the list resources request to Mavenir <em>When</em> Mavenir locks 20 MSISDN resources and returns the available number values <em>Then</em> the Customer sees their number is ++available number++ ++held available number++ <em>And</em> My Paradise returns the available numbers</p>
-<h4>Scenario: Refresh available numbers</h4>
-<p><em>Given</em> ++available number++ ++held available number++ and ++available number++ ++chosen available number++ are available in Mavenir <em>When</em> the Customer refreshes the number list <em>Then</em> My Paradise sends the list resources request to Mavenir <em>When</em> Mavenir locks 20 MSISDN resources and returns the available numbers <em>Then</em> My Paradise returns a fresh set of available numbers</p>
-<h4>Scenario: Search for a number</h4>
-<p><em>Given</em> ++available number++ ++James matching numbers++ are available in Mavenir <em>When</em> the Customer searches for numbers matching ++search term++ ++James search++ <em>Then</em> My Paradise sends the search request to Mavenir with pattern ++search term++ ++James search++ <em>When</em> Mavenir locks MSISDN resources matching 52637 and returns matching values <em>Then</em> My Paradise returns Available Numbers matching 52637 <em>And</em> the matching numbers are stored on the line for selection</p>
-<h4>Scenario: Numbers locked by another customer are excluded from results</h4>
-<p><em>Given</em> another customer has already locked ++available number++ ++held available number++ and ++available number++ ++chosen available number++ in Mavenir <em>And</em> ++available number++ ++numbers locked by another customer++ are the currently available numbers <em>When</em> the Customer loads available numbers <em>Then</em> My Paradise sends the list resources request to Mavenir <em>When</em> Mavenir returns only available numbers, excluding the locked ones <em>Then</em> the locked numbers are not in the available numbers list <em>And</em> only the currently available numbers are returned</p></div></figure></div></details><h4>Guidance</h4><div class="fidelity-guidance-body">
+<details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">scenarios.md</figcaption><div class="skill-md-preview"><h1>Story: Create Unconfirmed User</h1>
+<h4>Scenario: Display Create Account</h4>
+<p><em>When</em> the User proceeds to create an account from the Paradise Mobile website <em>Then</em> the User can enter account credentials <em>And</em> the email and password rules are unmet <em>And</em> the customer cannot save the customer account</p>
+<h4>Scenario: Enter Valid account credentials</h4>
+<p><em>When</em> the User enters valid account credentials <em>Then</em> account credentials are validated continuously <em>And</em> the customer can save the customer account</p>
+<h4>Scenario: Enter Invalid account credentials: ${example}</h4>
+<p><em>When</em> the User registers When the requirements have not been met <em>Then</em> the account cannot be registered <em>And</em> the ${unmet} requirement is unmet</p>
+<h4>Scenario: Email already registered</h4>
+<p><em>Given</em> already-registered account credentials are already registered <em>When</em> the User registers already-registered account credentials <em>Then</em> the email is already registered</p>
+<h4>Scenario: Create Unconfirmed User</h4>
+<p><em>Given</em> the amplifyService.signUp spy is set up <em>When</em> the User creates their account <em>Then</em> the system creates an unconfirmed Cognito user and emails a validation code</p></div></figure></div></details><h4>Guidance</h4><div class="fidelity-guidance-body">
 <p><strong>Create testable specifications.</strong> Use <strong>Given</strong> for state the system already has, <strong>When</strong> for the operation under test, and <strong>Then</strong> for results a person or another system can observe. Use <strong>And</strong> to continue the current kind of step. Use <strong>But</strong> for a missing record or an action not taken. Start a new <strong>When</strong> only when a new interaction begins, because each outcome must trace to the operation that produced it.</p>
 <p><strong>Start with the main flow, then inspect every variation.</strong> Cover the successful path first, then validation, field-level errors, cross-field rules, operation gating, service failures, reversals, and recovery that the sources or running product contain. Use separate Scenarios when the flow changes and a Scenario Outline when the same flow applies to many data combinations.</p>
 <p><strong>Use concrete examples.</strong> Put real domain values in Examples so domain experts and developers can agree on the expected result. Relate examples through domain keys when the model relates them. Acceptance tests represent the same named examples as code fixtures rather than inventing new values. Every example field must change an input, rule, or expected result, because unused data makes the behaviour harder to see.</p>
@@ -149,7 +114,7 @@
 <li><strong><code>seed-prior-story-as-given</code></strong> - Seed a later Story from examples produced by prior Stories instead of replaying their When steps. Reuse fixtures from the owning domain concept and keep the boundary under test real, because each Story must run independently while proving its own behaviour.</li>
 </ul>
 <hr></section>
-<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/246a322ca938be7f5b2b17575448210057b269a1/practices/stories/templates/py/scenarios.py">templates/py/scenarios.py</a></p><pre class="code-fence"><code class="language-py"># ---
+<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/c4ed1233be03ffa8d21127467552836528f63adc/practices/stories/templates/py/scenarios.py">templates/py/scenarios.py</a></p><pre class="code-fence"><code class="language-py"># ---
 # fidelity: [specification, engineering]
 # artifact: [story-scenarios]
 # format: py

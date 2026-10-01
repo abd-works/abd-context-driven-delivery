@@ -117,7 +117,7 @@ kind: spec
 - Refine context into an executable specification that tests the actual solution.
 - Write the code as a direct expression of the design, so it can be turned into docs and back.
 
-The CDD harness includes [Stories](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md), a practice that generates working code for both functional and business logic. Flipping between [documentation](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md) and [code](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts) is seamless.
+The CDD harness includes [Stories](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md), a practice that generates working code for both functional and business logic. Flipping between [documentation](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/catalog-examples/acceptance_tests.md) and [code](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/catalog-examples/acceptance_tests.ts) is seamless.
 
 ## Library
 

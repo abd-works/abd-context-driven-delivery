@@ -77,199 +77,145 @@
 <section class="install-block fidelity-guidance" data-fidelity="acceptance_tests" aria-label="Fidelity guidance"><h2>acceptance-tests</h2>
 <h4>Overview</h4>
 <p><strong>Produce:</strong> <code>{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}</code> plus the production code that makes it pass. Markdown scenarios for the same story are <code>{story_snake}_story.test.md</code>. Shared Given/When/Then helpers stay <code>story_test.py</code> / <code>story-test.ts</code>. Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.</p>
-<details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">acceptance_tests.ts</figcaption><div class="skill-code-preview"><div class="skill-code-lang">ts</div><pre><code>import { afterEach, beforeEach, expect, vi } from &#x27;vitest&#x27;;
+<details class="catalog-examples"><summary>Examples</summary><div class="catalog-examples__body"><figure class="catalog-example"><figcaption class="catalog-example__name">acceptance_tests.md</figcaption><div class="skill-md-preview"><h1>Story: Create Unconfirmed User</h1>
+<h4>Scenario: Display Create Account</h4>
+<p><em>When</em> the User proceeds to create an account from the Paradise Mobile website <em>Then</em> the User can enter account credentials <em>But</em> the email and password rules are unmet <em>But</em> the customer cannot save the customer account</p>
+<h4>Scenario: Enter Valid account credentials</h4>
+<p><em>When</em> the User enters valid account credentials <em>Then</em> account credentials are validated continuously <em>And</em> the customer can save the customer account</p>
+<h4>Scenario: Enter Invalid account credentials: ${example}</h4>
+<p><em>When</em> the User registers When the requirements have not been met <em>Then</em> the account cannot be registered <em>And</em> the ${unmet} requirement is unmet <em>And</em> the System displays the unmet requirements*</p>
+<h4>Scenario: Email already registered</h4>
+<p><em>Given</em> already-registered account credentials are already registered <em>When</em> the User registers already-registered account credentials <em>Then</em> the email is already registered <em>And</em> The system displays a message that the account is already registered</p>
+<h4>Scenario: Create Unconfirmed User</h4>
+<p><em>Given</em> the amplifyService.signUp spy is set up <em>When</em> the User creates their account <em>Then</em> the system creates an unconfirmed Cognito user and emails a validation code</p></div></figure><figure class="catalog-example"><figcaption class="catalog-example__name">acceptance_tests.ts</figcaption><div class="skill-code-preview"><div class="skill-code-lang">ts</div><pre><code>/**
+ * Sub-epic: Create Customer — Story: Create Unconfirmed User
+ * Catalog excerpt from pml-domainmodel/stories/onboard-a-customer/create-customer/create_customer_story.test.ts
+ */
+
+import { afterEach, expect, vi } from &#x27;vitest&#x27;;
 import type { MockInstance } from &#x27;vitest&#x27;;
-import { scenario, story } from &#x27;stories/story-test&#x27;;
-import { type Cart, CartRepository } from &#x27;../../../domain/cart/Cart&#x27;;
-import { AccountCredentials, customerRepository } from &#x27;../../../domain/customer/Customer&#x27;;
+import { background, scenario, story } from &#x27;stories/story-test&#x27;;
+import { amplifyService } from &#x27;../../../domain/systems/amplify&#x27;;
 import {
-  MavenirCartItem,
-  MavenirProductCharacteristic,
-  MavenirShoppingCart,
-  shoppingCartGateway,
-} from &#x27;../../../domain/systems/mavenir/shopping-cart-gateway&#x27;;
-import { mavenirMsisdnGateway } from &#x27;../../../domain/systems/mavenir/msisdn-gateway&#x27;;
+  AccountCredentials,
+  accountRepository,
+} from &#x27;../../../domain/customer/Customer&#x27;;
+import { CreditServiceProviderId } from &#x27;../../../domain/systems/mavenir/billing&#x27;;
 import { portalGateway } from &#x27;../../../domain/systems/mavenir/portal-gateway&#x27;;
-
-// available number
-const heldAvailableNumber = &#x27;4415550100&#x27;;
-const chosenAvailableNumber = &#x27;4415550101&#x27;;
-const jamesMatchingNumbers = [&#x27;5263712345&#x27;, &#x27;5263798765&#x27;];
-const numbersLockedByAnotherCustomer = [&#x27;4415550200&#x27;, &#x27;4415550201&#x27;];
-
-// search term
-const jamesSearch = { input: &#x27;JAMES&#x27;, converted: &#x27;52637&#x27; };
-
-// Mavenir shopping cart
-const emptyCart = new MavenirShoppingCart(&#x27;cart_cus_1&#x27;, &#x27;cus_1&#x27;);
-const cartHoldingHeldAvailableNumber = new MavenirShoppingCart(
-  &#x27;cart_cus_1&#x27;,
-  &#x27;cus_1&#x27;,
-  &#x27;plan_1&#x27;,
-  [
-    new MavenirCartItem(
-      {
-        name: &#x27;&#x27;,
-        description: &#x27;&#x27;,
-        isBundle: true,
-        productCharacteristic: [new MavenirProductCharacteristic(&#x27;MSISDN&#x27;, heldAvailableNumber)],
-      },
-      { id: &#x27;plan_1&#x27; },
-    ),
-  ],
-);
-
-// account credentials
-const validAccountCredentials = new AccountCredentials(
-  &#x27;prospect@example.com&#x27;,
-  &#x27;Valid-pass99&#x27;,
-  &#x27;Valid-pass99&#x27;,
-  &#x27;&#x27;,
-  false,
-);
-
-const cartRepository = new CartRepository(shoppingCartGateway);
-
-function msisdnOn(cart: MavenirShoppingCart): string | undefined {
-  return cart.cartItem
-    .flatMap(item =&gt; item.product.productCharacteristic)
-    .find(characteristic =&gt; characteristic.name === &#x27;MSISDN&#x27;)?.value;
-}
-
-async function customerWithCart(mavenirShoppingCart: MavenirShoppingCart): Promise&lt;Cart&gt; {
-  const customerId = mavenirShoppingCart.customerId ?? &#x27;cus_1&#x27;;
-  portalGateway.seedCustomerById(customerId, validAccountCredentials.email ?? &#x27;&#x27;);
-  shoppingCartGateway.seedCart(customerId, mavenirShoppingCart.id, {
-    bundleId: mavenirShoppingCart.bundleId,
-    msisdn: msisdnOn(mavenirShoppingCart),
-  });
-  const customer = await customerRepository.load(validAccountCredentials);
-  return cartRepository.load(customer)!;
-}
+import { shoppingCartGateway } from &#x27;../../../domain/systems/mavenir/shopping-cart-gateway&#x27;;
+import {
+  enteredAlreadyRegisteredAccountCredentials,
+  enteredValidAccountCredentials,
+  expectedValidAccountCredentials,
+  invalidCredentialOutlines,
+} from &#x27;../examples/account-credentials.examples&#x27;;
+import { storedAlreadyRegisteredUnconfirmedCognitoUser } from &#x27;./examples/cognito-user.examples&#x27;;
 
 afterEach(() =&gt; {
-  shoppingCartGateway.reset();
-  mavenirMsisdnGateway.reset();
+  amplifyService.reset();
   portalGateway.reset();
+  shoppingCartGateway.reset();
   vi.restoreAllMocks();
 });
 
-story(&#x27;Determine Number&#x27;, () =&gt; {
-  let listResourcesSpy: MockInstance&lt;typeof mavenirMsisdnGateway.listResources&gt;;
-  let searchResourcesSpy: MockInstance&lt;typeof mavenirMsisdnGateway.searchResources&gt;;
+story(&#x27;Create Unconfirmed User&#x27;, () =&gt; {
+  background(({ given }) =&gt; {
+    scenario(&#x27;Display Create Account&#x27;, ({ when, then }) =&gt; {
+      let accountCredentials: AccountCredentials;
+      when(&#x27;the User proceeds to create an account from the Paradise Mobile website&#x27;, () =&gt; {
+        accountCredentials = accountRepository.newAccount();
+      });
+      then(&#x27;the User can enter account credentials&#x27;, () =&gt; {
+        expect(accountCredentials.isUpdatable).toBe(true);
+      })
+        .but(&#x27;the email and password rules are unmet&#x27;, () =&gt; {
+          const missing = accountCredentials.missingRequirements();
+          expect(missing).toContain(accountCredentials.requirements.emailRequired);
+          expect(missing).toContain(accountCredentials.requirements.passwordRequired);
+          expect(missing).toContain(accountCredentials.requirements.confirmRequired);
+        })
+        .but(&#x27;the customer cannot save the customer account&#x27;, () =&gt; {
+          expect(accountCredentials.isPersistable).toBe(false);
+        });
+    });
 
-  beforeEach(() =&gt; {
-    listResourcesSpy = vi.spyOn(mavenirMsisdnGateway, &#x27;listResources&#x27;);
-    searchResourcesSpy = vi.spyOn(mavenirMsisdnGateway, &#x27;searchResources&#x27;);
-  });
+    scenario(&#x27;Enter Valid account credentials&#x27;, ({ when, then }) =&gt; {
+      let accountCredentials: AccountCredentials;
 
-  scenario(&#x27;View available numbers&#x27;, ({ given, when, then }) =&gt; {
-    let cart: Cart;
-    let numbers: string[] | Error;
+      when(&#x27;the User enters valid account credentials&#x27;, () =&gt; {
+        accountCredentials = accountRepository.newAccount(enteredValidAccountCredentials);
+      });
+      then(&#x27;account credentials are validated continuously&#x27;, () =&gt; {
+        expect(accountCredentials.missingRequirements()).toHaveLength(0);
+      })
+        .and(&#x27;the customer can save the customer account&#x27;, () =&gt; {
+          expect(accountCredentials.isPersistable).toBe(true);
+        });
+    });
 
-    given(&#x27;a My Paradise customer with a Mavenir shopping cart and no MSISDN&#x27;, async () =&gt; {
-      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
-      cart = await customerWithCart(emptyCart);
-    });
-    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
-      numbers = cart.line!.getNumbers();
-    });
-    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
-      expect(listResourcesSpy).toHaveBeenCalledOnce();
-    });
-    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available number values&#x27;, () =&gt; {});
-    then(&#x27;My Paradise returns the available numbers&#x27;, () =&gt; {
-      expect(numbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
-    }).and(&#x27;held available number and chosen available number are in the Available Number list&#x27;, () =&gt; {
-      expect(numbers as string[]).toContain(heldAvailableNumber);
-      expect(numbers as string[]).toContain(chosenAvailableNumber);
-    });
-  });
+    invalidCredentialOutlines.forEach(({ example, unmet, credentials }) =&gt; {
+      scenario(`Enter Invalid account credentials: ${example}`, ({ when, then }) =&gt; {
+        let accountCredentials: AccountCredentials;
+        let caughtError: unknown;
 
-  scenario(&#x27;View available numbers — MSISDN in cart&#x27;, ({ given, when, then }) =&gt; {
-    let cart: Cart;
-    let numbers: string[] | Error;
+        when(`the User registers ${example}`, async () =&gt; {
+          accountCredentials = accountRepository.newAccount(credentials);
+          try { await accountCredentials.register(); } catch (e) { caughtError = e; }
+        });
+        then(&#x27;the account cannot be registered&#x27;, () =&gt; {
+          expect(caughtError).toHaveProperty(&#x27;register&#x27;, &#x27;Account credential requirements are unmet&#x27;);
+        }).and(`the ${unmet} requirement is unmet`, () =&gt; {
+          const missing = accountCredentials.missingRequirements();
+          const expectedRequirement = (accountCredentials.requirements as Record&lt;string, unknown&gt;)[unmet];
+          expect(missing).toContain(expectedRequirement);
+        });
+      });
+    });
 
-    given(&#x27;MSISDN held available number is in the Mavenir shopping cart&#x27;, async () =&gt; {
-      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
-      cart = await customerWithCart(cartHoldingHeldAvailableNumber);
+    scenario(&#x27;Email already registered&#x27;, ({ given, when, then }) =&gt; {
+      let caughtError: unknown;
+      let accountCredentials: AccountCredentials;
+      given(&#x27;already-registered account credentials are already registered&#x27;, async () =&gt; {
+        amplifyService.seedCognitoUser(storedAlreadyRegisteredUnconfirmedCognitoUser);
+      });
+      when(&#x27;the User registers already-registered account credentials&#x27;, async () =&gt; {
+        accountCredentials = accountRepository.newAccount(enteredAlreadyRegisteredAccountCredentials);
+        try { await accountCredentials.register(); } catch (e) { caughtError = e; }
+      });
+      then(&#x27;the email is already registered&#x27;, () =&gt; {
+        expect(caughtError).toHaveProperty(&#x27;register&#x27;, &#x27;UsernameExistsException&#x27;);
+      })
+        .and(&#x27;the system displays that the email is already registered&#x27;, () =&gt; {
+          expect(accountCredentials.errorMessage).toBe(&#x27;The email address is already in use. Please use a different email address.&#x27;);
+        });
     });
-    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
-      numbers = cart.line!.getNumbers();
-    });
-    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
-      expect(listResourcesSpy).toHaveBeenCalledOnce();
-    });
-    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available number values&#x27;, () =&gt; {});
-    then(&#x27;the Customer sees their number is held available number&#x27;, () =&gt; {
-      expect(cart.line?.msisdn).toBe(heldAvailableNumber);
-    }).and(&#x27;My Paradise returns the available numbers&#x27;, () =&gt; {
-      expect(numbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
-    });
-  });
 
-  scenario(&#x27;Refresh available numbers&#x27;, ({ given, when, then }) =&gt; {
-    let cart: Cart;
-    let refreshedNumbers: string[] | Error;
+    scenario(&#x27;Create Unconfirmed User&#x27;, ({ given, when, then }) =&gt; {
+      let accountCredentials: AccountCredentials;
+      let amplifySignUpSpy: MockInstance&lt;typeof amplifyService.signUp&gt;;
 
-    given(&#x27;a My Paradise customer with a Mavenir shopping cart&#x27;, async () =&gt; {
-      mavenirMsisdnGateway.seedAvailableNumbers([heldAvailableNumber, chosenAvailableNumber]);
-      cart = await customerWithCart(emptyCart);
-    });
-    when(&#x27;the Customer refreshes the number list&#x27;, () =&gt; {
-      refreshedNumbers = cart.line!.getNumbers();
-    });
-    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
-      expect(listResourcesSpy).toHaveBeenCalledOnce();
-    });
-    when(&#x27;Mavenir locks 20 MSISDN resources and returns the available numbers&#x27;, () =&gt; {});
-    then(&#x27;My Paradise returns a fresh set of available numbers&#x27;, () =&gt; {
-      expect(refreshedNumbers).toEqual([heldAvailableNumber, chosenAvailableNumber]);
-    });
-  });
-
-  scenario(&#x27;Search for a number&#x27;, ({ given, when, then }) =&gt; {
-    let cart: Cart;
-    let searchResults: string[] | Error;
-
-    given(&#x27;James matching numbers are available in Mavenir&#x27;, async () =&gt; {
-      mavenirMsisdnGateway.seedAvailableNumbers(jamesMatchingNumbers);
-      cart = await customerWithCart(emptyCart);
-    });
-    when(&#x27;the Customer searches for numbers matching James search&#x27;, () =&gt; {
-      searchResults = cart.line!.searchNumbers(jamesSearch.converted);
-    });
-    then(&#x27;My Paradise sends the search request to Mavenir with pattern James search&#x27;, () =&gt; {
-      expect(searchResourcesSpy).toHaveBeenCalledWith(jamesSearch.converted);
-    });
-    when(&#x27;Mavenir locks MSISDN resources matching 52637 and returns matching values&#x27;, () =&gt; {});
-    then(&#x27;My Paradise returns Available Numbers matching 52637&#x27;, () =&gt; {
-      expect(searchResults).toEqual(jamesMatchingNumbers);
-    }).and(&#x27;the matching numbers are stored on the line for selection&#x27;, () =&gt; {
-      expect(cart.line?.availableNumbers).toEqual(jamesMatchingNumbers);
-    });
-  });
-
-  scenario(&#x27;Numbers locked by another customer are excluded from results&#x27;, ({ given, when, then }) =&gt; {
-    let cart: Cart;
-    let numbers: string[] | Error;
-
-    given(&#x27;another customer has already locked the standard available numbers in Mavenir&#x27;, async () =&gt; {
-      mavenirMsisdnGateway.seedAvailableNumbers(numbersLockedByAnotherCustomer);
-      cart = await customerWithCart(emptyCart);
-    });
-    when(&#x27;the Customer loads available numbers&#x27;, () =&gt; {
-      numbers = cart.line!.getNumbers();
-    });
-    then(&#x27;My Paradise sends the list resources request to Mavenir&#x27;, () =&gt; {
-      expect(listResourcesSpy).toHaveBeenCalledOnce();
-    });
-    when(&#x27;Mavenir returns only available numbers, excluding the locked ones&#x27;, () =&gt; {});
-    then(&#x27;the locked numbers are not in the available numbers list&#x27;, () =&gt; {
-      expect(numbers).not.toContain(heldAvailableNumber);
-      expect(numbers).not.toContain(chosenAvailableNumber);
-    }).and(&#x27;only the currently available numbers are returned&#x27;, () =&gt; {
-      expect(numbers).toEqual(numbersLockedByAnotherCustomer);
+      given(&#x27;the amplifyService.signUp spy is set up&#x27;, () =&gt; {
+        amplifySignUpSpy = vi.spyOn(amplifyService, &#x27;signUp&#x27;);
+      });
+      when(&#x27;the User creates their account&#x27;, async () =&gt; {
+        accountCredentials = accountRepository.newAccount(enteredValidAccountCredentials);
+        await accountCredentials.register();
+      });
+      then(&#x27;the system creates an unconfirmed Cognito user and emails a validation code&#x27;, () =&gt; {
+        expect(amplifySignUpSpy).toHaveBeenCalledWith({
+          username: expectedValidAccountCredentials.email,
+          password: expectedValidAccountCredentials.password,
+          options: { userAttributes: {
+            email: expectedValidAccountCredentials.email,
+            &#x27;custom:language&#x27;: &#x27;en&#x27;,
+            &#x27;custom:role&#x27;: &#x27;customer&#x27;,
+            &#x27;custom:serviceproviderId&#x27;: CreditServiceProviderId.Paradise,
+          }},
+        });
+        expect(accountCredentials.verified).toBe(false);
+        expect(accountCredentials.token).toBeNull();
+        expect(accountCredentials.customerId).toBeNull();
+      });
     });
   });
 });
@@ -293,7 +239,7 @@ story(&#x27;Determine Number&#x27;, () =&gt; {
 <li><strong><code>extract-assertion-helper</code></strong> - Extract the same assertion shape after it appears more than twice and pass its concrete values as data, because copied assertions become inconsistent when behaviour changes.</li>
 </ul>
 <hr></section>
-<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/246a322ca938be7f5b2b17575448210057b269a1/practices/stories/templates/py/scenarios.py">templates/py/scenarios.py</a></p><pre class="code-fence"><code class="language-py"># ---
+<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/c4ed1233be03ffa8d21127467552836528f63adc/practices/stories/templates/py/scenarios.py">templates/py/scenarios.py</a></p><pre class="code-fence"><code class="language-py"># ---
 # fidelity: [specification, engineering]
 # artifact: [story-scenarios]
 # format: py

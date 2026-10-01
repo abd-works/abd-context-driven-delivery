@@ -854,6 +854,8 @@ def catalog_examples_html(module_dir: Path, fidelity_key: str) -> str:
 _EXAMPLE_SUFFIX_ORDER = {
     ".md": 0,
     ".markdown": 0,
+    ".ts": 1,
+    ".tsx": 1,
     ".html": 1,
     ".htm": 1,
     ".drawio": 2,
