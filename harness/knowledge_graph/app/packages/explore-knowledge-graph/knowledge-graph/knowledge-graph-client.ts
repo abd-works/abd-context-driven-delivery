@@ -27,14 +27,18 @@ const EMPTY_OPTIONS: KnowledgeGraphFilterOptions = {
   rules: [],
 };
 
+export type PracticeMember = { practice: string; type: string };
+
 export class KnowledgeGraphClient extends KnowledgeGraph {
   graphId: string;
   options: KnowledgeGraphFilterOptions;
+  members: PracticeMember[];
 
   constructor(storyModel?: any, ceModel?: any, domainDrivenDesignModel?: any, description?: any) {
     super(storyModel, ceModel, domainDrivenDesignModel, description);
     this.graphId = "";
     this.options = { ...EMPTY_OPTIONS };
+    this.members = [];
   }
 
   async createDatabase(): Promise<void> {
@@ -109,6 +113,7 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
     this.matching = tree;
     this.nodes = flattenNodes(tree);
     this.options = filterOptions(presented.filter_options, this.nodes);
+    this.members = practiceMembers(dto);
     if (presented.selected_node) {
       const found =
         this.nodes.find(
@@ -136,6 +141,10 @@ function webNode(row: any): WebKnowledgeGraphNode {
   node.name = row.name ?? "";
   node.practice = row.practice ?? "";
   node.stage = row.fidelity ?? row.stage ?? "";
+  node.ruleHits = (row.rules ?? []).map((rule: any) => ({
+    slug: String(rule.slug ?? rule.rule_slug ?? ""),
+    status: String(rule.status ?? "passing"),
+  }));
   node.nodeId = row.node_id ?? row.nodeId ?? row.name ?? "";
   node.nodeType = row.semantic_type || row.nodeType
     ? { name: row.semantic_type ?? row.nodeType?.name ?? "" }
@@ -202,6 +211,24 @@ function memberHomesIn(row: any, folderName: string): boolean {
     return true;
   }
   return !file && !propParent && String(row.name ?? "").toLowerCase() === needle;
+}
+
+function practiceMembers(dto: any): PracticeMember[] {
+  const seen = new Set<string>();
+  const members: PracticeMember[] = [];
+  for (const graph of dto.practice_graphs ?? []) {
+    for (const row of graph.nodes ?? []) {
+      const practice = String(row.practice ?? graph.name ?? "");
+      const type = String(row.semantic_type ?? "");
+      const key = `${practice}\0${type}`;
+      if (!practice || !type || seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      members.push({ practice, type });
+    }
+  }
+  return members;
 }
 
 function filterOptions(given: any, nodes: KnowledgeGraphNode[]): KnowledgeGraphFilterOptions {

@@ -112,6 +112,7 @@ export function useKnowledgeGraph(id: string) {
       relationship_types: [],
       rules: [],
     },
+    members: graph?.members ?? [],
     selectedNode: graph?.selected ?? null,
     html: graph?.render() ?? '',
     selectNode,

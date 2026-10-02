@@ -212,6 +212,7 @@ class KnowledgeGraphNode {
   rules: NodeRules | null;
   practice: string;
   stage: string;
+  ruleHits: { slug: string; status: string }[];
 
   constructor() {
     this.name = "";
@@ -225,6 +226,7 @@ class KnowledgeGraphNode {
     this.rules = null;
     this.practice = "";
     this.stage = "";
+    this.ruleHits = [];
   }
 
   navigateTo(edge: KnowledgeGraphEdge): KnowledgeGraphNode | null {

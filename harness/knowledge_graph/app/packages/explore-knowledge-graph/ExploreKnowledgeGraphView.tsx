@@ -17,6 +17,7 @@ type FilterPick = {
   node_types: string[];
   relationship_types: string[];
   rules: string[];
+  violations: boolean;
 };
 
 const EMPTY_PICK: FilterPick = {
@@ -25,6 +26,7 @@ const EMPTY_PICK: FilterPick = {
   node_types: [],
   relationship_types: [],
   rules: [],
+  violations: false,
 };
 
 /**
@@ -39,6 +41,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     folder: scannedFolder,
     listedTree,
     filterOptions,
+    members,
     selectedNode,
     selectNode,
     selectFolder,
@@ -253,19 +256,19 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               testId="filter-practice"
               options={filterOptions.practices}
               selected={picked.practices}
-              onChange={(practices) => setPicked((prev) => ({ ...prev, practices }))}
+              onChange={(practices) => setPicked((prev) => ({ ...prev, practices, node_types: [] }))}
             />
             <FilterSelect
               label="Stage"
               testId="filter-stage"
-              options={filterOptions.stages}
+              options={typesFor(picked.practices, members, filterOptions.stages, 'stage')}
               selected={picked.stages}
               onChange={(stages) => setPicked((prev) => ({ ...prev, stages }))}
             />
             <FilterSelect
               label="Node"
               testId="filter-node"
-              options={filterOptions.node_types}
+              options={typesFor(picked.practices, members, filterOptions.node_types, 'type')}
               selected={picked.node_types}
               onChange={(node_types) => setPicked((prev) => ({ ...prev, node_types }))}
             />
@@ -283,6 +286,15 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               selected={picked.rules}
               onChange={(rules) => setPicked((prev) => ({ ...prev, rules }))}
             />
+            <div className="filter-extras">
+              <button
+                type="button"
+                className={picked.violations ? 'is-active' : undefined}
+                onClick={() => setPicked((prev) => ({ ...prev, violations: !prev.violations }))}
+              >
+                Violations
+              </button>
+            </div>
           </div>
         </div>
         <div className="split">
@@ -339,8 +351,18 @@ function FilterSelect({
   onChange: (selected: string[]) => void;
 }) {
   return (
-    <label>
-      {label}
+    <div className="filter-list">
+      <div className="filter-heading">
+        <span className="filter-label">{label}</span>
+        <div className="filter-actions">
+          <button type="button" onClick={() => onChange(options)}>
+            All
+          </button>
+          <button type="button" onClick={() => onChange([])}>
+            None
+          </button>
+        </div>
+      </div>
       <select
         multiple
         data-testid={testId}
@@ -355,7 +377,7 @@ function FilterSelect({
           </option>
         ))}
       </select>
-    </label>
+    </div>
   );
 }
 
@@ -392,7 +414,9 @@ function TreeNode({
       <div className="tree-row">
         <button
           type="button"
-          className={selected ? 'selected' : undefined}
+          className={[selected ? 'selected' : '', hitsViolation(node, picked) ? 'tree-violating' : '']
+            .filter(Boolean)
+            .join(' ') || undefined}
           title={kind}
           onClick={(event) => {
             event.stopPropagation();
@@ -402,6 +426,11 @@ function TreeNode({
           <span className="node-name">{node.name}</span>
         </button>
       </div>
+      {visibleHits(node, picked).map((hit) => (
+        <span key={hit.slug} className={`rule-status ${hit.status}`}>
+          {hit.slug}
+        </span>
+      ))}
       {children.length > 0 ? (
         <ul>
           {children.map((child) => (
@@ -466,10 +495,56 @@ function SourcePane({ node, folder }: { node: KnowledgeGraphNode; folder: string
 }
 
 function shown(node: KnowledgeGraphNode, picked: FilterPick): boolean {
+  if (picked.violations) {
+    return violates(node, picked) || (node.children ?? []).some((child) => shown(child, picked));
+  }
   if (matches(node, picked)) {
     return true;
   }
   return (node.children ?? []).some((child) => shown(child, picked));
+}
+
+function violates(node: KnowledgeGraphNode, picked: FilterPick): boolean {
+  return node.ruleHits.some((hit) => {
+    if (hit.status !== 'violating') {
+      return false;
+    }
+    return picked.rules.length === 0 || picked.rules.includes(hit.slug);
+  });
+}
+
+function hitsViolation(node: KnowledgeGraphNode, picked: FilterPick): boolean {
+  return picked.violations && violates(node, picked);
+}
+
+function visibleHits(node: KnowledgeGraphNode, picked: FilterPick): { slug: string; status: string }[] {
+  if (!picked.violations && picked.rules.length === 0) {
+    return [];
+  }
+  return node.ruleHits.filter((hit) => {
+    if (picked.rules.length && !picked.rules.includes(hit.slug)) {
+      return false;
+    }
+    if (picked.violations) {
+      return hit.status === 'violating';
+    }
+    return true;
+  });
+}
+
+function typesFor(
+  practices: string[],
+  members: { practice: string; type: string }[],
+  fallback: string[],
+  field: 'type' | 'stage',
+): string[] {
+  if (!practices.length || field === 'stage') {
+    return fallback;
+  }
+  const found = members
+    .filter((member) => practices.includes(member.practice))
+    .map((member) => member.type);
+  return found.length ? [...new Set(found)] : fallback;
 }
 
 function matches(node: KnowledgeGraphNode, picked: FilterPick): boolean {
