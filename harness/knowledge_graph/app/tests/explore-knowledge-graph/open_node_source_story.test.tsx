@@ -11,7 +11,7 @@ story('Open Node Source', () => {
       await waitForTree('orders');
     });
     when('the Engineer selects the file Node', async () => {
-      await explorer().locator('[data-node-id]').filter({ hasText: /^processEverything$/ }).first().click();
+      await explorer().getByRole('button', { name: 'processEverything', exact: true }).click({ timeout: 15_000 });
     });
     then('the source file is shown', async () => {
       await expect(explorer().getByTestId('source-excerpt')).toBeVisible();
@@ -27,7 +27,7 @@ story('Open Node Source', () => {
       await waitForTree('orders');
     });
     when('the Engineer selects the operation Node', async () => {
-      await explorer().locator('[data-node-id]').filter({ hasText: /^processEverything$/ }).first().click();
+      await explorer().getByRole('button', { name: 'processEverything', exact: true }).click({ timeout: 15_000 });
     });
     then('the source pane shows the whole operation', async () => {
       const body = explorer().getByTestId('source-file').locator('.panel-source');
