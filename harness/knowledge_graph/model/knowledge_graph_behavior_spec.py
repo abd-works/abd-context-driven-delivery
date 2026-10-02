@@ -12,6 +12,7 @@ from harness.knowledge_graph.model.knowledge_graph_node import (
     KnowledgeGraphNodeType,
     KnowledgeGraphSourceFold,
     editor_height,
+    is_story_node,
     practice_root_labels,
     retained_tree,
     retag_practice,
@@ -215,6 +216,64 @@ with description("a knowledge graph"):
             included = _flatten(retained_tree([tests, epic], ["CleanEngineering"]))
             expect("tests" in [node.name for node in included]).to(equal(False))
             expect("Access Selfcare" in [node.name for node in included]).to(equal(False))
+
+    with context("a story node"):
+        with it("should leave tests, epics, sub-epics, and stories out of clean engineering"):
+            epic = _node("Access Selfcare", "Epic", "clean_engineering")
+            sub = _node("manage-services", "SubEpic", "clean_engineering")
+            story = _node("onboard-a-customer", "Story", "clean_engineering")
+            expect(is_story_node(epic)).to(equal(True))
+            expect(is_story_node(sub)).to(equal(True))
+            expect(is_story_node(story)).to(equal(True))
+            tests = _node(
+                "tests",
+                "Package",
+                "",
+                [
+                    _node(
+                        "access-selfcare",
+                        "Package",
+                        "",
+                        [epic, _node("examples", "Package", "")],
+                    ),
+                    _node(
+                        "manage-billing",
+                        "Package",
+                        "",
+                        [_node("Manage Billing", "Epic", "stories")],
+                    ),
+                    sub,
+                    story,
+                ],
+            )
+            expect(is_story_node(tests)).to(equal(True))
+            included = _flatten(
+                retained_tree(
+                    [
+                        _node(
+                            "domain",
+                            "Module",
+                            "clean_engineering",
+                            [_node("Customer", "OoadClass", "clean_engineering")],
+                        ),
+                        tests,
+                    ],
+                    ["CleanEngineering"],
+                )
+            )
+            names = [node.name for node in included]
+            expect(names).to(contain("domain"))
+            expect(names).to(contain("Customer"))
+            expect("tests" in names).to(equal(False))
+            expect("access-selfcare" in names).to(equal(False))
+            expect("examples" in names).to(equal(False))
+            expect("manage-billing" in names).to(equal(False))
+            expect("manage-services" in names).to(equal(False))
+            expect("onboard-a-customer" in names).to(equal(False))
+            kinds = [node.nodeType.name for node in included]
+            expect("Epic" in kinds).to(equal(False))
+            expect("SubEpic" in kinds).to(equal(False))
+            expect("Story" in kinds).to(equal(False))
 
     with context("that selects clean engineering"):
         with it("should leave story nodes out of the folders and files"):

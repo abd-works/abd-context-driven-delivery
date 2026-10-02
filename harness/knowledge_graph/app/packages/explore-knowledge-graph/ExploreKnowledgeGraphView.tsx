@@ -6,6 +6,7 @@ import {
   KnowledgeGraphNode,
   editorHeight,
   includedPracticeIds,
+  isStoryNode,
   practiceId,
   practiceRootLabels,
   retainedTree,
@@ -698,6 +699,9 @@ function TreeNode({
   );
 }
 
+const GLYPH_MARGIN = 2;
+const SNIPPET_LINE_HEIGHT = 20;
+
 function SourcePane({
   node,
   folder,
@@ -712,11 +716,18 @@ function SourcePane({
   const file = node.source?.file ?? '';
   const [text, setText] = useState('');
   const [openFolds, setOpenFolds] = useState<number[]>([]);
+  const [mounted, setMounted] = useState(false);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-  const marks = useRef<{ clear: () => void } | null>(null);
+  const decorations = useRef<{ clear: () => void } | null>(null);
+  const hideSource = useRef({ id: 'call-folds' });
   const prepared = preparedSource(node, text);
+  const foldsRef = useRef(prepared.folds);
+  const lineMap = useRef(prepared.lineNumbers);
+  foldsRef.current = prepared.folds;
+  lineMap.current = prepared.lineNumbers;
   const lineCount = Math.max(1, prepared.text ? prepared.text.split('\n').length : 1);
-  const height = editorHeight(lineCount, prepared.folds, openFolds);
+  const height = Math.min(520, editorHeight(lineCount, prepared.folds, openFolds) + 16);
+  const startLine = Number(node.source?.startLine) || 1;
 
   useEffect(() => {
     setOpenFolds([]);
@@ -755,37 +766,57 @@ function SourcePane({
     };
   }, [node, file, folder]);
 
-  function paint(editor: Parameters<OnMount>[0], value: string) {
-    marks.current?.clear();
-    const lines = Math.max(1, value.split('\n').length);
-    marks.current = editor.createDecorationsCollection([
-      {
-        range: {
-          startLineNumber: 1,
-          startColumn: 1,
-          endLineNumber: lines,
-          endColumn: 1,
-        },
-        options: { isWholeLine: true, className: 'source-highlight' },
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    if (editor.getValue() !== prepared.text) {
+      editor.setValue(prepared.text);
+    }
+    editor.updateOptions({
+      glyphMargin: prepared.folds.length > 0,
+      lineNumbers: (line) => {
+        const mapped = lineMap.current[line - 1];
+        return mapped ? String(startLine + Number(mapped) - 1) : '';
       },
-    ]);
-  }
+    });
+    applyCallFolds(editor, prepared.folds, openFolds, hideSource.current, decorations);
+  }, [prepared.text, prepared.folds, openFolds, startLine, mounted]);
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
-    paint(editor, text);
+    setMounted(true);
+    const nodeEl = editor.getDomNode();
+    nodeEl?.addEventListener(
+      'mousedown',
+      (event) => {
+        const target = editor.getTargetAtClientPoint(event.clientX, event.clientY);
+        const line = target?.position?.lineNumber ?? target?.range?.startLineNumber;
+        const markHit =
+          event.target instanceof Element &&
+          event.target.closest('.codicon-folding-collapsed, .codicon-folding-expanded, .call-fold, .class-fold') !==
+            null;
+        if (!line || !target || (target.type !== GLYPH_MARGIN && !markHit)) {
+          return;
+        }
+        const fold = foldsRef.current.find((entry) => entry.glyph === line);
+        if (!fold) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        setOpenFolds((current) => {
+          const next = current.includes(fold.start)
+            ? current.filter((start) => start !== fold.start)
+            : [...current, fold.start];
+          applyCallFolds(editor, foldsRef.current, next, hideSource.current, decorations);
+          return next;
+        });
+      },
+      true,
+    );
   };
-
-  useEffect(() => {
-    if (editorRef.current) {
-      paint(editorRef.current, text);
-    }
-  }, [text]);
-
-  useEffect(() => {
-    const editor = editorRef.current as { setHiddenAreas?: (ranges: object[]) => void } | null;
-    editor?.setHiddenAreas?.(hiddenRanges(prepared.folds, openFolds));
-  }, [prepared.text, openFolds, prepared.folds]);
 
   const hits = showRules
     ? picked.violations || picked.rules.length
@@ -793,36 +824,12 @@ function SourcePane({
       : node.ruleHits
     : [];
   return (
-    <section className="knowledge-graph-panel" data-open="true" data-file={file}>
+    <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={file}>
       <p className="source-path">{file || node.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
-        {prepared.folds.length > 0 ? (
-          <div className="source-folds">
-            {prepared.folds.map((fold) => {
-              const open = openFolds.includes(fold.start);
-              return (
-                <button
-                  key={`${fold.kind}:${fold.start}:${fold.label}`}
-                  type="button"
-                  data-testid="source-fold"
-                  aria-expanded={open}
-                  onClick={() =>
-                    setOpenFolds((current) =>
-                      current.includes(fold.start)
-                        ? current.filter((start) => start !== fold.start)
-                        : [...current, fold.start],
-                    )
-                  }
-                >
-                  {open ? '▼' : '▶'} {fold.label}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
         <div data-testid="source-editor" style={{ height }}>
           <Editor
-            height="100%"
+            height={height}
             language={languageFor(file)}
             theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
             value={prepared.text}
@@ -831,12 +838,21 @@ function SourcePane({
             options={{
               readOnly: true,
               domReadOnly: true,
+              folding: false,
+              showFoldingControls: 'never',
               minimap: { enabled: false },
               scrollBeyondLastLine: false,
-              folding: true,
+              automaticLayout: true,
+              wordWrap: 'off',
               fontFamily: "'JetBrains Mono', ui-monospace, monospace",
               fontSize: 13,
-              wordWrap: 'on',
+              lineHeight: SNIPPET_LINE_HEIGHT,
+              glyphMargin: prepared.folds.length > 0,
+              lineNumbers: (line) => {
+                const mapped = lineMap.current[line - 1];
+                return mapped ? String(startLine + Number(mapped) - 1) : '';
+              },
+              padding: { top: 8, bottom: 8 },
             }}
           />
         </div>
@@ -866,7 +882,7 @@ function expandShown(
       continue;
     }
     const children = (node.children ?? []).filter((child) => shown(child, picked, options));
-    if (children.length > 0) {
+    if (children.length > 0 && node.nodeType?.name !== 'OoadClass') {
       open.add(node.nodeId);
       expandShown(children, picked, options, open);
     }
@@ -876,11 +892,14 @@ function expandShown(
 function openAllRules(nodes: KnowledgeGraphNode[], open: Set<string>): void {
   for (const node of nodes) {
     const children = node.children ?? [];
+    const classNode = node.nodeType?.name === 'OoadClass';
     if (node.ruleHits.length > 0) {
-      open.add(node.nodeId);
+      if (!classNode) {
+        open.add(node.nodeId);
+      }
       open.add(`${node.nodeId}::rules`);
     }
-    if (children.length > 0) {
+    if (children.length > 0 && !classNode) {
       open.add(node.nodeId);
       openAllRules(children, open);
     }
@@ -918,12 +937,22 @@ function languageFor(file: string): string {
   return languages[ext] ?? 'plaintext';
 }
 
+function storiesInView(picked: FilterPick, options: KnowledgeGraphFilterOptions): boolean {
+  if (!restricts(picked.practices, options.practices)) {
+    return true;
+  }
+  return includedPracticeIds(picked.practices).includes('stories');
+}
+
 function shown(
   node: KnowledgeGraphNode,
   picked: FilterPick,
   options: KnowledgeGraphFilterOptions,
 ): boolean {
   if (node.nodeType?.name === 'File') {
+    return false;
+  }
+  if (isStoryNode(node) && !storiesInView(picked, options)) {
     return false;
   }
   if (picked.violations) {
@@ -1064,32 +1093,21 @@ function practiceForest(
   return roots.length ? roots : nodes;
 }
 
-type SourceFold = { start: number; end: number; kind: string; label: string };
+type SourceFold = { start: number; end: number; kind: 'class' | 'call'; glyph: number };
 
-function preparedSource(node: KnowledgeGraphNode, text: string): { text: string; folds: SourceFold[] } {
+function preparedSource(node: KnowledgeGraphNode, text: string): { text: string; folds: SourceFold[]; lineNumbers: string[] } {
   const kind = node.nodeType?.name ?? '';
+  const lines = text ? text.split('\n') : [''];
   if (kind === 'OoadClass') {
-    return { text, folds: memberFolds(node) };
+    return { text, folds: memberFolds(node, lines.length), lineNumbers: lines.map((_, index) => String(index + 1)) };
   }
-  if (kind === 'Operation' && text.trim()) {
-    const prepared = new KnowledgeGraphCallSource(text, node.source?.file ?? '', 1, text.split('\n').length, 'typescript');
-    prepared.source();
-    const folds: SourceFold[] = prepared.folds.map((fold, index) => ({
-      start: fold.start,
-      end: fold.end,
-      kind: fold.kind,
-      label: prepared.calls[index]?.operation ?? fold.kind,
-    }));
-    const lines = prepared.text.split('\n').length;
-    if (lines > 2) {
-      folds.unshift({ start: 2, end: lines, kind: 'class', label: 'body' });
-    }
-    return { text: prepared.text, folds };
+  if ((kind === 'Operation' || kind === 'Property') && text.trim()) {
+    return callLayout(node, text);
   }
-  return { text, folds: [] };
+  return { text, folds: [], lineNumbers: lines.map((_, index) => String(index + 1)) };
 }
 
-function memberFolds(node: KnowledgeGraphNode): SourceFold[] {
+function memberFolds(node: KnowledgeGraphNode, lineCount: number): SourceFold[] {
   const base = Number(node.source?.startLine) || 1;
   const folds: SourceFold[] = [];
   for (const child of node.children ?? []) {
@@ -1102,36 +1120,140 @@ function memberFolds(node: KnowledgeGraphNode): SourceFold[] {
     if (start < base) {
       continue;
     }
-    folds.push({
-      start: start - base + 1,
-      end: Math.max(start, end) - base + 1,
-      kind: type === 'Operation' ? 'operation' : 'property',
-      label: `${type === 'Operation' ? 'Operation' : 'Property'} ${child.name}`,
-    });
+    const signature = start - base + 1;
+    const last = Math.min(lineCount, Math.max(start, end) - base + 1);
+    if (last <= signature) {
+      continue;
+    }
+    folds.push({ start: signature + 1, end: last, kind: 'class', glyph: signature });
   }
   return folds;
 }
 
-function hiddenRanges(folds: SourceFold[], openFolds: number[]): object[] {
+function callLayout(node: KnowledgeGraphNode, text: string): { text: string; folds: SourceFold[]; lineNumbers: string[] } {
+  const prepared = new KnowledgeGraphCallSource(text, node.source?.file ?? '', 1, text.split('\n').length, 'typescript');
+  prepared.source();
+  const bodies = memberBodies(node);
+  const output: string[] = [];
+  const lineNumbers: string[] = [];
+  const folds: SourceFold[] = [];
+  prepared.text.split('\n').forEach((line, index) => {
+    output.push(line);
+    lineNumbers.push(String(index + 1));
+    const calls = prepared.calls.filter((call) => call.line === index + 1);
+    if (!calls.length) {
+      return;
+    }
+    const callLine = output.length;
+    let inserted = false;
+    let sawCall = false;
+    for (const call of calls) {
+      const operation = String(call.operation ?? '');
+      if (operation.includes('.')) {
+        sawCall = true;
+      }
+      const body = bodies.get(memberName(operation));
+      if (!body) {
+        continue;
+      }
+      for (const nestedLine of body.split('\n')) {
+        output.push(nestedLine.length ? `    ${nestedLine}` : '    ');
+        lineNumbers.push('');
+      }
+      inserted = true;
+    }
+    if (inserted && output.length > callLine) {
+      folds.push({
+        start: callLine + 1,
+        end: output.length,
+        kind: sawCall ? 'call' : 'class',
+        glyph: callLine,
+      });
+    }
+  });
+  return { text: output.join('\n'), folds, lineNumbers };
+}
+
+function memberBodies(node: KnowledgeGraphNode): Map<string, string> {
+  const bodies = new Map<string, string>();
+  const visit = (current: KnowledgeGraphNode) => {
+    for (const child of current.children ?? []) {
+      const type = child.nodeType?.name ?? '';
+      const source = child.source?.text ?? '';
+      if ((type === 'Operation' || type === 'Property') && source && !bodies.has(memberName(child.name))) {
+        bodies.set(memberName(child.name), source);
+      }
+      visit(child);
+    }
+  };
+  visit(node);
+  return bodies;
+}
+
+function memberName(name: string): string {
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 ? name.slice(dot + 1) : name;
+}
+
+function applyCallFolds(
+  editor: Parameters<OnMount>[0],
+  folds: SourceFold[],
+  openFolds: number[],
+  source: object,
+  decorations: { current: { clear: () => void } | null },
+) {
   const open = new Set(openFolds);
-  return folds
-    .filter((fold) => !open.has(fold.start))
-    .filter((fold) => {
-      return !folds.some(
-        (other) =>
-          other !== fold &&
-          other.start <= fold.start &&
-          other.end >= fold.end &&
-          other.end > other.start &&
-          !open.has(other.start),
-      );
-    })
+  const ranges = folds
+    .filter((fold) => !open.has(fold.start) && fold.end >= fold.start)
+    .filter(
+      (fold) =>
+        !folds.some(
+          (other) =>
+            other !== fold &&
+            other.start <= fold.start &&
+            other.end >= fold.end &&
+            !open.has(other.start),
+        ),
+    )
     .map((fold) => ({
       startLineNumber: fold.start,
       startColumn: 1,
-      endLineNumber: fold.end,
+      endLineNumber: fold.end + 1,
       endColumn: 1,
     }));
+  (
+    editor as Parameters<OnMount>[0] & {
+      setHiddenAreas(ranges: object[], source?: object): void;
+    }
+  ).setHiddenAreas(ranges, source);
+  decorations.current?.clear();
+  decorations.current = editor.createDecorationsCollection(
+    folds.map((fold) => ({
+      range: {
+        startLineNumber: fold.glyph,
+        startColumn: 1,
+        endLineNumber: fold.glyph,
+        endColumn: 1,
+      },
+      options: {
+        glyphMarginClassName: glyphClass(fold.kind, open.has(fold.start)),
+        glyphMarginHoverMessage: { value: hoverLabel(fold.kind, open.has(fold.start)) },
+      },
+    })),
+  );
+}
+
+function glyphClass(kind: SourceFold['kind'], open: boolean): string {
+  const icon = open ? 'codicon-folding-expanded' : 'codicon-folding-collapsed';
+  if (kind === 'class') {
+    return `codicon ${icon} class-fold${open ? ' class-fold-open' : ''}`;
+  }
+  return `codicon ${icon} call-fold${open ? ' call-fold-open' : ''}`;
+}
+
+function hoverLabel(kind: SourceFold['kind'], open: boolean): string {
+  const noun = kind === 'class' ? 'class' : 'call';
+  return open ? `Collapse ${noun}` : `Expand ${noun}`;
 }
 
 function filtersNarrow(picked: FilterPick, options: KnowledgeGraphFilterOptions): boolean {

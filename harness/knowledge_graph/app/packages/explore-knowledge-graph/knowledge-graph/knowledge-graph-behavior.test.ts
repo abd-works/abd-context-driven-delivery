@@ -6,6 +6,7 @@ import {
   KnowledgeGraphNode,
   KnowledgeGraphSourceFold,
   editorHeight,
+  isStoryNode,
   practiceRootLabels,
   retainedTree,
   retagPractice,
@@ -371,6 +372,48 @@ describe("a knowledge graph", () => {
         const included = flatten(retainedTree([tests, epic], ["CleanEngineering"]));
         expect(included.map((node) => node.name)).not.toContain("tests");
         expect(included.map((node) => node.name)).not.toContain("Access Selfcare");
+      });
+    });
+
+    describe("a story node", () => {
+      it("should leave tests, epics, sub-epics, and stories out of clean engineering", () => {
+        const epic = graphNode("Access Selfcare", "Epic", "clean_engineering");
+        const sub = graphNode("manage-services", "SubEpic", "clean_engineering");
+        const story = graphNode("onboard-a-customer", "Story", "clean_engineering");
+        expect(isStoryNode(epic)).toBe(true);
+        expect(isStoryNode(sub)).toBe(true);
+        expect(isStoryNode(story)).toBe(true);
+        const tests = graphNode("tests", "Package", "", [
+          graphNode("access-selfcare", "Package", "", [epic, graphNode("examples", "Package", "")]),
+          graphNode("manage-billing", "Package", "", [graphNode("Manage Billing", "Epic", "stories")]),
+          sub,
+          story,
+        ]);
+        expect(isStoryNode(tests)).toBe(true);
+        const included = flatten(
+          retainedTree(
+            [
+              graphNode("domain", "Module", "clean_engineering", [
+                graphNode("Customer", "OoadClass", "clean_engineering"),
+              ]),
+              tests,
+            ],
+            ["CleanEngineering"],
+          ),
+        );
+        const names = included.map((node) => node.name);
+        expect(names).toContain("domain");
+        expect(names).toContain("Customer");
+        expect(names).not.toContain("tests");
+        expect(names).not.toContain("access-selfcare");
+        expect(names).not.toContain("examples");
+        expect(names).not.toContain("manage-billing");
+        expect(names).not.toContain("manage-services");
+        expect(names).not.toContain("onboard-a-customer");
+        const kinds = included.map((node) => node.nodeType?.name);
+        expect(kinds).not.toContain("Epic");
+        expect(kinds).not.toContain("SubEpic");
+        expect(kinds).not.toContain("Story");
       });
     });
 

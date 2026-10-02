@@ -100,6 +100,12 @@ story('Filter Graph', () => {
         has: explorer().getByRole('button', { name: 'domain', exact: true }),
       }).first();
       await expect(domain.locator('.rule-status', { hasText: 'high-cohesion' }).first()).toBeVisible();
+    }).and('epics and the tests folder are not tagged as clean engineering', async () => {
+      await expect(explorer().getByRole('button', { name: 'tests', exact: true })).toHaveCount(0);
+      await expect(explorer().getByRole('button', { name: 'access-selfcare', exact: true })).toHaveCount(0);
+      await expect(explorer().getByRole('button', { name: 'manage-billing', exact: true })).toHaveCount(0);
+      await expect(explorer().getByRole('button', { name: 'onboard-a-customer', exact: true })).toHaveCount(0);
+      await expect(explorer().getByRole('button', { name: 'domain', exact: true })).toBeVisible();
     });
   });
 

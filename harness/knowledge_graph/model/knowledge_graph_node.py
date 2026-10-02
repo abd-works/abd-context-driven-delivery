@@ -202,6 +202,70 @@ def retag_practice(node):
     return node
 
 
+def is_story_node(node):
+    semantic = node.nodeType.name if getattr(node, "nodeType", None) else ""
+    if semantic in STORY_NODE_TYPES:
+        return True
+    if semantic not in {"Module", "Package"}:
+        return False
+    children = list(getattr(node, "children", None) or [])
+    if not children:
+        return False
+    if all(is_story_node(child) for child in children):
+        return True
+    return _holds_only_story(node)
+
+
+def _holds_only_story(node):
+    found = False
+
+    def walk(current):
+        nonlocal found
+        semantic = current.nodeType.name if getattr(current, "nodeType", None) else ""
+        if semantic in STORY_NODE_TYPES:
+            found = True
+            return True
+        if semantic == "File":
+            return True
+        if semantic in {"Module", "Package"}:
+            return all(walk(child) for child in (getattr(current, "children", None) or []))
+        return False
+
+    return walk(node) and found
+
+
+def is_story_node(node):
+    semantic = node.nodeType.name if getattr(node, "nodeType", None) else ""
+    if semantic in STORY_NODE_TYPES:
+        return True
+    if semantic not in {"Module", "Package"}:
+        return False
+    children = getattr(node, "children", None) or []
+    if not children:
+        return False
+    if all(is_story_node(child) for child in children):
+        return True
+    return _holds_only_story(node)
+
+
+def _holds_only_story(node):
+    found = False
+
+    def walk(current):
+        nonlocal found
+        semantic = current.nodeType.name if getattr(current, "nodeType", None) else ""
+        if semantic in STORY_NODE_TYPES:
+            found = True
+            return True
+        if semantic == "File":
+            return True
+        if semantic in {"Module", "Package"}:
+            return all(walk(child) for child in (getattr(current, "children", None) or []))
+        return False
+
+    return walk(node) and found
+
+
 def included_practice_ids(selected, expand_domain_driven_design=True):
     found = []
     for practice in selected:
