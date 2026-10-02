@@ -62,11 +62,9 @@ class HookDaemon:
         env["PYTHONPATH"] = os.pathsep.join(
             [*extra, *(existing.split(os.pathsep) if existing else ())]
         )
-        flags = 0
-        if sys.platform == "win32":
-            flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(
-                subprocess, "CREATE_NEW_PROCESS_GROUP", 0
-            )
+        from harness.hooks.process import detached_creationflags
+
+        flags = detached_creationflags()
         log = path.parent / "hook-server.log"
         stream = open(log, "a", encoding="utf-8")
         subprocess.Popen(

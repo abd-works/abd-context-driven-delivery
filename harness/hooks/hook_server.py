@@ -378,7 +378,30 @@ class HookServer:
     def _spawn(cls, repo: Path, path: Path) -> None:
         from harness.hooks.hook_daemon import HookDaemon
 
-        HookDaemon().spawn(repo, path)
+        lock_path = path.parent / "hook-server.spawn.lock"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        deadline = time.time() + _READY_WAIT_SECONDS
+        while time.time() < deadline:
+            connected = cls._connect(repo, path)
+            if connected is not None:
+                return
+            try:
+                fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError:
+                time.sleep(_READY_POLL_SECONDS)
+                continue
+            try:
+                os.write(fd, str(os.getpid()).encode("ascii"))
+            finally:
+                os.close(fd)
+            try:
+                HookDaemon().spawn(repo, path)
+            finally:
+                try:
+                    lock_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            return
 
     def _absorb_catalog_failures(self) -> None:
         if self._catalog is None:

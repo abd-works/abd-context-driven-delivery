@@ -469,6 +469,28 @@ with description("inject_rules hook dispatch"):
             expect(out.get("additional_context") or "").to(contain("sample rule one"))
 
 
+with description("hook process helpers"):
+
+    with it("should use pythonw for the Cursor dispatch command on Windows"):
+        from harness.hooks.hooks import HookInstallation
+        from harness.hooks.process import hook_python_executable
+
+        install = HookInstallation("Cursor", _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+        command = install.dispatch_command.replace("\\", "/")
+        python = hook_python_executable(sys.executable).replace("\\", "/")
+        expect(command).to(contain(python))
+        expect(command).to(contain("harness/hooks/hook_server.py"))
+        if sys.platform == "win32":
+            expect(command).to(contain("pythonw.exe"))
+
+    with it("should include CREATE_NO_WINDOW in detached daemon flags on Windows"):
+        from harness.hooks.process import detached_creationflags
+
+        flags = detached_creationflags()
+        if sys.platform == "win32":
+            expect(bool(flags & getattr(subprocess, "CREATE_NO_WINDOW", 0))).to(equal(True))
+
+
 with description("the Cursor hook_server.py command"):
 
     with it("should dispatch sessionStart over stdin without an import error"):

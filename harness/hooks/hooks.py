@@ -98,9 +98,12 @@ class HookInstallation(Installation):
 
     @property
     def dispatch_command(self) -> str:
+        from harness.hooks.process import hook_python_executable
+
         repo = self.repo or Path(__file__).resolve().parents[2]
         script = (repo / self.DISPATCH_SCRIPT).resolve()
-        return f"{self.python} -u {script}"
+        python = hook_python_executable(self.python)
+        return f"{python} -u {script}"
 
     def write(self, tool: Any) -> None:
         if not tool.install_to_hook:
