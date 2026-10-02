@@ -999,10 +999,14 @@ function matches(
   if (!practiceAllowed(node.practice, picked, options)) {
     return false;
   }
-  if (restricts(picked.stages, options.stages) && node.stage && !picked.stages.includes(node.stage)) {
+  if (restricts(picked.stages, options.stages) && node.nodeType?.name !== 'Practice' && !picked.stages.includes(node.stage)) {
     return false;
   }
-  if (restricts(picked.node_types, options.node_types) && !picked.node_types.includes(node.nodeType?.name ?? '')) {
+  if (
+    restricts(picked.node_types, options.node_types) &&
+    node.nodeType?.name !== 'Practice' &&
+    !picked.node_types.includes(node.nodeType?.name ?? '')
+  ) {
     return false;
   }
   return true;
