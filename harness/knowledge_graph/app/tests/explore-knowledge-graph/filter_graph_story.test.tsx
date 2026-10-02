@@ -86,6 +86,20 @@ story('Filter Graph', () => {
       await expect.poll(async () =>
         node.evaluate((el: HTMLSelectElement) => el.selectedOptions.length === el.options.length),
       ).toBe(true);
+    }).and('the rule filter lists the clean engineering rules', async () => {
+      const rule = explorer().getByTestId('filter-rule');
+      await expect(rule.locator('option', { hasText: 'high-cohesion' })).toHaveCount(1);
+      await expect(rule.locator('option', { hasText: 'keep-operations-small-focused' })).toHaveCount(1);
+      await expect(rule.locator('option', { hasText: 'verb-noun-format' })).toHaveCount(0);
+      await expect.poll(async () =>
+        rule.evaluate((el: HTMLSelectElement) => el.options.length > 10 && el.selectedOptions.length === el.options.length),
+      ).toBe(true);
+    }).and('Show rules lists high-cohesion on domain', async () => {
+      await explorer().getByRole('button', { name: 'Show rules' }).click();
+      const domain = explorer().locator('li').filter({
+        has: explorer().getByRole('button', { name: 'domain', exact: true }),
+      }).first();
+      await expect(domain.locator('.rule-status', { hasText: 'high-cohesion' }).first()).toBeVisible();
     });
   });
 

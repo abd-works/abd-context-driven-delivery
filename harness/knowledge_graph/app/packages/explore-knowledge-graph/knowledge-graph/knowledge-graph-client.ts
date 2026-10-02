@@ -246,6 +246,19 @@ function attachMembers(tree: WebKnowledgeGraphNode[], dto: any): void {
       const parentRow = parentId ? byId.get(parentId) : undefined;
       const parentHome = parentRow ? homeFolder(parentRow, folders) : null;
       if (home && sameFolderNode(home.node, row)) {
+        if (node.practice && !home.node.practice) {
+          home.node.practice = node.practice;
+        }
+        if (node.stage && !home.node.stage) {
+          home.node.stage = node.stage;
+        }
+        const seen = new Set(home.node.ruleHits.map((hit) => hit.slug));
+        for (const hit of node.ruleHits) {
+          if (!seen.has(hit.slug)) {
+            home.node.ruleHits.push(hit);
+            seen.add(hit.slug);
+          }
+        }
         for (const child of node.children) {
           pushChild(home.node, child);
         }
