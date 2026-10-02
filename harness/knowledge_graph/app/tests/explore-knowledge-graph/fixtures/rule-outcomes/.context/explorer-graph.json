@@ -1,0 +1,65 @@
+{
+  "id": "22222222-2222-4222-8222-222222222222",
+  "folder": "",
+  "practice_graphs": [
+    {
+      "id": "practice:clean_engineering",
+      "name": "clean_engineering",
+      "nodes": [
+        {
+          "node_id": "ce:Module:orders",
+          "name": "orders",
+          "practice": "clean_engineering",
+          "semantic_type": "Module",
+          "properties": { "folder": "orders" },
+          "applicable_rules": [],
+          "violations": [],
+          "source": null
+        },
+        {
+          "node_id": "ce:Operation:load",
+          "name": "load",
+          "practice": "clean_engineering",
+          "semantic_type": "Operation",
+          "properties": {},
+          "applicable_rules": ["keep-operations-small-focused"],
+          "violations": [],
+          "source": {
+            "file": "orders/Order.ts",
+            "start_line": 1,
+            "end_line": 4,
+            "text": "load() { return this.id }\n"
+          }
+        },
+        {
+          "node_id": "ce:Operation:processEverything",
+          "name": "processEverything",
+          "practice": "clean_engineering",
+          "semantic_type": "Operation",
+          "properties": {},
+          "applicable_rules": ["keep-operations-small-focused"],
+          "violations": [
+            {
+              "rule_slug": "keep-operations-small-focused",
+              "message": "Operation 'processEverything' is 23 statements (max 20). Extract helpers.",
+              "body": "",
+              "practice": "clean_engineering",
+              "fidelity": "code",
+              "tag": "base"
+            }
+          ],
+          "source": {
+            "file": "orders/Order.ts",
+            "start_line": 6,
+            "end_line": 40,
+            "text": "processEverything() { /* too many statements */ }\n"
+          }
+        }
+      ],
+      "relationships": [
+        { "kind": "owns", "from_id": "ce:Module:orders", "to_id": "ce:Operation:load" },
+        { "kind": "owns", "from_id": "ce:Module:orders", "to_id": "ce:Operation:processEverything" }
+      ]
+    }
+  ]
+}

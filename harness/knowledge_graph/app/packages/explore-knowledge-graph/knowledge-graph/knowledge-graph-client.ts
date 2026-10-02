@@ -141,10 +141,7 @@ function webNode(row: any): WebKnowledgeGraphNode {
   node.name = row.name ?? "";
   node.practice = row.practice ?? "";
   node.stage = row.fidelity ?? row.stage ?? "";
-  node.ruleHits = (row.rules ?? []).map((rule: any) => ({
-    slug: String(rule.slug ?? rule.rule_slug ?? ""),
-    status: String(rule.status ?? "passing"),
-  }));
+  node.ruleHits = ruleHitsFrom(row);
   node.nodeId = row.node_id ?? row.nodeId ?? row.name ?? "";
   node.nodeType = row.semantic_type || row.nodeType
     ? { name: row.semantic_type ?? row.nodeType?.name ?? "" }
@@ -211,6 +208,22 @@ function memberHomesIn(row: any, folderName: string): boolean {
     return true;
   }
   return !file && !propParent && String(row.name ?? "").toLowerCase() === needle;
+}
+
+function ruleHitsFrom(row: any): { slug: string; status: string }[] {
+  if (Array.isArray(row.rules) && row.rules.length) {
+    return row.rules.map((rule: any) => ({
+      slug: String(rule.slug ?? rule.rule_slug ?? ""),
+      status: String(rule.status ?? "passing"),
+    }));
+  }
+  const failing = new Set(
+    (row.violations ?? []).map((hit: any) => String(hit.rule_slug ?? hit.ruleSlug ?? "")),
+  );
+  return (row.applicable_rules ?? []).map((slug: string) => ({
+    slug,
+    status: failing.has(slug) ? "violating" : "passing",
+  }));
 }
 
 function practiceMembers(dto: any): PracticeMember[] {

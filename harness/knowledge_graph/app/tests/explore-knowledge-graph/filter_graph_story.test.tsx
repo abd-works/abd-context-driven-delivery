@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
+import { bindPage, explorer, openFolder, openPmlDomain, RULE_OUTCOMES, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -35,8 +35,8 @@ story('Filter Graph', () => {
 
   scenario('tree lists only Nodes that match the filters', ({ given, when, then }) => {
     given('a KnowledgeGraph whose source includes a Node that passes keep-operations-small-focused', async () => {
-      await openPmlDomain();
-      await waitForTree();
+      await openFolder(RULE_OUTCOMES);
+      await waitForTree('orders');
     }).and('whose source includes a Node that fails keep-operations-small-focused', async () => {});
     when('the Engineer filters the KnowledgeGraph using violations', async () => {
       await explorer().getByRole('button', { name: /^violations$/i }).click({ timeout: 5_000 });

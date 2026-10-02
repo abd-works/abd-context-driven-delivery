@@ -103,6 +103,48 @@ describe("a knowledge graph", () => {
       expect(loaded.options.node_types).toContain("OoadClass");
     });
 
+    it("should mark a violation hit as violating and leave the other rule passing", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "22222222-2222-4222-8222-222222222222",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "load",
+                  node_id: "ce:Operation:load",
+                  semantic_type: "Operation",
+                  applicable_rules: ["keep-operations-small-focused"],
+                  violations: [],
+                  source: { file: "orders/Order.ts" },
+                },
+                {
+                  name: "processEverything",
+                  node_id: "ce:Operation:processEverything",
+                  semantic_type: "Operation",
+                  applicable_rules: ["keep-operations-small-focused"],
+                  violations: [{ rule_slug: "keep-operations-small-focused", message: "too big" }],
+                  source: { file: "orders/Order.ts" },
+                },
+              ],
+            },
+          ],
+        },
+        listed_tree: [
+          { name: "orders", node_id: "ce:Module:orders", semantic_type: "Module", children: [] },
+        ],
+      });
+      const load = loaded.nodes.find((node) => node.name === "load");
+      const failing = loaded.nodes.find((node) => node.name === "processEverything");
+      expect(load?.ruleHits).toEqual([
+        { slug: "keep-operations-small-focused", status: "passing" },
+      ]);
+      expect(failing?.ruleHits).toEqual([
+        { slug: "keep-operations-small-focused", status: "violating" },
+      ]);
+    });
+
     it("should nest classes from practice graphs under their folder", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
