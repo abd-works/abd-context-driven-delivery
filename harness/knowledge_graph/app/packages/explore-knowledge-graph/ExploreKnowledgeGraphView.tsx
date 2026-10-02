@@ -466,10 +466,13 @@ function TreeNode({
     return null;
   }
   const rules = rulesFor(node, picked);
+  const links = node.relationships ?? [];
   const rulesId = `${node.nodeId}::rules`;
+  const linksId = `${node.nodeId}::relationships`;
   const open = openIds.has(node.nodeId);
   const rulesOpen = openIds.has(rulesId);
-  const canOpen = children.length > 0 || rules.length > 0;
+  const linksOpen = openIds.has(linksId);
+  const canOpen = children.length > 0 || rules.length > 0 || links.length > 0;
   const kind = node.nodeType?.name ?? '';
   const selected = node.nodeId === selectedId;
   return (
@@ -552,6 +555,51 @@ function TreeNode({
                       <div className="tree-row">
                         <span className="tree-twist-spacer" />
                         <span className={`rule-status ${hit.status}`}>{hit.slug}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ) : null}
+          {links.length > 0 ? (
+            <li data-depth={depth + 1} data-testid="tree-relationships">
+              <div className="tree-row">
+                <button
+                  type="button"
+                  className="tree-twist"
+                  data-testid="tree-expand-relationships"
+                  aria-expanded={linksOpen}
+                  aria-label={`${linksOpen ? 'Collapse' : 'Expand'} relationships`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggle(linksId);
+                  }}
+                >
+                  {linksOpen ? '▼' : '▶'}
+                </button>
+                <button type="button" title="Relationships" onClick={() => onToggle(linksId)}>
+                  <span className="node-name">relationships</span>
+                </button>
+              </div>
+              {linksOpen ? (
+                <ul>
+                  {links.map((link) => (
+                    <li key={`${link.kind}:${link.nodeId}`} data-depth={depth + 2}>
+                      <div className="tree-row">
+                        <span className="tree-twist-spacer" />
+                        <button
+                          type="button"
+                          data-testid="tree-relationship-target"
+                          title={link.kind}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSelect(link.nodeId);
+                          }}
+                        >
+                          <span className="node-name">{link.kind}</span>
+                          <span className="node-name">{link.name}</span>
+                        </button>
                       </div>
                     </li>
                   ))}

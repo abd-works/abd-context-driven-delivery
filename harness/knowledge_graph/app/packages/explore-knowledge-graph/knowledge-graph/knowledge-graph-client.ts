@@ -142,6 +142,7 @@ function webNode(row: any): WebKnowledgeGraphNode {
   node.practice = row.practice ?? "";
   node.stage = row.fidelity ?? row.stage ?? "";
   node.ruleHits = ruleHitsFrom(row);
+  node.relationships = relationshipLinks(row);
   node.nodeId = row.node_id ?? row.nodeId ?? row.name ?? "";
   node.nodeType = row.semantic_type || row.nodeType
     ? { name: row.semantic_type ?? row.nodeType?.name ?? "" }
@@ -208,6 +209,24 @@ function memberHomesIn(row: any, folderName: string): boolean {
     return true;
   }
   return !file && !propParent && String(row.name ?? "").toLowerCase() === needle;
+}
+
+function relationshipLinks(row: any): { kind: string; nodeId: string; name: string }[] {
+  const groups = Array.isArray(row.relationships) ? row.relationships : [];
+  const links: { kind: string; nodeId: string; name: string }[] = [];
+  for (const group of groups) {
+    const kind = String(group.kind ?? "");
+    const targets = Array.isArray(group.targets) ? group.targets : [];
+    for (const target of targets) {
+      const nodeId = String(target.node_id ?? target.nodeId ?? "");
+      const name = String(target.name ?? "");
+      if (!kind || !nodeId || !name) {
+        continue;
+      }
+      links.push({ kind, nodeId, name });
+    }
+  }
+  return links;
 }
 
 function ruleHitsFrom(row: any): { slug: string; status: string; message: string }[] {
