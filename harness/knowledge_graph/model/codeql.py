@@ -225,6 +225,35 @@ class CodeQL:
             return self.working_copy
         return self.rewrite_working_copy()
 
+    def _extractor_excludes(self) -> str:
+        """Folders the Python extractor must not walk.
+
+        The extractor treats a path that is neither a file nor a directory as a fatal
+        format error. On Windows that is every path longer than MAX_PATH. The database
+        directory sits inside the source root, so it has to be excluded too.
+        """
+        root = self.root.resolve()
+        excluded = {root / ".codeql", root / ".venv", root / "node_modules"}
+        skip = {".git", ".codeql", ".venv", "node_modules", "__pycache__"}
+        for dirpath, dirnames, filenames in os.walk(root):
+            base = Path(dirpath)
+            if base.name in skip:
+                dirnames[:] = []
+                continue
+            if base.name == "templates":
+                excluded.add(base)
+                dirnames[:] = []
+                continue
+            for name in list(dirnames):
+                if name in skip:
+                    excluded.add(base / name)
+                    dirnames.remove(name)
+            for name in filenames:
+                if len(str(base / name)) > 259:
+                    excluded.add(base)
+                    break
+        return "\n".join(str(path) for path in sorted(excluded))
+
     def _create_database(self, database: Path) -> Path:
         language = getattr(self, "_database_language", "python")
         source_root = self.root.resolve()
@@ -234,6 +263,7 @@ class CodeQL:
         python = sys.executable
         env["CODEQL_PYTHON"] = python
         env["PATH"] = str(Path(python).parent) + os.pathsep + env.get("PATH", "")
+        env["LGTM_INDEX_EXCLUDE"] = self._extractor_excludes()
         run = subprocess.run(
             [
                 self.executable(),

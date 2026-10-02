@@ -31,3 +31,12 @@ class Ddd(PracticeGuidance):
     def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
         del current_name, name
         return False
+
+    @property
+    def model(self):
+        from practices.ddd.model.transformation.ddd_transformer import DddTransformer
+
+        class DddPracticeModel:
+            transformer = DddTransformer
+
+        return DddPracticeModel()

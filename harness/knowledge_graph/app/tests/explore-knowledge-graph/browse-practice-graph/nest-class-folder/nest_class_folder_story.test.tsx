@@ -46,6 +46,15 @@ story('Nest Class Folder', () => {
             .present()
             .listed_tree.find((node) => node.name === 'harness');
           expect(harness?.semantic_type).toBe('Package');
+        }).and('the clean engineering practice keeps that folder nest', () => {
+          const section = KnowledgeGraph.fromDto(nestedClassGraph())
+            .filterGraph({ practices: ['clean_engineering'] })
+            .present()
+            .listed_tree.find((node) => node.name === 'clean_engineering');
+          const harness = section?.children.find((node) => node.name === 'harness');
+          expect(harness?.children.map((node) => node.name)).toEqual(['guidance']);
+          expect(harness?.children.map((node) => node.name)).not.toContain('Guidance');
+          expect(descendantNames(harness)).toContain('Guidance');
         });
   });
   scenario('a class lists its operations', ({ given, when, then }) => {

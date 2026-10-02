@@ -43,10 +43,13 @@ with description("a repo"):
             with context("that is ready to become the master"):
                 with before.all:
                     self.graph = KnowledgeGraph(root=_SLICE)
+                    working = _SLICE / ".codeql" / "python-working-copy" / "db-python"
+                    if not working.is_dir():
+                        self.graph.create_database(_SLICE)
                     self.graph.refresh_master()
                     self.master = _SLICE / ".codeql" / "python-master"
 
-                with it("should rewrite the master"):
+                with it("should copy the working copy onto master"):
                     expect((self.master / "db-python").is_dir()).to(equal(True))
 
                 with it("should populate the master"):

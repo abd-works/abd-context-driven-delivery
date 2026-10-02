@@ -255,12 +255,30 @@ html[data-theme="engineering"] .site-nav {
   gap: var(--space-sm);
 }
 
+.filter-toggle {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  cursor: pointer;
+}
+
 .filters {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: start;
   gap: var(--space-sm);
   width: 100%;
+}
+
+.filters[hidden] {
+  display: none;
 }
 
 .filter-extras {
@@ -568,41 +586,9 @@ ul.tree ul {
   color: var(--accent, #c2410c);
 }
 
-.source-snippet .call-fold {
-  cursor: pointer;
-}
-
-.source-snippet .call-fold.codicon::before,
-.source-snippet .call-fold::before {
-  content: '↳';
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 20px;
-  color: var(--accent, #c2410c);
-}
-
-.source-snippet .call-fold-open.codicon::before,
-.source-snippet .call-fold-open::before {
-  content: '↴';
-}
-
+.source-snippet .call-fold,
 .source-snippet .class-fold {
   cursor: pointer;
-}
-
-.source-snippet .class-fold.codicon::before,
-.source-snippet .class-fold::before {
-  content: '▸';
-  font-family: var(--font-sans);
-  font-size: 12px;
-  line-height: 20px;
-  color: var(--muted);
-}
-
-.source-snippet .class-fold-open.codicon::before,
-.source-snippet .class-fold-open::before {
-  content: '▾';
 }
 
 .source-snippet .source-toggle {

@@ -497,7 +497,7 @@ function _propertiesIn(file: WorkspaceFile): NodeDto[] {
 }
 
 function _scriptProperties(file: WorkspaceFile): NodeDto[] {
-  return _fieldLines(file, (line) => {
+  const fields = _fieldLines(file, (line) => {
     if (line.includes('(') || /\bclass\s+/.test(line)) {
       return null;
     }
@@ -506,6 +506,17 @@ function _scriptProperties(file: WorkspaceFile): NodeDto[] {
     );
     return matched && !TS_SKIP.has(matched[1]) ? matched[1] : null;
   });
+  const seen = new Set(fields.map((node) => node.source?.start_line));
+  const parameters = _fieldLines(file, (line) => {
+    if (line.includes('(') || line.includes(')') || /\bclass\s+/.test(line)) {
+      return null;
+    }
+    const matched = line.match(
+      /^\s+(?:public|private|protected|readonly|override)(?:\s+(?:public|private|protected|readonly|override))*\s+([A-Za-z_][A-Za-z0-9_]*)\??\s*(?::\s*[^,=]+)?\s*(?:=[^,]*)?,?\s*$/,
+    );
+    return matched && !TS_SKIP.has(matched[1]) ? matched[1] : null;
+  }).filter((node) => !seen.has(node.source?.start_line));
+  return [...fields, ...parameters];
 }
 
 function _pythonProperties(file: WorkspaceFile): NodeDto[] {

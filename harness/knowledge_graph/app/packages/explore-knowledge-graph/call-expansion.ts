@@ -1,5 +1,6 @@
 import {
   fieldTypeNames,
+  isClassKind,
   isSimpleProperty,
   signatureTypeNames,
   SKIP_TYPES,
@@ -67,7 +68,7 @@ export function classBodiesIn(node: ListedTreeNode): ClassBody[] {
   const seen = new Set<string>();
   const visit = (current: ListedTreeNode) => {
     const text = current.source?.text ?? '';
-    if (current.semantic_type === 'OoadClass' && text && !seen.has(current.node_id)) {
+    if (isClassKind(current.semantic_type) && text && !seen.has(current.node_id)) {
       seen.add(current.node_id);
       found.push({ id: current.node_id, name: current.name, text });
     }
@@ -259,7 +260,7 @@ function classTypes(node: ListedTreeNode, text: string): ClassBody[] {
     node.semantic_type === 'Property' ? fieldTypeNames(text) : signatureTypeNames(text);
   const classes = new Map(
     node.children
-      .filter((child) => child.semantic_type === 'OoadClass')
+      .filter((child) => isClassKind(child.semantic_type))
       .map((child) => [child.name, child]),
   );
   const types: ClassBody[] = [];

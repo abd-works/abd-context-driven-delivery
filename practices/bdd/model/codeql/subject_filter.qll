@@ -21,6 +21,14 @@ predicate firstClassModulePrefix(string prefix) {
   prefix = "harness/transformers/fixtures/mm3e/checks" or
   prefix = "harness/transformers/fixtures/mm3e/combat" or
   prefix = "harness/transformers/fixtures/mm3e/equipment" or
+  prefix = "harness/transformers/fixtures/mm3e/expected/ce/ability" or
+  prefix = "harness/transformers/fixtures/mm3e/expected/ce/advantage" or
+  prefix = "harness/transformers/fixtures/mm3e/expected/ce/character_construction" or
+  prefix = "harness/transformers/fixtures/mm3e/expected/ce/checks" or
+  prefix = "harness/transformers/fixtures/mm3e/expected/ce/combat" or
+  prefix = "harness/transformers/fixtures/mm3e/expected/ce/equipment" or
+  prefix = "harness/transformers/fixtures/mm3e/expected/ce/power" or
+  prefix = "harness/transformers/fixtures/mm3e/expected/ce/skill" or
   prefix = "harness/transformers/fixtures/mm3e/power" or
   prefix = "harness/transformers/fixtures/mm3e/skill" or
   prefix = "installation" or
@@ -53,15 +61,15 @@ predicate firstClassModulePrefix(string prefix) {
   prefix = "tools/record_decisions" or
   prefix = "tools/workflow" or
   prefix = "tools/workspace" or
-  prefix = "harness/guidance" or
-  prefix = "harness/guidance_actions" or
-  prefix = "harness/session" or
-  prefix = "harness/transformers" or
   prefix = "actions/document" or
   prefix = "actions/generate" or
   prefix = "actions/render" or
   prefix = "actions/satisfy" or
-  prefix = "actions/validate"
+  prefix = "actions/validate" or
+  prefix = "harness/guidance" or
+  prefix = "harness/guidance_actions" or
+  prefix = "harness/session" or
+  prefix = "harness/transformers"
 }
 
 predicate inSubject(AstNode n) {

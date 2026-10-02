@@ -1,6 +1,11 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { KnowledgeGraphDto, NodeDto, SourceRangeDto } from './knowledge-graph';
+import {
+  isClassKind,
+  type KnowledgeGraphDto,
+  type NodeDto,
+  type SourceRangeDto,
+} from './knowledge-graph';
 import {
   definitionsInFile,
   SKIP_DIR,
@@ -35,7 +40,100 @@ export function overlayWorkspaceTree(dto: KnowledgeGraphDto): KnowledgeGraphDto 
   attachClassMembers(dto, root);
   attachStepInvokes(dto, root);
   attachMemberInvokes(dto);
+  attachComposition(dto, root);
   return dto;
+}
+
+export function compositionByClass(markdown: string): Map<string, string[]> {
+  const composed = new Map<string, string[]>();
+  for (const part of markdown.split(/^### /m)) {
+    const header = part.match(/^\*\*(.+?)\*\*/);
+    if (!header) {
+      continue;
+    }
+    const targets: string[] = [];
+    for (const line of part.split('\n')) {
+      if (!/<<\s*composition\s*>>/i.test(line)) {
+        continue;
+      }
+      const typed = line.match(/:\s*([A-Za-z_][A-Za-z0-9_]*)/);
+      if (typed) {
+        targets.push(typed[1]);
+      }
+    }
+    if (targets.length > 0) {
+      composed.set(header[1].trim(), targets);
+    }
+  }
+  return composed;
+}
+
+function attachComposition(dto: KnowledgeGraphDto, root: string) {
+  const model = join(root, 'domain', 'domain-model.md');
+  let composed = new Map<string, string[]>();
+  if (existsSync(model)) {
+    try {
+      composed = compositionByClass(readFileSync(model, 'utf8'));
+    } catch {
+      composed = new Map();
+    }
+  }
+  for (const graph of dto.practice_graphs) {
+    const classes = graph.nodes.filter((node) => isClassKind(node.semantic_type));
+    const existing = new Set(graph.relationships.map((edge) => `${edge.kind}:${edge.from_id}:${edge.to_id}`));
+    const link = (owner: NodeDto | undefined, targetName: string) => {
+      if (!owner) {
+        return;
+      }
+      const target = classNamed(classes, targetName, owner.source?.file);
+      if (!target || target.node_id === owner.node_id) {
+        return;
+      }
+      const key = `composition:${owner.node_id}:${target.node_id}`;
+      if (existing.has(key)) {
+        return;
+      }
+      existing.add(key);
+      graph.relationships.push({ kind: 'composition', from_id: owner.node_id, to_id: target.node_id });
+    };
+    for (const [name, targets] of composed) {
+      const owner = classNamed(classes, name);
+      for (const targetName of targets) {
+        link(owner, targetName);
+      }
+    }
+    const nodeById = new Map(graph.nodes.map((node) => [node.node_id, node]));
+    for (const edge of graph.relationships) {
+      if (edge.kind !== 'owns') {
+        continue;
+      }
+      const member = nodeById.get(edge.to_id);
+      const owner = nodeById.get(edge.from_id);
+      if (!member || member.semantic_type !== 'Property' || !owner || !isClassKind(owner.semantic_type)) {
+        continue;
+      }
+      const text = member.source?.text ?? '';
+      if (!/<<\s*composition\s*>>/i.test(text)) {
+        continue;
+      }
+      const targetName = text.match(/:\s*([A-Za-z_][A-Za-z0-9_]*)/)?.[1];
+      if (targetName) {
+        link(owner, targetName);
+      }
+    }
+  }
+}
+
+function classNamed(classes: NodeDto[], name: string, nearFile?: string): NodeDto | undefined {
+  const matches = classes.filter((node) => node.name === name);
+  if (nearFile) {
+    const folder = nearFile.replaceAll('\\', '/').split('/').slice(0, -1).join('/');
+    const nearby = matches.find((node) => (node.source?.file ?? '').replaceAll('\\', '/').startsWith(folder));
+    if (nearby) {
+      return nearby;
+    }
+  }
+  return matches.find((node) => (node.source?.file ?? '').replaceAll('\\', '/').startsWith('domain/')) ?? matches[0];
 }
 
 function collectRelativeFolders(root: string): string[] {
@@ -303,7 +401,7 @@ function attachClassMembers(dto: KnowledgeGraphDto, root: string) {
   for (const graph of dto.practice_graphs) {
     const classes = graph.nodes.filter(
       (node) =>
-        node.semantic_type === 'OoadClass' &&
+        isClassKind(node.semantic_type) &&
         node.source?.file &&
         node.source.start_line >= 1,
     );
@@ -324,7 +422,11 @@ function attachClassMembers(dto: KnowledgeGraphDto, root: string) {
       const file = member.source.file.replaceAll('\\', '/');
       const start = member.source.start_line;
       const end = member.source.end_line || start;
-      if (member.semantic_type === 'Property' && insideOperation(catalog, file, start)) {
+      if (
+        member.semantic_type === 'Property' &&
+        insideOperation(catalog, file, start) &&
+        !/^\s*(?:public|private|protected|readonly)\b/.test(member.source.text ?? '')
+      ) {
         continue;
       }
       const owner = smallestClass(classes, file, start, end);
@@ -423,7 +525,7 @@ function ownership(dto: KnowledgeGraphDto): {
       if (!parent) {
         continue;
       }
-      if (parent.semantic_type === 'OoadClass') {
+      if (isClassKind(parent.semantic_type)) {
         classOf.set(childId, parentId);
       }
       const folder =
@@ -506,9 +608,15 @@ function sourceForNode(
   files: Map<string, string[] | null>,
 ): SourceRangeDto | null {
   if (node.source?.file && node.source.start_line >= 1) {
-    return readSpan(root, node.source, files);
+    const span = readSpan(root, node.source, files);
+    return node.semantic_type === 'Property' ? propertyExcerpt(node.name, span) : span;
   }
-  if (node.semantic_type !== 'OoadClass' && node.semantic_type !== 'Operation') {
+  if (
+    node.semantic_type !== 'OoadClass' &&
+    node.semantic_type !== 'Operation' &&
+    node.semantic_type !== 'Property' &&
+    !isClassKind(node.semantic_type)
+  ) {
     return node.source;
   }
   const ownerClass = owners.classOf.get(node.node_id);
@@ -517,21 +625,46 @@ function sourceForNode(
     : null;
   const hit = pickDefinition(
     catalog,
-    node.semantic_type,
+    node.semantic_type === 'Property' || node.semantic_type === 'Operation' || node.semantic_type === 'OoadClass'
+      ? node.semantic_type
+      : 'OoadClass',
     node.name,
     owners.moduleFolder.get(node.node_id) ?? '',
     classFile || node.source?.file || null,
     node.source?.start_line ?? 0,
   );
   if (hit) {
-    return readSpan(root, hit.source, files);
+    const span = readSpan(root, hit.source, files);
+    return node.semantic_type === 'Property' ? propertyExcerpt(node.name, span) : span;
   }
-  return node.source;
+  return node.semantic_type === 'Property' && node.source
+    ? propertyExcerpt(node.name, node.source)
+    : node.source;
+}
+
+export function propertyExcerpt(name: string, source: SourceRangeDto): SourceRangeDto {
+  const text = source.text ?? '';
+  const lines = text.split('\n');
+  if (lines.length <= 1 && !/constructor\s*\(/.test(text)) {
+    return source;
+  }
+  const pattern = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+  const index = lines.findIndex(
+    (row) =>
+      pattern.test(row) &&
+      !/^\s*(?:export\s+)?(?:abstract\s+)?class\b/.test(row) &&
+      !/constructor\s*\(/.test(row),
+  );
+  if (index < 0) {
+    return source;
+  }
+  const start = (source.start_line || 1) + index;
+  return { ...source, start_line: start, end_line: start, text: lines[index] };
 }
 
 function pickDefinition(
   catalog: SourceDefinition[],
-  kind: 'OoadClass' | 'Operation',
+  kind: 'OoadClass' | 'Operation' | 'Property',
   name: string,
   folder: string,
   preferFile: string | null,

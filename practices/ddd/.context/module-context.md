@@ -18,7 +18,7 @@ Constraint: do not restate CleanEngineering class/module analysis in DDD artifac
 - `diagnostic() -> Diagnose`
 - `contexts` instruction
 - `guidance` — domain generate prose plus the current fidelity's Clean Engineering companion when one is named
-- `render(format, content)` — `PracticeGuidance.render`; DDD has no format folders, so conversion uses the companion practice
+- `render(format, content)` — `PracticeGuidance.render`; class and module conversion uses the companion practice. Code format writes each bounded context as a folder containing `.context/bounded-context.md`, with aggregate folders underneath, through `DddTransformer`
 - Scan rules discovered under `practices/ddd/scanners/` (`screen-interface-not-a-domain-object`, `private-method-naming`, `building-blocks-fidelity-requires-tactical-stereotype`, `flaccid-data-object-no-behavior`, `no-orphaned-objects`)
 
 ## Dependencies

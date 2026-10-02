@@ -66,7 +66,7 @@ with description("a repo"):
                 with before.all:
                     self.graph = KnowledgeGraph(root=_SLICE)
                     if not (_MASTER / "db-python").is_dir():
-                        self.graph.refresh_master()
+                        self.graph.create_database(_SLICE)
                         master_graph = self.graph.practice_graphs[0]
                     else:
                         master_graph = PracticeGraph(_SLICE)
@@ -153,7 +153,7 @@ with description("a repo"):
                 with before.all:
                     self.graph = KnowledgeGraph(root=_SLICE)
                     if not (_MASTER / "db-python").is_dir():
-                        self.graph.refresh_master()
+                        self.graph.create_database(_SLICE)
                     _STORY_TEST.write_text(
                         _ORIGINAL_STORY + "\n// dirty-story\n",
                         encoding="utf-8",
@@ -189,7 +189,7 @@ with description("a repo"):
                 with before.all:
                     self.graph = KnowledgeGraph(root=_SLICE)
                     if not (_MASTER / "db-python").is_dir():
-                        self.graph.refresh_master()
+                        self.graph.create_database(_SLICE)
                     _PRODUCTION.write_text(
                         _ORIGINAL_PRODUCTION + "\n\nclass LoyaltyAccount:\n    pass\n",
                         encoding="utf-8",

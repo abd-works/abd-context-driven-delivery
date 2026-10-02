@@ -4,7 +4,7 @@ import { Memory } from 'lowdb';
 import { JSONFilePreset } from 'lowdb/node';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
-import { basename, dirname, delimiter, join, relative } from 'node:path';
+import { basename, dirname, delimiter, isAbsolute, join, relative, resolve } from 'node:path';
 import {
   KnowledgeGraph,
   KnowledgeGraphSchema,
@@ -15,14 +15,11 @@ import {
   type KnowledgeGraphSearch,
 } from './knowledge-graph';
 import {
-  isScanSourcePath,
   knowledgeGraphFromWorkspace,
   resolveNamedFolder,
   scanSourceFiles,
-  SKIP_DIR,
   type WorkspaceFile,
 } from './workspace';
-import { overlayWorkspaceTree } from './workspace-overlay';
 
 type KnowledgeGraphStore = {
   knowledge_graphs: unknown[];
@@ -146,19 +143,32 @@ export class KnowledgeGraphsServer {
   }
 
   static browse(graph: KnowledgeGraph) {
-    return graph.present();
+    return httpPresent(graph.present());
   }
 
   static selectNode(graph: KnowledgeGraph, nodeId: string) {
-    return graph.selectNode(nodeId).present();
+    return httpPresent(graph.selectNode(nodeId).present());
   }
 
   static followRelationship(graph: KnowledgeGraph, toId: string) {
-    return graph.followRelationship(toId).present();
+    return httpPresent(graph.followRelationship(toId).present());
   }
 
   static filterGraph(graph: KnowledgeGraph, filter: GraphFilter) {
-    return graph.filterGraph(filter).present();
+    return httpPresent(graph.filterGraph(filter).present());
+  }
+
+  static readSource(
+    folder: string,
+    ranges: { file: string; start_line: number; end_line: number }[],
+  ): { file: string; start_line: number; end_line: number; text: string }[] {
+    const root = _resolvePickedFolder(folder);
+    return ranges.map((range) => ({
+      file: range.file,
+      start_line: range.start_line,
+      end_line: range.end_line,
+      text: _readSourceText(root, range.file, range.start_line, range.end_line),
+    }));
   }
 
   static async createDatabase(
@@ -189,8 +199,6 @@ export class FolderNotFound extends Error {
     this.name = 'FolderNotFound';
   }
 }
-
-const SKIP_DIRS = SKIP_DIR;
 
 function _isDir(folder: string): boolean {
   return folder.length > 0 && existsSync(folder) && statSync(folder).isDirectory();
@@ -297,36 +305,6 @@ function _writeLastScanRoot(folder: string): void {
   writeFileSync(SCAN_ROOT_PATH, `${JSON.stringify({ folder }, null, 2)}\n`);
 }
 
-function _readWorkspaceFromDisk(folder: string): WorkspaceFile[] {
-  if (!existsSync(folder) || !statSync(folder).isDirectory()) {
-    throw new FolderNotFound(folder);
-  }
-  const files: WorkspaceFile[] = [];
-  _walk(folder, folder, files);
-  return scanSourceFiles(files);
-}
-
-function _walk(root: string, current: string, files: WorkspaceFile[]): void {
-  for (const entry of readdirSync(current)) {
-    if (SKIP_DIRS.has(entry)) {
-      continue;
-    }
-    const full = join(current, entry);
-    const info = statSync(full);
-    if (info.isDirectory()) {
-      _walk(root, full, files);
-      continue;
-    }
-    if (!isScanSourcePath(relative(root, full))) {
-      continue;
-    }
-    files.push({
-      relativePath: relative(root, full).replaceAll('\\', '/'),
-      text: readFileSync(full, 'utf8'),
-    });
-  }
-}
-
 export function createKnowledgeGraphsRouter(
   repo: KnowledgeGraphRepository,
 ): Router {
@@ -353,7 +331,7 @@ export function createKnowledgeGraphsRouter(
         files,
         Boolean(req.body.force),
       );
-      res.status(201).json(graph.present());
+      res.status(201).json(httpPresent(graph.present()));
     } catch (error) {
       if (error instanceof FolderNotFound) {
         res.status(400).json({ error: error.message });
@@ -361,6 +339,26 @@ export function createKnowledgeGraphsRouter(
       }
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Scan failed',
+      });
+    }
+  });
+
+  router.post('/source', (req, res) => {
+    try {
+      const ranges = Array.isArray(req.body.ranges) ? req.body.ranges : [];
+      res.json({
+        ranges: KnowledgeGraphsServer.readSource(
+          String(req.body.folder ?? ''),
+          ranges.map((range: { file?: string; start_line?: number; end_line?: number }) => ({
+            file: String(range.file ?? ''),
+            start_line: Number(range.start_line),
+            end_line: Number(range.end_line),
+          })),
+        ),
+      });
+    } catch (error) {
+      res.status(400).json({
+        error: error instanceof Error ? error.message : 'Could not read source',
       });
     }
   });
@@ -391,7 +389,7 @@ export function createKnowledgeGraphsRouter(
       { practiceGraphs: req.body.practice_graphs },
       repo,
     );
-    res.status(201).json(created.present());
+    res.status(201).json(httpPresent(created.present()));
   });
 
   router.post('/:id/select-node', async (req, res) => {
@@ -429,7 +427,7 @@ async function _databaseRoute(
 ) {
   try {
     const graph = await run(String(req.body.folder ?? ''), repo);
-    res.status(201).json(graph.present());
+    res.status(201).json(httpPresent(graph.present()));
   } catch (error) {
     if (error instanceof FolderNotFound) {
       res.status(400).json({ error: error.message });
@@ -482,11 +480,8 @@ function _spawnDatabaseCli(
 
 function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph {
   const cached = join(root, '.context', 'explorer-graph.json');
-  if (!force && existsSync(cached)) {
-    const graph = _graphFromCache(cached, root);
-    if (graph) {
-      return graph;
-    }
+  if (!force) {
+    return _graphFromCache(cached, root);
   }
   const repo = _repoRoot();
   const script = join(
@@ -507,16 +502,6 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
     },
   );
   if (result.status !== 0) {
-    const fromDisk = _graphFromDisk(root);
-    if (fromDisk) {
-      return fromDisk;
-    }
-    if (existsSync(cached)) {
-      const graph = _graphFromCache(cached, root);
-      if (graph) {
-        return graph;
-      }
-    }
     throw new Error(
       result.stderr || result.stdout || 'write_practice_hierarchy.py failed',
     );
@@ -531,76 +516,78 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
   }
   const dto = JSON.parse(line) as KnowledgeGraphDto;
   dto.folder = root;
+  _dropSourceText(dto);
   const graph = graphFromWorkspaceDto(dto);
   if (_graphIsEmpty(graph)) {
-    return _graphFromDisk(root) ?? graph;
-  }
-  if (!_hasDemonstrates(graph) && !_hasPracticeTree(graph)) {
-    return _graphFromDisk(root) ?? graph;
+    throw new Error('Knowledge graph has no nodes');
   }
   return graph;
-}
-
-function _hasPracticeTree(graph: KnowledgeGraph): boolean {
-  const kinds = new Set([
-    'Epic',
-    'SubEpic',
-    'Story',
-    'Scenario',
-    'Step',
-    'Description',
-    'Context',
-    'Observation',
-    'BoundedContext',
-    'Aggregate',
-    'Entity',
-    'EntityRoot',
-  ]);
-  return graph.toDto().practice_graphs.some((item) =>
-    item.nodes.some(
-      (node) =>
-        kinds.has(node.semantic_type) ||
-        node.practice === 'stories' ||
-        node.practice === 'bdd' ||
-        node.practice === 'ddd',
-    ),
-  );
-}
-
-function _hasDemonstrates(graph: KnowledgeGraph): boolean {
-  return graph.toDto().practice_graphs.some((item) =>
-    item.relationships.some((edge) => edge.kind === 'demonstrates'),
-  );
 }
 
 function _graphIsEmpty(graph: KnowledgeGraph): boolean {
   return graph.toDto().practice_graphs.every((item) => item.nodes.length === 0);
 }
 
-function _graphFromDisk(root: string): KnowledgeGraph | null {
-  if (!_isDir(root)) {
-    return null;
+function _graphFromCache(cached: string, root: string): KnowledgeGraph {
+  if (!existsSync(cached)) {
+    throw new Error(`Knowledge graph is missing: ${cached}`);
   }
-  const files = _readWorkspaceFromDisk(root);
-  if (files.length === 0) {
-    return null;
+  let dto: KnowledgeGraphDto;
+  try {
+    dto = JSON.parse(readFileSync(cached, 'utf8')) as KnowledgeGraphDto;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'invalid JSON';
+    throw new Error(`Knowledge graph could not be read: ${cached}: ${message}`);
   }
-  return knowledgeGraphFromWorkspace(root, files, crypto.randomUUID());
-}
-
-function _graphFromCache(cached: string, root: string): KnowledgeGraph | null {
-  const dto = JSON.parse(readFileSync(cached, 'utf8')) as KnowledgeGraphDto;
-  const cachedFolder = String(dto.folder || '').replaceAll('\\', '/').toLowerCase();
-  const wanted = root.replaceAll('\\', '/').toLowerCase();
-  if (cachedFolder && cachedFolder !== wanted) {
-    return null;
+  if (!Array.isArray(dto.practice_graphs)) {
+    throw new Error(`Knowledge graph has no practice graphs: ${cached}`);
   }
   dto.folder = root;
-  return graphFromWorkspaceDto(dto);
+  _dropSourceText(dto);
+  const graph = graphFromWorkspaceDto(dto);
+  if (_graphIsEmpty(graph)) {
+    throw new Error(`Knowledge graph has no nodes: ${cached}`);
+  }
+  return graph;
+}
+
+function _dropSourceText(dto: KnowledgeGraphDto): void {
+  for (const practice of dto.practice_graphs) {
+    for (const node of practice.nodes) {
+      if (node.source?.text) {
+        node.source = { ...node.source, text: '' };
+      }
+    }
+  }
+}
+
+function _readSourceText(
+  root: string,
+  file: string,
+  startLine: number,
+  endLine: number,
+): string {
+  const rootPath = resolve(root);
+  const target = resolve(rootPath, file);
+  const fromRoot = relative(rootPath, target);
+  if (!file || fromRoot.startsWith('..') || isAbsolute(fromRoot)) {
+    throw new Error(`Source is outside the graph folder: ${file}`);
+  }
+  if (!existsSync(target) || !statSync(target).isFile()) {
+    return '';
+  }
+  const lines = readFileSync(target, 'utf8').split(/\r?\n/);
+  const start = Math.max(1, startLine);
+  const end = Math.max(start, endLine);
+  return lines.slice(start - 1, end).join('\n');
 }
 
 function graphFromWorkspaceDto(dto: KnowledgeGraphDto): KnowledgeGraph {
-  return KnowledgeGraph.fromDto(overlayWorkspaceTree(dto));
+  return KnowledgeGraph.fromDto(dto);
+}
+
+function httpPresent(presented: ReturnType<KnowledgeGraph['present']>) {
+  return { ...presented, listed_nodes: [] };
 }
 
 function _filterFromQuery(query: Record<string, unknown>): GraphFilter {

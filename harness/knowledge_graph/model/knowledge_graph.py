@@ -50,14 +50,23 @@ class KnowledgeGraph:
         return list(self._practice_graphs)
 
     def refresh_master(self) -> KnowledgeGraph:
-        from .codeql import CodeQL
+        from .codeql import CodeQL, CodeQLRunError
         from .practice_graph import PracticeGraph
 
         codeql = CodeQL(self.root)
-        master = codeql.rewrite_master(codeql.detect_language())
+        codeql.detect_language()
+        if not codeql._database_ready(codeql.working_copy):
+            raise CodeQLRunError(
+                "Refresh master copies the working copy onto master. "
+                f"There is no working copy at {codeql.working_copy}."
+            )
+        codeql.copy_working_copy_to_master()
         graph = PracticeGraph(self.root)
-        codeql.populate(graph, database=master, results_path=master / "practice-graph.json")
-        codeql.copy_master_to_working_copy()
+        codeql.populate(
+            graph,
+            database=codeql.working_copy,
+            results_path=codeql.working_copy / "practice-graph.json",
+        )
         self._practice_graphs = [graph]
         return self
 

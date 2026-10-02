@@ -7,7 +7,7 @@ Start from what your users do, not from the technology:
 1. **Name the system you're building** — the consumer app, the product. This goes first/upstream on the map.
 2. **Identify the language clusters** — group concepts by shared vocabulary and shared rules. Each cluster that uses the same terms with the same meaning is one bounded context.
 3. **Name each context** — use the domain experts' words. Not `PaymentService`, not `BillingModule`. Use `Billing`, `Catalog`, `Fulfillment`.
-4. **Place aggregates inside contexts** — each aggregate is a consistency boundary within the context. Several aggregates sharing the same language is normal — don't wrap each one in its own context.
+4. **Place aggregates inside contexts** — each aggregate is a consistency boundary within the context. Several aggregates sharing the same language is normal — don't wrap each one in its own context. In code, the context is the folder that contains `.context/bounded-context.md`, and each aggregate is a folder under that context. The code-format build writes the file when it creates those folders.
 5. **Draw the arcs** — for each dependency between contexts, state: direction, what crosses, how they integrate, and the relationship pattern.
 
 ## Traps to catch during mapping

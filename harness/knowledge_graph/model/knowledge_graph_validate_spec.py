@@ -62,7 +62,7 @@ with description("a repo"):
                         self.graph = KnowledgeGraph(root=_SLICE)
                         codeql = CodeQL(_SLICE)
                         if not codeql._database_ready(codeql.master):
-                            self.graph.refresh_master()
+                            self.graph.create_database(_SLICE)
                         else:
                             codeql.copy_master_to_working_copy()
                         _PRODUCTION.write_text(

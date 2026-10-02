@@ -12,6 +12,7 @@ from harness.transformers.transformer import Transformer
 from installation.files import Skill
 from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
+from practices.ddd.ddd import Ddd
 from practices.stories.stories import Stories
 
 
@@ -50,6 +51,8 @@ class Transformers:
             practices.append(CleanEngineering())
         if _has_lens(sketch, "bdd:"):
             practices.append(Bdd())
+        if _has_lens(sketch, "ddd:"):
+            practices.append(Ddd())
         return practices
 
 

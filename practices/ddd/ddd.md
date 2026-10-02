@@ -24,7 +24,7 @@ Build the solution around how the business actually works, in the words the busi
 
 ### Default folder
 
-`default_workspace_folder` is `src/` for **generate**. Documenting an existing system uses the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. Leave production `src/` alone unless the user directs otherwise.
+`default_workspace_folder` is `src/` for **generate**. Documenting an existing system uses the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. A bounded context folder contains `.context/bounded-context.md`. The code-format build writes that file when it creates the context folder and the aggregate folders under it. A folder of classes with no such file is a module or a package. Leave production `src/` alone unless the user directs otherwise.
 
 ### Document
 
@@ -124,6 +124,7 @@ Whenever you create, alter, or delete bounded contexts, aggregates, or the langu
 - **`no-orphan-contexts`** — Every context on the map appears in a dependency arc or is declared standalone with a reason. A box with no arcs is either missing relationships or should not be on the map.
 - **`vendor-not-implementation`** — The context title carries vendor after `|` (`custom`, `bespoke`, or vendor name). Owning team and implementation stack belong elsewhere, because they can change while the domain meaning remains stable.
 - **`context-tree-bc-aggregate-concept`** — Three levels on the bounded_context card only: BC → Aggregate → concept. Deeper structure and stereotypes wait for **building_blocks**; tree shape is in the template. Structure drawn before the boundary settles is discarded when the boundary moves — and until then it argues for leaving the boundary where it is.
+- **`bounded-context-file-marks-the-folder`** — In code, a bounded context is the folder that contains `.context/bounded-context.md`. The code-format build writes that file when it creates the context folder and each aggregate folder under it. A folder of classes with no such file is a module or a package, so the map and the tree disagree about where the language boundary is.
 - **`link-arrow-target`** — Outbound links use `→` with `BC · Aggregate · Entity` or `System · Entity`. Omit leading segments when the target shares the same context or aggregate. A target nobody can resolve is a dependency nobody can build.
 - **`hang-deps-on-owning-bc`** — Put each outbound link on the concept or aggregate that has the dependency, not in a global `## Dependencies` section. A parking lot detaches the dependency from the concept that needs it, so it survives changes that should have removed it.
 - **`user-facing-system-first`** — The system you are wrapping sits first on the map; external systems of record sit downstream. The map exists to explain that system — everything downstream is context for it, not the subject.
@@ -211,7 +212,7 @@ clean_engineering: code
 
 Decide one implementation pattern for each building block the model uses, then implement the domain against it — preserving every name and boundary from upstream.
 
-**Produce:** Implementation under the project layout; call clean_engineering at **code**.
+**Produce:** Implementation under the project layout; call clean_engineering at **code**. When that build creates folders for bounded contexts and aggregates, write `.context/bounded-context.md` in each context folder.
 
 #### Guidance
 

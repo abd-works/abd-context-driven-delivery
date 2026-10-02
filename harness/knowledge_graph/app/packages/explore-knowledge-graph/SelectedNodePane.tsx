@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { callBodiesIn, classBodiesIn, directCallsIn, type CallBody, type ClassBody } from './call-expansion';
+import { KnowledgeGraphHttpClient } from './knowledge-graph/knowledge-graph-client';
 import {
   stepTitle,
   type ListedRule,
@@ -8,6 +9,7 @@ import {
 } from './knowledge-graph/knowledge-graph';
 import { kindLabel } from './PracticeGraphTree';
 import { SourceSnippetEditor } from './SourceSnippetEditor';
+import { sourcesMissingText, sourceKey, withSourceText } from './source-text';
 
 type SelectedNode = {
   name: string;
@@ -22,6 +24,7 @@ export function SelectedNodePane({
   selectedTree,
   selectedRule,
   sourceFile,
+  folder = '',
   violations = false,
   showRules = true,
 }: {
@@ -29,10 +32,36 @@ export function SelectedNodePane({
   selectedTree?: ListedTreeNode | null;
   selectedRule: ListedRule | null;
   sourceFile: SourceRangeDto | null;
+  folder?: string;
   violations?: boolean;
   showRules?: boolean;
 }) {
   const selectedId = selectedTree?.node_id ?? selectedNode?.name ?? '';
+  const [opened, setOpened] = useState<{ id: string; tree: ListedTreeNode } | null>(null);
+  const tree = opened?.id === selectedId ? opened.tree : selectedTree;
+  useEffect(() => {
+    const gaps = sourcesMissingText(selectedTree);
+    if (!folder || !selectedTree || gaps.length === 0) {
+      return;
+    }
+    let cancel = false;
+    KnowledgeGraphHttpClient.readSource(folder, gaps)
+      .then((ranges) => {
+        if (cancel || !selectedTree) {
+          return;
+        }
+        const texts = new Map(ranges.map((range) => [sourceKey(range), range.text ?? '']));
+        setOpened({ id: selectedTree.node_id, tree: withSourceText(selectedTree, texts) });
+      })
+      .catch(() => {
+        if (!cancel) {
+          setOpened(null);
+        }
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [folder, selectedTree]);
   const [openState, setOpenState] = useState<{
     id: string;
     sourcesOpen: boolean | null;
@@ -42,24 +71,24 @@ export function SelectedNodePane({
   const sourceOverrides = openState.id === selectedId ? openState.overrides : {};
   const rootType = selectedTree?.semantic_type ?? selectedNode?.semantic_type ?? '';
   const calls = useMemo(
-    () => (selectedTree ? callBodiesIn(selectedTree) : undefined),
-    [selectedTree],
+    () => (tree ? callBodiesIn(tree) : undefined),
+    [tree],
   );
   const classes = useMemo(
-    () => (selectedTree ? classBodiesIn(selectedTree) : undefined),
-    [selectedTree],
+    () => (tree ? classBodiesIn(tree) : undefined),
+    [tree],
   );
   const anchored = useMemo(
     () =>
-      selectedTree && (rootType === 'Step' || rootType === 'Example')
-        ? directCallsIn(selectedTree)
+      tree && (rootType === 'Step' || rootType === 'Example')
+        ? directCallsIn(tree)
         : undefined,
-    [selectedTree, rootType],
+    [tree, rootType],
   );
   const listClasses = rootType === 'Step' || rootType === 'Example';
-  const sections = selectedTree
+  const sections = tree
     ? flattenSections(
-        selectedTree,
+        tree,
         violations,
         rootType === 'Operation' || rootType === 'Property' ? '1' : '',
       )

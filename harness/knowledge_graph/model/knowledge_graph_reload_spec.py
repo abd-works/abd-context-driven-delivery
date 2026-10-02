@@ -55,7 +55,7 @@ with description("a repo"):
                 with before.all:
                     self.graph = KnowledgeGraph(root=_SLICE)
                     if not (_WORKING / "db-python").is_dir():
-                        self.graph.refresh_master()
+                        self.graph.create_database(_SLICE)
                     self.started = time.time()
                     self.graph.reload_working_copy()
 

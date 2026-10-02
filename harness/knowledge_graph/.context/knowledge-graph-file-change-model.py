@@ -74,8 +74,8 @@ class KnowledgeGraph:
         ...
 
     def refresh_master(self) -> KnowledgeGraph:
-        # rewrite master, populate master, then copy master to working copy
-        # never update_working_copy for this job
+        # copy the working copy onto master, then populate from the working copy
+        # never create a database for this job
         # -> CodeQL.populate
         ...
 
@@ -180,13 +180,14 @@ class CodeQL:
     """Database and query runner. Master and working copy are two folders, one populate."""
 
     master: Path
-    # .codeql/{language}-master — written by refresh_master and reload_working_copy
+    # .codeql/{language}-master — written by create_database and reload_working_copy
+    # refresh_master copies the working copy onto this folder
     # never extract dirty files onto this folder
     # never --expect-discarded-cache on master
 
     working_copy: Path
     # .codeql/{language}-working-copy — the only database KnowledgeGraph reads
-    # copied from master in refresh_master; copied onto master in reload_working_copy
+    # copied onto master in refresh_master and reload_working_copy
     # never copy master on each edit
 
     def populate(self, graph: PracticeGraph, database: Path) -> None:
@@ -206,7 +207,7 @@ class CodeQL:
 
     def ensure_database(self, language: str = "python") -> Path:
         # update_working_copy: working copy + dirty-file extract
-        # refresh_master: rewrite master, populate master, copy to working copy
+        # refresh_master: copy working copy onto master, populate from the working copy
         # reload_working_copy: reload working copy, populate it, copy to master
         # never OverlayManager / OverlayDatabase
         ...

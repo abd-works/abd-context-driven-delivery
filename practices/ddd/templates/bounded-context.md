@@ -1,6 +1,9 @@
 <!--
   Bounded context map. A context is a module of aggregates.
   A nested context is a context whose parent is a context.
+  In code, a context is the folder that contains .context/bounded-context.md.
+  The code-format build writes that file when it creates the context folder,
+  and creates each aggregate as a folder under that context.
 -->
 
 # Bounded Context Map — {{project_name}}

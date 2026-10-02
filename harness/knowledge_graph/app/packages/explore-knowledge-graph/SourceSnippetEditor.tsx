@@ -89,10 +89,8 @@ export function SourceSnippetEditor({
   const openFolds = opened.text === value ? opened.lines : closedFolds.current;
   const lineMap = useRef<string[]>(layout.lineNumbers);
   const foldsRef = useRef(layout.folds);
-  const openFoldsRef = useRef(openFolds);
   lineMap.current = layout.lineNumbers;
   foldsRef.current = layout.folds;
-  openFoldsRef.current = openFolds;
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const hideSource = useRef({ id: 'call-folds' });
   const decorations = useRef<{ clear: () => void } | null>(null);
@@ -135,7 +133,9 @@ export function SourceSnippetEditor({
         const line = target?.position?.lineNumber ?? target?.range?.startLineNumber;
         const markHit =
           event.target instanceof Element &&
-          event.target.closest('.call-fold, .class-fold') !== null;
+          event.target.closest(
+            '.codicon-folding-collapsed, .codicon-folding-expanded, .call-fold, .class-fold',
+          ) !== null;
         if (!line || !target || (target.type !== GLYPH_MARGIN && !markHit)) {
           return;
         }
@@ -153,7 +153,6 @@ export function SourceSnippetEditor({
           } else {
             next.add(fold.start);
           }
-          openFoldsRef.current = next;
           applyCallFolds(editor, foldsRef.current, next, hideSource.current, decorations);
           return { text: valueRef.current, lines: next };
         });
@@ -192,8 +191,6 @@ export function SourceSnippetEditor({
           loading={<pre className="source-loading">{layout.text}</pre>}
           options={{
             ...SNIPPET_OPTIONS,
-            folding: mark === 'class',
-            showFoldingControls: mark === 'class' ? 'always' : 'never',
             glyphMargin: layout.folds.length > 0,
             lineNumbers: (line) => {
               const mapped = lineMap.current[line - 1];
@@ -263,10 +260,11 @@ function applyCallFolds(
 }
 
 function glyphClass(kind: CallFold['kind'], open: boolean): string {
+  const icon = open ? 'codicon-folding-expanded' : 'codicon-folding-collapsed';
   if (kind === 'class') {
-    return open ? 'class-fold class-fold-open' : 'class-fold';
+    return `codicon ${icon} class-fold${open ? ' class-fold-open' : ''}`;
   }
-  return open ? 'call-fold call-fold-open' : 'call-fold';
+  return `codicon ${icon} call-fold${open ? ' call-fold-open' : ''}`;
 }
 
 function hoverLabel(kind: CallFold['kind'], open: boolean): string {

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
   fieldTypeNames,
+  isClassKind,
   isSimpleProperty,
   memberCallLabels,
   methodSignature,
+  returnTypeNames,
   signatureTypeNames,
   SKIP_TYPES,
   stepTitle,
@@ -370,7 +372,7 @@ function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
 }
 
 function listedRules(node: ListedTreeNode) {
-  return node.rules ?? [];
+  return (node.rules ?? []).filter((rule) => rule.status === 'violating');
 }
 
 function listedProperties(node: ListedTreeNode) {
@@ -467,19 +469,76 @@ function invokeLabel(
   return owner ? `${target.name} on ${owner}` : target.name;
 }
 
+const TYPE_CONTAINERS = new Set(['Module', 'Aggregate', 'BoundedContext']);
+
+function containerOf(
+  nodeId: string,
+  parentOf: Map<string, string>,
+  nodesById: Map<string, ListedTreeNode>,
+): string | null {
+  let current = parentOf.get(nodeId);
+  while (current) {
+    const node = nodesById.get(current);
+    if (!node) {
+      return null;
+    }
+    if (TYPE_CONTAINERS.has(node.semantic_type)) {
+      return node.node_id;
+    }
+    current = parentOf.get(current);
+  }
+  return null;
+}
+
 function classNodeOwning(
   nodesById: Map<string, ListedTreeNode>,
-  operationId: string,
+  memberId: string,
+  parentOf?: Map<string, string>,
 ): ListedTreeNode | null {
+  const parentId = parentOf?.get(memberId);
+  const parent = parentId ? nodesById.get(parentId) : undefined;
+  if (parent && isClassKind(parent.semantic_type)) {
+    return parent;
+  }
   for (const node of nodesById.values()) {
-    if (node.semantic_type !== 'OoadClass') {
+    if (!isClassKind(node.semantic_type)) {
       continue;
     }
-    if (node.children.some((child) => child.node_id === operationId)) {
+    if (node.children.some((child) => child.node_id === memberId)) {
       return node;
     }
   }
   return null;
+}
+
+function isPublicOperation(node: ListedTreeNode): boolean {
+  if (node.name === 'constructor' || node.name.startsWith('_')) {
+    return false;
+  }
+  const line = (node.source?.text ?? node.origin?.text ?? '').split('\n')[0] ?? '';
+  return !/\b(?:private|protected)\b/.test(line);
+}
+
+function matchingClass(
+  name: string,
+  container: string | null,
+  nodesById: Map<string, ListedTreeNode>,
+  parentOf: Map<string, string>,
+  sameModuleOnly: boolean,
+): ListedTreeNode | undefined {
+  const matches = [...nodesById.values()].filter(
+    (candidate) => isClassKind(candidate.semantic_type) && candidate.name === name,
+  );
+  const local = container
+    ? matches.find((candidate) => containerOf(candidate.node_id, parentOf, nodesById) === container)
+    : undefined;
+  if (local) {
+    return local;
+  }
+  if (sameModuleOnly) {
+    return undefined;
+  }
+  return matches[0];
 }
 
 function classOwning(nodesById: Map<string, ListedTreeNode>, operationId: string): string {
@@ -489,39 +548,44 @@ function classOwning(nodesById: Map<string, ListedTreeNode>, operationId: string
 function invokeTypeNodes(
   target: { node_id: string; name: string },
   nodesById: Map<string, ListedTreeNode>,
+  parentOf: Map<string, string>,
+  sameModuleOnly = false,
 ): ListedTreeNode[] {
   const operation = nodesById.get(target.node_id);
-  if (!operation) {
+  if (!operation || (sameModuleOnly && !isPublicOperation(operation))) {
     return [];
   }
-  const owner = classNodeOwning(nodesById, operation.node_id);
+  const owner = classNodeOwning(nodesById, operation.node_id, parentOf);
   const text = methodSignature(
     operation.name,
     operation.source?.text ?? '',
     owner?.source?.text ?? '',
   );
-  const names = new Set(signatureTypeNames(text));
-  for (const child of operation.children) {
-    if (child.semantic_type !== 'Parameter') {
-      continue;
-    }
-    for (const group of child.relationships) {
-      if (group.kind !== 'hasType') {
+  const names = new Set(sameModuleOnly ? returnTypeNames(text) : signatureTypeNames(text));
+  if (!sameModuleOnly) {
+    for (const child of operation.children) {
+      if (child.semantic_type !== 'Parameter') {
         continue;
       }
-      for (const related of group.targets) {
-        names.add(related.name);
+      for (const group of child.relationships) {
+        if (group.kind !== 'hasType') {
+          continue;
+        }
+        for (const related of group.targets) {
+          names.add(related.name);
+        }
       }
     }
   }
   for (const group of operation.relationships) {
-    if (group.kind !== 'returns' && group.kind !== 'hasType') {
+    if (group.kind !== 'returns' && (sameModuleOnly || group.kind !== 'hasType')) {
       continue;
     }
     for (const related of group.targets) {
       names.add(related.name);
     }
   }
+  const container = owner ? containerOf(owner.node_id, parentOf, nodesById) : null;
   const found: ListedTreeNode[] = [];
   const seen = new Set<string>([operation.node_id]);
   if (owner) {
@@ -531,9 +595,7 @@ function invokeTypeNodes(
     if (SKIP_TYPES.has(name) || name === owner?.name) {
       continue;
     }
-    const match = [...nodesById.values()].find(
-      (node) => node.semantic_type === 'OoadClass' && node.name === name,
-    );
+    const match = matchingClass(name, container, nodesById, parentOf, sameModuleOnly);
     if (!match || seen.has(match.node_id)) {
       continue;
     }
@@ -546,6 +608,8 @@ function invokeTypeNodes(
 function propertyTypeNodes(
   property: ListedTreeNode,
   nodesById: Map<string, ListedTreeNode>,
+  parentOf: Map<string, string>,
+  sameModuleOnly = false,
 ): ListedTreeNode[] {
   const names = new Set(fieldTypeNames(property.source?.text ?? ''));
   for (const group of property.relationships) {
@@ -556,7 +620,8 @@ function propertyTypeNodes(
       names.add(related.name);
     }
   }
-  const owner = classNodeOwning(nodesById, property.node_id);
+  const owner = classNodeOwning(nodesById, property.node_id, parentOf);
+  const container = owner ? containerOf(owner.node_id, parentOf, nodesById) : null;
   const found: ListedTreeNode[] = [];
   const seen = new Set<string>([property.node_id]);
   if (owner) {
@@ -566,9 +631,7 @@ function propertyTypeNodes(
     if (SKIP_TYPES.has(name) || name === owner?.name) {
       continue;
     }
-    const match = [...nodesById.values()].find(
-      (node) => node.semantic_type === 'OoadClass' && node.name === name,
-    );
+    const match = matchingClass(name, container, nodesById, parentOf, sameModuleOnly);
     if (!match || seen.has(match.node_id)) {
       continue;
     }
@@ -576,6 +639,31 @@ function propertyTypeNodes(
     found.push(match);
   }
   return found;
+}
+
+function composedByFolderRoot(node: ListedTreeNode): Set<string> {
+  const composed = new Set<string>();
+  if (node.semantic_type !== 'Module' && node.semantic_type !== 'Package') {
+    return composed;
+  }
+  const folder = (node.properties.folder || node.name).split(/[\\/.]/).filter(Boolean).pop()?.toLowerCase() ?? '';
+  const root = node.children.find(
+    (child) => isClassKind(child.semantic_type) && child.name.toLowerCase() === folder,
+  );
+  if (!root) {
+    return composed;
+  }
+  for (const group of root.relationships) {
+    if (group.kind !== 'composition') {
+      continue;
+    }
+    for (const target of group.targets) {
+      if (target.node_id !== root.node_id) {
+        composed.add(target.node_id);
+      }
+    }
+  }
+  return composed;
 }
 
 function calledMembers(
@@ -621,12 +709,13 @@ function calledMembers(
 function linkedTypeNodes(
   node: ListedTreeNode,
   nodesById: Map<string, ListedTreeNode>,
+  parentOf: Map<string, string>,
 ): ListedTreeNode[] {
   if (node.semantic_type === 'Operation') {
-    return invokeTypeNodes({ node_id: node.node_id, name: node.name }, nodesById);
+    return invokeTypeNodes({ node_id: node.node_id, name: node.name }, nodesById, parentOf);
   }
   if (node.semantic_type === 'Property') {
-    return propertyTypeNodes(node, nodesById);
+    return propertyTypeNodes(node, nodesById, parentOf);
   }
   return [];
 }
@@ -812,6 +901,7 @@ function RelationshipRow({
   selectedId,
   expanded,
   nodesById,
+  parentOf,
   stack,
   onToggle,
   onSelect,
@@ -825,6 +915,7 @@ function RelationshipRow({
   selectedId: string | null;
   expanded: Set<string>;
   nodesById: Map<string, ListedTreeNode>;
+  parentOf: Map<string, string>;
   stack: Set<string>;
   onToggle: (id: string) => void;
   onSelect: (id: string, ruleSlug?: string) => void;
@@ -832,7 +923,7 @@ function RelationshipRow({
   const targetNode = nodesById.get(target.node_id);
   const next = new Set(stack);
   next.add(target.node_id);
-  const typeNodes = kind === 'invokes' ? invokeTypeNodes(target, nodesById) : [];
+  const typeNodes = kind === 'invokes' ? invokeTypeNodes(target, nodesById, parentOf) : [];
   const properties = kind === 'invokes' || !targetNode ? [] : listedProperties(targetNode);
   const rules = showRules && targetNode && kind !== 'invokes' ? listedRules(targetNode) : [];
   const children = kind === 'invokes' ? typeNodes : (targetNode?.children ?? []);
@@ -883,6 +974,7 @@ function RelationshipRow({
               selectedRule={null}
               expanded={expanded}
               nodesById={nodesById}
+              parentOf={parentOf}
               stack={next}
               onToggle={onToggle}
               onSelect={onSelect}
@@ -924,6 +1016,7 @@ function TreeRow({
   selectedRule,
   expanded,
   nodesById,
+  parentOf,
   stack,
   callDepth = 1,
   onToggle,
@@ -937,6 +1030,7 @@ function TreeRow({
   selectedRule: string | null;
   expanded: Set<string>;
   nodesById: Map<string, ListedTreeNode>;
+  parentOf: Map<string, string>;
   stack?: Set<string>;
   callDepth?: number;
   onToggle: (id: string) => void;
@@ -952,8 +1046,10 @@ function TreeRow({
     node.source?.text ?? node.origin?.text ?? '',
   );
   const calls = callDepth >= 5 ? [] : calledMembers(node, nodesById);
-  const linked = linkedTypeNodes(node, nodesById);
-  const childNodes = calls.length > 0 || linked.length > 0 ? [...calls, ...linked] : node.children;
+  const linked = linkedTypeNodes(node, nodesById, parentOf);
+  const composed = composedByFolderRoot(node);
+  const structural = node.children.filter((child) => !composed.has(child.node_id));
+  const childNodes = calls.length > 0 || linked.length > 0 ? [...calls, ...linked] : structural;
   const shownCalls = new Set(calls.map((call) => call.node_id));
   const rules = showRules ? listedRules(node) : [];
   const properties = listedProperties(node);
@@ -1029,6 +1125,7 @@ function TreeRow({
                 selectedRule={selectedRule}
                 expanded={expanded}
                 nodesById={nodesById}
+                parentOf={parentOf}
                 stack={next}
                 callDepth={
                   child.semantic_type === 'Operation' || child.semantic_type === 'Property'
@@ -1073,6 +1170,7 @@ function TreeRow({
                   selectedRule={selectedRule}
                   expanded={expanded}
                   nodesById={nodesById}
+                  parentOf={parentOf}
                   stack={next}
                   callDepth={callDepth + 1}
                   onToggle={onToggle}
@@ -1092,6 +1190,7 @@ function TreeRow({
                 selectedId={selectedId}
                 expanded={expanded}
                 nodesById={nodesById}
+                parentOf={parentOf}
                 stack={next}
                 onToggle={onToggle}
                 onSelect={onSelect}
@@ -1151,13 +1250,17 @@ export function PracticeGraphTree({
     });
   }
   const nodesById = new Map<string, ListedTreeNode>();
-  const remember = (node: ListedTreeNode) => {
+  const parentOf = new Map<string, string>();
+  const remember = (node: ListedTreeNode, parentId?: string) => {
+    if (parentId && !parentOf.has(node.node_id)) {
+      parentOf.set(node.node_id, parentId);
+    }
     const existing = nodesById.get(node.node_id);
     if (!existing || (existing.children.length === 0 && node.children.length > 0)) {
       nodesById.set(node.node_id, node);
     }
     for (const child of node.children) {
-      remember(child);
+      remember(child, node.node_id);
     }
   };
   for (const node of nodes) {
@@ -1179,6 +1282,7 @@ export function PracticeGraphTree({
           selectedRule={selectedRule}
           expanded={expanded}
           nodesById={nodesById}
+          parentOf={parentOf}
           onToggle={onToggle}
           onSelect={onSelect}
         />

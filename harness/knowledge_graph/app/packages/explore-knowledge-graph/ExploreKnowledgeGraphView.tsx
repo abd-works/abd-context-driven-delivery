@@ -17,11 +17,11 @@ import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
  * Sources: harness/knowledge_graph/.context/knowledge-graph-explorer-sketch.md
  */
 export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }) {
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const {
     loading,
     workStatus,
     folder: scannedFolder,
-    listedNodes,
     listedTree,
     selectedNode,
     selectedTree,
@@ -209,10 +209,10 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 aria-live="polite"
               >
                 {workStatus.phase === 'working'
-                  ? `${workStatus.action}…`
+                  ? `${workStatus.action}… ${workStatus.seconds}s`
                   : workStatus.phase === 'done'
                     ? `${workStatus.action} done`
-                    : `${workStatus.action} failed`}
+                    : workStatus.detail || `${workStatus.action} failed`}
               </p>
             ) : null}
           </div>
@@ -236,6 +236,16 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 } as Record<string, string>)}
               />
             </span>
+            <button
+              type="button"
+              className="filter-toggle"
+              data-testid="toggle-filters"
+              aria-expanded={filtersOpen}
+              aria-label={filtersOpen ? 'Collapse filters' : 'Expand filters'}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              {filtersOpen ? '▼' : '▶'}
+            </button>
             {folder ? (
               <input
                 className="chosen-folder"
@@ -263,15 +273,14 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               />
             ) : null}
           </div>
-          <div className="filters">
+          <div className="filters" hidden={!filtersOpen}>
             <FilterList
               label="practice"
               values={practices}
               options={filterOptions.practices}
               onChange={(next) => {
                 setPractices(next);
-                setRules(null);
-                applyFilters({ practices: next, rules: null });
+                applyFilters({ practices: next });
               }}
             />
             <FilterList
@@ -347,13 +356,19 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
         </div>
         <div className="split">
           <nav className="panel tree" data-testid="practice-graph-tree">
-            {loading && <p className="empty-state">Loading KnowledgeGraph...</p>}
+            {loading && (
+              <p className="empty-state" data-testid="graph-loading">
+                {workStatus
+                  ? `${workStatus.action}… ${workStatus.seconds}s`
+                  : 'Loading KnowledgeGraph...'}
+              </p>
+            )}
             {!loading && scanError && (
               <p className="empty-state" data-testid="scan-error">
                 {scanError}
               </p>
             )}
-            {!loading && !scanError && listedNodes.length === 0 && (
+            {!loading && !scanError && listedTree.length === 0 && (
               <p className="empty-state">
                 Select a repo folder to load the Knowledge Graph.
               </p>
@@ -361,7 +376,6 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
             <PracticeGraphTree
               key={folder}
               roots={listedTree}
-              nodes={listedNodes}
               practices={practices}
               showRules={showRules}
               selectedId={selectedNode?.node_id ?? null}
@@ -375,6 +389,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               selectedTree={selectedTree}
               selectedRule={selectedRule}
               sourceFile={sourceFile}
+              folder={scannedFolder}
               violations={violations}
               showRules={showRules}
             />
