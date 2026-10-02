@@ -14,7 +14,9 @@ from harness.knowledge_graph.model.knowledge_graph_node import (
     editor_height,
     practice_root_labels,
     retained_tree,
+    retag_practice,
     step_members,
+    tagged_practice,
 )
 from practices.stories.model.story_model import Epic, StoryModel
 
@@ -196,6 +198,23 @@ with description("a knowledge graph"):
         with context("with a rule set"):
             with it("should offer base and project"):
                 expect(self.cascade.ruleSetFilter.available).to(equal(["base", "project"]))
+
+    with context("that tags an epic, sub-epic, or story"):
+        with it("should tag them as stories and not as clean engineering or bdd"):
+            expect(tagged_practice("Epic", "clean_engineering")).to(equal("stories"))
+            expect(tagged_practice("SubEpic", "bdd")).to(equal("stories"))
+            expect(tagged_practice("Story", "clean_engineering")).to(equal("stories"))
+            expect(tagged_practice("OoadClass", "clean_engineering")).to(equal("clean_engineering"))
+            epic = _node("Access Selfcare", "Epic", "clean_engineering")
+            tests = _node("tests", "Package", "clean_engineering")
+            tests.properties = {"folder": "tests"}
+            retag_practice(epic)
+            retag_practice(tests)
+            expect(epic.practice).to(equal("stories"))
+            expect(tests.practice).to(equal("stories"))
+            included = _flatten(retained_tree([tests, epic], ["CleanEngineering"]))
+            expect("tests" in [node.name for node in included]).to(equal(False))
+            expect("Access Selfcare" in [node.name for node in included]).to(equal(False))
 
     with context("that selects clean engineering"):
         with it("should leave story nodes out of the folders and files"):

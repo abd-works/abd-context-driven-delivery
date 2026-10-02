@@ -8,7 +8,9 @@ import {
   editorHeight,
   practiceRootLabels,
   retainedTree,
+  retagPractice,
   stepMembers,
+  taggedPractice,
 } from "./knowledge-graph";
 
 const STORY_NODE_TYPES = [
@@ -349,6 +351,26 @@ describe("a knowledge graph", () => {
     describe("with a rule set", () => {
       it("should offer base and project", () => {
         expect(cascade.ruleSetFilter.available).toEqual(["base", "project"]);
+      });
+    });
+
+    describe("that tags an epic, sub-epic, or story", () => {
+      it("should tag them as stories and not as clean engineering or bdd", () => {
+        expect(taggedPractice("Epic", "clean_engineering")).toBe("stories");
+        expect(taggedPractice("SubEpic", "bdd")).toBe("stories");
+        expect(taggedPractice("Story", "clean_engineering")).toBe("stories");
+        expect(taggedPractice("OoadClass", "clean_engineering")).toBe("clean_engineering");
+        const epic = graphNode("Access Selfcare", "Epic", "clean_engineering");
+        const tests = graphNode("tests", "Package", "clean_engineering");
+        retagPractice(epic);
+        const testsTag = { nodeType: tests.nodeType, practice: tests.practice, properties: { folder: "tests" } };
+        retagPractice(testsTag);
+        tests.practice = testsTag.practice;
+        expect(epic.practice).toBe("stories");
+        expect(tests.practice).toBe("stories");
+        const included = flatten(retainedTree([tests, epic], ["CleanEngineering"]));
+        expect(included.map((node) => node.name)).not.toContain("tests");
+        expect(included.map((node) => node.name)).not.toContain("Access Selfcare");
       });
     });
 

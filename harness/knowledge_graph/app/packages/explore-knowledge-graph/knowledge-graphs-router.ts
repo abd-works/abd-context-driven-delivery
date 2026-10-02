@@ -15,13 +15,13 @@ import {
   type KnowledgeGraphSearch,
 } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/knowledge-graph';
 import { KnowledgeGraphServer } from './knowledge-graph/knowledge-graph-server';
-import {
-  definitionsInFile,
+import { definitionsInFile,
   knowledgeGraphFromWorkspace,
   resolveNamedFolder,
   scanSourceFiles,
   type WorkspaceFile,
 } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
+import { taggedPractice } from './knowledge-graph/knowledge-graph';
 
 type KnowledgeGraphStore = {
   knowledge_graphs: unknown[];
@@ -141,9 +141,10 @@ export class KnowledgeGraphsServer {
     const nested = _nestDiskFolders(graph, root);
     const specified = _attachStorySpecification(nested, root);
     const coded = _attachClasses(specified, root);
+    const tagged = _retagPractices(coded);
     return repo.create({
       folder: root,
-      practiceGraphs: coded.toDto().practice_graphs,
+      practiceGraphs: tagged.toDto().practice_graphs,
     });
   }
 
@@ -734,6 +735,23 @@ function _mergeDirectory(listed: any[], root: string, parent: string): any[] {
     row.children = _mergeDirectory(row.children ?? [], root, relative);
   }
   return rows;
+}
+
+function _retagPractices(graph: KnowledgeGraph): KnowledgeGraph {
+  const dto = graph.toDto();
+  for (const practice of dto.practice_graphs) {
+    for (const node of practice.nodes) {
+      node.practice = taggedPractice(node.semantic_type, node.practice);
+      const folder = String(node.properties?.folder ?? '').replaceAll('\\', '/');
+      if (
+        (node.semantic_type === 'Module' || node.semantic_type === 'Package') &&
+        (folder === 'tests' || folder.startsWith('tests/'))
+      ) {
+        node.practice = 'stories';
+      }
+    }
+  }
+  return KnowledgeGraph.fromDto({ ...dto, folder: graph.folder });
 }
 
 function _nestDiskFolders(graph: KnowledgeGraph, root: string): KnowledgeGraph {

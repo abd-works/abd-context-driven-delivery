@@ -179,6 +179,29 @@ PRACTICE_NODE_TYPES = {
 STORY_NODE_TYPES = set(PRACTICE_NODE_TYPES["stories"])
 
 
+def tagged_practice(semantic_type, practice):
+    if semantic_type in STORY_NODE_TYPES:
+        return "stories"
+    if semantic_type in PRACTICE_NODE_TYPES["bdd"]:
+        return "bdd"
+    if semantic_type in PRACTICE_NODE_TYPES["ddd"]:
+        return "ddd"
+    return practice
+
+
+def retag_practice(node):
+    semantic = node.nodeType.name if getattr(node, "nodeType", None) else ""
+    node.practice = tagged_practice(semantic, getattr(node, "practice", "") or "")
+    properties = getattr(node, "properties", None) or {}
+    folder = ""
+    if isinstance(properties, dict):
+        folder = str(properties.get("folder", "") or "")
+    folder = folder.replace("\\", "/")
+    if semantic in {"Module", "Package"} and (folder == "tests" or folder.startswith("tests/")):
+        node.practice = "stories"
+    return node
+
+
 def included_practice_ids(selected, expand_domain_driven_design=True):
     found = []
     for practice in selected:
@@ -192,6 +215,7 @@ def included_practice_ids(selected, expand_domain_driven_design=True):
 
 def retained_tree(nodes, selected, expand_domain_driven_design=True):
     practices = included_practice_ids(selected, expand_domain_driven_design)
+    stories_selected = "stories" in practices
     allowed = set()
     for practice in practices:
         allowed.update(PRACTICE_NODE_TYPES.get(practice, []))
@@ -207,6 +231,15 @@ def retained_tree(nodes, selected, expand_domain_driven_design=True):
         return copy
 
     def visit(node):
+        if is_story_node(node):
+            if not stories_selected:
+                return []
+            copy = copy_node(node)
+            nested = []
+            for child in getattr(node, "children", None) or []:
+                nested.extend(visit(child))
+            copy.children = nested
+            return [copy]
         children = []
         for child in getattr(node, "children", None) or []:
             children.extend(visit(child))

@@ -178,6 +178,73 @@ export const PRACTICE_NODE_TYPES: Record<string, string[]> = {
   bdd: ["Description", "Context", "Observation"],
 };
 
+const STORY_NODE_TYPES = new Set(PRACTICE_NODE_TYPES.stories);
+
+export function taggedPractice(semanticType: string, practice: string): string {
+  if (STORY_NODE_TYPES.has(semanticType)) {
+    return "stories";
+  }
+  if ((PRACTICE_NODE_TYPES.bdd ?? []).includes(semanticType)) {
+    return "bdd";
+  }
+  if ((PRACTICE_NODE_TYPES.ddd ?? []).includes(semanticType)) {
+    return "ddd";
+  }
+  return practice;
+}
+
+export function retagPractice(node: {
+  nodeType?: { name?: string } | null;
+  practice: string;
+  properties?: { folder?: string };
+}): void {
+  const type = node.nodeType?.name ?? "";
+  node.practice = taggedPractice(type, node.practice);
+  const folder = String(node.properties?.folder ?? "").replaceAll("\\", "/");
+  if ((type === "Module" || type === "Package") && (folder === "tests" || folder.startsWith("tests/"))) {
+    node.practice = "stories";
+  }
+}
+
+const FOLDER_TYPES = new Set(["Module", "Package"]);
+
+export function isStoryNode(node: KnowledgeGraphNode): boolean {
+  const type = node.nodeType?.name ?? "";
+  if ((PRACTICE_NODE_TYPES.stories ?? []).includes(type)) {
+    return true;
+  }
+  if (!FOLDER_TYPES.has(type)) {
+    return false;
+  }
+  const children = node.children ?? [];
+  if (!children.length) {
+    return false;
+  }
+  if (children.every((child) => isStoryNode(child))) {
+    return true;
+  }
+  return holdsOnlyStory(node);
+}
+
+function holdsOnlyStory(node: KnowledgeGraphNode): boolean {
+  let found = false;
+  const walk = (current: KnowledgeGraphNode): boolean => {
+    const type = current.nodeType?.name ?? "";
+    if ((PRACTICE_NODE_TYPES.stories ?? []).includes(type)) {
+      found = true;
+      return true;
+    }
+    if (type === "File") {
+      return true;
+    }
+    if (FOLDER_TYPES.has(type)) {
+      return (current.children ?? []).every((child) => walk(child));
+    }
+    return false;
+  };
+  return walk(node) && found;
+}
+
 export function retainedTree(
   nodes: KnowledgeGraphNode[],
   selected: string[],
@@ -185,8 +252,17 @@ export function retainedTree(
 ): KnowledgeGraphNode[] {
   const ids = selected.map((practice) => practiceId(practice));
   const practices = expandDomainDrivenDesign ? includedPracticeIds(ids) : ids;
+  const storiesSelected = practices.includes("stories");
   const allowed = new Set(practices.flatMap((practice) => PRACTICE_NODE_TYPES[practice] ?? []));
   const visit = (node: KnowledgeGraphNode): KnowledgeGraphNode[] => {
+    if (isStoryNode(node)) {
+      if (!storiesSelected) {
+        return [];
+      }
+      const copy = copyNode(node);
+      copy.children = (node.children ?? []).flatMap(visit);
+      return [copy];
+    }
     const children = (node.children ?? []).flatMap(visit);
     const type = node.nodeType?.name ?? "";
     const practice = node.practice ? practiceId(node.practice) : "";

@@ -6,6 +6,8 @@ import {
   KnowledgeGraphSource,
   KnowledgeGraphFilter,
   SourceRange,
+  retagPractice,
+  taggedPractice,
 } from "./knowledge-graph";
 import { stageFor } from "../../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/catalog";
 
@@ -121,6 +123,9 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
     const tree = rows.map((row: any) => webNode(row));
     attachMembers(tree, dto);
     inheritPractice(tree, "");
+    for (const node of tree) {
+      retagTree(node);
+    }
     this.matching = tree;
     this.nodes = flattenNodes(tree);
     this.options = filterOptions(presented.filter_options, this.nodes);
@@ -150,14 +155,14 @@ function webNode(row: any): WebKnowledgeGraphNode {
     row.is_folder ?? row.isFolder ?? false,
   );
   node.name = row.name ?? "";
-  node.practice = row.practice ?? "";
+  node.nodeType = row.semantic_type || row.nodeType
+    ? { name: row.semantic_type ?? row.nodeType?.name ?? "" }
+    : node.nodeType;
+  node.practice = taggedPractice(node.nodeType?.name ?? "", row.practice ?? "");
   node.stage = stageFor(String(row.fidelity ?? row.stage ?? ""));
   node.ruleHits = ruleHitsFrom(row);
   node.relationships = relationshipLinks(row);
   node.nodeId = row.node_id ?? row.nodeId ?? row.name ?? "";
-  node.nodeType = row.semantic_type || row.nodeType
-    ? { name: row.semantic_type ?? row.nodeType?.name ?? "" }
-    : node.nodeType;
   node.isFolder =
     row.is_folder ??
     row.isFolder ??
@@ -282,6 +287,13 @@ function attachMembers(tree: WebKnowledgeGraphNode[], dto: any): void {
       }
       pushChild(home.node, node);
     }
+  }
+}
+
+function retagTree(node: WebKnowledgeGraphNode): void {
+  retagPractice(node);
+  for (const child of node.children ?? []) {
+    retagTree(child);
   }
 }
 
