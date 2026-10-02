@@ -178,8 +178,6 @@ export const PRACTICE_NODE_TYPES: Record<string, string[]> = {
   bdd: ["Description", "Context", "Observation"],
 };
 
-const STEP_CROSS_EDGES = new Set(["invokes", "demonstrates"]);
-
 export function retainedTree(
   nodes: KnowledgeGraphNode[],
   selected: string[],
@@ -202,7 +200,7 @@ export function retainedTree(
     }
     return children;
   };
-  return attachExplicitStepEdges(nodes.flatMap(visit), nodes);
+  return nodes.flatMap(visit);
 }
 
 function copyNode(node: KnowledgeGraphNode): KnowledgeGraphNode {
@@ -210,59 +208,6 @@ function copyNode(node: KnowledgeGraphNode): KnowledgeGraphNode {
   copy.children = [];
   copy.relationships = [...(node.relationships ?? [])];
   return copy;
-}
-
-function attachExplicitStepEdges(
-  roots: KnowledgeGraphNode[],
-  source: KnowledgeGraphNode[],
-): KnowledgeGraphNode[] {
-  const sourceById = new Map<string, KnowledgeGraphNode>();
-  const steps: KnowledgeGraphNode[] = [];
-  const walkSource = (items: KnowledgeGraphNode[]) => {
-    for (const node of items) {
-      if (node.nodeId) {
-        sourceById.set(node.nodeId, node);
-      }
-      if (node.nodeType?.name === "Step") {
-        steps.push(node);
-      }
-      walkSource(node.children ?? []);
-    }
-  };
-  walkSource(source);
-  const keptById = new Map<string, KnowledgeGraphNode>();
-  const walkKept = (items: KnowledgeGraphNode[]) => {
-    for (const node of items) {
-      if (node.nodeId) {
-        keptById.set(node.nodeId, node);
-      }
-      walkKept(node.children ?? []);
-    }
-  };
-  walkKept(roots);
-  for (const step of steps) {
-    for (const link of step.relationships ?? []) {
-      if (!STEP_CROSS_EDGES.has(link.kind)) {
-        continue;
-      }
-      const target = sourceById.get(link.nodeId);
-      if (!target) {
-        continue;
-      }
-      const keptStep = keptById.get(step.nodeId);
-      const keptTarget = keptById.get(target.nodeId);
-      if (keptStep && !keptTarget) {
-        const copy = copyNode(target);
-        keptStep.children = [...(keptStep.children ?? []), copy];
-        keptById.set(copy.nodeId, copy);
-      } else if (keptTarget && !keptStep) {
-        const copy = copyNode(step);
-        keptTarget.children = [...(keptTarget.children ?? []), copy];
-        keptById.set(copy.nodeId, copy);
-      }
-    }
-  }
-  return roots;
 }
 
 export function stepMembers(text: string): { operations: string[]; examples: string[] } {

@@ -196,27 +196,32 @@ def retained_tree(nodes, selected, expand_domain_driven_design=True):
     for practice in practices:
         allowed.update(PRACTICE_NODE_TYPES.get(practice, []))
 
+    def copy_node(node):
+        copy = KnowledgeGraphNode()
+        copy.name = node.name
+        copy.nodeId = getattr(node, "nodeId", "")
+        copy.practice = node.practice
+        copy.nodeType = node.nodeType
+        copy.children = []
+        copy.relationships = list(getattr(node, "relationships", []) or [])
+        return copy
+
     def visit(node):
         children = []
         for child in getattr(node, "children", None) or []:
-            kept = visit(child)
-            if kept is not None:
-                children.append(kept)
+            children.extend(visit(child))
         semantic = node.nodeType.name if node.nodeType else ""
         practice = _PRACTICE_IDS.get(node.practice, node.practice) if node.practice else ""
         type_fits = semantic in allowed
         practice_fits = not practice or practice in practices
-        folder = semantic in {"Module", "Package"} and children
+        folder = semantic in {"Module", "Package"} and practice_fits and children
         if (type_fits and practice_fits) or folder:
-            copy = KnowledgeGraphNode()
-            copy.name = node.name
-            copy.practice = node.practice
-            copy.nodeType = node.nodeType
+            copy = copy_node(node)
             copy.children = children
-            return copy
-        return None
+            return [copy]
+        return children
 
-    return [kept for kept in (visit(node) for node in nodes) if kept is not None]
+    return [kept for node in nodes for kept in visit(node)]
 
 
 def editor_height(line_count, folds, open_starts, line_height=20, max_height=520):

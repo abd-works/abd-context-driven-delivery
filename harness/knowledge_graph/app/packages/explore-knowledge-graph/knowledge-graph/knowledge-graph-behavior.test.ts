@@ -363,16 +363,17 @@ describe("a knowledge graph", () => {
           expect(STORY_NODE_TYPES).not.toContain(node.nodeType?.name);
         }
         for (const node of included) {
-          if (node.name === "When they send a feedback note") {
-            continue;
-          }
           expect(STORY_NODE_TYPES).not.toContain(node.nodeType?.name);
+          expect(["Description", "Context", "Observation", "BoundedContext"]).not.toContain(node.nodeType?.name);
         }
         expect(included.map((node) => node.name)).toContain("Customer");
-        expect(included.map((node) => node.name)).toContain("When they send a feedback note");
+        expect(included.map((node) => node.name)).toContain("submitFeedback");
+        expect(included.map((node) => node.name)).not.toContain("When they send a feedback note");
         expect(included.map((node) => node.name)).not.toContain("Onboard A Customer");
         expect(included.map((node) => node.name)).not.toContain("Select Plan");
         expect(included.map((node) => node.name)).not.toContain("Given a plan");
+        expect(included.map((node) => node.name)).not.toContain("Customer is known");
+        expect(included.map((node) => node.name)).not.toContain("Ordering");
         expect(included.map((node) => node.name)).not.toContain("select-plan.e2e.ts");
       });
     });
@@ -381,16 +382,19 @@ describe("a knowledge graph", () => {
       it("should keep clean engineering folders and files and leave story nodes out", () => {
         const included = flatten(retainedTree(mixedPracticeTree(), ["Ddd"]));
         for (const node of included) {
-          if (node.name === "When they send a feedback note") {
-            continue;
-          }
           expect(STORY_NODE_TYPES).not.toContain(node.nodeType?.name);
+          expect(["Description", "Context", "Observation"]).not.toContain(node.nodeType?.name);
         }
         expect(included.map((node) => node.name)).toEqual(
-          expect.arrayContaining(["domain", "Customer", "customer.ts", "Ordering"]),
+          expect.arrayContaining(["domain", "Customer", "customer.ts", "submitFeedback", "Ordering"]),
+        );
+        expect(included.map((node) => node.nodeType?.name)).toEqual(
+          expect.arrayContaining(["OoadClass", "BoundedContext"]),
         );
         expect(included.map((node) => node.name)).not.toContain("Onboard A Customer");
+        expect(included.map((node) => node.name)).not.toContain("When they send a feedback note");
         expect(included.map((node) => node.name)).not.toContain("Given a plan");
+        expect(included.map((node) => node.name)).not.toContain("Customer is known");
       });
     });
 
@@ -403,12 +407,15 @@ describe("a knowledge graph", () => {
         expect(names).not.toContain("customer.ts");
         expect(names).toContain("Select Plan");
         expect(names).toContain("When they send a feedback note");
-        expect(names).toContain("submitFeedback");
+        expect(names).not.toContain("submitFeedback");
+        expect(names).not.toContain("Ordering");
+        expect(names).not.toContain("Customer is known");
+        const step = included.find((node) => node.name === "When they send a feedback note");
+        expect(step?.relationships.map((link) => link.name)).toContain("submitFeedback");
         for (const node of included) {
-          if (node.name === "submitFeedback") {
-            continue;
-          }
           expect(node.practice).not.toBe("clean_engineering");
+          expect(node.practice).not.toBe("ddd");
+          expect(node.practice).not.toBe("bdd");
         }
       });
     });

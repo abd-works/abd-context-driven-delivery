@@ -34,20 +34,25 @@ _STORY_NODE_TYPES = {
 def _node(name, semantic, practice="", children=None):
     node = KnowledgeGraphNode()
     node.name = name
+    node.nodeId = f"{semantic}:{name}"
     node.practice = practice
     node.nodeType = KnowledgeGraphNodeType(semantic, practice, "")
     node.children = list(children or [])
+    node.relationships = []
     return node
 
 
 def _mixed_practice_tree():
+    operation = _node("submitFeedback", "Operation", "clean_engineering")
+    step = _node("When they send a feedback note", "Step", "stories")
+    step.relationships = [{"kind": "invokes", "nodeId": operation.nodeId, "name": operation.name}]
     return [
         _node(
             "domain",
             "Module",
             "clean_engineering",
             [
-                _node("Customer", "OoadClass", "clean_engineering"),
+                _node("Customer", "OoadClass", "clean_engineering", [operation]),
                 _node("customer.ts", "File", "clean_engineering"),
                 _node("Onboard A Customer", "Story", "stories"),
                 _node("Given a plan", "Step", "stories"),
@@ -59,7 +64,7 @@ def _mixed_practice_tree():
             "Package",
             "stories",
             [
-                _node("Select Plan", "Story", "stories"),
+                _node("Select Plan", "Story", "stories", [step]),
                 _node("select-plan.e2e.ts", "File", "stories"),
             ],
         ),
@@ -202,10 +207,14 @@ with description("a knowledge graph"):
             for node in folders_and_files:
                 expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
             for node in included:
+                if node.name == "When they send a feedback note":
+                    continue
                 expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
             expect([node.name for node in included]).to(contain("Customer"))
+            expect([node.name for node in included]).to(contain("When they send a feedback note"))
             expect("Onboard A Customer" in [node.name for node in included]).to(equal(False))
             expect("Select Plan" in [node.name for node in included]).to(equal(False))
+            expect("Given a plan" in [node.name for node in included]).to(equal(False))
             expect("select-plan.e2e.ts" in [node.name for node in included]).to(equal(False))
 
     with context("that selects domain driven design"):
@@ -213,6 +222,8 @@ with description("a knowledge graph"):
             included = _flatten(retained_tree(_mixed_practice_tree(), ["Ddd"]))
             names = [node.name for node in included]
             for node in included:
+                if node.name == "When they send a feedback note":
+                    continue
                 expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
             expect(names).to(contain("domain"))
             expect(names).to(contain("Customer"))
@@ -220,6 +231,21 @@ with description("a knowledge graph"):
             expect(names).to(contain("Ordering"))
             expect("Onboard A Customer" in names).to(equal(False))
             expect("Given a plan" in names).to(equal(False))
+
+    with context("that selects stories"):
+        with it("should leave class folders and files out except an explicit step edge"):
+            included = _flatten(retained_tree(_mixed_practice_tree(), ["Stories"]))
+            names = [node.name for node in included]
+            expect("domain" in names).to(equal(False))
+            expect("Customer" in names).to(equal(False))
+            expect("customer.ts" in names).to(equal(False))
+            expect(names).to(contain("Select Plan"))
+            expect(names).to(contain("When they send a feedback note"))
+            expect(names).to(contain("submitFeedback"))
+            for node in included:
+                if node.name == "submitFeedback":
+                    continue
+                expect(node.practice == "clean_engineering").to(equal(False))
 
     with context("that selects behavior driven development"):
         with it("should leave story nodes and class folders out"):
