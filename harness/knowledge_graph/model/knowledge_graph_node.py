@@ -42,6 +42,127 @@ NODE_RULES = {
 }
 
 _CALL = re.compile(r"((?:[A-Z][A-Za-z0-9]*\.)?[A-Za-z_][A-Za-z0-9]*)\s*\(")
+_STEP_CALL = re.compile(r"\.([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+_STEP_EXAMPLE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*Examples?)\b")
+_STEP_CALL_SKIP = {
+    "expect",
+    "toBe",
+    "toEqual",
+    "toHaveCount",
+    "toBeVisible",
+    "toContain",
+    "getByRole",
+    "getByLabel",
+    "getByText",
+    "getByTestId",
+    "locator",
+    "click",
+    "fill",
+    "press",
+    "hover",
+    "check",
+    "uncheck",
+    "selectOption",
+    "filter",
+    "map",
+    "forEach",
+    "then",
+    "catch",
+    "push",
+    "includes",
+    "toString",
+    "json",
+    "keys",
+    "values",
+    "entries",
+    "all",
+    "race",
+    "resolve",
+    "reject",
+    "first",
+    "nth",
+    "last",
+    "count",
+    "waitFor",
+    "toBeTruthy",
+    "toBeFalsy",
+    "not",
+}
+
+_FILTER_PRACTICE = {
+    "clean_engineering": "CleanEngineering",
+    "stories": "Stories",
+    "ddd": "Ddd",
+    "bdd": "Bdd",
+    "CleanEngineering": "CleanEngineering",
+    "Stories": "Stories",
+    "Ddd": "Ddd",
+    "Bdd": "Bdd",
+}
+
+_PRACTICE_ROOTS = [
+    (["clean_engineering", "CleanEngineering"], "Clean Engineering"),
+    (["stories", "Stories"], "Stories"),
+    (["ddd", "Ddd"], "Domain Driven Design"),
+    (["bdd", "Bdd"], "BDD"),
+]
+
+
+def included_filter_practices(practices):
+    found = []
+    for practice in practices:
+        name = _FILTER_PRACTICE.get(practice, practice)
+        if name not in found:
+            found.append(name)
+    if "Ddd" in found and "CleanEngineering" not in found:
+        found.append("CleanEngineering")
+    return found
+
+
+def practice_root_labels(selected):
+    if not selected:
+        return [label for _ids, label in _PRACTICE_ROOTS]
+    return [
+        label
+        for ids, label in _PRACTICE_ROOTS
+        if any(practice in selected for practice in ids)
+    ]
+
+
+def editor_height(line_count, folds, open_starts, line_height=20, max_height=520):
+    open_lines = set(open_starts)
+    hidden = 0
+    for fold in folds:
+        if fold.start in open_lines:
+            continue
+        covered = any(
+            other is not fold
+            and other.start <= fold.start
+            and other.end >= fold.end
+            and other.end > other.start
+            and other.start not in open_lines
+            for other in folds
+        )
+        if covered:
+            continue
+        hidden += max(0, fold.end - fold.start + 1)
+    visible = max(1, line_count - hidden)
+    return min(max_height, visible * line_height)
+
+
+def step_members(text):
+    operations = []
+    examples = []
+    for match in _STEP_CALL.finditer(text):
+        name = match.group(1)
+        if name in _STEP_CALL_SKIP or name in operations:
+            continue
+        operations.append(name)
+    for match in _STEP_EXAMPLE.finditer(text):
+        name = match.group(1)
+        if name not in examples:
+            examples.append(name)
+    return {"operations": operations, "examples": examples}
 
 
 class KnowledgeGraphNodeType:
@@ -196,7 +317,7 @@ class StageFilter:
 
     def available(self, practices) -> None:
         found = []
-        for practice in practices:
+        for practice in included_filter_practices(practices):
             for stage in PRACTICE_STAGES.get(practice, []):
                 if stage not in found:
                     found.append(stage)
@@ -213,7 +334,7 @@ class NodeFilter:
 
     def available(self, practices, stages) -> None:
         found = []
-        for practice in practices:
+        for practice in included_filter_practices(practices):
             by_stage = PRACTICE_NODES.get(practice, {})
             for stage in stages:
                 for name in by_stage.get(stage, []):

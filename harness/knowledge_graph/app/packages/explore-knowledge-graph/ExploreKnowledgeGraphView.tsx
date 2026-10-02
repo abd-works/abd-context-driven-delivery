@@ -1,7 +1,15 @@
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useKnowledgeGraph } from './use-knowledge-graph';
-import { KnowledgeGraphNode } from './knowledge-graph/knowledge-graph';
+import {
+  KnowledgeGraphCallSource,
+  KnowledgeGraphNode,
+  editorHeight,
+  includedPracticeIds,
+  practiceId,
+  practiceRootLabels,
+} from './knowledge-graph/knowledge-graph';
+import { KindMark, kindLabel } from './kind-mark';
 import {
   type KnowledgeGraphFilterOptions,
   type PracticeMember,
@@ -135,7 +143,8 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
 
   const [showRules, setShowRules] = useState(false);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
-  const treeKey = listedTree.map((node) => node.nodeId).join('|');
+  const forest = practiceForest(listedTree, picked, filterOptions);
+  const treeKey = `${listedTree.map((node) => node.nodeId).join('|')}|${forest.map((node) => node.nodeId).join('|')}`;
   const filterKey = [
     picked.violations ? '1' : '0',
     picked.rules.join(','),
@@ -146,18 +155,18 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
 
   useEffect(() => {
     const next = new Set<string>();
-    if (listedTree.length > 0) {
-      for (const node of listedTree) {
+    if (forest.length > 0) {
+      for (const node of forest) {
         if (node.nodeId) {
           next.add(node.nodeId);
         }
       }
     }
     if (filtersNarrow(picked, filterOptions)) {
-      expandShown(listedTree, picked, filterOptions, next);
+      expandShown(forest, picked, filterOptions, next);
     }
     if (showRules) {
-      openAllRules(listedTree, next);
+      openAllRules(forest, next);
     }
     setOpenIds(next);
   }, [treeKey, filterKey, showRules]);
@@ -412,7 +421,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               </p>
             ) : null}
             <ul className="tree">
-              {listedTree.map((node) => (
+              {forest.map((node) => (
                 <TreeNode
                   key={node.nodeId || node.name}
                   node={node}
@@ -574,12 +583,13 @@ function TreeNode({
           className={[selected ? 'selected' : '', hitsViolation(node, picked) ? 'tree-violating' : '']
             .filter(Boolean)
             .join(' ') || undefined}
-          title={kind}
+          title={kindLabel(kind, false)}
           onClick={(event) => {
             event.stopPropagation();
             onSelect(node.nodeId);
           }}
         >
+          <KindMark kind={kind} isFile={false} />
           <span className="node-name">{node.name}</span>
         </button>
       </div>
@@ -616,6 +626,7 @@ function TreeNode({
                   {rulesOpen ? '▼' : '▶'}
                 </button>
                 <button type="button" title="Rules" onClick={() => onToggle(rulesId)}>
+                  <KindMark kind="Rules" isFile={false} />
                   <span className="node-name">rules</span>
                 </button>
               </div>
@@ -650,6 +661,7 @@ function TreeNode({
                   {linksOpen ? '▼' : '▶'}
                 </button>
                 <button type="button" title="Relationships" onClick={() => onToggle(linksId)}>
+                  <KindMark kind="Relationships" isFile={false} />
                   <span className="node-name">relationships</span>
                 </button>
               </div>
@@ -662,12 +674,13 @@ function TreeNode({
                         <button
                           type="button"
                           data-testid="tree-relationship-target"
-                          title={link.kind}
+                          title={kindLabel(link.kind, false)}
                           onClick={(event) => {
                             event.stopPropagation();
                             onSelect(link.nodeId);
                           }}
                         >
+                          <KindMark kind="Relationship" isFile={false} />
                           <span className="node-name">{link.kind}</span>
                           <span className="node-name">{link.name}</span>
                         </button>
@@ -697,8 +710,16 @@ function SourcePane({
 }) {
   const file = node.source?.file ?? '';
   const [text, setText] = useState('');
+  const [openFolds, setOpenFolds] = useState<number[]>([]);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const marks = useRef<{ clear: () => void } | null>(null);
+  const prepared = preparedSource(node, text);
+  const lineCount = Math.max(1, prepared.text ? prepared.text.split('\n').length : 1);
+  const height = editorHeight(lineCount, prepared.folds, openFolds);
+
+  useEffect(() => {
+    setOpenFolds([]);
+  }, [node.nodeId]);
 
   useEffect(() => {
     const initial = node.source?.text ?? '';
@@ -760,6 +781,11 @@ function SourcePane({
     }
   }, [text]);
 
+  useEffect(() => {
+    const editor = editorRef.current as { setHiddenAreas?: (ranges: object[]) => void } | null;
+    editor?.setHiddenAreas?.(hiddenRanges(prepared.folds, openFolds));
+  }, [prepared.text, openFolds, prepared.folds]);
+
   const hits = showRules
     ? picked.violations || picked.rules.length
       ? visibleHits(node, picked)
@@ -769,23 +795,50 @@ function SourcePane({
     <section className="knowledge-graph-panel" data-open="true" data-file={file}>
       <p className="source-path">{file || node.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
-        <Editor
-          height="360px"
-          language={languageFor(file)}
-          theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
-          value={text}
-          onMount={onMount}
-          loading={<pre className="source-highlight">{text}</pre>}
-          options={{
-            readOnly: true,
-            domReadOnly: true,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-            fontSize: 13,
-            wordWrap: 'on',
-          }}
-        />
+        {prepared.folds.length > 0 ? (
+          <div className="source-folds">
+            {prepared.folds.map((fold) => {
+              const open = openFolds.includes(fold.start);
+              return (
+                <button
+                  key={`${fold.kind}:${fold.start}:${fold.label}`}
+                  type="button"
+                  data-testid="source-fold"
+                  aria-expanded={open}
+                  onClick={() =>
+                    setOpenFolds((current) =>
+                      current.includes(fold.start)
+                        ? current.filter((start) => start !== fold.start)
+                        : [...current, fold.start],
+                    )
+                  }
+                >
+                  {open ? '▼' : '▶'} {fold.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+        <div data-testid="source-editor" style={{ height }}>
+          <Editor
+            height="100%"
+            language={languageFor(file)}
+            theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
+            value={prepared.text}
+            onMount={onMount}
+            loading={<pre className="source-highlight">{prepared.text}</pre>}
+            options={{
+              readOnly: true,
+              domReadOnly: true,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              folding: true,
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: 13,
+              wordWrap: 'on',
+            }}
+          />
+        </div>
       </div>
       {hits.length > 0 ? (
         <ul className="rule-list">
@@ -943,16 +996,161 @@ function matches(
   picked: FilterPick,
   options: KnowledgeGraphFilterOptions,
 ): boolean {
-  if (restricts(picked.practices, options.practices) && !picked.practices.includes(node.practice)) {
+  if (!practiceAllowed(node.practice, picked, options)) {
     return false;
   }
-  if (restricts(picked.stages, options.stages) && !picked.stages.includes(node.stage)) {
+  if (restricts(picked.stages, options.stages) && node.stage && !picked.stages.includes(node.stage)) {
     return false;
   }
   if (restricts(picked.node_types, options.node_types) && !picked.node_types.includes(node.nodeType?.name ?? '')) {
     return false;
   }
   return true;
+}
+
+function practiceAllowed(
+  nodePractice: string,
+  picked: FilterPick,
+  options: KnowledgeGraphFilterOptions,
+): boolean {
+  if (!nodePractice) {
+    return true;
+  }
+  if (!restricts(picked.practices, options.practices)) {
+    return true;
+  }
+  return includedPracticeIds(picked.practices).includes(practiceId(nodePractice));
+}
+
+function practiceForest(
+  nodes: KnowledgeGraphNode[],
+  picked: FilterPick,
+  options: KnowledgeGraphFilterOptions,
+): KnowledgeGraphNode[] {
+  if (!nodes.length) {
+    return nodes;
+  }
+  const selected = restricts(picked.practices, options.practices) ? picked.practices : [];
+  const labels = practiceRootLabels(selected);
+  const showCleanEngineering = labels.includes('Clean Engineering');
+  const roots: KnowledgeGraphNode[] = [];
+  for (const label of labels) {
+    const id =
+      label === 'Clean Engineering'
+        ? 'clean_engineering'
+        : label === 'Domain Driven Design'
+          ? 'ddd'
+          : label === 'BDD'
+            ? 'bdd'
+            : 'stories';
+    const includeCleanEngineering = id === 'ddd' && !showCleanEngineering;
+    const children = nodes
+      .map((node) => prunePractice(node, id, includeCleanEngineering))
+      .filter((node): node is KnowledgeGraphNode => Boolean(node));
+    if (!children.length) {
+      continue;
+    }
+    const root = new KnowledgeGraphNode();
+    root.name = label;
+    root.nodeId = `practice:${id}`;
+    root.practice = id;
+    root.nodeType = { name: 'Practice' } as KnowledgeGraphNode['nodeType'];
+    root.children = children;
+    roots.push(root);
+  }
+  return roots.length ? roots : nodes;
+}
+
+function prunePractice(
+  node: KnowledgeGraphNode,
+  practice: string,
+  includeCleanEngineering: boolean,
+): KnowledgeGraphNode | null {
+  if (node.nodeType?.name === 'File') {
+    return null;
+  }
+  const children = (node.children ?? [])
+    .map((child) => prunePractice(child, practice, includeCleanEngineering))
+    .filter((child): child is KnowledgeGraphNode => Boolean(child));
+  const id = node.practice ? practiceId(node.practice) : '';
+  const structural = !id || node.nodeType?.name === 'Package' || node.nodeType?.name === 'Module';
+  const mine = id === practice || (includeCleanEngineering && id === 'clean_engineering');
+  if (!mine && !(structural && children.length)) {
+    return null;
+  }
+  const copy = Object.assign(Object.create(Object.getPrototypeOf(node)), node) as KnowledgeGraphNode;
+  copy.children = children;
+  return copy;
+}
+
+type SourceFold = { start: number; end: number; kind: string; label: string };
+
+function preparedSource(node: KnowledgeGraphNode, text: string): { text: string; folds: SourceFold[] } {
+  const kind = node.nodeType?.name ?? '';
+  if (kind === 'OoadClass') {
+    return { text, folds: memberFolds(node) };
+  }
+  if (kind === 'Operation' && text.trim()) {
+    const prepared = new KnowledgeGraphCallSource(text, node.source?.file ?? '', 1, text.split('\n').length, 'typescript');
+    prepared.source();
+    const folds: SourceFold[] = prepared.folds.map((fold, index) => ({
+      start: fold.start,
+      end: fold.end,
+      kind: fold.kind,
+      label: prepared.calls[index]?.operation ?? fold.kind,
+    }));
+    const lines = prepared.text.split('\n').length;
+    if (lines > 2) {
+      folds.unshift({ start: 2, end: lines, kind: 'class', label: 'body' });
+    }
+    return { text: prepared.text, folds };
+  }
+  return { text, folds: [] };
+}
+
+function memberFolds(node: KnowledgeGraphNode): SourceFold[] {
+  const base = Number(node.source?.startLine) || 1;
+  const folds: SourceFold[] = [];
+  for (const child of node.children ?? []) {
+    const type = child.nodeType?.name ?? '';
+    if (type !== 'Operation' && type !== 'Property') {
+      continue;
+    }
+    const start = Number(child.source?.startLine) || 0;
+    const end = Number(child.source?.endLine) || start;
+    if (start < base) {
+      continue;
+    }
+    folds.push({
+      start: start - base + 1,
+      end: Math.max(start, end) - base + 1,
+      kind: type === 'Operation' ? 'operation' : 'property',
+      label: `${type === 'Operation' ? 'Operation' : 'Property'} ${child.name}`,
+    });
+  }
+  return folds;
+}
+
+function hiddenRanges(folds: SourceFold[], openFolds: number[]): object[] {
+  const open = new Set(openFolds);
+  return folds
+    .filter((fold) => !open.has(fold.start))
+    .filter((fold) => {
+      return !folds.some(
+        (other) =>
+          other !== fold &&
+          other.start <= fold.start &&
+          other.end >= fold.end &&
+          other.end > other.start &&
+          !open.has(other.start),
+      );
+    })
+    .map((fold) => ({
+      startLineNumber: fold.start,
+      startColumn: 1,
+      endLineNumber: fold.end,
+      endColumn: 1,
+    }));
 }
 
 function filtersNarrow(picked: FilterPick, options: KnowledgeGraphFilterOptions): boolean {

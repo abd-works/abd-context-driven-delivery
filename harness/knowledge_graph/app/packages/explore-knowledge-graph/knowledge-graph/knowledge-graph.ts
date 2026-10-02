@@ -1,3 +1,164 @@
+const FILTER_PRACTICE: Record<string, string> = {
+  clean_engineering: "CleanEngineering",
+  stories: "Stories",
+  ddd: "Ddd",
+  bdd: "Bdd",
+  CleanEngineering: "CleanEngineering",
+  Stories: "Stories",
+  Ddd: "Ddd",
+  Bdd: "Bdd",
+};
+
+const PRACTICE_ROOTS = [
+  { ids: ["clean_engineering", "CleanEngineering"], label: "Clean Engineering" },
+  { ids: ["stories", "Stories"], label: "Stories" },
+  { ids: ["ddd", "Ddd"], label: "Domain Driven Design" },
+  { ids: ["bdd", "Bdd"], label: "BDD" },
+];
+
+const PRACTICE_ID: Record<string, string> = {
+  CleanEngineering: "clean_engineering",
+  Stories: "stories",
+  Ddd: "ddd",
+  Bdd: "bdd",
+  "Clean Engineering": "clean_engineering",
+  "Domain Driven Design": "ddd",
+  BDD: "bdd",
+};
+
+const STEP_CALL_SKIP = new Set([
+  "expect",
+  "toBe",
+  "toEqual",
+  "toHaveCount",
+  "toBeVisible",
+  "toContain",
+  "getByRole",
+  "getByLabel",
+  "getByText",
+  "getByTestId",
+  "locator",
+  "click",
+  "fill",
+  "press",
+  "hover",
+  "check",
+  "uncheck",
+  "selectOption",
+  "filter",
+  "map",
+  "forEach",
+  "then",
+  "catch",
+  "push",
+  "includes",
+  "toString",
+  "json",
+  "keys",
+  "values",
+  "entries",
+  "all",
+  "race",
+  "resolve",
+  "reject",
+  "first",
+  "nth",
+  "last",
+  "count",
+  "waitFor",
+  "toBeTruthy",
+  "toBeFalsy",
+  "not",
+]);
+
+export function includedFilterPractices(practices: string[]): string[] {
+  const found: string[] = [];
+  for (const practice of practices) {
+    const name = FILTER_PRACTICE[practice] ?? practice;
+    if (!found.includes(name)) {
+      found.push(name);
+    }
+  }
+  if (found.includes("Ddd") && !found.includes("CleanEngineering")) {
+    found.push("CleanEngineering");
+  }
+  return found;
+}
+
+export function practiceId(value: string): string {
+  return PRACTICE_ID[value] ?? value;
+}
+
+export function includedPracticeIds(selected: string[]): string[] {
+  const found: string[] = [];
+  for (const practice of selected) {
+    const id = practiceId(practice);
+    if (id && !found.includes(id)) {
+      found.push(id);
+    }
+  }
+  if (found.includes("ddd") && !found.includes("clean_engineering")) {
+    found.push("clean_engineering");
+  }
+  return found;
+}
+
+export function practiceRootLabels(selected: string[]): string[] {
+  if (!selected.length) {
+    return PRACTICE_ROOTS.map((item) => item.label);
+  }
+  return PRACTICE_ROOTS.filter((item) => item.ids.some((id) => selected.includes(id))).map(
+    (item) => item.label,
+  );
+}
+
+export function editorHeight(
+  lineCount: number,
+  folds: { start: number; end: number }[],
+  openStarts: number[],
+  lineHeight = 20,
+  maxHeight = 520,
+): number {
+  const open = new Set(openStarts);
+  let hidden = 0;
+  for (const fold of folds) {
+    if (open.has(fold.start)) {
+      continue;
+    }
+    const covered = folds.some(
+      (other) =>
+        other !== fold &&
+        other.start <= fold.start &&
+        other.end >= fold.end &&
+        other.end > other.start &&
+        !open.has(other.start),
+    );
+    if (covered) {
+      continue;
+    }
+    hidden += Math.max(0, fold.end - fold.start + 1);
+  }
+  return Math.min(maxHeight, Math.max(1, lineCount - hidden) * lineHeight);
+}
+
+export function stepMembers(text: string): { operations: string[]; examples: string[] } {
+  const operations: string[] = [];
+  const examples: string[] = [];
+  for (const match of text.matchAll(/\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
+    const name = match[1];
+    if (STEP_CALL_SKIP.has(name) || operations.includes(name)) {
+      continue;
+    }
+    operations.push(name);
+  }
+  for (const match of text.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*Examples?)\b/g)) {
+    if (!examples.includes(match[1])) {
+      examples.push(match[1]);
+    }
+  }
+  return { operations, examples };
+}
+
 function _escape(value: any): string {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -777,7 +938,7 @@ class StageFilter {
       Ddd: ["Specification"],
       Bdd: ["Specification"],
     };
-    for (const practice of practices) {
+    for (const practice of includedFilterPractices(practices)) {
       for (const stage of catalog[practice] ?? []) {
         if (!stages.includes(stage)) {
           stages.push(stage);
@@ -813,7 +974,7 @@ class NodeFilter {
       Bdd: { Specification: ["Description", "Context", "Observation"] },
     };
     const found: string[] = [];
-    for (const practice of practices) {
+    for (const practice of includedFilterPractices(practices)) {
       for (const stage of stages) {
         for (const name of catalog[practice]?.[stage] ?? []) {
           if (!found.includes(name)) {

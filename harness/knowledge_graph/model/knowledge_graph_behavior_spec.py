@@ -9,6 +9,10 @@ from harness.knowledge_graph.model.knowledge_graph_node import (
     KnowledgeGraphCallSource,
     KnowledgeGraphFilter,
     KnowledgeGraphNode,
+    KnowledgeGraphSourceFold,
+    editor_height,
+    practice_root_labels,
+    step_members,
 )
 from practices.stories.model.story_model import Epic, StoryModel
 
@@ -125,6 +129,59 @@ with description("a knowledge graph"):
         with context("with a rule set"):
             with it("should offer base and project"):
                 expect(self.cascade.ruleSetFilter.available).to(equal(["base", "project"]))
+
+    with context("that selects clean engineering"):
+        with it("should leave stories and domain driven design out of the class model"):
+            cascade = KnowledgeGraphFilter(["CleanEngineering"])
+            expect(cascade.nodeFilter.choices).to(contain("OoadClass"))
+            expect(cascade.nodeFilter.choices).not_to(contain("Story"))
+            expect(cascade.nodeFilter.choices).not_to(contain("BoundedContext"))
+            expect(cascade.nodeFilter.choices).not_to(contain("Description"))
+
+    with context("that selects domain driven design"):
+        with it("should include clean engineering plus domain driven design stereotypes"):
+            cascade = KnowledgeGraphFilter(["Ddd"])
+            expect(cascade.nodeFilter.choices).to(contain("BoundedContext"))
+            expect(cascade.nodeFilter.choices).to(contain("OoadClass"))
+            expect(cascade.nodeFilter.choices).to(contain("Module"))
+            expect(cascade.nodeFilter.choices).not_to(contain("Story"))
+            expect(cascade.nodeFilter.choices).not_to(contain("Description"))
+
+    with context("that selects behavior driven development"):
+        with it("should leave stories and clean engineering out"):
+            cascade = KnowledgeGraphFilter(["Bdd"])
+            expect(cascade.nodeFilter.choices).to(contain("Observation"))
+            expect(cascade.nodeFilter.choices).not_to(contain("Story"))
+            expect(cascade.nodeFilter.choices).not_to(contain("OoadClass"))
+
+
+with description("a practice tree"):
+    with it("should root each practice that is not filtered out"):
+        expect(practice_root_labels(["clean_engineering"])).to(equal(["Clean Engineering"]))
+        expect(practice_root_labels(["stories"])).to(equal(["Stories"]))
+        expect(practice_root_labels(["ddd"])).to(equal(["Domain Driven Design"]))
+        expect(practice_root_labels(["bdd"])).to(equal(["BDD"]))
+        expect(practice_root_labels([])).to(
+            equal(["Clean Engineering", "Stories", "Domain Driven Design", "BDD"])
+        )
+
+
+with description("a source panel"):
+    with it("should shrink when a fold is closed and grow when that fold opens"):
+        folds = [KnowledgeGraphSourceFold(2, 10, "operation")]
+        expect(editor_height(12, folds, [])).to(equal(60))
+        expect(editor_height(12, folds, [2])).to(equal(240))
+
+
+with description("a scenario step"):
+    with it("should list the fixture examples and the domain operation the test calls"):
+        members = step_members(
+            "subscriber.feedbackSubject = feedbackSubjectExample\n"
+            "subscriber.feedbackMessage = feedbackMessageExample\n"
+            "receipt = await subscriber.submitFeedback()"
+        )
+        expect(members["operations"]).to(equal(["submitFeedback"]))
+        expect(members["examples"]).to(equal(["feedbackSubjectExample", "feedbackMessageExample"]))
 
     with context("with a chosen node"):
         with it("should hold that node as selected"):

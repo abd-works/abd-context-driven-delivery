@@ -4,6 +4,10 @@ import {
   KnowledgeGraphCallSource,
   KnowledgeGraphFilter,
   KnowledgeGraphNode,
+  KnowledgeGraphSourceFold,
+  editorHeight,
+  practiceRootLabels,
+  stepMembers,
 } from "./knowledge-graph";
 import { KnowledgeGraphClient } from "./knowledge-graph-client";
 
@@ -287,6 +291,36 @@ describe("a knowledge graph", () => {
         expect(cascade.ruleSetFilter.available).toEqual(["base", "project"]);
       });
     });
+
+    describe("that selects clean engineering", () => {
+      it("should leave stories and domain driven design out of the class model", () => {
+        const filter = new KnowledgeGraphFilter(["CleanEngineering"]);
+        expect(filter.nodeFilter.choices).toContain("OoadClass");
+        expect(filter.nodeFilter.choices).not.toContain("Story");
+        expect(filter.nodeFilter.choices).not.toContain("BoundedContext");
+        expect(filter.nodeFilter.choices).not.toContain("Description");
+      });
+    });
+
+    describe("that selects domain driven design", () => {
+      it("should include clean engineering plus domain driven design stereotypes", () => {
+        const filter = new KnowledgeGraphFilter(["Ddd"]);
+        expect(filter.nodeFilter.choices).toContain("BoundedContext");
+        expect(filter.nodeFilter.choices).toContain("OoadClass");
+        expect(filter.nodeFilter.choices).toContain("Module");
+        expect(filter.nodeFilter.choices).not.toContain("Story");
+        expect(filter.nodeFilter.choices).not.toContain("Description");
+      });
+    });
+
+    describe("that selects behavior driven development", () => {
+      it("should leave stories and clean engineering out", () => {
+        const filter = new KnowledgeGraphFilter(["Bdd"]);
+        expect(filter.nodeFilter.choices).toContain("Observation");
+        expect(filter.nodeFilter.choices).not.toContain("Story");
+        expect(filter.nodeFilter.choices).not.toContain("OoadClass");
+      });
+    });
   });
 
   describe("with a chosen node", () => {
@@ -343,6 +377,39 @@ describe("an operation", () => {
       source.source();
       expect(source.folds[0].kind).toBe("call");
     });
+  });
+});
+
+describe("a practice tree", () => {
+  it("should root each practice that is not filtered out", () => {
+    expect(practiceRootLabels(["clean_engineering"])).toEqual(["Clean Engineering"]);
+    expect(practiceRootLabels(["stories"])).toEqual(["Stories"]);
+    expect(practiceRootLabels(["ddd"])).toEqual(["Domain Driven Design"]);
+    expect(practiceRootLabels(["bdd"])).toEqual(["BDD"]);
+    expect(practiceRootLabels([])).toEqual([
+      "Clean Engineering",
+      "Stories",
+      "Domain Driven Design",
+      "BDD",
+    ]);
+  });
+});
+
+describe("a source panel", () => {
+  it("should shrink when a fold is closed and grow when that fold opens", () => {
+    const folds = [new KnowledgeGraphSourceFold(2, 10, "operation")];
+    expect(editorHeight(12, folds, [])).toBe(60);
+    expect(editorHeight(12, folds, [2])).toBe(240);
+  });
+});
+
+describe("a scenario step", () => {
+  it("should list the fixture examples and the domain operation the test calls", () => {
+    const members = stepMembers(
+      "subscriber.feedbackSubject = feedbackSubjectExample\nsubscriber.feedbackMessage = feedbackMessageExample\nreceipt = await subscriber.submitFeedback()",
+    );
+    expect(members.operations).toEqual(["submitFeedback"]);
+    expect(members.examples).toEqual(["feedbackSubjectExample", "feedbackMessageExample"]);
   });
 });
 

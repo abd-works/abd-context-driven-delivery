@@ -186,9 +186,17 @@ export function closestFidelity(practice: string, semanticType: string): string 
   return '';
 }
 
+function expandPractices(practices: string[]): string[] {
+  const found = [...practices];
+  if (found.includes('ddd') && !found.includes('clean_engineering')) {
+    found.push('clean_engineering');
+  }
+  return found;
+}
+
 export function stagesForPractices(practices: string[]): string[] {
   const found = new Set<string>();
-  for (const practice of practices) {
+  for (const practice of expandPractices(practices)) {
     for (const fidelity of FIDELITY_ORDER[practice] ?? []) {
       const stage = stageFor(fidelity);
       if (stage) {
@@ -207,7 +215,7 @@ export function nodeTypesFor(practices: string[], stages: string[] | null): stri
       found.push(name);
     }
   };
-  for (const practice of practices) {
+  for (const practice of expandPractices(practices)) {
     const catalog = NODE_TYPES_BY_PRACTICE[practice] ?? [];
     const practiceStages = stagesForPractices([practice]);
     const limit =
