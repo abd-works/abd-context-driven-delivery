@@ -141,7 +141,7 @@ clean_engineering: code
 Make specifications executable by transforming them into automated tests that validate production code.  
 *Context graduates from being merely machine readable to machine executable. AI is allergic to causing tests to fail.*
 
-**Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Markdown scenarios for the same story are `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
+**Produce:** per lowest sub-epic, `{sub_epic_slug}.story.shared.{lang}` registers shared scenarios; `{sub_epic_slug}.story.domain.spec.{lang}` replays them at domain tier (domain is the only tier with one layer in the filename); `{sub_epic_slug}.story.server.spec.{lang}` and other tier specs name the tier explicitly before `spec`. Markdown scenarios stay `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
 
 #### Guidance
 
@@ -155,7 +155,7 @@ Refer to [`../language-tools.md`](../language-tools.md) for language-specific te
 
 ```yaml
 alwaysApply: false
-globs: "**/*_story.test.*,**/*story_test*,**/*story-test*,**/*-sketch.md"
+globs: "**/*.story.shared.*,**/*.story.domain.spec.*,**/*.story.server.spec.*,**/*_story.test.*,**/*story_test*,**/*story-test*,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.
