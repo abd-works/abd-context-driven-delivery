@@ -112,6 +112,11 @@ export function practiceRootLabels(selected: string[]): string[] {
   );
 }
 
+export function restoredBranches(stored: string[], present: string[]): string[] {
+  const known = new Set(present);
+  return stored.filter((id) => known.has(id));
+}
+
 export function editorHeight(
   lineCount: number,
   folds: { start: number; end: number }[],

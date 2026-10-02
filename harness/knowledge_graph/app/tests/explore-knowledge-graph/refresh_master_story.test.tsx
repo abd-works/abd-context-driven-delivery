@@ -1,5 +1,6 @@
+import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openPmlDomain, waitForTree, waitForWork } from './helpers/pml-domain';
+import { bindPage, expand, explorer, openPmlDomain, waitForTree, waitForWork } from './helpers/pml-domain';
 
 bindPage();
 
@@ -14,6 +15,8 @@ story('Refresh Master', () => {
     });
     then('the PracticeGraph lists domain', async () => {
       await waitForTree();
+      await expand('Clean Engineering');
+      await expect(explorer().getByRole('button', { name: 'Module domain' })).toBeVisible();
     });
   });
 });

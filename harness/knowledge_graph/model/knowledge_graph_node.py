@@ -129,6 +129,11 @@ def practice_root_labels(selected):
     ]
 
 
+def restored_branches(stored, present):
+    known = set(present)
+    return [item for item in stored if item in known]
+
+
 _PRACTICE_IDS = {
     "CleanEngineering": "clean_engineering",
     "Stories": "stories",

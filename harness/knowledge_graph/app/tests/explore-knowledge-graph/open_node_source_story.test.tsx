@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openFolder, openPmlDomain, RULE_OUTCOMES, waitForTree } from './helpers/pml-domain';
+import { bindPage, expand, explorer, openFolder, openPmlDomain, RULE_OUTCOMES, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -8,9 +8,12 @@ story('Open Node Source', () => {
   scenario('file Node opens source and highlights range', ({ given, when, then }) => {
     given('a KnowledgeGraph with a file Node that has a source file and range', async () => {
       await openFolder(RULE_OUTCOMES);
-      await waitForTree('orders');
+      await waitForTree('Clean Engineering');
     });
     when('the Engineer selects the file Node', async () => {
+      await expand('Clean Engineering');
+      await expand('orders');
+      await expand('Order');
       await explorer().getByRole('button', { name: 'processEverything', exact: true }).click({ timeout: 15_000 });
     });
     then('the source file is shown', async () => {
@@ -24,7 +27,7 @@ story('Open Node Source', () => {
   scenario('operation Node shows the whole operation', ({ given, when, then }) => {
     given('an operation Node whose source is the operation body', async () => {
       await openFolder(RULE_OUTCOMES);
-      await waitForTree('orders');
+      await waitForTree('Clean Engineering');
     });
     when('the Engineer selects the operation Node', async () => {
       await explorer().getByRole('button', { name: 'Show rules' }).click({ timeout: 5_000 });
@@ -43,10 +46,12 @@ story('Open Node Source', () => {
   scenario('a scenario pane shows the whole scenario', ({ given, when, then }) => {
     given('pml-domain stories are loaded', async () => {
       await openPmlDomain();
-      await waitForTree('tests');
+      await waitForTree('Stories');
     });
     when('the Engineer selects Customer submits feedback', async () => {
-      await explorer().getByRole('button', { name: 'Expand access-selfcare', exact: true }).first().click();
+      await expand('Stories');
+      await expand('tests');
+      await expand('access-selfcare');
       await explorer().getByRole('button', { name: 'Expand Access Selfcare', exact: true }).first().click();
       await explorer().getByRole('button', { name: 'Expand Get Support', exact: true }).first().click();
       await explorer().getByRole('button', { name: 'Customer submits feedback', exact: true }).first().click();
@@ -63,10 +68,12 @@ story('Open Node Source', () => {
   scenario('an epic pane shows every story inside it', ({ given, when, then }) => {
     given('pml-domain stories are loaded', async () => {
       await openPmlDomain();
-      await waitForTree('tests');
+      await waitForTree('Stories');
     });
     when('the Engineer selects Access Selfcare', async () => {
-      await explorer().getByRole('button', { name: 'Expand access-selfcare', exact: true }).first().click();
+      await expand('Stories');
+      await expand('tests');
+      await expand('access-selfcare');
       await explorer().getByRole('button', { name: 'Access Selfcare', exact: true }).first().click();
     });
     then('the pane shows the stories in that epic', async () => {

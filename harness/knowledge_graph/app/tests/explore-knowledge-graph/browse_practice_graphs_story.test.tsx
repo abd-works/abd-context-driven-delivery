@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
+import { bindPage, expand, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -10,7 +10,9 @@ story('Browse Practice Graphs', () => {
       await openPmlDomain();
       await waitForTree();
     }).and('whose source includes a Node that fails keep-operations-small-focused', async () => {});
-    when('the Engineer browses the KnowledgeGraph', async () => {});
+    when('the Engineer browses the KnowledgeGraph', async () => {
+      await explorer().getByRole('button', { name: 'Show rules' }).click({ timeout: 5_000 });
+    });
     then('the passing Node lists keep-operations-small-focused as passing', async () => {
       await expect(explorer().locator('.rule-status.passing', { hasText: 'keep-operations-small-focused' })).toBeVisible();
     }).and('the failing Node lists keep-operations-small-focused as violating', async () => {
@@ -23,9 +25,11 @@ story('Browse Practice Graphs', () => {
   scenario('a Story lists its background, scenarios, steps, and examples', ({ given, when, then }) => {
     given('pml-domain stories are loaded', async () => {
       await openPmlDomain();
-      await waitForTree('tests');
+      await waitForTree('Stories');
     });
     when('the Engineer opens Select Plan (Onboarding)', async () => {
+      await expand('Stories');
+      await expand('tests');
       await expand('onboard-a-customer');
       await expand('Onboard A Customer');
       await expand('Select Plan (Onboarding)');
@@ -46,9 +50,3 @@ story('Browse Practice Graphs', () => {
     });
   });
 });
-
-async function expand(name: string): Promise<void> {
-  const button = explorer().getByRole('button', { name: `Expand ${name}`, exact: true }).first();
-  await expect(button).toBeVisible({ timeout: 30_000 });
-  await button.click();
-}

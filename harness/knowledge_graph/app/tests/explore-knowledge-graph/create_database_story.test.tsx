@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { story, scenario } from '../story-test';
-import { PML_DOMAIN, bindPage, explorer, openPmlDomain, waitForTree, waitForWork } from './helpers/pml-domain';
+import { PML_DOMAIN, bindPage, expand, explorer, openPmlDomain, waitForTree, waitForWork } from './helpers/pml-domain';
 
 bindPage();
 
@@ -21,6 +21,8 @@ story('Create Database', () => {
       expect(existsSync(join(PML_DOMAIN, '.codeql', 'javascript-working-copy'))).toBe(true);
     }).and('the PracticeGraph lists domain', async () => {
       await waitForTree();
+      await expand('Clean Engineering');
+      await expect(explorer().getByRole('button', { name: 'Module domain' })).toBeVisible();
     });
   });
 });

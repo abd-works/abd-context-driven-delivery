@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
+import { bindPage, expand, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -11,6 +11,7 @@ story('Name Node Type', () => {
       await waitForTree();
     });
     when('the Engineer points at the Node icon or name', async () => {
+      await expand('Clean Engineering');
       await explorer().locator('.kind-mark').first().hover({ timeout: 5_000 });
     });
     then('the tooltip names Package', async () => {

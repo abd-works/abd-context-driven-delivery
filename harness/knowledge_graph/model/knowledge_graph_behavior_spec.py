@@ -15,6 +15,7 @@ from harness.knowledge_graph.model.knowledge_graph_node import (
     is_story_node,
     practice_root_labels,
     retained_tree,
+    restored_branches,
     retag_practice,
     step_members,
     tagged_practice,
@@ -358,6 +359,13 @@ with description("a knowledge graph"):
             node.name = "Epic"
             self.graph.open(node)
             expect(self.graph.expanded).to(contain(node))
+
+        with it("should start closed and restore only branches that were opened"):
+            expect(self.graph.expanded).to(equal([]))
+            present = ["practice:clean_engineering", "pkg:domain", "pkg:customer"]
+            expect(restored_branches([], present)).to(equal([]))
+            expect(restored_branches(["pkg:domain"], present)).to(equal(["pkg:domain"]))
+            expect(restored_branches(["pkg:domain", "missing"], present)).to(equal(["pkg:domain"]))
 
 
 with description("a practice tree"):

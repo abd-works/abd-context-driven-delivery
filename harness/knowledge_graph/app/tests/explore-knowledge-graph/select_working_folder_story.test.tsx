@@ -14,7 +14,7 @@ story('Select Working Folder', () => {
       const chosen = explorer().getByTestId('chosen-folder');
       await chosen.fill(RULE_OUTCOMES);
       await chosen.press('Enter');
-      await waitForTree('processEverything');
+      await waitForTree('Clean Engineering');
       await explorer().getByRole('button', { name: 'Show rules' }).click({ timeout: 5_000 });
     });
     then('the passing Node lists keep-operations-small-focused as passing', async () => {

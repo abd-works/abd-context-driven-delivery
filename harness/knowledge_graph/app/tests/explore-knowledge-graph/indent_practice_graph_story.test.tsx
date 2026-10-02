@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
+import { bindPage, expand, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -11,6 +11,7 @@ story('Indent Practice Graph', () => {
     });
     when('the Engineer browses the KnowledgeGraph', async () => {
       await waitForTree();
+      await expand('Clean Engineering');
     });
     then('the child sits one indent level under the parent', async () => {
       const parent = explorer().locator('li[data-depth="0"]').first();

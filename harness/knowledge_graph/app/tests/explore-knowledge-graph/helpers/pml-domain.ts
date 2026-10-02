@@ -34,10 +34,16 @@ export async function openPmlDomain(): Promise<void> {
   await openFolder(PML_DOMAIN);
 }
 
-export async function waitForTree(label = 'domain'): Promise<void> {
+export async function waitForTree(label = 'Clean Engineering'): Promise<void> {
   await expect(page.getByTestId('practice-graph-tree')).toContainText(label, {
     timeout: 180_000,
   });
+}
+
+export async function expand(name: string): Promise<void> {
+  const button = page.getByRole('button', { name: `Expand ${name}`, exact: true }).first();
+  await expect(button).toBeVisible({ timeout: 30_000 });
+  await button.click();
 }
 
 export async function waitForWork(action: string): Promise<void> {

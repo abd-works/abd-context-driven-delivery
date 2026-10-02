@@ -9,6 +9,7 @@ import {
   isStoryNode,
   practiceId,
   practiceRootLabels,
+  restoredBranches,
   retainedTree,
 } from './knowledge-graph/knowledge-graph';
 import { KindMark, kindLabel } from './kind-mark';
@@ -146,32 +147,15 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
   const [showRules, setShowRules] = useState(false);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const forest = practiceForest(listedTree, picked, filterOptions);
-  const treeKey = `${listedTree.map((node) => node.nodeId).join('|')}|${forest.map((node) => node.nodeId).join('|')}`;
-  const filterKey = [
-    picked.violations ? '1' : '0',
-    picked.rules.join(','),
-    picked.practices.join(','),
-    picked.node_types.join(','),
-    picked.stages.join(','),
-  ].join('|');
+  const treeKey = `${folder}|${listedTree.map((node) => node.nodeId).join('|')}|${forest.map((node) => node.nodeId).join('|')}`;
 
   useEffect(() => {
-    const next = new Set<string>();
-    if (forest.length > 0) {
-      for (const node of forest) {
-        if (node.nodeId) {
-          next.add(node.nodeId);
-        }
-      }
-    }
-    if (filtersNarrow(picked, filterOptions)) {
-      expandShown(forest, picked, filterOptions, next);
-    }
+    const next = new Set(restoredBranches(readStoredBranches(folder), branchIds(forest)));
     if (showRules) {
       openAllRules(forest, next);
     }
     setOpenIds(next);
-  }, [treeKey, filterKey, showRules]);
+  }, [treeKey, showRules]);
 
   useEffect(() => {
     if (!picked.violations) {
@@ -195,6 +179,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
       } else {
         next.add(id);
       }
+      writeStoredBranches(folder, [...next]);
       return next;
     });
   }
@@ -871,22 +856,43 @@ function SourcePane({
   );
 }
 
-function expandShown(
-  nodes: KnowledgeGraphNode[],
-  picked: FilterPick,
-  options: KnowledgeGraphFilterOptions,
-  open: Set<string>,
-): void {
+function branchIds(nodes: KnowledgeGraphNode[]): string[] {
+  const ids: string[] = [];
+  const walk = (node: KnowledgeGraphNode) => {
+    if (node.nodeId) {
+      ids.push(node.nodeId);
+    }
+    for (const child of node.children ?? []) {
+      walk(child);
+    }
+  };
   for (const node of nodes) {
-    if (!shown(node, picked, options)) {
-      continue;
-    }
-    const children = (node.children ?? []).filter((child) => shown(child, picked, options));
-    if (children.length > 0 && node.nodeType?.name !== 'OoadClass') {
-      open.add(node.nodeId);
-      expandShown(children, picked, options, open);
-    }
+    walk(node);
   }
+  return ids;
+}
+
+function openBranchKey(folder: string): string {
+  return `kg-open-branches:${folder}`;
+}
+
+function readStoredBranches(folder: string): string[] {
+  if (!folder || typeof window === 'undefined') {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(openBranchKey(folder)) ?? '[]');
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredBranches(folder: string, ids: string[]): void {
+  if (!folder || typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(openBranchKey(folder), JSON.stringify(ids));
 }
 
 function openAllRules(nodes: KnowledgeGraphNode[], open: Set<string>): void {
@@ -1257,16 +1263,6 @@ function glyphClass(kind: SourceFold['kind'], open: boolean): string {
 function hoverLabel(kind: SourceFold['kind'], open: boolean): string {
   const noun = kind === 'class' ? 'class' : 'call';
   return open ? `Collapse ${noun}` : `Expand ${noun}`;
-}
-
-function filtersNarrow(picked: FilterPick, options: KnowledgeGraphFilterOptions): boolean {
-  return (
-    picked.violations ||
-    restricts(picked.practices, options.practices) ||
-    restricts(picked.stages, options.stages) ||
-    restricts(picked.node_types, options.node_types) ||
-    restricts(picked.rules, options.rules)
-  );
 }
 
 function restricts(selected: string[], universe: string[]): boolean {

@@ -8,6 +8,7 @@ import {
   editorHeight,
   isStoryNode,
   practiceRootLabels,
+  restoredBranches,
   retainedTree,
   retagPractice,
   stepMembers,
@@ -518,6 +519,14 @@ describe("a knowledge graph", () => {
       node.name = "Epic";
       subject.open(node);
       expect(subject.expanded).toContain(node);
+    });
+
+    it("should start closed and restore only branches that were opened", () => {
+      expect(subject.expanded).toEqual([]);
+      const present = ["practice:clean_engineering", "pkg:domain", "pkg:customer"];
+      expect(restoredBranches([], present)).toEqual([]);
+      expect(restoredBranches(["pkg:domain"], present)).toEqual(["pkg:domain"]);
+      expect(restoredBranches(["pkg:domain", "missing"], present)).toEqual(["pkg:domain"]);
     });
   });
 });

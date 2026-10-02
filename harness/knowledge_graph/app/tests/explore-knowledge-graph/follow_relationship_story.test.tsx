@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openFolder, RULE_OUTCOMES, waitForTree } from './helpers/pml-domain';
+import { bindPage, expand, explorer, openFolder, RULE_OUTCOMES, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -8,9 +8,12 @@ story('Follow Relationship', () => {
   scenario('following a Relationship focuses the target Node', ({ given, when, then }) => {
     given('a Node with a Relationship to a target Node', async () => {
       await openFolder(RULE_OUTCOMES);
-      await waitForTree('orders');
+      await waitForTree('Clean Engineering');
     });
     when('the Engineer follows the Relationship', async () => {
+      await expand('Clean Engineering');
+      await expand('orders');
+      await expand('Order');
       await explorer().getByRole('button', { name: 'Expand relationships' }).first().click({ timeout: 5_000 });
       await explorer()
         .getByTestId('tree-relationship-target')

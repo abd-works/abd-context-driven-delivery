@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
+import { bindPage, expand, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -11,7 +11,8 @@ story('Nest Class Folder', () => {
       await waitForTree();
     });
     when('the Engineer opens domain', async () => {
-      await explorer().getByRole('button', { name: 'Expand domain' }).click({ timeout: 5_000 });
+      await expand('Clean Engineering');
+      await expand('domain');
     });
     then('domain children include the customer folder', async () => {
       const domain = explorer().locator('li[data-depth="0"]').filter({ hasText: 'domain' }).first();
