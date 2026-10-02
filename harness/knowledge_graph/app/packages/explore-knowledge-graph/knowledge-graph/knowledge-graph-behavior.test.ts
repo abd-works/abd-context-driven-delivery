@@ -399,7 +399,7 @@ describe("a knowledge graph", () => {
     });
 
     describe("that selects stories", () => {
-      it("should leave class folders and files out except an explicit step edge", () => {
+      it("should leave class folders and files out", () => {
         const included = flatten(retainedTree(mixedPracticeTree(), ["Stories"]));
         const names = included.map((node) => node.name);
         expect(names).not.toContain("domain");

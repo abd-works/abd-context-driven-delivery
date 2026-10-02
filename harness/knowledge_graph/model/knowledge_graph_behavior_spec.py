@@ -207,33 +207,41 @@ with description("a knowledge graph"):
             for node in folders_and_files:
                 expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
             for node in included:
-                if node.name == "When they send a feedback note":
-                    continue
                 expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
-            expect([node.name for node in included]).to(contain("Customer"))
-            expect([node.name for node in included]).to(contain("When they send a feedback note"))
-            expect("Onboard A Customer" in [node.name for node in included]).to(equal(False))
-            expect("Select Plan" in [node.name for node in included]).to(equal(False))
-            expect("Given a plan" in [node.name for node in included]).to(equal(False))
-            expect("select-plan.e2e.ts" in [node.name for node in included]).to(equal(False))
+                expect(node.nodeType.name in {"Description", "Context", "Observation", "BoundedContext"}).to(equal(False))
+            names = [node.name for node in included]
+            expect(names).to(contain("Customer"))
+            expect(names).to(contain("submitFeedback"))
+            expect("When they send a feedback note" in names).to(equal(False))
+            expect("Onboard A Customer" in names).to(equal(False))
+            expect("Select Plan" in names).to(equal(False))
+            expect("Given a plan" in names).to(equal(False))
+            expect("Customer is known" in names).to(equal(False))
+            expect("Ordering" in names).to(equal(False))
+            expect("select-plan.e2e.ts" in names).to(equal(False))
 
     with context("that selects domain driven design"):
         with it("should keep clean engineering folders and files and leave story nodes out"):
             included = _flatten(retained_tree(_mixed_practice_tree(), ["Ddd"]))
             names = [node.name for node in included]
+            kinds = [node.nodeType.name for node in included]
             for node in included:
-                if node.name == "When they send a feedback note":
-                    continue
                 expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
+                expect(node.nodeType.name in {"Description", "Context", "Observation"}).to(equal(False))
             expect(names).to(contain("domain"))
             expect(names).to(contain("Customer"))
             expect(names).to(contain("customer.ts"))
+            expect(names).to(contain("submitFeedback"))
             expect(names).to(contain("Ordering"))
+            expect(kinds).to(contain("OoadClass"))
+            expect(kinds).to(contain("BoundedContext"))
             expect("Onboard A Customer" in names).to(equal(False))
+            expect("When they send a feedback note" in names).to(equal(False))
             expect("Given a plan" in names).to(equal(False))
+            expect("Customer is known" in names).to(equal(False))
 
     with context("that selects stories"):
-        with it("should leave class folders and files out except an explicit step edge"):
+        with it("should leave class folders and files out"):
             included = _flatten(retained_tree(_mixed_practice_tree(), ["Stories"]))
             names = [node.name for node in included]
             expect("domain" in names).to(equal(False))
@@ -241,11 +249,15 @@ with description("a knowledge graph"):
             expect("customer.ts" in names).to(equal(False))
             expect(names).to(contain("Select Plan"))
             expect(names).to(contain("When they send a feedback note"))
-            expect(names).to(contain("submitFeedback"))
+            expect("submitFeedback" in names).to(equal(False))
+            expect("Ordering" in names).to(equal(False))
+            expect("Customer is known" in names).to(equal(False))
+            step = next(node for node in included if node.name == "When they send a feedback note")
+            expect([link["name"] for link in step.relationships]).to(contain("submitFeedback"))
             for node in included:
-                if node.name == "submitFeedback":
-                    continue
                 expect(node.practice == "clean_engineering").to(equal(False))
+                expect(node.practice == "ddd").to(equal(False))
+                expect(node.practice == "bdd").to(equal(False))
 
     with context("that selects behavior driven development"):
         with it("should leave story nodes and class folders out"):
@@ -253,7 +265,7 @@ with description("a knowledge graph"):
             expect([node.name for node in included]).to(equal(["Customer is known"]))
             for node in included:
                 expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
-                expect(node.nodeType.name in {"Module", "Package", "File", "OoadClass"}).to(equal(False))
+                expect(node.nodeType.name in {"Module", "Package", "File", "OoadClass", "Operation", "BoundedContext"}).to(equal(False))
 
     with context("with a chosen node"):
         with it("should hold that node as selected"):
