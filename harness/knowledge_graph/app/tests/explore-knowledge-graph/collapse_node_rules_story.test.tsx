@@ -26,7 +26,7 @@ story('Collapse Node Rules', () => {
       await waitForTree();
     });
     when('the Engineer opens the rules child', async () => {
-      await explorer().getByTestId('tree-expand-rules').first().click({ timeout: 5_000 });
+      await explorer().getByRole('button', { name: 'Show rules' }).click({ timeout: 5_000 });
     });
     then('those rules are listed', async () => {
       await expect(explorer().getByTestId('practice-graph-tree')).toContainText(

@@ -40,6 +40,7 @@ story('Filter Graph', () => {
     }).and('whose source includes a Node that fails keep-operations-small-focused', async () => {});
     when('the Engineer filters the KnowledgeGraph using violations', async () => {
       await explorer().getByRole('button', { name: /^violations$/i }).click({ timeout: 5_000 });
+      await explorer().getByRole('button', { name: 'Show rules' }).click({ timeout: 5_000 });
     }).and('using keep-operations-small-focused', async () => {
       await explorer().getByTestId('filter-rule').selectOption('keep-operations-small-focused');
     });

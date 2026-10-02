@@ -27,6 +27,7 @@ story('Open Node Source', () => {
       await waitForTree('orders');
     });
     when('the Engineer selects the operation Node', async () => {
+      await explorer().getByRole('button', { name: 'Show rules' }).click({ timeout: 5_000 });
       await explorer().getByRole('button', { name: 'processEverything', exact: true }).click({ timeout: 15_000 });
     });
     then('the source pane shows the whole operation', async () => {

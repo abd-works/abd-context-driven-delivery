@@ -119,6 +119,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
   const engineering = theme === 'engineering';
   const selectedId = selectedNode?.nodeId ?? '';
 
+  const [showRules, setShowRules] = useState(false);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const treeKey = listedTree.map((node) => node.nodeId).join('|');
   const filterKey = [
@@ -137,8 +138,11 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     if (filterKey !== '0||||') {
       expandShown(listedTree, picked, next);
     }
+    if (showRules) {
+      openAllRules(listedTree, next);
+    }
     setOpenIds(next);
-  }, [treeKey, filterKey]);
+  }, [treeKey, filterKey, showRules]);
 
   useEffect(() => {
     if (!picked.violations) {
@@ -348,13 +352,16 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               onChange={(rules) => setPicked((prev) => ({ ...prev, rules }))}
             />
             <div className="filter-extras">
-              <button
-                type="button"
-                className={picked.violations ? 'is-active' : undefined}
+              <FilterSwitch
+                label="Violations"
+                pressed={picked.violations}
                 onClick={() => setPicked((prev) => ({ ...prev, violations: !prev.violations }))}
-              >
-                Violations
-              </button>
+              />
+              <FilterSwitch
+                label="Show rules"
+                pressed={showRules}
+                onClick={() => setShowRules((on) => !on)}
+              />
             </div>
           </div>
         </div>
@@ -379,6 +386,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                   node={node}
                   depth={0}
                   picked={picked}
+                  showRules={showRules}
                   selectedId={selectedId}
                   openIds={openIds}
                   onToggle={toggleOpen}
@@ -389,7 +397,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
           </div>
           <div className="panel" data-testid="source-file">
             {selectedNode ? (
-              <SourcePane node={selectedNode} folder={folder} picked={picked} />
+              <SourcePane node={selectedNode} folder={folder} picked={picked} showRules={showRules} />
             ) : (
               <p className="empty-state">Select a node</p>
             )}
@@ -397,6 +405,30 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
         </div>
       </div>
     </main>
+  );
+}
+
+function FilterSwitch({
+  label,
+  pressed,
+  onClick,
+}: {
+  label: string;
+  pressed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={pressed ? 'filter-switch is-on' : 'filter-switch'}
+      aria-pressed={pressed}
+      onClick={onClick}
+    >
+      <span className="filter-switch-label">{label}</span>
+      <span className="filter-switch-track" aria-hidden="true">
+        <span className="filter-switch-knob" />
+      </span>
+    </button>
   );
 }
 
@@ -448,6 +480,7 @@ function TreeNode({
   node,
   depth,
   picked,
+  showRules,
   selectedId,
   openIds,
   onToggle,
@@ -456,6 +489,7 @@ function TreeNode({
   node: KnowledgeGraphNode;
   depth: number;
   picked: FilterPick;
+  showRules: boolean;
   selectedId: string;
   openIds: Set<string>;
   onToggle: (id: string) => void;
@@ -465,7 +499,7 @@ function TreeNode({
   if (!shown(node, picked)) {
     return null;
   }
-  const rules = rulesFor(node, picked);
+  const rules = rulesFor(node, picked, showRules);
   const links = node.relationships ?? [];
   const rulesId = `${node.nodeId}::rules`;
   const linksId = `${node.nodeId}::relationships`;
@@ -522,6 +556,7 @@ function TreeNode({
               node={child}
               depth={depth + 1}
               picked={picked}
+              showRules={showRules}
               selectedId={selectedId}
               openIds={openIds}
               onToggle={onToggle}
@@ -617,10 +652,12 @@ function SourcePane({
   node,
   folder,
   picked,
+  showRules,
 }: {
   node: KnowledgeGraphNode;
   folder: string;
   picked: FilterPick;
+  showRules: boolean;
 }) {
   const file = node.source?.file ?? '';
   const [text, setText] = useState('');
@@ -687,7 +724,11 @@ function SourcePane({
     }
   }, [text]);
 
-  const hits = picked.violations || picked.rules.length ? visibleHits(node, picked) : node.ruleHits;
+  const hits = showRules
+    ? picked.violations || picked.rules.length
+      ? visibleHits(node, picked)
+      : node.ruleHits
+    : [];
   return (
     <section className="knowledge-graph-panel" data-open="true" data-file={file}>
       <p className="source-path">{file || node.name}</p>
@@ -737,10 +778,28 @@ function expandShown(nodes: KnowledgeGraphNode[], picked: FilterPick, open: Set<
   }
 }
 
+function openAllRules(nodes: KnowledgeGraphNode[], open: Set<string>): void {
+  for (const node of nodes) {
+    const children = node.children ?? [];
+    if (node.ruleHits.length > 0) {
+      open.add(node.nodeId);
+      open.add(`${node.nodeId}::rules`);
+    }
+    if (children.length > 0) {
+      open.add(node.nodeId);
+      openAllRules(children, open);
+    }
+  }
+}
+
 function rulesFor(
   node: KnowledgeGraphNode,
   picked: FilterPick,
+  showRules: boolean,
 ): { slug: string; status: string; message: string }[] {
+  if (!showRules) {
+    return [];
+  }
   if (picked.violations || picked.rules.length > 0) {
     return visibleHits(node, picked);
   }
