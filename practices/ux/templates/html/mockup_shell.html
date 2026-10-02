@@ -5,18 +5,21 @@
   <title>UX — @@TITLE@@</title>
   <style>
     :root { --ink: #222; --line: #666; --wash: #f0f0f0; --sel: #dbeafe; --emph: #2563eb; --tint: #fecaca; }
+    html, body { height: 100%; }
     body { margin: 0; font-family: ui-monospace, Consolas, monospace; color: var(--ink);
-           min-height: 100vh; background: #fafafa; }
+           height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #fafafa; }
     header.shell-bar { display: flex; gap: 0.75rem; align-items: center; padding: 0.75rem 1rem;
                        border-bottom: 1px solid #ccc; background: #fff; }
     header.shell-bar h1 { font-size: 1rem; margin: 0; flex: 1; }
-    header.shell-bar button { font: inherit; padding: 0.25rem 0.6rem; cursor: pointer; }
-    header.shell-bar button.active { background: var(--sel); outline: 1px solid #6c8ebf; }
-    #shell { display: grid; grid-template-columns: 1fr 1fr; min-height: calc(100vh - 3rem); }
-    #story-demo-frame, #explorer-frame { padding: 1rem; overflow: auto; }
-    #story-demo-frame { border-right: 1px solid #ccc; }
+    #shell { display: grid; grid-template-columns: minmax(0, 1fr) 33rem; flex: 1; min-height: 0; overflow: hidden; }
+    #story-demo-frame, #explorer-frame { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+    #story-demo-frame { padding: 1rem; border-right: 1px solid #ccc; position: relative; }
+    #explorer-frame { padding: 0.35rem 0.75rem 0.75rem; }
+    .flow-zoom { position: sticky; top: 0.35rem; left: 0.35rem; z-index: 4; display: inline-flex; gap: 0.15rem; align-items: center; width: max-content; margin-bottom: 0.35rem; padding: 0.15rem; background: #fff; border: 1px solid #ccc; }
+    .flow-zoom button { font: inherit; min-width: 1.8rem; padding: 0.15rem 0.4rem; cursor: pointer; background: #fff; border: 1px solid #ccc; }
+    #mockup { zoom: 1; }
     .screen { border: 1px dashed var(--line); margin-bottom: 1rem; padding: 0.75rem;
-               background: #fff; max-width: 52rem; }
+               background: #fff; max-width: 52rem; cursor: pointer; }
     .screen[hidden] { display: none; }
     .screen[data-layout="modal"] {
       max-width: 28rem; margin: 2rem auto; border-style: solid;
@@ -56,11 +59,28 @@
     .tree-node[data-role="folder"] { font-weight: 600; cursor: default; }
     .screen-stories { font-size: 0.85rem; color: #444; }
     .key { font-size: 0.8rem; color: #555; margin-top: 0.75rem; }
-    .panel { border: 1px dashed var(--line); background: #fff; padding: 0.75rem; }
-    #explorer-tree ul { margin: 0.25rem 0 0.25rem 1rem; padding: 0; list-style: none; }
-    #explorer-tree li.current, #explorer-tree .current { background: var(--sel); font-weight: 600; }
+    .panel { border: 1px dashed var(--line); background: #fff; padding: 0.5rem 0.65rem 0.65rem; }
+    .panel-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
+    .panel-head h2 { margin: 0; font-size: 0.95rem; font-weight: 700; flex: 1; min-width: 0; }
+    #explorer-tree, #explorer-tree ul { margin: 0.15rem 0 0.15rem 0.8rem; padding: 0; list-style: none; }
+    #explorer-tree { margin-left: 0; }
+    #explorer-tree { font-size: 16.5px; }
+    #explorer-tree .twist, #explorer-tree .node-label { font: inherit; font-weight: 400; background: none; border: 0; padding: 0.02rem 0.12rem; cursor: pointer; text-align: left; }
+    #explorer-tree .node-label { display: inline-flex; align-items: center; gap: 0.3rem; }
+    #explorer-tree .glyph { width: 1.05rem; height: 1.05rem; flex: none; }
+    #explorer-tree .glyph * { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
+    #explorer-tree .twist { display: inline-flex; align-items: center; justify-content: center; width: 0.85rem; height: 0.85rem; padding: 0; vertical-align: middle; }
+    #explorer-tree .twist::before { content: ""; width: 0.32rem; height: 0.32rem; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); }
+    #explorer-tree .twist[aria-expanded="true"]::before { transform: rotate(45deg); }
+    #explorer-tree li.current > .node-label { background: var(--sel); font-weight: 600; }
+    #explorer-tree .step { font-size: 15px; font-weight: 400; cursor: pointer; }
+    #explorer-tree .step.current { background: var(--sel); }
+    #explorer-tree .step-kind.emph { font-weight: 700; }
+    #explorer-tree .step u { text-underline-offset: 2px; }
+    #explorer-tree .empty { color: #666; font-style: italic; }
     .message { color: #a00; margin-top: 0.75rem; min-height: 1.2rem; }
-    .chrome { margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .chrome { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+    .chrome button { font: inherit; padding: 0.15rem 0.45rem; cursor: pointer; background: #fff; border: 1px solid #ccc; }
     .status { font-size: 0.8rem; color: #555; margin-top: 0.5rem; }
     .toast { position: fixed; right: 1rem; bottom: 1rem; background: #222; color: #fff;
               padding: 0.5rem 0.75rem; font-size: 0.85rem; display: none; z-index: 2; }
@@ -69,71 +89,52 @@
 </head>
 <body data-story-demo-shell>
   <header class="shell-bar">
-    <h1>@@TITLE@@ · <span data-story-demo-mode>Play</span></h1>
-    <button type="button" data-set-mode="Play" class="active">Play</button>
-    <button type="button" data-set-mode="Interactive">Interactive</button>
+    <h1>@@TITLE@@</h1>
   </header>
 
   <div id="shell" data-layout="split-screen">
     <section id="story-demo-frame" aria-label="Product mockup">
+      <div class="flow-zoom" aria-label="Flow zoom">
+        <button type="button" data-flow-zoom="out" aria-label="Zoom out">−</button>
+        <button type="button" data-flow-zoom="reset" aria-label="Reset zoom">100%</button>
+        <button type="button" data-flow-zoom="in" aria-label="Zoom in">+</button>
+      </div>
       <main id="mockup">
         @@SCREENS@@
-        <p class="key">LEFT: product screens · «emph» / bind via data-bound-field · Interactive uses data-story-steps</p>
       </main>
     </section>
 
-    <section id="explorer-frame" aria-label="Story explorer">
+    <section id="explorer-frame" aria-label="Site Map Explorer">
       <div class="panel">
-        <h2>explorer</h2>
-        <div class="chrome">
-          <button type="button" data-reset>Reset</button>
+        <div class="panel-head">
+          <h2>Site Map Explorer</h2>
+          <div class="chrome">
+            <button type="button" data-reset>Reset</button>
+            <button type="button" data-play-next>▶▶ Play next</button>
+          </div>
         </div>
         <ul id="explorer-tree" data-explorer-tree></ul>
-        <div class="chrome">
-          <button type="button" data-play-next>▶▶ Play next</button>
-        </div>
         <p class="message" data-explorer-message hidden></p>
-        <p class="status" data-story-demo-status></p>
-        <p class="key">RIGHT: GWT from collect · Play next is chrome only · not product controls</p>
-        <footer id="stories" style="margin-top:1rem;border-top:1px solid #ddd;padding-top:0.5rem;">
-          <strong>Stories</strong>
-          <ul id="story-list">@@STORIES_LIST@@</ul>
-        </footer>
       </div>
     </section>
   </div>
 
   <div id="toast" class="toast" role="status"></div>
+  <script id="story-outline" type="application/json">@@STORY_OUTLINE@@</script>
+  <script id="screen-stories" type="application/json">@@SCREEN_STORIES@@</script>
 @@ENSURE_HINT@@@@STORY_IMPORTS@@
 @@OBJECT_IMPORTS@@
+  <script src="/practices/ux/story-demo/bind-flow-zoom.js"></script>
+  <script>
+    bindFlowZoom(document.querySelector('#story-demo-frame'), document.querySelector('#mockup'));
+  </script>
   <script type="module" src="/practices/ux/story-demo/mount-generated-mockup.js"></script>
   <script type="module">
-    // Generic screen nav (data-goto). Story Play / Interactive is mounted by mount-generated-mockup.js.
+    // Generic screen nav (data-goto). Story explorer is mounted by mount-generated-mockup.js.
     const transitions = [
 @@TRANSITIONS_JS@@
     ];
     const toast = document.querySelector('#toast');
-    const list = document.querySelector('#story-list');
-    const seen = new Set([...list.querySelectorAll('li')].map((li) => li.textContent));
-
-    for (const script of document.querySelectorAll('[data-ux-story-ref]')) {
-      try {
-        const mod = await import(script.getAttribute('src'));
-        const names = mod.storyNames
-          || Object.values(mod)
-              .filter((value) => value && typeof value === 'object' && value.story)
-              .map((value) => value.story);
-        for (const name of names || []) {
-          if (!name || seen.has(name)) continue;
-          seen.add(name);
-          const li = document.createElement('li');
-          li.textContent = name;
-          list.appendChild(li);
-        }
-      } catch (_err) {
-        // Artifact may be missing until Stories transform / JS emit runs.
-      }
-    }
 
     function flash(msg) {
       toast.textContent = msg;
@@ -163,7 +164,7 @@
 
     document.querySelectorAll('[data-trigger]').forEach((el) => {
       el.addEventListener('click', () => {
-        if (el.hasAttribute('data-story-steps')) return; // Story Demo owns these in Interactive
+        if (el.hasAttribute('data-story-steps')) return;
         const trigger = el.getAttribute('data-trigger');
         const from = visibleScreen()?.querySelector('h2')?.textContent?.trim();
         const hit = transitions.find((t) => t.from === from && t.trigger === trigger)

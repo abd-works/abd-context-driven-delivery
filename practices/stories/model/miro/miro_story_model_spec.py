@@ -219,21 +219,21 @@ with description("a Miro Story Map (story-map fidelity)") as self:
         with it("should place story cards in distinct left-to-right columns"):
             stories = fixture.rects_by_role(self.text, "story:")
             expect([int(story.get("x")) for story in stories]).to(
-                equal([35, 95, 155])
+                equal([35, 107, 179])
             )
 
         with it("should use compact square story cards like the DrawIO map"):
             stories = fixture.rects_by_role(self.text, "story:")
             expect(
                 [(int(story.get("width")), int(story.get("height"))) for story in stories]
-            ).to(equal([(50, 50), (50, 50), (50, 50)]))
+            ).to(equal([(60, 60), (60, 60), (60, 60)]))
 
         with it("should span the capability and Epic across their story columns"):
             epic = fixture.rects_by_role(self.text, "epic")[0]
             capability = fixture.rects_by_role(self.text, "subepic:0")[0]
-            expect((int(epic.get("x")), int(epic.get("width")))).to(equal((20, 180)))
+            expect((int(epic.get("x")), int(epic.get("width")))).to(equal((20, 216)))
             expect((int(capability.get("x")), int(capability.get("width")))).to(
-                equal((30, 170))
+                equal((30, 206))
             )
 
         with it("should place actor cards above each change of actor"):

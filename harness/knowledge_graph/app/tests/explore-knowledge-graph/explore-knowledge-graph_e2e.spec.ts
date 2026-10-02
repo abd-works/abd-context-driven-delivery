@@ -147,6 +147,25 @@ test('following a Node focuses its source', async ({ page }) => {
   await expect(page.locator('.monaco-editor').first()).toBeVisible();
 });
 
+test('the tree pane scrolls without moving the page', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 640 });
+  await page.goto(helper.graphQuery());
+  await waitForTree(page);
+  const tree = page.getByTestId('practice-graph-tree');
+  const box = await tree.boundingBox();
+  expect(box).toBeTruthy();
+  await page.mouse.move(box!.x + 24, box!.y + 24);
+  await page.mouse.wheel(0, 800);
+  const scrolled = await tree.evaluate((el) => ({
+    top: el.scrollTop,
+    room: el.scrollHeight - el.clientHeight,
+    page: document.scrollingElement?.scrollTop ?? 0,
+  }));
+  expect(scrolled.room).toBeGreaterThan(0);
+  expect(scrolled.page).toBe(0);
+  expect(scrolled.top).toBeGreaterThan(0);
+});
+
 test('violations filter keeps the failing Node', async ({ page }) => {
   await page.goto(helper.graphQuery());
   await waitForTree(page);

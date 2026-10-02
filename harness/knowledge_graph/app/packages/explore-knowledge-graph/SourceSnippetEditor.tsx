@@ -23,6 +23,7 @@ const SNIPPET_OPTIONS = {
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
   automaticLayout: true,
+  smoothScrolling: false,
   wordWrap: 'off' as const,
   fontFamily: "'JetBrains Mono', ui-monospace, monospace",
   fontSize: 13,

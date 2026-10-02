@@ -23,11 +23,7 @@
   </style>
 </head>
 <body data-story-demo-shell>
-  <header>
-    <span data-story-demo-mode>Play</span>
-    <button type="button" data-set-mode="Play">Play</button>
-    <button type="button" data-set-mode="Interactive">Interactive</button>
-  </header>
+  <header><h1>{{SCOPE}}</h1></header>
   <div id="shell">
     <section id="story-demo-frame">
       <main id="mockup">
@@ -36,11 +32,9 @@
     </section>
     <section id="explorer-frame">
       <button type="button" data-reset>Reset</button>
-      <ul data-explorer-tree></ul>
       <button type="button" data-play-next>Play next</button>
+      <ul data-explorer-tree></ul>
       <p data-explorer-message hidden></p>
-      <p data-story-demo-status></p>
-      <footer id="stories"><ul><!-- story names --></ul></footer>
     </section>
   </div>
   <script type="module" src="{{STORY_MODULE}}" data-ux-story-ref></script>

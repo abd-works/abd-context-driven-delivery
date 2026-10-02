@@ -16,6 +16,12 @@ export class ExplorerFrame {
     this.activeStoryName = null;
     /** When false, story map list is collapsed (active story still shown). */
     this.storyMapExpanded = true;
+    /** Screen → story → scenario keys that are open in the explorer. */
+    this.expandedNodes = new Set();
+    /** Screen name last auto-opened because it became current. */
+    this.openScreen = null;
+    /** Loaded story catalog, so a screen can list scenarios and steps. */
+    this.catalog = [];
     this.currentStep = null;
     this.message = null;
     this.stepMarks = [];
@@ -66,6 +72,19 @@ export class ExplorerFrame {
 
   isStoryMapExpanded() {
     return this.storyMapExpanded;
+  }
+
+  ensureExpanded(key) {
+    this.expandedNodes.add(key);
+  }
+
+  toggleExpanded(key) {
+    if (this.expandedNodes.has(key)) this.expandedNodes.delete(key);
+    else this.expandedNodes.add(key);
+  }
+
+  isExpanded(key) {
+    return this.expandedNodes.has(key);
   }
 
   showsStepLabels() {

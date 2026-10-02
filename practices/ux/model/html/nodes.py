@@ -15,7 +15,7 @@ _SHELL_PATH = Path(__file__).resolve().parents[2] / "templates" / "html" / "mock
 
 
 class HtmlUxMap(UxMap):
-    """Render a review shell: mockup on the left, story names at the bottom."""
+    """Render a review shell: mockup on the left, story explorer on the right."""
 
     @classmethod
     def parse(cls, content: str) -> UxMap:
@@ -31,7 +31,6 @@ class HtmlUxMap(UxMap):
 
     @classmethod
     def render(cls, ux_map: UxMap) -> str:
-        story_names = ux_map.all_story_names()
         story_imports = "\n".join(
             f'  <script type="module" src="{path}" data-ux-story-ref></script>'
             for path in ux_map.story_references
@@ -61,31 +60,42 @@ class HtmlUxMap(UxMap):
                     f"<h3>{region.name}</h3>{controls}</section>"
                 )
             story_trace = " . ".join(screen.story_names)
+            stories_attr = ""
+            if screen.story_names:
+                joined = html.escape(", ".join(screen.story_names), quote=True)
+                stories_attr = f' data-stories="{joined}" data-for-story="{joined}"'
             layout_attr = f' data-layout="{screen.layout}"' if screen.layout else ""
             screens_html.append(
-                f'<article class="screen" data-slug="{screen.slug}"'
-                f"{layout_attr}{hidden}>"
+                f'<article class="screen" data-slug="{html.escape(screen.slug, quote=True)}"'
+                f"{stories_attr}{layout_attr}{hidden}>"
                 f"<h2>{screen.name}</h2>"
                 f'<p class="layout">{screen.layout or "-"}</p>'
                 f'<div class="regions">{"".join(regions)}</div>'
                 f'<p class="screen-stories">Stories: {story_trace or "-"}</p>'
                 f"</article>"
             )
-        stories_list = (
-            "".join(f"<li>{name}</li>" for name in story_names)
-            or "<li>(waiting for story JS modules)</li>"
-        )
         model_json = JsonUxMap.create().render(ux_map).replace("-->", "")
         transitions_js = ",\n".join(
             f'    {{from: "{t.from_screen}", to: "{t.to_screen}", '
             f'trigger: "{t.trigger}"}}'
             for t in ux_map.transitions
         )
+        story_outline = json.dumps(getattr(ux_map, "story_outline", None) or [])
+        screen_stories = json.dumps(
+            [
+                {
+                    "name": screen.name,
+                    "stories": [{"name": story} for story in screen.story_names],
+                }
+                for screen in ux_map.screens
+            ]
+        )
         shell = _SHELL_PATH.read_text(encoding="utf-8")
         return (
             shell.replace("@@TITLE@@", ux_map.scope or ux_map.name)
             .replace("@@SCREENS@@", "".join(screens_html) or "<p>No screens yet.</p>")
-            .replace("@@STORIES_LIST@@", stories_list)
+            .replace("@@STORY_OUTLINE@@", story_outline)
+            .replace("@@SCREEN_STORIES@@", screen_stories)
             .replace("@@ENSURE_HINT@@", ensure_hint)
             .replace("@@STORY_IMPORTS@@", story_imports)
             .replace("@@OBJECT_IMPORTS@@", object_imports)

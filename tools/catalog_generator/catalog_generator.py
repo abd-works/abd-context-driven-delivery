@@ -1375,6 +1375,16 @@ class CatalogFidelity:
             return False
         if "sketch" in path.name.lower() or "components" in path.parts:
             return False
+        if ".codeql" in path.parts or path.suffix.lower() in {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".pdf",
+            ".trap",
+        }:
+            return False
         return True
 
     def _scored_templates(self, templates_root: Path) -> list[tuple[int, Path]]:
@@ -1413,7 +1423,7 @@ class CatalogFidelity:
     def _path_frontmatter_tokens(self, path: Path) -> set[str]:
         try:
             text = path.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             return set()
         if not text:
             return set()
@@ -1691,11 +1701,17 @@ class Catalog:
         catalog_context_tool: CatalogContextTool | None = None,
         catalog_action: CatalogAction | None = None,
         catalog_utility: CatalogUtility | None = None,
+        approach_md_path: str | Path | None = None,
     ) -> None:
         citation = GitCitation.from_checkout()
         self.repo_url = repo_url or citation.repo_url
         self.ref = ref or citation.ref
         self.out_root = Path(out_root)
+        from catalog_generator.approach_copy import APPROACH_MARKDOWN
+
+        self.approach_md_path = (
+            Path(approach_md_path) if approach_md_path is not None else APPROACH_MARKDOWN
+        )
         self.brand = None
         from catalog_generator.foundry_chrome import Brand
 
@@ -1979,139 +1995,37 @@ class Catalog:
         self._write_coming_soon_pages()
         self._write_readme_page()
 
+    def _approach_copy(self):
+        from catalog_generator.approach_copy import load_approach_copy
+
+        cached = getattr(self, "_approach_copy_cache", None)
+        if cached is None:
+            cached = load_approach_copy(self.approach_md_path)
+            self._approach_copy_cache = cached
+        return cached
+
     def _approach_practices(self) -> tuple[dict, ...]:
-        practices = (
-            {
-                "slug": "iterate-and-learn",
-                "title": "Iterate and Learn",
-                "summary": (
-                    "Limit each run to what the team can review. Each pass increases fidelity."
-                ),
-                "bullets": (
-                    "Limit each AI run to the cognitive load of the team, so people can guide, review, and adjust what it generates.",
-                    "Keep the context window small. Even frontier models produce better output well under their maximum.",
-                    "Layer context through successive generations. Each pass increases fidelity.",
-                ),
-                "paras": (
-                    "Limit each AI run to the cognitive load of the team, so people can guide, review, and adjust what it generates.",
-                    "Keep the context window small. Even frontier models produce better output well under their maximum.",
-                    "Layer context through successive generations. Each pass increases fidelity.",
-                    (
-                        "The CDD harness includes "
-                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md">Sketch</a>, '
-                        "a session where a person and AI probe, grill, illustrate, and align. "
-                        "Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback."
-                    ),
-                ),
-                "caption": (
-                    "The CDD harness includes "
-                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md">Sketch</a>, '
-                    "a session where a person and AI probe, grill, illustrate, and align. "
-                    "Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback."
-                ),
-            },
-            {
-                "slug": "product-engineering",
-                "title": "Product Engineering",
-                "summary": (
-                    "The fundamentals of product engineering have not changed."
-                ),
-                "paras": (
-                    "The fundamentals of product engineering have not changed.",
-                    "Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.",
-                ),
-                "bullets": (
-                    "The fundamentals of product engineering have not changed.",
-                    "Ground AI delivery in test-driven, iterative practices that easily connect business outcomes, user impact, and system behavior to technology implementation.",
-                ),
-            },
-            {
-                "slug": "code-is-context",
-                "title": "Code Is Context",
-                "summary": (
-                    "Managing context is critical. With the right product engineering practices, your code is the "
-                    "primary source of truth for how the business and the technology work — linking, versioning, "
-                    "reviews, and auditing come practically for free."
-                ),
-                "bullets": (
-                    "Code is the source of truth for how the business and the technology work. Linking, versioning, reviews, and auditing come with it.",
-                    "Refine context into an executable specification that tests the actual solution.",
-                    "Write the code as a direct expression of the design, so it can be turned into docs and back.",
-                ),
-                "paras": (
-                    "Code is the source of truth for how the business and the technology work. Linking, versioning, reviews, and auditing come with it.",
-                    "Refine context into an executable specification that tests the actual solution.",
-                    "Write the code as a direct expression of the design, so it can be turned into docs and back.",
-                    (
-                        'The CDD harness includes <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md">Stories</a>, '
-                        "a practice that generates working code for both functional and business logic. "
-                        "Flipping between "
-                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md">documentation</a> '
-                        "and "
-                        '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts">code</a> '
-                        "is seamless."
-                    ),
-                ),
-                "caption": (
-                    'The CDD harness includes <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md">Stories</a>, '
-                    "a practice that generates working code for both functional and business logic. "
-                    "Flipping between "
-                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md">documentation</a> '
-                    "and "
-                    '<a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts">code</a> '
-                    "is seamless."
-                ),
-            },
-            {
-                "slug": "context-storming",
-                "title": "Context Storming",
-                "summary": (
-                    "Define and connect context across product, engineering, and operations. "
-                    "Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory."
-                ),
-                "bullets": (
-                    "Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.",
-                    "Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.",
-                ),
-                "paras": (
-                    "Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.",
-                    "Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.",
-                    (
-                        'The CDD harness includes the <a href="https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph">knowledge graph</a>, '
-                        "the models and the relationships between them. CodeQL reads them out of the code."
-                    ),
-                ),
-                "caption": (
-                    'The CDD harness includes the <a href="https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph">knowledge graph</a>, '
-                    "the models and the relationships between them. CodeQL reads them out of the code."
-                ),
-            },
-        )
-        by_slug = {practice["slug"]: practice for practice in practices}
-        order = (
-            "iterate-and-learn",
-            "product-engineering",
-            "context-storming",
-            "code-is-context",
-        )
-        return tuple(by_slug[slug] for slug in order)
+        return self._approach_copy().practices
 
     def _write_approach_page(self) -> None:
-        from catalog_generator.foundry_chrome import page_shell
+        from catalog_generator.foundry_chrome import (
+            copy_practice_examples,
+            page_shell,
+            write_stage_example_pages,
+        )
 
+        copy_practice_examples(self.out_root)
+        example_hrefs = write_stage_example_pages(self.out_root, self._approach_copy().stages)
         page = page_shell(
             title="ABD Context Driven Delivery Harness",
             h1=self._harness_headline(),
             tagline="",
-            subhead=(
-                "The CDD harness helps you guide AI to refine unstructured context "
-                "in stages until it lives as working code."
-            ),
+            subhead=self._approach_copy().subhead,
             after_subhead=(
                 f'Get the repo <a href="{self.repo_url}" '
                 'target="_blank" rel="noopener noreferrer">here</a>.'
             ),
-            body_inner=self._approach_page_body(),
+            body_inner=self._approach_page_body(example_hrefs),
             commons_prefix="commons/",
             nav_prefix="",
             nav_current="",
@@ -2152,11 +2066,16 @@ class Catalog:
 
         from catalog_generator.foundry_chrome import page_shell
 
+        from catalog_generator.approach_copy import format_principle_bullet
+
         for practice in self._approach_practices():
             paras = "".join(
-                f'<p class="approach-practice__para">{para}</p>'
-                for para in practice["paras"]
+                f'<p class="approach-practice__para">{format_principle_bullet(item)}</p>'
+                for item in practice.get("bullets", ())
             )
+            caption = practice.get("caption", "")
+            if caption:
+                paras += f'<p class="approach-practice__para">{caption}</p>'
             body = (
                 '<article class="approach-practice">'
                 f'<p class="approach-practice__back"><a href="cdd-approach.html">← Back to the approach</a></p>'
@@ -2176,87 +2095,19 @@ class Catalog:
             )
             self.write_page(f'cdd-{practice["slug"]}.html', page)
 
-    def _approach_page_body(self) -> str:
+    def _approach_page_body(self, example_hrefs: dict[str, str] | None = None) -> str:
         import html as html_mod
 
-        stages = (
-            {
-                "id": "context",
-                "label": "Context",
-                "items": ("Business Model", "User Traction", "Operating Benchmarks"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "square",
-                "scope_name": "Context",
-                "scope_width": "square",
-                "detail_title": "Context",
-                "paras": (
-                    "Collect every source that describes the problem to be solved, the current conditions, constraints, and the intended solution — business, customer, and technology.",
-                    "Extract documentation. Interview experts.",
-                    "Parse code, instrument systems, and orchestrate running tests. Categorize and index the material so AI can consume it cleanly.",
-                ),
-            },
-            {
-                "id": "discovery",
-                "label": "Discovery",
-                "items": ("Outcome", "Experience", "Architecture"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "solution",
-                "scope_name": "Whole solution",
-                "scope_width": "wide / shallow",
-                "detail_title": "Discovery",
-                "paras": (
-                    "Refine context into lower-fidelity artifacts that make it easier to align on the overarching solution, catch systemic errors, and avoid failure cascading downstream.",
-                    "Focus on how outcomes translate to user journeys, and map those journeys to system behavior.",
-                    "Define enough structure to establish how domain boundaries and technology modules connect.",
-                ),
-            },
-            {
-                "id": "specification",
-                "label": "Specification",
-                "items": ("Increment", "Prototype", "Reference"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "sprint",
-                "scope_name": "Sprint",
-                "scope_width": "narrow / deeper",
-                "detail_title": "Specification",
-                "paras": (
-                    "Create machine-executable specifications — one small slice of the journey at a time.",
-                    "Refine the business understanding needed to modularize domain validity, access, persistence, consistency, and integration.",
-                    "Write example-driven scenarios backed by domain-driven operations, and generate working UI prototypes that pass their tests.",
-                ),
-            },
-            {
-                "id": "implementation",
-                "label": "Implement",
-                "items": ("Tests", "Interface", "Solution"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "story",
-                "scope_name": "Story",
-                "scope_width": "narrowest / deep",
-                "detail_title": "Implement",
-                "paras": (
-                    "Build each slice onto the target stack. AI oversees deterministic tools so the same input produces results guarded by safety and quality standards.",
-                    "Automate scenario specifications to cover user, system, and module-connecting interfaces.",
-                    "Evaluate every error — technical and functional — and feed results back into the growing knowledge repository.",
-                ),
-            },
-            {
-                "id": "validate",
-                "label": "Validate",
-                "items": ("Economics", "Impact", "Feasibility"),
-                "item_fams": ("sdd", "uxd", "arc"),
-                "shape": "story",
-                "scope_name": "Story",
-                "scope_width": "narrowest / deep",
-                "detail_title": "Validate",
-                "paras": (
-                    "Confirm the economics: revenue, growth, savings, or profit against the investment.",
-                    "Confirm user impact — does the intended value line up with the behavior that was observed?",
-                    "Confirm feasibility for cost, risk, and operations, then inject that feedback back into the context so AI compounds learning over time.",
-                ),
-            },
+        from catalog_generator.approach_copy import (
+            format_principle_bullet,
+            product_engineering_layout,
+            so_what_row,
         )
-        principles = self._approach_practices()
+
+        copy = self._approach_copy()
+        stages = copy.stages
+        principles = copy.practices
+        example_hrefs = example_hrefs or {}
 
         stage_buttons: list[str] = []
         for index, stage in enumerate(stages):
@@ -2275,16 +2126,19 @@ class Catalog:
                 "</span></span>"
             )
             active = " is-active" if index == 0 else ""
+            label_html = (
+                f'<span class="approach-stage__label">{html_mod.escape(stage["label"])}</span>'
+            )
             stage_buttons.append(
-                f'<button type="button" class="approach-stage{active}" '
+                f'<div class="approach-stage{active}" role="button" tabindex="0" '
                 f'data-stage-index="{index}" data-stage-id="{html_mod.escape(stage["id"])}" '
                 f'aria-pressed="{"true" if index == 0 else "false"}">'
                 f'<span class="approach-stage__head">'
                 f'{shape}'
-                f'<span class="approach-stage__label">{html_mod.escape(stage["label"])}</span>'
+                f"{label_html}"
                 f"</span>"
                 f'<ul class="approach-stage__items">{items}</ul>'
-                "</button>"
+                "</div>"
             )
 
         first = stages[0]
@@ -2300,6 +2154,7 @@ class Catalog:
                         "detail_title": s["detail_title"],
                         "items": list(s["items"]),
                         "paras": list(s["paras"]),
+                        "example_href": example_hrefs.get(s["id"], ""),
                     }
                     for s in stages
                 ]
@@ -2313,26 +2168,40 @@ class Catalog:
             "product-engineering": "descriptions",
             "iterate-and-learn": "windows",
             "code-is-context": "spec",
-            "context-storming": "storm",
         }
         principle_cards: list[str] = []
         for number, practice in enumerate(principles, start=1):
-            kind = principle_kinds.get(practice["slug"], "tickets")
-            grid = approach_principle_grid(self._board_tools, kind)
+            kind = practice.get("kind") or principle_kinds.get(practice["slug"], "tickets")
+            grid = approach_principle_grid(
+                self._board_tools,
+                kind,
+                stages=stages if practice["slug"] == "iterate-and-learn" else None,
+            )
             caption = practice.get("caption", "")
             caption_html = (
                 f'<aside class="approach-principle__caption"><p class="approach-principle__caption-body">{caption}</p></aside>'
                 if caption
                 else ""
             )
-            bullet_items = "".join(
-                f"<li>{html_mod.escape(item)}</li>" for item in practice.get("bullets", ())
-            )
-            bullets_html = (
-                f'<ul class="approach-principle__bullets">{bullet_items}</ul>' if bullet_items else ""
-            )
+            bullet_list = list(practice.get("bullets", ()))
+            if practice["slug"] == "iterate-and-learn" and bullet_list:
+                bullets_html = (
+                    '<div class="approach-refine__layout approach-refine__layout--bullets">'
+                    '<div class="approach-refine__context" aria-hidden="true"></div>'
+                    + so_what_row(bullet_list, modifier="approach-so--stages")
+                    + "</div>"
+                )
+            elif practice["slug"] == "product-engineering" and bullet_list:
+                bullets_html = product_engineering_layout(bullet_list)
+            else:
+                bullet_items = "".join(
+                    f"<li>{format_principle_bullet(item)}</li>" for item in bullet_list
+                )
+                bullets_html = (
+                    f'<ul class="approach-principle__bullets">{bullet_items}</ul>' if bullet_items else ""
+                )
             principle_cards.append(
-                '<section class="approach-principle">'
+                f'<section class="approach-principle" data-principle="{html_mod.escape(practice["slug"])}">'
                 f'<button type="button" class="approach-principle__toggle" aria-expanded="false">'
                 f'<span class="approach-principle__num" aria-hidden="true">{number}</span>'
                 f'<span class="approach-principle__copy">'
@@ -2355,14 +2224,13 @@ class Catalog:
             "</div>"
             '<aside class="approach-principles" id="approach-principles" aria-labelledby="approach-principles-heading">'
             '<h2 class="approach-principles__title" id="approach-principles-heading">'
-            'Context Driven Delivery Practices'
+            f"{html_mod.escape(copy.principles_heading)}"
             "</h2>"
             f'<div class="approach-principles__list">{"".join(principle_cards)}</div>'
             "</aside>"
             '<section class="approach-library" aria-labelledby="approach-library-heading">'
             '<h2 class="approach-library__title" id="approach-library-heading">'
-            "Our CDD harness is a library of skills, agents and tools that bring the best of "
-            "agile product, delivery, and engineering practices into the age of AI."
+            f"{html_mod.escape(copy.library_heading)}"
             "</h2>"
             f"{approach_principle_grid(self._board_tools, 'tickets')}"
             "</section>"
@@ -2425,53 +2293,104 @@ class Catalog:
             "var stage=stages[index];"
             "if(!stage)return;"
             "titleEl.textContent=stage.detail_title;"
+            "showStageExample(stage,scroll&&started);"
             "bodyEl.classList.remove('is-enter');"
             "void bodyEl.offsetWidth;"
             "bodyEl.innerHTML=stage.paras.map(function(para){"
             "return '<li>'+para.replace(/</g,'&lt;')+'</li>';"
             "}).join('');"
             "bodyEl.classList.add('is-enter');"
-            "if(scroll&&!onPrinciples&&started)scrollRefineToTop();"
+            "if(scroll&&!onPrinciples&&started&&!(stage.example_href))scrollRefineToTop();"
+            "}"
+            "function showStageExample(){}"
+            "function openNextColumn(){"
+            "var host=document.getElementById('approach-stage-examples');"
+            "return !!(window.catalogRefineOpenNext&&window.catalogRefineOpenNext(host));"
+            "}"
+            "function closeLastColumn(){"
+            "var host=document.getElementById('approach-stage-examples');"
+            "return !!(window.catalogRefineCloseLast&&window.catalogRefineCloseLast(host));"
+            "}"
+            "function principleSlug(i){"
+            "return principles[i]?principles[i].getAttribute('data-principle'):'';"
+            "}"
+            "var peStep=-1;"
+            "function peSteps(){"
+            "var steps=[];"
+            "document.querySelectorAll('#pe-engineering .approach-refine-row').forEach(function(host){"
+            "['discovery','specification','implementation'].forEach(function(id){"
+            "if(host.querySelector('.approach-stage-column[data-stage-id=\"'+id+'\"]')){"
+            "steps.push({host:host,id:id});"
+            "}"
+            "});"
+            "});"
+            "return steps;"
+            "}"
+            "function walkPe(delta){"
+            "if(!window.catalogRefineSetStage)return false;"
+            "var steps=peSteps();"
+            "if(!steps.length)return false;"
+            "if(delta>0){"
+            "if(peStep>=steps.length-1)return false;"
+            "peStep+=1;"
+            "return window.catalogRefineSetStage(steps[peStep].host,steps[peStep].id,true);"
+            "}"
+            "if(peStep<0)return false;"
+            "window.catalogRefineSetStage(steps[peStep].host,steps[peStep].id,false);"
+            "peStep-=1;"
+            "return true;"
             "}"
             "function move(delta){"
             "started=true;"
+            "if(phase==='stages'){"
+            "if(delta>0&&index>=stages.length-1){"
+            "phase='principles';"
+            "closePrinciples();"
+            "if(principlesEl){"
+            "var nav=document.querySelector('.site-nav');"
+            "var navH=nav?nav.getBoundingClientRect().height:0;"
+            "var top=principlesEl.getBoundingClientRect().top+window.pageYOffset-(navH+16);"
+            "window.scrollTo(0,Math.max(0,top));"
+            "}"
+            "return;"
+            "}"
+            "if(delta<0&&index<=0)return;"
+            "index+=delta;"
+            "closePrinciples();"
+            "paint(false);"
+            "return;"
+            "}"
+            "if(phase==='travel'||phase==='library')phase='principles';"
             "if(delta>0){"
-            "if(principleIndex>=0){"
+            "if(principleIndex<0){showPrinciple(0,false);paint(false);return;}"
+            "if(principleSlug(principleIndex)==='iterate-and-learn'&&openNextColumn())return;"
+            "if(principleSlug(principleIndex)==='product-engineering'&&walkPe(1))return;"
             "if(principleIndex>=principles.length-1)return;"
-            "showPrinciple(principleIndex+1,true);"
+            "showPrinciple(principleIndex+1,false);"
+            "if(principleSlug(principleIndex)==='product-engineering')peStep=-1;"
             "paint(false);"
             "return;"
             "}"
-            "if(index===stages.length-1){"
-            "showPrinciple(0,true);"
-            "paint(false);"
-            "return;"
-            "}"
-            "index+=1;"
-            "paint(true);"
-            "return;"
-            "}"
-            "if(principleIndex>0){"
-            "showPrinciple(principleIndex-1,true);"
-            "paint(false);"
-            "return;"
-            "}"
-            "if(principleIndex===0){"
-            "showPrinciple(-1,false);"
+            "if(principleSlug(principleIndex)==='product-engineering'&&walkPe(-1))return;"
+            "if(principleSlug(principleIndex)==='iterate-and-learn'&&closeLastColumn())return;"
+            "if(principleIndex>0){showPrinciple(principleIndex-1,false);paint(false);return;}"
+            "if(principleIndex===0){closePrinciples();paint(false);return;}"
+            "phase='stages';"
             "index=stages.length-1;"
-            "paint(true);"
-            "return;"
-            "}"
-            "if(index===0)return;"
-            "index-=1;"
-            "paint(true);"
+            "paint(false);"
             "}"
             "buttons.forEach(function(btn,i){"
-            "btn.addEventListener('click',function(){"
-            "showPrinciple(-1,false);"
+            "btn.addEventListener('click',function(e){"
+            "if(e.target.closest&&e.target.closest('a'))return;"
             "started=true;"
+            "phase='stages';"
             "index=i;"
+            "if(!stages[i]||!stages[i].example_href)showPrinciple(-1,false);"
             "paint(ready);"
+            "});"
+            "btn.addEventListener('keydown',function(e){"
+            "if(e.target!==btn)return;"
+            "if(e.key==='Enter'||e.key===' '){e.preventDefault();btn.click();}"
             "});"
             "});"
             "principles.forEach(function(el,i){"
@@ -2479,8 +2398,10 @@ class Catalog:
             "if(!toggle)return;"
             "toggle.addEventListener('click',function(){"
             "started=true;"
+            "phase='principles';"
             "if(principleIndex===i){showPrinciple(-1,false);paint(false);return;}"
-            "showPrinciple(i,true);"
+            "showPrinciple(i,false);"
+            "if(principleSlug(i)==='product-engineering')peStep=-1;"
             "paint(false);"
             "});"
             "});"
@@ -2489,19 +2410,28 @@ class Catalog:
             "if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();move(1);}"
             "else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();move(-1);}"
             "});"
-            "var wheelLock=false;"
-            "document.addEventListener('wheel',function(e){"
-            "if(e.ctrlKey||e.metaKey)return;"
-            "if(e.target.closest('input,textarea,select'))return;"
-            "var dy=e.deltaY;"
-            "if(Math.abs(dy)<Math.abs(e.deltaX))dy=e.deltaX;"
-            "if(Math.abs(dy)<4)return;"
-            "e.preventDefault();"
-            "if(wheelLock)return;"
-            "wheelLock=true;"
-            "move(dy>0?1:-1);"
-            "window.setTimeout(function(){wheelLock=false;},480);"
-            "},{passive:false});"
+            "var phase='stages';"
+            "var dragClip=null,dragX=0,dragLeft=0;"
+            "document.addEventListener('pointerdown',function(e){"
+            "var clip=e.target.closest&&e.target.closest('.approach-stage-examples__clip');"
+            "if(!clip||e.button!==0)return;"
+            "if(e.target.closest('button,a,input,textarea,select,.catalog-monaco,.mxgraph,.skill-drawio-wrap'))return;"
+            "dragClip=clip;dragX=e.clientX;dragLeft=clip.scrollLeft;"
+            "clip.classList.add('is-dragging');"
+            "try{clip.setPointerCapture(e.pointerId);}catch(err){}"
+            "});"
+            "document.addEventListener('pointermove',function(e){"
+            "if(!dragClip)return;"
+            "dragClip.scrollLeft=dragLeft-(e.clientX-dragX);"
+            "});"
+            "document.addEventListener('pointerup',function(){"
+            "if(!dragClip)return;"
+            "dragClip.classList.remove('is-dragging');"
+            "dragClip=null;"
+            "});"
+            "function closePrinciples(){"
+            "showPrinciple(-1,false);"
+            "}"
             "paint(false);"
             "ready=true;"
             "})();</script>"

@@ -33,6 +33,9 @@ with description("HtmlUxMap"):
         expect("<article class=\"screen\"" in self.rendered).to(equal(True))
         expect("Catalog" in self.rendered).to(equal(True))
         expect("data-ux-story-ref" in self.rendered).to(equal(True))
+        expect("data-set-mode" in self.rendered).to(equal(False))
+        expect('id="story-outline"' in self.rendered).to(equal(True))
+        expect('id="screen-stories"' in self.rendered).to(equal(True))
 
     with it("should parse the embedded ux-map-json marker"):
         expect(self.parsed.scope).to(equal("Place New Order"))

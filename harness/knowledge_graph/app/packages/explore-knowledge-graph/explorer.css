@@ -66,6 +66,8 @@ html {
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   color-scheme: light;
+  height: 100%;
+  overflow: hidden;
 }
 
 html[data-theme="engineering"] { color-scheme: dark; }
@@ -73,18 +75,21 @@ html[data-theme="engineering"] { color-scheme: dark; }
 body {
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
 }
 
 #root,
 .explore-knowledge-graph,
 .knowledge-graph-explorer {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .knowledge-graph-explorer {
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto minmax(0, auto) minmax(0, 1fr);
 }
 
 .site-nav {
@@ -246,6 +251,10 @@ html[data-theme="engineering"] .site-nav {
   padding: var(--space-sm) var(--space-lg);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  min-height: 0;
+  max-height: 42vh;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .folder-scan {
@@ -417,6 +426,7 @@ html[data-theme="engineering"] .site-nav {
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg) var(--space-lg);
   min-height: 0;
+  overflow: hidden;
 }
 
 .panel {
@@ -427,6 +437,8 @@ html[data-theme="engineering"] .site-nav {
   overflow: auto;
   min-height: 0;
   padding: var(--space-md);
+  overscroll-behavior: contain;
+  overflow-anchor: none;
 }
 
 .panel::before {
@@ -562,6 +574,7 @@ ul.tree ul {
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-xs);
   overflow: hidden;
+  overflow-anchor: none;
 }
 
 .source-snippet-bar {
@@ -653,6 +666,11 @@ ul.tree ul {
   background: transparent !important;
 }
 
+.source-snippet .monaco-editor,
+.source-snippet .overflow-guard {
+  overflow-anchor: none;
+}
+
 .source-loading {
   margin: 0;
   padding: var(--space-sm) var(--space-md);
@@ -707,7 +725,7 @@ ul.tree ul {
 
 .pane-actions {
   position: sticky;
-  top: calc(-1 * var(--space-md));
+  top: 0;
   z-index: 4;
   display: flex;
   justify-content: flex-end;

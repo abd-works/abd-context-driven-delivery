@@ -2,15 +2,17 @@
 
 Mirrors the abd-skills Foundry hub: hero, CDD tour panel, scope-shape column
 heads, orange policy boxes, kebab-case tickets, Actions/Utilities strips.
-Stage column heads navigate to CDD fidelities (no stage filter).
+Stage column heads that name a catalog example link to that example.
 """
 from __future__ import annotations
 
 import base64
 import html
+import json
 import re
 import shutil
 import urllib.parse
+import xml.etree.ElementTree as ET
 import zlib
 from pathlib import Path
 
@@ -50,43 +52,34 @@ _STAGE_SCOPES: dict[str, dict[str, str]] = {
     },
 }
 
-# Stage column bullets — approach-page scope chips (Outcome / Increment / Tests).
-_STAGE_POLICIES: dict[str, tuple[str, ...]] = {
-    "discovery": (
-        "Outcome",
-        "Experience",
-        "Architecture",
-    ),
-    "spec": (
-        "Increment",
-        "Prototype",
-        "Reference",
-    ),
-    "engineer": (
-        "Tests",
-        "Interface",
-        "Solution",
-    ),
-}
+_STORY_EXAMPLES = (
+    Path(__file__).resolve().parents[2] / "practices" / "stories" / "catalog-examples"
+)
 
-# Approach write-ups shown under each stage column during the tour.
-_STAGE_DESCRIPTIONS: dict[str, tuple[str, ...]] = {
-    "discovery": (
-        "Refine context into lower-fidelity artifacts that make it easier to align on the overarching solution, catch systemic errors, and avoid failure cascading downstream.",
-        "Focus on how outcomes translate to user journeys, and map those journeys to system behavior.",
-        "Define enough structure to establish how domain boundaries and technology modules connect.",
-    ),
-    "spec": (
-        "Create machine-executable specifications — one small slice of the journey at a time.",
-        "Refine the business understanding needed to modularize domain validity, access, persistence, consistency, and integration.",
-        "Write example-driven scenarios backed by domain-driven operations, and generate working UI prototypes that pass their tests.",
-    ),
-    "engineer": (
-        "Build each slice onto the target stack. AI oversees deterministic tools so the same input produces results guarded by safety and quality standards.",
-        "Automate scenario specifications to cover user, system, and module-connecting interfaces.",
-        "Evaluate every error — technical and functional — and feed results back into the growing knowledge repository.",
-    ),
-}
+
+def approach_board_stages(path: str | Path | None = None) -> dict[str, dict]:
+    """Stage chips and paragraphs keyed by board column, from approach markdown."""
+    from catalog_generator.approach_copy import APPROACH_MARKDOWN, load_approach_copy
+
+    source = Path(path) if path is not None else APPROACH_MARKDOWN
+    copy = load_approach_copy(source)
+    return {
+        stage["board_key"]: stage
+        for stage in copy.stages
+        if stage.get("board_key")
+    }
+
+
+def stage_example_href(stage: dict, *, path_prefix: str = "") -> str:
+    """Catalog page for a stage ``example:`` file under stories catalog-examples."""
+    filename = (stage.get("example") or "").strip()
+    if not filename or not (_STORY_EXAMPLES / filename).is_file():
+        return ""
+    return f"{path_prefix}examples/{stage['id']}.html"
+
+
+def _board_stage(stages: dict[str, dict], stage_key: str) -> dict:
+    return stages.get(stage_key) or {}
 
 # Board rows under the CDD header: Stories → CE → UX → BDD → DDD.
 FAMILY_ROW_ORDER: tuple[str, ...] = (
@@ -174,32 +167,13 @@ _SPEC_BLURBS: dict[str, str] = {
     "ddd": "Templates that generate domain building blocks for the target architecture",
 }
 
-# Discovery-fidelity overviews, tightened to one or two sentences for Context Storming.
-_STORM_BLURBS: dict[str, str] = {
-    "stories": (
-        "Define the story map as Epic, Sub-Epic, and Story. "
-        "Change it while the nodes are still titles, because the same move costs much more after scenarios, screens, and tests exist."
-    ),
-    "ddd": (
-        "Draw where the language changes: context boundaries, the aggregates that protect invariants, and the dependency arcs between contexts. "
-        "Names and boundaries are cheap to change here, and expensive once building blocks, stories, and code depend on them."
-    ),
-    "ux": (
-        "Decide which screens exist and how users move between them. "
-        "Name screens, regions, and transitions in the user's language before controls or brand."
-    ),
-    "clean_engineering": (
-        "Partition the problem into modules a reader can understand on their own. "
-        "Name each module, its public seam, and its one-way dependencies."
-    ),
-    "bdd": (
-        "Name every observation as a nested describe/it signature. "
-        "Leave the test bodies empty until the behavior is agreed."
-    ),
-}
-
-
-def approach_principle_grid(practices: list[dict], kind: str) -> str:
+def approach_principle_grid(
+    practices: list[dict],
+    kind: str,
+    *,
+    approach_md_path: str | Path | None = None,
+    stages: tuple[dict, ...] | list[dict] | None = None,
+) -> str:
     """Static board under one approach principle. ``kind`` is descriptions, windows, spec, or tickets."""
     by_name = {t["toolset_name"]: t for t in practices}
     row_order = ("stories", "ddd", "ux", "clean_engineering", "bdd")
@@ -224,37 +198,7 @@ def approach_principle_grid(practices: list[dict], kind: str) -> str:
     )
 
     if kind == "descriptions":
-        # Customer discovery and DevOps sit on this grid only. They are not catalog practices.
-        bookends = (
-            (
-                "customer-discovery",
-                "customer-discovery",
-                "Validate customer impact by delivering the smallest increment that enables them, and pivot to measure and learn.",
-                "customer-discovery.html",
-            ),
-            (
-                "devops",
-                "devops",
-                "Merge development and operations by treating infrastructure as code and testing and deploying continuously.",
-                "devops.html",
-            ),
-        )
-
-        def plain_row(name: str, fam: str, blurb: str, href: str) -> list[str]:
-            return [
-                f'<a class="approach-grid__label approach-grid__label--{html.escape(fam)}" '
-                f'href="{html.escape(href)}">{html.escape(name)}</a>',
-                f'<div class="approach-grid__cell">{html.escape(blurb)}</div>',
-            ]
-
-        body = plain_row(*bookends[0])
-        for tool in rows:
-            body.append(label(tool))
-            body.append(
-                f'<div class="approach-grid__cell">{html.escape(_PRACTICE_BLURBS.get(tool["toolset_name"], ""))}</div>'
-            )
-        body.extend(plain_row(*bookends[1]))
-        return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
+        return _product_engineering_grid(rows)
 
     if kind == "spec":
         body = []
@@ -265,59 +209,22 @@ def approach_principle_grid(practices: list[dict], kind: str) -> str:
             )
         return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
 
-    if kind == "storm":
-        body = []
-        for tool in rows:
-            body.append(label(tool))
-            body.append(
-                f'<div class="approach-grid__cell">{html.escape(_STORM_BLURBS.get(tool["toolset_name"], ""))}</div>'
-            )
-        return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
-
     if kind == "windows":
-        stages = ("Context", "Discovery", "Specification", "Implementation")
-        stage_bar = '<div class="approach-window__stages">' + "".join(
-            f'<div class="approach-window__stage">{html.escape(label)}</div>' for label in stages
-        ) + "</div>"
-        windows = (
-            ("solution", "Whole Solution", "wide / shallow", "", "outcomes · scope · boundaries"),
-            ("increment", "Increment", "medium", "days", "interactions · experience · structure"),
-            ("sprint", "Session", "narrow / deeper", "hours", "behaviour · design · logic"),
-            ("story", "Story", "narrowest / deep", "minutes", "tests · code · interface"),
-        )
-        parts: list[str] = []
-        for index, (shape, name, width, when, detail) in enumerate(windows):
-            if index:
-                parts.append('<div class="approach-window__arrow" aria-hidden="true"></div>')
-            bracket = f"{width} - {when}" if when else width
-            parts.append(
-                f'<div class="approach-window approach-window--{shape}">'
-                '<div class="approach-window__shape"></div>'
-                f'<div class="approach-window__name">{html.escape(name)}</div>'
-                f'<div class="approach-window__width">({html.escape(bracket)})</div>'
-                f'<div class="approach-window__detail">{html.escape(detail)}</div>'
-                "</div>"
-            )
-        return (
-            '<div class="approach-windows" role="img" '
-            'aria-label="Context window narrows from Whole Solution to Story">'
-            + stage_bar
-            + '<div class="approach-windows__row">'
-            + "".join(parts)
-            + "</div></div>"
-        )
+        return _approach_windows_html(stages)
 
     if kind == "stages":
+        board_stages = approach_board_stages(approach_md_path)
         heads = [cdd_head]
         details = []
         for stage_key, stage_label in STAGES:
+            stage = _board_stage(board_stages, stage_key)
             fams = ("sdd", "uxd", "arc")
             chips = "".join(
                 f'<li class="approach-grid__chip approach-grid__chip--{fams[i % 3]}">{html.escape(item)}</li>'
-                for i, item in enumerate(_STAGE_POLICIES.get(stage_key, ()))
+                for i, item in enumerate(stage.get("items") or ())
             )
             paras = "".join(
-                f'<p>{html.escape(para)}</p>' for para in _STAGE_DESCRIPTIONS.get(stage_key, ())
+                f'<p>{html.escape(para)}</p>' for para in (stage.get("paras") or ())
             )
             shape = "solution" if stage_key == "discovery" else "sprint" if stage_key == "spec" else "story"
             heads.append(
@@ -471,6 +378,24 @@ def page_shell(
     body_wrap = "wrap"
     if body_wrap_class:
         body_wrap = f"wrap {body_wrap_class.strip()}"
+    drawio_script = ""
+    if (
+        "data-mxgraph" in body_inner
+        or "approach-stage-examples" in body_inner
+        or "approach-refine-row" in body_inner
+    ):
+        drawio_script = (
+            f'<script src="{commons_prefix}catalog-drawio.js?v=cdd-117"></script>'
+        )
+        if "data-mxgraph" in body_inner:
+            drawio_script = (
+                '<script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>'
+                + drawio_script
+            )
+        if "approach-refine-row" in body_inner or "approach-stage-examples" in body_inner:
+            drawio_script += (
+                f'<script src="{commons_prefix}catalog-refine-row.js?v=cdd-2"></script>'
+            )
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="engineering" data-abd-theme="engineering">
 <head>
@@ -484,7 +409,7 @@ def page_shell(
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{commons_prefix}site.css?v=foundry-33">
-<link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-76">
+<link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-133">
 <link rel="stylesheet" href="{commons_prefix}cdd-board.css?v=cdd-31">
 {extra_head}
 <script src="{commons_prefix}catalog-nav.js?v=foundry-13"></script>
@@ -501,6 +426,7 @@ def page_shell(
 </div>
 </main>
 <script src="{commons_prefix}catalog-foundry-skill-nav.js?v=cdd-16"></script>
+{drawio_script}
 </body>
 </html>
 """
@@ -566,17 +492,18 @@ def _scope_shape_html(stage_key: str) -> str:
     )
 
 
-def _stage_col_detail_html(stage_key: str) -> str:
+def _stage_col_detail_html(stage_key: str, stages: dict[str, dict]) -> str:
     """Approach chips + write-ups shown inside each column during tour stage 1."""
+    stage = _board_stage(stages, stage_key)
     fams = ("sdd", "uxd", "arc")
     chips = "".join(
         f'<li class="tour-stage-detail__chip tour-stage-detail__chip--{fams[i % 3]}">'
         f"{html.escape(item)}</li>"
-        for i, item in enumerate(_STAGE_POLICIES.get(stage_key, ()))
+        for i, item in enumerate(stage.get("items") or ())
     )
     paras = "".join(
         f'<p class="tour-stage-detail__desc">{html.escape(para)}</p>'
-        for para in _STAGE_DESCRIPTIONS.get(stage_key, ())
+        for para in (stage.get("paras") or ())
     )
     return (
         f'<div class="tour-stage-detail" data-stage-detail="{html.escape(stage_key)}">'
@@ -588,6 +515,7 @@ def _stage_col_detail_html(stage_key: str) -> str:
 
 def _stage_questions_html(
     practices: list[dict],
+    stages: dict[str, dict],
     *,
     path_prefix: str = "",
 ) -> str:
@@ -603,13 +531,14 @@ def _stage_questions_html(
         "</svg></button></div>"
     ]
     for stage_key, _ in STAGES:
+        stage = _board_stage(stages, stage_key)
         items = "".join(
             f'<li class="kanban-stage-questions__item">{html.escape(item)}</li>'
-            for item in _STAGE_POLICIES[stage_key]
+            for item in (stage.get("items") or ())
         )
         paras = "".join(
             f'<p class="kanban-stage-questions__desc">{html.escape(para)}</p>'
-            for para in _STAGE_DESCRIPTIONS.get(stage_key, ())
+            for para in (stage.get("paras") or ())
         )
         fid = (cdd.get("fidelities") or {}).get(stage_key)
         href = path_prefix + (fid["href"] if fid else f"fidelities/cdd-{stage_key}.html")
@@ -655,8 +584,10 @@ def render_hub_board(
     highlight_fidelity: str | None = None,
     path_prefix: str = "",
     initial_family: str | None = None,
+    approach_md_path: str | Path | None = None,
 ) -> str:
     """Build the Foundry-style stage×tool kanban + policies + Actions/Utilities."""
+    board_stages = approach_board_stages(approach_md_path)
     by_name = {t["toolset_name"]: t for t in practices}
     ordered = [by_name[n] for n in FAMILY_ROW_ORDER if n in by_name]
     for t in practices:
@@ -717,14 +648,23 @@ def render_hub_board(
                 active = " active"
 
         stage_current = " kb-col-head--current" if active else ""
+        stage_meta = _board_stage(board_stages, stage_key)
+        example_href = stage_example_href(stage_meta, path_prefix=path_prefix)
+        label = html.escape(stage_label)
+        if example_href:
+            title = (
+                f'<a class="kb-col-head-title__link" href="{html.escape(example_href)}">{label}</a>'
+            )
+        else:
+            title = f"<span>{label}</span>"
         cols.append(
             f'<div class="kb-col{active}" data-id="col-{stage_key}" data-stage="{stage_key}">'
             f'<div class="kb-col-head{stage_current}">'
             f'<div class="kb-col-head-row">'
             f"{_scope_shape_html(stage_key)}"
-            f'<span class="kb-col-head-title"><span>{html.escape(stage_label)}</span></span>'
+            f'<span class="kb-col-head-title">{title}</span>'
             f"</div></div>"
-            f"{_stage_col_detail_html(stage_key)}"
+            f"{_stage_col_detail_html(stage_key, board_stages)}"
             f'{"".join(rows)}'
             f"</div>"
         )
@@ -762,7 +702,9 @@ def render_hub_board(
         + "</div>"
     )
 
-    stage_questions = _stage_questions_html(practices, path_prefix=path_prefix)
+    stage_questions = _stage_questions_html(
+        practices, board_stages, path_prefix=path_prefix
+    )
 
     return f"""
 <div class="wrap">
@@ -830,7 +772,8 @@ def catalog_examples_html(module_dir: Path, fidelity_key: str) -> str:
     """Collapsible Examples block for ``{practice}/catalog-examples/{fidelity}.*``.
 
     Every file with that stem is shown. Markdown renders as HTML, Draw.io
-    opens in the diagrams.net viewer, and other files stay as source.
+    opens in the diagrams.net viewer, images render as ``<img>``, and other
+    text files stay as source.
     """
     folder = Path(module_dir) / "catalog-examples"
     if not folder.is_dir() or not fidelity_key:
@@ -853,10 +796,28 @@ def catalog_examples_html(module_dir: Path, fidelity_key: str) -> str:
 _EXAMPLE_SUFFIX_ORDER = {
     ".md": 0,
     ".markdown": 0,
+    ".ts": 1,
+    ".tsx": 1,
     ".html": 1,
     ".htm": 1,
     ".drawio": 2,
     ".dio": 2,
+    ".png": 3,
+    ".jpg": 3,
+    ".jpeg": 3,
+    ".gif": 3,
+    ".webp": 3,
+    ".svg": 3,
+}
+
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+_IMAGE_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
 }
 
 
@@ -876,6 +837,13 @@ def _render_catalog_example(path: Path) -> str:
         src = html.escape(_drawio_viewer_url(path.read_text(encoding="utf-8")), quote=True)
         inner = (
             f'<iframe class="catalog-drawio-frame" title="{name}" loading="lazy" src="{src}"></iframe>'
+        )
+    elif suffix in _IMAGE_SUFFIXES:
+        mime = _IMAGE_MIME[suffix]
+        payload = base64.b64encode(path.read_bytes()).decode("ascii")
+        inner = (
+            f'<img class="catalog-example__image" alt="{name}" '
+            f'src="data:{mime};base64,{payload}">'
         )
     else:
         lang = html.escape(suffix.lstrip(".") or "text")
@@ -915,6 +883,77 @@ def _strip_markdown_frontmatter(text: str) -> str:
     return text[end + 4 :].lstrip("\n")
 
 
+_DRAWIO_FRAME_MARGIN = 20
+
+
+def _drawio_page_size(xml: str) -> tuple[int, int]:
+    try:
+        model = ET.fromstring(xml).find(".//mxGraphModel")
+    except ET.ParseError:
+        return 1080, 919
+    if model is None:
+        return 1080, 919
+    width = int(float(model.get("pageWidth") or 1080))
+    height = int(float(model.get("pageHeight") or 919))
+    return width, height
+
+
+def _drawio_content_size(xml: str, margin: int = _DRAWIO_FRAME_MARGIN) -> tuple[int, int]:
+    """Native pixel box that covers every placed cell and the page."""
+    page_w, page_h = _drawio_page_size(xml)
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        return page_w, page_h
+    xs: list[float] = [0.0, float(page_w)]
+    ys: list[float] = [0.0, float(page_h)]
+    for cell in root.iter("mxCell"):
+        geom = cell.find("mxGeometry")
+        if geom is None or geom.get("x") is None:
+            continue
+        left = float(geom.get("x") or 0)
+        top = float(geom.get("y") or 0)
+        xs.extend((left, left + float(geom.get("width") or 0)))
+        ys.extend((top, top + float(geom.get("height") or 0)))
+    width = int(max(xs) - min(xs) + margin * 2)
+    height = int(max(ys) - min(ys) + margin * 2)
+    return max(page_w, width), max(page_h, height)
+
+
+
+def _drawio_frame_viewport(xml: str, margin: int = _DRAWIO_FRAME_MARGIN) -> str:
+    """Park diagram cells on the top-left page edge and resize the page to fit."""
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        return xml
+    placed: list[ET.Element] = []
+    for cell in root.iter("mxCell"):
+        cell_id = cell.get("id") or ""
+        if cell_id in ("0", "1"):
+            continue
+        geom = cell.find("mxGeometry")
+        if geom is None or geom.get("x") is None:
+            continue
+        placed.append(geom)
+    if not placed:
+        return xml
+    left = min(float(geom.get("x") or 0) for geom in placed)
+    top = min(float(geom.get("y") or 0) for geom in placed)
+    right = max(float(geom.get("x") or 0) + float(geom.get("width") or 0) for geom in placed)
+    bottom = max(float(geom.get("y") or 0) + float(geom.get("height") or 0) for geom in placed)
+    shift_x = margin - left
+    shift_y = margin - top
+    for geom in placed:
+        geom.set("x", str(int(float(geom.get("x") or 0) + shift_x)))
+        geom.set("y", str(int(float(geom.get("y") or 0) + shift_y)))
+    model = root.find(".//mxGraphModel")
+    if model is not None:
+        model.set("pageWidth", str(int(right - left + margin * 2)))
+        model.set("pageHeight", str(int(bottom - top + margin * 2)))
+    return ET.tostring(root, encoding="unicode")
+
+
 def _drawio_viewer_url(xml: str) -> str:
     compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
     raw = compressor.compress(xml.encode("utf-8")) + compressor.flush()
@@ -923,6 +962,859 @@ def _drawio_viewer_url(xml: str) -> str:
         "https://viewer.diagrams.net/?lightbox=1&nav=1&layers=1&toolbar=zoom"
         f"&edit=_blank#R{token}"
     )
+
+
+def _drawio_framed_viewer_url(xml: str) -> str:
+    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
+    raw = compressor.compress(xml.encode("utf-8")) + compressor.flush()
+    token = urllib.parse.quote(base64.b64encode(raw).decode("ascii"), safe="")
+    return (
+        "https://viewer.diagrams.net/?lightbox=1&nav=0&layers=1&toolbar=0"
+        f"&edit=_blank#R{token}"
+    )
+
+
+def _drawio_story_map_viewer_url(xml: str) -> str:
+    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
+    raw = compressor.compress(xml.encode("utf-8")) + compressor.flush()
+    token = urllib.parse.quote(base64.b64encode(raw).decode("ascii"), safe="")
+    return (
+        "https://viewer.diagrams.net/?lightbox=1&nav=0&layers=1&toolbar=0"
+        f"&edit=_blank#R{token}"
+    )
+
+
+def _drawio_iframe(path: Path, *, zoom_left: bool = False) -> str:
+    xml = path.read_text(encoding="utf-8")
+    name = html.escape(path.name)
+    display_xml = _drawio_frame_viewport(xml) if path.stem == "story_map" else xml
+    viewer_url = (
+        _drawio_story_map_viewer_url(display_xml)
+        if path.stem == "story_map"
+        else _drawio_framed_viewer_url(display_xml)
+    )
+    src = html.escape(viewer_url, quote=True)
+    kind = (
+        " approach-stage-drawio--story-map"
+        if path.stem == "story_map"
+        else " approach-stage-drawio--framed"
+    )
+    page_w, page_h = (
+        _drawio_page_size(display_xml)
+        if path.stem == "story_map"
+        else _drawio_content_size(display_xml)
+    )
+    return (
+        f'<div class="approach-stage-drawio-zoom skill-drawio-wrap approach-stage-drawio{kind}" '
+        f'data-page-w="{page_w}" data-page-h="{page_h}">'
+        f'<div class="approach-stage-drawio__scale">'
+        f'<iframe class="catalog-drawio-frame" title="{name}" '
+        f'width="{page_w}" height="{page_h}" '
+        f'style="width:{page_w}px;height:{page_h}px;max-width:none" '
+        f'data-src="{src}"></iframe>'
+        "</div></div>"
+    )
+
+
+def _stories_stage_overview(stage_id: str) -> str:
+    stage_key = {"discovery": "discovery", "specification": "spec", "implementation": "engineer"}.get(stage_id, "")
+    if not stage_key:
+        return ""
+    guide = Path(__file__).resolve().parents[2] / "practices" / "stories" / "stories.md"
+    if not guide.is_file():
+        return ""
+    for item in _practice_fidelities(guide.read_text(encoding="utf-8")):
+        if item["stage"] == stage_key:
+            return item["opening"]
+    return ""
+
+
+_STEP_LINE = re.compile(r"^\s*(?:given|when|then|\.(?:and|but))\s*\(")
+_MONACO_LANG = {
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".js": "javascript",
+    ".jsx": "javascript",
+    ".py": "python",
+    ".html": "html",
+    ".htm": "html",
+}
+
+
+def step_fold_ranges(source: str) -> list[tuple[int, int]]:
+    """1-based inclusive line ranges for Given/When/Then/And/But callback bodies.
+
+    The start line is the step signature. The end line closes the callback.
+    A step that fits on one line is left unfolded.
+    """
+    lines = source.splitlines()
+    ranges: list[tuple[int, int]] = []
+    index = 0
+    while index < len(lines):
+        if not _STEP_LINE.match(lines[index]):
+            index += 1
+            continue
+        end = _callback_end_line(lines, index)
+        if end is not None and end > index:
+            ranges.append((index + 1, end + 1))
+            index = end + 1
+        else:
+            index += 1
+    return ranges
+
+
+_STORY_LINE = re.compile(r"^\s*story\s*\(")
+_SCENARIO_LINE = re.compile(r"^\s*scenario\s*\(")
+_STORY_COMMENT = re.compile(r"\*\s*Story:")
+
+
+def scenario_step_fold_ranges(source: str) -> list[tuple[int, int]]:
+    """Fold acceptance-test scaffolding and step bodies; keep story, scenario, and steps visible."""
+    lines = source.splitlines()
+    ranges = list(step_fold_ranges(source))
+
+    story_idx = next((i for i, line in enumerate(lines) if _STORY_LINE.match(line)), None)
+    scenario_idx = next((i for i, line in enumerate(lines) if _SCENARIO_LINE.match(line)), None)
+    first_step_idx = next((i for i, line in enumerate(lines) if _STEP_LINE.match(line)), None)
+
+    if story_idx is not None:
+        story_comment_idx = next(
+            (i for i in range(story_idx) if _STORY_COMMENT.search(lines[i])),
+            None,
+        )
+        if story_comment_idx is not None and story_comment_idx < story_idx - 1:
+            ranges.append((story_comment_idx + 2, story_idx))
+        elif story_idx > 0:
+            ranges.append((1, story_idx))
+
+    if (
+        scenario_idx is not None
+        and first_step_idx is not None
+        and first_step_idx > scenario_idx + 1
+    ):
+        ranges.append((scenario_idx + 1, first_step_idx))
+
+    last_step_end = None
+    index = 0
+    while index < len(lines):
+        if not _STEP_LINE.match(lines[index]):
+            index += 1
+            continue
+        end = _callback_end_line(lines, index)
+        if end is not None:
+            last_step_end = end
+            index = end + 1
+        else:
+            index += 1
+    return sorted({(start, end) for start, end in ranges if end >= start})
+
+
+def _acceptance_test_folds(source: str) -> list[tuple[int, int]] | None:
+    lines = source.splitlines()
+    has_story = any(_STORY_LINE.match(line) for line in lines)
+    has_scenario = any(_SCENARIO_LINE.match(line) for line in lines)
+    if has_story and has_scenario:
+        return scenario_step_fold_ranges(source)
+    return None
+
+
+_CLASS_LINE = re.compile(r"^export class (\w+)")
+_CONST_OBJECT_LINE = re.compile(r"^export const \w+ = \{")
+_INTERFACE_LINE = re.compile(r"^export interface \w+")
+_FUNCTION_LINE = re.compile(r"^function \w+")
+_METHOD_LINE = re.compile(
+    r"^\s+(?:public |private |protected |readonly |static |async |get |set )*"
+    r"(?:constructor|[A-Za-z_]\w*)\s*(?:<[^>\n]*>)?\s*\("
+)
+_OPEN_TYPE_NAMES = {"Customer", "AccountCredentials"}
+
+
+def ddd_class_fold_ranges(source: str) -> list[tuple[int, int]]:
+    """Fold a DDD tactics file to open aggregates and collapsed neighbors.
+
+    ``Customer`` and ``AccountCredentials`` stay open at the class level, with
+    each operation body folded. Other classes, const objects, interfaces, and
+    helpers fold to their declaration.
+    """
+    lines = source.splitlines()
+    ranges: list[tuple[int, int]] = []
+    for index, line in enumerate(lines):
+        class_match = _CLASS_LINE.match(line)
+        foldable = bool(
+            class_match or _CONST_OBJECT_LINE.match(line) or _INTERFACE_LINE.match(line) or _FUNCTION_LINE.match(line)
+        )
+        if not foldable:
+            continue
+        end = _brace_end_line(lines, index)
+        if end is None or end <= index:
+            continue
+        name = class_match.group(1) if class_match else ""
+        previous = lines[index - 1].strip() if index else ""
+        keep_open = name in _OPEN_TYPE_NAMES or (class_match is not None and "Root" in previous)
+        if keep_open:
+            cursor = index + 1
+            while cursor < end:
+                if _METHOD_LINE.match(lines[cursor]):
+                    method_end = _brace_end_line(lines, cursor)
+                    if method_end is not None and method_end > cursor:
+                        ranges.append((cursor + 1, method_end + 1))
+                        cursor = method_end + 1
+                        continue
+                cursor += 1
+        else:
+            ranges.append((index + 1, end + 1))
+    return ranges
+
+
+def _brace_end_line(lines: list[str], start: int) -> int | None:
+    text = "\n".join(lines[start:])
+    opened = _first_brace(text)
+    if opened is None:
+        return None
+    closed = _matching_brace(text, opened)
+    if closed is None:
+        return None
+    return start + text.count("\n", 0, closed)
+
+
+def _first_brace(text: str) -> int | None:
+    index = 0
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if char in "'\"`":
+            index = _skip_string(text, index)
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "/":
+            newline = text.find("\n", index)
+            index = length if newline == -1 else newline + 1
+            continue
+        if char == "{":
+            return index
+        index += 1
+    return None
+
+
+def _callback_end_line(lines: list[str], start: int) -> int | None:
+    text = "\n".join(lines[start:])
+    opened = _arrow_body_open(text)
+    if opened is None:
+        return None
+    closed = _matching_brace(text, opened)
+    if closed is None:
+        return None
+    return start + text.count("\n", 0, closed)
+
+
+def _arrow_body_open(text: str) -> int | None:
+    index = 0
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if char in "'\"`":
+            index = _skip_string(text, index)
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "/":
+            newline = text.find("\n", index)
+            index = length if newline == -1 else newline + 1
+            continue
+        if text.startswith("=>", index):
+            cursor = index + 2
+            while cursor < length and text[cursor] in " \t\r\n":
+                cursor += 1
+            if cursor < length and text[cursor] == "{":
+                return cursor
+            return None
+        index += 1
+    return None
+
+
+def _matching_brace(text: str, open_at: int) -> int | None:
+    depth = 0
+    index = open_at
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if char in "'\"`":
+            index = _skip_string(text, index)
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "/":
+            newline = text.find("\n", index)
+            index = length if newline == -1 else newline + 1
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return None
+
+
+def _skip_string(text: str, start: int) -> int:
+    quote = text[start]
+    index = start + 1
+    length = len(text)
+    while index < length:
+        if text[index] == "\\":
+            index += 2
+            continue
+        if text[index] == quote:
+            return index + 1
+        if quote == "`" and text.startswith("${", index):
+            closed = _matching_brace(text, index + 1)
+            index = length if closed is None else closed + 1
+            continue
+        index += 1
+    return length
+
+
+def write_stage_example_pages(out_root: Path, stages) -> dict[str, str]:
+    """Copy each stage example into ``out_root/examples`` and write its catalog page."""
+    hrefs: dict[str, str] = {}
+    dest_dir = Path(out_root) / "examples"
+    for stage in stages:
+        href = stage_example_href(stage)
+        if not href:
+            continue
+        source = _STORY_EXAMPLES / stage["example"].strip()
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, dest_dir / source.name)
+        page = page_shell(
+            title=f"{stage['label']} — ABD Context Driven Delivery",
+            h1=html.escape(stage["label"]),
+            tagline=html.escape(source.name),
+            body_inner=_stage_example_body(stage, source),
+            commons_prefix="../commons/",
+            nav_prefix="../",
+            nav_current="",
+            body_wrap_class="approach-wrap",
+        )
+        (dest_dir / f"{stage['id']}.html").write_text(page, encoding="utf-8")
+        hrefs[stage["id"]] = href
+    return hrefs
+
+
+def _stage_example_body(stage: dict, source: Path) -> str:
+    back = (
+        '<p class="approach-practice__back">'
+        '<a href="../cdd-approach.html">← Back to the approach</a></p>'
+    )
+    suffix = source.suffix.lower()
+    if suffix in _IMAGE_SUFFIXES:
+        name = html.escape(source.name)
+        return (
+            f"{back}"
+            '<figure class="catalog-example">'
+            f'<img class="catalog-example__image" alt="{name}" src="{name}">'
+            "</figure>"
+        )
+    text = source.read_text(encoding="utf-8")
+    if suffix in (".md", ".markdown"):
+        return f'{back}<div class="skill-md-preview">{_render_example_markdown(text)}</div>'
+    language = _MONACO_LANG.get(suffix, "plaintext")
+    return back + _monaco_example_html(
+        text,
+        language,
+        script_src="../commons/catalog-monaco.js?v=cdd-108",
+        folds=_acceptance_test_folds(text),
+    )
+
+
+def _monaco_start_line(source: str) -> int | None:
+    for number, line in enumerate(source.splitlines(), start=1):
+        if line.startswith("export class Customer"):
+            return number
+    return None
+
+
+def _monaco_example_html(
+    source: str,
+    language: str,
+    *,
+    script_src: str,
+    editor_id: str = "catalog-monaco",
+    folds: list[tuple[int, int]] | None = None,
+    include_script: bool = True,
+    start_line: int | None = None,
+) -> str:
+    ranges = step_fold_ranges(source) if folds is None else folds
+    payload = json.dumps(source).replace("<", "\\u003c")
+    fold_attr = html.escape(
+        json.dumps([{"start": start, "end": end} for start, end in ranges]),
+        quote=True,
+    )
+    source_id = f"{editor_id}-source"
+    start_attr = f' data-start-line="{start_line}"' if start_line else ""
+    body = (
+        f'<div id="{html.escape(editor_id)}" class="catalog-monaco" '
+        f'data-language="{html.escape(language)}" data-folds="{fold_attr}" '
+        f'data-source-id="{html.escape(source_id)}"{start_attr}></div>'
+        f'<script type="application/json" id="{html.escape(source_id)}">{payload}</script>'
+    )
+    if not include_script:
+        return body
+    return (
+        body
+        + '<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>'
+        + f'<script src="{html.escape(script_src)}"></script>'
+    )
+
+
+def _refine_example_panel(stage_id: str, opening: str, inline: str) -> str:
+    """One expandable stage example, matching the Iterate and Learn column body."""
+    if not inline:
+        return ""
+    return (
+        f'<div class="approach-stage-column approach-stage-example" '
+        f'data-stage-id="{html.escape(stage_id)}">'
+        '<div class="approach-stage-column__body">'
+        f"{inline}"
+        "</div></div>"
+    )
+
+
+def _refine_opening(stage_id: str, opening: str) -> str:
+    body = (
+        f'<div class="practice-fidelity__opening">{markdown_to_html(opening)}</div>'
+        if opening
+        else ""
+    )
+    return (
+        f'<div class="approach-refine__opening" data-stage-id="{html.escape(stage_id)}">'
+        f"{body}</div>"
+    )
+
+
+def _stage_example_panel_html(stage: dict) -> tuple[str, bool]:
+    """Example body for one refine stage, or empty when no catalog example exists."""
+    filename = (stage.get("example") or "").strip()
+    if not filename:
+        return "", False
+    source = _STORY_EXAMPLES / filename
+    if not source.is_file():
+        return "", False
+    inline = _stage_example_inline(source, include_monaco_script=False)
+    return (
+        _refine_example_panel(stage["id"], _stories_stage_overview(stage["id"]), inline),
+        "catalog-monaco" in inline,
+    )
+
+
+_REFINE_STAGES = (
+    ("discovery", "Discovery"),
+    ("specification", "Specification"),
+    ("implementation", "Implementation"),
+)
+
+
+def refine_stage_row(
+    *,
+    host_id: str,
+    rail_label: str,
+    panels: dict[str, str],
+    extra_content: str = "",
+    extra_classes: str = "",
+    rail_family: str = "",
+    openings: dict[str, str] | None = None,
+    aria_label: str = "",
+    role: str = "region",
+) -> str:
+    """Context rail + rewind/play + three stacked stage columns."""
+    overviews = openings or {}
+    transport = (
+        '<div class="approach-refine__nav" role="group" aria-label="Stage examples">'
+        '<button type="button" class="approach-refine__nav-btn approach-refine__nav-btn--back" '
+        'data-refine-nav="-1" aria-label="Collapse last example">'
+        '<span class="approach-refine__icon approach-refine__icon--back" aria-hidden="true"></span>'
+        "</button>"
+        '<button type="button" class="approach-refine__nav-btn approach-refine__nav-btn--fwd" '
+        'data-refine-nav="1" aria-label="Expand next example">'
+        '<span class="approach-refine__icon approach-refine__icon--fwd" aria-hidden="true"></span>'
+        "</button>"
+        "</div>"
+    )
+    heads: list[str] = []
+    copies: list[str] = []
+    examples: list[str] = []
+    for stage_id, label in _REFINE_STAGES:
+        heads.append(
+            f'<button type="button" class="approach-window__stage" '
+            f'data-stage-id="{html.escape(stage_id)}" aria-pressed="false" '
+            f'aria-expanded="false">'
+            f"{html.escape(label)}</button>"
+        )
+        copies.append(_refine_opening(stage_id, overviews.get(stage_id, "")))
+        examples.append(
+            panels.get(stage_id)
+            or (
+                f'<div class="approach-refine__placeholder" '
+                f'data-stage-id="{html.escape(stage_id)}"></div>'
+            )
+        )
+    classes = " ".join(
+        part
+        for part in ("approach-refine-row", "approach-stage-examples", extra_classes)
+        if part
+    )
+    label_attr = html.escape(aria_label or f"{rail_label} refine stages")
+    return (
+        f'<div class="{classes}" id="{html.escape(host_id)}" role="{html.escape(role)}" '
+        f'aria-label="{label_attr}">'
+        '<div class="approach-refine__layout">'
+        '<div class="approach-refine__context">'
+        f'<button type="button" class="approach-window__stage approach-window__stage--context'
+        f'{(" approach-grid__label--" + html.escape(rail_family)) if rail_family else ""}" '
+        'data-stage-id="context" aria-pressed="false">'
+        f'<span class="approach-window__context-label">{html.escape(rail_label)}</span>'
+        "</button></div>"
+        '<div class="approach-refine__content">'
+        f"{extra_content}"
+        '<div class="approach-refine__board">'
+        f"{transport}"
+        '<div class="approach-refine__stages">'
+        f'<div class="approach-refine__heads">{"".join(heads)}</div>'
+        f'<div class="approach-refine__openings">{"".join(copies)}</div>'
+        f'<div class="approach-refine__examples">{"".join(examples)}</div>'
+        "</div></div></div></div></div>"
+    )
+
+
+def _monaco_loader_scripts() -> str:
+    return (
+        '<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>'
+        '<script src="commons/catalog-monaco.js?v=cdd-109"></script>'
+    )
+
+
+def _approach_windows_html(stages: tuple[dict, ...] | list[dict] | None) -> str:
+    """Narrowing-window diagram with context left and stacked stage columns."""
+    stage_by_id = {stage["id"]: stage for stage in (stages or ())}
+    panels: dict[str, str] = {}
+    openings: dict[str, str] = {}
+    needs_monaco = False
+    for stage_id, _label in _REFINE_STAGES:
+        stage = stage_by_id.get(stage_id, {})
+        panel, panel_monaco = _stage_example_panel_html(stage) if stage else ("", False)
+        needs_monaco = needs_monaco or panel_monaco
+        if panel:
+            panels[stage_id] = panel
+            openings[stage_id] = _stories_stage_overview(stage_id)
+    windows = (
+        ("solution", "Whole Solution", "wide / shallow", "", "outcomes · scope · boundaries"),
+        ("increment", "Increment", "medium", "days", "interactions · experience · structure"),
+        ("sprint", "Session", "narrow / deeper", "hours", "behaviour · design · logic"),
+        ("story", "Story", "narrowest / deep", "minutes", "tests · code · interface"),
+    )
+    parts: list[str] = []
+    for index, (shape, name, width, when, detail) in enumerate(windows):
+        if index:
+            parts.append('<div class="approach-window__arrow" aria-hidden="true"></div>')
+        bracket = f"{width} - {when}" if when else width
+        parts.append(
+            f'<div class="approach-window approach-window--{shape}">'
+            '<div class="approach-window__shape"></div>'
+            f'<div class="approach-window__name">{html.escape(name)}</div>'
+            f'<div class="approach-window__width">({html.escape(bracket)})</div>'
+            f'<div class="approach-window__detail">{html.escape(detail)}</div>'
+            "</div>"
+        )
+    extra = '<div class="approach-windows__row">' + "".join(parts) + "</div>"
+    return refine_stage_row(
+        host_id="approach-stage-examples",
+        rail_label="Context",
+        panels=panels,
+        openings=openings,
+        extra_content=extra,
+        extra_classes="approach-windows",
+        aria_label="Context feeds a narrowing window from Whole Solution to Story",
+        role="img",
+    ) + (_monaco_loader_scripts() if needs_monaco else "")
+
+
+def approach_stage_examples_html(stages) -> str:
+    """Deprecated: examples are embedded in ``_approach_windows_html``."""
+    return ""
+
+
+def _stage_example_inline(
+    source: Path,
+    *,
+    include_monaco_script: bool = True,
+    editor_id: str | None = None,
+) -> str:
+    suffix = source.suffix.lower()
+    name = html.escape(source.name)
+    if suffix in (".drawio", ".dio"):
+        return _drawio_iframe(source, zoom_left=source.stem == "story_map")
+    if suffix in (".html", ".htm"):
+        srcdoc = html.escape(source.read_text(encoding="utf-8"), quote=True)
+        return (
+            '<figure class="catalog-example catalog-example--scroll">'
+            f'<iframe class="catalog-example__frame" title="{name}" sandbox="" '
+            f'style="width:2700px;height:920px;max-width:none" srcdoc="{srcdoc}"></iframe>'
+            "</figure>"
+        )
+    if suffix in _IMAGE_SUFFIXES:
+        if source.parent.name == "catalog-examples":
+            href = f"examples/{html.escape(source.parent.parent.name)}/{name}"
+        else:
+            href = f"examples/{name}"
+        classes = ["catalog-example", "catalog-example--scroll"]
+        if source.stem == "bounded-context":
+            classes.append("catalog-example--fit")
+        if source.stem in {"building-blocks", "front-end-code"}:
+            classes.append("catalog-example--zoom-2")
+        if source.stem == "story_map":
+            classes.append("catalog-example--story-map")
+        return (
+            f'<figure class="{" ".join(classes)}">'
+            f'<img class="catalog-example__image" alt="{name}" src="{href}">'
+            "</figure>"
+        )
+    text = source.read_text(encoding="utf-8")
+    if suffix in (".md", ".markdown"):
+        return f'<div class="skill-md-preview">{_render_example_markdown(text)}</div>'
+    language = _MONACO_LANG.get(suffix, "plaintext")
+    folds = (
+        ddd_class_fold_ranges(text)
+        if "Root" in text and "export class " in text
+        else _acceptance_test_folds(text)
+    )
+    return _monaco_example_html(
+        text,
+        language,
+        script_src="commons/catalog-monaco.js?v=cdd-109",
+        editor_id=editor_id or "catalog-monaco",
+        folds=folds,
+        include_script=include_monaco_script,
+        start_line=_monaco_start_line(text),
+    )
+
+
+_PRACTICE_GUIDES = {
+    "stories": "stories",
+    "ddd": "ddd",
+    "ux": "ux",
+    "clean_engineering": "clean_engineering",
+    "bdd": "bdd",
+}
+_STAGE_FROM_META = {
+    "discovery": "discovery",
+    "specification": "spec",
+    "spec": "spec",
+    "implementation": "engineer",
+    "engineer": "engineer",
+}
+_BOOKEND_TABS = (
+    (
+        "customer-discovery",
+        "customer-discovery",
+        "Validate customer impact by delivering the smallest increment that enables them, and pivot to measure and learn.",
+    ),
+    (
+        "devops",
+        "devops",
+        "Merge development and operations by treating infrastructure as code and testing and deploying continuously.",
+    ),
+)
+
+
+def copy_practice_examples(out_root: Path) -> None:
+    """Copy ``{practice}/catalog-examples`` files into the catalog."""
+    practices = Path(__file__).resolve().parents[2] / "practices"
+    if not practices.is_dir():
+        return
+    for practice in practices.iterdir():
+        folder = practice / "catalog-examples"
+        if not folder.is_dir():
+            continue
+        dest = Path(out_root) / "examples" / practice.name
+        for path in folder.iterdir():
+            if path.is_file() and not path.name.startswith("."):
+                dest.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, dest / path.name)
+
+
+_STAGE_ID_FROM_KEY = {
+    "discovery": "discovery",
+    "spec": "specification",
+    "engineer": "implementation",
+}
+
+_FIDELITY_STEM_ALIASES = {
+    ("ux", "ia"): ("information-architecture",),
+}
+
+
+def _product_engineering_grid(practices: list[dict]) -> str:
+    """One refine row per practice, reusing the Iterate and Learn stage architecture."""
+    rows: list[str] = []
+    needs_monaco = False
+    for tool in practices:
+        name = tool["toolset_name"]
+        label = _PE_TAB_LABELS.get(name, name.replace("_", "-"))
+        panels, openings, panel_monaco = _practice_refine_panels(name)
+        needs_monaco = needs_monaco or panel_monaco
+        rows.append(
+            refine_stage_row(
+                host_id=f"refine-row-{name}",
+                rail_label=label,
+                rail_family=family_perspective(name),
+                panels=panels,
+                openings=openings,
+                aria_label=f"{label} discovery, specification, and implementation",
+            )
+        )
+    return (
+        '<div class="approach-pe-rows" id="pe-engineering">'
+        + "".join(rows)
+        + (_monaco_loader_scripts() if needs_monaco else "")
+        + "</div>"
+    )
+
+
+def _practice_refine_panels(practice: str) -> tuple[dict[str, str], dict[str, str], bool]:
+    panels: dict[str, str] = {}
+    openings: dict[str, str] = {}
+    needs_monaco = False
+    guide_name = _PRACTICE_GUIDES.get(practice)
+    if not guide_name:
+        return panels, openings, False
+    guide = Path(__file__).resolve().parents[2] / "practices" / guide_name / f"{guide_name}.md"
+    if not guide.is_file():
+        return panels, openings, False
+    for item in _practice_fidelities(guide.read_text(encoding="utf-8")):
+        stage_id = _STAGE_ID_FROM_KEY.get(item["stage"])
+        if not stage_id:
+            continue
+        files = _fidelity_example_files(practice, item["key"])
+        if not files:
+            continue
+        parts: list[str] = []
+        for path in files:
+            slug = re.sub(
+                r"[^a-z0-9]+",
+                "-",
+                f"{practice}-{path.stem}-{path.suffix.lstrip('.')}".lower(),
+            ).strip("-")
+            inline = _stage_example_inline(
+                path,
+                include_monaco_script=False,
+                editor_id=f"monaco-{slug}",
+            )
+            needs_monaco = needs_monaco or "catalog-monaco" in inline
+            parts.append(inline)
+        panel = _refine_example_panel(stage_id, item["opening"], "".join(parts))
+        if panel:
+            panels[stage_id] = panel
+            openings[stage_id] = item["opening"]
+    return panels, openings, needs_monaco
+
+
+_PE_TAB_LABELS = {
+    "customer-discovery": "customer-discovery",
+    "stories": "stories",
+    "ddd": "Domain-driven design",
+    "ux": "ux",
+    "clean_engineering": "clean-engineering",
+    "bdd": "bdd",
+    "devops": "devops",
+}
+
+
+def _practice_fidelities(text: str) -> list[dict]:
+    match = re.search(r"(?m)^## Fidelities\s*$", text)
+    if not match:
+        return []
+    body = text[match.end() :]
+    nxt = re.search(r"(?m)^## ", body)
+    if nxt:
+        body = body[: nxt.start()]
+    found = []
+    for chunk in re.split(r"(?m)^### ", body)[1:]:
+        title, _, rest = chunk.partition("\n")
+        stage_match = re.search(r"(?m)^stage:\s*(\S+)", rest)
+        if not stage_match:
+            continue
+        stage = _STAGE_FROM_META.get(stage_match.group(1).strip().lower())
+        if not stage:
+            continue
+        found.append(
+            {
+                "key": title.strip(),
+                "stage": stage,
+                "opening": _overview_paragraph(rest),
+            }
+        )
+    return found
+
+
+def _overview_paragraph(section: str) -> str:
+    marker = "#### Overview"
+    index = section.find(marker)
+    body = section[index + len(marker) :] if index >= 0 else section
+    lines: list[str] = []
+    started = False
+    fence = False
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if started:
+                break
+            fence = not fence
+            continue
+        if fence or stripped.startswith("#"):
+            if started:
+                break
+            continue
+        if not stripped:
+            if started:
+                break
+            continue
+        started = True
+        lines.append(line.rstrip("\r"))
+    return "\n".join(lines).strip()
+
+
+def _fidelity_example_files(practice: str, fidelity: str) -> list[Path]:
+    folder = Path(__file__).resolve().parents[2] / "practices" / practice / "catalog-examples"
+    if not folder.is_dir():
+        return []
+    names = {fidelity, fidelity.replace("_", "-"), fidelity.replace("-", "_")}
+    names.update(_FIDELITY_STEM_ALIASES.get((practice, fidelity), ()))
+    files = sorted(
+        (
+            path
+            for path in folder.iterdir()
+            if path.is_file() and not path.name.startswith(".") and path.stem in names
+        ),
+        key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name),
+    )
+    chosen: list[Path] = []
+    stems: dict[str, list[Path]] = {}
+    for path in files:
+        stems.setdefault(path.stem, []).append(path)
+    for group in stems.values():
+        images = [path for path in group if path.suffix.lower() in _IMAGE_SUFFIXES]
+        if images:
+            chosen.extend(images)
+            continue
+        drawios = [path for path in group if path.suffix.lower() in (".drawio", ".dio")]
+        if drawios:
+            chosen.extend(drawios)
+            continue
+        others = [
+            path
+            for path in group
+            if path.suffix.lower() not in {".md", ".markdown"}
+        ]
+        if others:
+            chosen.extend(others)
+            continue
+        chosen.extend(group)
+    return sorted(chosen, key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name))
 
 
 def fence(lang: str, text: str) -> str:
@@ -967,6 +1859,17 @@ def markdown_to_html(text: str, *, include_tables: bool = False) -> str:
             close_list()
             out.append(f"<{kind}>")
             in_list = kind
+
+    def _hard_break_after(raw: str) -> bool:
+        return bool(re.search(r"  +$", raw.rstrip("\r")))
+
+    def _join_paragraph_lines(para: list[str], format_inline) -> str:
+        parts: list[str] = []
+        for index, raw in enumerate(para):
+            if index:
+                parts.append("<br>" if _hard_break_after(para[index - 1]) else " ")
+            parts.append(format_inline(raw.strip()))
+        return "".join(parts)
 
     def inline(s: str) -> str:
         links: list[tuple[str, str]] = []
@@ -1125,7 +2028,7 @@ def markdown_to_html(text: str, *, include_tables: bool = False) -> str:
         ):
             para.append(lines[i])
             i += 1
-        out.append(f"<p>{inline(' '.join(p.strip() for p in para))}</p>")
+        out.append(f"<p>{_join_paragraph_lines(para, inline)}</p>")
 
     close_list()
     if in_code and code_lang.lower() not in ("yaml", "yml"):

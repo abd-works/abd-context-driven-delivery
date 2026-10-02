@@ -39,7 +39,8 @@ stage: discovery
 
 #### Overview
 
-Define a story map as Epic → nestable Sub-Epic → Story. Change the map while nodes are still titles; after scenarios, screens, and tests exist, the same move is much more expensive.
+Scope the solution using a hierarchy of business goals, user interactions, and system behaviors.  
+*a simple graph is easier to change, compare, and reorganize. Humans catch AI Order-of-Magnitude sizing errors.*
 
 #### Guidance
 
@@ -84,7 +85,8 @@ stage: specification
 
 #### Overview
 
-`{epic}/{sub-epic}/{story}/{story_snake}_story.test.md` — same stem as the TypeScript or Python acceptance test; only the extension is `md`. One file per story. Refine Stories into concrete examples with preconditions, triggering operations, and observable outcomes. A Scenario defines both the required behaviour and the evidence that will show whether it works.
+Define system behavior by taking concrete examples through scenarios; include preconditions, triggers, and outcomes.  
+*testable specifications ensure both humans are aligned on exactly what to build and limits AI hallucination*
 
 #### Guidance
 
@@ -136,7 +138,10 @@ clean_engineering: code
 
 #### Overview
 
-**Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Markdown scenarios for the same story are `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`. Turn agreed Scenarios into executable evidence and working production behavior. For greenfield work, begin with a failing test that calls the intended production interface. For brownfield capture, first preserve observed behaviour and mark intended changes explicitly.
+Make specifications executable by transforming them into automated tests that validate production code.  
+*Context graduates from being merely machine readable to machine executable. AI is allergic to causing tests to fail.*
+
+**Produce:** `{epic}/{sub-epic}/{story}/{story_snake}_story.test.{lang}` plus the production code that makes it pass. Markdown scenarios for the same story are `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
 
 #### Guidance
 

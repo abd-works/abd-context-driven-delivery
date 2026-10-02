@@ -26,13 +26,17 @@ predicate coreFile(File f) {
 }
 
 predicate domainFolder(Container domain) {
-  exists(File f | f.getParentContainer() = domain and (coreFile(f) or serverFile(f) or clientFile(f)))
+  exists(File f |
+    f.getParentContainer() = domain and
+    (coreFile(f) or serverFile(f) or clientFile(f))
+  )
 }
 
-predicate domainName(Container domain, string name) { name = domain.getBaseName() }
+predicate importedPath(ImportDeclaration imp, string path) {
+  path = imp.getImportedPathString()
+}
 
-predicate importedPath(ImportDeclaration imp, string path) { path = imp.getImportedPathString() }
-
+bindingset[path]
 predicate forbiddenFrameworkPath(string path) {
   path = "express" or
   path = "react" or
@@ -74,66 +78,29 @@ predicate lifecycleOp(string name) {
   name = "load" or name = "create" or name = "search" or name = "update"
 }
 
+bindingset[name]
 predicate repositoryType(string name) { name.matches("%Repository") }
 
 predicate zodCall(CallExpr call) {
-  exists(PropAccess acc |
-    acc = call.getCallee() and
-    (
-      acc.getPropertyName() = "object" or
-      acc.getPropertyName() = "string" or
-      acc.getPropertyName() = "number" or
-      acc.getPropertyName() = "boolean" or
-      acc.getPropertyName() = "enum" or
-      acc.getPropertyName() = "array" or
-      acc.getPropertyName() = "union"
-    )
-  )
-}
-
-predicate parseCall(CallExpr call) {
-  exists(PropAccess acc |
-    acc = call.getCallee() and
-    (acc.getPropertyName() = "parse" or acc.getPropertyName() = "safeParse")
-  )
-}
-
-predicate schemaName(string name) { name.matches("%Schema") }
-
-predicate usesSchemaName(File f) {
-  exists(VarAccess acc | acc.getFile() = f and schemaName(acc.getName()))
+  call.getCalleeName() = "object" or
+  call.getCalleeName() = "string" or
+  call.getCalleeName() = "enum" or
+  call.getCalleeName() = "array"
 }
 
 predicate sharedStoreName(string name) {
   name = "db.json" or name = "database.json" or name = "store.json" or name = "data.json"
 }
 
-predicate jsonPresetCall(CallExpr call) {
-  call.getCalleeName().matches("JSONFile%") or call.getCalleeName().matches("%Preset")
-}
-
 predicate routerHandler(CallExpr call) {
-  exists(PropAccess acc |
-    acc = call.getCallee() and
-    acc.getReceiver().(VarAccess).getName() = "router" and
-    (
-      acc.getPropertyName() = "get" or
-      acc.getPropertyName() = "post" or
-      acc.getPropertyName() = "put" or
-      acc.getPropertyName() = "patch" or
-      acc.getPropertyName() = "delete"
-    )
-  )
+  call.getCalleeName() = "get" or
+  call.getCalleeName() = "post" or
+  call.getCalleeName() = "put" or
+  call.getCalleeName() = "patch" or
+  call.getCalleeName() = "delete"
 }
 
-predicate repoReceiver(Expr recv) {
-  recv.(VarAccess).getName() = "repo" or recv.(VarAccess).getName() = "repository"
-}
-
-predicate methodNamed(Function f, string name) { name = f.getName() }
-
-predicate classMethod(ClassDefinition cls, Function method) { method = cls.getAMethod() }
-
+bindingset[name]
 predicate placeholderScope(string name) {
   name.matches("@example/%") or
   name.matches("@project/%") or
@@ -143,26 +110,6 @@ predicate placeholderScope(string name) {
   name.matches("@todo/%") or
   name.matches("@sample/%") or
   name.matches("@demo/%")
-}
-
-predicate nodeBuiltin(string name) {
-  name = "path" or
-  name = "fs" or
-  name = "os" or
-  name = "crypto" or
-  name = "util" or
-  name = "events" or
-  name = "stream" or
-  name = "http" or
-  name = "https" or
-  name = "url" or
-  name = "buffer" or
-  name = "process" or
-  name = "module"
-}
-
-predicate relativeOrAlias(string path) {
-  path.matches("./%") or path.matches("../%") or path.matches("@/%")
 }
 
 predicate specFile(File f) {
@@ -185,11 +132,3 @@ predicate missingDomainTier(Container domain, string missing) {
     missing = "*-client.tsx"
   )
 }
-
-predicate sameStemMethod(Function coreFn, Function otherFn) {
-  coreFn.getName() = otherFn.getName() and
-  coreFile(coreFn.getFile()) and
-  (serverFile(otherFn.getFile()) or clientFile(otherFn.getFile()))
-}
-
-predicate paramNameAt(Function f, int i, string name) { name = f.getParameter(i).getName() }
