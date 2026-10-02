@@ -1,4 +1,5 @@
-import { type ChangeEvent, useEffect, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import Editor, { type OnMount } from '@monaco-editor/react';
 import { useKnowledgeGraph } from './use-knowledge-graph';
 import { KnowledgeGraphNode } from './knowledge-graph/knowledge-graph';
 import {
@@ -118,6 +119,27 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
   const engineering = theme === 'engineering';
   const selectedId = selectedNode?.nodeId ?? '';
 
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const treeKey = listedTree.map((node) => node.nodeId).join('|');
+  const filterKey = [
+    picked.violations ? '1' : '0',
+    picked.rules.join(','),
+    picked.practices.join(','),
+    picked.node_types.join(','),
+    picked.stages.join(','),
+  ].join('|');
+
+  useEffect(() => {
+    const next = new Set<string>();
+    if (listedTree.length === 1 && listedTree[0]?.nodeId) {
+      next.add(listedTree[0].nodeId);
+    }
+    if (filterKey !== '0||||') {
+      expandShown(listedTree, picked, next);
+    }
+    setOpenIds(next);
+  }, [treeKey, filterKey]);
+
   useEffect(() => {
     if (!picked.violations) {
       return;
@@ -131,6 +153,18 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
       selectNode(match.nodeId);
     }
   }, [picked, listedTree, selectedId, selectNode]);
+
+  function toggleOpen(id: string) {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   return (
     <main className="explore-knowledge-graph">
@@ -346,6 +380,8 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                   depth={0}
                   picked={picked}
                   selectedId={selectedId}
+                  openIds={openIds}
+                  onToggle={toggleOpen}
                   onSelect={selectNode}
                 />
               ))}
@@ -413,18 +449,27 @@ function TreeNode({
   depth,
   picked,
   selectedId,
+  openIds,
+  onToggle,
   onSelect,
 }: {
   node: KnowledgeGraphNode;
   depth: number;
   picked: FilterPick;
   selectedId: string;
+  openIds: Set<string>;
+  onToggle: (id: string) => void;
   onSelect: (nodeId: string) => void;
 }) {
   const children = (node.children ?? []).filter((child) => shown(child, picked));
   if (!shown(node, picked)) {
     return null;
   }
+  const rules = rulesFor(node, picked);
+  const rulesId = `${node.nodeId}::rules`;
+  const open = openIds.has(node.nodeId);
+  const rulesOpen = openIds.has(rulesId);
+  const canOpen = children.length > 0 || rules.length > 0;
   const kind = node.nodeType?.name ?? '';
   const selected = node.nodeId === selectedId;
   return (
@@ -433,12 +478,25 @@ function TreeNode({
       data-node-id={node.nodeId}
       data-kind={kind}
       className={selected ? 'is-selected' : undefined}
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect(node.nodeId);
-      }}
     >
       <div className="tree-row">
+        {canOpen ? (
+          <button
+            type="button"
+            className="tree-twist"
+            data-testid="tree-expand"
+            aria-expanded={open}
+            aria-label={`${open ? 'Collapse' : 'Expand'} ${node.name}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle(node.nodeId);
+            }}
+          >
+            {open ? '▼' : '▶'}
+          </button>
+        ) : (
+          <span className="tree-twist-spacer" />
+        )}
         <button
           type="button"
           className={[selected ? 'selected' : '', hitsViolation(node, picked) ? 'tree-violating' : '']
@@ -453,12 +511,7 @@ function TreeNode({
           <span className="node-name">{node.name}</span>
         </button>
       </div>
-      {visibleHits(node, picked).map((hit) => (
-        <span key={hit.slug} className={`rule-status ${hit.status}`}>
-          {hit.slug}
-        </span>
-      ))}
-      {children.length > 0 ? (
+      {open && canOpen ? (
         <ul>
           {children.map((child) => (
             <TreeNode
@@ -467,9 +520,45 @@ function TreeNode({
               depth={depth + 1}
               picked={picked}
               selectedId={selectedId}
+              openIds={openIds}
+              onToggle={onToggle}
               onSelect={onSelect}
             />
           ))}
+          {rules.length > 0 ? (
+            <li data-depth={depth + 1} data-testid="tree-rules">
+              <div className="tree-row">
+                <button
+                  type="button"
+                  className="tree-twist"
+                  data-testid="tree-expand-rules"
+                  aria-expanded={rulesOpen}
+                  aria-label={`${rulesOpen ? 'Collapse' : 'Expand'} rules`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggle(rulesId);
+                  }}
+                >
+                  {rulesOpen ? '▼' : '▶'}
+                </button>
+                <button type="button" title="Rules" onClick={() => onToggle(rulesId)}>
+                  <span className="node-name">rules</span>
+                </button>
+              </div>
+              {rulesOpen ? (
+                <ul>
+                  {rules.map((hit) => (
+                    <li key={hit.slug} data-depth={depth + 2}>
+                      <div className="tree-row">
+                        <span className="tree-twist-spacer" />
+                        <span className={`rule-status ${hit.status}`}>{hit.slug}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ) : null}
         </ul>
       ) : null}
     </li>
@@ -487,6 +576,8 @@ function SourcePane({
 }) {
   const file = node.source?.file ?? '';
   const [text, setText] = useState('');
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const marks = useRef<{ clear: () => void } | null>(null);
 
   useEffect(() => {
     const initial = node.source?.text ?? '';
@@ -508,7 +599,7 @@ function SourcePane({
       .then((response) => response.json())
       .then((body: { ranges?: Array<{ text?: string }> }) => {
         if (!cancel) {
-          setText(body.ranges?.[0]?.text ?? node.name);
+          setText(body.ranges?.[0]?.text || node.name);
         }
       })
       .catch(() => {
@@ -521,10 +612,56 @@ function SourcePane({
     };
   }, [node, file, folder]);
 
-  const hits = visibleHits(node, picked);
+  function paint(editor: Parameters<OnMount>[0], value: string) {
+    marks.current?.clear();
+    const lines = Math.max(1, value.split('\n').length);
+    marks.current = editor.createDecorationsCollection([
+      {
+        range: {
+          startLineNumber: 1,
+          startColumn: 1,
+          endLineNumber: lines,
+          endColumn: 1,
+        },
+        options: { isWholeLine: true, className: 'source-highlight' },
+      },
+    ]);
+  }
+
+  const onMount: OnMount = (editor) => {
+    editorRef.current = editor;
+    paint(editor, text);
+  };
+
+  useEffect(() => {
+    if (editorRef.current) {
+      paint(editorRef.current, text);
+    }
+  }, [text]);
+
+  const hits = picked.violations || picked.rules.length ? visibleHits(node, picked) : node.ruleHits;
   return (
     <section className="knowledge-graph-panel" data-open="true" data-file={file}>
       <p className="source-path">{file || node.name}</p>
+      <div className="panel-source" data-testid="source-excerpt">
+        <Editor
+          height="360px"
+          language={languageFor(file)}
+          theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
+          value={text}
+          onMount={onMount}
+          loading={<pre className="source-highlight">{text}</pre>}
+          options={{
+            readOnly: true,
+            domReadOnly: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontSize: 13,
+            wordWrap: 'on',
+          }}
+        />
+      </div>
       {hits.length > 0 ? (
         <ul className="rule-list">
           {hits.map((hit) => (
@@ -535,9 +672,48 @@ function SourcePane({
           ))}
         </ul>
       ) : null}
-      <pre className="panel-source">{text || node.name}</pre>
     </section>
   );
+}
+
+function expandShown(nodes: KnowledgeGraphNode[], picked: FilterPick, open: Set<string>): void {
+  for (const node of nodes) {
+    if (!shown(node, picked)) {
+      continue;
+    }
+    const children = (node.children ?? []).filter((child) => shown(child, picked));
+    if (children.length > 0) {
+      open.add(node.nodeId);
+      expandShown(children, picked, open);
+    }
+  }
+}
+
+function rulesFor(
+  node: KnowledgeGraphNode,
+  picked: FilterPick,
+): { slug: string; status: string; message: string }[] {
+  if (picked.violations || picked.rules.length > 0) {
+    return visibleHits(node, picked);
+  }
+  return node.ruleHits;
+}
+
+function languageFor(file: string): string {
+  const name = file.replaceAll('\\', '/').split('/').pop() ?? '';
+  const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : '';
+  const languages: Record<string, string> = {
+    py: 'python',
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    json: 'json',
+    css: 'css',
+    html: 'html',
+    md: 'markdown',
+  };
+  return languages[ext] ?? 'plaintext';
 }
 
 function shown(node: KnowledgeGraphNode, picked: FilterPick): boolean {

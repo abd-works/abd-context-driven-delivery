@@ -562,6 +562,10 @@ ul.tree ul {
 .rule-status.passing { color: var(--success); }
 .rule-status.violating { color: var(--error); }
 
+.source-highlight {
+  background: rgba(229, 83, 26, 0.22);
+}
+
 .empty-state {
   color: var(--muted);
   font-size: var(--text-base);
