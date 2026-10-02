@@ -877,6 +877,29 @@ with description("a Cursor hooks config that installed practice inject_rules") a
         ).to(equal(1))
 
 
+with description("example car kits annotated hooks disabled") as self:
+    with it("should not write inject_rules handlers for Car or CarStory"):
+        from practices.examples.car.car import Car
+        from actions.examples.car_story.car_story import CarStory
+
+        tree = Path(tempfile.mkdtemp())
+        try:
+            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([Car(), CarStory()])
+            dest = tree / "hook-handlers.json"
+            if dest.is_file():
+                refs = [
+                    item.get("ref", "")
+                    for item in json.loads(dest.read_text(encoding="utf-8")).get("handlers")
+                    or []
+                ]
+            else:
+                refs = []
+            expect(any("car:Car" in ref for ref in refs)).to(equal(False))
+            expect(any("CarStory" in ref for ref in refs)).to(equal(False))
+        finally:
+            shutil.rmtree(tree, ignore_errors=True)
+
+
 with description("an installer that recorded files from a prior install") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()
@@ -1010,6 +1033,15 @@ with description("the installer import path") as self:
             expect(Installer(path=tmp, repo=self.repo)._is_ephemeral_install_path(tmp)).to(equal(True))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+with description("install standup of runtime hosts") as self:
+    with it("should leave hook, codeql query, and mcp hosts answering"):
+        installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+        status = installer.ensure_runtimes()
+        expect(status["hook"]).to(equal("running"))
+        expect(status["codeql"]).to(equal("running"))
+        expect(status["mcp"]).to(equal("running"))
 
 
 def _skill_tool(name: str):
@@ -1202,3 +1234,13 @@ with description("markdown rules front matter"):
         expect(text).to(contain("alwaysApply: false"))
         expect(text).to(contain("globs: **/*spec.py"))
         expect(text).to(contain("Whenever you write specs"))
+
+    with it("should leave alwaysApply off when the bag has no glob"):
+        from installation.files import FileInstallation
+        from harness.guidance.rule import RulesCollection
+
+        guidance = type("Guidance", (), {"rules": RulesCollection()})()
+        writer = FileInstallation("Cursor", Path("."), "rules")
+        text = writer._rules_front_matter("Practice rules.\n", guidance)
+        expect(text).to(contain("alwaysApply: false"))
+        expect(text).not_to(contain("globs:"))

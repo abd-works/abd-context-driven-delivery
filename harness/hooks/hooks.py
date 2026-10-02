@@ -13,9 +13,10 @@ from installation.destination import Destination, Installation
 class Hooks:
     """Class annotation: disable every hook operation on the toolset."""
 
-    def __new__(cls, target: Any = None, *, disabled: bool = False):
+    def __new__(cls, target: Any = None, *, disabled: bool = False, deploy: bool = True):
         inst = object.__new__(cls)
         inst.disabled = disabled
+        inst.deploy = deploy
         if isinstance(target, type):
             return inst.annotate(target)
         return inst
@@ -25,6 +26,7 @@ class Hooks:
 
     def annotate(self, cls: type) -> type:
         cls._hooks_disabled = self.disabled
+        cls._hooks_deploy = self.deploy
         return cls
 
 
@@ -102,6 +104,8 @@ class HookInstallation(Installation):
 
     def write(self, tool: Any) -> None:
         if not tool.install_to_hook:
+            return
+        if getattr(type(getattr(tool, "toolset", None)), "_hooks_deploy", True) is False:
             return
         if self._omit_inject_rules(tool):
             return

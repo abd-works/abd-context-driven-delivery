@@ -289,15 +289,13 @@ class FileInstallation(Installation):
             description = stripped.replace('"', "'")
             break
         applies = getattr(getattr(toolset, "rules", None), "appliesTo", None)
-        always_apply = True
+        always_apply = False
         globs = ""
         if applies is not None:
             globs = getattr(applies, "globs", "") or ""
             flagged = getattr(applies, "always_apply", None)
             if flagged is not None:
                 always_apply = bool(flagged)
-            elif globs:
-                always_apply = False
         lines = [
             "---",
             f"alwaysApply: {'true' if always_apply else 'false'}",

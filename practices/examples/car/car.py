@@ -4,10 +4,12 @@ from __future__ import annotations
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.agent_tools.agent_tools import agent_tool
+from harness.hooks.hooks import Hooks
 
 _TRIP_HEADER = "===== TRIP LOG (read only) ====="
 _TRIP_FOOTER = "===== END TRIP LOG ====="
 
+@Hooks(disabled=True, deploy=False)
 @agent_toolset
 class Car(PracticeGuidance):
     """# Instructions
