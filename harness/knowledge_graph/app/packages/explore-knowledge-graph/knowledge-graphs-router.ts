@@ -1198,32 +1198,59 @@ function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
     const file = relative(root, abs).replaceAll('\\', '/');
     const text = readFileSync(abs, 'utf8');
     const workspace: WorkspaceFile = { relativePath: file, text };
+    const classes: { id: string; start: number; end: number }[] = [];
     for (const found of definitionsInFile(workspace)) {
       if (found.semantic_type !== 'OoadClass') {
         continue;
       }
-      _addClass(engineering, seen, file, found.name, found.source.start_line, found.source.end_line);
+      const id = _addType(engineering, seen, file, 'OoadClass', found.name, found.source.start_line, found.source.end_line, null);
+      if (id) {
+        classes.push({ id, start: found.source.start_line, end: found.source.end_line });
+      }
     }
     for (const match of text.matchAll(/export\s+interface\s+([A-Za-z_][A-Za-z0-9_]*)[^{]*\{/g)) {
       const at = match.index ?? 0;
       const start = text.slice(0, at).split(/\r?\n/).length;
-      _addClass(engineering, seen, file, match[1], start, _blockEndLine(text, start));
+      const end = _blockEndLine(text, start);
+      const id = _addType(engineering, seen, file, 'OoadClass', match[1], start, end, null);
+      if (id) {
+        classes.push({ id, start, end });
+      }
+    }
+    for (const found of definitionsInFile(workspace)) {
+      if (found.semantic_type === 'OoadClass') {
+        continue;
+      }
+      const line = found.source.start_line;
+      const owner = classes.find((item) => item.start <= line && line <= item.end);
+      _addType(
+        engineering,
+        seen,
+        file,
+        found.semantic_type,
+        found.name,
+        line,
+        found.source.end_line,
+        owner?.id ?? null,
+      );
     }
   }
   return graphFromWorkspaceDto({ ...dto, folder: root });
 }
 
-function _addClass(
+function _addType(
   engineering: KnowledgeGraphDto['practice_graphs'][number],
   seen: Set<string>,
   file: string,
+  type: string,
   name: string,
   start: number,
   end: number,
-): void {
-  const nodeId = `ce:OoadClass:${file}:${name}`;
+  ownerId: string | null,
+): string | null {
+  const nodeId = `ce:${type}:${file}:${name}:${start}`;
   if (seen.has(nodeId)) {
-    return;
+    return nodeId;
   }
   seen.add(nodeId);
   const folder = file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '';
@@ -1232,20 +1259,23 @@ function _addClass(
     name,
     practice: 'clean_engineering',
     fidelity: 'code',
-    semantic_type: 'OoadClass',
+    semantic_type: type,
     properties: folder ? { folder } : {},
     applicable_rules: [],
     violations: [],
     source: { file, start_line: start, end_line: Math.max(start, end), text: '' },
   });
-  const owner = engineering.nodes.find(
-    (node) =>
-      (node.semantic_type === 'Module' || node.semantic_type === 'Package') &&
-      String(node.properties?.folder ?? '').replaceAll('\\', '/') === folder,
-  );
+  const owner =
+    ownerId ??
+    engineering.nodes.find(
+      (node) =>
+        (node.semantic_type === 'Module' || node.semantic_type === 'Package') &&
+        String(node.properties?.folder ?? '').replaceAll('\\', '/') === folder,
+    )?.node_id;
   if (owner) {
-    engineering.relationships.push({ kind: 'owns', from_id: owner.node_id, to_id: nodeId });
+    engineering.relationships.push({ kind: 'owns', from_id: owner, to_id: nodeId });
   }
+  return nodeId;
 }
 
 function _codeFiles(dir: string, root = dir): string[] {

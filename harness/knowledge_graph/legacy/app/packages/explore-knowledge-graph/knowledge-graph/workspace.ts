@@ -530,7 +530,7 @@ function _scriptProperties(file: WorkspaceFile): NodeDto[] {
       return null;
     }
     const matched = line.match(
-      /^(?:\s+)(?:(?:public|private|protected|readonly|static|declare|abstract|override)\s+)*([A-Za-z_][A-Za-z0-9_]*)\??\s*(?::\s*[^=;{]+)?\s*(?:=|;)/,
+      /^(?:\s+)(?:(?:public|private|protected|readonly|static|declare|abstract|override)\s+)*([A-Za-z_][A-Za-z0-9_]*)\??\s*(?::\s*[^=;{(]+)?\s*(?:=[^;]*)?;?\s*$/,
     );
     return matched && !TS_SKIP.has(matched[1]) ? matched[1] : null;
   });

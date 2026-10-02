@@ -25,6 +25,11 @@ story('Nest Class Folder', () => {
         has: explorer().getByRole('button', { name: 'customer', exact: true }),
       }).first();
       await expect(folder.locator('button[title="OoadClass"]', { hasText: /^Customer$/ }).first()).toBeVisible();
+      await explorer().getByRole('button', { name: 'Expand Customer', exact: true }).first().click();
+      await expect(folder.locator('button[title="Property"]', { hasText: /^kycVerified$/ }).first()).toBeVisible();
+      await explorer().getByRole('button', { name: 'Expand AccountCredentialsE2e', exact: true }).first().click();
+      await expect(folder.locator('button[title="Operation"]', { hasText: /^validate$/ }).first()).toBeVisible();
+      await expect(folder.locator('button[title="Property"]', { hasText: /^email$/ }).first()).toBeVisible();
     });
   });
 });
