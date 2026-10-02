@@ -120,6 +120,7 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
       (dto.practice_graphs ?? []).flatMap((graph: any) => graph.nodes ?? []);
     const tree = rows.map((row: any) => webNode(row));
     attachMembers(tree, dto);
+    inheritPractice(tree, "");
     this.matching = tree;
     this.nodes = flattenNodes(tree);
     this.options = filterOptions(presented.filter_options, this.nodes);
@@ -176,49 +177,174 @@ function webNode(row: any): WebKnowledgeGraphNode {
 }
 
 function attachMembers(tree: WebKnowledgeGraphNode[], dto: any): void {
-  const members = (dto.practice_graphs ?? []).flatMap((graph: any) => graph.nodes ?? []);
-  const skip = new Set(["Module", "Package", "StoryMap", "CleanEngineeringModel", "StoryModel"]);
-  const classes = members.filter((row: any) => !skip.has(row.semantic_type));
-  const walk = (nodes: WebKnowledgeGraphNode[]): void => {
-    for (const node of nodes) {
-      const folder =
-        node.isFolder ||
-        node.nodeType?.name === "Module" ||
-        node.properties?.semantic_type === "Module";
-      if (folder) {
-        for (const row of classes) {
-          if (!memberHomesIn(row, node.name)) {
-            continue;
+  const folders = indexFolders(tree);
+  for (const graph of dto.practice_graphs ?? []) {
+    const rows = Array.isArray(graph.nodes) ? graph.nodes : [];
+    const byId = new Map(rows.map((row: any) => [String(row.node_id ?? ""), row]));
+    const owned = new Map<string, string[]>();
+    for (const edge of graph.relationships ?? []) {
+      if (edge.kind !== "owns") {
+        continue;
+      }
+      const from = String(edge.from_id ?? "");
+      const to = String(edge.to_id ?? "");
+      if (!from || !to) {
+        continue;
+      }
+      const list = owned.get(from) ?? [];
+      list.push(to);
+      owned.set(from, list);
+    }
+    const parentOf = new Map<string, string>();
+    for (const [from, tos] of owned) {
+      for (const to of tos) {
+        parentOf.set(to, from);
+      }
+    }
+    const built = new Map<string, WebKnowledgeGraphNode>();
+    const build = (row: any, ancestors: Set<string>): WebKnowledgeGraphNode => {
+      const id = String(row.node_id ?? row.name ?? "");
+      const existing = built.get(id);
+      if (existing) {
+        return existing;
+      }
+      const node = webNode(row);
+      built.set(id, node);
+      const next = new Set(ancestors);
+      next.add(id);
+      for (const childId of owned.get(id) ?? []) {
+        if (next.has(childId)) {
+          continue;
+        }
+        const childRow = byId.get(childId);
+        if (!childRow) {
+          continue;
+        }
+        const child = build(childRow, next);
+        if (child === node) {
+          continue;
+        }
+        if (child.name === node.name && child.nodeType?.name === node.nodeType?.name) {
+          for (const grand of child.children) {
+            if (!node.children.some((item) => item.nodeId === grand.nodeId)) {
+              node.children.push(grand);
+            }
           }
-          const id = row.node_id ?? row.name;
-          if (!node.children.some((child) => child.nodeId === id || child.name === row.name)) {
-            node.children.push(webNode(row));
-          }
+          continue;
+        }
+        if (!node.children.some((item) => item.nodeId === child.nodeId)) {
+          node.children.push(child);
         }
       }
-      walk(node.children);
+      return node;
+    };
+    for (const row of rows) {
+      const id = String(row.node_id ?? "");
+      const node = build(row, new Set());
+      const home = homeFolder(row, folders);
+      const parentId = parentOf.get(id);
+      const parentRow = parentId ? byId.get(parentId) : undefined;
+      const parentHome = parentRow ? homeFolder(parentRow, folders) : null;
+      if (home && sameFolderNode(home.node, row)) {
+        for (const child of node.children) {
+          pushChild(home.node, child);
+        }
+        continue;
+      }
+      if (!home) {
+        if (
+          !parentId &&
+          row.semantic_type !== "StoryModel" &&
+          row.semantic_type !== "Module" &&
+          row.semantic_type !== "Package"
+        ) {
+          if (!tree.some((item) => item.nodeId === node.nodeId || item.name === node.name)) {
+            tree.push(node);
+          }
+        }
+        continue;
+      }
+      if (parentHome && !sameFolderNode(parentHome.node, parentRow)) {
+        continue;
+      }
+      pushChild(home.node, node);
     }
-  };
-  walk(tree);
+  }
 }
 
-function memberHomesIn(row: any, folderName: string): boolean {
-  const needle = String(folderName).toLowerCase();
-  if (!needle) {
-    return false;
+function inheritPractice(nodes: WebKnowledgeGraphNode[], practice: string): void {
+  for (const node of nodes) {
+    const next = node.practice || practice;
+    if (!node.practice && next && (node.nodeType?.name === "File" || node.isFile)) {
+      node.practice = next;
+    }
+    inheritPractice(node.children ?? [], node.practice || practice);
   }
-  const file = String(row.source?.file ?? "").replaceAll("\\", "/").toLowerCase();
-  const parts = file.split("/").filter(Boolean);
-  const parent = parts.length > 1 ? parts[parts.length - 2] : "";
-  const propFolder = String(row.properties?.folder ?? "").replaceAll("\\", "/").toLowerCase();
-  const propParent = propFolder.split("/").filter(Boolean).pop() ?? "";
-  if (parent && parent === needle) {
-    return true;
+}
+
+function indexFolders(
+  nodes: WebKnowledgeGraphNode[],
+  prefix = "",
+): { node: WebKnowledgeGraphNode; path: string }[] {
+  const found: { node: WebKnowledgeGraphNode; path: string }[] = [];
+  for (const node of nodes) {
+    const path = prefix ? `${prefix}/${node.name}` : node.name;
+    if (isFolderNode(node)) {
+      found.push({ node, path });
+      found.push(...indexFolders(node.children ?? [], path));
+    }
   }
-  if (propParent && propParent === needle) {
-    return true;
+  return found;
+}
+
+function isFolderNode(node: WebKnowledgeGraphNode): boolean {
+  return Boolean(
+    node.isFolder ||
+      node.nodeType?.name === "Module" ||
+      node.nodeType?.name === "Package",
+  );
+}
+
+function homeFolder(
+  row: any,
+  folders: { node: WebKnowledgeGraphNode; path: string }[],
+): { node: WebKnowledgeGraphNode; path: string } | null {
+  const folderPath = String(row.properties?.folder ?? "").replaceAll("\\", "/");
+  if (folderPath) {
+    const exact = folders.find((folder) => folder.path.replaceAll("\\", "/") === folderPath);
+    if (exact) {
+      return exact;
+    }
   }
-  return !file && !propParent && String(row.name ?? "").toLowerCase() === needle;
+  const key = compactName(row.name);
+  if (!key) {
+    return null;
+  }
+  const named = folders.filter((folder) => compactName(folder.node.name) === key);
+  if (!named.length) {
+    return null;
+  }
+  const prefer = row.practice === "stories" ? "tests" : "domain";
+  return named.slice().sort((left, right) => {
+    const leftRank = left.path === prefer || left.path.startsWith(`${prefer}/`) ? 0 : 1;
+    const rightRank = right.path === prefer || right.path.startsWith(`${prefer}/`) ? 0 : 1;
+    return leftRank - rightRank || left.path.length - right.path.length;
+  })[0];
+}
+
+function sameFolderNode(folder: WebKnowledgeGraphNode, row: any): boolean {
+  const type = String(row.semantic_type ?? "");
+  return (type === "Module" || type === "Package") && compactName(folder.name) === compactName(row.name);
+}
+
+function pushChild(parent: { children: WebKnowledgeGraphNode[] }, child: WebKnowledgeGraphNode): void {
+  if (!parent.children.some((item) => item.nodeId === child.nodeId || item.name === child.name)) {
+    parent.children.push(child);
+  }
+}
+
+function compactName(value: string): string {
+  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function relationshipLinks(row: any): { kind: string; nodeId: string; name: string }[] {
