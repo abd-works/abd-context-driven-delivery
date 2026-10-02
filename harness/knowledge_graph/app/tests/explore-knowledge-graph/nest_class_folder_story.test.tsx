@@ -19,6 +19,12 @@ story('Nest Class Folder', () => {
     }).and('do not list Customer as a direct child', async () => {
       const domain = explorer().locator('li[data-depth="0"]').filter({ hasText: 'domain' }).first();
       await expect(domain.locator(':scope > ul > li > .tree-row .node-name', { hasText: /^Customer$/ })).toHaveCount(0);
+    }).and('the customer folder lists the Customer class', async () => {
+      await explorer().getByRole('button', { name: 'Expand customer', exact: true }).first().click();
+      const folder = explorer().locator('li').filter({
+        has: explorer().getByRole('button', { name: 'customer', exact: true }),
+      }).first();
+      await expect(folder.locator('button[title="OoadClass"]', { hasText: /^Customer$/ }).first()).toBeVisible();
     });
   });
 });

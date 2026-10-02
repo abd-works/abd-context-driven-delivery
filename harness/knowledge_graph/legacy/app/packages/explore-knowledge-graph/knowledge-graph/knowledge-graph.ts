@@ -2722,7 +2722,7 @@ function treeTypeRank(kind: string): number {
 function treeOwnerRank(kind: string): number {
   if (kind === 'OoadClass') return 8;
   if (kind === 'Operation') return 10;
-  if (kind === 'Story' || kind === 'Scenario' || kind === 'Background' || kind === 'Step') return 12;
+  if (kind === 'Story' || kind === 'Scenario' || kind === 'Background' || kind === 'Step' || kind === 'Epic' || kind === 'SubEpic') return 12;
   if (kind === 'Package') return 40;
   if (kind === 'Module' || kind === 'File') return 30;
   if (kind === 'CleanEngineeringModel' || kind === 'StoryMap') return 80;

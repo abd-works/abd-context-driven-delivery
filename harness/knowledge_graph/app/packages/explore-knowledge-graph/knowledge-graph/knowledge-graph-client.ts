@@ -164,7 +164,7 @@ function webNode(row: any): WebKnowledgeGraphNode {
     node.nodeType?.name === "Module" ??
     false;
   node.children = (row.children ?? []).map((child: any) => webNode(child));
-  if (row.source?.file || row.file) {
+  if (row.source?.file || row.file || row.source?.text) {
     node.source = new KnowledgeGraphSource(
       row.source?.text ?? row.text ?? "",
       row.source?.file ?? row.file ?? "",

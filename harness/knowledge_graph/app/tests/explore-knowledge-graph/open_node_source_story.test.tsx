@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openFolder, RULE_OUTCOMES, waitForTree } from './helpers/pml-domain';
+import { bindPage, explorer, openFolder, openPmlDomain, RULE_OUTCOMES, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -37,6 +37,42 @@ story('Open Node Source', () => {
       await expect(body).not.toHaveText(/^processEverything$/);
     }).and('rule problems sit below that excerpt', async () => {
       await expect(explorer().getByTestId('source-file').locator('.rule-status')).toBeVisible();
+    });
+  });
+
+  scenario('a scenario pane shows the whole scenario', ({ given, when, then }) => {
+    given('pml-domain stories are loaded', async () => {
+      await openPmlDomain();
+      await waitForTree('tests');
+    });
+    when('the Engineer selects Customer submits feedback', async () => {
+      await explorer().getByRole('button', { name: 'Expand access-selfcare', exact: true }).first().click();
+      await explorer().getByRole('button', { name: 'Expand Access Selfcare', exact: true }).first().click();
+      await explorer().getByRole('button', { name: 'Expand Get Support', exact: true }).first().click();
+      await explorer().getByRole('button', { name: 'Customer submits feedback', exact: true }).first().click();
+    });
+    then('the pane shows the scenario and everything inside it', async () => {
+      const body = explorer().getByTestId('source-excerpt');
+      await expect(body).toContainText("scenario('Customer submits feedback'", { timeout: 30_000 });
+      await expect(body).toContainText('they send a feedback note');
+      await expect(body).toContainText('thanks for your feedback is shown');
+      await expect(body).toContainText('the receipt is for this customer');
+    });
+  });
+
+  scenario('an epic pane shows every story inside it', ({ given, when, then }) => {
+    given('pml-domain stories are loaded', async () => {
+      await openPmlDomain();
+      await waitForTree('tests');
+    });
+    when('the Engineer selects Access Selfcare', async () => {
+      await explorer().getByRole('button', { name: 'Expand access-selfcare', exact: true }).first().click();
+      await explorer().getByRole('button', { name: 'Access Selfcare', exact: true }).first().click();
+    });
+    then('the pane shows the stories in that epic', async () => {
+      const body = explorer().getByTestId('source-excerpt');
+      await expect(body).toContainText("story('Get Support'", { timeout: 30_000 });
+      await expect(body).toContainText("story('Sign In'");
     });
   });
 });

@@ -16,6 +16,7 @@ import {
 } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/knowledge-graph';
 import { KnowledgeGraphServer } from './knowledge-graph/knowledge-graph-server';
 import {
+  definitionsInFile,
   knowledgeGraphFromWorkspace,
   resolveNamedFolder,
   scanSourceFiles,
@@ -139,9 +140,10 @@ export class KnowledgeGraphsServer {
         : _fromPracticeHierarchyCli(root, false);
     const nested = _nestDiskFolders(graph, root);
     const specified = _attachStorySpecification(nested, root);
+    const coded = _attachClasses(specified, root);
     return repo.create({
       folder: root,
-      practiceGraphs: specified.toDto().practice_graphs,
+      practiceGraphs: coded.toDto().practice_graphs,
     });
   }
 
@@ -951,25 +953,24 @@ function _attachStorySpecification(graph: KnowledgeGraph, root: string): Knowled
       (node) => node.semantic_type === 'Story' && node.name === parsed.name,
     );
     for (const story of matches) {
-      story.source = story.source?.file
-        ? story.source
-        : {
-            file: parsed.file,
-            start_line: parsed.line,
-            end_line: parsed.endLine,
-            text: '',
-          };
+      story.source = {
+        file: parsed.file,
+        start_line: parsed.line,
+        end_line: parsed.endLine,
+        text: '',
+      };
       for (const background of parsed.backgrounds) {
-        _own(stories, story.node_id, 'Background', 'Background', parsed.file, background.line, background.steps);
+        _own(stories, story.node_id, 'Background', 'Background', parsed.file, background.line, background.endLine, background.steps);
       }
       for (const scenario of parsed.scenarios) {
-        _own(stories, story.node_id, 'Scenario', scenario.name, parsed.file, scenario.line, scenario.steps);
+        _own(stories, story.node_id, 'Scenario', scenario.name, parsed.file, scenario.line, scenario.endLine, scenario.steps);
       }
       for (const example of parsed.examples) {
-        _own(stories, story.node_id, 'Example', example.name, example.file, example.line, []);
+        _own(stories, story.node_id, 'Example', example.name, example.file, example.line, example.line, []);
       }
     }
   }
+  _fillEpicSource(stories, root);
   return graphFromWorkspaceDto({ ...dto, folder: root });
 }
 
@@ -980,12 +981,17 @@ function _own(
   name: string,
   file: string,
   line: number,
-  steps: { keyword: string; name: string; line: number }[],
+  endLine: number,
+  steps: { keyword: string; name: string; line: number; endLine: number }[],
 ): string | null {
   const existing = stories.relationships.find(
     (edge) => edge.kind === 'owns' && edge.from_id === parentId && stories.nodes.some((node) => node.node_id === edge.to_id && node.name === name && node.semantic_type === type),
   );
   if (existing) {
+    const current = stories.nodes.find((node) => node.node_id === existing.to_id);
+    if (current?.source && current.source.end_line <= current.source.start_line) {
+      current.source = { ...current.source, end_line: endLine };
+    }
     return existing.to_id;
   }
   const nodeId = `stories:${type}:${parentId}:${line}:${name}`;
@@ -998,7 +1004,7 @@ function _own(
     properties: {},
     applicable_rules: [],
     violations: [],
-    source: { file, start_line: line, end_line: line, text: '' },
+    source: { file, start_line: line, end_line: Math.max(line, endLine), text: '' },
   });
   stories.relationships.push({ kind: 'owns', from_id: parentId, to_id: nodeId });
   let previous = 'given';
@@ -1006,7 +1012,7 @@ function _own(
     const keyword = step.keyword === 'and' ? previous : step.keyword;
     previous = keyword;
     const label = `${keyword[0].toUpperCase()}${keyword.slice(1)} ${step.name}`;
-    _own(stories, nodeId, 'Step', label, file, step.line, []);
+    _own(stories, nodeId, 'Step', label, file, step.line, step.endLine, []);
   }
   return nodeId;
 }
@@ -1032,8 +1038,8 @@ function _parseStoryFile(root: string, abs: string): {
   file: string;
   line: number;
   endLine: number;
-  backgrounds: { line: number; steps: { keyword: string; name: string; line: number }[] }[];
-  scenarios: { name: string; line: number; steps: { keyword: string; name: string; line: number }[] }[];
+  backgrounds: { line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[];
+  scenarios: { name: string; line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[];
   examples: { name: string; file: string; line: number }[];
 } | null {
   const text = readFileSync(abs, 'utf8');
@@ -1043,36 +1049,219 @@ function _parseStoryFile(root: string, abs: string): {
   }
   const file = relative(root, abs).replaceAll('\\', '/');
   const lines = text.split(/\r?\n/);
-  const backgrounds: { line: number; steps: { keyword: string; name: string; line: number }[] }[] = [];
-  const scenarios: { name: string; line: number; steps: { keyword: string; name: string; line: number }[] }[] = [];
-  let current: { steps: { keyword: string; name: string; line: number }[] } | null = null;
+  const backgrounds: { line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[] = [];
+  const scenarios: { name: string; line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[] = [];
+  let current: { steps: { keyword: string; name: string; line: number; endLine: number }[] } | null = null;
   lines.forEach((line, index) => {
     const background = line.match(/background\(\s*['"][^'"]*['"]/);
     const scenario = line.match(/scenario\(\s*['"]([^'"]+)['"]/);
     const step = line.match(/(?:^|[^\w])(given|when|then|and)\(\s*['"]([^'"]+)['"]/i);
     if (background) {
       current = { steps: [] };
-      backgrounds.push({ line: index + 1, steps: current.steps });
+      backgrounds.push({ line: index + 1, endLine: index + 1, steps: current.steps });
       return;
     }
     if (scenario) {
       current = { steps: [] };
-      scenarios.push({ name: scenario[1], line: index + 1, steps: current.steps });
+      scenarios.push({ name: scenario[1], line: index + 1, endLine: index + 1, steps: current.steps });
       return;
     }
     if (step && current) {
-      current.steps.push({ keyword: step[1].toLowerCase(), name: step[2], line: index + 1 });
+      current.steps.push({ keyword: step[1].toLowerCase(), name: step[2], line: index + 1, endLine: index + 1 });
     }
   });
+  const storyLine = text.slice(0, story.index).split(/\r?\n/).length;
+  for (const background of backgrounds) {
+    background.endLine = _blockEndLine(text, background.line);
+  }
+  for (const scenario of scenarios) {
+    scenario.endLine = _blockEndLine(text, scenario.line);
+    for (const step of scenario.steps) {
+      step.endLine = _blockEndLine(text, step.line);
+    }
+  }
+  for (const background of backgrounds) {
+    for (const step of background.steps) {
+      step.endLine = _blockEndLine(text, step.line);
+    }
+  }
   return {
     name: story[1],
     file,
-    line: text.slice(0, story.index).split(/\r?\n/).length,
-    endLine: lines.length,
+    line: storyLine,
+    endLine: _blockEndLine(text, storyLine),
     backgrounds,
     scenarios,
     examples: _importedExamples(root, abs, text),
   };
+}
+
+function _blockEndLine(text: string, line: number): number {
+  let offset = 0;
+  let current = 1;
+  while (current < line && offset < text.length) {
+    if (text[offset] === '\n') {
+      current += 1;
+    }
+    offset += 1;
+  }
+  const brace = text.indexOf('{', offset);
+  if (brace < 0) {
+    return line;
+  }
+  let depth = 0;
+  for (let index = brace; index < text.length; index += 1) {
+    if (text[index] === '{') {
+      depth += 1;
+    } else if (text[index] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(0, index).split(/\r?\n/).length;
+      }
+    }
+  }
+  return text.split(/\r?\n/).length;
+}
+
+function _fillEpicSource(
+  stories: KnowledgeGraphDto['practice_graphs'][number],
+  root: string,
+): void {
+  const byId = new Map(stories.nodes.map((node) => [node.node_id, node]));
+  const children = new Map<string, string[]>();
+  for (const edge of stories.relationships) {
+    if (edge.kind !== 'owns') {
+      continue;
+    }
+    const list = children.get(edge.from_id) ?? [];
+    list.push(edge.to_id);
+    children.set(edge.from_id, list);
+  }
+  for (const epic of stories.nodes) {
+    if (epic.semantic_type !== 'Epic') {
+      continue;
+    }
+    const blocks: string[] = [];
+    let file = '';
+    const seen = new Set<string>();
+    const walk = (id: string) => {
+      for (const childId of children.get(id) ?? []) {
+        if (seen.has(childId)) {
+          continue;
+        }
+        seen.add(childId);
+        const child = byId.get(childId);
+        if (!child) {
+          continue;
+        }
+        if (child.semantic_type === 'Story' && child.source?.file) {
+          if (!file) {
+            file = child.source.file;
+          }
+          const text = _readSourceText(
+            root,
+            child.source.file,
+            child.source.start_line,
+            child.source.end_line,
+          );
+          if (text.trim()) {
+            blocks.push(text);
+          }
+        }
+        if (child.semantic_type === 'Epic' || child.semantic_type === 'SubEpic') {
+          walk(childId);
+        }
+      }
+    };
+    walk(epic.node_id);
+    if (!blocks.length || !file) {
+      continue;
+    }
+    const text = blocks.join('\n\n');
+    epic.source = {
+      file,
+      start_line: 1,
+      end_line: text.split(/\r?\n/).length,
+      text,
+    };
+  }
+}
+
+function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
+  const dto = graph.toDto();
+  const engineering = dto.practice_graphs.find((item) => item.name === 'clean_engineering');
+  if (!engineering || !_isDir(root)) {
+    return graph;
+  }
+  const seen = new Set(engineering.nodes.map((node) => node.node_id));
+  for (const abs of _codeFiles(root)) {
+    const file = relative(root, abs).replaceAll('\\', '/');
+    const text = readFileSync(abs, 'utf8');
+    const workspace: WorkspaceFile = { relativePath: file, text };
+    for (const found of definitionsInFile(workspace)) {
+      if (found.semantic_type !== 'OoadClass') {
+        continue;
+      }
+      _addClass(engineering, seen, file, found.name, found.source.start_line, found.source.end_line);
+    }
+    for (const match of text.matchAll(/export\s+interface\s+([A-Za-z_][A-Za-z0-9_]*)[^{]*\{/g)) {
+      const at = match.index ?? 0;
+      const start = text.slice(0, at).split(/\r?\n/).length;
+      _addClass(engineering, seen, file, match[1], start, _blockEndLine(text, start));
+    }
+  }
+  return graphFromWorkspaceDto({ ...dto, folder: root });
+}
+
+function _addClass(
+  engineering: KnowledgeGraphDto['practice_graphs'][number],
+  seen: Set<string>,
+  file: string,
+  name: string,
+  start: number,
+  end: number,
+): void {
+  const nodeId = `ce:OoadClass:${file}:${name}`;
+  if (seen.has(nodeId)) {
+    return;
+  }
+  seen.add(nodeId);
+  const folder = file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '';
+  engineering.nodes.push({
+    node_id: nodeId,
+    name,
+    practice: 'clean_engineering',
+    fidelity: 'code',
+    semantic_type: 'OoadClass',
+    properties: folder ? { folder } : {},
+    applicable_rules: [],
+    violations: [],
+    source: { file, start_line: start, end_line: Math.max(start, end), text: '' },
+  });
+  const owner = engineering.nodes.find(
+    (node) =>
+      (node.semantic_type === 'Module' || node.semantic_type === 'Package') &&
+      String(node.properties?.folder ?? '').replaceAll('\\', '/') === folder,
+  );
+  if (owner) {
+    engineering.relationships.push({ kind: 'owns', from_id: owner.node_id, to_id: nodeId });
+  }
+}
+
+function _codeFiles(dir: string, root = dir): string[] {
+  const found: string[] = [];
+  for (const name of readdirSync(dir)) {
+    if (name === 'node_modules' || name === 'tests' || name === 'dist' || name === 'coverage' || name.startsWith('.')) {
+      continue;
+    }
+    const abs = join(dir, name);
+    if (statSync(abs).isDirectory()) {
+      found.push(..._codeFiles(abs, root));
+    } else if (/\.(ts|tsx)$/.test(name) && !name.endsWith('.d.ts')) {
+      found.push(abs);
+    }
+  }
+  return found;
 }
 
 function _importedExamples(
