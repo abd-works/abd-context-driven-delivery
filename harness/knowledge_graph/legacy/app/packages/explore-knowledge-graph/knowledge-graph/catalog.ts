@@ -76,6 +76,29 @@ export const RELATIONSHIP_KINDS = [
   'usedBy',
 ] as const;
 
+/** Connectors a node type can carry. The filter lists these, not only edges already stored. */
+export const CONNECTORS_BY_TYPE: Record<string, readonly string[]> = {
+  Module: ['owns', 'belongsTo'],
+  Package: ['owns', 'belongsTo'],
+  Epic: ['owns', 'demonstrates'],
+  SubEpic: ['owns'],
+  Story: ['owns', 'demonstrates', 'demonstratedThrough'],
+  Scenario: ['owns'],
+  Step: ['owns', 'invokes'],
+  Example: ['demonstratedThrough'],
+  OoadClass: ['owns', 'composition', 'aggregation', 'associates', 'invokes', 'dependsOn'],
+  Operation: ['owns', 'invokes', 'hasParameter', 'returns'],
+  Property: ['hasType'],
+  Parameter: ['hasType'],
+  BoundedContext: ['owns'],
+  Aggregate: ['owns', 'accesses'],
+  Entity: ['hasIdentity'],
+  EntityRoot: ['hasIdentity', 'root'],
+  Description: ['observes'],
+  Context: ['scopes'],
+  Observation: ['observes'],
+};
+
 export const INVERSE_KIND: Record<string, string> = {
   owns: 'belongsTo',
   belongsTo: 'owns',
