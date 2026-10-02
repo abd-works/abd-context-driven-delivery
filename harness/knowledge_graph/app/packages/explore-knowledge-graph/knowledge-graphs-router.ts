@@ -137,9 +137,10 @@ export class KnowledgeGraphsServer {
       uploaded.length > 0
         ? knowledgeGraphFromWorkspace(root, uploaded, crypto.randomUUID())
         : _fromPracticeHierarchyCli(root, false);
+    const nested = _nestDiskFolders(graph, root);
     return repo.create({
       folder: root,
-      practiceGraphs: graph.toDto().practice_graphs,
+      practiceGraphs: nested.toDto().practice_graphs,
     });
   }
 
@@ -540,6 +541,120 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
 
 function _graphIsEmpty(graph: KnowledgeGraph): boolean {
   return graph.toDto().practice_graphs.every((item) => item.nodes.length === 0);
+}
+
+const DISK_SKIP = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  '__pycache__',
+  '.venv',
+  'venv',
+  'coverage',
+  '.codeql',
+  '.codeql-db',
+  '.context',
+  '.cursor',
+  '.vscode',
+  '.github',
+  'htmlcov',
+]);
+
+function _nestDiskFolders(graph: KnowledgeGraph, root: string): KnowledgeGraph {
+  if (!root || !existsSync(root)) {
+    return graph;
+  }
+  const dto = graph.toDto();
+  const workspace =
+    dto.practice_graphs.find((item) => item.id === 'practice:workspace') ??
+    dto.practice_graphs[0];
+  if (!workspace) {
+    return graph;
+  }
+  const byPath = new Map<string, string>();
+  for (const practice of dto.practice_graphs) {
+    for (const node of practice.nodes) {
+      if (node.semantic_type !== 'Package' && node.semantic_type !== 'Module') {
+        continue;
+      }
+      const folder = String(node.properties?.folder ?? '').replaceAll('\\', '/');
+      if (folder) {
+        byPath.set(folder, node.node_id);
+      }
+    }
+  }
+  const seeds = [...byPath.keys()];
+  for (const seed of seeds) {
+    _addDiskFolders(root, seed, byPath, workspace.nodes);
+  }
+  const seen = new Set(
+    dto.practice_graphs.flatMap((practice) =>
+      practice.relationships.map((edge) => `${edge.from_id}\0${edge.to_id}`),
+    ),
+  );
+  for (const [path, nodeId] of byPath) {
+    const split = path.lastIndexOf('/');
+    if (split <= 0) {
+      continue;
+    }
+    const parentId = byPath.get(path.slice(0, split));
+    if (!parentId) {
+      continue;
+    }
+    const key = `${parentId}\0${nodeId}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    workspace.relationships.push({ kind: 'owns', from_id: parentId, to_id: nodeId });
+  }
+  return KnowledgeGraph.fromDto(dto);
+}
+
+function _addDiskFolders(
+  root: string,
+  folder: string,
+  byPath: Map<string, string>,
+  nodes: KnowledgeGraphDto['practice_graphs'][number]['nodes'],
+): void {
+  let names: string[] = [];
+  try {
+    names = readdirSync(join(root, folder));
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    if (!name || name.startsWith('.') || DISK_SKIP.has(name)) {
+      continue;
+    }
+    const child = `${folder}/${name}`.replaceAll('\\', '/');
+    let info;
+    try {
+      info = statSync(join(root, child));
+    } catch {
+      continue;
+    }
+    if (!info.isDirectory()) {
+      continue;
+    }
+    if (!byPath.has(child)) {
+      const nodeId = `pkg:${child}`;
+      byPath.set(child, nodeId);
+      nodes.push({
+        node_id: nodeId,
+        name,
+        practice: '',
+        fidelity: null,
+        semantic_type: 'Package',
+        properties: { folder: child },
+        applicable_rules: [],
+        violations: [],
+        source: null,
+      });
+    }
+    _addDiskFolders(root, child, byPath, nodes);
+  }
 }
 
 function _graphFromCache(cached: string, root: string): KnowledgeGraph {

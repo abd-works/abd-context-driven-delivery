@@ -132,8 +132,12 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
 
   useEffect(() => {
     const next = new Set<string>();
-    if (listedTree.length === 1 && listedTree[0]?.nodeId) {
-      next.add(listedTree[0].nodeId);
+    if (listedTree.length > 0) {
+      for (const node of listedTree) {
+        if (node.nodeId) {
+          next.add(node.nodeId);
+        }
+      }
     }
     if (filterKey !== '0||||') {
       expandShown(listedTree, picked, next);
