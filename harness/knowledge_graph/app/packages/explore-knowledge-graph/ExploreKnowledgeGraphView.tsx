@@ -869,6 +869,9 @@ function shown(
   picked: FilterPick,
   options: KnowledgeGraphFilterOptions,
 ): boolean {
+  if (node.nodeType?.name === 'File') {
+    return false;
+  }
   if (picked.violations) {
     return violates(node, picked) || (node.children ?? []).some((child) => shown(child, picked, options));
   }

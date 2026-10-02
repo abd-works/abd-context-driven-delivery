@@ -675,15 +675,13 @@ function _treeFromPaths(paths: string[]): DirectoryRow[] {
     for (let index = 0; index < parts.length; index += 1) {
       const name = parts[index];
       relative = relative ? `${relative}/${name}` : name;
-      const last = index === parts.length - 1;
+      if (index === parts.length - 1) {
+        continue;
+      }
       let node = level.find((item) => item.name === name);
       if (!node) {
-        node = last ? _fileRow(name, relative) : _folderRow(name, relative);
+        node = _folderRow(name, relative);
         level.push(node);
-      } else if (!last && node.is_file) {
-        node.is_file = false;
-        node.is_folder = true;
-        node.semantic_type = 'Package';
       }
       level = node.children;
     }
@@ -720,16 +718,17 @@ function _mergeDirectory(listed: any[], root: string, parent: string): any[] {
     } catch {
       continue;
     }
+    if (!isDir) {
+      continue;
+    }
     let row = byName.get(name);
     if (!row) {
-      row = isDir ? _folderRow(name, relative) : _fileRow(name, relative);
+      row = _folderRow(name, relative);
       rows.push(row);
       byName.set(name, row);
     }
-    if (isDir) {
-      row.is_folder = true;
-      row.children = _mergeDirectory(row.children ?? [], root, relative);
-    }
+    row.is_folder = true;
+    row.children = _mergeDirectory(row.children ?? [], root, relative);
   }
   return rows;
 }
