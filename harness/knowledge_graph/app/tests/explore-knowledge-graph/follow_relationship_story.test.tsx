@@ -14,11 +14,15 @@ story('Follow Relationship', () => {
       await explorer().locator('[data-node-id]').filter({ hasText: /^Customer$/ }).first().click();
     });
     then('the target Node is selected', async () => {
-      await expect(explorer().locator('[data-node-id].is-selected, [data-node-id]').filter({ hasText: /^Customer$/ }).first()).toBeVisible();
-    }).and('the target source is shown', async () => {
       await expect(
-        explorer().locator('.knowledge-graph-panel, [data-testid="source-file"]'),
-      ).toContainText(/Customer|class/);
+        explorer().locator('[data-node-id].is-selected').filter({ hasText: /^Customer$/ }),
+      ).toBeVisible();
+    }).and('the target source is shown', async () => {
+      await expect(explorer().getByTestId('source-file')).toContainText(/Customer|class/);
+    }).and('the Node stays in the tree', async () => {
+      await expect(
+        explorer().getByTestId('practice-graph-tree').locator('[data-node-id].is-selected'),
+      ).toBeVisible();
     });
   });
 });

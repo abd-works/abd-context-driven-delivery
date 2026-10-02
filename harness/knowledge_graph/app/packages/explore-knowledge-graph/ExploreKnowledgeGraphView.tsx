@@ -1,5 +1,6 @@
 import { type ChangeEvent, useEffect, useState } from 'react';
 import { useKnowledgeGraph } from './use-knowledge-graph';
+import { KnowledgeGraphNode } from './knowledge-graph/knowledge-graph';
 import {
   isScanSourcePath,
   pickerRelativePath,
@@ -9,6 +10,22 @@ import {
 } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
+
+type FilterPick = {
+  practices: string[];
+  stages: string[];
+  node_types: string[];
+  relationship_types: string[];
+  rules: string[];
+};
+
+const EMPTY_PICK: FilterPick = {
+  practices: [],
+  stages: [],
+  node_types: [],
+  relationship_types: [],
+  rules: [],
+};
 
 /**
  * ExploreKnowledgeGraphView — feature view.
@@ -20,7 +37,9 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     loading,
     workStatus,
     folder: scannedFolder,
-    html,
+    listedTree,
+    filterOptions,
+    selectedNode,
     selectNode,
     selectFolder,
     refreshGraph,
@@ -79,7 +98,9 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     selectFolder({ folder: folderName, files: scanSourceFiles(picked) });
   }
 
+  const [picked, setPicked] = useState<FilterPick>(EMPTY_PICK);
   const engineering = theme === 'engineering';
+  const selectedId = selectedNode?.nodeId ?? '';
 
   return (
     <main className="explore-knowledge-graph">
@@ -210,7 +231,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 }}
                 onBlur={() => {
                   const next = folder.trim();
-                  if (next && next !== scannedFolder) {
+                  if (next && !sameFolder(next, scannedFolder)) {
                     selectFolder({ folder: next });
                   }
                 }}
@@ -226,36 +247,248 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               />
             ) : null}
           </div>
-          <div className="filters" hidden={!filtersOpen} />
+          <div className="filters" hidden={!filtersOpen}>
+            <FilterSelect
+              label="Practice"
+              testId="filter-practice"
+              options={filterOptions.practices}
+              selected={picked.practices}
+              onChange={(practices) => setPicked((prev) => ({ ...prev, practices }))}
+            />
+            <FilterSelect
+              label="Stage"
+              testId="filter-stage"
+              options={filterOptions.stages}
+              selected={picked.stages}
+              onChange={(stages) => setPicked((prev) => ({ ...prev, stages }))}
+            />
+            <FilterSelect
+              label="Node"
+              testId="filter-node"
+              options={filterOptions.node_types}
+              selected={picked.node_types}
+              onChange={(node_types) => setPicked((prev) => ({ ...prev, node_types }))}
+            />
+            <FilterSelect
+              label="Connector"
+              testId="filter-connector"
+              options={filterOptions.relationship_types}
+              selected={picked.relationship_types}
+              onChange={(relationship_types) => setPicked((prev) => ({ ...prev, relationship_types }))}
+            />
+            <FilterSelect
+              label="Rule"
+              testId="filter-rule"
+              options={filterOptions.rules}
+              selected={picked.rules}
+              onChange={(rules) => setPicked((prev) => ({ ...prev, rules }))}
+            />
+          </div>
         </div>
-        <div
-          className="split"
-          data-testid="practice-graph-tree"
-          onClick={(event) => {
-            const target = (event.target as HTMLElement).closest('[data-node-id]');
-            if (target) {
-              selectNode(target.getAttribute('data-node-id') ?? '');
-            }
-          }}
-        >
-          {loading && (
-            <p className="empty-state" data-testid="graph-loading">
-              {workStatus
-                ? `${workStatus.action}… ${workStatus.seconds}s`
-                : 'Loading KnowledgeGraph...'}
-            </p>
-          )}
-          {!loading && scanError && (
-            <p className="empty-state" data-testid="scan-error">
-              {scanError}
-            </p>
-          )}
-          <div
-            data-testid="source-file"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+        <div className="split">
+          <div className="panel" data-testid="practice-graph-tree">
+            {loading && listedTree.length === 0 && (
+              <p className="empty-state" data-testid="graph-loading">
+                {workStatus
+                  ? `${workStatus.action}… ${workStatus.seconds}s`
+                  : 'Loading KnowledgeGraph...'}
+              </p>
+            )}
+            {!loading && scanError && listedTree.length === 0 && (
+              <p className="empty-state" data-testid="scan-error">
+                {scanError}
+              </p>
+            )}
+            <ul className="tree">
+              {listedTree.map((node) => (
+                <TreeNode
+                  key={node.nodeId || node.name}
+                  node={node}
+                  depth={0}
+                  picked={picked}
+                  selectedId={selectedId}
+                  onSelect={selectNode}
+                />
+              ))}
+            </ul>
+          </div>
+          <div className="panel" data-testid="source-file">
+            {selectedNode ? (
+              <SourcePane node={selectedNode} folder={folder} />
+            ) : (
+              <p className="empty-state">Select a node</p>
+            )}
+          </div>
         </div>
       </div>
     </main>
   );
+}
+
+function FilterSelect({
+  label,
+  testId,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string;
+  testId: string;
+  options: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+}) {
+  return (
+    <label>
+      {label}
+      <select
+        multiple
+        data-testid={testId}
+        value={selected}
+        onChange={(event) => {
+          onChange(Array.from(event.target.selectedOptions).map((option) => option.value));
+        }}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function TreeNode({
+  node,
+  depth,
+  picked,
+  selectedId,
+  onSelect,
+}: {
+  node: KnowledgeGraphNode;
+  depth: number;
+  picked: FilterPick;
+  selectedId: string;
+  onSelect: (nodeId: string) => void;
+}) {
+  const children = (node.children ?? []).filter((child) => shown(child, picked));
+  if (!shown(node, picked)) {
+    return null;
+  }
+  const kind = node.nodeType?.name ?? '';
+  const selected = node.nodeId === selectedId;
+  return (
+    <li
+      data-depth={depth}
+      data-node-id={node.nodeId}
+      data-kind={kind}
+      className={selected ? 'is-selected' : undefined}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(node.nodeId);
+      }}
+    >
+      <div className="tree-row">
+        <button
+          type="button"
+          className={selected ? 'selected' : undefined}
+          title={kind}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(node.nodeId);
+          }}
+        >
+          <span className="node-name">{node.name}</span>
+        </button>
+      </div>
+      {children.length > 0 ? (
+        <ul>
+          {children.map((child) => (
+            <TreeNode
+              key={child.nodeId || child.name}
+              node={child}
+              depth={depth + 1}
+              picked={picked}
+              selectedId={selectedId}
+              onSelect={onSelect}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+function SourcePane({ node, folder }: { node: KnowledgeGraphNode; folder: string }) {
+  const file = node.source?.file ?? '';
+  const [text, setText] = useState('');
+
+  useEffect(() => {
+    const initial = node.source?.text ?? '';
+    setText(initial);
+    if (!file || !folder || initial) {
+      return;
+    }
+    const start = Number(node.source?.startLine) || 1;
+    const end = Number(node.source?.endLine) || start + 80;
+    let cancel = false;
+    fetch('/api/knowledge-graphs/source', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        folder,
+        ranges: [{ file, start_line: start, end_line: end }],
+      }),
+    })
+      .then((response) => response.json())
+      .then((body: { ranges?: Array<{ text?: string }> }) => {
+        if (!cancel) {
+          setText(body.ranges?.[0]?.text ?? node.name);
+        }
+      })
+      .catch(() => {
+        if (!cancel) {
+          setText(node.name);
+        }
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [node, file, folder]);
+
+  return (
+    <section className="knowledge-graph-panel" data-open="true" data-file={file}>
+      <p className="source-path">{file || node.name}</p>
+      <pre className="panel-source">{text || node.name}</pre>
+    </section>
+  );
+}
+
+function shown(node: KnowledgeGraphNode, picked: FilterPick): boolean {
+  if (matches(node, picked)) {
+    return true;
+  }
+  return (node.children ?? []).some((child) => shown(child, picked));
+}
+
+function matches(node: KnowledgeGraphNode, picked: FilterPick): boolean {
+  const active = Object.values(picked).some((values) => values.length > 0);
+  if (!active) {
+    return true;
+  }
+  if (picked.practices.length && !picked.practices.includes(node.practice)) {
+    return false;
+  }
+  if (picked.stages.length && !picked.stages.includes(node.stage)) {
+    return false;
+  }
+  if (picked.node_types.length && !picked.node_types.includes(node.nodeType?.name ?? '')) {
+    return false;
+  }
+  return true;
+}
+
+function sameFolder(left: string, right: string): boolean {
+  return left.replaceAll('/', '\\').toLowerCase() === right.replaceAll('/', '\\').toLowerCase();
 }

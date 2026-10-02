@@ -455,7 +455,7 @@ html[data-theme="engineering"] .site-nav {
 
 ul.tree ul {
   list-style: none;
-  padding-left: 10px;
+  padding-left: 1.25rem;
 }
 
 .tree-row {

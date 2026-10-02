@@ -11,12 +11,30 @@ import {
 const GRAPH_DEADLINE_MS = 180_000;
 const DATABASE_DEADLINE_MS = 15 * 60_000;
 
+export type KnowledgeGraphFilterOptions = {
+  practices: string[];
+  stages: string[];
+  node_types: string[];
+  relationship_types: string[];
+  rules: string[];
+};
+
+const EMPTY_OPTIONS: KnowledgeGraphFilterOptions = {
+  practices: [],
+  stages: [],
+  node_types: [],
+  relationship_types: [],
+  rules: [],
+};
+
 export class KnowledgeGraphClient extends KnowledgeGraph {
   graphId: string;
+  options: KnowledgeGraphFilterOptions;
 
   constructor(storyModel?: any, ceModel?: any, domainDrivenDesignModel?: any, description?: any) {
     super(storyModel, ceModel, domainDrivenDesignModel, description);
     this.graphId = "";
+    this.options = { ...EMPTY_OPTIONS };
   }
 
   async createDatabase(): Promise<void> {
@@ -90,6 +108,7 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
     attachMembers(tree, dto);
     this.matching = tree;
     this.nodes = flattenNodes(tree);
+    this.options = filterOptions(presented.filter_options, this.nodes);
     if (presented.selected_node) {
       const found =
         this.nodes.find(
@@ -115,6 +134,8 @@ function webNode(row: any): WebKnowledgeGraphNode {
     row.is_folder ?? row.isFolder ?? false,
   );
   node.name = row.name ?? "";
+  node.practice = row.practice ?? "";
+  node.stage = row.fidelity ?? row.stage ?? "";
   node.nodeId = row.node_id ?? row.nodeId ?? row.name ?? "";
   node.nodeType = row.semantic_type || row.nodeType
     ? { name: row.semantic_type ?? row.nodeType?.name ?? "" }
@@ -169,12 +190,35 @@ function memberHomesIn(row: any, folderName: string): boolean {
   if (!needle) {
     return false;
   }
-  if (String(row.name ?? "").toLowerCase() === needle) {
+  const file = String(row.source?.file ?? "").replaceAll("\\", "/").toLowerCase();
+  const parts = file.split("/").filter(Boolean);
+  const parent = parts.length > 1 ? parts[parts.length - 2] : "";
+  const propFolder = String(row.properties?.folder ?? "").replaceAll("\\", "/").toLowerCase();
+  const propParent = propFolder.split("/").filter(Boolean).pop() ?? "";
+  if (parent && parent === needle) {
     return true;
   }
-  const file = String(row.source?.file ?? "").replaceAll("\\", "/").toLowerCase();
-  const folder = String(row.properties?.folder ?? "").replaceAll("\\", "/").toLowerCase();
-  return file.split("/").includes(needle) || folder.split("/").pop() === needle;
+  if (propParent && propParent === needle) {
+    return true;
+  }
+  return !file && !propParent && String(row.name ?? "").toLowerCase() === needle;
+}
+
+function filterOptions(given: any, nodes: KnowledgeGraphNode[]): KnowledgeGraphFilterOptions {
+  const source = given ?? {};
+  return {
+    practices: listed(source.practices, nodes.map((node) => node.practice)),
+    stages: listed(source.stages, nodes.map((node) => node.stage)),
+    node_types: listed(source.node_types, nodes.map((node) => node.nodeType?.name ?? "")),
+    relationship_types: listed(source.relationship_types, []),
+    rules: listed(source.rules, []),
+  };
+}
+
+function listed(given: unknown, fallback: string[]): string[] {
+  const rows = Array.isArray(given) ? given.map((item) => String(item)).filter(Boolean) : [];
+  const names = rows.length ? rows : fallback.filter(Boolean);
+  return [...new Set(names)];
 }
 
 function flattenNodes(nodes: KnowledgeGraphNode[]): KnowledgeGraphNode[] {

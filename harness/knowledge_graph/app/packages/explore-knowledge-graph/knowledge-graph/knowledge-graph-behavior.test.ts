@@ -58,6 +58,51 @@ describe("a knowledge graph", () => {
       expect(loaded.render()).toContain("Customer");
     });
 
+    it("should keep a class under its own folder", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "11111111-1111-1111-1111-111111111111",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "Customer",
+                  node_id: "ce:OoadClass:Customer",
+                  semantic_type: "OoadClass",
+                  practice: "clean_engineering",
+                  source: { file: "domain/customer/Customer.ts" },
+                },
+              ],
+            },
+          ],
+        },
+        listed_tree: [
+          {
+            name: "domain",
+            node_id: "ce:Module:domain",
+            semantic_type: "Module",
+            practice: "clean_engineering",
+            children: [
+              { name: "customer", node_id: "ce:Module:customer", semantic_type: "Module", children: [] },
+            ],
+          },
+        ],
+        filter_options: {
+          practices: ["clean_engineering", "ddd"],
+          node_types: ["Module", "OoadClass"],
+          stages: ["code"],
+          relationship_types: ["owns"],
+          rules: ["keep-operations-small-focused"],
+        },
+      });
+      const domain = loaded.matching[0];
+      expect(domain.children.map((node) => node.name)).toEqual(["customer"]);
+      expect(domain.children[0].children.map((node) => node.name)).toContain("Customer");
+      expect(loaded.options.practices).toEqual(["clean_engineering", "ddd"]);
+      expect(loaded.options.node_types).toContain("OoadClass");
+    });
+
     it("should nest classes from practice graphs under their folder", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({

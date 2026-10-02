@@ -105,6 +105,13 @@ export function useKnowledgeGraph(id: string) {
     scanError,
     folder: graph?.folder ?? lastScanFolder(),
     listedTree: graph?.matching.length ? graph.matching : graph?.nodes ?? [],
+    filterOptions: graph?.options ?? {
+      practices: [],
+      stages: [],
+      node_types: [],
+      relationship_types: [],
+      rules: [],
+    },
     selectedNode: graph?.selected ?? null,
     html: graph?.render() ?? '',
     selectNode,

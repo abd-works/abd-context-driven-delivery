@@ -14,9 +14,9 @@ story('Open Node Source', () => {
       await explorer().locator('[data-node-id]').filter({ hasText: /^Customer$/ }).first().click();
     });
     then('the source is shown', async () => {
-      await expect(
-        explorer().locator('.knowledge-graph-panel, [data-testid="source-file"]'),
-      ).toContainText(/Customer|class/);
+      const selected = explorer().locator('[data-node-id].is-selected').filter({ hasText: /^Customer$/ });
+      await expect(selected).toBeVisible();
+      await expect(explorer().getByTestId('source-file')).toContainText(/Customer|class/);
     });
   });
 });

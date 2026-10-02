@@ -14,7 +14,11 @@ story('Indent Practice Graph', () => {
     });
     then('the child sits one indent level under the parent', async () => {
       const parent = explorer().locator('li[data-depth="0"]').first();
-      await expect(parent.locator('li[data-depth="1"]').first()).toBeVisible();
+      const child = parent.locator('li[data-depth="1"]').first();
+      await expect(child).toBeVisible();
+      const parentBox = await parent.locator('.node-name').first().boundingBox();
+      const childBox = await child.locator('.node-name').first().boundingBox();
+      expect(childBox!.x).toBeGreaterThan((parentBox?.x ?? 0) + 8);
     });
   });
 });

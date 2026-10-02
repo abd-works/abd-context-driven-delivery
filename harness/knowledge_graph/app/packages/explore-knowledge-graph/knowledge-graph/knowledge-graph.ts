@@ -210,6 +210,8 @@ class KnowledgeGraphNode {
   children: KnowledgeGraphNode[];
   panel: KnowledgeGraphPanel | null;
   rules: NodeRules | null;
+  practice: string;
+  stage: string;
 
   constructor() {
     this.name = "";
@@ -221,6 +223,8 @@ class KnowledgeGraphNode {
     this.children = [];
     this.panel = null;
     this.rules = null;
+    this.practice = "";
+    this.stage = "";
   }
 
   navigateTo(edge: KnowledgeGraphEdge): KnowledgeGraphNode | null {
