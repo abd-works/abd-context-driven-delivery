@@ -426,7 +426,9 @@ describe("a knowledge graph", () => {
         expect(included.map((node) => node.name)).toEqual(["Customer is known"]);
         for (const node of included) {
           expect(STORY_NODE_TYPES).not.toContain(node.nodeType?.name);
-          expect(["Module", "Package", "File", "OoadClass"]).not.toContain(node.nodeType?.name);
+          expect(["Module", "Package", "File", "OoadClass", "Operation", "BoundedContext"]).not.toContain(
+            node.nodeType?.name,
+          );
         }
       });
     });
