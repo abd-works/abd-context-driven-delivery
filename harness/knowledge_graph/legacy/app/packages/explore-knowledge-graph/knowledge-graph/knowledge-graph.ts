@@ -2812,6 +2812,9 @@ function ensureFolderPackages(dto: KnowledgeGraphDto): KnowledgeGraphDto {
           node.properties = { ...node.properties, folder: path };
           return true;
         }
+        if ((node.applicable_rules?.length ?? 0) > 0 || (node.violations?.length ?? 0) > 0) {
+          return true;
+        }
         drop.add(node.node_id);
         return false;
       });
