@@ -16,8 +16,10 @@ from harness.knowledge_graph.model.knowledge_graph_node import (
     practice_root_labels,
     retained_tree,
     restored_branches,
+    database_build_required,
     retag_practice,
     step_members,
+    step_callouts,
     tagged_practice,
 )
 from practices.stories.model.story_model import Epic, StoryModel
@@ -367,6 +369,11 @@ with description("a knowledge graph"):
             expect(restored_branches(["pkg:domain"], present)).to(equal(["pkg:domain"]))
             expect(restored_branches(["pkg:domain", "missing"], present)).to(equal(["pkg:domain"]))
 
+        with it("should build a database when create database is clicked even if one is already there"):
+            expect(database_build_required("create-database", True)).to(equal(True))
+            expect(database_build_required("refresh-master", True)).to(equal(False))
+            expect(database_build_required("reload-working-copy", False)).to(equal(True))
+
 
 with description("a practice tree"):
     with it("should root each practice that is not filtered out"):
@@ -395,6 +402,37 @@ with description("a scenario step"):
         )
         expect(members["operations"]).to(equal(["submitFeedback"]))
         expect(members["examples"]).to(equal(["feedbackSubjectExample", "feedbackMessageExample"]))
+        text = (
+            "subscriber.feedbackSubject = feedbackSubjectExample\n"
+            "subscriber.feedbackMessage = feedbackMessageExample\n"
+            "receipt = await subscriber.submitFeedback()"
+        )
+        layout = step_callouts(
+            text,
+            [
+                {"name": "feedbackSubjectExample", "text": "feedbackSubjectExample"},
+                {"name": "feedbackMessageExample", "text": "feedbackMessageExample"},
+                {"name": "submitFeedback", "text": "submitFeedback()"},
+            ],
+        )
+        expect([fold["kind"] for fold in layout["folds"]]).to(equal(["call", "call", "call"]))
+        expect("    feedbackSubjectExample" in layout["text"]).to(equal(True))
+        expect("    submitFeedback()" in layout["text"]).to(equal(True))
+
+    with it("should keep the operation a step invokes under that step"):
+        operation = _node("submitFeedback", "Operation", "clean_engineering")
+        example = _node("feedbackSubjectExample", "Example", "stories")
+        step = _node("When they send a feedback note", "Step", "stories", [operation, example])
+        step.relationships = [
+            {"kind": "invokes", "nodeId": operation.nodeId, "name": operation.name},
+            {"kind": "demonstrates", "nodeId": example.nodeId, "name": example.name},
+        ]
+        included = _flatten(retained_tree([step], ["Stories"]))
+        names = [node.name for node in included]
+        expect(names).to(contain("submitFeedback"))
+        expect(names).to(contain("feedbackSubjectExample"))
+        engineering = [node.name for node in _flatten(retained_tree([step], ["CleanEngineering"]))]
+        expect("When they send a feedback note" in engineering).to(equal(False))
 
 
 with description("an operation"):

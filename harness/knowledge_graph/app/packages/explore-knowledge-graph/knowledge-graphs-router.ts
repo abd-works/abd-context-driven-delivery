@@ -21,7 +21,7 @@ import { definitionsInFile,
   scanSourceFiles,
   type WorkspaceFile,
 } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
-import { taggedPractice } from './knowledge-graph/knowledge-graph';
+import { taggedPractice, stepMembers, databaseBuildRequired } from './knowledge-graph/knowledge-graph';
 
 type KnowledgeGraphStore = {
   knowledge_graphs: unknown[];
@@ -141,7 +141,8 @@ export class KnowledgeGraphsServer {
     const nested = _nestDiskFolders(graph, root);
     const specified = _attachStorySpecification(nested, root);
     const coded = _attachClasses(specified, root);
-    const tagged = _retagPractices(coded);
+    const linked = _linkStepMembers(coded, root);
+    const tagged = _retagPractices(linked);
     return repo.create({
       folder: root,
       practiceGraphs: tagged.toDto().practice_graphs,
@@ -517,7 +518,8 @@ async function _runDatabaseOperation(
   if (_isDir(root)) {
     _writeLastScanRoot(root);
   }
-  if (!_codeqlReady(root)) {
+  if (databaseBuildRequired(operation, _codeqlReady(root))) {
+    console.log(`${operation} ${root}`);
     _spawnDatabaseCli(operation, root);
   }
   const cached = join(root, '.context', 'explorer-graph.json');
@@ -735,6 +737,83 @@ function _mergeDirectory(listed: any[], root: string, parent: string): any[] {
     row.children = _mergeDirectory(row.children ?? [], root, relative);
   }
   return rows;
+}
+
+function _linkStepMembers(graph: KnowledgeGraph, root: string): KnowledgeGraph {
+  const dto = graph.toDto();
+  const nodes = dto.practice_graphs.flatMap((practice) => practice.nodes);
+  const operations = new Map<string, string>();
+  const properties = new Map<string, string>();
+  for (const node of nodes) {
+    if (node.semantic_type === 'Operation') {
+      operations.set(node.name, node.node_id);
+    }
+    if (node.semantic_type === 'Property') {
+      properties.set(node.name, node.node_id);
+    }
+  }
+  for (const practice of dto.practice_graphs) {
+    for (const step of [...practice.nodes]) {
+      if (step.semantic_type !== 'Step' || !step.source?.file) {
+        continue;
+      }
+      const text = _sourceSlice(root, step.source.file, step.source.start_line, step.source.end_line);
+      if (text) {
+        step.source = { ...step.source, text };
+      }
+      const members = stepMembers(text);
+      for (const example of members.examples) {
+        const exampleId = `stories:Example:${step.node_id}:${example}`;
+        if (!practice.nodes.some((node) => node.node_id === exampleId)) {
+          practice.nodes.push({
+            node_id: exampleId,
+            name: example,
+            practice: 'stories',
+            fidelity: 'scenarios',
+            semantic_type: 'Example',
+            properties: {},
+            applicable_rules: [],
+            violations: [],
+            source: { file: step.source.file, start_line: step.source.start_line, end_line: step.source.start_line, text: example },
+          });
+          practice.relationships.push({ kind: 'owns', from_id: step.node_id, to_id: exampleId });
+        }
+        const propertyId = properties.get(example.replace(/Examples?$/, ''));
+        if (
+          propertyId &&
+          !practice.relationships.some(
+            (edge) => edge.kind === 'demonstrates' && edge.from_id === exampleId && edge.to_id === propertyId,
+          )
+        ) {
+          practice.relationships.push({ kind: 'demonstrates', from_id: exampleId, to_id: propertyId });
+        }
+      }
+      for (const operation of members.operations) {
+        const target = operations.get(operation);
+        if (
+          !target ||
+          practice.relationships.some(
+            (edge) => edge.kind === 'invokes' && edge.from_id === step.node_id && edge.to_id === target,
+          )
+        ) {
+          continue;
+        }
+        practice.relationships.push({ kind: 'invokes', from_id: step.node_id, to_id: target });
+      }
+    }
+  }
+  return KnowledgeGraph.fromDto({ ...dto, folder: graph.folder });
+}
+
+function _sourceSlice(root: string, file: string, start: number, end: number): string {
+  const full = join(root, file);
+  if (!existsSync(full)) {
+    return '';
+  }
+  const lines = readFileSync(full, 'utf8').split(/\r?\n/);
+  const from = Math.max(0, start - 1);
+  const to = Math.max(from, end);
+  return lines.slice(from, to).join('\n');
 }
 
 function _retagPractices(graph: KnowledgeGraph): KnowledgeGraph {

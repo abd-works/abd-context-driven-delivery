@@ -126,6 +126,7 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
     for (const node of tree) {
       retagTree(node);
     }
+    attachCrossEdges(tree, dto);
     this.matching = tree;
     this.nodes = flattenNodes(tree);
     this.options = filterOptions(presented.filter_options, this.nodes);
@@ -294,6 +295,39 @@ function retagTree(node: WebKnowledgeGraphNode): void {
   retagPractice(node);
   for (const child of node.children ?? []) {
     retagTree(child);
+  }
+}
+
+function attachCrossEdges(nodes: WebKnowledgeGraphNode[], dto: any): void {
+  const byId = new Map<string, WebKnowledgeGraphNode>();
+  const index = (list: WebKnowledgeGraphNode[]) => {
+    for (const node of list) {
+      if (node.nodeId) {
+        byId.set(node.nodeId, node);
+      }
+      index(node.children ?? []);
+    }
+  };
+  index(nodes);
+  const contains = (node: WebKnowledgeGraphNode, id: string): boolean =>
+    node.nodeId === id || (node.children ?? []).some((child) => contains(child, id));
+  for (const graph of dto.practice_graphs ?? []) {
+    for (const edge of graph.relationships ?? []) {
+      if (edge.kind !== "invokes" && edge.kind !== "demonstrates") {
+        continue;
+      }
+      const from = byId.get(String(edge.from_id ?? ""));
+      const to = byId.get(String(edge.to_id ?? ""));
+      if (!from || !to || contains(to, from.nodeId)) {
+        continue;
+      }
+      if (!from.relationships.some((link) => link.kind === edge.kind && link.nodeId === to.nodeId)) {
+        from.relationships.push({ kind: edge.kind, nodeId: to.nodeId, name: to.name });
+      }
+      if (!from.children.some((child) => child.nodeId === to.nodeId)) {
+        from.children.push(to);
+      }
+    }
   }
 }
 

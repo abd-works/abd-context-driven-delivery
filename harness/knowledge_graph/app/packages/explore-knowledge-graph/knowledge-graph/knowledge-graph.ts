@@ -112,6 +112,10 @@ export function practiceRootLabels(selected: string[]): string[] {
   );
 }
 
+export function databaseBuildRequired(operation: string, ready: boolean): boolean {
+  return operation === "create-database" || !ready;
+}
+
 export function restoredBranches(stored: string[], present: string[]): string[] {
   const known = new Set(present);
   return stored.filter((id) => known.has(id));
@@ -259,16 +263,28 @@ export function retainedTree(
   const practices = expandDomainDrivenDesign ? includedPracticeIds(ids) : ids;
   const storiesSelected = practices.includes("stories");
   const allowed = new Set(practices.flatMap((practice) => PRACTICE_NODE_TYPES[practice] ?? []));
-  const visit = (node: KnowledgeGraphNode): KnowledgeGraphNode[] => {
+  const visit = (node: KnowledgeGraphNode, crossed = false): KnowledgeGraphNode[] => {
+    const linked = new Set(
+      (node.relationships ?? [])
+        .filter((link) => link.kind === "invokes" || link.kind === "demonstrates")
+        .map((link) => link.nodeId),
+    );
+    const children = (node.children ?? []).flatMap((child) =>
+      visit(child, linked.has(child.nodeId)),
+    );
+    if (crossed) {
+      const copy = copyNode(node);
+      copy.children = children;
+      return [copy];
+    }
     if (isStoryNode(node)) {
       if (!storiesSelected) {
         return [];
       }
       const copy = copyNode(node);
-      copy.children = (node.children ?? []).flatMap(visit);
+      copy.children = children;
       return [copy];
     }
-    const children = (node.children ?? []).flatMap(visit);
     const type = node.nodeType?.name ?? "";
     const practice = node.practice ? practiceId(node.practice) : "";
     const typeFits = allowed.has(type);
@@ -307,6 +323,32 @@ export function stepMembers(text: string): { operations: string[]; examples: str
     }
   }
   return { operations, examples };
+}
+
+export function stepCallouts(
+  text: string,
+  members: { name: string; text: string }[],
+): { text: string; folds: { start: number; end: number; kind: "call" }[] } {
+  const output: string[] = [];
+  const folds: { start: number; end: number; kind: "call" }[] = [];
+  for (const line of text ? text.split("\n") : [""]) {
+    output.push(line);
+    const hits = members.filter((member) => member.name && line.includes(member.name));
+    if (!hits.length) {
+      continue;
+    }
+    const first = output.length + 1;
+    for (const hit of hits) {
+      const body = hit.text.trim() ? hit.text : hit.name;
+      for (const bodyLine of body.split("\n")) {
+        output.push(bodyLine.length ? `    ${bodyLine}` : "    ");
+      }
+    }
+    if (output.length >= first) {
+      folds.push({ start: first, end: output.length, kind: "call" });
+    }
+  }
+  return { text: output.join("\n"), folds };
 }
 
 function _escape(value: any): string {

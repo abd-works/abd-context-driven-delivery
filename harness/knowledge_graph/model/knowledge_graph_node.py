@@ -134,6 +134,10 @@ def restored_branches(stored, present):
     return [item for item in stored if item in known]
 
 
+def database_build_required(operation, ready):
+    return operation == "create-database" or not ready
+
+
 _PRACTICE_IDS = {
     "CleanEngineering": "clean_engineering",
     "Stories": "stories",
@@ -299,19 +303,26 @@ def retained_tree(nodes, selected, expand_domain_driven_design=True):
         copy.relationships = list(getattr(node, "relationships", []) or [])
         return copy
 
-    def visit(node):
+    def visit(node, crossed=False):
+        linked = set()
+        for link in getattr(node, "relationships", None) or []:
+            kind = link.get("kind") if isinstance(link, dict) else getattr(link, "kind", "")
+            node_id = link.get("nodeId") if isinstance(link, dict) else getattr(link, "nodeId", "")
+            if kind in {"invokes", "demonstrates"} and node_id:
+                linked.add(node_id)
+        children = []
+        for child in getattr(node, "children", None) or []:
+            children.extend(visit(child, getattr(child, "nodeId", "") in linked))
+        if crossed:
+            copy = copy_node(node)
+            copy.children = children
+            return [copy]
         if is_story_node(node):
             if not stories_selected:
                 return []
             copy = copy_node(node)
-            nested = []
-            for child in getattr(node, "children", None) or []:
-                nested.extend(visit(child))
-            copy.children = nested
+            copy.children = children
             return [copy]
-        children = []
-        for child in getattr(node, "children", None) or []:
-            children.extend(visit(child))
         semantic = node.nodeType.name if node.nodeType else ""
         practice = _PRACTICE_IDS.get(node.practice, node.practice) if node.practice else ""
         type_fits = semantic in allowed
@@ -360,6 +371,26 @@ def step_members(text):
         if name not in examples:
             examples.append(name)
     return {"operations": operations, "examples": examples}
+
+
+def step_callouts(text, members):
+    output = []
+    folds = []
+    for line in (text.split("\n") if text else [""]):
+        output.append(line)
+        hits = [member for member in members if member.get("name") and member["name"] in line]
+        if not hits:
+            continue
+        first = len(output) + 1
+        for hit in hits:
+            body = hit.get("text") or hit["name"]
+            if not str(body).strip():
+                body = hit["name"]
+            for body_line in str(body).split("\n"):
+                output.append(f"    {body_line}" if body_line else "    ")
+        if len(output) >= first:
+            folds.append({"start": first, "end": len(output), "kind": "call"})
+    return {"text": "\n".join(output), "folds": folds}
 
 
 class KnowledgeGraphNodeType:

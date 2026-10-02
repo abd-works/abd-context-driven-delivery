@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> None:
     graph = KnowledgeGraph()
     graph.folder = root
     if operation == "create-database":
-        graph.createDatabase()
+        graph.createDatabase(rebuild=True)
         return
     if operation == "refresh-master":
         graph.copyWorkingCopyToMaster()

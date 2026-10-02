@@ -86,13 +86,13 @@ class KnowledgeGraph:
         self.description = KnowledgeGraphDescription().load(folder)
         self._collect_nodes()
 
-    def createDatabase(self) -> None:
+    def createDatabase(self, rebuild=False) -> None:
         ql = CodeQL(Path(self.folder))
         language = ql.detect_language()
         ql._database_language = language
-        if not Path(ql.master).exists():
+        if rebuild or not Path(ql.master).exists():
             ql.rewrite_master(language)
-        if not Path(ql.working_copy).exists():
+        if rebuild or not Path(ql.working_copy).exists():
             ql.copy_master_to_working_copy()
         self._codeql = ql
 

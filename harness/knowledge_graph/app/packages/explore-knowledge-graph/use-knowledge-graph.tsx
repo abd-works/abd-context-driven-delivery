@@ -16,6 +16,20 @@ export function useKnowledgeGraph(id: string) {
   } | null>(null);
   const request = useRef(0);
 
+  useEffect(() => {
+    if (workStatus?.phase !== 'working') {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setWorkStatus((current) =>
+        current && current.phase === 'working'
+          ? { ...current, seconds: current.seconds + 1 }
+          : current,
+      );
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [workStatus?.phase, workStatus?.action]);
+
   const take = useCallback((work: Promise<void>, target: KnowledgeGraphClient, action?: string) => {
     const token = ++request.current;
     const started = Date.now();

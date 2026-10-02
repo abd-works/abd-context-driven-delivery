@@ -9,9 +9,11 @@ import {
   isStoryNode,
   practiceRootLabels,
   restoredBranches,
+  databaseBuildRequired,
   retainedTree,
   retagPractice,
   stepMembers,
+  stepCallouts,
   taggedPractice,
 } from "./knowledge-graph";
 
@@ -528,6 +530,12 @@ describe("a knowledge graph", () => {
       expect(restoredBranches(["pkg:domain"], present)).toEqual(["pkg:domain"]);
       expect(restoredBranches(["pkg:domain", "missing"], present)).toEqual(["pkg:domain"]);
     });
+
+    it("should build a database when create database is clicked even if one is already there", () => {
+      expect(databaseBuildRequired("create-database", true)).toBe(true);
+      expect(databaseBuildRequired("refresh-master", true)).toBe(false);
+      expect(databaseBuildRequired("reload-working-copy", false)).toBe(true);
+    });
   });
 });
 
@@ -589,13 +597,36 @@ describe("a source panel", () => {
 });
 
 describe("a scenario step", () => {
-  it("should list the fixture examples and the domain operation the test calls", () => {
-    const members = stepMembers(
-      "subscriber.feedbackSubject = feedbackSubjectExample\nsubscriber.feedbackMessage = feedbackMessageExample\nreceipt = await subscriber.submitFeedback()",
-    );
-    expect(members.operations).toEqual(["submitFeedback"]);
-    expect(members.examples).toEqual(["feedbackSubjectExample", "feedbackMessageExample"]);
-  });
+    it("should list the fixture examples and the domain operation the test calls", () => {
+      const text =
+        "subscriber.feedbackSubject = feedbackSubjectExample\nsubscriber.feedbackMessage = feedbackMessageExample\nreceipt = await subscriber.submitFeedback()";
+      const members = stepMembers(text);
+      expect(members.operations).toEqual(["submitFeedback"]);
+      expect(members.examples).toEqual(["feedbackSubjectExample", "feedbackMessageExample"]);
+      const layout = stepCallouts(text, [
+        { name: "feedbackSubjectExample", text: "feedbackSubjectExample" },
+        { name: "feedbackMessageExample", text: "feedbackMessageExample" },
+        { name: "submitFeedback", text: "submitFeedback()" },
+      ]);
+      expect(layout.folds.map((fold) => fold.kind)).toEqual(["call", "call", "call"]);
+      expect(layout.text).toContain("    feedbackSubjectExample");
+      expect(layout.text).toContain("    submitFeedback()");
+    });
+
+    it("should keep the operation a step invokes under that step", () => {
+      const operation = graphNode("submitFeedback", "Operation", "clean_engineering");
+      const example = graphNode("feedbackSubjectExample", "Example", "stories");
+      const step = graphNode("When they send a feedback note", "Step", "stories", [operation, example]);
+      step.relationships = [
+        { kind: "invokes", nodeId: operation.nodeId, name: operation.name },
+        { kind: "demonstrates", nodeId: example.nodeId, name: example.name },
+      ];
+      const included = flatten(retainedTree([step], ["Stories"]));
+      expect(included.map((node) => node.name)).toContain("submitFeedback");
+      expect(included.map((node) => node.name)).toContain("feedbackSubjectExample");
+      const engineering = flatten(retainedTree([step], ["CleanEngineering"]));
+      expect(engineering.map((node) => node.name)).not.toContain("When they send a feedback note");
+    });
 });
 
 describe("a property", () => {

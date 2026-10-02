@@ -52,9 +52,10 @@ story('Open Node Source', () => {
       await expand('Stories');
       await expand('tests');
       await expand('access-selfcare');
-      await explorer().getByRole('button', { name: 'Expand Access Selfcare', exact: true }).first().click();
-      await explorer().getByRole('button', { name: 'Expand Get Support', exact: true }).first().click();
-      await explorer().getByRole('button', { name: 'Customer submits feedback', exact: true }).first().click();
+      await expand('Access Selfcare');
+      await expand('Access Selfcare');
+      await expand('Get Support');
+      await explorer().getByRole('button', { name: /Customer submits feedback/ }).first().click({ timeout: 15_000 });
     });
     then('the pane shows the scenario and everything inside it', async () => {
       const body = explorer().getByTestId('source-excerpt');
@@ -62,6 +63,14 @@ story('Open Node Source', () => {
       await expect(body).toContainText('they send a feedback note');
       await expect(body).toContainText('thanks for your feedback is shown');
       await expect(body).toContainText('the receipt is for this customer');
+    }).and('the step lists each example and the operation it calls', async () => {
+      await expand('When they send a feedback note');
+      const step = explorer().locator('li[data-kind="Step"]').filter({ hasText: 'When they send a feedback note' }).first();
+      await expect(step.getByRole('button', { name: 'Example feedbackSubjectExample' })).toBeVisible();
+      await expect(step.getByRole('button', { name: 'Example feedbackMessageExample' })).toBeVisible();
+      await expect(step.getByRole('button', { name: 'Operation submitFeedback' })).toBeVisible();
+      await step.getByRole('button', { name: 'Step When they send a feedback note' }).click();
+      await expect(explorer().locator('.call-fold').first()).toBeVisible({ timeout: 20_000 });
     });
   });
 

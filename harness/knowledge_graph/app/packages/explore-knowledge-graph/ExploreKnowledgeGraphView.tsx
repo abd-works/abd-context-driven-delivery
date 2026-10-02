@@ -11,6 +11,8 @@ import {
   practiceRootLabels,
   restoredBranches,
   retainedTree,
+  stepCallouts,
+  stepMembers,
 } from './knowledge-graph/knowledge-graph';
 import { KindMark, kindLabel } from './kind-mark';
 import {
@@ -1104,6 +1106,19 @@ type SourceFold = { start: number; end: number; kind: 'class' | 'call'; glyph: n
 function preparedSource(node: KnowledgeGraphNode, text: string): { text: string; folds: SourceFold[]; lineNumbers: string[] } {
   const kind = node.nodeType?.name ?? '';
   const lines = text ? text.split('\n') : [''];
+  if (kind === 'Step' || kind === 'Example') {
+    const members = stepMembers(text);
+    const listed = [...members.examples, ...members.operations].map((name) => ({
+      name,
+      text: memberText(node, name),
+    }));
+    const layout = stepCallouts(text, listed);
+    return {
+      text: layout.text,
+      folds: layout.folds.map((fold) => ({ ...fold, glyph: fold.start - 1 })),
+      lineNumbers: layout.text.split('\n').map((_, index) => String(index + 1)),
+    };
+  }
   if (kind === 'OoadClass') {
     return { text, folds: memberFolds(node, lines.length), lineNumbers: lines.map((_, index) => String(index + 1)) };
   }
@@ -1111,6 +1126,15 @@ function preparedSource(node: KnowledgeGraphNode, text: string): { text: string;
     return callLayout(node, text);
   }
   return { text, folds: [], lineNumbers: lines.map((_, index) => String(index + 1)) };
+}
+
+function memberText(node: KnowledgeGraphNode, name: string): string {
+  const found = [node, ...(node.children ?? [])].find((child) => child.name === name);
+  const linked = (node.relationships ?? []).find((link) => link.name === name);
+  const target = linked
+    ? (node.children ?? []).find((child) => child.nodeId === linked.nodeId)
+    : undefined;
+  return found?.source?.text || target?.source?.text || name;
 }
 
 function memberFolds(node: KnowledgeGraphNode, lineCount: number): SourceFold[] {
