@@ -210,19 +210,24 @@ function memberHomesIn(row: any, folderName: string): boolean {
   return !file && !propParent && String(row.name ?? "").toLowerCase() === needle;
 }
 
-function ruleHitsFrom(row: any): { slug: string; status: string }[] {
+function ruleHitsFrom(row: any): { slug: string; status: string; message: string }[] {
   if (Array.isArray(row.rules) && row.rules.length) {
     return row.rules.map((rule: any) => ({
       slug: String(rule.slug ?? rule.rule_slug ?? ""),
       status: String(rule.status ?? "passing"),
+      message: String(rule.message ?? ""),
     }));
   }
-  const failing = new Set(
-    (row.violations ?? []).map((hit: any) => String(hit.rule_slug ?? hit.ruleSlug ?? "")),
+  const failing = new Map(
+    (row.violations ?? []).map((hit: any) => [
+      String(hit.rule_slug ?? hit.ruleSlug ?? ""),
+      String(hit.message ?? ""),
+    ]),
   );
   return (row.applicable_rules ?? []).map((slug: string) => ({
     slug,
     status: failing.has(slug) ? "violating" : "passing",
+    message: failing.get(slug) ?? "",
   }));
 }
 

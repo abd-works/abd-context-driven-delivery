@@ -212,7 +212,7 @@ class KnowledgeGraphNode {
   rules: NodeRules | null;
   practice: string;
   stage: string;
-  ruleHits: { slug: string; status: string }[];
+  ruleHits: { slug: string; status: string; message: string }[];
 
   constructor() {
     this.name = "";

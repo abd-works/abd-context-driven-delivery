@@ -45,6 +45,8 @@ story('Filter Graph', () => {
     });
     then('the failing Node is listed', async () => {
       await expect(explorer().locator('.tree-violating').first()).toBeVisible();
+      await expect(explorer().getByTestId('source-file')).toContainText('processEverything');
+      await expect(explorer().getByTestId('source-file')).toContainText('keep-operations-small-focused');
     }).and('the passing Node is not listed', async () => {
       await expect(explorer().locator('.rule-status.passing')).toHaveCount(0);
     });

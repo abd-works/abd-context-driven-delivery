@@ -132,5 +132,11 @@ function lastScanFolder(): string {
   if (typeof window === 'undefined') {
     return '';
   }
+  const fromQuery = new URLSearchParams(window.location.search).get('folder');
+  if (fromQuery) {
+    window.localStorage.setItem(SCAN_ROOT_KEY, fromQuery);
+    window.localStorage.removeItem('kg-scan-graph-id-v2');
+    return fromQuery;
+  }
   return window.localStorage.getItem(SCAN_ROOT_KEY) ?? '';
 }

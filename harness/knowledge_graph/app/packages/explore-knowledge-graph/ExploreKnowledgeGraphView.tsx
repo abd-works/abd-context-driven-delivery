@@ -29,6 +29,19 @@ const EMPTY_PICK: FilterPick = {
   violations: false,
 };
 
+function pickFromLocation(): FilterPick {
+  if (typeof window === 'undefined') {
+    return EMPTY_PICK;
+  }
+  const params = new URLSearchParams(window.location.search);
+  const rule = params.get('rule');
+  return {
+    ...EMPTY_PICK,
+    violations: params.get('violations') === '1',
+    rules: rule ? [rule] : [],
+  };
+}
+
 /**
  * ExploreKnowledgeGraphView — feature view.
  * Sources: harness/knowledge_graph/.context/knowledge-graph-explorer-sketch.md
@@ -101,9 +114,23 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     selectFolder({ folder: folderName, files: scanSourceFiles(picked) });
   }
 
-  const [picked, setPicked] = useState<FilterPick>(EMPTY_PICK);
+  const [picked, setPicked] = useState<FilterPick>(pickFromLocation);
   const engineering = theme === 'engineering';
   const selectedId = selectedNode?.nodeId ?? '';
+
+  useEffect(() => {
+    if (!picked.violations) {
+      return;
+    }
+    const current = findNode(listedTree, selectedId);
+    if (current && violates(current, picked)) {
+      return;
+    }
+    const match = firstViolating(listedTree, picked);
+    if (match) {
+      selectNode(match.nodeId);
+    }
+  }, [picked, listedTree, selectedId, selectNode]);
 
   return (
     <main className="explore-knowledge-graph">
@@ -326,7 +353,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
           </div>
           <div className="panel" data-testid="source-file">
             {selectedNode ? (
-              <SourcePane node={selectedNode} folder={folder} />
+              <SourcePane node={selectedNode} folder={folder} picked={picked} />
             ) : (
               <p className="empty-state">Select a node</p>
             )}
@@ -449,7 +476,15 @@ function TreeNode({
   );
 }
 
-function SourcePane({ node, folder }: { node: KnowledgeGraphNode; folder: string }) {
+function SourcePane({
+  node,
+  folder,
+  picked,
+}: {
+  node: KnowledgeGraphNode;
+  folder: string;
+  picked: FilterPick;
+}) {
   const file = node.source?.file ?? '';
   const [text, setText] = useState('');
 
@@ -486,9 +521,20 @@ function SourcePane({ node, folder }: { node: KnowledgeGraphNode; folder: string
     };
   }, [node, file, folder]);
 
+  const hits = visibleHits(node, picked);
   return (
     <section className="knowledge-graph-panel" data-open="true" data-file={file}>
       <p className="source-path">{file || node.name}</p>
+      {hits.length > 0 ? (
+        <ul className="rule-list">
+          {hits.map((hit) => (
+            <li key={hit.slug} className={`rule-status ${hit.status}`}>
+              {hit.slug}
+              {hit.message ? ` — ${hit.message}` : ''}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <pre className="panel-source">{text || node.name}</pre>
     </section>
   );
@@ -517,7 +563,36 @@ function hitsViolation(node: KnowledgeGraphNode, picked: FilterPick): boolean {
   return picked.violations && violates(node, picked);
 }
 
-function visibleHits(node: KnowledgeGraphNode, picked: FilterPick): { slug: string; status: string }[] {
+function findNode(nodes: KnowledgeGraphNode[], nodeId: string): KnowledgeGraphNode | null {
+  for (const node of nodes) {
+    if (node.nodeId === nodeId) {
+      return node;
+    }
+    const child = findNode(node.children ?? [], nodeId);
+    if (child) {
+      return child;
+    }
+  }
+  return null;
+}
+
+function firstViolating(nodes: KnowledgeGraphNode[], picked: FilterPick): KnowledgeGraphNode | null {
+  for (const node of nodes) {
+    if (violates(node, picked)) {
+      return node;
+    }
+    const child = firstViolating(node.children ?? [], picked);
+    if (child) {
+      return child;
+    }
+  }
+  return null;
+}
+
+function visibleHits(
+  node: KnowledgeGraphNode,
+  picked: FilterPick,
+): { slug: string; status: string; message: string }[] {
   if (!picked.violations && picked.rules.length === 0) {
     return [];
   }

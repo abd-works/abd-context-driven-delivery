@@ -138,10 +138,10 @@ describe("a knowledge graph", () => {
       const load = loaded.nodes.find((node) => node.name === "load");
       const failing = loaded.nodes.find((node) => node.name === "processEverything");
       expect(load?.ruleHits).toEqual([
-        { slug: "keep-operations-small-focused", status: "passing" },
+        { slug: "keep-operations-small-focused", status: "passing", message: "" },
       ]);
       expect(failing?.ruleHits).toEqual([
-        { slug: "keep-operations-small-focused", status: "violating" },
+        { slug: "keep-operations-small-focused", status: "violating", message: "too big" },
       ]);
     });
 
