@@ -71,14 +71,17 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
     this.takeSave(raw);
   }
 
-  async loadKnowledgeGraph(path: any): Promise<void> {
+  async loadKnowledgeGraph(path: any, paths?: string[]): Promise<void> {
     this.folder = path;
+    if (paths) {
+      this.graphId = "";
+    }
     const suffix = this.graphId ? `/${this.graphId}` : "/scan";
     const raw = this.graphId
       ? await getJson(`/api/knowledge-graphs${suffix}`)
       : await postJson(
           "/api/knowledge-graphs/scan",
-          { folder: path },
+          { folder: path, paths: paths ?? [] },
           GRAPH_DEADLINE_MS,
           "Load Knowledge Graph",
         );

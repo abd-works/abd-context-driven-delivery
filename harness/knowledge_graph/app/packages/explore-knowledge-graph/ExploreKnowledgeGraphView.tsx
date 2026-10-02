@@ -2,13 +2,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useKnowledgeGraph } from './use-knowledge-graph';
 import { KnowledgeGraphNode } from './knowledge-graph/knowledge-graph';
-import {
-  isScanSourcePath,
-  pickerRelativePath,
-  PICKER_UPLOAD_LIMIT,
-  scanSourceFiles,
-  type WorkspaceFile,
-} from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
+import { pickerRelativePath } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 
@@ -86,33 +80,21 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     window.localStorage.setItem('kg-theme', next);
   }
 
-  async function pickFolder(list: FileList | null) {
+  function pickFolder(list: FileList | null) {
     if (!list || list.length === 0) {
       return;
     }
     let folderName = 'workspace';
-    const source: File[] = [];
+    const paths: string[] = [];
     for (const file of Array.from(list)) {
       const mapped = pickerRelativePath(file.webkitRelativePath || file.name);
       folderName = mapped.folder;
-      if (isScanSourcePath(mapped.relativePath)) {
-        source.push(file);
+      if (mapped.relativePath && keepUploadPath(mapped.relativePath)) {
+        paths.push(mapped.relativePath);
       }
     }
     setFolder(folderName);
-    if (source.length === 0 || source.length > PICKER_UPLOAD_LIMIT) {
-      selectFolder({ folder: folderName });
-      return;
-    }
-    const picked: WorkspaceFile[] = [];
-    for (const file of source) {
-      const mapped = pickerRelativePath(file.webkitRelativePath || file.name);
-      picked.push({
-        relativePath: mapped.relativePath,
-        text: await file.text(),
-      });
-    }
-    selectFolder({ folder: folderName, files: scanSourceFiles(picked) });
+    selectFolder({ folder: folderName, paths });
   }
 
   const [picked, setPicked] = useState<FilterPick>(pickFromLocation);
@@ -377,11 +359,11 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                   : 'Loading KnowledgeGraph...'}
               </p>
             )}
-            {!loading && scanError && listedTree.length === 0 && (
+            {!loading && scanError ? (
               <p className="empty-state" data-testid="scan-error">
                 {scanError}
               </p>
-            )}
+            ) : null}
             <ul className="tree">
               {listedTree.map((node) => (
                 <TreeNode
@@ -923,6 +905,19 @@ function matches(node: KnowledgeGraphNode, picked: FilterPick): boolean {
     return false;
   }
   return true;
+}
+
+const UPLOAD_SKIP = new Set([
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  '.codeql',
+  '.codeql-db',
+]);
+
+function keepUploadPath(relativePath: string): boolean {
+  return relativePath.split('/').every((part) => part.length > 0 && !UPLOAD_SKIP.has(part));
 }
 
 function sameFolder(left: string, right: string): boolean {

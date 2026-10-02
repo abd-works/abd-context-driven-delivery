@@ -219,9 +219,13 @@ function _resolvePickedFolder(folder: string): string {
     }
     return repo;
   }
-  const bases = [repo, last, last ? dirname(last) : '', dirname(repo)].filter(
-    Boolean,
-  );
+  const bases = [
+    repo,
+    last,
+    last ? dirname(last) : '',
+    dirname(repo),
+    ..._knownFolderBases(),
+  ].filter(Boolean);
   const found = resolveNamedFolder(
     chosen,
     bases,
@@ -240,6 +244,32 @@ function _resolvePickedFolder(folder: string): string {
     return found;
   }
   throw new FolderNotFound(chosen);
+}
+
+function _knownFolderBases(): string[] {
+  const found: string[] = [];
+  const dev = 'C:\\dev\\paradise-mobile';
+  if (_isDir(dev)) {
+    found.push(dev);
+  }
+  const home = process.env.USERPROFILE || process.env.HOME || '';
+  if (!home || !_isDir(home)) {
+    return found;
+  }
+  try {
+    for (const name of readdirSync(home)) {
+      if (!name.toLowerCase().startsWith('onedrive')) {
+        continue;
+      }
+      const mobile = join(home, name, 'personal', 'paradise-mobile');
+      if (_isDir(mobile)) {
+        found.push(mobile);
+      }
+    }
+  } catch {
+    return found;
+  }
+  return found;
 }
 
 function _databaseRoot(folder: string): string {
@@ -343,9 +373,32 @@ export function createKnowledgeGraphsRouter(
         files,
         Boolean(req.body.force),
       );
-      res.status(201).json(httpPresent(graph.present()));
+      const presented = httpPresent(graph.present());
+      if (presented.folder && _isDir(presented.folder)) {
+        presented.listed_tree = _completeDirectory(
+          presented.listed_tree ?? [],
+          presented.folder,
+        );
+      }
+      res.status(201).json(presented);
     } catch (error) {
       if (error instanceof FolderNotFound) {
+        const paths = _relativePaths(req.body.paths);
+        if (paths.length > 0) {
+          res.status(201).json({
+            folder: String(req.body.folder ?? ''),
+            listed_tree: _treeFromPaths(paths),
+            knowledge_graph: { practice_graphs: [] },
+            filter_options: {
+              practices: [],
+              stages: [],
+              node_types: [],
+              relationship_types: [],
+              rules: [],
+            },
+          });
+          return;
+        }
         res.status(400).json({ error: error.message });
         return;
       }
@@ -561,6 +614,126 @@ const DISK_SKIP = new Set([
   'htmlcov',
 ]);
 
+type DirectoryRow = {
+  node_id: string;
+  name: string;
+  semantic_type: string;
+  is_file: boolean;
+  is_folder: boolean;
+  children: DirectoryRow[];
+  rules: [];
+  relationships: [];
+  source?: { file: string; start_line: number; end_line: number; text: string };
+};
+
+function _relativePaths(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => String(entry ?? '').replaceAll('\\', '/'))
+    .filter((entry) => entry.length > 0 && !entry.split('/').some((part) => _skipDiskName(part)));
+}
+
+function _skipDiskName(name: string): boolean {
+  return !name || name.startsWith('.') || DISK_SKIP.has(name);
+}
+
+function _folderRow(name: string, relative: string): DirectoryRow {
+  return {
+    node_id: `pkg:${relative}`,
+    name,
+    semantic_type: 'Package',
+    is_file: false,
+    is_folder: true,
+    children: [],
+    rules: [],
+    relationships: [],
+  };
+}
+
+function _fileRow(name: string, relative: string): DirectoryRow {
+  return {
+    node_id: `file:${relative}`,
+    name,
+    semantic_type: 'File',
+    is_file: true,
+    is_folder: false,
+    children: [],
+    rules: [],
+    relationships: [],
+    source: { file: relative, start_line: 1, end_line: 1, text: '' },
+  };
+}
+
+function _treeFromPaths(paths: string[]): DirectoryRow[] {
+  const roots: DirectoryRow[] = [];
+  for (const path of paths) {
+    const parts = path.split('/').filter(Boolean);
+    let level = roots;
+    let relative = '';
+    for (let index = 0; index < parts.length; index += 1) {
+      const name = parts[index];
+      relative = relative ? `${relative}/${name}` : name;
+      const last = index === parts.length - 1;
+      let node = level.find((item) => item.name === name);
+      if (!node) {
+        node = last ? _fileRow(name, relative) : _folderRow(name, relative);
+        level.push(node);
+      } else if (!last && node.is_file) {
+        node.is_file = false;
+        node.is_folder = true;
+        node.semantic_type = 'Package';
+      }
+      level = node.children;
+    }
+  }
+  return roots;
+}
+
+function _completeDirectory(listed: any[], root: string): any[] {
+  return _mergeDirectory(listed, root, '');
+}
+
+function _mergeDirectory(listed: any[], root: string, parent: string): any[] {
+  const dir = parent ? join(root, parent) : root;
+  if (!_isDir(dir)) {
+    return listed;
+  }
+  const rows = listed.map((row) => ({ ...row, children: row.children ?? [] }));
+  const byName = new Map(rows.map((row) => [row.name, row]));
+  let names: string[] = [];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return rows;
+  }
+  for (const name of names) {
+    if (_skipDiskName(name)) {
+      continue;
+    }
+    const relative = parent ? `${parent}/${name}` : name;
+    const abs = join(root, relative);
+    let isDir = false;
+    try {
+      isDir = statSync(abs).isDirectory();
+    } catch {
+      continue;
+    }
+    let row = byName.get(name);
+    if (!row) {
+      row = isDir ? _folderRow(name, relative) : _fileRow(name, relative);
+      rows.push(row);
+      byName.set(name, row);
+    }
+    if (isDir) {
+      row.is_folder = true;
+      row.children = _mergeDirectory(row.children ?? [], root, relative);
+    }
+  }
+  return rows;
+}
+
 function _nestDiskFolders(graph: KnowledgeGraph, root: string): KnowledgeGraph {
   if (!root || !existsSync(root)) {
     return graph;
@@ -584,9 +757,15 @@ function _nestDiskFolders(graph: KnowledgeGraph, root: string): KnowledgeGraph {
       }
     }
   }
-  const seeds = [...byPath.keys()];
+  const seeds = new Set(byPath.keys());
+  _addTopLevelFolders(root, byPath, workspace.nodes);
   for (const seed of seeds) {
     _addDiskFolders(root, seed, byPath, workspace.nodes);
+  }
+  for (const path of [...byPath.keys()]) {
+    if (!path.includes('/')) {
+      _addDiskFolders(root, path, byPath, workspace.nodes);
+    }
   }
   const seen = new Set(
     dto.practice_graphs.flatMap((practice) =>
@@ -610,6 +789,46 @@ function _nestDiskFolders(graph: KnowledgeGraph, root: string): KnowledgeGraph {
     workspace.relationships.push({ kind: 'owns', from_id: parentId, to_id: nodeId });
   }
   return KnowledgeGraph.fromDto(dto);
+}
+
+function _addTopLevelFolders(
+  root: string,
+  byPath: Map<string, string>,
+  nodes: KnowledgeGraphDto['practice_graphs'][number]['nodes'],
+): void {
+  let names: string[] = [];
+  try {
+    names = readdirSync(root);
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    if (!name || name.startsWith('.') || DISK_SKIP.has(name)) {
+      continue;
+    }
+    let info;
+    try {
+      info = statSync(join(root, name));
+    } catch {
+      continue;
+    }
+    if (!info.isDirectory() || byPath.has(name)) {
+      continue;
+    }
+    const nodeId = `pkg:${name}`;
+    byPath.set(name, nodeId);
+    nodes.push({
+      node_id: nodeId,
+      name,
+      practice: '',
+      fidelity: null,
+      semantic_type: 'Package',
+      properties: { folder: name },
+      applicable_rules: [],
+      violations: [],
+      source: null,
+    });
+  }
 }
 
 function _addDiskFolders(
