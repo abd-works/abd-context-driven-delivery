@@ -163,6 +163,50 @@ export function closestFidelity(practice: string, semanticType: string): string 
   return '';
 }
 
+export function stagesForPractices(practices: string[]): string[] {
+  const found = new Set<string>();
+  for (const practice of practices) {
+    for (const fidelity of FIDELITY_ORDER[practice] ?? []) {
+      const stage = stageFor(fidelity);
+      if (stage) {
+        found.add(stage);
+      }
+    }
+  }
+  return STAGES.filter((stage) => found.has(stage));
+}
+
+/** Every node type the practices define. A narrower stage list keeps only that stage's types. */
+export function nodeTypesFor(practices: string[], stages: string[] | null): string[] {
+  const found: string[] = [];
+  const push = (name: string) => {
+    if (name && !found.includes(name)) {
+      found.push(name);
+    }
+  };
+  for (const practice of practices) {
+    const catalog = NODE_TYPES_BY_PRACTICE[practice] ?? [];
+    const practiceStages = stagesForPractices([practice]);
+    const limit =
+      stages && stages.length > 0 && stages.length < practiceStages.length ? stages : null;
+    if (!limit) {
+      for (const name of catalog) {
+        push(name);
+      }
+      continue;
+    }
+    for (const fidelity of FIDELITY_ORDER[practice] ?? []) {
+      if (!limit.includes(stageFor(fidelity))) {
+        continue;
+      }
+      for (const name of FIDELITY_SCOPE[practice]?.[fidelity] ?? []) {
+        push(name);
+      }
+    }
+  }
+  return found;
+}
+
 export function stageFor(fidelity: string | null | undefined): string {
   if (!fidelity) {
     return '';

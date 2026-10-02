@@ -6,6 +6,7 @@ import {
   type KnowledgeGraphFilterOptions,
   type PracticeMember,
 } from './knowledge-graph/knowledge-graph-client';
+import { nodeTypesFor, stagesForPractices } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/catalog';
 import { pickerRelativePath } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
@@ -997,10 +998,11 @@ function applyPractice(
 ): Omit<FilterPick, 'violations'> {
   const practiceLimit = restricts(practices, options.practices) ? practices : null;
   const rows = membersIn(members, practiceLimit, null, null);
+  const stages = practiceLimit ? stagesForPractices(practiceLimit) : options.stages;
   return {
     practices,
-    stages: practiceLimit ? keepOrder(options.stages, rows.map((member) => member.stage)) : options.stages,
-    node_types: practiceLimit ? keepOrder(options.node_types, rows.map((member) => member.type)) : options.node_types,
+    stages,
+    node_types: practiceLimit ? listedTypes(practiceLimit, stages) : options.node_types,
     relationship_types: practiceLimit
       ? keepOrder(options.relationship_types, rows.flatMap((member) => member.connectors))
       : options.relationship_types,
@@ -1023,12 +1025,14 @@ function applyStage(
   options: KnowledgeGraphFilterOptions,
 ): Pick<FilterPick, 'stages' | 'node_types' | 'relationship_types' | 'rules'> {
   const practiceLimit = restricts(picked.practices, options.practices) ? picked.practices : null;
-  const stageLimit = restricts(stages, options.stages) ? stages : null;
+  const stageLimit = restricts(stages, practiceLimit ? stagesForPractices(practiceLimit) : options.stages)
+    ? stages
+    : null;
   const rows = membersIn(members, practiceLimit, stageLimit, null);
   const narrowed = Boolean(practiceLimit || stageLimit);
   return {
     stages,
-    node_types: narrowed ? keepOrder(options.node_types, rows.map((member) => member.type)) : options.node_types,
+    node_types: practiceLimit ? listedTypes(practiceLimit, stageLimit ?? stages) : options.node_types,
     relationship_types: narrowed
       ? keepOrder(options.relationship_types, rows.flatMap((member) => member.connectors))
       : options.relationship_types,
@@ -1036,12 +1040,22 @@ function applyStage(
   };
 }
 
+function listedTypes(practices: string[], stages: string[] | null): string[] {
+  return nodeTypesFor(practices, stages);
+}
+
 function nodeOptions(
   picked: FilterPick,
-  members: PracticeMember[],
+  _members: PracticeMember[],
   options: KnowledgeGraphFilterOptions,
 ): string[] {
-  return applyStage(picked, picked.stages, members, options).node_types;
+  const practiceLimit = restricts(picked.practices, options.practices) ? picked.practices : null;
+  if (!practiceLimit) {
+    return options.node_types;
+  }
+  const availableStages = stagesForPractices(practiceLimit);
+  const stageLimit = restricts(picked.stages, availableStages) ? picked.stages : null;
+  return listedTypes(practiceLimit, stageLimit);
 }
 
 function applyNode(

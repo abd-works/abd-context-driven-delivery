@@ -34,18 +34,57 @@ story('Filter Graph', () => {
     when('the Engineer selects the stories practice', async () => {
       await explorer().getByTestId('filter-practice').selectOption('stories');
     });
-    then('the node filter lists Story', async () => {
-      await expect(explorer().getByTestId('filter-node').locator('option', { hasText: /^Story$/ })).toHaveCount(1);
+    then('the node filter lists every stories type', async () => {
+      await expect(explorer().getByTestId('filter-node').locator('option')).toHaveText([
+        'Epic',
+        'SubEpic',
+        'Story',
+        'Background',
+        'Scenario',
+        'Step',
+        'Example',
+        'StoryModel',
+      ]);
     }).and('the node filter drops Module', async () => {
       await expect(explorer().getByTestId('filter-node').locator('option', { hasText: 'Module' })).toHaveCount(0);
-    }).and('the stage filter keeps only discovery', async () => {
-      await expect(explorer().getByTestId('filter-stage').locator('option')).toHaveText(['discovery']);
+    }).and('the stage filter lists every stories stage', async () => {
+      await expect(explorer().getByTestId('filter-stage').locator('option')).toHaveText([
+        'discovery',
+        'specification',
+        'implementation',
+      ]);
     }).and('the rule filter lists the stories rules', async () => {
       const rule = explorer().getByTestId('filter-rule');
       await expect(rule.locator('option', { hasText: 'verb-noun-format' })).toHaveCount(1);
       await expect(rule.locator('option', { hasText: 'high-cohesion' })).toHaveCount(0);
       await expect.poll(async () =>
         rule.evaluate((el: HTMLSelectElement) => el.options.length > 0 && el.selectedOptions.length === el.options.length),
+      ).toBe(true);
+    });
+  });
+
+  scenario('selecting clean engineering lists every node type', ({ given, when, then }) => {
+    given('pml-domain is loaded into the KnowledgeGraph', async () => {
+      await openPmlDomain();
+      await waitForTree();
+    });
+    when('the Engineer selects the clean engineering practice', async () => {
+      await explorer().getByTestId('filter-practice').selectOption('clean_engineering');
+    });
+    then('the node filter lists every clean engineering type', async () => {
+      const node = explorer().getByTestId('filter-node');
+      await expect(node.locator('option')).toHaveText([
+        'Module',
+        'Package',
+        'OoadClass',
+        'Property',
+        'Operation',
+        'Parameter',
+        'File',
+        'CleanEngineeringModel',
+      ]);
+      await expect.poll(async () =>
+        node.evaluate((el: HTMLSelectElement) => el.selectedOptions.length === el.options.length),
       ).toBe(true);
     });
   });
