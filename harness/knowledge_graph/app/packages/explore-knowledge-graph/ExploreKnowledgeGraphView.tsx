@@ -288,32 +288,31 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
             >
               {filtersOpen ? '▼' : '▶'}
             </button>
-            {folder ? (
-              <input
-                className="chosen-folder"
-                data-testid="chosen-folder"
-                value={folder}
-                spellCheck={false}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                  setFolder(event.target.value);
-                }}
-                onBlur={() => {
-                  const next = folder.trim();
-                  if (next && !sameFolder(next, scannedFolder)) {
-                    selectFolder({ folder: next });
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') {
-                    return;
-                  }
-                  const next = folder.trim();
-                  if (next) {
-                    selectFolder({ folder: next });
-                  }
-                }}
-              />
-            ) : null}
+            <input
+              className="chosen-folder"
+              data-testid="chosen-folder"
+              value={folder}
+              placeholder="Repository folder"
+              spellCheck={false}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                setFolder(event.target.value);
+              }}
+              onBlur={() => {
+                const next = folder.trim();
+                if (next && !sameFolder(next, scannedFolder)) {
+                  selectFolder({ folder: next });
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') {
+                  return;
+                }
+                const next = folder.trim();
+                if (next) {
+                  selectFolder({ folder: next });
+                }
+              }}
+            />
           </div>
           <div className="filters" hidden={!filtersOpen}>
             <FilterSelect

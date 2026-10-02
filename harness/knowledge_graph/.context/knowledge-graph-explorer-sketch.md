@@ -127,6 +127,12 @@ Explore Knowledge Graph
                 then rule slugs are not listed
                 when the Engineer opens the rules child
                 then those rules are listed
+        Engineer --> Display Node Progress
+            a Node shows discovery, specification, and implementation
+                given a Node
+                when the Engineer views that Node
+                then the Node shows discovery, specification, and implementation
+                    and each stage is incomplete or complete
     Engineer --> Open Node Source
         file Node opens source and highlights range
             given a KnowledgeGraph with a file Node that has a source file and range

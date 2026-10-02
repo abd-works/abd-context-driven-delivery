@@ -20,6 +20,7 @@ section: body
         (S) Engineer --> Nest Class Folder
         (S) Engineer --> Show Disk Packages
         (S) Engineer --> Collapse Node Rules
+        (S) Engineer --> Display Node Progress
     (S) Engineer --> Open Node Source
     (S) Engineer --> Follow Relationship
     (S) Engineer --> Filter Graph
@@ -31,6 +32,6 @@ section: body
 
 ## Scope boundary
 
-**In scope:** Engineer loads a repo folder into a KnowledgeGraph, browses the PracticeGraph tree, opens Node source, follows a Relationship, filters by practice · connector · node · violations · rule, and runs Create database, Refresh master, and Reload working copy.
+**In scope:** Engineer loads a repo folder into a KnowledgeGraph, browses the PracticeGraph tree, sees each Node’s discovery, specification, and implementation progress, opens Node source, follows a Relationship, filters by practice · connector · node · violations · rule, and runs Create database, Refresh master, and Reload working copy.
 
 **Out of scope:** writing or repairing rules, branding besides the explorer chrome already on the screen.

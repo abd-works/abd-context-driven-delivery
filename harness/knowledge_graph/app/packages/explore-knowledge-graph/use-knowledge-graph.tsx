@@ -83,7 +83,14 @@ export function useKnowledgeGraph(id: string) {
   const selectFolder = useCallback(
     (input: { folder?: string } = {}) => {
       const next = graph ?? new KnowledgeGraphClient(null, null, null, null);
-      next.folder = input.folder ?? lastScanFolder();
+      const chosen = input.folder ?? lastScanFolder();
+      if (!sameFolderPath(chosen, next.folder)) {
+        next.graphId = '';
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem('kg-scan-graph-id-v2');
+        }
+      }
+      next.folder = chosen;
       take(next.loadKnowledgeGraph(next.folder), next, 'Load Knowledge Graph');
     },
     [graph, take],
@@ -126,6 +133,10 @@ export function useKnowledgeGraph(id: string) {
       runDatabase('Reload working copy', folder, (item) => item.reloadWorkingCopy()),
     choose: (node: KnowledgeGraphNode) => graph?.choose(node),
   };
+}
+
+function sameFolderPath(left: string, right: string): boolean {
+  return left.replaceAll('/', '\\').toLowerCase() === right.replaceAll('/', '\\').toLowerCase();
 }
 
 function lastScanFolder(): string {
