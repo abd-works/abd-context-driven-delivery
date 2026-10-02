@@ -73,6 +73,24 @@ with description("a shared rules section containing scanner bullets") as self:
             )
             expect(result.get("additional_context")).to(contain("sample rule one"))
 
+        with it("should ask the agent to echo injected rule names and the document path"):
+            result = self.guidance.rules.inject_rules(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"path": "pkg/foo_sample_bar.py"},
+                }
+            )
+            text = result.get("additional_context") or ""
+            expect(text).to(
+                contain(
+                    "The following rules need to be followed while editing this document:"
+                )
+            )
+            expect(text).to(contain("sample-rule-one"))
+            expect(text).to(contain("pkg/foo_sample_bar.py"))
+            expect(text).to(contain("**/*sample*"))
+            expect(text).to(contain("Echo the following message to the user"))
+
         with it("should inject when the path matches regardless of tool name"):
             result = self.guidance.rules.inject_rules(
                 {"tool_input": {"path": "pkg/foo_sample_bar.py"}}

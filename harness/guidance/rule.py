@@ -143,7 +143,7 @@ class RulesCollection(MarkdownCollection):
         parts, labels = self._bodies(bags)
         if not parts:
             return {}
-        body = "\n\n".join(parts)
+        body = self._inject_context(path, bags, parts)
         echo = PromptEcho()
         echo.toast_roots = hook_payload.get("workspace_roots")
         echo.show_ide_toast(
@@ -248,6 +248,55 @@ class RulesCollection(MarkdownCollection):
             else:
                 labels.append(getattr(parent, "name", None) or type(parent).__name__)
         return parts, labels
+
+    def _rule_names(self, bags: list[RulesCollection]) -> list[str]:
+        names: list[str] = []
+        seen: set[str] = set()
+        for bag in bags:
+            for rule in bag:
+                slug = (rule.slug or "").strip()
+                if not slug or slug in seen:
+                    continue
+                seen.add(slug)
+                names.append(slug)
+        return names
+
+    def _matched_globs(self, bags: list[RulesCollection]) -> list[str]:
+        patterns: list[str] = []
+        seen: set[str] = set()
+        for bag in bags:
+            for pattern in (part.strip().strip("\"'") for part in str(bag.glob or "").split(",")):
+                if not pattern or pattern in seen:
+                    continue
+                seen.add(pattern)
+                patterns.append(pattern)
+        return patterns
+
+    def _inject_echo_instruction(
+        self, path: str, bags: list[RulesCollection]
+    ) -> str:
+        rule_names = self._rule_names(bags)
+        if not rule_names:
+            return ""
+        lines = [
+            "Before you continue, echo the following message to the user:",
+            "",
+            "The following rules need to be followed while editing this document:",
+            *rule_names,
+            path,
+        ]
+        for pattern in self._matched_globs(bags):
+            lines.append(pattern)
+        return "\n".join(lines)
+
+    def _inject_context(
+        self, path: str, bags: list[RulesCollection], parts: list[str]
+    ) -> str:
+        preamble = self._inject_echo_instruction(path, bags).strip()
+        rules = "\n\n".join(parts).strip()
+        if preamble and rules:
+            return f"{preamble}\n\n{rules}"
+        return preamble or rules
 
     def matches(self, path: str) -> bool:
         if not path:

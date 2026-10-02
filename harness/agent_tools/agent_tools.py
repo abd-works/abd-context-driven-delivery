@@ -876,8 +876,20 @@ class AgentTool(AgentToolDestination):
     @property
     def docstring(self) -> str:
         if self._body is not None:
-            return self._body
-        return (inspect.getdoc(self.callable) or "").strip()
+            body = self._body
+        else:
+            body = (inspect.getdoc(self.callable) or "").strip()
+        return self._with_sub_agent_preamble(body)
+
+    def _with_sub_agent_preamble(self, text: str) -> str:
+        from harness.agent_tools.sub_agent.mark import (
+            marked_as_sub_agent,
+            prepend_sub_agent_instructions,
+        )
+
+        if marked_as_sub_agent(self.callable):
+            return prepend_sub_agent_instructions(text)
+        return text
 
     @property
     def description(self) -> str:
@@ -1045,6 +1057,7 @@ class AgentInstructions(AgentTool):
             self.result_template, arguments, parameter_names, instance=self.toolset,
         )
         instructions = self._join_prompt(tuple(self._prompt), arguments)
+        instructions = self._with_sub_agent_preamble(instructions)
         return ExpansionResult(
             instructions=instructions,
             tools=list(dict.fromkeys(self._tools)),
@@ -1906,7 +1919,16 @@ class ToolsetManifest:
                 entry["tools"] = list(nested)
             prompt = getattr(tool, "prompt", None)
             if prompt:
-                entry["instructions"] = "\n".join(prompt)
+                entry["instructions"] = tool._with_sub_agent_preamble("\n".join(prompt))
+            from harness.agent_tools.sub_agent.mark import marked_as_sub_agent
+
+            if marked_as_sub_agent(tool.callable):
+                entry["kind"] = "sub_agent"
+                entry["launch"] = "non_blocking"
+                if tool.response:
+                    entry["returns"] = tool.response
+                if not entry.get("instructions"):
+                    entry["instructions"] = tool.description
             signature[name] = entry
         return signature
 

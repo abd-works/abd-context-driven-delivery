@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from harness.agent_tools import agent_tool, agent_toolset
+from harness.agent_tools.sub_agent.mark import subAgent
 from installation.destination import noCatalog
 from installation.files import skill
 from harness.mcp.mcp_server import mcp
@@ -15,6 +16,7 @@ class Diagnose:
     Reproduce -> minimise -> hypothesise -> instrument -> fix -> regression-test.
     """
 
+    @subAgent
     @mcp
     @skill
     @agent_tool
