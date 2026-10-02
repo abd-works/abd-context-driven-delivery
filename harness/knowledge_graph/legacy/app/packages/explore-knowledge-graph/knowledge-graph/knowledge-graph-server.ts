@@ -135,7 +135,7 @@ export class KnowledgeGraphsServer {
     const graph =
       uploaded.length > 0
         ? knowledgeGraphFromWorkspace(root, uploaded, crypto.randomUUID())
-        : _fromPracticeHierarchyCli(root, Boolean(force));
+        : _fromPracticeHierarchyCli(root, true);
     return repo.create({
       folder: root,
       practiceGraphs: graph.toDto().practice_graphs,

@@ -39,7 +39,10 @@ describe('cascading filters', () => {
 
   it('keeps node types and relationships to the selected practice', () => {
     const options = graph.filterGraph({ practices: ['stories'] }).present().filter_options;
-    expect(options.node_types.sort()).toEqual(['Epic', 'Story']);
+    expect(options.node_types).toEqual(
+      expect.arrayContaining(['Epic', 'Story', 'Scenario', 'Step', 'Example']),
+    );
+    expect(options.node_types).not.toContain('OoadClass');
     expect(options.relationship_types).toEqual([...RELATIONSHIP_KINDS]);
     expect(options.stages).toEqual(['discovery', 'specification', 'implementation']);
   });
@@ -66,7 +69,9 @@ describe('cascading filters', () => {
       .filterGraph({ practices: ['stories'], nodeTypes: ['Epic'] })
       .present().filter_options;
     expect(options.relationship_types).toEqual([...RELATIONSHIP_KINDS]);
-    expect(options.node_types.sort()).toEqual(['Epic', 'Story']);
+    expect(options.node_types).toEqual(
+      expect.arrayContaining(['Epic', 'Story', 'Scenario', 'Step']),
+    );
   });
 });
 

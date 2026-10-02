@@ -479,7 +479,10 @@ export function useKnowledgeGraph(id: string) {
   const selectFolder = useCallback(
     (input: { folder?: string; files?: WorkspaceFile[] } = {}) => {
       take(
-        KnowledgeGraphsClient.scan(input, 'Load Knowledge Graph'),
+        KnowledgeGraphsClient.scan(
+          { ...input, force: true },
+          'Load Knowledge Graph',
+        ),
         'Load Knowledge Graph',
       );
     },
@@ -489,7 +492,7 @@ export function useKnowledgeGraph(id: string) {
   const refreshGraph = useCallback(() => {
     const lastFolder = lastScanFolder();
     take(
-      KnowledgeGraphsClient.scan({ folder: lastFolder }, 'Refresh'),
+      KnowledgeGraphsClient.scan({ folder: lastFolder, force: true }, 'Refresh'),
       'Refresh',
     );
   }, [take]);

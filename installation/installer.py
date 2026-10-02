@@ -50,7 +50,13 @@ class Installer:
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
     _SKIP_ROOT_TOOLSET_NAMES = frozenset(
-        {"RulesCollection", "MarkdownCollection", "GuidanceCollection"}
+        {
+            "RulesCollection",
+            "MarkdownCollection",
+            "GuidanceCollection",
+            "PracticeGuidance",
+            "FidelityGuidance",
+        }
     )
     _ANNOTATIONS = frozenset(
         {
@@ -131,9 +137,7 @@ class Installer:
         self.ensure_import_path(root)
         seen: set[str] = set()
         toolsets: list[Any] = []
-        for py_file in sorted(root.rglob("*.py")):
-            if self._skip_collect_path(py_file):
-                continue
+        for py_file in self._iter_collect_files(root):
             for ref in self._toolset_refs_in_file(py_file, root):
                 if ref in seen:
                     continue
@@ -159,6 +163,22 @@ class Installer:
                 continue
             refs.append(f"{module}:{node.name}")
         return refs
+
+    def _iter_collect_files(self, root: Path) -> Iterable[Path]:
+        skip = {name.lower() for name in self._SKIP_DIRS}
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [
+                name
+                for name in sorted(dirnames)
+                if not name.startswith(".") and name.lower() not in skip
+            ]
+            for name in sorted(filenames):
+                if not name.endswith(".py"):
+                    continue
+                path = Path(dirpath) / name
+                if self._skip_collect_path(path):
+                    continue
+                yield path
 
     def _skip_collect_path(self, py_file: Path) -> bool:
         try:
@@ -326,12 +346,11 @@ class Installer:
         for item in toolsets:
             try:
                 toolset = AgentToolSet.instantiate(item)
-            except Exception as error:  # noqa: BLE001
-                print(f"install skipped {item}: {error}", file=sys.stderr)
-                continue
-            self._install_toolset(toolset)
-            for child in toolset.child_toolsets():
-                self._install_toolset(child)
+                self._install_toolset(toolset)
+                for child in toolset.child_toolsets():
+                    self._install_toolset(child)
+            except Exception as error:
+                raise RuntimeError(f"install failed for {item}") from error
 
     def _standup_channels(self) -> None:
         self._mcp.standup()

@@ -173,10 +173,7 @@ class FileInstallation(Installation):
     def _body_for(self, kind: str, tool: Any, toolset: Any) -> str:
         if self.mcp_mode:
             return tool.docstring
-        try:
-            result = getattr(toolset, tool.name, None)
-        except Exception:
-            return tool.docstring
+        result = getattr(toolset, tool.name, None)
         if isinstance(result, str) and result.strip():
             return result.strip()
         if kind == "rules":

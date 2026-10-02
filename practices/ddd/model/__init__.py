@@ -29,7 +29,9 @@ def load_bounded_context_map(root):
 
     workspace = Path(root)
     preferred = (
+        workspace / "domain" / ".context" / "bounded-context-map.md",
         workspace / "domain" / "bounded-context-map.md",
+        workspace / ".context" / "bounded-context-map.md",
         workspace / "bounded-context-map.md",
     )
     path = next((item for item in preferred if item.is_file()), None)

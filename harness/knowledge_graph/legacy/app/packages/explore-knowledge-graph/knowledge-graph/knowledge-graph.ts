@@ -2719,10 +2719,11 @@ function asFolderPath(raw: string): string {
 }
 
 function practiceNodeTypes(practices: string[] | undefined): string[] {
-  if (!practices || practices.length === 0 || practices.length >= PRACTICES.length) {
-    return [];
-  }
-  return practices.flatMap((practice) => NODE_TYPES_BY_PRACTICE[practice] ?? []);
+  const selected =
+    practices && practices.length > 0 && practices.length < PRACTICES.length
+      ? practices
+      : [...PRACTICES];
+  return selected.flatMap((practice) => NODE_TYPES_BY_PRACTICE[practice] ?? []);
 }
 
 function treeTypeRank(kind: string): number {

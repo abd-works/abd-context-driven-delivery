@@ -7,8 +7,28 @@ export const PRACTICES = [
   'stories',
 ] as const;
 
-/** Building blocks from the DDD practice, including types a workspace has not tagged yet. */
+/** Types each practice view lists, including types a workspace has not tagged yet. */
 export const NODE_TYPES_BY_PRACTICE: Record<string, string[]> = {
+  clean_engineering: [
+    'Module',
+    'Package',
+    'OoadClass',
+    'Property',
+    'Operation',
+    'Parameter',
+    'File',
+    'CleanEngineeringModel',
+  ],
+  stories: [
+    'Epic',
+    'SubEpic',
+    'Story',
+    'Background',
+    'Scenario',
+    'Step',
+    'Example',
+    'StoryModel',
+  ],
   ddd: [
     'BoundedContext',
     'Aggregate',
@@ -20,6 +40,7 @@ export const NODE_TYPES_BY_PRACTICE: Record<string, string[]> = {
     'DomainService',
     'Specification',
   ],
+  bdd: ['Description', 'Context', 'Observation'],
 };
 
 export const STAGES = [

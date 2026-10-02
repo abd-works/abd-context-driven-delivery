@@ -914,6 +914,20 @@ with description("the installer toolset installing itself") as self:
         expect(events).to(contain("afterAgentResponse"))
 
 
+with description("install when a toolset cannot be instantiated") as self:
+    with it("should raise instead of skipping the toolset"):
+        tree = Path(tempfile.mkdtemp())
+        try:
+            def run():
+                Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
+                    ["no.such.module:Nope"]
+                )
+
+            expect(run).to(raise_error(RuntimeError, "install failed for no.such.module:Nope"))
+        finally:
+            shutil.rmtree(tree, ignore_errors=True)
+
+
 with description("the installer import path") as self:
     with before.each:
         self.repo = Path(__file__).resolve().parents[1]
@@ -942,6 +956,8 @@ with description("the installer import path") as self:
         expect(refs).to(contain("harness.transformers.transformers:Transformers"))
         expect(refs).to(contain("harness.knowledge_graph.model.knowledge_graph:KnowledgeGraph"))
         expect(refs).to(contain("harness.guidance.guidance:Guidance"))
+        expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))
+        expect(refs).not_to(contain("harness.guidance.guidance:FidelityGuidance"))
 
     with it("should not record a temp install path in the shared install state"):
         shared = Path(__file__).resolve().parent / ".install-state.json"

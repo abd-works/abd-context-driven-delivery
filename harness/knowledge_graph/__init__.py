@@ -1,5 +1,5 @@
-"""Practice graph — navigable object model across practices."""
+"""Knowledge graph package. Replaced graph types live under legacy/."""
 
-from .model import PracticeGraph
+from .model import CodeQL
 
-__all__ = ["PracticeGraph"]
+__all__ = ["CodeQL"]

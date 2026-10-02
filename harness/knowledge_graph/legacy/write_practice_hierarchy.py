@@ -43,7 +43,7 @@ from harness.knowledge_graph.model.dot_graph import (
 )
 from practices.clean_engineering.model.codeql.codeql_model import Module
 
-_DEFAULT_PRACTICES = ("clean_engineering", "bdd", "stories")
+_DEFAULT_PRACTICES = ("clean_engineering", "bdd", "stories", "ddd")
 
 
 def _append_line(lines: list[str], depth: int, node, graph: PracticeGraph) -> None:
@@ -93,7 +93,9 @@ def _slugs_for(graph: PracticeGraph, practices: tuple[str, ...]) -> RuleSlugs:
 
 
 _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py"}
-_STORY_CODE = re.compile(r".+_story\.(test|spec)\.[jt]sx?$|.+\.examples\.[jt]sx?$")
+_STORY_CODE = re.compile(
+    r".+_story\.(test|spec)\.[jt]sx?$|.+\.examples\.[jt]sx?$|.+\.e2e\.[jt]sx?$"
+)
 _MODULE_CONTEXT_NAMES = ("module-context.md", "architecture-context.md")
 
 
@@ -129,6 +131,9 @@ def _load_ce_folders(graph: PracticeGraph, workspace: Path) -> None:
 
 def _ce_folders(workspace: Path) -> dict[str, Path | None]:
     found: dict[str, Path | None] = {}
+    domain = workspace / "domain"
+    start = domain if domain.is_dir() else workspace
+    start_rel = "domain" if start == domain else ""
 
     def visit(folder: Path, rel: str) -> bool:
         try:
@@ -149,7 +154,7 @@ def _ce_folders(workspace: Path) -> dict[str, Path | None]:
             return True
         return child_kept
 
-    visit(workspace, "")
+    visit(start, start_rel)
     return found
 
 
@@ -157,7 +162,13 @@ def _skip_ce_dir(name: str, parent_rel: str) -> bool:
     if name in _SKIP_PACKAGES or name.startswith("."):
         return True
     rel = f"{parent_rel}/{name}" if parent_rel else name
-    return rel == "stories" or rel.startswith("stories/")
+    if rel == "stories" or rel.startswith("stories/"):
+        return True
+    if rel == "tests" or rel.startswith("tests/"):
+        return True
+    if rel == "apps" or rel.startswith("apps/"):
+        return True
+    return False
 
 
 def _module_context(folder: Path) -> Path | None:
@@ -233,6 +244,8 @@ def _top_level_folders(root: Path) -> list[str]:
         if not child.is_dir():
             continue
         if child.name in _SKIP_PACKAGES or child.name.startswith("."):
+            continue
+        if child.name in {"tests", "apps", "stories"}:
             continue
         names.append(child.name)
     return names
@@ -484,6 +497,18 @@ def main(
     graph = PracticeGraph(workspace)
     _load_practice_trees(graph, workspace, log)
     ctx = graph.working_context()
+    if as_json and not populate:
+        payload = explorer_dto(graph, workspace)
+        export_path = ctx / "explorer-graph.json"
+        export_path.write_text(json.dumps(payload), encoding="utf-8")
+        print(
+            f"loaded {len(graph.nodes)} nodes, {len(graph.relationships)} edges",
+            file=log,
+            flush=True,
+        )
+        print(f"wrote {export_path}", file=log, flush=True)
+        print(json.dumps(payload), flush=True)
+        return
     hierarchy_path = ctx / "knowledge-graph-ce-hierarchy.txt"
     timings_path = ctx / "knowledge-graph-ce-rule-timings.txt"
     zero_hits_path = ctx / "knowledge-graph-zero-hit-rules.txt"
@@ -586,11 +611,8 @@ def main(
 
 def _load_practice_trees(graph: PracticeGraph, workspace: Path, log) -> None:
     """Load stories, DDD, and BDD trees. CodeQL fact queries only build the code index."""
-    from dataclasses import asdict
-
-    from harness.knowledge_graph.model.codeql_query import query_workspace
     from harness.knowledge_graph.model.loader import GraphLoader
-    from practices.stories.model.codeql.codeql_model import StoryModel
+    from practices.stories.model.story_model import StoryModel as DiskStoryModel
 
     loader = GraphLoader.from_graph(graph)
     try:
@@ -608,8 +630,30 @@ def _load_practice_trees(graph: PracticeGraph, workspace: Path, log) -> None:
         print(f"bdd tree did not load ({error})", file=log, flush=True)
     try:
         loader._load_ddd_structure_from_map()
+        print(
+            f"ddd contexts: {sum(1 for node in graph.nodes.values() if node.semantic_type() == 'BoundedContext')}",
+            file=log,
+            flush=True,
+        )
     except Exception as error:
         print(f"ddd tree did not load ({error})", file=log, flush=True)
+    try:
+        loader.graph.story_map = loader._load_story_map(DiskStoryModel.load(workspace))
+        loader._index_story_epics()
+        print(
+            f"stories map: {len(loader.graph.story_map.epics)} epics",
+            file=log,
+            flush=True,
+        )
+    except Exception as error:
+        print(f"stories map did not load ({error})", file=log, flush=True)
+    if loader.graph.story_map and loader.graph.story_map.epics:
+        return
+    from dataclasses import asdict
+
+    from harness.knowledge_graph.model.codeql_query import query_workspace
+    from practices.stories.model.codeql.codeql_model import StoryModel
+
     try:
         export = query_workspace(workspace)
         raw = {
@@ -684,13 +728,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="practices",
         action="append",
         metavar="NAME",
-        help="Practice to evaluate; repeatable. Default: clean_engineering, bdd, stories.",
+        help="Practice to evaluate; repeatable. Default: clean_engineering, bdd, stories, ddd.",
     )
     parser.add_argument(
         "--ddd",
         dest="ddd",
         action="store_true",
-        help="Also evaluate DDD graph rules. Default: Clean Engineering, BDD, Stories.",
+        help="Also evaluate DDD graph rules. Default already includes DDD.",
     )
     parser.add_argument(
         "--json",
