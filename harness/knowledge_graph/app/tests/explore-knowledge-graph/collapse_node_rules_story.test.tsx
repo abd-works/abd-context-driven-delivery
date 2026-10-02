@@ -11,7 +11,7 @@ story('Collapse Node Rules', () => {
       await waitForTree();
     });
     when('the Engineer expands that Node without opening rules', async () => {
-      await explorer().getByRole('button', { name: /^Expand / }).first().click();
+      await explorer().getByRole('button', { name: /^Expand / }).first().click({ timeout: 5_000 });
     });
     then('rule slugs are not listed', async () => {
       await expect(explorer().getByTestId('practice-graph-tree')).not.toContainText(
@@ -26,7 +26,7 @@ story('Collapse Node Rules', () => {
       await waitForTree();
     });
     when('the Engineer opens the rules child', async () => {
-      await explorer().getByTestId('tree-expand-rules').first().click();
+      await explorer().getByTestId('tree-expand-rules').first().click({ timeout: 5_000 });
     });
     then('those rules are listed', async () => {
       await expect(explorer().getByTestId('practice-graph-tree')).toContainText(

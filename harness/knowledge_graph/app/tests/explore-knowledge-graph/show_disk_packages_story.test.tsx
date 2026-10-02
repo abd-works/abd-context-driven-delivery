@@ -11,7 +11,7 @@ story('Show Disk Packages', () => {
       await waitForTree();
     });
     when('the Engineer opens domain', async () => {
-      await explorer().getByRole('button', { name: 'Expand domain' }).click();
+      await explorer().getByRole('button', { name: 'Expand domain' }).click({ timeout: 5_000 });
     });
     then('those folders are listed', async () => {
       await expect(explorer().locator('button[title="Package"]', { hasText: 'customer' })).toBeVisible();

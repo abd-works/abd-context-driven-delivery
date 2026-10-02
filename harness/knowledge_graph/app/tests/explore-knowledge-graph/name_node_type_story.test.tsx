@@ -11,7 +11,7 @@ story('Name Node Type', () => {
       await waitForTree();
     });
     when('the Engineer points at the Node icon or name', async () => {
-      await explorer().locator('.kind-mark').first().hover();
+      await explorer().locator('.kind-mark').first().hover({ timeout: 5_000 });
     });
     then('the tooltip names Package', async () => {
       await expect(explorer().locator('button[title="Package"]')).toBeVisible();

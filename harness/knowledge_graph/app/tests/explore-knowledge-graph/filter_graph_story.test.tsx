@@ -27,7 +27,7 @@ story('Filter Graph', () => {
       await explorer().getByTestId('filter-practice').selectOption('stories');
     });
     then('the node filter lists Story', async () => {
-      await expect(explorer().getByTestId('filter-node').locator('option', { hasText: 'Story' })).toHaveCount(1);
+      await expect(explorer().getByTestId('filter-node').locator('option', { hasText: /^Story$/ })).toHaveCount(1);
     }).and('the node filter drops Module', async () => {
       await expect(explorer().getByTestId('filter-node').locator('option', { hasText: 'Module' })).toHaveCount(0);
     });
@@ -39,7 +39,7 @@ story('Filter Graph', () => {
       await waitForTree();
     }).and('whose source includes a Node that fails keep-operations-small-focused', async () => {});
     when('the Engineer filters the KnowledgeGraph using violations', async () => {
-      await explorer().getByRole('button', { name: /^violations$/i }).click();
+      await explorer().getByRole('button', { name: /^violations$/i }).click({ timeout: 5_000 });
     }).and('using keep-operations-small-focused', async () => {
       await explorer().getByTestId('filter-rule').selectOption('keep-operations-small-focused');
     });
