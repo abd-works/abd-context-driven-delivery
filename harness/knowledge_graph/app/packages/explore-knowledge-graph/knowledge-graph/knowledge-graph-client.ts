@@ -7,6 +7,7 @@ import {
   KnowledgeGraphFilter,
   SourceRange,
 } from "./knowledge-graph";
+import { stageFor } from "../../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/catalog";
 
 const GRAPH_DEADLINE_MS = 180_000;
 const DATABASE_DEADLINE_MS = 15 * 60_000;
@@ -27,7 +28,13 @@ const EMPTY_OPTIONS: KnowledgeGraphFilterOptions = {
   rules: [],
 };
 
-export type PracticeMember = { practice: string; type: string };
+export type PracticeMember = {
+  practice: string;
+  stage: string;
+  type: string;
+  rules: string[];
+  connectors: string[];
+};
 
 export class KnowledgeGraphClient extends KnowledgeGraph {
   graphId: string;
@@ -143,7 +150,7 @@ function webNode(row: any): WebKnowledgeGraphNode {
   );
   node.name = row.name ?? "";
   node.practice = row.practice ?? "";
-  node.stage = row.fidelity ?? row.stage ?? "";
+  node.stage = stageFor(String(row.fidelity ?? row.stage ?? ""));
   node.ruleHits = ruleHitsFrom(row);
   node.relationships = relationshipLinks(row);
   node.nodeId = row.node_id ?? row.nodeId ?? row.name ?? "";
@@ -254,21 +261,73 @@ function ruleHitsFrom(row: any): { slug: string; status: string; message: string
 }
 
 function practiceMembers(dto: any): PracticeMember[] {
-  const seen = new Set<string>();
+  const buckets = new Map<string, PracticeMember>();
   const members: PracticeMember[] = [];
+  const take = (practice: string, stage: string, type: string): PracticeMember | null => {
+    if (!practice || !type) {
+      return null;
+    }
+    const key = `${practice}\0${stage}\0${type}`;
+    const existing = buckets.get(key);
+    if (existing) {
+      return existing;
+    }
+    const created: PracticeMember = { practice, stage, type, rules: [], connectors: [] };
+    buckets.set(key, created);
+    members.push(created);
+    return created;
+  };
   for (const graph of dto.practice_graphs ?? []) {
     for (const row of graph.nodes ?? []) {
-      const practice = String(row.practice ?? graph.name ?? "");
-      const type = String(row.semantic_type ?? "");
-      const key = `${practice}\0${type}`;
-      if (!practice || !type || seen.has(key)) {
+      const bucket = take(
+        String(row.practice ?? graph.name ?? ""),
+        stageFor(String(row.fidelity ?? row.stage ?? "")),
+        String(row.semantic_type ?? ""),
+      );
+      if (!bucket) {
         continue;
       }
-      seen.add(key);
-      members.push({ practice, type });
+      for (const slug of ruleSlugs(row)) {
+        if (!bucket.rules.includes(slug)) {
+          bucket.rules.push(slug);
+        }
+      }
+    }
+    for (const edge of graph.relationships ?? []) {
+      const kind = String(edge.kind ?? "");
+      if (!kind) {
+        continue;
+      }
+      for (const id of [edge.from_id, edge.to_id]) {
+        const parsed = nodeIdParts(id);
+        if (!parsed) {
+          continue;
+        }
+        for (const bucket of members) {
+          if (bucket.practice === parsed.practice && bucket.type === parsed.type && !bucket.connectors.includes(kind)) {
+            bucket.connectors.push(kind);
+          }
+        }
+      }
     }
   }
   return members;
+}
+
+function ruleSlugs(row: any): string[] {
+  const listed = [
+    ...(row.applicable_rules ?? []),
+    ...(row.rules ?? []).map((rule: any) => rule.slug ?? rule.rule_slug ?? ""),
+  ];
+  return [...new Set(listed.map((slug) => String(slug)).filter(Boolean))];
+}
+
+function nodeIdParts(id: unknown): { practice: string; type: string } | null {
+  const parts = String(id ?? "").split(":");
+  if (parts.length < 2 || !parts[0] || !parts[1]) {
+    return null;
+  }
+  return { practice: parts[0], type: parts[1] };
 }
 
 function filterOptions(given: any, nodes: KnowledgeGraphNode[]): KnowledgeGraphFilterOptions {

@@ -15,6 +15,14 @@ story('Filter Graph', () => {
       await expect(explorer().getByTestId('filter-practice').locator('..').locator('.filter-actions button').first()).toBeVisible();
     }).and('the node filter has action buttons', async () => {
       await expect(explorer().getByTestId('filter-node').locator('..').locator('.filter-actions button').first()).toBeVisible();
+    }).and('every filter option starts on', async () => {
+      for (const testId of ['filter-practice', 'filter-stage', 'filter-node', 'filter-rule']) {
+        await expect.poll(async () =>
+          explorer().getByTestId(testId).evaluate((el: HTMLSelectElement) =>
+            el.options.length > 0 && el.selectedOptions.length === el.options.length,
+          ),
+        ).toBe(true);
+      }
     });
   });
 
@@ -30,6 +38,15 @@ story('Filter Graph', () => {
       await expect(explorer().getByTestId('filter-node').locator('option', { hasText: /^Story$/ })).toHaveCount(1);
     }).and('the node filter drops Module', async () => {
       await expect(explorer().getByTestId('filter-node').locator('option', { hasText: 'Module' })).toHaveCount(0);
+    }).and('the stage filter keeps only discovery', async () => {
+      await expect(explorer().getByTestId('filter-stage').locator('option')).toHaveText(['discovery']);
+    }).and('the rule filter lists the stories rules', async () => {
+      const rule = explorer().getByTestId('filter-rule');
+      await expect(rule.locator('option', { hasText: 'verb-noun-format' })).toHaveCount(1);
+      await expect(rule.locator('option', { hasText: 'high-cohesion' })).toHaveCount(0);
+      await expect.poll(async () =>
+        rule.evaluate((el: HTMLSelectElement) => el.options.length > 0 && el.selectedOptions.length === el.options.length),
+      ).toBe(true);
     });
   });
 

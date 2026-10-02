@@ -2,6 +2,10 @@ import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useKnowledgeGraph } from './use-knowledge-graph';
 import { KnowledgeGraphNode } from './knowledge-graph/knowledge-graph';
+import {
+  type KnowledgeGraphFilterOptions,
+  type PracticeMember,
+} from './knowledge-graph/knowledge-graph-client';
 import { pickerRelativePath } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
@@ -98,6 +102,33 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
   }
 
   const [picked, setPicked] = useState<FilterPick>(pickFromLocation);
+  const optionKey = [
+    filterOptions.practices.join('\n'),
+    filterOptions.stages.join('\n'),
+    filterOptions.node_types.join('\n'),
+    filterOptions.relationship_types.join('\n'),
+    filterOptions.rules.join('\n'),
+  ].join('\u0000');
+  useEffect(() => {
+    if (!filterOptions.practices.length && !filterOptions.rules.length) {
+      return;
+    }
+    setPicked((prev) => {
+      if (prev.practices.length) {
+        return prev;
+      }
+      return {
+        practices: filterOptions.practices,
+        stages: filterOptions.stages,
+        node_types: filterOptions.node_types,
+        relationship_types: filterOptions.relationship_types,
+        rules: prev.rules.length
+          ? prev.rules.filter((rule) => filterOptions.rules.includes(rule))
+          : filterOptions.rules,
+        violations: prev.violations,
+      };
+    });
+  }, [optionKey]);
   const engineering = theme === 'engineering';
   const selectedId = selectedNode?.nodeId ?? '';
 
@@ -121,8 +152,8 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
         }
       }
     }
-    if (filterKey !== '0||||') {
-      expandShown(listedTree, picked, next);
+    if (filtersNarrow(picked, filterOptions)) {
+      expandShown(listedTree, picked, filterOptions, next);
     }
     if (showRules) {
       openAllRules(listedTree, next);
@@ -306,33 +337,48 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               testId="filter-practice"
               options={filterOptions.practices}
               selected={picked.practices}
-              onChange={(practices) => setPicked((prev) => ({ ...prev, practices, node_types: [] }))}
+              onChange={(practices) =>
+                setPicked((prev) => ({
+                  ...prev,
+                  ...applyPractice(practices, members, filterOptions),
+                }))
+              }
             />
             <FilterSelect
               label="Stage"
               testId="filter-stage"
-              options={typesFor(picked.practices, members, filterOptions.stages, 'stage')}
+              options={stageOptions(picked, members, filterOptions)}
               selected={picked.stages}
-              onChange={(stages) => setPicked((prev) => ({ ...prev, stages }))}
+              onChange={(stages) =>
+                setPicked((prev) => ({
+                  ...prev,
+                  ...applyStage(prev, stages, members, filterOptions),
+                }))
+              }
             />
             <FilterSelect
               label="Node"
               testId="filter-node"
-              options={typesFor(picked.practices, members, filterOptions.node_types, 'type')}
+              options={nodeOptions(picked, members, filterOptions)}
               selected={picked.node_types}
-              onChange={(node_types) => setPicked((prev) => ({ ...prev, node_types }))}
+              onChange={(node_types) =>
+                setPicked((prev) => ({
+                  ...prev,
+                  ...applyNode(prev, node_types, members, filterOptions),
+                }))
+              }
             />
             <FilterSelect
               label="Connector"
               testId="filter-connector"
-              options={filterOptions.relationship_types}
+              options={connectorOptions(picked, members, filterOptions)}
               selected={picked.relationship_types}
               onChange={(relationship_types) => setPicked((prev) => ({ ...prev, relationship_types }))}
             />
             <FilterSelect
               label="Rule"
               testId="filter-rule"
-              options={filterOptions.rules}
+              options={ruleOptions(picked, members, filterOptions)}
               selected={picked.rules}
               onChange={(rules) => setPicked((prev) => ({ ...prev, rules }))}
             />
@@ -371,6 +417,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                   node={node}
                   depth={0}
                   picked={picked}
+                  options={filterOptions}
                   showRules={showRules}
                   selectedId={selectedId}
                   openIds={openIds}
@@ -465,6 +512,7 @@ function TreeNode({
   node,
   depth,
   picked,
+  options,
   showRules,
   selectedId,
   openIds,
@@ -474,14 +522,15 @@ function TreeNode({
   node: KnowledgeGraphNode;
   depth: number;
   picked: FilterPick;
+  options: KnowledgeGraphFilterOptions;
   showRules: boolean;
   selectedId: string;
   openIds: Set<string>;
   onToggle: (id: string) => void;
   onSelect: (nodeId: string) => void;
 }) {
-  const children = (node.children ?? []).filter((child) => shown(child, picked));
-  if (!shown(node, picked)) {
+  const children = (node.children ?? []).filter((child) => shown(child, picked, options));
+  if (!shown(node, picked, options)) {
     return null;
   }
   const rules = rulesFor(node, picked, showRules);
@@ -541,6 +590,7 @@ function TreeNode({
               node={child}
               depth={depth + 1}
               picked={picked}
+              options={options}
               showRules={showRules}
               selectedId={selectedId}
               openIds={openIds}
@@ -750,15 +800,20 @@ function SourcePane({
   );
 }
 
-function expandShown(nodes: KnowledgeGraphNode[], picked: FilterPick, open: Set<string>): void {
+function expandShown(
+  nodes: KnowledgeGraphNode[],
+  picked: FilterPick,
+  options: KnowledgeGraphFilterOptions,
+  open: Set<string>,
+): void {
   for (const node of nodes) {
-    if (!shown(node, picked)) {
+    if (!shown(node, picked, options)) {
       continue;
     }
-    const children = (node.children ?? []).filter((child) => shown(child, picked));
+    const children = (node.children ?? []).filter((child) => shown(child, picked, options));
     if (children.length > 0) {
       open.add(node.nodeId);
-      expandShown(children, picked, open);
+      expandShown(children, picked, options, open);
     }
   }
 }
@@ -808,14 +863,18 @@ function languageFor(file: string): string {
   return languages[ext] ?? 'plaintext';
 }
 
-function shown(node: KnowledgeGraphNode, picked: FilterPick): boolean {
+function shown(
+  node: KnowledgeGraphNode,
+  picked: FilterPick,
+  options: KnowledgeGraphFilterOptions,
+): boolean {
   if (picked.violations) {
-    return violates(node, picked) || (node.children ?? []).some((child) => shown(child, picked));
+    return violates(node, picked) || (node.children ?? []).some((child) => shown(child, picked, options));
   }
-  if (matches(node, picked)) {
+  if (matches(node, picked, options)) {
     return true;
   }
-  return (node.children ?? []).some((child) => shown(child, picked));
+  return (node.children ?? []).some((child) => shown(child, picked, options));
 }
 
 function violates(node: KnowledgeGraphNode, picked: FilterPick): boolean {
@@ -875,36 +934,150 @@ function visibleHits(
   });
 }
 
-function typesFor(
-  practices: string[],
-  members: { practice: string; type: string }[],
-  fallback: string[],
-  field: 'type' | 'stage',
-): string[] {
-  if (!practices.length || field === 'stage') {
-    return fallback;
-  }
-  const found = members
-    .filter((member) => practices.includes(member.practice))
-    .map((member) => member.type);
-  return found.length ? [...new Set(found)] : fallback;
-}
-
-function matches(node: KnowledgeGraphNode, picked: FilterPick): boolean {
-  const active = Object.values(picked).some((values) => values.length > 0);
-  if (!active) {
-    return true;
-  }
-  if (picked.practices.length && !picked.practices.includes(node.practice)) {
+function matches(
+  node: KnowledgeGraphNode,
+  picked: FilterPick,
+  options: KnowledgeGraphFilterOptions,
+): boolean {
+  if (restricts(picked.practices, options.practices) && !picked.practices.includes(node.practice)) {
     return false;
   }
-  if (picked.stages.length && !picked.stages.includes(node.stage)) {
+  if (restricts(picked.stages, options.stages) && !picked.stages.includes(node.stage)) {
     return false;
   }
-  if (picked.node_types.length && !picked.node_types.includes(node.nodeType?.name ?? '')) {
+  if (restricts(picked.node_types, options.node_types) && !picked.node_types.includes(node.nodeType?.name ?? '')) {
     return false;
   }
   return true;
+}
+
+function filtersNarrow(picked: FilterPick, options: KnowledgeGraphFilterOptions): boolean {
+  return (
+    picked.violations ||
+    restricts(picked.practices, options.practices) ||
+    restricts(picked.stages, options.stages) ||
+    restricts(picked.node_types, options.node_types) ||
+    restricts(picked.rules, options.rules)
+  );
+}
+
+function restricts(selected: string[], universe: string[]): boolean {
+  return selected.length > 0 && selected.length < universe.length;
+}
+
+function keepOrder(universe: string[], found: string[]): string[] {
+  const have = new Set(found.filter(Boolean));
+  return universe.filter((item) => have.has(item));
+}
+
+function membersIn(
+  members: PracticeMember[],
+  practices: string[] | null,
+  stages: string[] | null,
+  types: string[] | null,
+): PracticeMember[] {
+  return members.filter((member) => {
+    if (practices && !practices.includes(member.practice)) {
+      return false;
+    }
+    if (stages && !stages.includes(member.stage)) {
+      return false;
+    }
+    if (types && !types.includes(member.type)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function applyPractice(
+  practices: string[],
+  members: PracticeMember[],
+  options: KnowledgeGraphFilterOptions,
+): Omit<FilterPick, 'violations'> {
+  const practiceLimit = restricts(practices, options.practices) ? practices : null;
+  const rows = membersIn(members, practiceLimit, null, null);
+  return {
+    practices,
+    stages: practiceLimit ? keepOrder(options.stages, rows.map((member) => member.stage)) : options.stages,
+    node_types: practiceLimit ? keepOrder(options.node_types, rows.map((member) => member.type)) : options.node_types,
+    relationship_types: practiceLimit
+      ? keepOrder(options.relationship_types, rows.flatMap((member) => member.connectors))
+      : options.relationship_types,
+    rules: practiceLimit ? keepOrder(options.rules, rows.flatMap((member) => member.rules)) : options.rules,
+  };
+}
+
+function stageOptions(
+  picked: FilterPick,
+  members: PracticeMember[],
+  options: KnowledgeGraphFilterOptions,
+): string[] {
+  return applyPractice(picked.practices, members, options).stages;
+}
+
+function applyStage(
+  picked: FilterPick,
+  stages: string[],
+  members: PracticeMember[],
+  options: KnowledgeGraphFilterOptions,
+): Pick<FilterPick, 'stages' | 'node_types' | 'relationship_types' | 'rules'> {
+  const practiceLimit = restricts(picked.practices, options.practices) ? picked.practices : null;
+  const stageLimit = restricts(stages, options.stages) ? stages : null;
+  const rows = membersIn(members, practiceLimit, stageLimit, null);
+  const narrowed = Boolean(practiceLimit || stageLimit);
+  return {
+    stages,
+    node_types: narrowed ? keepOrder(options.node_types, rows.map((member) => member.type)) : options.node_types,
+    relationship_types: narrowed
+      ? keepOrder(options.relationship_types, rows.flatMap((member) => member.connectors))
+      : options.relationship_types,
+    rules: narrowed ? keepOrder(options.rules, rows.flatMap((member) => member.rules)) : options.rules,
+  };
+}
+
+function nodeOptions(
+  picked: FilterPick,
+  members: PracticeMember[],
+  options: KnowledgeGraphFilterOptions,
+): string[] {
+  return applyStage(picked, picked.stages, members, options).node_types;
+}
+
+function applyNode(
+  picked: FilterPick,
+  nodeTypes: string[],
+  members: PracticeMember[],
+  options: KnowledgeGraphFilterOptions,
+): Pick<FilterPick, 'node_types' | 'relationship_types' | 'rules'> {
+  const practiceLimit = restricts(picked.practices, options.practices) ? picked.practices : null;
+  const stageLimit = restricts(picked.stages, options.stages) ? picked.stages : null;
+  const typeLimit = restricts(nodeTypes, options.node_types) ? nodeTypes : null;
+  const rows = membersIn(members, practiceLimit, stageLimit, typeLimit);
+  const narrowed = Boolean(practiceLimit || stageLimit || typeLimit);
+  return {
+    node_types: nodeTypes,
+    relationship_types: narrowed
+      ? keepOrder(options.relationship_types, rows.flatMap((member) => member.connectors))
+      : options.relationship_types,
+    rules: narrowed ? keepOrder(options.rules, rows.flatMap((member) => member.rules)) : options.rules,
+  };
+}
+
+function connectorOptions(
+  picked: FilterPick,
+  members: PracticeMember[],
+  options: KnowledgeGraphFilterOptions,
+): string[] {
+  return applyNode(picked, picked.node_types, members, options).relationship_types;
+}
+
+function ruleOptions(
+  picked: FilterPick,
+  members: PracticeMember[],
+  options: KnowledgeGraphFilterOptions,
+): string[] {
+  return applyNode(picked, picked.node_types, members, options).rules;
 }
 
 const UPLOAD_SKIP = new Set([
