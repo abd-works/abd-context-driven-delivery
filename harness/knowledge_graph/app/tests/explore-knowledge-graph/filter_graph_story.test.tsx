@@ -102,7 +102,7 @@ story('Filter Graph', () => {
       await expect(domain.locator('.rule-status', { hasText: 'high-cohesion' }).first()).toBeVisible();
     }).and('epics and the tests folder are not tagged as clean engineering', async () => {
       const engineering = explorer().locator('li[data-node-id="practice:clean_engineering"]');
-      await expect(engineering.locator(':scope > ul > li .node-name', { hasText: /^tests$/ })).toHaveCount(0);
+      await expect(engineering.locator('> ul > li > .tree-row .node-name', { hasText: /^tests$/ })).toHaveCount(0);
       await expect(engineering.locator('.node-name', { hasText: /^access-selfcare$/ })).toHaveCount(0);
       await expect(engineering.locator('.node-name', { hasText: /^manage-billing$/ })).toHaveCount(0);
       await expect(engineering.locator('.node-name', { hasText: /^manage-services$/ })).toHaveCount(0);
