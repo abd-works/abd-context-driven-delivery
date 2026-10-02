@@ -23,6 +23,7 @@ from practices.stories.model.python.python_story_model import PythonStoryModel
 from practices.stories.model.codeql.codeql_model import StoryModel as CodeQLStoryModel
 from practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 from practices.stories.model.code_story_model import CodeStoryNode
+from practices.stories.model.knowledge_graph.nodes import KnowledgeGraphStoryModel
 
 EXPECTED = Path(__file__).resolve().parent / ".examples" / "expected"
 ACTUAL = Path(__file__).resolve().parent / ".examples" / "actual"
@@ -290,6 +291,10 @@ def save_channel(source_name: str, target: str, source: StoryModel) -> StoryMode
     if target == "codeql":
         _write_tree(folder, TypeScriptStoryModel(source).save())
         return CodeQLStoryModel.load_content(folder)
+    if target == "knowledge_graph":
+        copied = KnowledgeGraphStoryModel(source)
+        _write(folder / "story-map.kg", copied.save())
+        return copied
     maps = {
         "typescript": TypeScriptStoryModel,
         "python": PythonStoryModel,
@@ -504,6 +509,11 @@ with describe("a story map"):
                 _open_codeql(self, "markdown")
             with included_context("a story map saved through a channel"):
                 pass
+        with describe("to knowledge graph"):
+            with before.all:
+                _open(self, "markdown", "knowledge_graph")
+            with included_context("a story map saved through a channel"):
+                pass
 
     with describe("from drawio"):
         with describe("to markdown"):
@@ -551,6 +561,11 @@ with describe("a story map"):
                 _open_codeql(self, "drawio")
             with included_context("a story map saved through a channel"):
                 pass
+        with describe("to knowledge graph"):
+            with before.all:
+                _open(self, "drawio", "knowledge_graph")
+            with included_context("a story map saved through a channel"):
+                pass
 
     with describe("from typescript"):
         with describe("to markdown"):
@@ -596,6 +611,11 @@ with describe("a story map"):
         with describe("to codeql"):
             with before.all:
                 _open_codeql(self, "typescript")
+            with included_context("a story map saved through a channel"):
+                pass
+        with describe("to knowledge graph"):
+            with before.all:
+                _open(self, "typescript", "knowledge_graph")
             with included_context("a story map saved through a channel"):
                 pass
 

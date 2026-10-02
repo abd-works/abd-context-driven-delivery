@@ -82,7 +82,12 @@ with description("a Bdd toolset"):
             ):
                 expect(name in practice.agent_tools).to(equal(False))
 
-    with context("whose transform tool is called"):
-        with it("should delegate to CleanEngineering and return a dict"):
-            result = Bdd().render("markdown", "class Foo:\n    pass\n", source="python")
+    with context("whose render tool is called"):
+        with it("should render a sketch to python"):
+            result = Bdd().render(
+                "python",
+                "a cart\n  that has been created\n    it should hold no items\n",
+                source="markdown",
+            )
             expect(result).to(be_a(dict))
+            expect(str(result.get("content"))).to(contain("description"))

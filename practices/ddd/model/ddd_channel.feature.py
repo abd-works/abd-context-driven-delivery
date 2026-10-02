@@ -10,9 +10,10 @@ import shutil
 from pathlib import Path
 
 from expects import equal, expect
-from mamba import describe, it
+from mamba import before, describe, included_context, it, shared_context
 
 from practices.clean_engineering.model.property import Property
+from practices.ddd.model.knowledge_graph.nodes import KnowledgeGraphDomainDrivenDesignModel
 from practices.ddd.model.nodes import DDDModelFactory, DomainEvent, ValueObject
 
 EXPECTED = Path(__file__).resolve().parent / ".examples" / "expected" / "bounded-context-map.md"
@@ -60,19 +61,39 @@ def check_map(loaded) -> None:
     expect(catalog.aggregates[0].root.is_root).to(equal(True))
 
 
-with describe("DDD markdown channel"):
+with shared_context("a domain driven design model saved through a channel"):
+    with it("should match each bounded context, aggregate, integration, and event"):
+        check_map(self.loaded)
+
+
+with describe("a domain driven design model"):
+    with describe("from markdown"):
+        with describe("to markdown"):
+            with before.all:
+                source = DDDModelFactory.load(str(EXPECTED))
+                folder = ACTUAL / "from-markdown" / "to-markdown"
+                if folder.exists():
+                    shutil.rmtree(folder)
+                folder.mkdir(parents=True)
+                written = folder / "bounded-context-map.md"
+                written.write_text(source.save(), encoding="utf-8")
+                self.loaded = DDDModelFactory.load(str(written))
+            with included_context("a domain driven design model saved through a channel"):
+                pass
+        with describe("to knowledge graph"):
+            with before.all:
+                source = DDDModelFactory.load(str(EXPECTED))
+                folder = ACTUAL / "from-markdown" / "to-knowledge-graph"
+                if folder.exists():
+                    shutil.rmtree(folder)
+                folder.mkdir(parents=True)
+                self.loaded = KnowledgeGraphDomainDrivenDesignModel(source)
+                (folder / "bounded-context-map.kg").write_text(self.loaded.save(), encoding="utf-8")
+            with included_context("a domain driven design model saved through a channel"):
+                pass
+
     with it("should load the expected map"):
         check_map(DDDModelFactory.load(str(EXPECTED)))
-
-    with it("should save and load the same map"):
-        source = DDDModelFactory.load(str(EXPECTED))
-        folder = ACTUAL / "from-markdown" / "to-markdown"
-        if folder.exists():
-            shutil.rmtree(folder)
-        folder.mkdir(parents=True)
-        written = folder / "bounded-context-map.md"
-        written.write_text(source.save(), encoding="utf-8")
-        check_map(DDDModelFactory.load(str(written)))
 
     with it("should return a new value object from create, clone, and mix"):
         original = ValueObject("Money", 1)

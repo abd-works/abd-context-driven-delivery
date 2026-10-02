@@ -240,6 +240,20 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         self._index = end
         return context
 
+    def parse(self, text: str) -> "MarkdownBoundedContextMap":
+        model = type(self)()
+        model._lines = text.splitlines()
+        model._index = 0
+        model.load_bounded_contexts()
+        return model
+
+    def render(self, canonical=None, previous: str | None = None) -> str:
+        del previous
+        source = canonical if canonical is not None else self
+        if isinstance(source, MarkdownBoundedContextMap):
+            return source.save()
+        return type(self)(source).save()
+
     def save(self) -> str:
         lines = ["# Bounded Context Map", ""]
         for context in self.contexts:

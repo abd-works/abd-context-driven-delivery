@@ -24,6 +24,22 @@ class Ddd(PracticeGuidance):
             format=format,
             fidelity=None if stage is not None else fidelity,
             default_workspace_folder="src",
+            formats={
+                "sketch": ("practices.ddd.model.sketch.sketch_ddd_model", "SketchDddModel"),
+                "knowledge_graph": (
+                    "practices.ddd.model.knowledge_graph.nodes",
+                    "KnowledgeGraphDomainDrivenDesignModel",
+                ),
+                "markdown": ("practices.ddd.model.markdown.nodes", "MarkdownBoundedContextMap"),
+                "python": (
+                    "practices.clean_engineering.model.python.python_class_model",
+                    "PythonCleanEngineeringModel",
+                ),
+                "typescript": (
+                    "practices.clean_engineering.model.typescript.typescript_class_model",
+                    "TypeScriptCleanEngineeringModel",
+                ),
+            },
         )
         if stage is not None:
             self._activate(stage=stage)

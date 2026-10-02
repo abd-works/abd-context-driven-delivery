@@ -95,7 +95,15 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             return None
 
     def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
-        header = "from __future__ import annotations\nfrom abc import ABC, abstractmethod\n"
+        known = [loaded.name for module in canonical.modules for loaded in module.classes]
+        needs_abc = any(
+            is_interface_name(oclass.name) or companion_interface_name(oclass.name, known)
+            for module in canonical.modules
+            for oclass in module.classes
+        )
+        header = "from __future__ import annotations\n"
+        if needs_abc:
+            header += "from abc import ABC, abstractmethod\n"
         parts = [header]
         for module in canonical.modules:
             if module.name:
@@ -104,9 +112,9 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
                     for line in module.description.splitlines():
                         parts.append(f"# {line}" if line.strip() else "#")
                 parts.append("")
-            known = [c.name for c in module.classes]
+            names = [c.name for c in module.classes]
             for oclass in module.classes:
-                parts.append(self._render_class(oclass, known_names=known))
+                parts.append(self._render_class(oclass, known_names=names))
         return "\n\n".join(parts) + "\n"
 
     def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
@@ -453,19 +461,24 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
 
     def _render_class(self, oclass: OoadClass, known_names: List[str] | None = None) -> str:
         self._known_names = known_names or []
-        iface = companion_interface_name(oclass.name, self._known_names)
-        bases = iface if iface and not is_interface_name(oclass.name) else "ABC"
-        lines: List[str] = [f"class {oclass.name}({bases}):"]
+        contract = is_interface_name(oclass.name)
+        bases = self._bases(oclass)
+        heading = f"class {oclass.name}({bases}):" if bases else f"class {oclass.name}:"
+        lines: List[str] = [heading]
         if oclass.intent:
             lines.append(f'    """{oclass.intent}"""')
             lines.append("")
-        self._render_properties(lines, oclass)
-        self._render_init(lines, oclass)
+        self._render_properties(lines, oclass, contract)
+        self._render_init(lines, oclass, contract)
         for op in oclass.operations:
+            if op.name == oclass.name:
+                continue
             params = ", ".join(parameter.save() for parameter in op.parameters)
             ret = op.return_type or "None"
-            lines.append("    @abstractmethod")
-            lines.append(f"    def {op.name}(self, {params}) -> {ret}: ...")
+            if contract:
+                lines.append("    @abstractmethod")
+            signature = f"    def {op.name}(self, {params}) -> {ret}: ..."
+            lines.append(signature)
             lines.append("")
         while lines and lines[-1] == "":
             lines.pop()
@@ -473,26 +486,41 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             lines.append("    pass")
         return "\n".join(lines)
 
-    def _render_properties(self, lines: List[str], oclass: OoadClass) -> None:
+    def _bases(self, oclass: OoadClass) -> str:
+        if oclass.collaborators:
+            return ", ".join(oclass.collaborators)
         iface = companion_interface_name(oclass.name, self._known_names)
+        if is_interface_name(oclass.name):
+            return "ABC"
+        if iface:
+            return iface
+        return ""
+
+    def _render_properties(self, lines: List[str], oclass: OoadClass, contract: bool) -> None:
         for prop in oclass.properties:
             hint = prop.type_hint or "object"
-            if is_interface_name(oclass.name) or not iface:
+            if contract:
                 lines.append("    @property")
                 lines.append("    @abstractmethod")
                 lines.append(f"    def {prop.name}(self) -> {hint}: ...")
                 lines.append("")
             else:
                 lines.append(f"    {prop.name}: {hint}")
-        if oclass.properties and not is_interface_name(oclass.name) and iface:
+        if oclass.properties and not contract:
             lines.append("")
 
-    def _render_init(self, lines: List[str], oclass: OoadClass) -> None:
-        if not oclass.properties:
+    def _render_init(self, lines: List[str], oclass: OoadClass, contract: bool) -> None:
+        constructors = [op for op in oclass.operations if op.name == oclass.name]
+        if constructors:
+            params = constructors[0].parameters
+            param_sig = ", ".join(parameter.save() for parameter in params)
+        elif oclass.properties:
+            param_sig = ", ".join(
+                f"{p.name}: {p.type_hint}" if p.type_hint else p.name for p in oclass.properties
+            )
+        else:
             return
-        param_sig = ", ".join(
-            f"{p.name}: {p.type_hint}" if p.type_hint else p.name for p in oclass.properties
-        )
-        lines.append("    @abstractmethod")
+        if contract:
+            lines.append("    @abstractmethod")
         lines.append(f"    def __init__(self, {param_sig}) -> None: ...")
         lines.append("")

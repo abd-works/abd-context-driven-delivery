@@ -128,8 +128,11 @@ class TypeScriptOoadClass(OoadClass):
             lines.append("}")
             return "\n".join(lines)
         iface = companion_interface_name(self.name, names)
+        bases = list(self.collaborators)
         if iface:
             lines.append(f"abstract class {self.name} implements {iface} {{")
+        elif bases:
+            lines.append(f"class {self.name} extends {bases[0]} {{")
         else:
             lines.append(f"class {self.name} {{")
         for property_row in self.properties:
