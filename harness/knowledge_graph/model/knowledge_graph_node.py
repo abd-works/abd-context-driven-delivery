@@ -129,6 +129,96 @@ def practice_root_labels(selected):
     ]
 
 
+_PRACTICE_IDS = {
+    "CleanEngineering": "clean_engineering",
+    "Stories": "stories",
+    "Ddd": "ddd",
+    "Bdd": "bdd",
+    "Clean Engineering": "clean_engineering",
+    "Domain Driven Design": "ddd",
+    "BDD": "bdd",
+}
+
+PRACTICE_NODE_TYPES = {
+    "clean_engineering": [
+        "Module",
+        "Package",
+        "OoadClass",
+        "Property",
+        "Relationship",
+        "Operation",
+        "Parameter",
+        "File",
+        "CleanEngineeringModel",
+    ],
+    "stories": [
+        "Increment",
+        "Epic",
+        "SubEpic",
+        "Story",
+        "Scenario",
+        "Background",
+        "Step",
+        "Example",
+        "StoryModel",
+    ],
+    "ddd": [
+        "BoundedContext",
+        "Aggregate",
+        "Entity",
+        "EntityRoot",
+        "ValueObject",
+        "Repository",
+        "DomainEvent",
+        "DomainService",
+        "Specification",
+    ],
+    "bdd": ["Description", "Context", "Observation"],
+}
+
+STORY_NODE_TYPES = set(PRACTICE_NODE_TYPES["stories"])
+
+
+def included_practice_ids(selected, expand_domain_driven_design=True):
+    found = []
+    for practice in selected:
+        name = _PRACTICE_IDS.get(practice, practice)
+        if name not in found:
+            found.append(name)
+    if expand_domain_driven_design and "ddd" in found and "clean_engineering" not in found:
+        found.append("clean_engineering")
+    return found
+
+
+def retained_tree(nodes, selected, expand_domain_driven_design=True):
+    practices = included_practice_ids(selected, expand_domain_driven_design)
+    allowed = set()
+    for practice in practices:
+        allowed.update(PRACTICE_NODE_TYPES.get(practice, []))
+
+    def visit(node):
+        children = []
+        for child in getattr(node, "children", None) or []:
+            kept = visit(child)
+            if kept is not None:
+                children.append(kept)
+        semantic = node.nodeType.name if node.nodeType else ""
+        practice = _PRACTICE_IDS.get(node.practice, node.practice) if node.practice else ""
+        type_fits = semantic in allowed
+        practice_fits = not practice or practice in practices
+        folder = semantic in {"Module", "Package"} and children
+        if (type_fits and practice_fits) or folder:
+            copy = KnowledgeGraphNode()
+            copy.name = node.name
+            copy.practice = node.practice
+            copy.nodeType = node.nodeType
+            copy.children = children
+            return copy
+        return None
+
+    return [kept for kept in (visit(node) for node in nodes) if kept is not None]
+
+
 def editor_height(line_count, folds, open_starts, line_height=20, max_height=520):
     open_lines = set(open_starts)
     hidden = 0

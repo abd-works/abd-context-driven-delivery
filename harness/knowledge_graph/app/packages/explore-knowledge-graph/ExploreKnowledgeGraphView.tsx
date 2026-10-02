@@ -8,6 +8,7 @@ import {
   includedPracticeIds,
   practiceId,
   practiceRootLabels,
+  retainedTree,
 } from './knowledge-graph/knowledge-graph';
 import { KindMark, kindLabel } from './kind-mark';
 import {
@@ -1048,9 +1049,7 @@ function practiceForest(
             ? 'bdd'
             : 'stories';
     const includeCleanEngineering = id === 'ddd' && !showCleanEngineering;
-    const children = nodes
-      .map((node) => prunePractice(node, id, includeCleanEngineering))
-      .filter((node): node is KnowledgeGraphNode => Boolean(node));
+    const children = retainedTree(nodes, [id], includeCleanEngineering);
     if (!children.length) {
       continue;
     }
@@ -1063,28 +1062,6 @@ function practiceForest(
     roots.push(root);
   }
   return roots.length ? roots : nodes;
-}
-
-function prunePractice(
-  node: KnowledgeGraphNode,
-  practice: string,
-  includeCleanEngineering: boolean,
-): KnowledgeGraphNode | null {
-  if (node.nodeType?.name === 'File') {
-    return null;
-  }
-  const children = (node.children ?? [])
-    .map((child) => prunePractice(child, practice, includeCleanEngineering))
-    .filter((child): child is KnowledgeGraphNode => Boolean(child));
-  const id = node.practice ? practiceId(node.practice) : '';
-  const structural = !id || node.nodeType?.name === 'Package' || node.nodeType?.name === 'Module';
-  const mine = id === practice || (includeCleanEngineering && id === 'clean_engineering');
-  if (!mine && !(structural && children.length)) {
-    return null;
-  }
-  const copy = Object.assign(Object.create(Object.getPrototypeOf(node)), node) as KnowledgeGraphNode;
-  copy.children = children;
-  return copy;
 }
 
 type SourceFold = { start: number; end: number; kind: string; label: string };

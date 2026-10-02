@@ -141,6 +141,130 @@ export function editorHeight(
   return Math.min(maxHeight, Math.max(1, lineCount - hidden) * lineHeight);
 }
 
+export const PRACTICE_NODE_TYPES: Record<string, string[]> = {
+  clean_engineering: [
+    "Module",
+    "Package",
+    "OoadClass",
+    "Property",
+    "Relationship",
+    "Operation",
+    "Parameter",
+    "File",
+    "CleanEngineeringModel",
+  ],
+  stories: [
+    "Increment",
+    "Epic",
+    "SubEpic",
+    "Story",
+    "Scenario",
+    "Background",
+    "Step",
+    "Example",
+    "StoryModel",
+  ],
+  ddd: [
+    "BoundedContext",
+    "Aggregate",
+    "Entity",
+    "EntityRoot",
+    "ValueObject",
+    "Repository",
+    "DomainEvent",
+    "DomainService",
+    "Specification",
+  ],
+  bdd: ["Description", "Context", "Observation"],
+};
+
+const STEP_CROSS_EDGES = new Set(["invokes", "demonstrates"]);
+
+export function retainedTree(
+  nodes: KnowledgeGraphNode[],
+  selected: string[],
+  expandDomainDrivenDesign = true,
+): KnowledgeGraphNode[] {
+  const ids = selected.map((practice) => practiceId(practice));
+  const practices = expandDomainDrivenDesign ? includedPracticeIds(ids) : ids;
+  const allowed = new Set(practices.flatMap((practice) => PRACTICE_NODE_TYPES[practice] ?? []));
+  const visit = (node: KnowledgeGraphNode): KnowledgeGraphNode[] => {
+    const children = (node.children ?? []).flatMap(visit);
+    const type = node.nodeType?.name ?? "";
+    const practice = node.practice ? practiceId(node.practice) : "";
+    const typeFits = allowed.has(type);
+    const practiceFits = !practice || practices.includes(practice);
+    const folder = (type === "Module" || type === "Package") && practiceFits && children.length > 0;
+    if ((typeFits && practiceFits) || folder) {
+      const copy = copyNode(node);
+      copy.children = children;
+      return [copy];
+    }
+    return children;
+  };
+  return attachExplicitStepEdges(nodes.flatMap(visit), nodes);
+}
+
+function copyNode(node: KnowledgeGraphNode): KnowledgeGraphNode {
+  const copy = Object.assign(Object.create(Object.getPrototypeOf(node)), node) as KnowledgeGraphNode;
+  copy.children = [];
+  copy.relationships = [...(node.relationships ?? [])];
+  return copy;
+}
+
+function attachExplicitStepEdges(
+  roots: KnowledgeGraphNode[],
+  source: KnowledgeGraphNode[],
+): KnowledgeGraphNode[] {
+  const sourceById = new Map<string, KnowledgeGraphNode>();
+  const steps: KnowledgeGraphNode[] = [];
+  const walkSource = (items: KnowledgeGraphNode[]) => {
+    for (const node of items) {
+      if (node.nodeId) {
+        sourceById.set(node.nodeId, node);
+      }
+      if (node.nodeType?.name === "Step") {
+        steps.push(node);
+      }
+      walkSource(node.children ?? []);
+    }
+  };
+  walkSource(source);
+  const keptById = new Map<string, KnowledgeGraphNode>();
+  const walkKept = (items: KnowledgeGraphNode[]) => {
+    for (const node of items) {
+      if (node.nodeId) {
+        keptById.set(node.nodeId, node);
+      }
+      walkKept(node.children ?? []);
+    }
+  };
+  walkKept(roots);
+  for (const step of steps) {
+    for (const link of step.relationships ?? []) {
+      if (!STEP_CROSS_EDGES.has(link.kind)) {
+        continue;
+      }
+      const target = sourceById.get(link.nodeId);
+      if (!target) {
+        continue;
+      }
+      const keptStep = keptById.get(step.nodeId);
+      const keptTarget = keptById.get(target.nodeId);
+      if (keptStep && !keptTarget) {
+        const copy = copyNode(target);
+        keptStep.children = [...(keptStep.children ?? []), copy];
+        keptById.set(copy.nodeId, copy);
+      } else if (keptTarget && !keptStep) {
+        const copy = copyNode(step);
+        keptTarget.children = [...(keptTarget.children ?? []), copy];
+        keptById.set(copy.nodeId, copy);
+      }
+    }
+  }
+  return roots;
+}
+
 export function stepMembers(text: string): { operations: string[]; examples: string[] } {
   const operations: string[] = [];
   const examples: string[] = [];

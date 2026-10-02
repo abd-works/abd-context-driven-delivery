@@ -9,12 +9,74 @@ from harness.knowledge_graph.model.knowledge_graph_node import (
     KnowledgeGraphCallSource,
     KnowledgeGraphFilter,
     KnowledgeGraphNode,
+    KnowledgeGraphNodeType,
     KnowledgeGraphSourceFold,
     editor_height,
     practice_root_labels,
+    retained_tree,
     step_members,
 )
 from practices.stories.model.story_model import Epic, StoryModel
+
+_STORY_NODE_TYPES = {
+    "Increment",
+    "Epic",
+    "SubEpic",
+    "Story",
+    "Scenario",
+    "Background",
+    "Step",
+    "Example",
+    "StoryModel",
+}
+
+
+def _node(name, semantic, practice="", children=None):
+    node = KnowledgeGraphNode()
+    node.name = name
+    node.practice = practice
+    node.nodeType = KnowledgeGraphNodeType(semantic, practice, "")
+    node.children = list(children or [])
+    return node
+
+
+def _mixed_practice_tree():
+    return [
+        _node(
+            "domain",
+            "Module",
+            "clean_engineering",
+            [
+                _node("Customer", "OoadClass", "clean_engineering"),
+                _node("customer.ts", "File", "clean_engineering"),
+                _node("Onboard A Customer", "Story", "stories"),
+                _node("Given a plan", "Step", "stories"),
+                _node("Ordering", "BoundedContext", "ddd"),
+            ],
+        ),
+        _node(
+            "tests",
+            "Package",
+            "stories",
+            [
+                _node("Select Plan", "Story", "stories"),
+                _node("select-plan.e2e.ts", "File", "stories"),
+            ],
+        ),
+        _node("Customer is known", "Description", "bdd"),
+    ]
+
+
+def _flatten(nodes):
+    found = []
+
+    def walk(items):
+        for node in items:
+            found.append(node)
+            walk(getattr(node, "children", []) or [])
+
+    walk(nodes)
+    return found
 
 
 def _graph(folder):
@@ -131,28 +193,55 @@ with description("a knowledge graph"):
                 expect(self.cascade.ruleSetFilter.available).to(equal(["base", "project"]))
 
     with context("that selects clean engineering"):
-        with it("should leave stories and domain driven design out of the class model"):
-            cascade = KnowledgeGraphFilter(["CleanEngineering"])
-            expect(cascade.nodeFilter.choices).to(contain("OoadClass"))
-            expect(cascade.nodeFilter.choices).not_to(contain("Story"))
-            expect(cascade.nodeFilter.choices).not_to(contain("BoundedContext"))
-            expect(cascade.nodeFilter.choices).not_to(contain("Description"))
+        with it("should leave story nodes out of the folders and files"):
+            included = _flatten(retained_tree(_mixed_practice_tree(), ["CleanEngineering"]))
+            folders_and_files = [
+                node for node in included if node.nodeType.name in {"Module", "Package", "File"}
+            ]
+            expect([node.name for node in folders_and_files]).to(equal(["domain", "customer.ts"]))
+            for node in folders_and_files:
+                expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
+            for node in included:
+                expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
+            expect([node.name for node in included]).to(contain("Customer"))
+            expect("Onboard A Customer" in [node.name for node in included]).to(equal(False))
+            expect("Select Plan" in [node.name for node in included]).to(equal(False))
+            expect("select-plan.e2e.ts" in [node.name for node in included]).to(equal(False))
 
     with context("that selects domain driven design"):
-        with it("should include clean engineering plus domain driven design stereotypes"):
-            cascade = KnowledgeGraphFilter(["Ddd"])
-            expect(cascade.nodeFilter.choices).to(contain("BoundedContext"))
-            expect(cascade.nodeFilter.choices).to(contain("OoadClass"))
-            expect(cascade.nodeFilter.choices).to(contain("Module"))
-            expect(cascade.nodeFilter.choices).not_to(contain("Story"))
-            expect(cascade.nodeFilter.choices).not_to(contain("Description"))
+        with it("should keep clean engineering folders and files and leave story nodes out"):
+            included = _flatten(retained_tree(_mixed_practice_tree(), ["Ddd"]))
+            names = [node.name for node in included]
+            for node in included:
+                expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
+            expect(names).to(contain("domain"))
+            expect(names).to(contain("Customer"))
+            expect(names).to(contain("customer.ts"))
+            expect(names).to(contain("Ordering"))
+            expect("Onboard A Customer" in names).to(equal(False))
+            expect("Given a plan" in names).to(equal(False))
 
     with context("that selects behavior driven development"):
-        with it("should leave stories and clean engineering out"):
-            cascade = KnowledgeGraphFilter(["Bdd"])
-            expect(cascade.nodeFilter.choices).to(contain("Observation"))
-            expect(cascade.nodeFilter.choices).not_to(contain("Story"))
-            expect(cascade.nodeFilter.choices).not_to(contain("OoadClass"))
+        with it("should leave story nodes and class folders out"):
+            included = _flatten(retained_tree(_mixed_practice_tree(), ["Bdd"]))
+            expect([node.name for node in included]).to(equal(["Customer is known"]))
+            for node in included:
+                expect(node.nodeType.name in _STORY_NODE_TYPES).to(equal(False))
+                expect(node.nodeType.name in {"Module", "Package", "File", "OoadClass"}).to(equal(False))
+
+    with context("with a chosen node"):
+        with it("should hold that node as selected"):
+            node = KnowledgeGraphNode()
+            node.name = "Story"
+            self.graph.choose(node)
+            expect(self.graph.selected).to(equal(node))
+
+    with context("with open branches"):
+        with it("should hold those nodes as expanded"):
+            node = KnowledgeGraphNode()
+            node.name = "Epic"
+            self.graph.open(node)
+            expect(self.graph.expanded).to(contain(node))
 
 
 with description("a practice tree"):
@@ -182,20 +271,6 @@ with description("a scenario step"):
         )
         expect(members["operations"]).to(equal(["submitFeedback"]))
         expect(members["examples"]).to(equal(["feedbackSubjectExample", "feedbackMessageExample"]))
-
-    with context("with a chosen node"):
-        with it("should hold that node as selected"):
-            node = KnowledgeGraphNode()
-            node.name = "Story"
-            self.graph.choose(node)
-            expect(self.graph.selected).to(equal(node))
-
-    with context("with open branches"):
-        with it("should hold those nodes as expanded"):
-            node = KnowledgeGraphNode()
-            node.name = "Epic"
-            self.graph.open(node)
-            expect(self.graph.expanded).to(contain(node))
 
 
 with description("an operation"):

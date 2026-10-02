@@ -7,8 +7,68 @@ import {
   KnowledgeGraphSourceFold,
   editorHeight,
   practiceRootLabels,
+  retainedTree,
   stepMembers,
 } from "./knowledge-graph";
+
+const STORY_NODE_TYPES = [
+  "Increment",
+  "Epic",
+  "SubEpic",
+  "Story",
+  "Scenario",
+  "Background",
+  "Step",
+  "Example",
+  "StoryModel",
+];
+
+function graphNode(
+  name: string,
+  type: string,
+  practice = "",
+  children: KnowledgeGraphNode[] = [],
+): KnowledgeGraphNode {
+  const node = new KnowledgeGraphNode();
+  node.name = name;
+  node.nodeId = `${type}:${name}`;
+  node.practice = practice;
+  node.nodeType = { name: type } as KnowledgeGraphNode["nodeType"];
+  node.children = children;
+  return node;
+}
+
+function mixedPracticeTree(): KnowledgeGraphNode[] {
+  const operation = graphNode("submitFeedback", "Operation", "clean_engineering");
+  const step = graphNode("When they send a feedback note", "Step", "stories");
+  step.relationships = [{ kind: "invokes", nodeId: operation.nodeId, name: operation.name }];
+  return [
+    graphNode("domain", "Module", "clean_engineering", [
+      graphNode("Customer", "OoadClass", "clean_engineering", [operation]),
+      graphNode("customer.ts", "File", "clean_engineering"),
+      graphNode("Onboard A Customer", "Story", "stories"),
+      graphNode("Given a plan", "Step", "stories"),
+      graphNode("Ordering", "BoundedContext", "ddd"),
+    ]),
+    graphNode("tests", "Package", "stories", [
+      graphNode("Select Plan", "Story", "stories", [step]),
+      graphNode("select-plan.e2e.ts", "File", "stories"),
+    ]),
+    graphNode("Customer is known", "Description", "bdd"),
+  ];
+}
+
+function flatten(nodes: KnowledgeGraphNode[]): KnowledgeGraphNode[] {
+  const all: KnowledgeGraphNode[] = [];
+  const walk = (items: KnowledgeGraphNode[]) => {
+    for (const node of items) {
+      all.push(node);
+      walk(node.children ?? []);
+    }
+  };
+  walk(nodes);
+  return all;
+}
 import { KnowledgeGraphClient } from "./knowledge-graph-client";
 
 function graph() {
@@ -293,32 +353,74 @@ describe("a knowledge graph", () => {
     });
 
     describe("that selects clean engineering", () => {
-      it("should leave stories and domain driven design out of the class model", () => {
-        const filter = new KnowledgeGraphFilter(["CleanEngineering"]);
-        expect(filter.nodeFilter.choices).toContain("OoadClass");
-        expect(filter.nodeFilter.choices).not.toContain("Story");
-        expect(filter.nodeFilter.choices).not.toContain("BoundedContext");
-        expect(filter.nodeFilter.choices).not.toContain("Description");
+      it("should leave story nodes out of the folders and files", () => {
+        const included = flatten(retainedTree(mixedPracticeTree(), ["CleanEngineering"]));
+        const foldersAndFiles = included.filter((node) =>
+          ["Module", "Package", "File"].includes(node.nodeType?.name ?? ""),
+        );
+        expect(foldersAndFiles.map((node) => node.name)).toEqual(["domain", "customer.ts"]);
+        for (const node of foldersAndFiles) {
+          expect(STORY_NODE_TYPES).not.toContain(node.nodeType?.name);
+        }
+        for (const node of included) {
+          if (node.name === "When they send a feedback note") {
+            continue;
+          }
+          expect(STORY_NODE_TYPES).not.toContain(node.nodeType?.name);
+        }
+        expect(included.map((node) => node.name)).toContain("Customer");
+        expect(included.map((node) => node.name)).toContain("When they send a feedback note");
+        expect(included.map((node) => node.name)).not.toContain("Onboard A Customer");
+        expect(included.map((node) => node.name)).not.toContain("Select Plan");
+        expect(included.map((node) => node.name)).not.toContain("Given a plan");
+        expect(included.map((node) => node.name)).not.toContain("select-plan.e2e.ts");
       });
     });
 
     describe("that selects domain driven design", () => {
-      it("should include clean engineering plus domain driven design stereotypes", () => {
-        const filter = new KnowledgeGraphFilter(["Ddd"]);
-        expect(filter.nodeFilter.choices).toContain("BoundedContext");
-        expect(filter.nodeFilter.choices).toContain("OoadClass");
-        expect(filter.nodeFilter.choices).toContain("Module");
-        expect(filter.nodeFilter.choices).not.toContain("Story");
-        expect(filter.nodeFilter.choices).not.toContain("Description");
+      it("should keep clean engineering folders and files and leave story nodes out", () => {
+        const included = flatten(retainedTree(mixedPracticeTree(), ["Ddd"]));
+        for (const node of included) {
+          if (node.name === "When they send a feedback note") {
+            continue;
+          }
+          expect(STORY_NODE_TYPES).not.toContain(node.nodeType?.name);
+        }
+        expect(included.map((node) => node.name)).toEqual(
+          expect.arrayContaining(["domain", "Customer", "customer.ts", "Ordering"]),
+        );
+        expect(included.map((node) => node.name)).not.toContain("Onboard A Customer");
+        expect(included.map((node) => node.name)).not.toContain("Given a plan");
+      });
+    });
+
+    describe("that selects stories", () => {
+      it("should leave class folders and files out except an explicit step edge", () => {
+        const included = flatten(retainedTree(mixedPracticeTree(), ["Stories"]));
+        const names = included.map((node) => node.name);
+        expect(names).not.toContain("domain");
+        expect(names).not.toContain("Customer");
+        expect(names).not.toContain("customer.ts");
+        expect(names).toContain("Select Plan");
+        expect(names).toContain("When they send a feedback note");
+        expect(names).toContain("submitFeedback");
+        for (const node of included) {
+          if (node.name === "submitFeedback") {
+            continue;
+          }
+          expect(node.practice).not.toBe("clean_engineering");
+        }
       });
     });
 
     describe("that selects behavior driven development", () => {
-      it("should leave stories and clean engineering out", () => {
-        const filter = new KnowledgeGraphFilter(["Bdd"]);
-        expect(filter.nodeFilter.choices).toContain("Observation");
-        expect(filter.nodeFilter.choices).not.toContain("Story");
-        expect(filter.nodeFilter.choices).not.toContain("OoadClass");
+      it("should leave story nodes and class folders out", () => {
+        const included = flatten(retainedTree(mixedPracticeTree(), ["Bdd"]));
+        expect(included.map((node) => node.name)).toEqual(["Customer is known"]);
+        for (const node of included) {
+          expect(STORY_NODE_TYPES).not.toContain(node.nodeType?.name);
+          expect(["Module", "Package", "File", "OoadClass"]).not.toContain(node.nodeType?.name);
+        }
       });
     });
   });
