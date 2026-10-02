@@ -160,7 +160,12 @@ class FileInstallation(Installation):
             slug = getattr(toolset, "slug", None)
             if slug:
                 parent = folder.parent if folder.name else folder
-                return parent / self._op_slug(str(slug))
+                leaf = parent / self._op_slug(str(slug))
+                if op in {"instructions", "rules-markdown"}:
+                    return leaf
+                if len(self._skill_ops(toolset)) > 1:
+                    return leaf / op
+                return leaf
         if op in {"instructions", "rules-markdown"}:
             return folder
         last = folder.name

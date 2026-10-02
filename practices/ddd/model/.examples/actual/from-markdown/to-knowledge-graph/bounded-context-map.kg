@@ -1,15 +1,15 @@
-# Bounded Context Map
+# Bounded Context Map — Shop
 
 ## Sales | custom
 
 ### ShoppingCart
 
-ShoppingCart
+ShoppingCart - the cart
   CartItem
   Discount
 
 Integrations:
-  - Product
+  - Product (by ProductId)
     pattern: Customer/Supplier
     direction: downstream
     crosses: unit price
@@ -22,7 +22,7 @@ emits:
 
 ### Product
 
-Product
+Product - identity and price
 
 ## event map
 

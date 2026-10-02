@@ -28,17 +28,18 @@ def main(argv: list[str] | None = None) -> None:
     if len(args) < 2:
         raise SystemExit("usage: database_cli.py create-database|refresh-master|reload-working-copy ROOT")
     operation, root = args[0], Path(args[1])
-    graph = KnowledgeGraph(root=root)
+    graph = KnowledgeGraph()
+    graph.folder = root
     if operation == "create-database":
-        graph.create_database(root)
+        graph.createDatabase()
         return
     if operation == "refresh-master":
-        graph.refresh_master()
+        graph.copyWorkingCopyToMaster()
         return
     if operation == "reload-working-copy":
-        graph.reload_working_copy()
+        graph.copyMasterToWorkingCopy()
         return
-    raise SystemExit(f"unknown database operation: {operation}")
+    raise SystemExit(f"unknown operation: {operation}")
 
 
 if __name__ == "__main__":

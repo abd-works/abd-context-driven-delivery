@@ -14,6 +14,7 @@ import {
   type KnowledgeGraphRepository,
   type KnowledgeGraphSearch,
 } from './knowledge-graph';
+import { KnowledgeGraphServer } from '../../../../app/packages/explore-knowledge-graph/knowledge-graph/knowledge-graph-server';
 import {
   knowledgeGraphFromWorkspace,
   resolveNamedFolder,
@@ -175,6 +176,9 @@ export class KnowledgeGraphsServer {
     folder: string,
     repo: KnowledgeGraphRepository,
   ): Promise<KnowledgeGraph> {
+    const model = new KnowledgeGraphServer(null, null, null, null);
+    model.folder = folder;
+    model.createDatabase();
     return _runDatabaseOperation('create-database', folder, repo);
   }
 

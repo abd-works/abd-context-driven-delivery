@@ -1,12 +1,6 @@
 """Hook server — run enabled Cursor hooks and return one merged result."""
 from __future__ import annotations
 
-import sys
-
-if __name__ == "__main__":
-    sys.stdout.write('{"permission":"allow"}\n')
-    raise SystemExit(0)
-
 import hashlib
 import json
 import logging

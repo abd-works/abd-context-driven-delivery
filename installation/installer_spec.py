@@ -44,7 +44,7 @@ CAR_INSPECT = ".cursor/skills/actions/examples/car-story/inspect-trip/SKILL.md"
 def stage_invoke_commands(repo_root: Path) -> None:
     car = AgentToolSet.instantiate(CAR)
     car_story = AgentToolSet.instantiate("actions.examples.car_story.car_story:CarStory")
-    Installer("Cursor", path=repo_root / ".cursor").install([car, car_story])
+    Installer("Cursor", path=repo_root / ".cursor").install([car, car_story], replace=False)
 
 
 with description("an operation annotated as a Cursor hook"):
@@ -464,6 +464,46 @@ with description("clean engineering skills registered for deploy") as self:
             expect(names).to(contain("clean-engineering-model"))
             expect(names).to(contain("clean-engineering-modules"))
             expect("clean_engineering" in names).to(equal(False))
+            expect((self.tree / "skills/practices/clean-engineering/SKILL.md").is_file()).to(
+                equal(True)
+            )
+            expect((self.tree / "skills/practices/clean-engineering/clean-engineering-code/SKILL.md").is_file()).to(
+                equal(True)
+            )
+            expect((self.tree / "skills/practices/clean_engineering").exists()).to(equal(False))
+
+        with it("should remove a leftover underscored practice skill folder"):
+            leftover = self.tree / "skills/practices/clean_engineering"
+            leftover.mkdir(parents=True, exist_ok=True)
+            (leftover / "SKILL.md").write_text("stale\n", encoding="utf-8")
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+
+            Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                [CleanEngineering()]
+            )
+            expect(leftover.exists()).to(equal(False))
+            expect((self.tree / "skills/practices/clean-engineering/SKILL.md").is_file()).to(
+                equal(True)
+            )
+
+
+with description("install of a subset of toolsets") as self:
+    with it("should leave skills already written on the tree"):
+        from practices.clean_engineering.clean_engineering import CleanEngineering
+
+        tree = Path(tempfile.mkdtemp())
+        try:
+            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([CleanEngineering()])
+            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
+                [AgentToolSet.instantiate(CAR)],
+                replace=False,
+            )
+            expect((tree / "skills/practices/clean-engineering/SKILL.md").is_file()).to(
+                equal(True)
+            )
+            expect((tree / "skills/practices/examples/car/SKILL.md").is_file()).to(equal(True))
+        finally:
+            shutil.rmtree(tree, ignore_errors=True)
 
 
 with description("practice guidance that has been deployed for VS Code") as self:
@@ -954,7 +994,7 @@ with description("the installer import path") as self:
     with it("should collect deployable toolsets under harness"):
         refs = Installer(ide="Cursor", path=self.repo / ".cursor", repo=self.repo).collect_toolsets()
         expect(refs).to(contain("harness.transformers.transformers:Transformers"))
-        expect(refs).to(contain("harness.knowledge_graph.model.knowledge_graph:KnowledgeGraph"))
+        expect(refs).to(contain("harness.knowledge_graph.legacy.model.knowledge_graph:KnowledgeGraph"))
         expect(refs).to(contain("harness.guidance.guidance:Guidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:FidelityGuidance"))

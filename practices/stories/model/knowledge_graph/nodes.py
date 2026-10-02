@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from harness.knowledge_graph.model.knowledge_graph_node import KnowledgeGraphNode
+from practices.stories.model.json.nodes import JsonStoryModel
 from practices.stories.model.story_model import (
     Background,
     Epic,
@@ -16,20 +19,25 @@ from practices.stories.model.story_model import (
 
 
 class KnowledgeGraphStoryModel(StoryModel, KnowledgeGraphNode):
-    epicType = None
-    incrementType = None
-
     def __init__(self, source=None) -> None:
         StoryModel.__init__(self, source)
 
     def save(self) -> str:
-        return ""
+        return JsonStoryModel().render(self)
 
     def load(self, path) -> "KnowledgeGraphStoryModel":
-        return self
+        text = Path(path).read_text(encoding="utf-8") if Path(path).is_file() else ""
+        if not text:
+            folder = Path(path)
+            candidate = folder / "story-map.kg" if folder.is_dir() else Path(path)
+            if candidate.is_file():
+                text = candidate.read_text(encoding="utf-8")
+        if not text:
+            return self
+        return type(self)(JsonStoryModel().parse(text))
 
     def parse(self, text: str) -> "KnowledgeGraphStoryModel":
-        return self
+        return type(self)(JsonStoryModel().parse(text))
 
     def render(self, canonical=None, previous: str | None = None) -> str:
         del previous
@@ -37,15 +45,15 @@ class KnowledgeGraphStoryModel(StoryModel, KnowledgeGraphNode):
 
 
 class KnowledgeGraphIncrement(Increment, KnowledgeGraphNode):
-    def __init__(self, source) -> None:
+    def __init__(self, source, story_class=None, **kwargs) -> None:
         Increment.__init__(self, source)
 
 
 class KnowledgeGraphEpic(Epic, KnowledgeGraphNode):
     storyType = None
 
-    def __init__(self, source) -> None:
-        Epic.__init__(self, source)
+    def __init__(self, source, story_class=None, **kwargs) -> None:
+        Epic.__init__(self, source, story_class=story_class or KnowledgeGraphStory)
 
 
 class KnowledgeGraphStory(Story, KnowledgeGraphNode):
@@ -79,3 +87,4 @@ KnowledgeGraphStoryModel.epic_type = KnowledgeGraphEpic
 KnowledgeGraphStoryModel.story_type = KnowledgeGraphStory
 KnowledgeGraphStoryModel.increment_type = KnowledgeGraphIncrement
 KnowledgeGraphEpic.storyType = KnowledgeGraphStory
+KnowledgeGraphStory.scenarioType = KnowledgeGraphScenario

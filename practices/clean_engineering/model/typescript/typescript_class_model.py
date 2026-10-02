@@ -24,7 +24,7 @@ from practices.clean_engineering.model.base_class_model import (
     is_interface_name,
 )
 from practices.clean_engineering.model.c_family_parse import CFamilyParse
-from practices.clean_engineering.model.operation import Operation
+from practices.clean_engineering.model.operation import Operation, Parameter
 from practices.clean_engineering.model.property import Property
 from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
@@ -47,6 +47,38 @@ def _ts_type(py_type: str) -> str:
 def _camel_identifier(name: str) -> str:
     parts = re.split(r"_+", name)
     return parts[0] + "".join(part.title() for part in parts[1:])
+
+
+_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_PROSE = re.compile(
+    r"\b(the|and|is|are|a|an|of|to|for|that|this|with|from|into|each|same|only|like)\b",
+    re.I,
+)
+
+
+def _render_callee(callee: str) -> str:
+    text = callee.strip()
+    if not text:
+        return ""
+    tokens = text.split()
+    if _PROSE.search(text) and len(tokens) >= 3:
+        return ""
+    head = tokens[0]
+    args = ", ".join(tokens[1:])
+    call = f"({args})"
+    if head.startswith("super."):
+        rest = head[6:]
+        if rest and rest[0].isupper():
+            return f"    super{call};"
+        return f"    super.{rest}{call};"
+    if head == "super":
+        return f"    super{call};"
+    if "." in head:
+        return f"    {head}{call};"
+    if head[0].isupper() and _IDENT.match(head):
+        target = _camel_identifier(tokens[1]) if len(tokens) > 1 else _camel_identifier(head)
+        return f"    this.{target} = new {head}{call};"
+    return f"    {head}{call};"
 
 
 class TypeScriptProperty(Property):
@@ -79,7 +111,9 @@ class TypeScriptOperation(Operation):
         for note in invariant_lines(self):
             lines.append(f"    // {note}")
         for callee in self.callees:
-            lines.append(f"    {callee}();")
+            rendered = _render_callee(callee)
+            if rendered:
+                lines.append(rendered)
         lines.append("  }")
         return "\n".join(lines)
 
@@ -146,22 +180,23 @@ class TypeScriptOoadClass(OoadClass):
             operation for operation in self.operations
             if operation.name not in {self.name, "constructor"}
         ]
-        if self.properties or constructors:
+        constructor_params = self._constructor_parameters(constructors)
+        if constructor_params or constructors:
             lines.append("")
             params = ", ".join(
-                property_row.constructor_parameter()
-                if hasattr(property_row, "constructor_parameter")
-                else _camel_identifier(property_row.name)
-                for property_row in self.properties
+                f"{_camel_identifier(parameter.name)}: any"
+                for parameter in constructor_params
             )
             lines.append(f"  constructor({params}) {{")
             for operation in constructors:
                 for note in invariant_lines(operation):
                     lines.append(f"    // {note}")
                 for callee in operation.callees:
-                    lines.append(f"    {callee}();")
-            for property_row in self.properties:
-                camel = _camel_identifier(property_row.name)
+                    rendered = _render_callee(callee)
+                    if rendered:
+                        lines.append(rendered)
+            for parameter in constructor_params:
+                camel = _camel_identifier(parameter.name)
                 lines.append(f"    this.{camel} = {camel};")
             lines.append("  }")
             lines.append("")
@@ -169,6 +204,16 @@ class TypeScriptOoadClass(OoadClass):
             lines.append(operation.render() if hasattr(operation, "render") else operation.name)
         lines.append("}")
         return "\n".join(lines)
+
+    def _constructor_parameters(self, constructors: List[Operation]) -> list:
+        if constructors and constructors[0].parameters:
+            return list(constructors[0].parameters)
+        if constructors:
+            return []
+        return [
+            Parameter(name=property_row.name, sequential_order=index)
+            for index, property_row in enumerate(self.properties, start=1)
+        ]
 
 
 class TypeScriptModule(Module):

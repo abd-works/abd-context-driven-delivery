@@ -10,6 +10,9 @@ export default defineConfig({
   server: {
     port: uiPort,
     strictPort: true,
+    fs: {
+      allow: ['..', '../../..', '../../../../app'],
+    },
     proxy: {
       '/api': {
         target: `http://localhost:${apiPort}`,

@@ -1,7 +1,5 @@
 import { type ChangeEvent, useEffect, useState } from 'react';
 import { useKnowledgeGraph } from './knowledge-graph/knowledge-graph-client';
-import { PracticeGraphTree } from './PracticeGraphTree';
-import { SelectedNodePane } from './SelectedNodePane';
 import {
   isScanSourcePath,
   pickerRelativePath,
@@ -22,32 +20,15 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     loading,
     workStatus,
     folder: scannedFolder,
-    listedTree,
-    selectedNode,
-    selectedTree,
-    selectedRule,
-    sourceFile,
+    html,
     selectNode,
-    followRelationship,
-    filterGraph,
     selectFolder,
-    filterOptions,
     refreshGraph,
     createDatabase,
     refreshMaster,
     reloadWorkingCopy,
     scanError,
   } = useKnowledgeGraph(graphId);
-  const [practices, setPractices] = useState<string[] | null>(null);
-  const [stages, setStages] = useState<string[] | null>(null);
-  const [nodeTypes, setNodeTypes] = useState<string[] | null>(null);
-  const [relationshipTypes, setRelationshipTypes] = useState<string[] | null>(
-    null,
-  );
-  const [rules, setRules] = useState<string[] | null>(null);
-  const [ruleSources, setRuleSources] = useState<string[] | null>(null);
-  const [violations, setViolations] = useState(false);
-  const [showRules, setShowRules] = useState(true);
   const [folder, setFolder] = useState(scannedFolder);
   const [theme, setTheme] = useState(
     () => document.documentElement.dataset.theme ?? '',
@@ -96,34 +77,6 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
       });
     }
     selectFolder({ folder: folderName, files: scanSourceFiles(picked) });
-  }
-
-  function applyFilters(next: {
-    practices?: string[] | null;
-    stages?: string[] | null;
-    nodeTypes?: string[] | null;
-    relationshipTypes?: string[] | null;
-    rules?: string[] | null;
-    ruleSources?: string[] | null;
-    violations?: boolean;
-  }) {
-    const practiceValues = 'practices' in next ? next.practices! : practices;
-    const stageValues = 'stages' in next ? next.stages! : stages;
-    const nodeTypeValues = 'nodeTypes' in next ? next.nodeTypes! : nodeTypes;
-    const relationshipValues =
-      'relationshipTypes' in next ? next.relationshipTypes! : relationshipTypes;
-    const ruleValues = 'rules' in next ? next.rules! : rules;
-    const sourceValues = 'ruleSources' in next ? next.ruleSources! : ruleSources;
-    const violationsValue = next.violations ?? violations;
-    filterGraph({
-      practices: practiceValues ?? undefined,
-      stages: stageValues ?? undefined,
-      nodeTypes: nodeTypeValues ?? undefined,
-      relationshipTypes: relationshipValues ?? undefined,
-      rules: ruleValues ?? undefined,
-      ruleSources: sourceValues ?? undefined,
-      violations: violationsValue,
-    });
   }
 
   const engineering = theme === 'engineering';
@@ -273,223 +226,36 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
               />
             ) : null}
           </div>
-          <div className="filters" hidden={!filtersOpen}>
-            <FilterList
-              label="practice"
-              values={practices}
-              options={filterOptions.practices}
-              onChange={(next) => {
-                setPractices(next);
-                applyFilters({ practices: next });
-              }}
-            />
-            <FilterList
-              label="stage"
-              values={stages}
-              options={filterOptions.stages}
-              onChange={(next) => {
-                setStages(next);
-                setRules(null);
-                applyFilters({ stages: next, rules: null });
-              }}
-            />
-            <FilterList
-              label="node type"
-              values={nodeTypes}
-              options={filterOptions.node_types}
-              onChange={(next) => {
-                setNodeTypes(next);
-                applyFilters({ nodeTypes: next });
-              }}
-            />
-            <FilterList
-              label="relationship"
-              values={relationshipTypes}
-              options={filterOptions.relationship_types}
-              onChange={(next) => {
-                setRelationshipTypes(next);
-                applyFilters({ relationshipTypes: next });
-              }}
-            />
-            <FilterList
-              label="ruleset"
-              values={ruleSources}
-              options={filterOptions.rule_sources ?? ['base', 'project']}
-              onChange={(next) => {
-                setRuleSources(next);
-                applyFilters({ ruleSources: next });
-              }}
-            />
-            <FilterList
-              label="rule"
-              values={rules}
-              options={filterOptions.rules ?? []}
-              onChange={(next) => {
-                setRules(next);
-                applyFilters({ rules: next });
-              }}
-            />
-            <div className="filter-extras">
-              <label>
-                show rules
-                <input
-                  type="checkbox"
-                  data-testid="show-rules"
-                  checked={showRules}
-                  onChange={(event) => setShowRules(event.target.checked)}
-                />
-              </label>
-              <label>
-                violations
-                <input
-                  type="checkbox"
-                  checked={violations}
-                  onChange={(event) => {
-                    const next = event.target.checked;
-                    setViolations(next);
-                    applyFilters({ violations: next });
-                  }}
-                />
-              </label>
-            </div>
-          </div>
+          <div className="filters" hidden={!filtersOpen} />
         </div>
-        <div className="split">
-          <nav className="panel tree" data-testid="practice-graph-tree">
-            {loading && (
-              <p className="empty-state" data-testid="graph-loading">
-                {workStatus
-                  ? `${workStatus.action}… ${workStatus.seconds}s`
-                  : 'Loading KnowledgeGraph...'}
-              </p>
-            )}
-            {!loading && scanError && (
-              <p className="empty-state" data-testid="scan-error">
-                {scanError}
-              </p>
-            )}
-            {!loading && !scanError && listedTree.length === 0 && (
-              <p className="empty-state">
-                Select a repo folder to load the Knowledge Graph.
-              </p>
-            )}
-            <PracticeGraphTree
-              key={folder}
-              roots={listedTree}
-              practices={practices}
-              showRules={showRules}
-              selectedId={selectedNode?.node_id ?? null}
-              selectedRule={selectedRule?.slug ?? null}
-              onSelect={selectNode}
-            />
-          </nav>
-          <section className="panel" data-testid="source-file">
-            <SelectedNodePane
-              selectedNode={selectedNode}
-              selectedTree={selectedTree}
-              selectedRule={selectedRule}
-              sourceFile={sourceFile}
-              folder={scannedFolder}
-              violations={violations}
-              showRules={showRules}
-            />
-          </section>
-        </div>
-        {selectedNode && !selectedNode.is_file && (
-          <button
-            type="button"
-            hidden
-            onClick={() =>
-              selectedNode && followRelationship(selectedNode.node_id)
+        <div
+          className="split"
+          data-testid="practice-graph-tree"
+          onClick={(event) => {
+            const target = (event.target as HTMLElement).closest('[data-node-id]');
+            if (target) {
+              selectNode(target.getAttribute('data-node-id') ?? '');
             }
-          >
-            follow
-          </button>
-        )}
+          }}
+        >
+          {loading && (
+            <p className="empty-state" data-testid="graph-loading">
+              {workStatus
+                ? `${workStatus.action}… ${workStatus.seconds}s`
+                : 'Loading KnowledgeGraph...'}
+            </p>
+          )}
+          {!loading && scanError && (
+            <p className="empty-state" data-testid="scan-error">
+              {scanError}
+            </p>
+          )}
+          <div
+            data-testid="source-file"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        </div>
       </div>
     </main>
   );
-}
-
-function FilterList({
-  label,
-  values,
-  options,
-  onChange,
-}: {
-  label: string;
-  values: string[] | null;
-  options: string[];
-  onChange: (next: string[] | null) => void;
-}) {
-  const [sort, setSort] = useState<'none' | 'asc' | 'desc'>('asc');
-  const shown = sortedOptions(options, sort);
-  const selected = values === null ? options : values;
-  return (
-    <div className="filter-list">
-      <div className="filter-heading">
-        <span className="filter-label">{label}</span>
-        <div className="filter-actions">
-          <button type="button" onClick={() => onChange(null)}>
-            All
-          </button>
-          <button type="button" onClick={() => onChange([])}>
-            None
-          </button>
-          <button
-            type="button"
-            aria-label={`Sort ${label} A to Z`}
-            className={sort === 'asc' ? 'is-active' : ''}
-            onClick={() => setSort('asc')}
-          >
-            ↑
-          </button>
-          <button
-            type="button"
-            aria-label={`Sort ${label} Z to A`}
-            className={sort === 'desc' ? 'is-active' : ''}
-            onClick={() => setSort('desc')}
-          >
-            ↓
-          </button>
-          <button
-            type="button"
-            aria-label={`No sort for ${label}`}
-            className={sort === 'none' ? 'is-active' : ''}
-            onClick={() => setSort('none')}
-          >
-            −
-          </button>
-        </div>
-      </div>
-      <select
-        multiple
-        size={6}
-        value={selected}
-        onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-          onChange(
-            Array.from(event.target.selectedOptions, (option) => option.value),
-          );
-        }}
-      >
-        {shown.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function sortedOptions(
-  options: string[],
-  sort: 'none' | 'asc' | 'desc',
-): string[] {
-  if (sort === 'none') {
-    return options;
-  }
-  const copy = [...options];
-  copy.sort((left, right) => left.localeCompare(right));
-  return sort === 'desc' ? copy.reverse() : copy;
 }

@@ -1,11 +1,6 @@
 """Persistent HookServer process — stdin CLI connects through HookServer.ensure."""
 from __future__ import annotations
 
-import sys
-
-if __name__ == "__main__":
-    raise SystemExit(0)
-
 import json
 import os
 import socket

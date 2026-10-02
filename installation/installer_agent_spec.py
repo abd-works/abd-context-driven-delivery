@@ -78,7 +78,7 @@ def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
 def stage_invoke_commands(repo_root: Path) -> None:
     car = AgentToolSet.instantiate(CAR)
     car_story = AgentToolSet.instantiate("actions.examples.car_story.car_story:CarStory")
-    Installer("Cursor", path=repo_root / ".cursor").install([car, car_story])
+    Installer("Cursor", path=repo_root / ".cursor").install([car, car_story], replace=False)
 
 
 def ensure_invoke_staged(repo_root: Path) -> None:

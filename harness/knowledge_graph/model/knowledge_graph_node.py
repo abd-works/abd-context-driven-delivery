@@ -2,208 +2,323 @@
 
 from __future__ import annotations
 
+import re
+
+PRACTICE_STAGES = {
+    "Stories": ["Discovery"],
+    "CleanEngineering": ["Specification", "Implementation"],
+    "Ddd": ["Specification"],
+    "Bdd": ["Specification"],
+}
+
+PRACTICE_NODES = {
+    "Stories": {
+        "Discovery": ["Increment", "Epic", "Story", "Scenario", "Background", "Step", "Example"],
+    },
+    "CleanEngineering": {
+        "Specification": ["OoadClass", "Property", "Relationship", "Operation", "Parameter"],
+        "Implementation": ["Module"],
+    },
+    "Ddd": {
+        "Specification": ["BoundedContext", "Aggregate", "Entity", "EntityRoot", "ValueObject"],
+    },
+    "Bdd": {
+        "Specification": ["Description", "Context", "Observation"],
+    },
+}
+
+NODE_EDGES = {
+    "Epic": ["owns"],
+    "Story": ["owns", "demonstrates"],
+    "OoadClass": ["composition", "aggregation", "associates", "invokes"],
+    "Operation": ["invokes", "hasParameter", "returns"],
+    "Property": ["hasType"],
+}
+
+NODE_RULES = {
+    "OoadClass": ["keep-operations-small-focused"],
+    "Operation": ["keep-operations-small-focused"],
+    "Property": ["hide-inner-details"],
+}
+
+_CALL = re.compile(r"((?:[A-Z][A-Za-z0-9]*\.)?[A-Za-z_][A-Za-z0-9]*)\s*\(")
+
 
 class KnowledgeGraphNodeType:
-    name: object
-    practice: object
-    stage: object
-    edgeTypes: object
-
-    def __init__(self, name, practice, stage, edgeTypes) -> None: ...
+    def __init__(self, name, practice, stage, edgeTypes=None) -> None:
+        self.name = name
+        self.practice = practice
+        self.stage = stage
+        self.edgeTypes = list(edgeTypes or [])
 
 
 class KnowledgeGraphEdgeType:
-    name: object
-    fromType: object
-    toType: object
-    inverse: object
-    cardinality: object
-
-    def __init__(self, name, fromType, toType, inverse, cardinality) -> None: ...
+    def __init__(self, name, fromType=None, toType=None, inverse=None, cardinality="0..*") -> None:
+        self.name = name
+        self.fromType = fromType
+        self.toType = toType
+        self.inverse = inverse
+        self.cardinality = cardinality
 
 
 class KnowledgeGraphNode:
-    name: object
-    sequentialOrder: object
-    nodeType: object
-    source: object
-    nodeId: object
-    edges: object
-    panel: object
-    rules: object
+    def __init__(self) -> None:
+        self.name = ""
+        self.sequentialOrder = 0
+        self.nodeType = None
+        self.source = None
+        self.nodeId = ""
+        self.edges = []
+        self.panel = None
+        self.rules = None
 
-    def __init__(self) -> None: ...
-
-    def navigateTo(self, edge) -> None: ...
+    def navigateTo(self, edge):
+        if edge.from_node is self:
+            return edge.to
+        if edge.to is self:
+            return edge.from_node
+        return None
 
 
 class KnowledgeGraphSource:
-    text: object
-    file: object
-    startLine: object
-    endLine: object
-    language: object
+    def __init__(self, text, file, startLine, endLine, language) -> None:
+        self.text = text
+        self.file = file
+        self.startLine = startLine
+        self.endLine = endLine
+        self.language = language
 
-    def __init__(self, text, file, startLine, endLine, language) -> None: ...
-
-    def source(self) -> None: ...
+    def source(self):
+        return self.text
 
 
 class KnowledgeGraphCallSource(KnowledgeGraphSource):
-    calls: object
-    folds: object
-    loadCalls: object
-    insertCalls: object
-    loadFolds: object
+    def __init__(self, text, file, startLine, endLine, language) -> None:
+        KnowledgeGraphSource.__init__(self, text, file, startLine, endLine, language)
+        self.calls = []
+        self.folds = []
 
-    def __init__(self, calls, folds, loadCalls, insertCalls, loadFolds) -> None: ...
+    def source(self):
+        KnowledgeGraphSource.source(self)
+        self.loadCalls()
+        self.insertCalls()
+        self.loadFolds()
+        return self.text
 
-    def source(self) -> None: ...
+    def loadCalls(self) -> None:
+        self.calls = []
+        skip = {"if", "for", "while", "function", "def", "switch", "catch"}
+        for line_no, line in enumerate(self.text.splitlines(), 1):
+            order = 0
+            for match in _CALL.finditer(line):
+                name = match.group(1)
+                if name.split(".")[-1] in skip:
+                    continue
+                order += 1
+                self.calls.append(KnowledgeGraphCall(line_no, order, name))
+
+    def insertCalls(self) -> None:
+        lines = self.text.splitlines()
+        for call in self.calls:
+            index = call.line - 1
+            if 0 <= index < len(lines) and f"call:{call.operation}" not in lines[index]:
+                lines[index] = f"{lines[index]} /* call:{call.operation} */"
+        self.text = "\n".join(lines)
+
+    def loadFolds(self) -> None:
+        self.folds = []
+        for call in self.calls:
+            kind = "call" if "." in str(call.operation) else "class"
+            self.folds.append(KnowledgeGraphSourceFold(call.line, call.line, kind))
 
 
 class KnowledgeGraphCall:
-    line: object
-    sequentialOrder: object
-    operation: object
-
-    def __init__(self, line, sequentialOrder, operation) -> None: ...
+    def __init__(self, line, sequentialOrder, operation) -> None:
+        self.line = line
+        self.sequentialOrder = sequentialOrder
+        self.operation = operation
 
 
 class KnowledgeGraphSourceFold:
-    start: object
-    end: object
-    kind: object
-
-    def __init__(self, start, end, kind) -> None: ...
+    def __init__(self, start, end, kind) -> None:
+        self.start = start
+        self.end = end
+        self.kind = kind
 
 
 class KnowledgeGraphPanel:
-    source: object
-    language: object
-    open: object
-    theme: object
-    mount: object
-
-    def __init__(self, source, language, open, theme, mount) -> None: ...
+    def __init__(self, source=None, language="", open=False, theme=None, mount=None) -> None:
+        self.source = source
+        self.language = language
+        self.open = open
+        self.theme = theme
+        self.mount = mount
 
 
 class KnowledgeGraphEdge:
-    edgeType: object
-    from_node: object
-    to: object
-
-    def __init__(self, edgeType, from_node, to) -> None: ...
+    def __init__(self, edgeType, from_node, to) -> None:
+        self.edgeType = edgeType
+        self.from_node = from_node
+        self.to = to
 
 
 class KnowledgeGraphFilter:
-    type: object
-    selected: object
-    available: object
-
-    def __init__(self, practices) -> None: ...
+    def __init__(self, practices=None) -> None:
+        practices = list(practices or [])
+        self.type = "Practice"
+        self.selected = practices
+        self.available = practices
+        self.stageFilter = StageFilter([])
+        self.nodeFilter = NodeFilter([])
+        self.relationshipFilter = RelationshipFilter([])
+        self.ruleSetFilter = RuleSetFilter([], ["base", "project"])
+        self.ruleFilter = RuleFilter([])
+        self.stageFilter.available(practices)
+        stages = self.stageFilter.selected or self.stageFilter.choices
+        self.nodeFilter.available(practices, stages)
+        self.relationshipFilter.available(self.nodeFilter.selected or self.nodeFilter.choices)
+        self.ruleSetFilter.available = ["base", "project"]
+        self.ruleFilter.available(self.nodeFilter.selected or self.nodeFilter.choices)
 
 
 class PracticeFilter(KnowledgeGraphFilter):
-    selected: object
-    available: object
-
-    def __init__(self, selected, available) -> None: ...
-
-
-class StageFilter(KnowledgeGraphFilter):
-    selected: object
-
-    def __init__(self, selected) -> None: ...
-
-    def available(self, practices) -> None: ...
+    def __init__(self, selected=None, available=None) -> None:
+        self.type = "Practice"
+        self.selected = list(selected or [])
+        self.available = list(available or [])
 
 
-class NodeFilter(KnowledgeGraphFilter):
-    selected: object
+class StageFilter:
+    def __init__(self, selected=None) -> None:
+        self.type = "Stage"
+        self.selected = list(selected or [])
+        self.choices = []
 
-    def __init__(self, selected) -> None: ...
-
-    def available(self, practices, stages) -> None: ...
-
-
-class RelationshipFilter(KnowledgeGraphFilter):
-    selected: object
-
-    def __init__(self, selected) -> None: ...
-
-    def available(self, nodes) -> None: ...
-
-
-class RuleSetFilter(KnowledgeGraphFilter):
-    selected: object
-    available: object
-
-    def __init__(self, selected, available) -> None: ...
+    def available(self, practices) -> None:
+        found = []
+        for practice in practices:
+            for stage in PRACTICE_STAGES.get(practice, []):
+                if stage not in found:
+                    found.append(stage)
+        self.choices = found
+        if not self.selected:
+            self.selected = list(found)
 
 
-class RuleFilter(KnowledgeGraphFilter):
-    selected: object
+class NodeFilter:
+    def __init__(self, selected=None) -> None:
+        self.type = "Node"
+        self.selected = list(selected or [])
+        self.choices = []
 
-    def __init__(self, selected) -> None: ...
+    def available(self, practices, stages) -> None:
+        found = []
+        for practice in practices:
+            by_stage = PRACTICE_NODES.get(practice, {})
+            for stage in stages:
+                for name in by_stage.get(stage, []):
+                    if name not in found:
+                        found.append(name)
+        self.choices = found
+        if not self.selected:
+            self.selected = list(found)
 
-    def available(self, nodes) -> None: ...
+
+class RelationshipFilter:
+    def __init__(self, selected=None) -> None:
+        self.type = "Relationship"
+        self.selected = list(selected or [])
+        self.choices = []
+
+    def available(self, nodes) -> None:
+        found = []
+        for node in nodes:
+            name = node.name if hasattr(node, "name") else str(node)
+            for edge in NODE_EDGES.get(name, []):
+                if edge not in found:
+                    found.append(edge)
+        self.choices = found
+        if not self.selected:
+            self.selected = list(found)
+
+
+class RuleSetFilter:
+    def __init__(self, selected=None, available=None) -> None:
+        self.type = "RuleSet"
+        self.selected = list(selected or [])
+        self.available = list(available or ["base", "project"])
+
+
+class RuleFilter:
+    def __init__(self, selected=None) -> None:
+        self.type = "Rule"
+        self.selected = list(selected or [])
+        self.choices = []
+
+    def available(self, nodes) -> None:
+        found = []
+        for node in nodes:
+            name = node.name if hasattr(node, "name") else str(node)
+            for rule in NODE_RULES.get(name, []):
+                if rule not in found:
+                    found.append(rule)
+        self.choices = found
+        if not self.selected:
+            self.selected = list(found)
 
 
 class WebKnowledgeGraphNode(KnowledgeGraphNode):
-    keyword: object
-    origin: object
-    properties: object
-    isFile: object
-    isFolder: object
-
-    def __init__(self, keyword, origin, properties, isFile, isFolder) -> None: ...
+    def __init__(self, keyword="", origin=None, properties=None, isFile=False, isFolder=False) -> None:
+        KnowledgeGraphNode.__init__(self)
+        self.keyword = keyword
+        self.origin = origin
+        self.properties = properties or {}
+        self.isFile = isFile
+        self.isFolder = isFolder
 
 
 class PracticeGraph:
-    id: object
-    name: object
-    nodes: object
-    relationships: object
-
-    def __init__(self, id, name, nodes, relationships) -> None: ...
+    def __init__(self, id, name, nodes=None, relationships=None) -> None:
+        self.id = id
+        self.name = name
+        self.nodes = list(nodes or [])
+        self.relationships = list(relationships or [])
 
 
 class SourceRange:
-    file: object
-    startLine: object
-    endLine: object
-    text: object
-
-    def __init__(self, file, startLine, endLine, text) -> None: ...
+    def __init__(self, file, startLine, endLine, text="") -> None:
+        self.file = file
+        self.startLine = startLine
+        self.endLine = endLine
+        self.text = text
 
 
 class RuleHit:
-    ruleSlug: object
-    message: object
-    body: object
-    practice: object
-    fidelity: object
-    tag: object
-
-    def __init__(self, ruleSlug, message, body, practice, fidelity, tag) -> None: ...
+    def __init__(self, ruleSlug, message="", body="", practice="", fidelity="", tag="base") -> None:
+        self.ruleSlug = ruleSlug
+        self.message = message
+        self.body = body
+        self.practice = practice
+        self.fidelity = fidelity
+        self.tag = tag
 
 
 class NodeRules:
-    applicable: object
-    violations: object
-    statuses: object
-    details: object
-    tally: object
+    def __init__(self, applicable=None, violations=None, statuses=None, details=None, tally=None) -> None:
+        self.applicable = list(applicable or [])
+        self.violations = list(violations or [])
+        self.statuses = statuses or {}
+        self.details = details
+        self.tally = tally
 
-    def __init__(self, applicable, violations, statuses, details, tally) -> None: ...
+    def status(self, ruleSlug):
+        return self.statuses.get(ruleSlug)
 
-    def status(self, ruleSlug) -> None: ...
-
-    def hasRule(self, ruleSlug) -> None: ...
+    def hasRule(self, ruleSlug) -> bool:
+        return ruleSlug in self.applicable or any(hit.ruleSlug == ruleSlug for hit in self.violations)
 
 
 class WorkspaceFile:
-    relativePath: object
-    text: object
-
-    def __init__(self, relativePath, text) -> None: ...
+    def __init__(self, relativePath, text) -> None:
+        self.relativePath = relativePath
+        self.text = text

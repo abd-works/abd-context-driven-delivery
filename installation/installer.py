@@ -4,6 +4,8 @@ from __future__ import annotations
 import ast
 import json
 import os
+import shutil
+import stat
 import sys
 import tempfile
 from pathlib import Path
@@ -316,18 +318,69 @@ class Installer:
             dest.unlink()
             removed.append(rel)
             self._prune_empty_parents(dest)
+        self._prune_empty_skill_dirs()
         return removed
+
+    def _prune_empty_skill_dirs(self) -> None:
+        skills = self.path / "skills"
+        if not skills.is_dir():
+            return
+        for dirpath, _dirnames, _filenames in os.walk(skills, topdown=False):
+            folder = Path(dirpath)
+            if folder == skills:
+                continue
+            try:
+                next(folder.iterdir())
+            except StopIteration:
+                try:
+                    folder.rmdir()
+                except OSError:
+                    pass
+
+    def _rmtree(self, path: Path) -> None:
+        def onerror(func: Any, target: str, _exc: Any) -> None:
+            os.chmod(target, stat.S_IWRITE)
+            func(target)
+
+        shutil.rmtree(path, onerror=onerror)
+
+    def _remove_legacy_underscore_skills(self) -> None:
+        skills = self.path / "skills"
+        if not skills.is_dir():
+            return
+        for dirpath, dirnames, _filenames in os.walk(skills):
+            root = Path(dirpath)
+            for name in list(dirnames):
+                kebab = name.replace("_", "-")
+                if kebab == name or not (root / kebab).exists():
+                    continue
+                twin = root / name
+                if twin.is_dir():
+                    self._rmtree(twin)
 
     @Mcp
     @Skill
     @agent_tool
-    def install(self, toolsets: Iterable[Any] | None = None) -> Any:
-        """Install annotated toolsets into the IDE path — skills, commands, rules, MCP, and hooks. Runs clean first."""
-        self.clean()
-        self._installed_paths = []
+    def install(
+        self,
+        toolsets: Iterable[Any] | None = None,
+        replace: bool = True,
+    ) -> Any:
+        """Install annotated toolsets into the IDE path — skills, commands, rules, MCP, and hooks. ``replace`` wipes files from the previous install first."""
+        if replace:
+            self.clean()
+            self._installed_paths = []
+        else:
+            self._installed_paths = [
+                rel
+                for rel in self._load_state().get("installed_files", [])
+                if (self.path / rel).is_file()
+            ]
         self.ensure_import_path()
         self._reset_channels()
         self._install_all(toolsets)
+        self._remove_legacy_underscore_skills()
+        self._prune_empty_skill_dirs()
         self._save_state()
         self._standup_channels()
         self.ensure_mcp_host()
