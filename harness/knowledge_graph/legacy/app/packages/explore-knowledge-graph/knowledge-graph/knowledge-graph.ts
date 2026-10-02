@@ -1395,38 +1395,7 @@ export class KnowledgeGraph {
   ): { name: string; source: SourceRangeDto | null; children: ListedTreeNode[]; failed: number; total: number } {
     const failed = children.reduce((sum, child) => sum + child.failed, 0);
     const total = children.reduce((sum, child) => sum + child.total, 0);
-    if (node.semanticType !== 'Background') {
-      return { name: leaf.name, source: leaf.source, children, failed, total };
-    }
-    const steps = children.filter((child) => child.semantic_type === 'Step');
-    const rest = children.filter((child) => child.semantic_type !== 'Step');
-    const given =
-      steps.find((step) =>
-        stepTitle(step.name, 'Step', '', step.source?.text ?? '').startsWith('Given '),
-      ) ?? steps[0];
-    const name = given
-      ? stepTitle(given.name, 'Step', '', given.source?.text ?? '')
-      : leaf.name;
-    const parts = steps
-      .map((step) => step.source?.text ?? '')
-      .filter((text) => text.length > 0);
-    const source = parts.length
-      ? {
-          file: given?.source?.file || leaf.source?.file || '',
-          start_line: given?.source?.start_line || leaf.source?.start_line || 1,
-          end_line:
-            steps[steps.length - 1]?.source?.end_line ||
-            given?.source?.end_line ||
-            leaf.source?.end_line ||
-            1,
-          text: parts.join('\n'),
-        }
-      : leaf.source;
-    const shown = rest.reduce(
-      (sum, child) => ({ failed: sum.failed + child.failed, total: sum.total + child.total }),
-      { failed: 0, total: 0 },
-    );
-    return { name, source, children: rest, failed: shown.failed, total: shown.total };
+    return { name: leaf.name, source: leaf.source, children, failed, total };
   }
 
   private _sameClassMembers(
@@ -2753,6 +2722,7 @@ function treeTypeRank(kind: string): number {
 function treeOwnerRank(kind: string): number {
   if (kind === 'OoadClass') return 8;
   if (kind === 'Operation') return 10;
+  if (kind === 'Story' || kind === 'Scenario' || kind === 'Background' || kind === 'Step') return 12;
   if (kind === 'Package') return 40;
   if (kind === 'Module' || kind === 'File') return 30;
   if (kind === 'CleanEngineeringModel' || kind === 'StoryMap') return 80;

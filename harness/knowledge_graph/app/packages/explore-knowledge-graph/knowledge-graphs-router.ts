@@ -138,9 +138,10 @@ export class KnowledgeGraphsServer {
         ? knowledgeGraphFromWorkspace(root, uploaded, crypto.randomUUID())
         : _fromPracticeHierarchyCli(root, false);
     const nested = _nestDiskFolders(graph, root);
+    const specified = _attachStorySpecification(nested, root);
     return repo.create({
       folder: root,
-      practiceGraphs: nested.toDto().practice_graphs,
+      practiceGraphs: specified.toDto().practice_graphs,
     });
   }
 
@@ -931,6 +932,178 @@ function _readSourceText(
 
 function graphFromWorkspaceDto(dto: KnowledgeGraphDto): KnowledgeGraph {
   return KnowledgeGraph.fromDto(dto);
+}
+
+function _attachStorySpecification(graph: KnowledgeGraph, root: string): KnowledgeGraph {
+  const dto = graph.toDto();
+  const stories = dto.practice_graphs.find((item) => item.name === 'stories');
+  const tests = join(root, 'tests');
+  if (!stories || !_isDir(tests)) {
+    return graph;
+  }
+  const files = _storyFiles(tests);
+  for (const file of files) {
+    const parsed = _parseStoryFile(root, file);
+    if (!parsed) {
+      continue;
+    }
+    const matches = stories.nodes.filter(
+      (node) => node.semantic_type === 'Story' && node.name === parsed.name,
+    );
+    for (const story of matches) {
+      story.source = story.source?.file
+        ? story.source
+        : {
+            file: parsed.file,
+            start_line: parsed.line,
+            end_line: parsed.endLine,
+            text: '',
+          };
+      for (const background of parsed.backgrounds) {
+        _own(stories, story.node_id, 'Background', 'Background', parsed.file, background.line, background.steps);
+      }
+      for (const scenario of parsed.scenarios) {
+        _own(stories, story.node_id, 'Scenario', scenario.name, parsed.file, scenario.line, scenario.steps);
+      }
+      for (const example of parsed.examples) {
+        _own(stories, story.node_id, 'Example', example.name, example.file, example.line, []);
+      }
+    }
+  }
+  return graphFromWorkspaceDto({ ...dto, folder: root });
+}
+
+function _own(
+  stories: KnowledgeGraphDto['practice_graphs'][number],
+  parentId: string,
+  type: string,
+  name: string,
+  file: string,
+  line: number,
+  steps: { keyword: string; name: string; line: number }[],
+): string | null {
+  const existing = stories.relationships.find(
+    (edge) => edge.kind === 'owns' && edge.from_id === parentId && stories.nodes.some((node) => node.node_id === edge.to_id && node.name === name && node.semantic_type === type),
+  );
+  if (existing) {
+    return existing.to_id;
+  }
+  const nodeId = `stories:${type}:${parentId}:${line}:${name}`;
+  stories.nodes.push({
+    node_id: nodeId,
+    name,
+    practice: 'stories',
+    fidelity: 'scenarios',
+    semantic_type: type,
+    properties: {},
+    applicable_rules: [],
+    violations: [],
+    source: { file, start_line: line, end_line: line, text: '' },
+  });
+  stories.relationships.push({ kind: 'owns', from_id: parentId, to_id: nodeId });
+  let previous = 'given';
+  for (const step of steps) {
+    const keyword = step.keyword === 'and' ? previous : step.keyword;
+    previous = keyword;
+    const label = `${keyword[0].toUpperCase()}${keyword.slice(1)} ${step.name}`;
+    _own(stories, nodeId, 'Step', label, file, step.line, []);
+  }
+  return nodeId;
+}
+
+function _storyFiles(dir: string): string[] {
+  const found: string[] = [];
+  for (const name of readdirSync(dir)) {
+    if (name === 'node_modules' || name.startsWith('.')) {
+      continue;
+    }
+    const abs = join(dir, name);
+    if (statSync(abs).isDirectory()) {
+      found.push(..._storyFiles(abs));
+    } else if (name.endsWith('.e2e.ts')) {
+      found.push(abs);
+    }
+  }
+  return found;
+}
+
+function _parseStoryFile(root: string, abs: string): {
+  name: string;
+  file: string;
+  line: number;
+  endLine: number;
+  backgrounds: { line: number; steps: { keyword: string; name: string; line: number }[] }[];
+  scenarios: { name: string; line: number; steps: { keyword: string; name: string; line: number }[] }[];
+  examples: { name: string; file: string; line: number }[];
+} | null {
+  const text = readFileSync(abs, 'utf8');
+  const story = text.match(/story\(\s*['"]([^'"]+)['"]/);
+  if (!story || story.index == null) {
+    return null;
+  }
+  const file = relative(root, abs).replaceAll('\\', '/');
+  const lines = text.split(/\r?\n/);
+  const backgrounds: { line: number; steps: { keyword: string; name: string; line: number }[] }[] = [];
+  const scenarios: { name: string; line: number; steps: { keyword: string; name: string; line: number }[] }[] = [];
+  let current: { steps: { keyword: string; name: string; line: number }[] } | null = null;
+  lines.forEach((line, index) => {
+    const background = line.match(/background\(\s*['"][^'"]*['"]/);
+    const scenario = line.match(/scenario\(\s*['"]([^'"]+)['"]/);
+    const step = line.match(/(?:^|[^\w])(given|when|then|and)\(\s*['"]([^'"]+)['"]/i);
+    if (background) {
+      current = { steps: [] };
+      backgrounds.push({ line: index + 1, steps: current.steps });
+      return;
+    }
+    if (scenario) {
+      current = { steps: [] };
+      scenarios.push({ name: scenario[1], line: index + 1, steps: current.steps });
+      return;
+    }
+    if (step && current) {
+      current.steps.push({ keyword: step[1].toLowerCase(), name: step[2], line: index + 1 });
+    }
+  });
+  return {
+    name: story[1],
+    file,
+    line: text.slice(0, story.index).split(/\r?\n/).length,
+    endLine: lines.length,
+    backgrounds,
+    scenarios,
+    examples: _importedExamples(root, abs, text),
+  };
+}
+
+function _importedExamples(
+  root: string,
+  storyFile: string,
+  text: string,
+): { name: string; file: string; line: number }[] {
+  const found: { name: string; file: string; line: number }[] = [];
+  const seen = new Set<string>();
+  for (const match of text.matchAll(/from\s+['"]([^'"]+)['"]/g)) {
+    const spec = match[1];
+    if (!spec.includes('examples')) {
+      continue;
+    }
+    const abs = join(dirname(storyFile), spec.endsWith('.ts') ? spec : `${spec}.ts`);
+    if (!existsSync(abs) || seen.has(abs)) {
+      continue;
+    }
+    seen.add(abs);
+    const body = readFileSync(abs, 'utf8');
+    const file = relative(root, abs).replaceAll('\\', '/');
+    for (const exported of body.matchAll(/export (?:const|function) (\w+)/g)) {
+      const at = exported.index ?? 0;
+      found.push({
+        name: exported[1],
+        file,
+        line: body.slice(0, at).split(/\r?\n/).length,
+      });
+    }
+  }
+  return found;
 }
 
 function httpPresent(presented: ReturnType<KnowledgeGraph['present']>) {

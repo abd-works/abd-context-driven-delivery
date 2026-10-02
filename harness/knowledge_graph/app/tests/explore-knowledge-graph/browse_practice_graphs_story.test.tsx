@@ -19,4 +19,36 @@ story('Browse Practice Graphs', () => {
       await expect(explorer().locator('button[title="Story"]')).toBeVisible();
     });
   });
+
+  scenario('a Story lists its background, scenarios, steps, and examples', ({ given, when, then }) => {
+    given('pml-domain stories are loaded', async () => {
+      await openPmlDomain();
+      await waitForTree('tests');
+    });
+    when('the Engineer opens Select Plan (Onboarding)', async () => {
+      await expand('onboard-a-customer');
+      await expand('Onboard A Customer');
+      await expand('Select Plan (Onboarding)');
+      await expand('Background');
+      await explorer().getByRole('button', { name: 'Select Plan (Onboarding)', exact: true }).first().click();
+    });
+    then('the Story lists a Background, a Scenario, a Step, and an Example', async () => {
+      const storyNode = explorer().locator('li[data-kind="Story"]').filter({
+        has: explorer().getByRole('button', { name: 'Select Plan (Onboarding)', exact: true }),
+      }).first();
+      await expect(storyNode.locator('li[data-kind="Background"]').first()).toBeVisible();
+      await expect(storyNode.getByRole('button', { name: 'Prospect selects a plan after email verification', exact: true }).first()).toBeVisible();
+      await expect(storyNode.getByRole('button', { name: 'Given the plan catalog contains purchasable plans', exact: true }).first()).toBeVisible();
+      await expect(storyNode.getByRole('button', { name: 'inventoryMsisdnExamples', exact: true }).first()).toBeVisible();
+    }).and('the panel shows the story source', async () => {
+      await expect(explorer().locator('.source-path')).toContainText('select-plan-onboarding.e2e.ts');
+      await expect(explorer().getByTestId('source-excerpt')).toContainText("story('Select Plan (Onboarding)'", { timeout: 30_000 });
+    });
+  });
 });
+
+async function expand(name: string): Promise<void> {
+  const button = explorer().getByRole('button', { name: `Expand ${name}`, exact: true }).first();
+  await expect(button).toBeVisible({ timeout: 30_000 });
+  await button.click();
+}
