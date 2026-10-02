@@ -5,6 +5,7 @@ import {
   KnowledgeGraphFilter,
   KnowledgeGraphNode,
 } from "./knowledge-graph";
+import { KnowledgeGraphClient } from "./knowledge-graph-client";
 
 function graph() {
   const loaded = new KnowledgeGraph(null, null, null, null);
@@ -25,6 +26,94 @@ describe("a knowledge graph", () => {
     it("should write the knowledge graph models", () => {
       subject.saveKnowledgeGraph();
       expect(subject.saved["story-map.kg"]).toContain("Onboard");
+    });
+  });
+
+  describe("that has been loaded from a presented graph", () => {
+    it("should rebuild the nodes from listed_tree", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111", folder: "/tmp/kg" },
+        listed_tree: [
+          {
+            name: "domain",
+            node_id: "ce:Module:domain",
+            semantic_type: "Module",
+            children: [
+              {
+                name: "customer",
+                node_id: "ce:Module:customer",
+                semantic_type: "Module",
+                children: [
+                  { name: "Customer", node_id: "ce:OoadClass:Customer", semantic_type: "OoadClass" },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+      expect(loaded.nodes.map((node) => node.name)).toEqual(["domain", "customer", "Customer"]);
+      expect(loaded.render()).toContain("domain");
+      expect(loaded.render()).toContain('data-kind="Module"');
+      expect(loaded.render()).toContain("Customer");
+    });
+
+    it("should nest classes from practice graphs under their folder", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "11111111-1111-1111-1111-111111111111",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "Customer",
+                  node_id: "ce:OoadClass:Customer",
+                  semantic_type: "OoadClass",
+                  source: { file: "domain/customer/Customer.ts" },
+                },
+              ],
+            },
+          ],
+        },
+        listed_tree: [
+          { name: "customer", node_id: "ce:Module:customer", semantic_type: "Module", children: [] },
+        ],
+      });
+            expect(loaded.nodes.map((node) => node.name)).toContain("Customer");
+      expect(loaded.render()).toContain("Customer");
+    });
+
+    it("should nest a BoundedContext under the folder of the same name", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "11111111-1111-1111-1111-111111111111",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "Customer",
+                  node_id: "ddd:BoundedContext:customer",
+                  semantic_type: "BoundedContext",
+                  source: null,
+                  properties: { folder: "" },
+                },
+              ],
+            },
+          ],
+        },
+        listed_tree: [
+          {
+            name: "customer",
+            node_id: "ce:Module:customer",
+            semantic_type: "Module",
+            children: [],
+          },
+        ],
+      });
+      expect(loaded.nodes.map((node) => node.name)).toContain("Customer");
+      expect(loaded.render()).toContain("Customer");
     });
   });
 
@@ -117,8 +206,12 @@ describe("a knowledge graph", () => {
     it("should hold that node as selected", () => {
       const node = new KnowledgeGraphNode();
       node.name = "Story";
+      node.nodeId = "story";
+      subject.nodes = [node];
+      subject.matching = [node];
       subject.choose(node);
       expect(subject.selected).toBe(node);
+      expect(subject.render()).toContain("is-selected");
     });
   });
 

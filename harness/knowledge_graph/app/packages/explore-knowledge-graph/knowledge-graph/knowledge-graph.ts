@@ -158,7 +158,7 @@ class KnowledgeGraph {
   render(): string {
     const listed = this.matching.length ? this.matching : this.nodes;
     const filters = this.filter.map((item) => item.render()).join("");
-    const tree = listed.map((node) => node.render()).join("");
+    const tree = listed.map((node) => node.render(0, this.selected)).join("");
     const panel = this.selected?.panel?.render() ?? "";
     return `<section class="knowledge-graph">${filters}<ul class="practice-graph-tree">${tree}</ul>${panel}</section>`;
   }
@@ -233,11 +233,12 @@ class KnowledgeGraphNode {
     return null;
   }
 
-  render(depth = 0): string {
+  render(depth = 0, selected: KnowledgeGraphNode | null = null): string {
     const kind = this.nodeType?.name ?? "";
-    const nested = this.children.map((child) => child.render(depth + 1)).join("");
+    const nested = this.children.map((child) => child.render(depth + 1, selected)).join("");
     const branch = nested ? `<ul class="graph-children">${nested}</ul>` : "";
-    return `<li data-node-id="${_escape(this.nodeId)}" class="graph-node" data-kind="${_escape(kind)}" data-depth="${depth}"><span class="node-name">${_escape(this.name)}</span>${branch}</li>`;
+    const chosen = selected === this || selected?.nodeId === this.nodeId ? " is-selected" : "";
+    return `<li data-node-id="${_escape(this.nodeId)}" class="graph-node${chosen}" data-kind="${_escape(kind)}" data-depth="${depth}"><span class="node-name">${_escape(this.name)}</span>${branch}</li>`;
   }
 }
 
@@ -922,13 +923,14 @@ class WebKnowledgeGraphNode extends KnowledgeGraphNode {
     this.isFolder = isFolder;
   }
 
-  render(depth = 0): string {
+  render(depth = 0, selected: KnowledgeGraphNode | null = null): string {
     const mark = this.isFolder ? "folder" : this.isFile ? "file" : "node";
     const kind = this.nodeType?.name ?? this.properties?.semantic_type ?? "";
     const keyword = this.keyword ? `<span class="keyword">${_escape(this.keyword)}</span>` : "";
-    const nested = this.children.map((child) => child.render(depth + 1)).join("");
+    const nested = this.children.map((child) => child.render(depth + 1, selected)).join("");
     const branch = nested ? `<ul class="graph-children">${nested}</ul>` : "";
-    return `<li data-node-id="${_escape(this.nodeId)}" class="graph-node is-${mark}" data-kind="${_escape(kind)}" data-depth="${depth}"><span class="node-name">${keyword}${_escape(this.name)}</span>${branch}</li>`;
+    const chosen = selected === this || selected?.nodeId === this.nodeId ? " is-selected" : "";
+    return `<li data-node-id="${_escape(this.nodeId)}" class="graph-node is-${mark}${chosen}" data-kind="${_escape(kind)}" data-depth="${depth}"><span class="node-name">${keyword}${_escape(this.name)}</span>${branch}</li>`;
   }
 }
 

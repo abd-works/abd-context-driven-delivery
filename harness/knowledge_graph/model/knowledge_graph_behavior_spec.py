@@ -32,6 +32,18 @@ with description("a knowledge graph"):
             written = (Path(self.temp.name) / "story-map.kg").read_text(encoding="utf-8")
             expect(written).to(contain("Onboard"))
 
+    with context("that has been loaded from a presented explorer graph"):
+        with it("should rebuild the nodes from that document"):
+            folder = Path(self.temp.name)
+            (folder / ".context").mkdir()
+            (folder / ".context" / "explorer-graph.json").write_text(
+                '{"id": "11111111-1111-1111-1111-111111111111", "folder": "", "practice_graphs": [{"id": "p", "name": "ce", "nodes": [{"node_id": "n", "name": "domain", "practice": "clean_engineering", "semantic_type": "Module"}], "relationships": []}]}',
+                encoding="utf-8",
+            )
+            loaded = KnowledgeGraph()
+            loaded.loadKnowledgeGraph(folder)
+            expect([node.name for node in loaded.nodes]).to(contain("domain"))
+
     with context("that has been loaded from a path"):
         with it("should rebuild the nodes from that document"):
             self.graph.saveKnowledgeGraph()
@@ -49,6 +61,17 @@ with description("a knowledge graph"):
 
         with it("should copy master to the working copy"):
             expect(Path(self.graph._codeql.working_copy).exists()).to(equal(True))
+
+    with context("that already has a database"):
+        with it("should keep the existing master and working copy"):
+            ql_root = Path(self.temp.name) / ".codeql"
+            (ql_root / "python-master").mkdir(parents=True)
+            (ql_root / "python-working-copy").mkdir()
+            marker = ql_root / "python-master" / "kept"
+            marker.write_text("keep", encoding="utf-8")
+            self.graph.createDatabase()
+            expect(marker.read_text(encoding="utf-8")).to(equal("keep"))
+            expect((ql_root / "python-working-copy").exists()).to(equal(True))
 
     with context("that has refreshed the master"):
         with it("should be the document that was just saved"):

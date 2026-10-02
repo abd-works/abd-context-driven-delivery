@@ -8,8 +8,8 @@ import {
   SourceRange,
 } from "./knowledge-graph";
 
-const GRAPH_DEADLINE_MS = 45_000;
-const DATABASE_DEADLINE_MS = 90_000;
+const GRAPH_DEADLINE_MS = 180_000;
+const DATABASE_DEADLINE_MS = 15 * 60_000;
 
 export class KnowledgeGraphClient extends KnowledgeGraph {
   graphId: string;
@@ -72,26 +72,33 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
   }
 
   takeSave(raw: any): void {
-    const body = raw?.knowledge_graph ?? raw ?? {};
-    this.graphId = body.id ?? this.graphId;
-    this.folder = body.folder ?? this.folder;
+    const presented = raw ?? {};
+    const dto = presented.knowledge_graph ?? presented;
+    this.graphId = dto.id ?? presented.id ?? this.graphId;
+    this.folder = presented.folder ?? dto.folder ?? this.folder;
     if (typeof window !== "undefined" && this.folder) {
       window.localStorage.setItem("kg-scan-root-v2", this.folder);
       if (this.graphId) {
         window.localStorage.setItem("kg-scan-graph-id-v2", this.graphId);
       }
     }
-    const tree = (body.listed_tree ?? body.nodes ?? []).map((row: any) => webNode(row));
+    const rows =
+      presented.listed_tree ??
+      presented.nodes ??
+      (dto.practice_graphs ?? []).flatMap((graph: any) => graph.nodes ?? []);
+    const tree = rows.map((row: any) => webNode(row));
+    attachMembers(tree, dto);
     this.matching = tree;
     this.nodes = flattenNodes(tree);
-    if (body.selected_node) {
+    if (presented.selected_node) {
       const found =
-        this.nodes.find((node) => node.nodeId === (body.selected_node.node_id ?? body.selected_node.nodeId)) ??
-        webNode(body.selected_node);
+        this.nodes.find(
+          (node) => node.nodeId === (presented.selected_node.node_id ?? presented.selected_node.nodeId),
+        ) ?? webNode(presented.selected_node);
       this.choose(found);
     }
-    if (Array.isArray(body.filter)) {
-      this.filter = body.filter.map((row: any) => new KnowledgeGraphFilter(row.selected ?? []));
+    if (Array.isArray(presented.filter)) {
+      this.filter = presented.filter.map((row: any) => new KnowledgeGraphFilter(row.selected ?? []));
     }
   }
 }
@@ -112,6 +119,11 @@ function webNode(row: any): WebKnowledgeGraphNode {
   node.nodeType = row.semantic_type || row.nodeType
     ? { name: row.semantic_type ?? row.nodeType?.name ?? "" }
     : node.nodeType;
+  node.isFolder =
+    row.is_folder ??
+    row.isFolder ??
+    node.nodeType?.name === "Module" ??
+    false;
   node.children = (row.children ?? []).map((child: any) => webNode(child));
   if (row.source?.file || row.file) {
     node.source = new KnowledgeGraphSource(
@@ -123,6 +135,46 @@ function webNode(row: any): WebKnowledgeGraphNode {
     );
   }
   return node;
+}
+
+function attachMembers(tree: WebKnowledgeGraphNode[], dto: any): void {
+  const members = (dto.practice_graphs ?? []).flatMap((graph: any) => graph.nodes ?? []);
+  const skip = new Set(["Module", "Package", "StoryMap", "CleanEngineeringModel", "StoryModel"]);
+  const classes = members.filter((row: any) => !skip.has(row.semantic_type));
+  const walk = (nodes: WebKnowledgeGraphNode[]): void => {
+    for (const node of nodes) {
+      const folder =
+        node.isFolder ||
+        node.nodeType?.name === "Module" ||
+        node.properties?.semantic_type === "Module";
+      if (folder) {
+        for (const row of classes) {
+          if (!memberHomesIn(row, node.name)) {
+            continue;
+          }
+          const id = row.node_id ?? row.name;
+          if (!node.children.some((child) => child.nodeId === id || child.name === row.name)) {
+            node.children.push(webNode(row));
+          }
+        }
+      }
+      walk(node.children);
+    }
+  };
+  walk(tree);
+}
+
+function memberHomesIn(row: any, folderName: string): boolean {
+  const needle = String(folderName).toLowerCase();
+  if (!needle) {
+    return false;
+  }
+  if (String(row.name ?? "").toLowerCase() === needle) {
+    return true;
+  }
+  const file = String(row.source?.file ?? "").replaceAll("\\", "/").toLowerCase();
+  const folder = String(row.properties?.folder ?? "").replaceAll("\\", "/").toLowerCase();
+  return file.split("/").includes(needle) || folder.split("/").pop() === needle;
 }
 
 function flattenNodes(nodes: KnowledgeGraphNode[]): KnowledgeGraphNode[] {

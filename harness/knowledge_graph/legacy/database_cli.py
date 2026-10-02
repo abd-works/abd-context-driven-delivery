@@ -14,7 +14,10 @@ sys.path[:] = [
 ]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
-import mcp.types  # SDK; harness/mcp must not shadow this
+try:
+    import mcp.types  # SDK; harness/mcp must not shadow this
+except ModuleNotFoundError:
+    pass
 for _cat in ("practices", "harness", "tools", "actions"):
     _p = str(_REPO / _cat)
     if _p not in sys.path:

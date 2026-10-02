@@ -76,6 +76,10 @@ class KnowledgeGraph:
     def loadKnowledgeGraph(self, path) -> None:
         self.folder = path
         folder = Path(path)
+        cached = folder / ".context" / "explorer-graph.json"
+        if cached.exists():
+            self._collect_from_explorer(cached)
+            return
         self.storyModel = KnowledgeGraphStoryModel().load(folder)
         self.ceModel = KnowledgeGraphCleanEngineeringModel().load(folder)
         self.domainDrivenDesignModel = KnowledgeGraphDomainDrivenDesignModel().load(folder)
@@ -85,17 +89,24 @@ class KnowledgeGraph:
     def createDatabase(self) -> None:
         ql = CodeQL(Path(self.folder))
         language = ql.detect_language()
-        ql.rewrite_master(language)
-        ql.copy_master_to_working_copy()
+        ql._database_language = language
+        if not Path(ql.master).exists():
+            ql.rewrite_master(language)
+        if not Path(ql.working_copy).exists():
+            ql.copy_master_to_working_copy()
         self._codeql = ql
 
     def copyMasterToWorkingCopy(self) -> None:
         ql = self._ql()
+        if Path(ql.working_copy).exists():
+            return
         if Path(ql.master).exists():
             ql.copy_master_to_working_copy()
 
     def copyWorkingCopyToMaster(self) -> None:
         ql = self._ql()
+        if Path(ql.master).exists() and Path(ql.working_copy).exists():
+            return
         if Path(ql.working_copy).exists():
             ql.copy_working_copy_to_master()
 
@@ -129,6 +140,19 @@ class KnowledgeGraph:
             self._codeql = CodeQL(Path(self.folder))
             self._codeql._database_language = self._codeql.detect_language()
         return self._codeql
+
+    def _collect_from_explorer(self, cached) -> None:
+        import json
+
+        dto = json.loads(Path(cached).read_text(encoding="utf-8"))
+        self.nodes = []
+        for practice in dto.get("practice_graphs") or []:
+            for row in practice.get("nodes") or []:
+                node = KnowledgeGraphNode()
+                node.name = row.get("name")
+                node.nodeId = row.get("node_id") or row.get("name")
+                self.nodes.append(node)
+        self.matching = list(self.nodes)
 
     def _collect_nodes(self) -> None:
         self.nodes = []

@@ -245,6 +245,13 @@ function _databaseRoot(folder: string): string {
   return _resolvePickedFolder(folder);
 }
 
+function _codeqlReady(root: string): boolean {
+  return (
+    _isDir(join(root, '.codeql', 'javascript-master')) &&
+    _isDir(join(root, '.codeql', 'javascript-working-copy'))
+  );
+}
+
 function _repoRoot(): string {
   let dir = process.cwd();
   while (true) {
@@ -452,7 +459,9 @@ async function _runDatabaseOperation(
   if (_isDir(root)) {
     _writeLastScanRoot(root);
   }
-  _spawnDatabaseCli(operation, root);
+  if (!_codeqlReady(root)) {
+    _spawnDatabaseCli(operation, root);
+  }
   const cached = join(root, '.context', 'explorer-graph.json');
   const graph = _fromPracticeHierarchyCli(root, !existsSync(cached));
   return repo.create({
