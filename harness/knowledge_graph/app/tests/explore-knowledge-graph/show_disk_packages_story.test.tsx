@@ -5,17 +5,19 @@ import { bindPage, explorer, openPmlDomain, waitForTree } from './helpers/pml-do
 bindPage();
 
 story('Show Disk Packages', () => {
-  scenario('disk folders show under a Module', ({ given, when, then }) => {
-    given('pml-domain has a domain folder on disk', async () => {
+  scenario('disk folders show under a Module even when they are only Packages', ({ given, when, then }) => {
+    given('domain has disk folders on disk', async () => {
       await openPmlDomain();
-    });
-    when('the Engineer browses the KnowledgeGraph', async () => {
       await waitForTree();
     });
-    then('domain is listed', async () => {
-      await expect(explorer().getByTestId('practice-graph-tree')).toContainText('domain');
-    }).and('customer is listed under it', async () => {
-      await expect(explorer().getByTestId('practice-graph-tree')).toContainText('customer');
+    when('the Engineer opens domain', async () => {
+      await explorer().getByRole('button', { name: 'Expand domain' }).click();
+    });
+    then('those folders are listed', async () => {
+      await expect(explorer().locator('button[title="Package"]', { hasText: 'customer' })).toBeVisible();
+    }).and('classes stay inside them', async () => {
+      const folder = explorer().locator('li').filter({ has: explorer().locator('button[title="Package"]', { hasText: /^customer$/ }) }).first();
+      await expect(folder.locator('.node-name', { hasText: /^Customer$/ })).toBeVisible();
     });
   });
 });

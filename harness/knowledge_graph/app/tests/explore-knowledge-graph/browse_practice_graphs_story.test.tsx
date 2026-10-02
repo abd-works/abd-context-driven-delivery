@@ -6,18 +6,17 @@ bindPage();
 
 story('Browse Practice Graphs', () => {
   scenario('KnowledgeGraph lists PracticeGraphs and Nodes', ({ given, when, then }) => {
-    given('pml-domain has been selected as the working folder', async () => {
+    given('a KnowledgeGraph whose source includes a Node that passes keep-operations-small-focused', async () => {
       await openPmlDomain();
-    });
-    when('the Engineer browses the KnowledgeGraph', async () => {
       await waitForTree();
-    });
-    then('the tree lists domain', async () => {
-      await expect(explorer().getByTestId('practice-graph-tree')).toContainText('domain');
-    }).and('lists customer', async () => {
-      await expect(explorer().getByTestId('practice-graph-tree')).toContainText('customer');
-    }).and('lists Customer', async () => {
-      await expect(explorer().getByTestId('practice-graph-tree')).toContainText('Customer');
+    }).and('whose source includes a Node that fails keep-operations-small-focused', async () => {});
+    when('the Engineer browses the KnowledgeGraph', async () => {});
+    then('the passing Node lists keep-operations-small-focused as passing', async () => {
+      await expect(explorer().locator('.rule-status.passing', { hasText: 'keep-operations-small-focused' })).toBeVisible();
+    }).and('the failing Node lists keep-operations-small-focused as violating', async () => {
+      await expect(explorer().locator('.rule-status.violating', { hasText: 'keep-operations-small-focused' })).toBeVisible();
+    }).and('lists a Story', async () => {
+      await expect(explorer().locator('button[title="Story"]')).toBeVisible();
     });
   });
 });
