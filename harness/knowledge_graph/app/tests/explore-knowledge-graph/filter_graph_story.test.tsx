@@ -101,11 +101,13 @@ story('Filter Graph', () => {
       }).first();
       await expect(domain.locator('.rule-status', { hasText: 'high-cohesion' }).first()).toBeVisible();
     }).and('epics and the tests folder are not tagged as clean engineering', async () => {
-      await expect(explorer().getByRole('button', { name: 'tests', exact: true })).toHaveCount(0);
-      await expect(explorer().getByRole('button', { name: 'access-selfcare', exact: true })).toHaveCount(0);
-      await expect(explorer().getByRole('button', { name: 'manage-billing', exact: true })).toHaveCount(0);
-      await expect(explorer().getByRole('button', { name: 'onboard-a-customer', exact: true })).toHaveCount(0);
-      await expect(explorer().getByRole('button', { name: 'domain', exact: true })).toBeVisible();
+      const engineering = explorer().locator('li[data-node-id="practice:clean_engineering"]');
+      await expect(engineering.locator(':scope > ul > li .node-name', { hasText: /^tests$/ })).toHaveCount(0);
+      await expect(engineering.locator('.node-name', { hasText: /^access-selfcare$/ })).toHaveCount(0);
+      await expect(engineering.locator('.node-name', { hasText: /^manage-billing$/ })).toHaveCount(0);
+      await expect(engineering.locator('.node-name', { hasText: /^manage-services$/ })).toHaveCount(0);
+      await expect(engineering.locator('.node-name', { hasText: /^onboard-a-customer$/ })).toHaveCount(0);
+      await expect(engineering.getByRole('button', { name: 'Module domain' })).toBeVisible();
     });
   });
 

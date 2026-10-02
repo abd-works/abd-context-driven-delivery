@@ -1110,6 +1110,9 @@ function preparedSource(node: KnowledgeGraphNode, text: string): { text: string;
 function memberFolds(node: KnowledgeGraphNode, lineCount: number): SourceFold[] {
   const base = Number(node.source?.startLine) || 1;
   const folds: SourceFold[] = [];
+  if (lineCount > 1) {
+    folds.push({ start: 2, end: lineCount, kind: 'class', glyph: 1 });
+  }
   for (const child of node.children ?? []) {
     const type = child.nodeType?.name ?? '';
     if (type !== 'Operation' && type !== 'Property') {
@@ -1122,7 +1125,7 @@ function memberFolds(node: KnowledgeGraphNode, lineCount: number): SourceFold[] 
     }
     const signature = start - base + 1;
     const last = Math.min(lineCount, Math.max(start, end) - base + 1);
-    if (last <= signature) {
+    if (last <= signature || signature <= 1) {
       continue;
     }
     folds.push({ start: signature + 1, end: last, kind: 'class', glyph: signature });
