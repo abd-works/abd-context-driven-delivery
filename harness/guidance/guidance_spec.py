@@ -192,7 +192,7 @@ with description("a context tool module with section files and subsection folder
         with it("should return the Guidance section body only"):
             expect(self.guidance.guidance).to(contain("split guidance section body only"))
 
-    with context("with a Shared rules section containing scanner bullets"):
+    with context("with a Shared rules section containing rule bullets"):
         with context("with the rules property read"):
             with it("should parse bullets into a rules collection"):
                 expect("split-rule" in self.guidance.rules.entries).to(equal(True))

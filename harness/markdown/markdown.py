@@ -897,11 +897,6 @@ class MarkdownCollection:
                 bind(owner, name)
             else:
                 vars(owner)[name] = result
-            class_dir = AssetLocator(owner, prop_label).class_file_directory()
-            for entry in result or ():
-                bind_scanner = getattr(entry, "bind_scanner", None)
-                if callable(bind_scanner):
-                    bind_scanner(class_dir)
             return result
 
         getter.__doc__ = fn.__doc__
@@ -1017,12 +1012,6 @@ class Markdown:
                 return MarkdownSlot(text)
             result = md.coerce(raw, return_type)
             YamlBinder(result).bind_yaml(raw)
-            from harness.guidance.rule import RulesCollection
-
-            if isinstance(result, RulesCollection):
-                class_dir = AssetLocator(owner, prop_label).class_file_directory()
-                for rule in result:
-                    rule.bind_scanner(class_dir)
             return result
 
         getter.__doc__ = fn.__doc__

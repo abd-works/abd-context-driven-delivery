@@ -39,7 +39,7 @@ class Validate(GuidanceAction):
     @Skill
     @agent_instructions
     def createRule(self, guidance: GuidanceArg, failed: str, wanted: str) -> str:
-        """Add a named rule and matching scanner to each listed Guidance from a failed example and the wanted behavior. Then scan the asset with that rule so the same mistake is detected. Pass a string to create the rule against that text once."""
+        """Add a named rule and CodeQL query to each listed Guidance from a failed example and the wanted behavior. Then validate the asset with that rule so the same mistake is detected. Pass a string to create the rule against that text once."""
         def on(item) -> None:
             if isinstance(item, str):
                 return
@@ -49,7 +49,7 @@ class Validate(GuidanceAction):
 
         self.run(guidance, on, action="createRule")
         return (
-            "Write a new named rule and matching scanner into this tool. "
-            "Then run that rule via scan on the asset and detect a failure "
+            "Write a new named rule and CodeQL query into this tool. "
+            "Then run collection validate on the asset and detect a failure "
             "that matches the Mistake."
         )
