@@ -655,6 +655,30 @@ ul.tree ul {
 .source-snippet .call-fold,
 .source-snippet .class-fold {
   cursor: pointer;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+}
+
+.source-snippet .call-fold.codicon::before,
+.source-snippet .class-fold.codicon::before {
+  content: none;
+}
+
+.source-snippet .class-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='2.5' width='11' height='11' rx='0.5' fill='none' stroke='%23333333' stroke-width='1.5'/%3E%3Cpath d='M2.5 6.2h11' fill='none' stroke='%23333333' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+.source-snippet .call-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 4.5 2.5 8 5 11.5M11 4.5 13.5 8 11 11.5' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+html[data-theme="engineering"] .source-snippet .class-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='2.5' width='11' height='11' rx='0.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5'/%3E%3Cpath d='M2.5 6.2h11' fill='none' stroke='%23d4d4d4' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+html[data-theme="engineering"] .source-snippet .call-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 4.5 2.5 8 5 11.5M11 4.5 13.5 8 11 11.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .source-snippet .source-toggle {

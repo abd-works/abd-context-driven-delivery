@@ -17,8 +17,10 @@ import {
   retagPractice,
   stepMembers,
   stepCallouts,
+  stepLinks,
   taggedPractice,
 } from "./knowledge-graph";
+import { inlineCallLayout } from "../call-expansion";
 
 const STORY_NODE_TYPES = [
   "Increment",
@@ -604,6 +606,83 @@ describe("an operation", () => {
       source.source();
       expect(source.folds[0].kind).toBe("call");
     });
+
+    it("should fold a call through this to the other operation", () => {
+      const source = new KnowledgeGraphCallSource("this.save(customer)", "Customer.ts", 10, 10, "typescript");
+      source.source();
+      expect(source.calls.map((call) => call.operation)).toEqual(["this.save"]);
+      expect(source.folds[0].kind).toBe("call");
+    });
+  });
+});
+
+describe("inlined operation source", () => {
+  const members = [
+    {
+      id: "save",
+      name: "save",
+      kind: "Operation",
+      owner: "CustomerRepository",
+      text: "save(customer: Customer): void {\n  store.set(customer)\n}",
+      file: "customer.ts",
+      start: 20,
+      end: 22,
+    },
+    {
+      id: "place",
+      name: "placeOrder",
+      kind: "Operation",
+      owner: "Cart",
+      text: "placeOrder(cart: Cart): Receipt {\n  return receipt\n}",
+      file: "cart.ts",
+      start: 4,
+      end: 6,
+    },
+    {
+      id: "customer",
+      name: "Customer",
+      kind: "OoadClass",
+      owner: "",
+      text: "class Customer {\n  email: string\n}",
+      file: "customer.ts",
+      start: 1,
+      end: 3,
+    },
+    {
+      id: "receipt",
+      name: "Receipt",
+      kind: "OoadClass",
+      owner: "",
+      text: "class Receipt {\n  id: string\n}",
+      file: "cart.ts",
+      start: 1,
+      end: 3,
+    },
+  ];
+
+  it("inlines an internal call and the parameter and return types", () => {
+    const layout = inlineCallLayout(
+      "persist(customer: Customer): void {\n  this.save(customer)\n}",
+      members,
+      "CustomerRepository",
+    );
+    expect(layout.text).toContain("save(customer: Customer): void {");
+    expect(layout.text).toContain("store.set(customer)");
+    expect(layout.text).toContain("class Customer {");
+    expect(layout.folds.some((fold) => fold.kind === "call")).toBe(true);
+    expect(layout.folds.some((fold) => fold.kind === "class")).toBe(true);
+  });
+
+  it("inlines a call to an operation on another class", () => {
+    const layout = inlineCallLayout(
+      "checkout(): Receipt {\n  Cart.placeOrder(cart)\n}",
+      members,
+      "CustomerRepository",
+    );
+    expect(layout.text).toContain("placeOrder(cart: Cart): Receipt {");
+    expect(layout.text).toContain("class Receipt {");
+    expect(layout.folds.some((fold) => fold.kind === "call")).toBe(true);
+    expect(layout.folds.some((fold) => fold.kind === "class")).toBe(true);
   });
 });
 
@@ -660,6 +739,36 @@ describe("a scenario step", () => {
       expect(included.map((node) => node.name)).toContain("feedbackSubjectExample");
       const engineering = flatten(retainedTree([step], ["CleanEngineering"]));
       expect(engineering.map((node) => node.name)).not.toContain("When they send a feedback note");
+    });
+
+    it("should link an invoked operation, a demonstrated example class, and an expected class", () => {
+      const operations = [{ id: "load", name: "load", owner: "CustomerRepository" }];
+      const examples = [{ name: "seedCustomerWithAddress", classes: ["Customer"] }];
+      const classes = ["Customer", "Onboarding"];
+      expect(
+        stepLinks("customer = await ctx.customerRepository.load(accountCredentials);", operations, examples, classes)
+          .invokes,
+      ).toEqual(["load"]);
+      expect(
+        stepLinks(
+          "customer = seedCustomerWithAddress(ctx.customerRepository, accountCredentials);",
+          operations,
+          examples,
+          classes,
+        ).examples,
+      ).toEqual([{ name: "seedCustomerWithAddress", classes: ["Customer"] }]);
+      expect(
+        stepLinks(
+          "expect(customer).toBeInstanceOf(Customer)\nexpect(customer.onboarding).toBeInstanceOf(Onboarding)",
+          operations,
+          examples,
+          classes,
+        ).expected,
+      ).toEqual(["Customer", "Onboarding"]);
+      const customer = graphNode("Customer", "OoadClass", "clean_engineering");
+      const thenStep = graphNode("Then the result is a customer", "Step", "stories", [customer]);
+      thenStep.relationships = [{ kind: "expected", nodeId: customer.nodeId, name: customer.name }];
+      expect(flatten(retainedTree([thenStep], ["Stories"])).map((node) => node.name)).toContain("Customer");
     });
 });
 

@@ -284,7 +284,7 @@ export function retainedTree(
   const visit = (node: KnowledgeGraphNode, crossed = false): KnowledgeGraphNode[] => {
     const linked = new Set(
       (node.relationships ?? [])
-        .filter((link) => link.kind === "invokes" || link.kind === "demonstrates")
+        .filter((link) => link.kind === "invokes" || link.kind === "demonstrates" || link.kind === "expected")
         .map((link) => link.nodeId),
     );
     const children = (node.children ?? []).flatMap((child) =>
@@ -344,6 +344,79 @@ export function stepMembers(text: string): { operations: string[]; examples: str
     }
   }
   return { operations, examples };
+}
+
+export type StepOperationRef = { id: string; name: string; owner: string };
+export type StepExampleRef = { name: string; classes: string[] };
+
+const STEP_RECEIVER_SKIP = new Set([
+  "expect",
+  "vi",
+  "console",
+  "Math",
+  "JSON",
+  "Object",
+  "Promise",
+  "Array",
+  "page",
+  "ctx",
+  "screen",
+]);
+
+export function stepLinks(
+  text: string,
+  operations: StepOperationRef[],
+  examples: StepExampleRef[],
+  classes: string[],
+): { invokes: string[]; examples: StepExampleRef[]; expected: string[] } {
+  const classNames = new Set(classes);
+  const invokes: string[] = [];
+  const seenOps = new Set<string>();
+  for (const match of text.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
+    if (STEP_RECEIVER_SKIP.has(match[1]) || STEP_CALL_SKIP.has(match[2])) {
+      continue;
+    }
+    const id = operationFor(operations, match[1], match[2]);
+    if (!id || seenOps.has(id)) {
+      continue;
+    }
+    seenOps.add(id);
+    invokes.push(id);
+  }
+  const foundExamples: StepExampleRef[] = [];
+  const seenExamples = new Set<string>();
+  for (const match of text.matchAll(/(^|[^.\w])([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
+    const name = match[2];
+    if (STEP_CALL_SKIP.has(name) || STEP_RECEIVER_SKIP.has(name) || seenExamples.has(name)) {
+      continue;
+    }
+    const example = examples.find((item) => item.name === name);
+    if (!example) {
+      continue;
+    }
+    seenExamples.add(name);
+    foundExamples.push({
+      name,
+      classes: example.classes.filter((item) => classNames.has(item)),
+    });
+  }
+  const expected: string[] = [];
+  for (const match of text.matchAll(/\b(?:toBeInstanceOf|instanceof)\s*\(?\s*([A-Z][A-Za-z0-9_]*)/g)) {
+    if (classNames.has(match[1]) && !expected.includes(match[1])) {
+      expected.push(match[1]);
+    }
+  }
+  return { invokes, examples: foundExamples, expected };
+}
+
+function operationFor(operations: StepOperationRef[], receiver: string, method: string): string {
+  const receiverKey = receiver.toLowerCase();
+  const owned = operations.find((op) => op.name === method && op.owner.toLowerCase() === receiverKey);
+  if (owned) {
+    return owned.id;
+  }
+  const named = operations.filter((op) => op.name === method);
+  return named.length === 1 ? named[0].id : "";
 }
 
 export function stepCallouts(
@@ -666,16 +739,28 @@ class KnowledgeGraphCallSource extends KnowledgeGraphSource {
 
   loadCalls(): void {
     this.calls = [];
-    const skip = new Set(["if", "for", "while", "function", "def", "switch", "catch"]);
+    const skip = new Set(["if", "for", "while", "function", "def", "switch", "catch", "constructor"]);
+    const skipReceiver = new Set([
+      "console",
+      "Math",
+      "JSON",
+      "Object",
+      "Promise",
+      "Array",
+      "expect",
+      "vi",
+    ]);
     String(this.text ?? "")
       .split(/\r?\n/)
       .forEach((line, index) => {
         let order = 0;
-        const matcher = /((?:[A-Z][A-Za-z0-9]*\.)?[A-Za-z_][A-Za-z0-9]*)\s*\(/g;
+        const matcher = /\b([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)\s*\(/g;
         let found: RegExpExecArray | null = matcher.exec(line);
         while (found) {
           const name = found[1];
-          if (!skip.has(name.split(".").pop() ?? "")) {
+          const receiver = name.includes(".") ? name.slice(0, name.indexOf(".")) : "";
+          const method = name.includes(".") ? name.slice(name.lastIndexOf(".") + 1) : name;
+          if (!skip.has(method) && !skipReceiver.has(receiver)) {
             order += 1;
             this.calls.push(new KnowledgeGraphCall(index + 1, order, name));
           }

@@ -21,7 +21,7 @@ import { definitionsInFile,
   scanSourceFiles,
   type WorkspaceFile,
 } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
-import { taggedPractice, stepMembers, databaseBuildRequired } from './knowledge-graph/knowledge-graph';
+import { taggedPractice, stepLinks, databaseBuildRequired } from './knowledge-graph/knowledge-graph';
 
 type KnowledgeGraphStore = {
   knowledge_graphs: unknown[];
@@ -743,16 +743,32 @@ function _mergeDirectory(listed: any[], root: string, parent: string): any[] {
 function _linkStepMembers(graph: KnowledgeGraph, root: string): KnowledgeGraph {
   const dto = graph.toDto();
   const nodes = dto.practice_graphs.flatMap((practice) => practice.nodes);
-  const operations = new Map<string, string>();
-  const properties = new Map<string, string>();
-  for (const node of nodes) {
-    if (node.semantic_type === 'Operation') {
-      operations.set(node.name, node.node_id);
+  const classIds = new Map<string, string>();
+  const operations: { id: string; name: string; owner: string }[] = [];
+  for (const practice of dto.practice_graphs) {
+    const classes = new Map(
+      practice.nodes
+        .filter((node) => node.semantic_type === 'OoadClass')
+        .map((node) => [node.node_id, node.name]),
+    );
+    for (const [id, name] of classes) {
+      if (!classIds.has(name)) {
+        classIds.set(name, id);
+      }
     }
-    if (node.semantic_type === 'Property') {
-      properties.set(node.name, node.node_id);
+    for (const edge of practice.relationships) {
+      if (edge.kind !== 'owns') {
+        continue;
+      }
+      const owner = classes.get(edge.from_id);
+      const child = practice.nodes.find((node) => node.node_id === edge.to_id);
+      if (!owner || child?.semantic_type !== 'Operation') {
+        continue;
+      }
+      operations.push({ id: child.node_id, name: child.name, owner });
     }
   }
+  const examples = _exampleExports(root);
   for (const practice of dto.practice_graphs) {
     for (const step of [...practice.nodes]) {
       if (step.semantic_type !== 'Step' || !step.source?.file) {
@@ -762,48 +778,108 @@ function _linkStepMembers(graph: KnowledgeGraph, root: string): KnowledgeGraph {
       if (text) {
         step.source = { ...step.source, text };
       }
-      const members = stepMembers(text);
-      for (const example of members.examples) {
-        const exampleId = `stories:Example:${step.node_id}:${example}`;
+      const linked = stepLinks(text, operations, examples, [...classIds.keys()]);
+      for (const target of linked.invokes) {
+        _relate(practice, 'invokes', step.node_id, target);
+      }
+      for (const example of linked.examples) {
+        const known = examples.find((item) => item.name === example.name);
+        const exampleId = `stories:Example:${step.node_id}:${example.name}`;
         if (!practice.nodes.some((node) => node.node_id === exampleId)) {
           practice.nodes.push({
             node_id: exampleId,
-            name: example,
+            name: example.name,
             practice: 'stories',
             fidelity: 'scenarios',
             semantic_type: 'Example',
-            properties: {},
+            properties: { folder: String(step.properties?.folder ?? '') },
             applicable_rules: [],
             violations: [],
-            source: { file: step.source.file, start_line: step.source.start_line, end_line: step.source.start_line, text: example },
+            source: {
+              file: known?.file ?? step.source.file,
+              start_line: known?.line ?? step.source.start_line,
+              end_line: known?.end ?? step.source.start_line,
+              text: known?.text ?? example.name,
+            },
           });
           practice.relationships.push({ kind: 'owns', from_id: step.node_id, to_id: exampleId });
         }
-        const propertyId = properties.get(example.replace(/Examples?$/, ''));
-        if (
-          propertyId &&
-          !practice.relationships.some(
-            (edge) => edge.kind === 'demonstrates' && edge.from_id === exampleId && edge.to_id === propertyId,
-          )
-        ) {
-          practice.relationships.push({ kind: 'demonstrates', from_id: exampleId, to_id: propertyId });
+        for (const className of example.classes) {
+          const classId = classIds.get(className);
+          if (classId) {
+            _relate(practice, 'demonstrates', exampleId, classId);
+          }
         }
       }
-      for (const operation of members.operations) {
-        const target = operations.get(operation);
-        if (
-          !target ||
-          practice.relationships.some(
-            (edge) => edge.kind === 'invokes' && edge.from_id === step.node_id && edge.to_id === target,
-          )
-        ) {
-          continue;
+      for (const className of linked.expected) {
+        const classId = classIds.get(className);
+        if (classId) {
+          _relate(practice, 'expected', step.node_id, classId);
         }
-        practice.relationships.push({ kind: 'invokes', from_id: step.node_id, to_id: target });
       }
     }
   }
   return KnowledgeGraph.fromDto({ ...dto, folder: graph.folder });
+}
+
+function _relate(
+  practice: KnowledgeGraphDto['practice_graphs'][number],
+  kind: string,
+  fromId: string,
+  toId: string,
+): void {
+  if (
+    practice.relationships.some(
+      (edge) => edge.kind === kind && edge.from_id === fromId && edge.to_id === toId,
+    )
+  ) {
+    return;
+  }
+  practice.relationships.push({ kind, from_id: fromId, to_id: toId });
+}
+
+function _exampleExports(root: string): { name: string; classes: string[]; file: string; line: number; end: number; text: string }[] {
+  const found: { name: string; classes: string[]; file: string; line: number; end: number; text: string }[] = [];
+  const tests = join(root, 'tests');
+  if (!_isDir(tests)) {
+    return found;
+  }
+  const visit = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      if (name === 'node_modules' || name.startsWith('.')) {
+        continue;
+      }
+      const abs = join(dir, name);
+      if (statSync(abs).isDirectory()) {
+        visit(abs);
+        continue;
+      }
+      if (!name.endsWith('.examples.ts')) {
+        continue;
+      }
+      const text = readFileSync(abs, 'utf8');
+      const file = relative(root, abs).replaceAll('\\', '/');
+      const matches = [...text.matchAll(/export\s+function\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
+      matches.forEach((match, index) => {
+        const next = matches[index + 1]?.index ?? text.length;
+        const local = text.slice(match.index ?? 0, next);
+        const brace = local.indexOf('{');
+        if (brace < 0) {
+          return;
+        }
+        const openAt = (match.index ?? 0) + brace;
+        const line = text.slice(0, match.index ?? 0).split(/\r?\n/).length;
+        const end = _balancedEnd(text, openAt, '{', '}');
+        const body = _lineSlice(text, line, end);
+        const returned = body.match(/\)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/)?.[1] ?? '';
+        const constructed = [...body.matchAll(/\bnew\s+([A-Z][A-Za-z0-9_]*)/g)].map((item) => item[1]);
+        const classes = [...new Set([returned, ...constructed].filter((item) => /^[A-Z]/.test(item)))];
+        found.push({ name: match[1], classes, file, line, end, text: body });
+      });
+    }
+  };
+  visit(tests);
+  return found;
 }
 
 function _sourceSlice(root: string, file: string, start: number, end: number): string {
@@ -1042,35 +1118,36 @@ function _attachStorySpecification(graph: KnowledgeGraph, root: string): Knowled
   }
   const stories = _ensurePractice(dto, 'stories');
   for (const file of _storyFiles(tests)) {
-    const parsed = _parseStoryFile(root, file);
-    if (!parsed) {
-      continue;
-    }
-    const matches = stories.nodes.filter(
-      (node) => node.semantic_type === 'Story' && node.name === parsed.name,
-    );
-    const storyId = matches[0]?.node_id ?? _addStory(stories, parsed);
-    const story = stories.nodes.find((node) => node.node_id === storyId);
-    if (story) {
-      story.source = {
-        file: parsed.file,
-        start_line: parsed.line,
-        end_line: parsed.endLine,
-        text: '',
-      };
-      story.properties = { ...(story.properties ?? {}), folder: parsed.folder };
-    }
-    if (!storyId) {
-      continue;
-    }
-    for (const background of parsed.backgrounds) {
-      _own(stories, storyId, 'Background', 'Background', parsed.file, background.line, background.endLine, background.steps, parsed.folder);
-    }
-    for (const scenario of parsed.scenarios) {
-      _own(stories, storyId, 'Scenario', scenario.name, parsed.file, scenario.line, scenario.endLine, scenario.steps, parsed.folder);
-    }
-    for (const example of parsed.examples) {
-      _own(stories, storyId, 'Example', example.name, example.file, example.line, example.line, [], parsed.folder);
+    for (const parsed of _parseStoryFile(root, file)) {
+      const matches = stories.nodes.filter(
+        (node) => node.semantic_type === 'Story' && node.name === parsed.name,
+      );
+      const storyId = matches[0]?.node_id ?? _addStory(stories, parsed);
+      const story = stories.nodes.find((node) => node.node_id === storyId);
+      if (story) {
+        const shared = parsed.file.endsWith('.story.shared.ts');
+        if (shared || !story.source?.file) {
+          story.source = {
+            file: parsed.file,
+            start_line: parsed.line,
+            end_line: parsed.endLine,
+            text: '',
+          };
+        }
+        story.properties = { ...(story.properties ?? {}), folder: parsed.folder };
+      }
+      if (!storyId) {
+        continue;
+      }
+      for (const background of parsed.backgrounds) {
+        _own(stories, storyId, 'Background', 'Background', parsed.file, background.line, background.endLine, background.steps, parsed.folder);
+      }
+      for (const scenario of parsed.scenarios) {
+        _own(stories, storyId, 'Scenario', scenario.name, parsed.file, scenario.line, scenario.endLine, scenario.steps, parsed.folder);
+      }
+      for (const example of parsed.examples) {
+        _own(stories, storyId, 'Example', example.name, example.file, example.line, example.line, [], parsed.folder);
+      }
     }
   }
   _fillEpicSource(stories, root);
@@ -1135,9 +1212,19 @@ function _own(
   );
   if (existing) {
     const current = stories.nodes.find((node) => node.node_id === existing.to_id);
-    if (current?.source && current.source.end_line <= current.source.start_line) {
-      current.source = { ...current.source, end_line: endLine };
+    if (
+      current?.source &&
+      (file.endsWith('.story.shared.ts') || current.source.end_line <= current.source.start_line)
+    ) {
+      current.source = {
+        ...current.source,
+        file,
+        start_line: line,
+        end_line: Math.max(line, endLine),
+        text: '',
+      };
     }
+    _ownSteps(stories, existing.to_id, steps, file, folder);
     return existing.to_id;
   }
   const nodeId = `stories:${type}:${parentId}:${line}:${name}`;
@@ -1153,6 +1240,17 @@ function _own(
     source: { file, start_line: line, end_line: Math.max(line, endLine), text: '' },
   });
   stories.relationships.push({ kind: 'owns', from_id: parentId, to_id: nodeId });
+  _ownSteps(stories, nodeId, steps, file, folder);
+  return nodeId;
+}
+
+function _ownSteps(
+  stories: KnowledgeGraphDto['practice_graphs'][number],
+  nodeId: string,
+  steps: { keyword: string; name: string; line: number; endLine: number }[],
+  file: string,
+  folder: string,
+): void {
   let previous = 'given';
   for (const step of steps) {
     const keyword = step.keyword === 'and' ? previous : step.keyword;
@@ -1160,7 +1258,6 @@ function _own(
     const label = `${keyword[0].toUpperCase()}${keyword.slice(1)} ${step.name}`;
     _own(stories, nodeId, 'Step', label, file, step.line, step.endLine, [], folder);
   }
-  return nodeId;
 }
 
 function _storyFiles(dir: string): string[] {
@@ -1172,7 +1269,11 @@ function _storyFiles(dir: string): string[] {
     const abs = join(dir, name);
     if (statSync(abs).isDirectory()) {
       found.push(..._storyFiles(abs));
-    } else if (name.endsWith('.e2e.ts') || name.endsWith('.story.playwright.ts')) {
+    } else if (
+      name.endsWith('.e2e.ts') ||
+      name.endsWith('.story.playwright.ts') ||
+      name.endsWith('.story.shared.ts')
+    ) {
       found.push(abs);
     }
   }
@@ -1191,69 +1292,71 @@ function _parseStoryFile(root: string, abs: string): {
   subEpic: string;
   epicFolder: string;
   folder: string;
-} | null {
+}[] {
   const text = readFileSync(abs, 'utf8');
-  const story =
-    text.match(/withStory\(\s*['"]([^'"]+)['"]/) ??
-    text.match(/story\(\s*['"]([^'"]+)['"]/);
-  if (!story || story.index == null) {
-    return null;
+  const stories = [...text.matchAll(/(?:withStory|shareStory|story)\(\s*['"]([^'"]+)['"]/g)];
+  if (stories.length === 0) {
+    return [];
   }
   const file = relative(root, abs).replaceAll('\\', '/');
   const lines = text.split(/\r?\n/);
-  const backgrounds: { line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[] = [];
-  const scenarios: { name: string; line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[] = [];
-  let current: { steps: { keyword: string; name: string; line: number; endLine: number }[] } | null = null;
-  lines.forEach((line, index) => {
-    const background = line.match(/(?:withBackground|background)\s*\(/);
-    const scenario = line.match(/(?:withScenario|scenario)\(\s*['"]([^'"]+)['"]/);
-    const step = line.match(/(?:^|[^\w])(given|when|then|and)\(\s*['"]([^'"]+)['"]/i);
-    if (background) {
-      current = { steps: [] };
-      backgrounds.push({ line: index + 1, endLine: index + 1, steps: current.steps });
-      return;
-    }
-    if (scenario) {
-      current = { steps: [] };
-      scenarios.push({ name: scenario[1], line: index + 1, endLine: index + 1, steps: current.steps });
-      return;
-    }
-    if (step && current) {
-      current.steps.push({ keyword: step[1].toLowerCase(), name: step[2], line: index + 1, endLine: index + 1 });
-    }
-  });
-  const storyLine = text.slice(0, story.index).split(/\r?\n/).length;
-  for (const background of backgrounds) {
-    background.endLine = _blockEndLine(text, background.line);
-  }
-  for (const scenario of scenarios) {
-    scenario.endLine = _blockEndLine(text, scenario.line);
-    for (const step of scenario.steps) {
-      step.endLine = _blockEndLine(text, step.line);
-    }
-  }
-  for (const background of backgrounds) {
-    for (const step of background.steps) {
-      step.endLine = _blockEndLine(text, step.line);
-    }
-  }
+  const examples = _importedExamples(root, abs, text);
   const parts = file.split('/');
   const epic = parts.length > 2 ? parts[1] : 'tests';
   const subEpic = parts.length > 3 ? parts[2] : '';
   const folder = subEpic ? parts.slice(0, 3).join('/') : parts.slice(0, 2).join('/');
-  return {
-    name: story[1],
-    file,
-    line: storyLine,
-    endLine: _blockEndLine(text, storyLine),
-    epic,
-    subEpic,
-    epicFolder: parts.slice(0, 2).join('/'),
-    folder,
-    backgrounds,
-    scenarios,
-    examples: _importedExamples(root, abs, text),
-  };
+  return stories.map((story, storyIndex) => {
+    const storyLine = text.slice(0, story.index ?? 0).split(/\r?\n/).length;
+    const nextStart = stories[storyIndex + 1]?.index;
+    const nextLine = nextStart == null ? lines.length + 1 : text.slice(0, nextStart).split(/\r?\n/).length;
+    const backgrounds: { line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[] = [];
+    const scenarios: { name: string; line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[] = [];
+    let current: { steps: { keyword: string; name: string; line: number; endLine: number }[] } | null = null;
+    for (let index = storyLine - 1; index < nextLine - 1 && index < lines.length; index += 1) {
+      const line = lines[index];
+      const background = line.match(/(?:withBackground|background)\s*\(/);
+      const scenario = line.match(/(?:withScenario|scenario)\(\s*['"]([^'"]+)['"]/);
+      const step = line.match(/(?:^|[^\w])(given|when|then|and)\(\s*['"]([^'"]+)['"]/i);
+      if (background) {
+        current = { steps: [] };
+        backgrounds.push({ line: index + 1, endLine: index + 1, steps: current.steps });
+        continue;
+      }
+      if (scenario) {
+        current = { steps: [] };
+        scenarios.push({ name: scenario[1], line: index + 1, endLine: index + 1, steps: current.steps });
+        continue;
+      }
+      if (step && current) {
+        current.steps.push({ keyword: step[1].toLowerCase(), name: step[2], line: index + 1, endLine: index + 1 });
+      }
+    }
+    for (const background of backgrounds) {
+      background.endLine = _blockEndLine(text, background.line);
+      for (const step of background.steps) {
+        step.endLine = _blockEndLine(text, step.line);
+      }
+    }
+    for (const scenario of scenarios) {
+      scenario.endLine = _blockEndLine(text, scenario.line);
+      for (const step of scenario.steps) {
+        step.endLine = _blockEndLine(text, step.line);
+      }
+    }
+    return {
+      name: story[1],
+      file,
+      line: storyLine,
+      endLine: _blockEndLine(text, storyLine),
+      epic,
+      subEpic,
+      epicFolder: parts.slice(0, 2).join('/'),
+      folder,
+      backgrounds,
+      scenarios,
+      examples: storyIndex === 0 ? examples : [],
+    };
+  });
 }
 
 function _blockEndLine(text: string, line: number): number {
@@ -1265,18 +1368,43 @@ function _blockEndLine(text: string, line: number): number {
     }
     offset += 1;
   }
-  const brace = text.indexOf('{', offset);
-  if (brace < 0) {
-    return line;
+  const rest = text.slice(offset);
+  const openParen = rest.indexOf('(');
+  const openBrace = rest.indexOf('{');
+  if (openParen >= 0 && (openBrace < 0 || openParen < openBrace)) {
+    return _balancedEnd(text, offset + openParen, '(', ')');
   }
+  if (openBrace >= 0) {
+    return _balancedEnd(text, offset + openBrace, '{', '}');
+  }
+  return line;
+}
+
+function _balancedEnd(text: string, openAt: number, open: string, close: string): number {
   let depth = 0;
-  for (let index = brace; index < text.length; index += 1) {
-    if (text[index] === '{') {
+  let quote = '';
+  for (let index = openAt; index < text.length; index += 1) {
+    const char = text[index];
+    if (quote) {
+      if (char === '\\') {
+        index += 1;
+        continue;
+      }
+      if (char === quote) {
+        quote = '';
+      }
+      continue;
+    }
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char;
+      continue;
+    }
+    if (char === open) {
       depth += 1;
-    } else if (text[index] === '}') {
+    } else if (char === close) {
       depth -= 1;
       if (depth === 0) {
-        return text.slice(0, index).split(/\r?\n/).length;
+        return text.slice(0, index + 1).split(/\r?\n/).length;
       }
     }
   }
@@ -1383,6 +1511,10 @@ function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
       }
       const line = found.source.start_line;
       const owner = classes.find((item) => item.start <= line && line <= item.end);
+      const body =
+        found.semantic_type === 'Operation' || found.semantic_type === 'Property'
+          ? _lineSlice(text, line, found.source.end_line)
+          : '';
       _addType(
         engineering,
         seen,
@@ -1392,10 +1524,97 @@ function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
         line,
         found.source.end_line,
         owner?.id ?? null,
+        body,
       );
     }
   }
+  _linkOperationCalls(dto);
   return graphFromWorkspaceDto({ ...dto, folder: root });
+}
+
+const CALL_RECEIVER_SKIP = new Set([
+  'expect',
+  'vi',
+  'console',
+  'Math',
+  'JSON',
+  'Object',
+  'Promise',
+  'Array',
+  'describe',
+  'it',
+  'test',
+  'beforeEach',
+  'afterEach',
+]);
+
+function _lineSlice(text: string, start: number, end: number): string {
+  const lines = text.split(/\r?\n/);
+  const from = Math.max(0, start - 1);
+  const to = Math.max(from, end);
+  return lines.slice(from, to).join('\n');
+}
+
+function _linkOperationCalls(dto: KnowledgeGraphDto): void {
+  const operations = new Map<string, string>();
+  const ownerName = new Map<string, string>();
+  for (const practice of dto.practice_graphs) {
+    const classes = new Map(
+      practice.nodes
+        .filter((node) => node.semantic_type === 'OoadClass')
+        .map((node) => [node.node_id, node.name]),
+    );
+    const nodes = new Map(practice.nodes.map((node) => [node.node_id, node]));
+    for (const edge of practice.relationships) {
+      if (edge.kind !== 'owns') {
+        continue;
+      }
+      const className = classes.get(edge.from_id);
+      const child = nodes.get(edge.to_id);
+      if (!className || !child) {
+        continue;
+      }
+      if (child.semantic_type !== 'Operation' && child.semantic_type !== 'Property') {
+        continue;
+      }
+      operations.set(`${className.toLowerCase()}.${child.name}`, child.node_id);
+      ownerName.set(child.node_id, className);
+    }
+  }
+  const call = /\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+  for (const practice of dto.practice_graphs) {
+    const nodes = new Map(practice.nodes.map((node) => [node.node_id, node]));
+    for (const member of practice.nodes) {
+      if (member.semantic_type !== 'Operation' && member.semantic_type !== 'Property') {
+        continue;
+      }
+      const text = member.source?.text ?? '';
+      if (!text) {
+        continue;
+      }
+      const seen = new Set<string>();
+      for (const match of text.matchAll(call)) {
+        if (CALL_RECEIVER_SKIP.has(match[1])) {
+          continue;
+        }
+        const receiver =
+          match[1] === 'this' || match[1] === 'self'
+            ? (ownerName.get(member.node_id) ?? '')
+            : match[1];
+        const target = operations.get(`${receiver.toLowerCase()}.${match[2]}`);
+        if (!target || target === member.node_id || seen.has(target) || !nodes.has(target)) {
+          continue;
+        }
+        seen.add(target);
+        const linked = practice.relationships.some(
+          (edge) => edge.kind === 'invokes' && edge.from_id === member.node_id && edge.to_id === target,
+        );
+        if (!linked) {
+          practice.relationships.push({ kind: 'invokes', from_id: member.node_id, to_id: target });
+        }
+      }
+    }
+  }
 }
 
 function _addType(
@@ -1407,6 +1626,7 @@ function _addType(
   start: number,
   end: number,
   ownerId: string | null,
+  body = '',
 ): string | null {
   const nodeId = `ce:${type}:${file}:${name}:${start}`;
   if (seen.has(nodeId)) {
@@ -1423,7 +1643,7 @@ function _addType(
     properties: folder ? { folder } : {},
     applicable_rules: [],
     violations: [],
-    source: { file, start_line: start, end_line: Math.max(start, end), text: '' },
+    source: { file, start_line: start, end_line: Math.max(start, end), text: body },
   });
   const owner =
     ownerId ??

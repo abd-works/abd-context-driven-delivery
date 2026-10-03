@@ -130,6 +130,7 @@ export function useKnowledgeGraph(id: string) {
       node_types: [],
       relationship_types: [],
       rules: [],
+      ruleCatalog: [],
     },
     members: graph?.members ?? [],
     selectedNode: graph?.selected ?? null,

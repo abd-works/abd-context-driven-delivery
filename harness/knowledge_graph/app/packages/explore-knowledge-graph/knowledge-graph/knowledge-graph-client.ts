@@ -323,7 +323,7 @@ function attachCrossEdges(nodes: WebKnowledgeGraphNode[], dto: any): void {
     node.nodeId === id || (node.children ?? []).some((child) => contains(child, id));
   for (const graph of dto.practice_graphs ?? []) {
     for (const edge of graph.relationships ?? []) {
-      if (edge.kind !== "invokes" && edge.kind !== "demonstrates") {
+      if (edge.kind !== "invokes" && edge.kind !== "demonstrates" && edge.kind !== "expected") {
         continue;
       }
       const from = byId.get(String(edge.from_id ?? ""));
