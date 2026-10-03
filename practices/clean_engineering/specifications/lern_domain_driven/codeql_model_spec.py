@@ -19,9 +19,10 @@ from harness.knowledge_graph.model.graph_query_spec import assert_pack_hits
 _LERN = Path(__file__).resolve().parent
 _EXAMPLES = _LERN / "examples" / "codeql"
 
-_CLEAN_ENGINEERING_PACK = _LERN / "clean_engineering" / "model" / "typescript" / "codeql"
-_DDD_PACK = _LERN / "ddd" / "model" / "typescript" / "codeql"
-_STORIES_PACK = _LERN / "stories" / "model" / "typescript" / "codeql"
+_PRACTICES = _LERN / "practices"
+_CLEAN_ENGINEERING_PACK = _PRACTICES / "clean_engineering" / "model" / "typescript" / "codeql"
+_DDD_PACK = _PRACTICES / "ddd" / "model" / "typescript" / "codeql"
+_STORIES_PACK = _PRACTICES / "stories" / "model" / "typescript" / "codeql"
 
 _RULES_BY_PACK = {
     _CLEAN_ENGINEERING_PACK: {

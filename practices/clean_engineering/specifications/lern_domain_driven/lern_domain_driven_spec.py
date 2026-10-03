@@ -148,7 +148,7 @@ with description("a LernDomainDriven generator"):
 
         with it("should resolve a typescript query pack per attributed practice"):
             for practice in ("clean_engineering", "ddd", "stories"):
-                pack = _MODULE_DIR / practice / "model" / "typescript" / "codeql"
+                pack = _MODULE_DIR / "practices" / practice / "model" / "typescript" / "codeql"
                 expect((pack / "qlpack.yml").is_file()).to(equal(True))
                 expect((pack / "rules").is_dir()).to(equal(True))
                 expect((pack / "loaders").is_dir()).to(equal(True))
@@ -162,7 +162,7 @@ with description("a LernDomainDriven generator"):
 
         with it("should keep rule queries flat under each practice rules folder"):
             for practice in ("clean_engineering", "ddd", "stories"):
-                rules_root = _MODULE_DIR / practice / "model" / "typescript" / "codeql" / "rules"
+                rules_root = _MODULE_DIR / "practices" / practice / "model" / "typescript" / "codeql" / "rules"
                 expect(any(rules_root.glob("*.ql"))).to(be_true)
                 expect(list(rules_root.glob("*/*.ql"))).to(equal([]))
 

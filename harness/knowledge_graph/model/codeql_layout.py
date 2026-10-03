@@ -33,13 +33,17 @@ def lern_spec_root() -> Path:
     return _LERN_ROOT
 
 
+def lern_practices_root() -> Path:
+    return lern_spec_root() / "practices"
+
+
 def lern_codeql_pack(attributed_practice: str, language: str) -> Path:
-    return lern_spec_root() / attributed_practice / "model" / language / "codeql"
+    return lern_practices_root() / attributed_practice / "model" / language / "codeql"
 
 
 def lern_codeql_packs(language: str) -> list[Path]:
     packs: list[Path] = []
-    root = lern_spec_root()
+    root = lern_practices_root()
     if not root.is_dir():
         return packs
     for child in sorted(root.iterdir()):
