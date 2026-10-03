@@ -2,9 +2,9 @@ import javascript
 import subject_filter
 import model
 
-predicate modeledClass(Class cls) { publicMethod(cls, _) }
+predicate modeledClass(ClassDefinition cls) { publicMethod(cls, _) }
 
-predicate anemicClass(Class cls) { not modeledClass(cls) }
+predicate anemicClass(ClassDefinition cls) { not modeledClass(cls) }
 
 bindingset[name]
 string compactName(string name) { result = name.toLowerCase().regexpReplaceAll("_", "") }
@@ -15,25 +15,25 @@ string classStem(string name) {
   result.length() >= 4
 }
 
-predicate namesType(Function method, Class named) {
-  exists(Call call |
-    call.getScope() = method and
-    call.getFunc().(Name).getId() = named.getName()
+predicate namesType(Function method, ClassDefinition named) {
+  exists(CallExpr call |
+    call.getEnclosingFunction() = method and
+    call.getCalleeName() = named.getName()
   )
   or
   exists(Parameter p |
-    p = method.getAnArg() and
-    p.getName() != "self" and
-    p.getName() != "cls" and
-    p.getAnnotation().(Name).getId() = named.getName()
+    p = method.getAParameter() and
+    p.getName() != "this" and
+    exists(p.getTypeAnnotation()) and
+    p.getTypeAnnotation().toString() = named.getName()
   )
 }
 
-predicate ownShape(Class owner, Class named) {
+predicate ownShape(ClassDefinition owner, ClassDefinition named) {
   compactName(classStem(owner.getName())).matches("%" + classStem(named.getName()) + "%")
 }
 
-predicate mentions(Class owner, Class named) {
+predicate mentions(ClassDefinition owner, ClassDefinition named) {
   modeledClass(owner) and
   anemicClass(named) and
   named.getName().regexpMatch(".*(Entry|Model|Record|Dto|DTO|Data)$") and
@@ -42,14 +42,14 @@ predicate mentions(Class owner, Class named) {
   exists(Function method | publicMethod(owner, method) and namesType(method, named))
 }
 
-predicate edgeExcluding(Class subject, Class a, Class b) {
+predicate edgeExcluding(ClassDefinition subject, ClassDefinition a, ClassDefinition b) {
   a != subject and
   b != subject and
   a != b and
   (mentions(a, b) or mentions(b, a))
 }
 
-predicate connectedExcluding(Class subject, Class a, Class b) {
+predicate connectedExcluding(ClassDefinition subject, ClassDefinition a, ClassDefinition b) {
   a != subject and
   b != subject and
   (
@@ -57,15 +57,15 @@ predicate connectedExcluding(Class subject, Class a, Class b) {
     or
     edgeExcluding(subject, a, b)
     or
-    exists(Class mid |
+    exists(ClassDefinition mid |
       connectedExcluding(subject, a, mid) and edgeExcluding(subject, mid, b)
     )
   )
 }
 
-predicate joinsForeignShapes(Class subject) {
+predicate joinsForeignShapes(ClassDefinition subject) {
   modeledClass(subject) and
-  exists(Class left, Class right |
+  exists(ClassDefinition left, ClassDefinition right |
     mentions(subject, left) and
     mentions(subject, right) and
     left.getName() < right.getName() and
@@ -73,11 +73,11 @@ predicate joinsForeignShapes(Class subject) {
   )
 }
 
-predicate inheritsFrom(Class child, Class parent) {
-  child.getABase().(Name).getId() = parent.getName()
+predicate inheritsFrom(ClassDefinition child, ClassDefinition parent) {
+  child.getASuperClass() = parent
 }
 
-predicate parallelCopy(Class copy, Class original) {
+predicate parallelCopy(ClassDefinition copy, ClassDefinition original) {
   copy != original and
   classStem(copy.getName()) = classStem(original.getName()) and
   not inheritsFrom(copy, original) and
@@ -86,9 +86,9 @@ predicate parallelCopy(Class copy, Class original) {
   anemicClass(copy)
 }
 
-predicate splitsConnectedPair(Class copy, Class original) {
+predicate splitsConnectedPair(ClassDefinition copy, ClassDefinition original) {
   parallelCopy(copy, original) and
-  exists(Class otherCopy, Class otherOriginal |
+  exists(ClassDefinition otherCopy, ClassDefinition otherOriginal |
     parallelCopy(otherCopy, otherOriginal) and
     copy != otherCopy and
     original != otherOriginal and
@@ -98,15 +98,15 @@ predicate splitsConnectedPair(Class copy, Class original) {
   )
 }
 
-predicate joinContributor(Class subject, Function method) {
+predicate joinContributor(ClassDefinition subject, Function method) {
   joinsForeignShapes(subject) and
   publicMethod(subject, method) and
-  exists(Class named | mentions(subject, named) and namesType(method, named))
+  exists(ClassDefinition named | mentions(subject, named) and namesType(method, named))
 }
 
-predicate copyContributor(Class copy, Function method) {
-  exists(Class original | parallelCopy(copy, original) or splitsConnectedPair(copy, original)) and
-  method = min(Function f | f = copy.getAMethod() | f order by f.getName())
+predicate copyContributor(ClassDefinition copy, Function method) {
+  exists(ClassDefinition original | parallelCopy(copy, original) or splitsConnectedPair(copy, original)) and
+  method = min(Function f | ownerClass(f, copy) | f order by f.getName())
 }
 
 predicate graphRuleHit(AstNode subject, string message, AstNode contributor, string slug) {
@@ -152,7 +152,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
   )
   or
   slug = "never-swallow-exceptions" and
-  exists(Function f, ExceptStmt ex |
+  exists(Function f, CatchClause ex |
     inSubject(f) and
     swallowedExcept(f, ex) and
     subject = f and
@@ -161,7 +161,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
   )
   or
   slug = "use-exceptions-properly" and
-  exists(Function f, ExceptStmt ex |
+  exists(Function f, CatchClause ex |
     inSubject(f) and
     bareExcept(f, ex) and
     subject = f and
@@ -170,7 +170,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
   )
   or
   slug = "use-explicit-dependencies" and
-  exists(Class cls, Function init, Class constructed |
+  exists(ClassDefinition cls, Function init, ClassDefinition constructed |
     inSubject(cls) and
     ownerClass(init, cls) and
     constructsTypeInInit(init, constructed) and
@@ -178,11 +178,11 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     contributor = init and
     message =
       "Class '" + cls.getName() + "' constructs '" + constructed.getName() +
-        "' inside __init__."
+        "' inside constructor."
   )
   or
   slug = "use-property-not-accessor" and
-  exists(Class cls, Function f |
+  exists(ClassDefinition cls, Function f |
     inSubject(cls) and
     ownerClass(f, cls) and
     accessorOperation(f) and
@@ -214,27 +214,27 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
   )
   or
   slug = "hide-inner-details" and
-  exists(Function f, Attribute attr |
+  exists(Function f, PropAccess attr |
     inSubject(f) and
     privateAttributeRead(f, attr) and
     subject = f and
     contributor = attr and
     message =
-      "Operation '" + operationLabel(f) + "' reads private attribute '" + attr.getName() + "'."
+      "Operation '" + operationLabel(f) + "' reads private attribute '" + attr.getPropertyName() + "'."
   )
   or
   slug = "low-coupling" and
-  exists(Function f, Attribute attr |
+  exists(Function f, PropAccess attr |
     inSubject(f) and
     privateAttributeRead(f, attr) and
     subject = f and
     contributor = attr and
     message =
-      "Operation '" + operationLabel(f) + "' reaches past a seam via '" + attr.getName() + "'."
+      "Operation '" + operationLabel(f) + "' reaches past a seam via '" + attr.getPropertyName() + "'."
   )
   or
   slug = "shape-classes-around-resources" and
-  exists(Class doer, Class bag |
+  exists(ClassDefinition doer, ClassDefinition bag |
     inSubject(doer) and
     doerOnBag(doer, bag) and
     subject = doer and
@@ -296,7 +296,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
   )
   or
   slug = "extensions-live-with-the-domain" and
-  exists(Class extension, Class domainType |
+  exists(ClassDefinition extension, ClassDefinition domainType |
     inSubject(extension) and
     domainExtensionInFrameworkModule(extension, domainType) and
     subject = extension and
@@ -325,7 +325,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
   )
   or
   slug = "do-not-invent-parallel-object-models" and
-  exists(Class cls, Function method |
+  exists(ClassDefinition cls, Function method |
     inSubject(cls) and
     subject = cls and
     contributor = method and
@@ -336,9 +336,9 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
           "' mixes types the rest of the graph keeps in separate shapes."
       or
       copyContributor(cls, method) and
-      exists(Class original |
+      exists(ClassDefinition original |
         original =
-          min(Class o |
+          min(ClassDefinition o |
             parallelCopy(cls, o) or splitsConnectedPair(cls, o)
           |
             o order by o.getName()
@@ -356,7 +356,7 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
     slug = "public-seam-only" or
     slug = "modules-not-model-blocks"
   ) and
-  exists(Class cls |
+  exists(ClassDefinition cls |
     moduleOwningClass(cls) and
     subject = cls and
     contributor = cls and

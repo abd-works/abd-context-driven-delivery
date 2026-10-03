@@ -179,7 +179,6 @@ class GraphRule(Rule):
         query_pack=None,
     ) -> None:
         super().__init__(rule.slug, rule.body, rule.fidelity)
-        self.scanner = rule.scanner
         parent = getattr(rule, "parent", None)
         if parent is not None:
             self.parent = parent
@@ -190,8 +189,6 @@ class GraphRule(Rule):
         self._query_pack = None if query_pack is None else Path(query_pack)
 
     def validate(self) -> str:
-        if self.graphQuery is None:
-            return super().validate()
         return super().validate()
 
     @property
@@ -236,23 +233,11 @@ class GraphRule(Rule):
         return path.read_text(encoding="utf-8")
 
     def evaluate(self, graph, hits=None, by_name=None) -> List[RuleViolation]:
-        if hits is None:
-            from .codeql import CodeQL, Rows
-            from .codeql_layout import codeql_pack as pack_for
-
-            language = CodeQL(graph.root).detect_language()
-            pack = self.query_pack if self._query_pack is not None else pack_for(self.practice, language)
-            query = self.graphQuery
-            combined = pack / "rules.ql"
-            if query is None:
-                raise FileNotFoundError(f"no graphQuery file for {self.slug}")
-            if combined.is_file() and (pack / "rule_hits.qll").is_file():
-                grouped = CodeQL(graph.root).run_rules(combined, [self.slug])
-                hits = Rows.from_tuples(grouped.get(self.slug) or [])
-            else:
-                hits = CodeQL(graph.root).run(query)
+        from .codeql import Rows
         from .graph_query_spec import refine_rows
 
+        if hits is None:
+            hits = Rows.from_tuples([])
         hits = refine_rows(self.slug, hits)
         return self.hits_from_query(graph, hits, by_name=by_name)
 
@@ -399,6 +384,15 @@ def _practice_slug(parent: Any) -> str:
     return AssetLocator(practice, "").class_file_directory().name
 
 
+class _HitGraph:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.nodes: Dict[str, Any] = {}
+
+    def named_nodes(self) -> Dict[str, list]:
+        return {}
+
+
 class GraphRulesCollection(RulesCollection):
     @mcp
     @Skill
@@ -435,6 +429,61 @@ When rules.md is new, start it with a yaml fence, alwaysApply false, and globs f
 A TypeScript query starts with import javascript, is @kind problem, and selects the subject, the message, and one contributor.
 """
 
+    @property
+    def validate(self) -> str:
+        return self._collection_report()
+
+    def _collection_report(self) -> str:
+        base_parts = [rule.validate() for rule in self if not isinstance(rule, GraphRule)]
+        graph_rules = [rule for rule in self if isinstance(rule, GraphRule) and rule.graphQuery]
+        if graph_rules:
+            base_parts.append(self._run_graph_rule_pack(graph_rules))
+        return "\n\n".join(part for part in base_parts if part)
+
+    def _workspace_root(self) -> Path:
+        parent = self.parent
+        workspace = getattr(parent, "workspace", None)
+        path = getattr(workspace, "path", None) if workspace is not None else None
+        if path:
+            return Path(path)
+        return Path.cwd()
+
+    def _run_graph_rule_pack(self, graph_rules: List[GraphRule]) -> str:
+        from collections import defaultdict
+
+        from .codeql import CodeQL, Rows
+
+        root = self._workspace_root()
+        codeql = CodeQL(root)
+        language = codeql.detect_language()
+        by_pack: dict[Path, List[GraphRule]] = defaultdict(list)
+        for rule in graph_rules:
+            pack = rule.query_pack if rule._query_pack is not None else codeql_pack(rule.practice, language)
+            by_pack[pack].append(rule)
+        lines: List[str] = []
+        graph = _HitGraph(root)
+        for pack, pack_rules in by_pack.items():
+            lines.extend(self._map_pack_hits(codeql, pack, pack_rules, graph, Rows))
+        return "\n".join(lines)
+
+    def _map_pack_hits(self, codeql, pack: Path, pack_rules: List[GraphRule], graph, rows_type) -> List[str]:
+        combined = pack / "rules.ql"
+        slugs = [rule.slug for rule in pack_rules]
+        if combined.is_file() and (pack / "rule_hits.qll").is_file():
+            batch = codeql.run_rules(combined, slugs)
+        else:
+            batch = {slug: [] for slug in slugs}
+        lines: List[str] = []
+        for rule in pack_rules:
+            hits = rows_type.from_tuples(batch.get(rule.slug) or [])
+            violations = rule.evaluate(graph, hits=hits)
+            if not violations:
+                lines.append(f"{rule.slug}: pass")
+                continue
+            for hit in violations:
+                lines.append(f"{hit.rule_slug}: {hit.message}")
+        return lines
+
     @classmethod
     def from_markdown(
         cls,
@@ -465,7 +514,6 @@ A TypeScript query starts with import javascript, is @kind problem, and selects 
             graph_practice = meta.get("practice") or practice
             graph_fidelity = meta.get("fidelity") or rule.fidelity
             promoted = Rule(slug, rule.body, graph_fidelity)
-            promoted.scanner = rule.scanner
             collection.entries[slug] = GraphRule(
                 promoted,
                 practice=graph_practice,
@@ -487,7 +535,9 @@ class RuleRegistry:
         return registry
 
     def load_from_practices(self, root=None) -> None:
-        from .guidance_rules_loader import load_graph_rules_from_markdown
+        from harness.knowledge_graph.legacy.model.guidance_rules_loader import (
+            load_graph_rules_from_markdown,
+        )
 
         self.rules = load_graph_rules_from_markdown(root)
 
@@ -521,6 +571,9 @@ class RuleRegistry:
         skip: Optional[Set[str]] = None,
     ) -> Dict[str, List[RuleViolation]]:
         return graph._evaluate_graph_rules(slugs=slugs, skip=skip)
+
+    def validate(self, graph) -> Dict[str, List[RuleViolation]]:
+        return self.evaluate(graph)
 
     def rules_for_node(
         self,

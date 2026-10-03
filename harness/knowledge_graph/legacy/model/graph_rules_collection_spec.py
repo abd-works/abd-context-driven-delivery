@@ -103,3 +103,19 @@ with description("a repo"):
                     with patch.object(GraphRule, "validate", return_value="ran") as validate:
                         self.practice.rules.inject_rules(self.payload)
                     expect(validate.call_count).to(equal(0))
+
+            with it("should bind @fidelity from the query header"):
+                expect(self.code_rules["keep-operations-small-focused"].fidelity).to(
+                    equal("code")
+                )
+
+            with it("should run CodeQL once for the pack on collection validate"):
+                from harness.knowledge_graph.model.codeql import CodeQL
+
+                with patch.object(CodeQL, "detect_language", return_value="python"):
+                    with patch.object(CodeQL, "run_rules", return_value={}) as run_rules:
+                        report = self.code_rules.validate
+                expect(run_rules.call_count).to(equal(1))
+                slugs = run_rules.call_args.args[-1]
+                expect("keep-operations-small-focused" in slugs).to(equal(True))
+                expect(report).to(contain("keep-operations-small-focused"))
