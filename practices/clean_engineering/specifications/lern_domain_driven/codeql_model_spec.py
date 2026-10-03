@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[6]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 for _cat in ("practices", "tools", "actions"):
@@ -16,7 +16,7 @@ from mamba import description, it
 
 from harness.knowledge_graph.model.graph_query_spec import assert_pack_hits
 
-_LERN = Path(__file__).resolve().parents[2]
+_LERN = Path(__file__).resolve().parent
 _EXAMPLES = _LERN / "examples" / "codeql"
 
 _CLEAN_ENGINEERING_PACK = _LERN / "clean_engineering" / "model" / "typescript" / "codeql"
