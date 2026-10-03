@@ -4,7 +4,6 @@
  * @fidelity
  * @node class
  * @id clean_engineering/do-not-invent-parallel-object-models
- * @problem.severity warning
  * Compare the subject to the rest of the graph.
  * Join: a public method constructs or takes two types the rest of the graph
  * never joins.

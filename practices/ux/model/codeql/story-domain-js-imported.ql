@@ -4,7 +4,6 @@
  * @fidelity mockup
  * @node screen
  * @id ux/mockup/story-domain-js-imported
- * @problem.severity warning
  * @connection stories.stories
  */
 

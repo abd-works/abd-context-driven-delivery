@@ -4,7 +4,6 @@
  * @fidelity bounded_context
  * @node class
  * @id ddd/bounded_context/domain-concepts-not-technical-names
- * @problem.severity warning
  * CodeQL emits the class name. Python WordNet decides agent nouns; leftover
  * technical suffixes stay in Python.
  */

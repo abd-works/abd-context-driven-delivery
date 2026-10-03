@@ -4,7 +4,6 @@
  * @fidelity code
  * @node module
  * @id lern_domain_driven/code/organize-by-domain-module
- * @problem.severity warning
  */
 
 import javascript

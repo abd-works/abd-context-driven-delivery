@@ -4,7 +4,6 @@
  * @fidelity building_blocks
  * @node class
  * @id ddd/building_blocks/service-is-homeless
- * @problem.severity warning
  */
 
 import python

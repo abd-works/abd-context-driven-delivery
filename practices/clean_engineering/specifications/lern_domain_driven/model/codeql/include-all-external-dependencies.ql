@@ -4,7 +4,6 @@
  * @fidelity code
  * @node module
  * @id lern_domain_driven/code/include-all-external-dependencies
- * @problem.severity warning
  */
 
 import javascript

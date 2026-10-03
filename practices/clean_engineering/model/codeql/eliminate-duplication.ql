@@ -4,7 +4,6 @@
  * @fidelity model
  * @node operation
  * @id clean_engineering/model/eliminate-duplication
- * @problem.severity warning
  */
 
 import python

@@ -4,7 +4,6 @@
  * @fidelity modules
  * @node module
  * @id clean_engineering/modules/missing-module-context
- * @problem.severity warning
  * CodeQL names the class and its source file. Python then checks that the
  * folder owns `.context/module-context.md` — markdown is not in the Python DB.
  */

@@ -4,7 +4,6 @@
  * @fidelity building_blocks
  * @node class
  * @id ddd/building_blocks/building-blocks-fidelity-requires-tactical-stereotype
- * @problem.severity warning
  */
 
 import python

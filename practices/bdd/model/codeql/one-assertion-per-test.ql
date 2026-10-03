@@ -4,7 +4,6 @@
  * @fidelity development
  * @node observation
  * @id bdd/development/one-assertion-per-test
- * @problem.severity warning
  */
 
 import python

@@ -4,7 +4,6 @@
  * @fidelity model
  * @node class
  * @id clean_engineering/model/keep-classes-single-responsibility
- * @problem.severity warning
  */
 
 import python

@@ -4,7 +4,6 @@
  * @fidelity building_blocks
  * @node class
  * @id ddd/building_blocks/screen-interface-not-a-domain-object
- * @problem.severity warning
  */
 
 import python

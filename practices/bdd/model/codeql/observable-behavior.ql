@@ -4,7 +4,6 @@
  * @fidelity
  * @node observation
  * @id bdd/observable-behavior
- * @problem.severity warning
  */
 
 import python

@@ -4,7 +4,6 @@
  * @fidelity story_map
  * @node stories
  * @id stories/story_map/right-size-story-nodes
- * @problem.severity warning
  */
 
 import python

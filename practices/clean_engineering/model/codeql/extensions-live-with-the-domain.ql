@@ -4,7 +4,6 @@
  * @fidelity modules
  * @node class
  * @id clean_engineering/modules/extensions-live-with-the-domain
- * @problem.severity warning
  */
 
 import python

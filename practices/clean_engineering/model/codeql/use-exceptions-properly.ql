@@ -4,7 +4,6 @@
  * @fidelity code
  * @node operation
  * @id clean_engineering/code/use-exceptions-properly
- * @problem.severity warning
  */
 
 import python

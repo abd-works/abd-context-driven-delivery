@@ -4,7 +4,6 @@
  * @fidelity code
  * @node property
  * @id lern_domain_driven/code/property-casing-transform
- * @problem.severity warning
  */
 
 import javascript

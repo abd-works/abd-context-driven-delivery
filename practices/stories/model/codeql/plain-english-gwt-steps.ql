@@ -4,7 +4,6 @@
  * @fidelity scenarios
  * @node steps
  * @id stories/scenarios/plain-english-gwt-steps
- * @problem.severity warning
  */
 
 import javascript

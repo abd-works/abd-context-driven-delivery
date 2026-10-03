@@ -4,7 +4,6 @@
  * @fidelity tactics
  * @node operation
  * @id ddd/tactics/load-with-identity-in-hand
- * @problem.severity warning
  */
 
 import python

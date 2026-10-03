@@ -4,7 +4,6 @@
  * @fidelity
  * @node screen
  * @id ux/screen-names-use-domain-terms
- * @problem.severity warning
  * @connection clean_engineering.class
  */
 

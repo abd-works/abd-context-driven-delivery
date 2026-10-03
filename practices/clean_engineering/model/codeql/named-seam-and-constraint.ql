@@ -4,7 +4,6 @@
  * @fidelity modules
  * @node module
  * @id clean_engineering/modules/named-seam-and-constraint
- * @problem.severity warning
  */
 
 import python

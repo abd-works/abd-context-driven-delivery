@@ -4,7 +4,6 @@
  * @fidelity code
  * @node stories
  * @id lern_domain_driven/code/ask-cross-aggregate-sync
- * @problem.severity warning
  * @connection stories.stories
  */
 

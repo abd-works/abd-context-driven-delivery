@@ -4,7 +4,6 @@
  * @fidelity mockup
  * @node screen
  * @id ux/mockup/key-interactions-wired
- * @problem.severity warning
  */
 
 import javascript

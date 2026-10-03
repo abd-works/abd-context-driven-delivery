@@ -4,7 +4,6 @@
  * @fidelity code
  * @node operation
  * @id lern_domain_driven/code/delegate-routes-to-domain-server
- * @problem.severity warning
  */
 
 import javascript

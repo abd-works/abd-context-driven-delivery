@@ -4,7 +4,6 @@
  * @fidelity model
  * @node class
  * @id clean_engineering/model/use-explicit-dependencies
- * @problem.severity warning
  */
 
 import python

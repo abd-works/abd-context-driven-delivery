@@ -4,7 +4,6 @@
  * @fidelity model
  * @node class
  * @id clean_engineering/model/put-logic-on-the-owning-resource
- * @problem.severity warning
  */
 
 import python

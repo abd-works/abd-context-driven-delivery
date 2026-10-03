@@ -4,7 +4,6 @@
  * @fidelity story_map
  * @node stories
  * @id stories/story_map/verb-noun-format
- * @problem.severity warning
  * CodeQL emits the story label. Python WordNet decides verb then noun.
  */
 

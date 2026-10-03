@@ -4,7 +4,6 @@
  * @fidelity scenarios
  * @node steps
  * @id stories/scenarios/gwt-steps-trace-to-domain-operations
- * @problem.severity warning
  * @connection clean_engineering.class
  */
 

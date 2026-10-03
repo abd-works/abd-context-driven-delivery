@@ -4,7 +4,6 @@
  * @fidelity code
  * @node module
  * @id lern_domain_driven/code/test-story-driven
- * @problem.severity warning
  * @connection stories.stories
  */
 

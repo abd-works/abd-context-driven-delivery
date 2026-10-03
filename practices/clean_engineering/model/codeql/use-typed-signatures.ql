@@ -4,7 +4,6 @@
  * @fidelity modules
  * @node class
  * @id clean_engineering/modules/use-typed-signatures
- * @problem.severity warning
  */
 
 import python

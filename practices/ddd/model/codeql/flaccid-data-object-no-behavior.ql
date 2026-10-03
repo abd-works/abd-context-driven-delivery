@@ -4,7 +4,6 @@
  * @fidelity building_blocks
  * @node class
  * @id ddd/building_blocks/flaccid-data-object-no-behavior
- * @problem.severity warning
  */
 
 import python

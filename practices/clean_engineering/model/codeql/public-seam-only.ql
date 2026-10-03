@@ -4,7 +4,6 @@
  * @fidelity modules
  * @node module
  * @id clean_engineering/modules/public-seam-only
- * @problem.severity warning
  * CodeQL names the class and its source file. Python then reads
  * `.context/module-context.md` for leaked internals.
  */

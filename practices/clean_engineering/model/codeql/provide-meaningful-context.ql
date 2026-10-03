@@ -4,7 +4,6 @@
  * @fidelity code
  * @node operation
  * @id clean_engineering/code/provide-meaningful-context
- * @problem.severity warning
  */
 
 import python

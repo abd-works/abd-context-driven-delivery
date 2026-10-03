@@ -4,7 +4,6 @@
  * @fidelity story_map
  * @node stories
  * @id stories/story_map/story-name-captures-system-mechanic
- * @problem.severity warning
  * CodeQL emits the story label. Python WordNet decides whether the verb is a
  * vague doer word over a generic noun.
  */

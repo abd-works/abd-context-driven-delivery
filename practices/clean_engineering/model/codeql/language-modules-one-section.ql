@@ -4,7 +4,6 @@
  * @fidelity modules
  * @node module
  * @id clean_engineering/modules/language-modules-one-section
- * @problem.severity warning
  * CodeQL names the class and its source file. Python then reads
  * `.context/module-context.md` for a `## Modules` heading.
  */

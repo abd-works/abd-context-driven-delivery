@@ -4,7 +4,6 @@
  * @fidelity model
  * @node class
  * @id clean_engineering/model/shape-classes-around-resources
- * @problem.severity warning
  */
 
 import python

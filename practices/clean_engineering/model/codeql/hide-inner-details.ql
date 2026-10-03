@@ -4,7 +4,6 @@
  * @fidelity model
  * @node class
  * @id clean_engineering/model/hide-inner-details
- * @problem.severity warning
  */
 
 import python

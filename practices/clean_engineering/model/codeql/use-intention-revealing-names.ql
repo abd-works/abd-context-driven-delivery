@@ -4,7 +4,6 @@
  * @fidelity model
  * @node class
  * @id clean_engineering/model/use-intention-revealing-names
- * @problem.severity warning
  */
 
 import python

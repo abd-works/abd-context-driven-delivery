@@ -4,7 +4,6 @@
  * @fidelity building_blocks
  * @node class
  * @id ddd/building_blocks/repository-is-collection-lifecycle
- * @problem.severity warning
  */
 
 import python

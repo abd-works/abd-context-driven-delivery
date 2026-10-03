@@ -4,7 +4,6 @@
  * @fidelity code
  * @node class
  * @id lern_domain_driven/code/one-json-store-per-aggregate
- * @problem.severity warning
  */
 
 import javascript

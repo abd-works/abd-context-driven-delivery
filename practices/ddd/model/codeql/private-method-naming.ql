@@ -4,7 +4,6 @@
  * @fidelity building_blocks
  * @node operation
  * @id ddd/building_blocks/private-method-naming
- * @problem.severity warning
  */
 
 import python

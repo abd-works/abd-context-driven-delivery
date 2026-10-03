@@ -4,7 +4,6 @@
  * @fidelity code
  * @node parameter
  * @id lern_domain_driven/code/preserve-arg-names-across-layers
- * @problem.severity warning
  */
 
 import javascript

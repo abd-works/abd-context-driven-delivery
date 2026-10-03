@@ -4,7 +4,6 @@
  * @fidelity story_map
  * @node stories
  * @id stories/story_map/kebab-case-paths
- * @problem.severity warning
  */
 
 import javascript

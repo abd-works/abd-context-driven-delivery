@@ -4,7 +4,6 @@
  * @fidelity
  * @node describe
  * @id bdd/describe-is-subject-not-internal
- * @problem.severity warning
  */
 
 import python

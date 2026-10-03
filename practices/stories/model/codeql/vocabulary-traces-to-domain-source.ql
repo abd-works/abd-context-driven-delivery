@@ -4,7 +4,6 @@
  * @fidelity
  * @node stories
  * @id stories/vocabulary-traces-to-domain-source
- * @problem.severity warning
  * @connection clean_engineering.class
  */
 

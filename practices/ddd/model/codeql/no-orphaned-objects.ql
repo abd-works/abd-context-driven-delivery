@@ -4,7 +4,6 @@
  * @fidelity building_blocks
  * @node class
  * @id ddd/building_blocks/no-orphaned-objects
- * @problem.severity warning
  */
 
 import python

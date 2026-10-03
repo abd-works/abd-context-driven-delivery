@@ -4,7 +4,6 @@
  * @fidelity
  * @node describe
  * @id bdd/state-not-when
- * @problem.severity warning
  */
 
 import python

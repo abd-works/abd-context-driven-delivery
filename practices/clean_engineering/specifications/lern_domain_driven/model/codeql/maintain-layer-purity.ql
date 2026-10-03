@@ -4,7 +4,6 @@
  * @fidelity code
  * @node module
  * @id lern_domain_driven/code/maintain-layer-purity
- * @problem.severity warning
  */
 
 import javascript

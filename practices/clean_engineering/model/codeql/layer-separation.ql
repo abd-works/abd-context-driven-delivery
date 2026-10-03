@@ -4,7 +4,6 @@
  * @fidelity modules
  * @node module
  * @id clean_engineering/modules/layer-separation
- * @problem.severity warning
  */
 
 import python

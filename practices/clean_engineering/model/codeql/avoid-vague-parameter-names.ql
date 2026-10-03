@@ -4,7 +4,6 @@
  * @fidelity model
  * @node parameter
  * @id clean_engineering/model/avoid-vague-parameter-names
- * @problem.severity warning
  */
 
 import python

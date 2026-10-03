@@ -4,7 +4,6 @@
  * @fidelity development
  * @node observation
  * @id bdd/development/layer-isolation
- * @problem.severity warning
  */
 
 import python

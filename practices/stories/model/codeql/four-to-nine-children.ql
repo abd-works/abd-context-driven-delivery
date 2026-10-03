@@ -4,7 +4,6 @@
  * @fidelity story_map
  * @node stories
  * @id stories/story_map/four-to-nine-children
- * @problem.severity warning
  */
 
 import python

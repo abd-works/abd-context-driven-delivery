@@ -4,7 +4,6 @@
  * @fidelity code
  * @node operation
  * @id lern_domain_driven/code/ensure-type-safe-routes
- * @problem.severity warning
  */
 
 import javascript

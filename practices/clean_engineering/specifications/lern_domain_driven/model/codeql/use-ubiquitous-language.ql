@@ -4,7 +4,6 @@
  * @fidelity code
  * @node class
  * @id lern_domain_driven/code/use-ubiquitous-language
- * @problem.severity warning
  */
 
 import javascript

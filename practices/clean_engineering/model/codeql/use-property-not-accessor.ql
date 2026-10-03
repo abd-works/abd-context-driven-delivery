@@ -4,7 +4,6 @@
  * @fidelity model
  * @node operation
  * @id clean_engineering/model/use-property-not-accessor
- * @problem.severity warning
  */
 
 import python

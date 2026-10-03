@@ -4,7 +4,6 @@
  * @fidelity code
  * @node operation
  * @id clean_engineering/code/simplify-control-flow
- * @problem.severity warning
  */
 
 import python

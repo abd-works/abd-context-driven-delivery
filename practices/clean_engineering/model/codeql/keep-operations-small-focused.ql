@@ -4,7 +4,6 @@
  * @fidelity code
  * @node operation
  * @id clean_engineering/code/keep-operations-small-focused
- * @problem.severity warning
  */
 
 import python

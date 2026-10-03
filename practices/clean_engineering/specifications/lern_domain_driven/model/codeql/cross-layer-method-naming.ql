@@ -4,7 +4,6 @@
  * @fidelity code
  * @node operation
  * @id lern_domain_driven/code/cross-layer-method-naming
- * @problem.severity warning
  */
 
 import javascript
