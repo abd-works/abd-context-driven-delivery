@@ -1307,7 +1307,7 @@ export function rulesForFilters(
   nodeTypes: string[] | null,
 ): string[] {
   const found: string[] = [];
-  for (const rule of catalog) {
+  for (const rule of catalog ?? []) {
     if (practices && !practices.includes(rule.practice)) {
       continue;
     }
