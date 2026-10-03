@@ -10,6 +10,7 @@ import {
   restoredBranches,
   domainTree,
   retainedTree,
+  storyTree,
   rulesForFilters,
   shownRelationships,
   extractionProgress,
@@ -1153,6 +1154,22 @@ function practiceAllowed(
   return includedPracticeIds(picked.practices).includes(practiceId(nodePractice));
 }
 
+function practiceMark(id: string): string {
+  if (id === 'stories') {
+    return 'Book';
+  }
+  if (id === 'clean_engineering') {
+    return 'Gear';
+  }
+  if (id === 'ddd') {
+    return 'Entity diagram';
+  }
+  if (id === 'bdd') {
+    return 'Checklist';
+  }
+  return 'Practice';
+}
+
 function practiceForest(
   nodes: KnowledgeGraphNode[],
   picked: FilterPick,
@@ -1173,7 +1190,8 @@ function practiceForest(
           : label === 'BDD'
             ? 'bdd'
             : 'stories';
-    const children = id === 'ddd' ? domainTree(nodes) : retainedTree(nodes, [id], false);
+    const children =
+      id === 'ddd' ? domainTree(nodes) : id === 'stories' ? storyTree(nodes) : retainedTree(nodes, [id], false);
     if (!children.length) {
       continue;
     }
@@ -1181,7 +1199,7 @@ function practiceForest(
     root.name = label;
     root.nodeId = `practice:${id}`;
     root.practice = id;
-    root.nodeType = { name: 'Practice' } as KnowledgeGraphNode['nodeType'];
+    root.nodeType = { name: practiceMark(id) } as KnowledgeGraphNode['nodeType'];
     root.children = children;
     roots.push(root);
   }

@@ -463,6 +463,97 @@ function markAggregateRoots(children: KnowledgeGraphNode[]): void {
   }
 }
 
+const STORY_KINDS = new Set([
+  "Increment",
+  "Epic",
+  "SubEpic",
+  "Story",
+  "Scenario",
+  "Background",
+  "Step",
+  "Example",
+  "StoryModel",
+]);
+
+const CROSSED_KINDS = new Set(["invokes", "demonstrates", "expected"]);
+
+export function storyTree(nodes: KnowledgeGraphNode[]): KnowledgeGraphNode[] {
+  return nodes.flatMap((node) => {
+    const projected = projectStories(node);
+    return projected ? [projected] : [];
+  });
+}
+
+function projectStories(node: KnowledgeGraphNode): KnowledgeGraphNode | null {
+  const type = node.nodeType?.name ?? "";
+  if (STORY_KINDS.has(type)) {
+    const copy = copyNode(node);
+    copy.practice = "stories";
+    copy.children = (node.children ?? []).flatMap((child) => projectStoryChild(node, child));
+    return copy;
+  }
+  if (type !== "Module" && type !== "Package") {
+    return null;
+  }
+  const children = (node.children ?? []).flatMap((child) => {
+    const projected = projectStories(child);
+    return projected ? [projected] : [];
+  });
+  if (!children.some((child) => hasStoryLeaf(child))) {
+    return null;
+  }
+  const copy = copyNode(node);
+  copy.practice = "stories";
+  copy.children = children;
+  const folderKind = storyFolderKind(children);
+  if (folderKind) {
+    copy.nodeType = { name: folderKind } as KnowledgeGraphNode["nodeType"];
+  }
+  return copy;
+}
+
+function projectStoryChild(node: KnowledgeGraphNode, child: KnowledgeGraphNode): KnowledgeGraphNode[] {
+  const projected = projectStories(child);
+  if (projected) {
+    return [projected];
+  }
+  const linked = (node.relationships ?? []).some(
+    (link) => CROSSED_KINDS.has(link.kind) && link.nodeId === child.nodeId,
+  );
+  if (!linked) {
+    return [];
+  }
+  const copy = copyNode(child);
+  copy.children = (child.children ?? []).flatMap((nested) => projectStoryChild(child, nested));
+  return [copy];
+}
+
+function hasStoryLeaf(node: KnowledgeGraphNode): boolean {
+  if (STORY_KINDS.has(node.nodeType?.name ?? "")) {
+    return true;
+  }
+  return (node.children ?? []).some((child) => hasStoryLeaf(child));
+}
+
+function storyFolderKind(children: KnowledgeGraphNode[]): string {
+  const hasStory = children.some((child) => {
+    const type = child.nodeType?.name ?? "";
+    return type === "Story" || type === "Scenario" || type === "Background";
+  });
+  const hasSubEpic = children.some((child) => child.nodeType?.name === "SubEpic");
+  const hasEpic = children.some((child) => child.nodeType?.name === "Epic");
+  if (hasSubEpic && !hasStory) {
+    return "Epic";
+  }
+  if (hasEpic) {
+    return "";
+  }
+  if (hasStory) {
+    return "SubEpic";
+  }
+  return "";
+}
+
 function copyNode(node: KnowledgeGraphNode): KnowledgeGraphNode {
   const copy = Object.assign(Object.create(Object.getPrototypeOf(node)), node) as KnowledgeGraphNode;
   copy.children = [];

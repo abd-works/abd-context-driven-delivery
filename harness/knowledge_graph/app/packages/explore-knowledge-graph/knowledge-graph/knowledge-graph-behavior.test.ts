@@ -16,6 +16,7 @@ import {
   domainTree,
   dddClassKind,
   retainedTree,
+  storyTree,
   retagPractice,
   shownRelationships,
   stepMembers,
@@ -453,6 +454,31 @@ describe("a knowledge graph", () => {
         expect(included.map((node) => node.name)).not.toContain("Customer is known");
         expect(included.map((node) => node.name)).not.toContain("Ordering");
         expect(included.map((node) => node.name)).not.toContain("select-plan.e2e.ts");
+      });
+    });
+
+    describe("that projects a story tree", () => {
+      it("should keep folders that lead to stories and mark epics", () => {
+        const story = graphNode("Load Customer", "Story", "stories", [
+          graphNode("When My Paradise loads the customer", "Step", "stories"),
+        ]);
+        const subEpic = graphNode("create-customer", "Package", "", [story]);
+        const epic = graphNode("onboard-a-customer", "Package", "", [subEpic]);
+        const tests = graphNode("tests", "Package", "", [epic]);
+        const src = graphNode("src", "Module", "clean_engineering", [
+          graphNode("Customer", "OoadClass", "clean_engineering"),
+        ]);
+        const projected = storyTree([
+          graphNode("packages", "Package", ""),
+          src,
+          tests,
+          graphNode("Customer is known", "Description", "bdd"),
+        ]);
+        expect(projected.map((node) => node.name)).toEqual(["tests"]);
+        expect(projected[0].children[0].nodeType?.name).toBe("Epic");
+        expect(projected[0].children[0].name).toBe("onboard-a-customer");
+        expect(projected[0].children[0].children[0].nodeType?.name).toBe("SubEpic");
+        expect(projected[0].children[0].children[0].children[0].name).toBe("Load Customer");
       });
     });
 
