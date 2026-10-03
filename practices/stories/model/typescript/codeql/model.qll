@@ -23,3 +23,41 @@ bindingset[label]
 predicate identifierStep(string label) {
   label.regexpMatch("[A-Za-z_][A-Za-z0-9_]*")
 }
+
+predicate nestedInStory(CallExpr inner, CallExpr story) {
+  storyCall(story) and
+  inner.getEnclosingFunction*() = story.getArgument(1).(Function)
+}
+
+int scenarioCount(CallExpr story) {
+  result = count(CallExpr scenario | scenarioCall(scenario) and nestedInStory(scenario, story))
+}
+
+predicate tooFewOrManyScenarios(CallExpr story) {
+  exists(int n | n = scenarioCount(story) and (n < 4 or n > 9))
+}
+
+predicate siblingStories(string left, string right, File file) {
+  exists(CallExpr a, CallExpr b |
+    storyCall(a) and
+    storyCall(b) and
+    a.getFile() = file and
+    b.getFile() = file and
+    left = a.getArgument(0).(StringLiteral).getValue() and
+    right = b.getArgument(0).(StringLiteral).getValue() and
+    left < right
+  )
+}
+
+bindingset[left, right]
+predicate similarSiblingNames(string left, string right) {
+  left.length() - right.length() <= 2 and
+  right.length() - left.length() <= 2
+}
+
+predicate untracedStory(CallExpr call, string name) {
+  storyLabel(call, name) and
+  not exists(ClassDefinition cls |
+    name.toLowerCase().matches("%" + cls.getName().toLowerCase() + "%")
+  )
+}

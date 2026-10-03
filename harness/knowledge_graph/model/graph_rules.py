@@ -12,8 +12,8 @@ from harness.guidance.rule import Rule, RulesCollection
 from harness.mcp.mcp_server import mcp
 from installation.files import Skill
 
-_REPO = Path(__file__).resolve().parents[3]
-_PRACTICES = _REPO / "practices"
+from .codeql_layout import codeql_pack, has_graph_query, rule_query
+
 _CLASS_TYPES = {
     "OoadClass",
     "Entity",
@@ -202,17 +202,7 @@ class GraphRule(Rule):
     def query_pack(self) -> Path:
         if self._query_pack is not None:
             return self._query_pack
-        nested = (
-            _PRACTICES
-            / "clean_engineering"
-            / "specifications"
-            / self.practice
-            / "model"
-            / "codeql"
-        )
-        if (nested / "qlpack.yml").is_file():
-            return nested
-        return _PRACTICES / self.practice / "model" / "codeql"
+        return codeql_pack(self.practice, "python")
 
     @property
     def pack_rules_query(self) -> Optional[Path]:
@@ -225,8 +215,7 @@ class GraphRule(Rule):
 
     @property
     def graphQuery(self) -> Optional[Path]:
-        path = self.query_pack / f"{self.slug}.ql"
-        return path if path.is_file() else None
+        return rule_query(self.practice, self.slug)
 
     def load_graph_query(self) -> str:
         path = self.graphQuery
@@ -237,13 +226,17 @@ class GraphRule(Rule):
     def evaluate(self, graph, hits=None, by_name=None) -> List[RuleViolation]:
         if hits is None:
             from .codeql import CodeQL, Rows
+            from .codeql_layout import codeql_pack as pack_for
 
-            combined = self.pack_rules_query
-            if combined is not None:
+            language = CodeQL(graph.root).detect_language()
+            pack = pack_for(self.practice, language)
+            combined = pack / "rules.ql"
+            query = pack / "rules" / f"{self.slug}.ql"
+            if combined.is_file():
                 grouped = CodeQL(graph.root).run_rules(combined, [self.slug])
                 hits = Rows.from_tuples(grouped.get(self.slug) or [])
-            elif self.graphQuery is not None:
-                hits = CodeQL(graph.root).run(self.graphQuery)
+            elif query.is_file():
+                hits = CodeQL(graph.root).run(query)
             else:
                 raise FileNotFoundError(f"no graphQuery file for {self.slug}")
         from .graph_query_spec import refine_rows
@@ -445,8 +438,7 @@ A TypeScript query starts with import javascript, is @kind problem, and selects 
         for slug, rule in list(collection.entries.items()):
             if not isinstance(rule, Rule) or isinstance(rule, GraphRule):
                 continue
-            query = _PRACTICES / practice / "model" / "codeql" / f"{slug}.ql"
-            if not query.is_file():
+            if not has_graph_query(practice, slug):
                 continue
             collection.entries[slug] = GraphRule(rule, practice=practice, shared=shared)
         return collection

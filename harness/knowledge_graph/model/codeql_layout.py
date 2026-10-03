@@ -60,3 +60,26 @@ def has_graph_query(practice: str, slug: str) -> bool:
 
 def qlpack_name(practice: str, language: str) -> str:
     return f"cdd/{practice.replace('_', '-')}-graph-query-{language}"
+
+
+def extractor_language(language: str) -> str:
+    return EXTRACTOR.get(language, language)
+
+
+def source_language_from_path(path: Path) -> str | None:
+    parts = Path(path).resolve().parts
+    for index, part in enumerate(parts):
+        if part == "codeql" and index > 0 and parts[index - 1] in SOURCE_LANGUAGES:
+            return parts[index - 1]
+    return None
+
+
+def listed_practices() -> tuple[str, ...]:
+    return (
+        "stories",
+        "clean_engineering",
+        "ddd",
+        "bdd",
+        "ux",
+        "lern_domain_driven",
+    )

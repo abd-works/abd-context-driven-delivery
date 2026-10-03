@@ -1,21 +1,21 @@
 import javascript
 import subject_filter
 
-predicate serverFile(File f) { f.getBaseName().matches("%-server.ts") }
+predicate serverFile(File f) { f.getBaseName().matches("%-server.js") }
 
 predicate clientFile(File f) {
-  f.getBaseName().matches("%-client.tsx") or f.getBaseName().matches("%-client.ts")
+  f.getBaseName().matches("%-client.jsx") or f.getBaseName().matches("%-client.js")
 }
 
 predicate coreFile(File f) {
-  f.getExtension() = "ts" and
+  f.getExtension() = "js" and
   not serverFile(f) and
   not clientFile(f) and
-  not f.getBaseName().matches("%.test.ts") and
-  not f.getBaseName().matches("%.spec.ts") and
-  not f.getBaseName() = "index.ts" and
-  not f.getBaseName() = "app.ts" and
-  not f.getBaseName() = "serve.ts" and
+  not f.getBaseName().matches("%.test.js") and
+  not f.getBaseName().matches("%.spec.js") and
+  not f.getBaseName() = "index.js" and
+  not f.getBaseName() = "app.js" and
+  not f.getBaseName() = "serve.js" and
   exists(Container domain |
     domain = f.getParentContainer() and
     (
@@ -113,10 +113,10 @@ predicate placeholderScope(string name) {
 }
 
 predicate specFile(File f) {
-  f.getBaseName().matches("%.test.ts") or
-  f.getBaseName().matches("%.test.tsx") or
-  f.getBaseName().matches("%.spec.ts") or
-  f.getBaseName().matches("%.spec.tsx")
+  f.getBaseName().matches("%.test.js") or
+  f.getBaseName().matches("%.test.jsx") or
+  f.getBaseName().matches("%.spec.js") or
+  f.getBaseName().matches("%.spec.jsx")
 }
 
 predicate missingDomainTier(Container domain, string missing) {

@@ -9,7 +9,7 @@ import python
 
 string enclosingScenario(Call call) {
   exists(Call scenario, StringLiteral name |
-    scenario.getCalleeName() = "scenario" and
+    scenario.getFunc().(Name).getId() = "scenario" and
     name = scenario.getArg(0) and
     call.getParent+() = scenario and
     result = name.getValue()
@@ -21,7 +21,7 @@ where
   call.getFunc().(Name).getId() = "background" and
   scope = call.getArg(0) and
   file = call.getFile() and
-  story.getCalleeName() = "story" and
+  story.getFunc().(Name).getId() = "story" and
   storyName = story.getArg(0) and
   call.getParent+() = story and
   (

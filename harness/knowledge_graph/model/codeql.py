@@ -12,16 +12,18 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from .codeql_layout import (
+    PACK_FOLDERS,
+    codeql_pack,
+    extractor_language,
+    loader_query,
+    pack_root_for_query,
+    source_language_from_path,
+)
+
 if TYPE_CHECKING:
     from .practice_graph import PracticeGraph
 
-_CODEQL_QUERIES = (
-    Path(__file__).resolve().parents[3]
-    / "practices"
-    / "clean_engineering"
-    / "model"
-    / "codeql"
-)
 _FACT_QUERIES = ("classes", "operations", "parameters", "properties", "calls")
 _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet")
 
@@ -175,19 +177,22 @@ class CodeQL:
 
     def detect_language(self) -> str:
         skip = {"node_modules", ".git", "dist", "__pycache__", ".venv", ".codeql", "coverage"}
-        ts = 0
-        py = 0
+        counts = {"python": 0, "javascript": 0, "typescript": 0}
         for dirpath, dirnames, filenames in os.walk(self.root):
             dirnames[:] = [name for name in dirnames if name not in skip]
             for name in filenames:
                 suffix = Path(name).suffix.lower()
-                if suffix in {".ts", ".tsx", ".js", ".jsx"} and not name.endswith(".d.ts"):
-                    ts += 1
+                if name.endswith(".d.ts"):
+                    continue
+                if suffix in {".ts", ".tsx"}:
+                    counts["typescript"] += 1
+                elif suffix in {".js", ".jsx"}:
+                    counts["javascript"] += 1
                 elif suffix == ".py":
-                    py += 1
-                if ts + py >= 80:
-                    return "javascript" if ts > py else "python"
-        return "javascript" if ts > py else "python"
+                    counts["python"] += 1
+                if sum(counts.values()) >= 80:
+                    return max(counts, key=counts.get)
+        return max(counts, key=counts.get)
 
     def has_database(self, language: str | None = None) -> bool:
         return self._ready_database(language or self.detect_language()) is not None
@@ -270,7 +275,7 @@ class CodeQL:
                 "database",
                 "create",
                 str(database),
-                f"--language={language}",
+                f"--language={extractor_language(language)}",
                 f"--source-root={source_root}",
                 "--build-mode=none",
                 "--overwrite",
@@ -367,10 +372,7 @@ class CodeQL:
             time.sleep(0.4)
 
     def _query_pack(self, language: str) -> Path:
-        pack = _CODEQL_QUERIES / language
-        if (pack / "qlpack.yml").is_file():
-            return pack
-        return _CODEQL_QUERIES
+        return codeql_pack("clean_engineering", language)
 
     def _fact_query(self, name: str) -> tuple[Path, Path]:
         language = self.detect_language()
@@ -641,7 +643,7 @@ class CodeQL:
 
     def _pack_results_dir(self, query: Path) -> Path:
         name = "cdd/clean-engineering-graph-query"
-        qlpack = query.parent / "qlpack.yml"
+        qlpack = pack_root_for_query(query) / "qlpack.yml"
         if qlpack.is_file():
             for line in qlpack.read_text(encoding="utf-8").splitlines():
                 if line.startswith("name:"):
@@ -793,6 +795,8 @@ class CodeQL:
         return f"predicate {name}(string prefix) {{\n  {clauses}\n}}\n"
 
     def _write_subject_filter(self, pack_dir: Path, path_root: Path | None = None) -> None:
+        if pack_dir.name in PACK_FOLDERS:
+            pack_dir = pack_dir.parent
         root = (path_root or self.repo_root()).resolve()
         prefix = self._subject_prefix(root)
         modules = self._first_class_module_prefixes(root)
@@ -806,10 +810,8 @@ class CodeQL:
             )
         else:
             path_body = "  any()\n"
-        language = "python"
-        qlpack = pack_dir / "qlpack.yml"
-        if qlpack.is_file() and "javascript" in qlpack.read_text(encoding="utf-8"):
-            language = "javascript"
+        source = source_language_from_path(pack_dir) or "python"
+        language = extractor_language(source)
         ast = "AstNode"
         extra = ""
         if language == "python":
@@ -837,7 +839,11 @@ class CodeQL:
         target.write_text(text, encoding="utf-8")
 
     def pack_language(self, pack_dir: Path) -> str | None:
-        qlpack = pack_dir / "qlpack.yml"
+        pack = pack_root_for_query(pack_dir / "qlpack.yml") if pack_dir.name in PACK_FOLDERS else pack_dir
+        source = source_language_from_path(pack)
+        if source:
+            return source
+        qlpack = pack / "qlpack.yml"
         if not qlpack.is_file():
             return None
         text = qlpack.read_text(encoding="utf-8")
@@ -848,19 +854,26 @@ class CodeQL:
         return None
 
     def _file_language(self, ql_path: Path) -> str:
+        source = source_language_from_path(ql_path)
+        if source:
+            return source
         text = ql_path.read_text(encoding="utf-8")
         if "import javascript" in text:
             return "javascript"
         return "python"
 
     def query_language(self, ql_path: Path) -> str:
-        return self.pack_language(ql_path.parent) or self._file_language(ql_path)
+        return (
+            source_language_from_path(ql_path)
+            or self.pack_language(ql_path.parent)
+            or self._file_language(ql_path)
+        )
 
     def query_matches_pack(self, ql_path: Path) -> bool:
         pack_language = self.pack_language(ql_path.parent)
         if pack_language is None:
             return True
-        return pack_language == self._file_language(ql_path)
+        return extractor_language(pack_language) == extractor_language(self._file_language(ql_path))
 
     def _database_ready(self, database: Path) -> bool:
         has_db = (database / "db-python").is_dir() or (database / "db-javascript").is_dir()
@@ -928,8 +941,8 @@ class CodeQL:
         self._apply_fact_batch(graph)
 
     def _populate_query_paths(self) -> List[Path]:
-        pack = self._query_pack(self._database_language)
-        return [pack / f"{name}.ql" for name in _FACT_QUERIES]
+        language = self._database_language
+        return [loader_query("clean_engineering", name, language) for name in _FACT_QUERIES]
 
     def _ready_database(self, language: str = "python") -> Path | None:
         working = self.root / ".codeql" / f"{language}-working-copy"

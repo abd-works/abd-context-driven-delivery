@@ -1,5 +1,0 @@
-a context tool
-  that is invoked to run an action
-    ...
-a workspace
-  -> workspace = Workspace(path=...)

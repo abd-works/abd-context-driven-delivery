@@ -6,16 +6,14 @@
 
 import javascript
 import subject_filter
-import model
 
-from AnnAssign assign, Class cls, string name
+from FieldDefinition field, string name
 where
-  inSubject(assign) and
-  assign.getScope() = cls and
-  name = assign.getTarget().(Name).getId() and
+  inSubject(field) and
+  name = field.getName() and
   not name.matches("\\_%")
-select cls.getName(), name, assign.getLocation().getFile().getShortName(),
-  assign.getLocation().getStartLine(),
-  assign.getLocation().getFile().getRelativePath(),
-  assign.getLocation().getEndLine(),
-  assign.getAnnotation().toString()
+select field.getDeclaringType().getName(), name, field.getFile().getBaseName(),
+  field.getLocation().getStartLine(),
+  field.getFile().getRelativePath(),
+  field.getLocation().getEndLine(),
+  ""

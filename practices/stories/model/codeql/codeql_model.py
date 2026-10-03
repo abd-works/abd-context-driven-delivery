@@ -991,15 +991,23 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
         )
 
         model = CodeQLCleanEngineeringModel.load_content(database)
+        name = database.name
+        language = "python"
+        for token in ("typescript", "javascript", "python"):
+            if token in name:
+                language = token
+                break
         codeql = CodeQL(database)
+        from harness.knowledge_graph.model.codeql_layout import loader_query
+
         queries = [
-            Path(__file__).resolve().parent / name
-            for name in (
-                "stories.ql",
-                "scenarios.ql",
-                "backgrounds.ql",
-                "steps.ql",
-                "example_exports.ql",
+            loader_query("stories", query_name, language)
+            for query_name in (
+                "stories",
+                "scenarios",
+                "backgrounds",
+                "steps",
+                "example_exports",
             )
         ]
         batch = codeql.run_queries(queries, database, write_filter=False)

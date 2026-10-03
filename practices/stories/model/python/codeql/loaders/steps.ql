@@ -17,7 +17,7 @@ predicate isStepName(string name) {
 
 string scenarioName(Call call) {
   exists(Call scenario, StringLiteral name |
-    scenario.getCalleeName() = "scenario" and
+    scenario.getFunc().(Name).getId() = "scenario" and
     name = scenario.getArg(0) and
     call.getParent+() = scenario and
     result = name.getValue()
@@ -26,7 +26,7 @@ string scenarioName(Call call) {
 
 string backgroundName(Call call) {
   exists(Call background, StringLiteral name |
-    background.getCalleeName() = "background" and
+    background.getFunc().(Name).getId() = "background" and
     name = background.getArg(0) and
     call.getParent+() = background and
     result = name.getValue()
@@ -39,7 +39,7 @@ where
   isStepName(callee) and
   arg = call.getArg(0) and
   file = call.getFile() and
-  story.getCalleeName() = "story" and
+  story.getFunc().(Name).getId() = "story" and
   storyName = story.getArg(0) and
   call.getParent+() = story and
   (

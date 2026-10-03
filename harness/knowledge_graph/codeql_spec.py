@@ -27,7 +27,9 @@ from harness.knowledge_graph.model.graph_rules import RuleViolation
 from harness.knowledge_graph.model.practice_graph import PracticeGraph
 
 _KG = _REPO_ROOT / "harness" / "knowledge_graph"
-_PACK = _REPO_ROOT / "practices" / "clean_engineering" / "model" / "codeql"
+_PACK = (
+    _REPO_ROOT / "practices" / "clean_engineering" / "model" / "python" / "codeql"
+)
 
 
 with description("CodeQL report runner"):
@@ -211,12 +213,20 @@ with description("CodeQL report runner"):
 
 
 with description("CodeQL.detect_language"):
-    with it("should choose javascript when the tree is TypeScript"):
+    with it("should choose typescript when the tree is TypeScript"):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             src = root / "src"
             src.mkdir()
             (src / "App.tsx").write_text("export const App = () => null;\n", encoding="utf-8")
+            expect(CodeQL(root).detect_language()).to(equal("typescript"))
+
+    with it("should choose javascript when the tree is JavaScript"):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            src = root / "src"
+            src.mkdir()
+            (src / "app.js").write_text("export const App = () => null;\n", encoding="utf-8")
             expect(CodeQL(root).detect_language()).to(equal("javascript"))
 
     with it("should choose python when the tree is Python"):
@@ -241,7 +251,8 @@ with description("CodeQL fact queries"):
                 "properties.ql",
                 "calls.ql",
             ]))
-            expect(paths[0].parent.name).to(equal("javascript"))
+            expect(paths[0].parent.name).to(equal("loaders"))
+            expect("typescript" in str(paths[0])).to(equal(True))
 
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -256,4 +267,5 @@ with description("CodeQL fact queries"):
                 "properties.ql",
                 "calls.ql",
             ]))
-            expect(paths[0].parent.name).to(equal("codeql"))
+            expect(paths[0].parent.name).to(equal("loaders"))
+            expect("python" in str(paths[0])).to(equal(True))

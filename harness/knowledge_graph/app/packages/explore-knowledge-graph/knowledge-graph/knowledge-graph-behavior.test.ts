@@ -739,6 +739,47 @@ describe("inlined operation source", () => {
     expect(layout.folds.some((fold) => fold.kind === "class")).toBe(true);
   });
 
+  it("inlines a call through a property chain", () => {
+    const layout = inlineCallLayout(
+      "customer = await ctx.customerRepository.load(accountCredentials)",
+      [
+        {
+          id: "load",
+          name: "load",
+          kind: "Operation",
+          owner: "CustomerRepository",
+          text: "async load(accountCredentials: AccountCredentials) {\n  return stored\n}",
+          file: "customer.ts",
+          start: 10,
+          end: 12,
+        },
+      ],
+      "",
+    );
+    expect(layout.text).toContain("return stored");
+    expect(layout.folds.some((fold) => fold.kind === "call")).toBe(true);
+  });
+
+  it("stops inlining calls after five levels", () => {
+    const chain = ["a", "b", "c", "d", "e", "f", "g"].map((name, index, names) => {
+      const next = names[index + 1];
+      return {
+        id: name,
+        name,
+        kind: "Operation",
+        owner: "Chain",
+        text: next ? `${name}() {\n  this.${next}()\n}` : `${name}() {\n  leaf\n}`,
+        file: "chain.ts",
+        start: index + 1,
+        end: index + 3,
+      };
+    });
+    const layout = inlineCallLayout(chain[0].text, chain, "Chain");
+    expect(layout.text).toContain("e() {");
+    expect(layout.text).toContain("this.f()");
+    expect(layout.text).not.toContain("leaf");
+  });
+
   it("inlines a call to an operation on another class", () => {
     const layout = inlineCallLayout(
       "checkout(): Receipt {\n  Cart.placeOrder(cart)\n}",

@@ -12,7 +12,7 @@ where
   call.getFunc().(Name).getId() = "scenario" and
   name = call.getArg(0) and
   file = call.getFile() and
-  story.getCalleeName() = "story" and
+  story.getFunc().(Name).getId() = "story" and
   storyName = story.getArg(0) and
   call.getParent+() = story and
   (

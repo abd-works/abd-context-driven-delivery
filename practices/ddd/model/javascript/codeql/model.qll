@@ -6,46 +6,51 @@ predicate inSource(AstNode n) { exists(n.getLocation().getFile().getRelativePath
 bindingset[name]
 predicate publicName(string name) { not name.matches("\\_%") }
 
-predicate publicMethod(Class cls, Function method) {
-  method = cls.getAMethod() and publicName(method.getName())
+predicate publicMethod(ClassDefinition cls, MethodDefinition method) {
+  method = cls.getMethod(method.getName()) and publicName(method.getName())
 }
 
-predicate bagClass(Class bag) {
+predicate bagClass(ClassDefinition bag) {
   inSource(bag) and
-  exists(AnnAssign assign | assign.getScope() = bag) and
-  not exists(Function method | method = bag.getAMethod() and method.getName() != "__init__")
+  exists(FieldDefinition field | field.getDeclaringType() = bag) and
+  not exists(MethodDefinition method |
+    method.getDeclaringType() = bag and method.getName() != "constructor"
+  )
 }
 
-predicate screenClass(Class cls) {
-  exists(Function method |
-    method = cls.getAMethod() and
+predicate screenClass(ClassDefinition cls) {
+  exists(MethodDefinition method |
+    method.getDeclaringType() = cls and
     (method.getName() = "open" or method.getName() = "isShowing" or method.getName() = "is_showing")
   )
 }
 
-predicate mentionsClass(Class owner, Class named) {
+predicate mentionsClass(ClassDefinition owner, ClassDefinition named) {
   owner != named and
-  exists(Name n | n.getScope() = owner.getAMethod() or n.getScope() = owner |
-    n.getId() = named.getName()
+  exists(Identifier id |
+    id.getName() = named.getName() and
+    id.getFile() = owner.getFile()
   )
 }
 
-predicate orphanClass(Class cls) {
+predicate orphanClass(ClassDefinition cls) {
   inSubject(cls) and
-  not exists(Class other | mentionsClass(other, cls))
+  not exists(ClassDefinition other | mentionsClass(other, cls))
 }
 
-predicate homelessService(Class cls) {
+predicate homelessService(ClassDefinition cls) {
   cls.getName().matches("%Service") and
-  exists(Function method, Parameter p |
+  exists(MethodDefinition method, Parameter p |
     publicMethod(cls, method) and
-    p = method.getAnArg() and
-    p.getName() != "self" and
-    exists(Attribute attr | attr.getScope() = method and attr.getObject().(Name).getId() = p.getName())
+    p = method.getBody().getAParameter() and
+    exists(PropAccess access |
+      access.getEnclosingFunction() = method.getBody() and
+      access.getBase().(VarAccess).getName() = p.getName()
+    )
   )
 }
 
-predicate collectionLifecycle(Function method) {
+predicate collectionLifecycle(MethodDefinition method) {
   method.getName() = "add" or
   method.getName() = "remove" or
   method.getName() = "update" or
@@ -54,20 +59,19 @@ predicate collectionLifecycle(Function method) {
   method.getName() = "load"
 }
 
-predicate thinRepository(Class cls) {
+predicate thinRepository(ClassDefinition cls) {
   cls.getName().matches("%Repository") and
-  exists(Function method | publicMethod(cls, method)) and
-  not exists(Function method | publicMethod(cls, method) and collectionLifecycle(method))
+  exists(MethodDefinition method | publicMethod(cls, method)) and
+  not exists(MethodDefinition method | publicMethod(cls, method) and collectionLifecycle(method))
 }
 
-predicate loadWithoutIdentity(Function method) {
+predicate loadWithoutIdentity(MethodDefinition method) {
   method.getName() = "load" and
-  count(Parameter p | p = method.getAnArg() and p.getName() != "self") = 0
+  count(Parameter p | p = method.getBody().getAParameter()) = 0
 }
 
-predicate leakedPrivate(Function f, Call call) {
-  f.getName().matches("\\_%") and
-  not f.getName().matches("\\_\\_%") and
-  call.getFunc().(Attribute).getName() = f.getName() and
-  call.getScope() != f
+predicate leakedPrivate(MethodDefinition f, CallExpr call) {
+  f.getName().regexpMatch("^_[^_].*") and
+  call.getCalleeName() = f.getName() and
+  call.getEnclosingFunction() != f.getBody()
 }

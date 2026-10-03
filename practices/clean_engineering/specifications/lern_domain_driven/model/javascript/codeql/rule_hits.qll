@@ -173,12 +173,12 @@ predicate graphRuleHit(AstNode subject, string message, AstNode contributor, str
   slug = "scaffold-test-scripts" and
   exists(File sentinel, TopLevel top |
     sentinel.getBaseName() = "vitest.config.ts" and
-    not exists(File pw | pw.getBaseName() = "playwright.config.ts") and
+    not exists(File pw | pw.getBaseName() = "playwright.config.js") and
     top.getFile() = sentinel and
     inSubject(top) and
     subject = top and
     contributor = top and
-    message = "Missing playwright.config.ts. Keep Vitest and Playwright runners separate."
+    message = "Missing playwright.config.js. Keep Vitest and Playwright runners separate."
   )
   or
   slug = "use-thorough-e2e-tests" and

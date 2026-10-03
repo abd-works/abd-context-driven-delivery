@@ -1,23 +1,26 @@
 import javascript
 import subject_filter
 
-predicate mambaIt(Call call) { call.getFunc().(Name).getId() = "it" }
+predicate mambaIt(CallExpr call) { call.getCalleeName() = "it" }
 
-predicate mambaDescribe(Call call) { call.getFunc().(Name).getId() = "description" }
+predicate mambaDescribe(CallExpr call) {
+  call.getCalleeName() = "describe" or call.getCalleeName() = "description"
+}
 
-predicate mambaContext(Call call) { call.getFunc().(Name).getId() = "context" }
+predicate mambaContext(CallExpr call) {
+  call.getCalleeName() = "context" or call.getCalleeName() = "describe"
+}
 
-predicate expectCall(Call call) { call.getFunc().(Name).getId() = "expect" }
+predicate expectCall(CallExpr call) { call.getCalleeName() = "expect" }
 
-predicate twoAssertions(Function f) { count(Call call | call.getScope() = f and expectCall(call)) > 1 }
+predicate twoAssertions(Function f) {
+  count(CallExpr call | call.getEnclosingFunction() = f and expectCall(call)) > 1
+}
 
-predicate internalDescribe(Call call) {
+predicate internalDescribe(CallExpr call) {
   exists(string label |
-    label = call.getArg(0).(StringLiteral).getText() and
-    (
-      mambaDescribe(call) or
-      exists(With block | block.getContextExpr() = call)
-    ) and
+    label = call.getArgument(0).(StringLiteral).getValue() and
+    mambaDescribe(call) and
     (
       label.matches("%Manager%") or
       label.matches("%Service%") or
@@ -28,28 +31,24 @@ predicate internalDescribe(Call call) {
   )
 }
 
-predicate whenContext(Call call) {
+predicate whenContext(CallExpr call) {
   mambaContext(call) and
-  call.getArg(0).(StringLiteral).getText().toLowerCase().matches("when %")
+  call.getArgument(0).(StringLiteral).getValue().toLowerCase().matches("when %")
 }
 
-predicate observesPrivate(Call call) {
+predicate observesPrivate(CallExpr call) {
   expectCall(call) and
-  exists(Attribute attr |
-    attr = call.getArg(0) and
-    attr.getName().matches("\\_%") and
-    not attr.getName().matches("\\_\\_%")
+  exists(PropAccess access |
+    access = call.getArgument(0) and
+    access.getPropertyName().regexpMatch("^_[^_].*")
   )
 }
 
-predicate relativeInternalMock(Call call, string target) {
+predicate relativeInternalMock(CallExpr call, string target) {
   exists(string name |
-    (
-      call.getFunc().(Name).getId() = name or
-      call.getFunc().(Attribute).getName() = name
-    ) and
-    (name = "patch" or name = "mock") and
-    target = call.getArg(0).(StringLiteral).getText() and
+    name = call.getCalleeName() and
+    (name = "mock" or name = "spyOn") and
+    target = call.getArgument(0).(StringLiteral).getValue() and
     (
       target.matches("./%") or
       target.matches("../%") or

@@ -6,16 +6,14 @@
 
 import javascript
 import subject_filter
-import model
 
-from Function method, Parameter param
+from MethodDefinition method, Parameter param
 where
   inSubject(method) and
-  exists(graphOwnerName(method)) and
-  param = method.getAnArg() and
-  param.getName() != "self" and
-  param.getName() != "cls"
-select graphOwnerName(method), method.getName(), param.getName(),
+  exists(method.getDeclaringType().getName()) and
+  param = method.getBody().getAParameter() and
+  param.getName() != "this"
+select method.getDeclaringType().getName(), method.getName(), param.getName(),
   param.getLocation().getStartLine(),
-  param.getLocation().getFile().getRelativePath(),
+  param.getFile().getRelativePath(),
   param.getLocation().getEndLine()

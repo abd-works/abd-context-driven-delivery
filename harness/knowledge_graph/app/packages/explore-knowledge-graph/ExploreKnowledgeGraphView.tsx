@@ -1208,6 +1208,17 @@ function practiceForest(
 
 type SourceFold = { start: number; end: number; kind: 'class' | 'call'; glyph: number };
 
+const CLASS_SOURCE_KINDS = new Set([
+  'OoadClass',
+  'Entity',
+  'EntityRoot',
+  'ValueObject',
+  'Repository',
+  'DomainEvent',
+  'DomainService',
+  'Specification',
+]);
+
 function preparedSource(
   node: KnowledgeGraphNode,
   text: string,
@@ -1216,26 +1227,38 @@ function preparedSource(
   const kind = node.nodeType?.name ?? '';
   const lines = text ? text.split('\n') : [''];
   const owner = members.find((member) => member.id === node.nodeId)?.owner ?? '';
-  if (kind === 'Step' || kind === 'Example' || kind === 'Operation' || kind === 'Property') {
-    const anchored = (node.children ?? [])
-      .filter((child) => {
-        const childKind = child.nodeType?.name ?? '';
-        return childKind === 'Operation' || childKind === 'Property';
-      })
-      .map((child) => members.find((member) => member.id === child.nodeId))
-      .filter((member): member is FoldMember => Boolean(member));
-    const named = namedFolds(node, members);
-    const layout = inlineCallLayout(text, members, owner, {
-      anchored: kind === 'Operation' || kind === 'Property' ? [] : anchored,
-      named: kind === 'Step' || kind === 'Example' ? named : [],
-      listClasses: false,
-    });
+  const stepLike = kind === 'Step' || kind === 'Example';
+  const anchored = stepLike
+    ? (node.children ?? [])
+        .filter((child) => {
+          const childKind = child.nodeType?.name ?? '';
+          return childKind === 'Operation' || childKind === 'Property';
+        })
+        .map((child) => members.find((member) => member.id === child.nodeId))
+        .filter((member): member is FoldMember => Boolean(member))
+    : [];
+  const layout = inlineCallLayout(text, members, owner, {
+    anchored,
+    named: stepLike ? namedFolds(node, members) : [],
+    listClasses: false,
+  });
+  if (!CLASS_SOURCE_KINDS.has(kind)) {
     return layout;
   }
-  if (kind === 'OoadClass') {
-    return { text, folds: memberFolds(node, lines.length), lineNumbers: lines.map((_, index) => String(index + 1)) };
-  }
-  return { text, folds: [], lineNumbers: lines.map((_, index) => String(index + 1)) };
+  const structural = memberFolds(node, lines.length).flatMap((fold) => {
+    const glyph = displayedLine(layout.lineNumbers, fold.glyph);
+    const end = displayedLine(layout.lineNumbers, fold.end);
+    if (end <= glyph) {
+      return [];
+    }
+    return [{ ...fold, glyph, start: glyph + 1, end }];
+  });
+  return { text: layout.text, lineNumbers: layout.lineNumbers, folds: [...layout.folds, ...structural] };
+}
+
+function displayedLine(lineNumbers: string[], original: number): number {
+  const index = lineNumbers.indexOf(String(original));
+  return index >= 0 ? index + 1 : original;
 }
 
 function namedFolds(node: KnowledgeGraphNode, members: FoldMember[]): FoldMember[] {
@@ -1272,7 +1295,7 @@ function missingSource(node: KnowledgeGraphNode, text: string, members: FoldMemb
     return [];
   }
   const names = new Set<string>();
-  for (const match of text.matchAll(/\b[A-Za-z_][A-Za-z0-9_]*\.([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
+  for (const match of text.matchAll(/\.([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
     names.add(match[1]);
   }
   const kind = node.nodeType?.name ?? '';

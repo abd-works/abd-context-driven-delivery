@@ -1,3 +1,0 @@
-export interface Subscriber extends Customer { billing: Billing; subscriptions: Subscription[] }
-export interface Subscription { id; number; simtype; status; bundle; usage? }
-export interface Billing { id; balance; defaultPayment; invoices[]; transactions[] }

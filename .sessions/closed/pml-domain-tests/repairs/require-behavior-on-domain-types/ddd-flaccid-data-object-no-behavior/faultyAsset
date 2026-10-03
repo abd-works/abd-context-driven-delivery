@@ -1,8 +1,0 @@
-export interface Cart {
-  id: string
-  bundle?: Plan
-  msisdn?: string
-  simType?: SimType
-  iccid?: string
-  portingInfo?: PortingInfo
-}

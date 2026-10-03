@@ -1,4 +1,0 @@
-Given the plan catalog contains plan :planId
-When they navigate to /sign-up/:planId
-Then the plan is pre-selected
-  And they land directly on Create Account

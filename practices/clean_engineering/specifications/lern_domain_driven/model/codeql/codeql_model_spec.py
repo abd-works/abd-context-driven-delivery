@@ -16,7 +16,7 @@ from mamba import description, it
 
 from harness.knowledge_graph.model.graph_query_spec import assert_pack_hits
 
-_PACK = Path(__file__).resolve().parent
+_PACK = Path(__file__).resolve().parents[1] / "typescript" / "codeql"
 _EXAMPLES = Path(__file__).resolve().parents[2] / "examples" / "codeql"
 
 _RULES = {
@@ -46,5 +46,5 @@ _RULES = {
 
 with description("LERN graphQuery rules"):
     with it("should hit each CodeQL-appropriate rule example in one batch"):
-        misses = assert_pack_hits(_PACK, _EXAMPLES, "javascript", _RULES)
+        misses = assert_pack_hits(_PACK, _EXAMPLES, "typescript", _RULES)
         expect(misses).to(equal([]))

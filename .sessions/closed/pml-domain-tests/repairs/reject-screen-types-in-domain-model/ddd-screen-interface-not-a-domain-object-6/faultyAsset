@@ -1,5 +1,0 @@
-export interface PayNow {
-  open(): Promise<void>
-  confirmPayment(): Promise<void>
-  isSuccessShown(): Promise<boolean>
-}

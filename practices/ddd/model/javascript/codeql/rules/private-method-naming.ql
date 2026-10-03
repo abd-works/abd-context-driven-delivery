@@ -10,6 +10,6 @@ import javascript
 import subject_filter
 import model
 
-from Function f, Call call
-where inSubject(f) and leakedPrivate(f, call)
-select f, "Private operation '" + f.getName() + "' is called from outside its definition.", call
+from MethodDefinition method, CallExpr call
+where inSubject(method) and leakedPrivate(method, call)
+select method, "Private operation '" + method.getName() + "' is called from outside its definition.", call

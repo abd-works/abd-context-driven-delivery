@@ -9,9 +9,10 @@
 import javascript
 import model
 
-from With story, string name, int n
+from CallExpr story, string name, int n
 where
-  storyWith(story, name) and
+  storyCall(story) and
+  storyLabel(story, name) and
   n = scenarioCount(story) and
   tooFewOrManyScenarios(story)
 select story,

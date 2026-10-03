@@ -16,7 +16,7 @@ from mamba import description, it
 
 from harness.knowledge_graph.model import CodeQL
 
-_PACK = Path(__file__).resolve().parent
+_PACK = Path(__file__).resolve().parents[1] / "python" / "codeql"
 _EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 _TESTS = _PACK / "tests"
 _DB = _EXAMPLES / ".codeql" / "python-db"
@@ -144,7 +144,7 @@ with description("Clean Engineering graphQuery rules"):
         db = ExamplesQuery().ensure()
         misses = []
         for slug, expected in _RULES.items():
-            rows = CodeQL(_EXAMPLES).run(_PACK / f"{slug}.ql", database=db)
+            rows = CodeQL(_EXAMPLES).run(_PACK / "rules" / f"{slug}.ql", database=db)
             if not ExamplesQuery().hit(rows, expected):
                 misses.append(f"{slug} expected {expected}")
         expect(misses).to(equal([]))
@@ -166,7 +166,7 @@ with description("Clean Engineering graphQuery rules"):
     with it("should not treat two collaborating resources as a service-plus-bag"):
         db = ExamplesQuery().ensure()
         rows = CodeQL(_EXAMPLES).run(
-            _PACK / "shape-classes-around-resources.ql",
+            _PACK / "rules" / "shape-classes-around-resources.ql",
             database=db,
         )
         blob = " ".join(
@@ -179,7 +179,7 @@ with description("Clean Engineering graphQuery rules"):
 
     with it("should not flag an operation that reads its own private attribute"):
         db = ExamplesQuery().ensure()
-        rows = CodeQL(_EXAMPLES).run(_PACK / "hide-inner-details.ql", database=db)
+        rows = CodeQL(_EXAMPLES).run(_PACK / "rules" / "hide-inner-details.ql", database=db)
         blob = " ".join(
             str(row.get(key) or "")
             for row in rows
@@ -193,7 +193,7 @@ with description("Clean Engineering graphQuery rules"):
     with it("should hit typed resource html without flagging a wrapper factory"):
         db = ExamplesQuery().ensure()
         rows = CodeQL(_EXAMPLES).run(
-            _PACK / "put-logic-on-the-owning-resource.ql",
+            _PACK / "rules" / "put-logic-on-the-owning-resource.ql",
             database=db,
         )
         blob = " ".join(

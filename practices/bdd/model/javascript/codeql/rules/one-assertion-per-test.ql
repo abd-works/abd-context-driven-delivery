@@ -10,10 +10,9 @@ import javascript
 import subject_filter
 import model
 
-from With block, Call itCall
+from CallExpr itCall
 where
-  inSubject(block) and
-  itCall = block.getContextExpr() and
+  inSubject(itCall) and
   mambaIt(itCall) and
-  count(Call assertion | expectCall(assertion) and assertion.getParentNode*() = block) > 1
+  twoAssertions(itCall.getArgument(1).(Function))
 select itCall, "Example has more than one assertion.", itCall

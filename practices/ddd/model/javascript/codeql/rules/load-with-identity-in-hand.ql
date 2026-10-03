@@ -10,6 +10,6 @@ import javascript
 import subject_filter
 import model
 
-from Function f
-where inSubject(f) and loadWithoutIdentity(f)
-select f, "Operation 'load' takes no identity.", f
+from MethodDefinition method
+where inSubject(method) and loadWithoutIdentity(method)
+select method, "Operation 'load' takes no identity.", method

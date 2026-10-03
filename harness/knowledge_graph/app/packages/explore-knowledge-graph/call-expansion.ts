@@ -1,4 +1,3 @@
-const CALL = /\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b/g;
 const MAX_DEPTH = 5;
 
 const SKIP_TYPES = new Set([
@@ -366,20 +365,45 @@ function wordHas(line: string, name: string): boolean {
 function callsOnLine(line: string, bodies: Map<string, CallBody>, stack: string[]): CallBody[] {
   const found: CallBody[] = [];
   const seen = new Set<string>();
-  for (const match of line.matchAll(CALL)) {
-    if (SKIP_TYPES.has(match[1])) {
-      continue;
-    }
-    const receiver = match[1];
-    const body =
-      (receiver !== "this" ? bodies.get(`${receiver}.${match[2]}`) : undefined) ?? bodies.get(match[2]);
+  const add = (body: CallBody | undefined) => {
     if (!body || stack.includes(body.id) || seen.has(body.id)) {
-      continue;
+      return;
     }
     seen.add(body.id);
     found.push(body);
+  };
+  const pattern = /\b([A-Za-z_][A-Za-z0-9_]*)\??\.([A-Za-z_][A-Za-z0-9_]*)\b/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(line))) {
+    if (!SKIP_TYPES.has(match[1])) {
+      add(resolveCall(bodies, match[1], match[2]));
+    }
+    const next = match.index + match[1].length + (match[0].includes("?.") ? 2 : 1);
+    if (pattern.lastIndex > next) {
+      pattern.lastIndex = next;
+    }
   }
   return found;
+}
+
+function resolveCall(bodies: Map<string, CallBody>, receiver: string, method: string): CallBody | undefined {
+  if (receiver !== "this") {
+    const exact = bodies.get(`${receiver}.${method}`);
+    if (exact) {
+      return exact;
+    }
+    const wanted = receiver.toLowerCase();
+    for (const [key, body] of bodies) {
+      const dot = key.lastIndexOf(".");
+      if (dot < 0 || key.slice(dot + 1) !== method) {
+        continue;
+      }
+      if (key.slice(0, dot).toLowerCase() === wanted) {
+        return body;
+      }
+    }
+  }
+  return bodies.get(method);
 }
 
 function appendOperation(
