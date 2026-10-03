@@ -13,8 +13,11 @@ import {
   extractionProgress,
   ruleChoices,
   rulesForFilters,
+  domainTree,
+  dddClassKind,
   retainedTree,
   retagPractice,
+  shownRelationships,
   stepMembers,
   stepCallouts,
   stepLinks,
@@ -453,6 +456,43 @@ describe("a knowledge graph", () => {
       });
     });
 
+    describe("that projects a domain tree", () => {
+      it("should keep classes under an aggregate when the folder has a repository", () => {
+        const customer = graphNode("Customer", "OoadClass", "clean_engineering", [
+          graphNode("load", "Operation", "clean_engineering"),
+        ]);
+        const repository = graphNode("CustomerRepository", "OoadClass", "clean_engineering");
+        const folder = graphNode("customer", "Module", "clean_engineering", [
+          customer,
+          repository,
+          graphNode("customer.ts", "File", "clean_engineering"),
+        ]);
+        const projected = domainTree([
+          graphNode("src", "Module", "clean_engineering", [folder]),
+          graphNode("tests", "Package", "stories", [graphNode("Select Plan", "Story", "stories")]),
+          graphNode("Customer is known", "Description", "bdd"),
+        ]);
+        expect(projected.map((node) => node.name)).toEqual(["src"]);
+        const aggregate = projected[0].children[0];
+        expect(aggregate.nodeType?.name).toBe("Aggregate");
+        expect(aggregate.children.map((node) => node.name)).toEqual(["Customer", "CustomerRepository"]);
+        expect(aggregate.children[0].nodeType?.name).toBe("EntityRoot");
+        expect(aggregate.children[0].children.map((node) => node.name)).toEqual(["load"]);
+        expect(aggregate.children[1].nodeType?.name).toBe("Repository");
+      });
+
+      it("should leave a folder as a module when it has no root or repository", () => {
+        const projected = domainTree([
+          graphNode("src", "Module", "", [
+            graphNode("notes", "Module", "", [graphNode("Note", "OoadClass", "clean_engineering")]),
+          ]),
+        ]);
+        expect(projected[0].nodeType?.name).toBe("Module");
+        expect(projected[0].children[0].nodeType?.name).toBe("Module");
+        expect(dddClassKind("Payment <<value object>>")).toBe("ValueObject");
+      });
+    });
+
     describe("that selects domain driven design", () => {
       it("should keep clean engineering folders and files and leave story nodes out", () => {
         const included = flatten(retainedTree(mixedPracticeTree(), ["Ddd"]));
@@ -739,6 +779,15 @@ describe("a scenario step", () => {
       expect(included.map((node) => node.name)).toContain("feedbackSubjectExample");
       const engineering = flatten(retainedTree([step], ["CleanEngineering"]));
       expect(engineering.map((node) => node.name)).not.toContain("When they send a feedback note");
+    });
+
+    it("should leave belongsTo out of the relationship list", () => {
+      expect(
+        shownRelationships([
+          { kind: "belongsTo", nodeId: "story", name: "Load Customer" },
+          { kind: "invokes", nodeId: "load", name: "load" },
+        ]),
+      ).toEqual([{ kind: "invokes", nodeId: "load", name: "load" }]);
     });
 
     it("should link an invoked operation, a demonstrated example class, and an expected class", () => {

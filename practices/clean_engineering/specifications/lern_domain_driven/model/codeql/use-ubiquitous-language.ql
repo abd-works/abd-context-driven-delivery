@@ -1,14 +1,16 @@
-﻿/**
- * @name use-ubiquitous-language
- * @kind problem
- * @id cdd/practice-graph/use-ubiquitous-language
- * @problem.severity warning
- */
-
-import javascript
-import subject_filter
-import rule_hits
-
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "use-ubiquitous-language")
-select subject, message, contributor
+/**
+ * @name use-ubiquitous-language
+ * @practice lern_domain_driven
+ * @fidelity code
+ * @node class
+ * @id lern_domain_driven/code/use-ubiquitous-language
+ * @problem.severity warning
+ */
+
+import javascript
+import subject_filter
+import rule_hits
+
+from AstNode subject, string message, AstNode contributor
+where graphRuleHit(subject, message, contributor, "use-ubiquitous-language")
+select subject, message, contributor

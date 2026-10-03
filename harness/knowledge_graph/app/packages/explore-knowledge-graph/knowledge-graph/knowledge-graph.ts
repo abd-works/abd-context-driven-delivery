@@ -321,6 +321,148 @@ export function retainedTree(
   return nodes.flatMap((node) => visit(node));
 }
 
+export function shownRelationships<T extends { kind: string }>(links: T[]): T[] {
+  return links.filter((link) => link.kind !== "belongsTo");
+}
+
+const TACTICAL_CLASS = new Set([
+  "OoadClass",
+  "Entity",
+  "EntityRoot",
+  "ValueObject",
+  "Repository",
+  "DomainEvent",
+  "DomainService",
+  "Specification",
+]);
+
+export function dddClassKind(name: string): string {
+  const stereotypes = [...name.matchAll(/<<([^>]+)>>/g)].map((match) => match[1].trim().toLowerCase());
+  if (stereotypes.includes("system")) {
+    return "";
+  }
+  if (stereotypes.includes("aggregate root")) {
+    return "EntityRoot";
+  }
+  if (stereotypes.includes("specification")) {
+    return "Specification";
+  }
+  if (stereotypes.includes("entity")) {
+    return "Entity";
+  }
+  if (stereotypes.includes("value object")) {
+    return "ValueObject";
+  }
+  if (stereotypes.includes("repository")) {
+    return "Repository";
+  }
+  if (stereotypes.includes("domain event")) {
+    return "DomainEvent";
+  }
+  if (stereotypes.includes("domain service") || stereotypes.includes("service")) {
+    return "DomainService";
+  }
+  return /Repository(Node|Client)?$/.test(plainClassName(name)) ? "Repository" : "";
+}
+
+export function repositoryRootName(name: string): string {
+  const plain = plainClassName(name).replace(/(Node|Client)$/, "");
+  return plain.endsWith("Repository") ? plain.slice(0, -"Repository".length) : "";
+}
+
+function plainClassName(name: string): string {
+  return name.replace(/<<[^>]+>>/g, "").replace(/\*+/g, "").split(/\s+extends\s+/)[0].trim();
+}
+
+export function domainTree(nodes: KnowledgeGraphNode[]): KnowledgeGraphNode[] {
+  return nodes.flatMap((node) => {
+    const projected = projectDomain(node);
+    return projected ? [projected] : [];
+  });
+}
+
+function projectDomain(node: KnowledgeGraphNode): KnowledgeGraphNode | null {
+  const type = node.nodeType?.name ?? "";
+  if (
+    isStoryNode(node) ||
+    type === "Description" ||
+    type === "Context" ||
+    type === "Observation" ||
+    type === "File"
+  ) {
+    return null;
+  }
+  const children = (node.children ?? []).flatMap((child) => {
+    if ((child.nodeType?.name ?? "") === "File") {
+      return (child.children ?? []).flatMap((nested) => {
+        const projected = projectDomain(nested);
+        return projected ? [projected] : [];
+      });
+    }
+    const projected = projectDomain(child);
+    return projected ? [projected] : [];
+  });
+  if (TACTICAL_CLASS.has(type)) {
+    const copy = copyNode(node);
+    copy.children = children;
+    const kind = dddClassKind(node.name);
+    if (kind) {
+      copy.nodeType = { name: kind } as KnowledgeGraphNode["nodeType"];
+      copy.practice = "ddd";
+    }
+    return copy;
+  }
+  if (type === "Operation" || type === "Property" || type === "Parameter") {
+    const copy = copyNode(node);
+    copy.children = children;
+    return copy;
+  }
+  if (type === "Module" || type === "Package" || type === "Aggregate" || type === "BoundedContext") {
+    if (!children.length && type !== "BoundedContext" && type !== "Aggregate") {
+      return null;
+    }
+    markAggregateRoots(children);
+    const copy = copyNode(node);
+    copy.children = children;
+    const roots = children.filter((child) => child.nodeType?.name === "EntityRoot").length;
+    const hasRepository = children.some((child) => child.nodeType?.name === "Repository");
+    if (roots > 1) {
+      copy.nodeType = { name: "BoundedContext" } as KnowledgeGraphNode["nodeType"];
+      copy.practice = "ddd";
+    } else if (roots === 1 || hasRepository) {
+      copy.nodeType = { name: "Aggregate" } as KnowledgeGraphNode["nodeType"];
+      copy.practice = "ddd";
+    }
+    return copy;
+  }
+  return null;
+}
+
+function markAggregateRoots(children: KnowledgeGraphNode[]): void {
+  const roots = new Set<string>();
+  for (const child of children) {
+    if (child.nodeType?.name !== "Repository") {
+      continue;
+    }
+    const root = repositoryRootName(child.name);
+    if (root) {
+      roots.add(root);
+    }
+  }
+  for (const child of children) {
+    if (!TACTICAL_CLASS.has(child.nodeType?.name ?? "")) {
+      continue;
+    }
+    if (child.nodeType?.name === "Repository" || child.nodeType?.name === "EntityRoot") {
+      continue;
+    }
+    if (roots.has(plainClassName(child.name))) {
+      child.nodeType = { name: "EntityRoot" } as KnowledgeGraphNode["nodeType"];
+      child.practice = "ddd";
+    }
+  }
+}
+
 function copyNode(node: KnowledgeGraphNode): KnowledgeGraphNode {
   const copy = Object.assign(Object.create(Object.getPrototypeOf(node)), node) as KnowledgeGraphNode;
   copy.children = [];

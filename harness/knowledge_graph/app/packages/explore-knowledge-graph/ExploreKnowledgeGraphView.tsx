@@ -8,8 +8,10 @@ import {
   practiceId,
   practiceRootLabels,
   restoredBranches,
+  domainTree,
   retainedTree,
   rulesForFilters,
+  shownRelationships,
   extractionProgress,
 } from './knowledge-graph/knowledge-graph';
 import { KindMark, kindLabel } from './kind-mark';
@@ -548,7 +550,7 @@ function TreeNode({
     return null;
   }
   const rules = rulesFor(node, picked, showRules);
-  const links = node.relationships ?? [];
+  const links = shownRelationships(node.relationships ?? []);
   const rulesId = `${node.nodeId}::rules`;
   const linksId = `${node.nodeId}::relationships`;
   const open = openIds.has(node.nodeId);
@@ -1161,7 +1163,6 @@ function practiceForest(
   }
   const selected = restricts(picked.practices, options.practices) ? picked.practices : [];
   const labels = practiceRootLabels(selected);
-  const showCleanEngineering = labels.includes('Clean Engineering');
   const roots: KnowledgeGraphNode[] = [];
   for (const label of labels) {
     const id =
@@ -1172,8 +1173,7 @@ function practiceForest(
           : label === 'BDD'
             ? 'bdd'
             : 'stories';
-    const includeCleanEngineering = id === 'ddd' && !showCleanEngineering;
-    const children = retainedTree(nodes, [id], includeCleanEngineering);
+    const children = id === 'ddd' ? domainTree(nodes) : retainedTree(nodes, [id], false);
     if (!children.length) {
       continue;
     }
@@ -1479,12 +1479,13 @@ function connectorChoices(
   nodeTypes: string[] | null,
   options: KnowledgeGraphFilterOptions,
 ): string[] {
+  const available = options.relationship_types.filter((kind) => kind !== 'belongsTo');
   if (!nodeTypes) {
-    return options.relationship_types;
+    return available;
   }
-  const found = nodeTypes.flatMap((type) => CONNECTORS_BY_TYPE[type] ?? []);
-  const ordered = keepOrder(options.relationship_types, found);
-  return ordered.length ? ordered : options.relationship_types;
+  const found = nodeTypes.flatMap((type) => CONNECTORS_BY_TYPE[type] ?? []).filter((kind) => kind !== 'belongsTo');
+  const ordered = keepOrder(available, found);
+  return ordered.length ? ordered : available;
 }
 
 function connectorOptions(

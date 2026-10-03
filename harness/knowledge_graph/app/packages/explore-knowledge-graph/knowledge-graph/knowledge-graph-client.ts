@@ -421,6 +421,9 @@ function relationshipLinks(row: any): { kind: string; nodeId: string; name: stri
   const links: { kind: string; nodeId: string; name: string }[] = [];
   for (const group of groups) {
     const kind = String(group.kind ?? "");
+    if (kind === "belongsTo") {
+      continue;
+    }
     const targets = Array.isArray(group.targets) ? group.targets : [];
     for (const target of targets) {
       const nodeId = String(target.node_id ?? target.nodeId ?? "");
