@@ -1368,19 +1368,46 @@ function _blockEndLine(text: string, line: number): number {
     }
     offset += 1;
   }
+  let endAt = _openerEnd(text, offset);
+  endAt = _chainEnd(text, endAt);
+  return text.slice(0, Math.max(offset + 1, endAt)).split(/\r?\n/).length;
+}
+
+function _openerEnd(text: string, offset: number): number {
   const rest = text.slice(offset);
   const openParen = rest.indexOf('(');
   const openBrace = rest.indexOf('{');
   if (openParen >= 0 && (openBrace < 0 || openParen < openBrace)) {
-    return _balancedEnd(text, offset + openParen, '(', ')');
+    return _balancedEndIndex(text, offset + openParen, '(', ')');
   }
   if (openBrace >= 0) {
-    return _balancedEnd(text, offset + openBrace, '{', '}');
+    return _balancedEndIndex(text, offset + openBrace, '{', '}');
   }
-  return line;
+  return offset;
+}
+
+function _chainEnd(text: string, endAt: number): number {
+  let cursor = endAt;
+  while (cursor < text.length) {
+    let look = cursor;
+    while (look < text.length && /\s/.test(text[look])) {
+      look += 1;
+    }
+    const call = /^\.[ \t]*[A-Za-z_][A-Za-z0-9_]*[ \t]*\(/.exec(text.slice(look));
+    if (!call) {
+      break;
+    }
+    const parenAt = look + call[0].lastIndexOf('(');
+    cursor = _balancedEndIndex(text, parenAt, '(', ')');
+  }
+  return cursor;
 }
 
 function _balancedEnd(text: string, openAt: number, open: string, close: string): number {
+  return text.slice(0, _balancedEndIndex(text, openAt, open, close)).split(/\r?\n/).length;
+}
+
+function _balancedEndIndex(text: string, openAt: number, open: string, close: string): number {
   let depth = 0;
   let quote = '';
   for (let index = openAt; index < text.length; index += 1) {
@@ -1404,11 +1431,11 @@ function _balancedEnd(text: string, openAt: number, open: string, close: string)
     } else if (char === close) {
       depth -= 1;
       if (depth === 0) {
-        return text.slice(0, index + 1).split(/\r?\n/).length;
+        return index + 1;
       }
     }
   }
-  return text.split(/\r?\n/).length;
+  return text.length;
 }
 
 function _fillEpicSource(
