@@ -1,0 +1,4 @@
+name: cdd/lern-domain-driven-graph-query-python
+version: 0.0.1
+dependencies:
+  codeql/python-all: "*"
