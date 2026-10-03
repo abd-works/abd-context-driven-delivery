@@ -317,7 +317,10 @@ class RulesCollection(MarkdownCollection):
             return False
         if Path(posix).match(pattern) or fnmatch.fnmatch(posix, pattern):
             return True
-        leaf = pattern.rsplit("/", 1)[-1]
+        # Path-scoped patterns must match the full path — not the filename alone.
+        if "/" in pattern:
+            return False
+        leaf = pattern
         if leaf in {"", "*", "**"}:
             return False
         return fnmatch.fnmatch(name, leaf)

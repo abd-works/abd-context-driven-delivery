@@ -53,6 +53,15 @@ with description("a shared rules section containing scanner bullets") as self:
             expect(bag.matches("harness/guidance/rule.py")).to(equal(False))
             expect(bag.matches("foo/bar_agent_spec.py")).to(equal(True))
 
+        with it("should not match by filename alone when the glob names a path prefix"):
+            from harness.guidance.rule import AppliesTo, RulesCollection
+
+            bag = RulesCollection(
+                applies_to=AppliesTo(globs="packages/**/*-server.ts")
+            )
+            expect(bag.matches("packages/onboard/carts/cart-server.ts")).to(equal(True))
+            expect(bag.matches("src/customer/customer-server.ts")).to(equal(False))
+
         with it("should not inject AgentBdd rules for a production python file"):
             from practices.agent_bdd.agent_bdd import AgentBdd
 
@@ -89,7 +98,7 @@ with description("a shared rules section containing scanner bullets") as self:
             expect(text).to(contain("sample-rule-one"))
             expect(text).to(contain("pkg/foo_sample_bar.py"))
             expect(text).to(contain("**/*sample*"))
-            expect(text).to(contain("Echo the following message to the user"))
+            expect(text).to(contain("echo the following message to the user"))
 
         with it("should inject when the path matches regardless of tool name"):
             result = self.guidance.rules.inject_rules(

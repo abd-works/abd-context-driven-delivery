@@ -12,13 +12,15 @@ for _cat in ("practices", "tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_true, contain, equal, expect
+from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
+from practices.clean_engineering.specifications._scan_kit import DOMAIN_MODULE_RULE_GLOBS
 from practices.clean_engineering.specifications.mern_domain_driven.mern_domain_driven import (
     MernDomainDriven,
 )
 from practices.stories.stories import Stories
+from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
 
 _MODULE_DIR = Path(__file__).resolve().parent
 
@@ -119,3 +121,34 @@ with description("a MernDomainDriven generator"):
         with it("should not flag the route template for calling the repository directly"):
             rules = {v.rule for v in self.report.violations}
             expect("delegate-routes-to-domain-server" in rules).to(equal(False))
+
+    with context("whose rules collection injects on matching package paths"):
+        with before.each:
+            self.rules = self.tool.rules
+            self.payload = {
+                "tool_name": "Write",
+                "tool_input": {"path": "packages/onboard-a-customer/carts/cart-server.ts"},
+            }
+
+        with it("should load shared rules as a GraphRulesCollection"):
+            expect(self.rules).to(be_a(GraphRulesCollection))
+            expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
+
+        with it("should scope inject globs to packages feature layout"):
+            expect(self.rules.glob).to(equal(DOMAIN_MODULE_RULE_GLOBS))
+
+        with it("should match domain-module server files under packages"):
+            expect(self.rules.matches("packages/onboard-a-customer/carts/cart-server.ts")).to(
+                equal(True)
+            )
+
+        with it("should not match legacy flat src server files"):
+            expect(self.rules.matches("src/customer/customer-server.ts")).to(equal(False))
+
+        with it("should inject rules markdown when a matching package file is written"):
+            result = self.rules.inject_rules(self.payload)
+            expect(result.get("additional_context") or "").to(contain("organize-by-domain-module"))
+
+        with it("should list inject_rules on tools so hook install can enroll it"):
+            expect("inject_rules" in self.tool.tools).to(equal(True))
+            expect("inject_rules" in self.rules.tools).to(equal(True))

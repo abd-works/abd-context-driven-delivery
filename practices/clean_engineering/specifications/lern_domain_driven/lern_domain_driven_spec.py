@@ -32,14 +32,16 @@ for _name in list(sys.modules):
     ):
         del sys.modules[_name]
 
-from expects import be_true, contain, equal, expect
+from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
+from practices.clean_engineering.specifications._scan_kit import DOMAIN_MODULE_RULE_GLOBS
 from practices.clean_engineering.specifications.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
 )
 from practices.stories.stories import Stories
 from practices.clean_engineering.specifications.lern_domain_driven.scanners._scan_base import ScannerCollection
+from harness.knowledge_graph.model.graph_rules import GraphRule, GraphRulesCollection
 
 _ALL_RULE_SLUGS = (
     "organize-by-domain-module",
@@ -136,10 +138,50 @@ with description("a LernDomainDriven generator"):
     with context("whose CodeQL pack lists the architecture rules"):
         with before.each:
             self.discovered = ScannerCollection(module_dir=_MODULE_DIR).discover()
-            self.pack = _MODULE_DIR / "model" / "codeql"
+            self.pack = _MODULE_DIR / "model" / "typescript" / "codeql"
 
-        with it("should resolve a javascript query pack beside the practice"):
+        with it("should resolve a typescript query pack beside the practice"):
             expect((self.pack / "qlpack.yml").is_file()).to(equal(True))
 
         with it("should register exactly the architecture rules, one query each"):
             expect(sorted(self.discovered)).to(equal(sorted(_ALL_RULE_SLUGS)))
+
+    with context("whose rules collection injects on matching package paths"):
+        with before.each:
+            self.rules = self.tool.rules
+            self.payload = {
+                "tool_name": "Write",
+                "tool_input": {"path": "packages/onboard-a-customer/carts/cart-server.ts"},
+            }
+
+        with it("should load shared rules as a GraphRulesCollection"):
+            expect(self.rules).to(be_a(GraphRulesCollection))
+            expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
+
+        with it("should scope inject globs to packages feature layout"):
+            expect(self.rules.glob).to(equal(DOMAIN_MODULE_RULE_GLOBS))
+
+        with it("should match domain-module server files under packages"):
+            expect(self.rules.matches("packages/onboard-a-customer/carts/cart-server.ts")).to(
+                equal(True)
+            )
+
+        with it("should match domain-core files under packages"):
+            expect(self.rules.matches("packages/onboard-a-customer/carts/cart.ts")).to(equal(True))
+
+        with it("should not match legacy flat src server files"):
+            expect(self.rules.matches("src/customer/customer-server.ts")).to(equal(False))
+
+        with it("should not match unrelated python modules"):
+            expect(self.rules.matches("actions/validate/validate.py")).to(equal(False))
+
+        with it("should upgrade rules with graph queries to GraphRule"):
+            expect(self.rules["organize-by-domain-module"]).to(be_a(GraphRule))
+
+        with it("should inject rules markdown when a matching package file is written"):
+            result = self.rules.inject_rules(self.payload)
+            expect(result.get("additional_context") or "").to(contain("organize-by-domain-module"))
+
+        with it("should list inject_rules on tools so hook install can enroll it"):
+            expect("inject_rules" in self.tool.tools).to(equal(True))
+            expect("inject_rules" in self.rules.tools).to(equal(True))

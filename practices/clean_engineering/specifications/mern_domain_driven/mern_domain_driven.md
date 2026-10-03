@@ -15,6 +15,9 @@ Stories' `ce()` companion at `code` / `typescript`.
 
 ## Guidance
 
+Enforceable rules live in **§ Shared rules** below. This section explains how
+they apply; do not treat guidance bullets as a second rule list.
+
 ### Domain module organization
 
 Packages follow the feature → domain hierarchy: a feature package owns process
@@ -33,9 +36,8 @@ packages/<epicSlug>/                    ← feature package — e.g. wires/
     <domainName>-client.tsx             ← e.g. recipient-client.tsx
 ```
 
-- **`organize-by-domain-module`** — feature package present with process boot (`app.ts`, `serve.ts`, `main.tsx`) and nested domain dirs each having `{domain}.ts`, `{domain}-server.ts`, `{domain}-client.tsx`.
-- **`share-domain-logic`** — entities, value objects, Zod schemas, and business rules defined once in `<domain>.ts`; `<domain>-server.ts` and `<domain>-client.tsx` import from there, never re-derive.
-- **`maintain-layer-purity`** — `<domain>.ts` is framework-free (no Express, no React, no Mongo driver); `<domain>-server.ts` and `<domain>-client.tsx` never cross-import each other.
+Rules `organize-by-domain-module`, `share-domain-logic`, and
+`maintain-layer-purity` govern layout and imports.
 
 ### Naming / layering
 
@@ -64,27 +66,27 @@ That same identity holds across the rest of the stack: where an operation
 appears on the route, HTTP client, server domain class, or core, it is the
 same `{verbNoun}` with the same argument names — only types narrow.
 
-- **`use-ubiquitous-language`** — names come from the domain model; no `Manager`, `Handler`, `Helper`, or `Domain*` prefixes/suffixes.
-- **`cross-layer-method-naming`** — the same `{verbNoun}` method stem flows through every tier where an operation appears (domain core → client → server → route → HTTP); subclasses keep every inherited base operation unchanged.
-- **`preserve-arg-names-across-layers`** — argument names stay identical across layer boundaries and across base → extension; only types narrow.
-- **`property-casing-transform`** — `camelCase` in TypeScript; `snake_case` in JSON and MongoDB documents.
-- **`consistent-view-naming`** — React components end in `View` or `CardView`; never `Page`.
+Rules `use-ubiquitous-language`, `cross-layer-method-naming`,
+`preserve-arg-names-across-layers`, `property-casing-transform`, and
+`consistent-view-naming` govern naming.
 
 ### App server / routes
 
-- **`delegate-routes-to-domain-server`** — route handlers in `<domain>-server.ts` are thin: parse the request, delegate to a server-side domain class; never call the repository or apply domain-core logic inline.
-- **`ensure-type-safe-routes`** — route handlers compile without implicit `any`; `req.user` and other request extensions are typed.
-- **`standard-mutation-response`** — every mutation on the same aggregate returns the same response shape.
+Route handlers stay thin: parse the request, delegate to a server-side domain
+class. Rules `delegate-routes-to-domain-server`, `ensure-type-safe-routes`,
+and `standard-mutation-response` govern this tier.
 
 ### Types & entities
 
-- **`implement-domain-entities-correctly`** — business rules live on domain classes; the Zod schema validates at the repository boundary, not inline in routes or views.
-- **`implement-full-interfaces`** — every `implements` clause covers all interface members; no stub no-ops standing in for real behavior.
+Business rules live on domain classes; Zod validates at the repository
+boundary. Rules `implement-domain-entities-correctly` and
+`implement-full-interfaces` govern entities and interfaces.
 
 ### Packaging
 
-- **`use-valid-package-names`** — one package per feature (`@scope/epicSlug`) with subpath exports into nested domains (`./recipients`, `./recipients/recipient-server`, …); no placeholder scopes; no phantom imports; no legacy flat `*-shared` / `*-server` / `*-client` package split.
-- **`include-all-external-dependencies`** — every import has a declared dependency; the project compiles after a clean install.
+One package per feature with subpath exports into nested domains. Rules
+`use-valid-package-names` and `include-all-external-dependencies` govern
+packaging.
 
 ### Testing architecture
 
@@ -107,9 +109,8 @@ mechanism underneath. Prefer building tier helpers from `stories`'
 tier's collaborators, `Production` mode = real collaborators) over hand-rolled
 fixtures.
 
-- **`test-story-driven`** — tests mirror the story hierarchy (epic → folder, sub-epic → file, story → `describe`, scenario → `it`); Given/When/Then helpers present at all three tiers.
-- **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` present at the workspace root; unit/component and E2E runners stay separate (Vitest vs Playwright), and `vitest.config.ts` / `playwright.config.ts` don't pick up each other's spec files.
-- **`use-thorough-e2e-tests`** — E2E tests are independent (no blanket deletes between tests); the feature package must exist and serve the real frontend (`npm run dev`) before E2E tests can pass.
+Rules `test-story-driven`, `scaffold-test-scripts`, and `use-thorough-e2e-tests`
+govern acceptance tests for this architecture.
 
 ### UX hand-off
 
@@ -122,10 +123,12 @@ the touched view files (`packages/<epicSlug>/<Feature>View.tsx`, views inside
 
 ```yaml
 alwaysApply: false
-globs: "**/*-server.ts,**/*-client.tsx,**/*View.tsx,**/*_spec.server.ts,**/*_spec.client.ts,**/*_spec.e2e.ts,**/*-sketch.md"
+globs: "packages/**/app.ts,packages/**/serve.ts,packages/**/main.tsx,packages/**/package.json,packages/**/data/*.json,packages/**/*-server.ts,packages/**/*-client.tsx,packages/**/*View.tsx,packages/*/*/*.ts,packages/**/*_spec.server.ts,packages/**/*_spec.client.ts,packages/**/*_spec.e2e.ts,packages/**/*-sketch.md"
 ```
 
-Whenever you create, alter, or delete a domain-module feature package (domain / server / client / View), or tests that package supports. Follow these rules.
+Whenever you create, alter, or delete a domain-module feature package under
+`packages/` (domain / server / client / View), or tests that package supports.
+Follow these rules.
 
 If this change will not stay here, follow `practices/clean_engineering/code.mdc`. If the tests are Spec-by-Example, also follow `practices/stories/acceptance_tests.mdc`.
 
