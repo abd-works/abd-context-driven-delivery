@@ -739,6 +739,147 @@ describe("inlined operation source", () => {
     expect(layout.folds.some((fold) => fold.kind === "class")).toBe(true);
   });
 
+  it("folds every property and the class named on the line", () => {
+    const layout = inlineCallLayout(
+      "let customer: Customer;\nexpect(customer.identity.email).toBe('x');\nexpect(customer).toBeInstanceOf(Customer);",
+      [
+        {
+          id: "identity",
+          name: "identity",
+          kind: "Property",
+          owner: "Customer",
+          text: "public identity: Identity",
+          file: "customer.ts",
+          start: 8,
+          end: 8,
+        },
+        {
+          id: "email",
+          name: "email",
+          kind: "Property",
+          owner: "Identity",
+          text: "public email: string",
+          file: "customer.ts",
+          start: 2,
+          end: 2,
+        },
+        {
+          id: "customer",
+          name: "Customer",
+          kind: "OoadClass",
+          owner: "",
+          text: "class Customer {\n  identity: Identity\n}",
+          file: "customer.ts",
+          start: 1,
+          end: 3,
+        },
+        {
+          id: "identity-class",
+          name: "Identity",
+          kind: "OoadClass",
+          owner: "",
+          text: "class Identity {\n  email: string\n}",
+          file: "customer.ts",
+          start: 4,
+          end: 6,
+        },
+      ],
+      "",
+    );
+    expect(layout.text).toContain("public identity: Identity");
+    expect(layout.text).toContain("public email: string");
+    expect(layout.text).toContain("class Customer {");
+    expect(layout.text).toContain("class Identity {");
+    expect(layout.folds.some((fold) => fold.kind === "call")).toBe(true);
+    expect(layout.folds.some((fold) => fold.kind === "class")).toBe(true);
+  });
+
+  it("does not expand classes nested inside a class fold", () => {
+    const layout = inlineCallLayout("let customer: Customer", [
+      {
+        id: "customer",
+        name: "Customer",
+        kind: "OoadClass",
+        owner: "",
+        text: "class Customer {\n  identity: Identity\n}",
+        file: "customer.ts",
+        start: 1,
+        end: 3,
+      },
+      {
+        id: "identity-class",
+        name: "Identity",
+        kind: "OoadClass",
+        owner: "",
+        text: "class Identity {\n  home: Address\n}",
+        file: "customer.ts",
+        start: 4,
+        end: 6,
+      },
+      {
+        id: "address",
+        name: "Address",
+        kind: "OoadClass",
+        owner: "",
+        text: "class Address {\n  street: string\n}",
+        file: "customer.ts",
+        start: 7,
+        end: 9,
+      },
+    ], "");
+    expect(layout.text).toContain("class Customer {");
+    expect(layout.text).not.toContain("class Identity {");
+    expect(layout.text).not.toContain("class Address {");
+  });
+
+  it("does not fold the class that is already open", () => {
+    const layout = inlineCallLayout(
+      "export class Customer {\n  identity: Identity\n}",
+      [
+        {
+          id: "customer",
+          name: "Customer",
+          kind: "OoadClass",
+          owner: "",
+          text: "export class Customer {\n  identity: Identity\n}",
+          file: "customer.ts",
+          start: 1,
+          end: 3,
+        },
+        {
+          id: "identity-class",
+          name: "Identity",
+          kind: "OoadClass",
+          owner: "",
+          text: "class Identity {\n  email: string\n}",
+          file: "customer.ts",
+          start: 4,
+          end: 6,
+        },
+      ],
+      "",
+      { openedClass: "Customer" },
+    );
+    expect(layout.text.split("\n").some((line) => line.trim() === "Customer")).toBe(false);
+    expect(layout.text).toContain("class Identity {");
+  });
+
+  it("leaves a class name inside a string unfolded", () => {
+    const layout = inlineCallLayout("given('the Customer is stored')", [
+      {
+        id: "customer",
+        name: "Customer",
+        kind: "OoadClass",
+        owner: "",
+        text: "class Customer {\n  id: string\n}",
+        file: "customer.ts",
+        start: 1,
+        end: 2,
+      },
+    ], "");
+    expect(layout.text).not.toContain("class Customer {");
+  });
+
   it("inlines a call through a property chain", () => {
     const layout = inlineCallLayout(
       "customer = await ctx.customerRepository.load(accountCredentials)",

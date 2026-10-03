@@ -35,16 +35,24 @@ for _name in list(sys.modules):
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from practices.clean_engineering.specifications._scan_kit import DOMAIN_MODULE_RULE_GLOBS
+from practices.clean_engineering.specifications._scan_kit import (
+    DOMAIN_MODULE_RULE_GLOBS,
+    ScannerCollection,
+)
 from practices.clean_engineering.specifications.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
 )
 from practices.stories.stories import Stories
-from practices.clean_engineering.specifications.lern_domain_driven.scanners._scan_base import ScannerCollection
 from harness.knowledge_graph.model.graph_rules import GraphRule, GraphRulesCollection
 
 _ALL_RULE_SLUGS = (
-    "organize-by-domain-module",
+    "epic-package-screens-only",
+    "domain-core-file-matches-folder-slug",
+    "node-tier-uses-node-suffix",
+    "client-subtypes-domain-hosts-browser-logic",
+    "node-decides-next-page",
+    "router-asks-the-node",
+    "views-render-only",
     "share-domain-logic",
     "maintain-layer-purity",
     "use-ubiquitous-language",
@@ -52,7 +60,6 @@ _ALL_RULE_SLUGS = (
     "preserve-arg-names-across-layers",
     "property-casing-transform",
     "consistent-view-naming",
-    "delegate-routes-to-domain-server",
     "ensure-type-safe-routes",
     "standard-mutation-response",
     "implement-domain-entities-correctly",
@@ -135,52 +142,83 @@ with description("a LernDomainDriven generator"):
             expect(self.rendered).to(contain("ask-cross-aggregate-sync"))
             expect("event" in self.rendered.lower()).to(be_true)
 
-    with context("whose CodeQL pack lists the architecture rules"):
+    with context("whose CodeQL packs list the architecture rules"):
         with before.each:
             self.discovered = ScannerCollection(module_dir=_MODULE_DIR).discover()
-            self.pack = _MODULE_DIR / "model" / "typescript" / "codeql"
 
-        with it("should resolve a typescript query pack beside the practice"):
-            expect((self.pack / "qlpack.yml").is_file()).to(equal(True))
+        with it("should resolve a typescript query pack per attributed practice"):
+            for practice in ("clean_engineering", "ddd", "stories"):
+                pack = _MODULE_DIR / practice / "model" / "typescript" / "codeql"
+                expect((pack / "qlpack.yml").is_file()).to(equal(True))
+                expect((pack / "rules").is_dir()).to(equal(True))
+                expect((pack / "loaders").is_dir()).to(equal(True))
 
         with it("should register exactly the architecture rules, one query each"):
             expect(sorted(self.discovered)).to(equal(sorted(_ALL_RULE_SLUGS)))
 
-    with context("whose rules collection injects on matching package paths"):
+        with it("should not ship javascript or python query packs"):
+            expect((_MODULE_DIR / "model" / "javascript").exists()).to(equal(False))
+            expect((_MODULE_DIR / "model" / "python").exists()).to(equal(False))
+
+        with it("should keep rule queries flat under each practice rules folder"):
+            for practice in ("clean_engineering", "ddd", "stories"):
+                rules_root = _MODULE_DIR / practice / "model" / "typescript" / "codeql" / "rules"
+                expect(any(rules_root.glob("*.ql"))).to(be_true)
+                expect(list(rules_root.glob("*/*.ql"))).to(equal([]))
+
+    with context("whose graph rules carry pattern and parent-practice metadata"):
+        with before.each:
+            self.rules = self.tool.rules
+
+        with it("should tag every graph rule with the lern_domain_driven pattern"):
+            for rule in self.rules:
+                if not isinstance(rule, GraphRule):
+                    continue
+                expect(getattr(rule, "pattern", None)).to(equal("lern_domain_driven"))
+
+        with it("should attribute layout rules to clean_engineering"):
+            expect(self.rules["epic-package-screens-only"].practice).to(equal("clean_engineering"))
+            expect(self.rules["epic-package-screens-only"].fidelity).to(equal("code"))
+
+        with it("should attribute aggregate rules to ddd"):
+            expect(self.rules["one-json-store-per-aggregate"].practice).to(equal("ddd"))
+            expect(self.rules["one-json-store-per-aggregate"].fidelity).to(equal("tactics"))
+
+        with it("should attribute story-test rules to stories"):
+            expect(self.rules["test-story-driven"].practice).to(equal("stories"))
+            expect(self.rules["test-story-driven"].fidelity).to(equal("acceptance_tests"))
+
+    with context("whose rules collection injects on matching paths"):
         with before.each:
             self.rules = self.tool.rules
             self.payload = {
                 "tool_name": "Write",
-                "tool_input": {"path": "packages/onboard-a-customer/carts/cart-server.ts"},
+                "tool_input": {"path": "src/customer/customer-node.ts"},
             }
 
         with it("should load shared rules as a GraphRulesCollection"):
             expect(self.rules).to(be_a(GraphRulesCollection))
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
-        with it("should scope inject globs to packages feature layout"):
+        with it("should scope inject globs to src domains and epic packages"):
             expect(self.rules.glob).to(equal(DOMAIN_MODULE_RULE_GLOBS))
 
-        with it("should match domain-module server files under packages"):
-            expect(self.rules.matches("packages/onboard-a-customer/carts/cart-server.ts")).to(
-                equal(True)
-            )
+        with it("should match domain node files under src"):
+            expect(self.rules.matches("src/customer/customer-node.ts")).to(equal(True))
 
-        with it("should match domain-core files under packages"):
-            expect(self.rules.matches("packages/onboard-a-customer/carts/cart.ts")).to(equal(True))
+        with it("should match epic screen files under packages"):
+            expect(self.rules.matches("packages/wire-pay/send-wire/send-wire.tsx")).to(equal(True))
 
-        with it("should not match legacy flat src server files"):
-            expect(self.rules.matches("src/customer/customer-server.ts")).to(equal(False))
-
-        with it("should not match unrelated python modules"):
+        with it("should not match unrelated files outside src or packages"):
             expect(self.rules.matches("actions/validate/validate.py")).to(equal(False))
 
         with it("should upgrade rules with graph queries to GraphRule"):
-            expect(self.rules["organize-by-domain-module"]).to(be_a(GraphRule))
+            expect(self.rules["epic-package-screens-only"]).to(be_a(GraphRule))
+            expect(self.rules["epic-package-screens-only"].graphQuery.is_file()).to(equal(True))
 
-        with it("should inject rules markdown when a matching package file is written"):
+        with it("should inject rules markdown when a matching src file is written"):
             result = self.rules.inject_rules(self.payload)
-            expect(result.get("additional_context") or "").to(contain("organize-by-domain-module"))
+            expect(result.get("additional_context") or "").to(contain("node-tier-uses-node-suffix"))
 
         with it("should list inject_rules on tools so hook install can enroll it"):
             expect("inject_rules" in self.tool.tools).to(equal(True))

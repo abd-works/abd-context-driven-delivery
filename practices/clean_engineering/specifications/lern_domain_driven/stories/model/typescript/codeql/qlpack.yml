@@ -1,0 +1,4 @@
+﻿name: cdd/lern-stories-graph-query-typescript
+version: 0.0.1
+dependencies:
+  codeql/javascript-all: "*"

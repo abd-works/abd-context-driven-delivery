@@ -16,6 +16,7 @@ from .codeql_layout import (
     PACK_FOLDERS,
     codeql_pack,
     extractor_language,
+    locate_rule_query,
     loader_query,
     pack_root_for_query,
     source_language_from_path,
@@ -26,6 +27,17 @@ if TYPE_CHECKING:
 
 _FACT_QUERIES = ("classes", "operations", "parameters", "properties", "calls")
 _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet")
+
+
+def _extended_path(path: Path) -> Path:
+    """Use the Windows extended-length path prefix when normal paths hit MAX_PATH."""
+    resolved = path.resolve()
+    if os.name != "nt":
+        return resolved
+    text = str(resolved)
+    if text.startswith("\\\\?\\"):
+        return Path(text)
+    return Path("\\\\?\\" + text)
 
 
 class CodeQLRunError(RuntimeError):
@@ -498,6 +510,8 @@ class CodeQL:
         )
         if write_filter:
             self._write_subject_filter(queries[0].parent, path_root=self._ql_path_root(db))
+        for query in queries:
+            self._clear_stale_batch_bqrs(db, query)
         server = attached_query_server()
         if server is not None and getattr(server, "alive", False):
             self._emit("query-server " + " ".join(query.stem for query in queries))
@@ -573,13 +587,29 @@ class CodeQL:
         *,
         write_filter: bool = True,
     ) -> Dict[str, List[list]]:
-        self._write_requested_rules(query.parent, slugs)
-        self.write_rules_query(query.parent)
+        pack_dir = query.parent
+        if not (pack_dir / "rule_hits.qll").is_file():
+            queries = [locate_rule_query(pack_dir, slug) for slug in slugs]
+            queries = [q for q in queries if q is not None]
+            if not queries:
+                return {slug: [] for slug in slugs}
+            batch = self.run_queries(queries, database=database, write_filter=write_filter)
+            grouped: Dict[str, List[list]] = {slug: [] for slug in slugs}
+            for slug in slugs:
+                rule_query = locate_rule_query(pack_dir, slug)
+                if rule_query is not None:
+                    grouped[slug] = batch.get(rule_query.stem) or []
+            return grouped
+        self._write_requested_rules(pack_dir, slugs)
+        self.write_rules_query(pack_dir)
         tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
         return self._rows_by_slug(tuples, slugs)
 
     def write_rules_query(self, pack_dir: Path) -> None:
+        if not (pack_dir / "rule_hits.qll").is_file():
+            return
         language = self.pack_language(pack_dir) or "python"
+        extractor = extractor_language(language)
         text = (
             "/**\n"
             " * @name practice-graph-rules\n"
@@ -591,7 +621,7 @@ class CodeQL:
             " * which slugs this pass evaluates; each row still names its rule.\n"
             " */\n"
             "\n"
-            f"import {language}\n"
+            f"import {extractor}\n"
             "import subject_filter\n"
             "import requested_rules\n"
             "import rule_hits\n"
@@ -651,19 +681,38 @@ class CodeQL:
                     break
         return Path(*name.split("/"))
 
+    def _clear_stale_batch_bqrs(self, database: Path, query: Path) -> None:
+        """Remove legacy rules.bqrs when nested rules/<practice>/*.bqrs exist (Windows path clash)."""
+        results = database / "results"
+        pack_dir = results / self._pack_results_dir(query)
+        stale = pack_dir / "rules.bqrs"
+        nested = pack_dir / "rules"
+        if stale.is_file() and nested.is_dir():
+            stale.unlink(missing_ok=True)
+
     def _bqrs_for(self, database: Path, query: Path) -> Path:
         results = database / "results"
-        direct = results / self._pack_results_dir(query) / f"{query.stem}.bqrs"
-        if direct.is_file():
+        self._clear_stale_batch_bqrs(database, query)
+        pack_root = pack_root_for_query(query)
+        try:
+            rel = query.resolve().relative_to(pack_root.resolve()).with_suffix(".bqrs")
+        except ValueError:
+            rel = Path(f"{query.stem}.bqrs")
+        direct = results / self._pack_results_dir(query) / rel
+        if _extended_path(direct).is_file():
             return direct
-        matches = list(results.rglob(f"{query.stem}.bqrs")) if results.is_dir() else []
+        matches = [
+            path
+            for path in results.rglob(f"{query.stem}.bqrs")
+            if _extended_path(path).is_file()
+        ] if results.is_dir() else []
         if not matches:
             raise CodeQLRunError(f"no bqrs for {query.stem} under {results}")
-        return max(matches, key=lambda p: p.stat().st_mtime)
+        return max(matches, key=lambda p: _extended_path(p).stat().st_mtime)
 
     def _decode_bqrs(self, bqrs: Path) -> List[list]:
         decode = subprocess.run(
-            [self.executable(), "bqrs", "decode", str(bqrs), "--format=json"],
+            [self.executable(), "bqrs", "decode", str(_extended_path(bqrs)), "--format=json"],
             check=False,
             capture_output=True,
             text=True,

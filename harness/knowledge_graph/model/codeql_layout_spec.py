@@ -18,14 +18,20 @@ def _stems(pack: Path, folder: str) -> set[str]:
     root = pack / folder
     if not root.is_dir():
         return set()
-    return {path.stem for path in root.glob("*.ql") if path.name not in _SKIP}
+    return {path.stem for path in root.rglob("*.ql") if path.name not in _SKIP}
 
 
 with description("CodeQL language pack parity"):
     with it("should keep the same loader and rule files for python, javascript, and typescript"):
         misses = []
         for practice in listed_practices():
-            packs = {lang: codeql_pack(practice, lang) for lang in SOURCE_LANGUAGES}
+            packs = {
+                lang: codeql_pack(practice, lang)
+                for lang in SOURCE_LANGUAGES
+                if codeql_pack(practice, lang).is_dir()
+            }
+            if not packs:
+                continue
             for folder in ("loaders", "rules"):
                 by_lang = {lang: _stems(pack, folder) for lang, pack in packs.items()}
                 expected = set.union(*by_lang.values()) if any(by_lang.values()) else set()

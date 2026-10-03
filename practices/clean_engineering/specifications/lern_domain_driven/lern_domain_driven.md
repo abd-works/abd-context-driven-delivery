@@ -42,25 +42,59 @@ callers never open the JSON store themselves.
 
 ---
 
+### Two-root layout: `src/` domains, `packages/` screens
+
+Domain tiers and lowdb stores live **once** under `src/<domain-slug>/`.
+Epic packages under `packages/<epicSlug>/` hold process boot, routing, and
+screen views only — they import domain tiers through `@src`.
+
+```
+src/                                    ← shared domain modules (one copy)
+  <domain-slug>/
+    <domain-slug>.ts                    ← core aggregate, repository, VOs
+    <domain-slug>-node.ts               ← Node tier (Express, destination, repo node)
+    <domain-slug>-client.tsx            ← browser client subtype
+    <domain-slug>.json                  ← lowdb store for this aggregate
+
+packages/<epicSlug>/                    ← epic package — screens and boot only
+  app.ts / serve.ts / main.tsx          ← Express + Vite process boot
+  package.json / index.html / vite.config.ts
+  <epic-slug>-view.tsx                  ← epic shell view (kebab-case filename)
+  <epic-slug>-redirect.tsx              ← fetches destination, mounts sub-epic view
+  routes/
+    <epic-slug>-routes.ts               ← asks *Node classes; never picks a step locally
+  <sub-epic-slug>/                      ← sub-epic screen folder
+    <screen-slug>.tsx
+```
+
+Rule `epic-package-screens-only` governs this split. Do **not** duplicate
+`<domain>.ts`, `<domain>-node.ts`, `<domain>-client.tsx`, `source/`, or
+`data/` trees under the epic package — tests and screens already import the
+single copy from `@src`.
+
+Rule `domain-core-file-matches-folder-slug` governs filenames: kebab-case core
+files (`<domain-slug>/<domain-slug>.ts`), PascalCase exported types
+(`{Domain}`).
+
+---
+
 ### Persistence: one lowdb JSON store per aggregate
 
 [lowdb](https://github.com/typicode/lowdb) is the adapter (`JSONFilePreset` /
 `JSONFile` from `lowdb/node` in production; `Memory` from `lowdb` in tests).
-`db.data` is a plain object for **this aggregate only**.
+Each aggregate's JSON file sits beside its domain module in `src/<domain-slug>/`.
 
 ```
-data/<aggregate-plural>.json     ← e.g. data/recipients.json
+src/<domain-slug>/<domain-slug>.json
 {
-  "recipients": [                 ← one collection: serialized aggregate roots
-    { "id": "…", "name": "…", "beneficiary_bank": { … } }
+  "<collection-key>": [                 ← serialized aggregate roots for this aggregate
+    { "id": "…", … }
   ]
 }
 ```
 
 Rules `one-json-store-per-aggregate` and `repository-owns-aggregate-lifecycle`
-govern this layer. Each aggregate root owns its own JSON file
-(`data/<aggregate>.json`). Repositories never open another aggregate's file.
-The domain-core `*Repository` interface is the collection seam for the root.
+govern this layer. Repositories never open another aggregate's JSON file.
 Required operations, named in ubiquitous language:
 
 | Operation | Returns | Role |
@@ -70,9 +104,9 @@ Required operations, named in ubiquitous language:
 | `search(query?)` | aggregate roots | find by attributes / example |
 | `update(root)` | updated aggregate root | persist a mutation already applied on the root |
 
-Zod `.parse()` runs at this boundary. The server class
-`*RepositoryServer` implements the interface with lowdb; routes and views
-never call `JSONFilePreset` / `db.data` themselves.
+Zod `.parse()` runs at the repository boundary. The `*RepositoryNode` class
+implements persistence with lowdb; routes and views never call `JSONFilePreset`
+/ `db.data` themselves.
 
 Cross-aggregate consistency is **outside** a single JSON file. Choose one
 coordination style **when generating stories** (see `ask-cross-aggregate-sync`
@@ -80,64 +114,63 @@ in § Shared rules) — then keep that choice for the slice.
 
 ---
 
-### Domain module organization
+### Three tiers per domain (`src/<domain-slug>/`)
 
-Packages follow the feature → domain hierarchy: a feature package owns process
-boot and the feature view; each domain (aggregate) it needs lives as a
-folder inside it, with three tier files — core, server, client:
-
-```
-packages/<epicSlug>/                    ← feature package — e.g. wires/
-  <EpicName>View.tsx                    ← feature view — e.g. WirePaymentView.tsx
-  app.ts / serve.ts                     ← Express app factory + process listen
-  main.tsx / index.html / vite.config.ts ← browser process boot
-  package.json                          ← @scope/epicSlug
-  data/<domainNames>.json               ← lowdb store for this feature's aggregate(s)
-  <domainNames>/                        ← aggregate nested in the feature — e.g. recipients/
-    <domainNames>.ts                    ← domain core — e.g. recipients.ts
-    <domainName>-server.ts              ← e.g. recipient-server.ts (RepositoryServer + routes)
-    <domainName>-client.tsx             ← e.g. recipient-client.tsx
-```
-
-Rules `organize-by-domain-module`, `share-domain-logic`, and
-`maintain-layer-purity` govern layout and imports.
-
-### Naming / layering
-
-Every artifact instantiates from the domain — file, class, and method names
-derive from domain classes/operations. `<domain>.ts` keeps plain domain names
-(`Recipient`, `Recipients`); every extension in `<domain>-client.tsx` or
-`<domain>-server.ts` adds a layer qualifier (`RecipientClient`,
-`RecipientsServer`, `RecipientHttpClient`, `RecipientRepositoryServer`).
-`Domain` is never part of a class name.
-
-| File | Qualifier | Example |
+| File | Suffix | Role |
 |---|---|---|
-| `<domain>.ts` / `recipients.ts` | *(none)* | `Recipient`, `Recipients`, `RecipientRepository` |
-| `<domain>-client.tsx` | `Client`, `HttpClient` | `RecipientClient`, `RecipientsClient`, `RecipientHttpClient` |
-| `<domain>-server.ts` | `Server`, `RepositoryServer` | `RecipientsServer`, `RecipientRepositoryServer` |
+| `<domain-slug>.ts` | *(none)* | Core aggregate, repository interface, value objects, exceptions — framework-free |
+| `<domain-slug>-node.ts` | `Node` | Express wiring, `*RepositoryNode`, `destination`, session on the request context |
+| `<domain-slug>-client.tsx` | `Client` | Browser subtype: field entry, touched flags, requirement lines, host operations |
 
-Tier classes **extend** the domain-core class — they do not fork it.
-`RecipientsClient extends Recipients`, `RecipientsServer extends Recipients`,
-`RecipientClient extends Recipient`. Every operation on the base
-(`filterByStatus`, getters, collection queries, …) stays exactly the same on
-the subclass: same name, same arguments, same meaning. Subclasses only **add**
-layer-specific operations (`load`, `cardCssClass`, repository I/O); they never
-rename, redefine, or reimplement a base operation under a different signature.
+Rule `node-tier-uses-node-suffix` names the Node.js tier **`Node`**, not
+`Server` — this tier runs in-process with Express and the Vitest server channel,
+not on an external host.
 
-That same identity holds across the rest of the stack: where an operation
-appears on the route, HTTP client, server domain class, or core, it is the
-same `{verbNoun}` with the same argument names — only types narrow.
+Rule `client-subtypes-domain-hosts-browser-logic`: `{Domain}Client`
+and `{Domain}Node` both **extend** `{Domain}`. Domain operations on the core
+class are the operations the client hosts for the browser. A field change returns
+a **new client instance** for React state.
 
-Rules `use-ubiquitous-language`, `cross-layer-method-naming`,
-`preserve-arg-names-across-layers`, `property-casing-transform`, and
-`consistent-view-naming` govern naming.
+Tier classes keep every inherited base operation unchanged; subclasses only add
+layer-specific behaviour (`destination`, repository I/O).
+
+Rules `share-domain-logic`, `maintain-layer-purity`, `use-ubiquitous-language`,
+`cross-layer-method-naming`, `preserve-arg-names-across-layers`, and
+`property-casing-transform` govern imports and naming across these three files.
+
+---
+
+### Navigation: node decides, router asks, view renders
+
+**Node decides the next page.** `*Node.destination` maps the domain step to a
+browser path. Path maps stay in the `*-node.ts` file (rule
+`node-decides-next-page`).
+
+**Router asks the node.** Route modules call `*Node.destination` and return the
+path those classes produce. Redirect components fetch that result and mount the
+view for the returned path. Neither the route module nor the redirect derives
+the page from a step enum locally (rule `router-asks-the-node`).
+
+**Views render only.** A screen view keeps the client instance in React state
+and paints the fields, requirement lines, and actions that client exposes.
+Field entry, touched flags, requirement strings, host operations, and the next
+page stay off the view (rule `views-render-only`).
+
+Epic and sub-epic views use kebab-case filenames (`<epic-slug>-view.tsx`,
+`<screen-slug>.tsx`). Exported React components end in `View`
+(rule `consistent-view-naming`).
+
+---
 
 ### App server / routes
 
-Route handlers stay thin: parse the request, delegate to a server-side domain
-class. Rules `delegate-routes-to-domain-server`, `ensure-type-safe-routes`,
-and `standard-mutation-response` govern this tier.
+Route handlers stay thin: parse the request, delegate to a `*Node` class or
+call `*Node.destination`. Rules `router-asks-the-node`, `ensure-type-safe-routes`
+(typed request extensions), and `standard-mutation-response` govern this tier.
+
+Create repositories at the **caller** — production passes repository node
+instances into route factories; tests construct their own in the scenario that
+needs one. Node modules export the class only.
 
 ### Types & entities
 
@@ -147,7 +180,8 @@ boundary. Rules `implement-domain-entities-correctly` and
 
 ### Packaging
 
-One package per feature with subpath exports into nested domains. Rules
+`@src` alias resolves `src/` for epic packages. One epic package per feature
+(`packages/<epicSlug>`) with screen and route subpaths. Rules
 `use-valid-package-names` and `include-all-external-dependencies` govern
 packaging (`lowdb` on the server).
 
@@ -179,15 +213,15 @@ govern acceptance tests for this architecture.
 
 Screens and navigation for this slice were designed upstream by `ux` before
 this tool runs. `generate` cites that artifact under **Sources / context** on
-the touched view files (`packages/<epicSlug>/<Feature>View.tsx`, views inside
-`<domain>/<domain>-client.tsx`, …) — it does not call `ux` itself.
+the touched view files (`packages/<epicSlug>/*-view.tsx`, sub-epic screen
+folders, …) — it does not call `ux` itself.
 
 ### Generating stories — cross-aggregate sync
 
 When a story (or the slice) involves **more than one aggregate**, those
-aggregates stay in separate JSON stores. Synchronization is a **choice**,
-recorded before scenarios are written. Rule `ask-cross-aggregate-sync` is a
-hard gate when generating stories.
+aggregates stay in separate JSON stores under `src/`. Synchronization is a
+**choice**, recorded before scenarios are written. Rule
+`ask-cross-aggregate-sync` is a hard gate when generating stories.
 
 Use the **AskQuestion** tool (never a plain chat list). One question, two
 options; do not write story files until the answer is in
@@ -216,9 +250,10 @@ heading and skip the question.
 
 ## Generate
 
-1. Follow **session_guidance**. Fill `templates/` for the feature package this
-   slice touches (`{epicSlug}/` with nested domain module, process boot, and
-   `data/{domainNames}.json` via `*RepositoryServer.open`).
+1. Follow **session_guidance**. Scaffold domain modules under `src/<domain-slug>/`
+   (`<domain>.ts`, `<domain>-node.ts`, `<domain>-client.tsx`, `<domain>.json`)
+   and the epic package under `packages/<epicSlug>/` (boot, `routes/`, epic view,
+   sub-epic screen folders). Import domain tiers through `@src`.
 2. **`ask-cross-aggregate-sync`** — if more than one aggregate is in play,
    AskQuestion as specified above and persist the answer **before** calling
    the Stories companion.
@@ -234,39 +269,51 @@ heading and skip the question.
 
 ```yaml
 alwaysApply: false
-globs: "packages/**/app.ts,packages/**/serve.ts,packages/**/main.tsx,packages/**/package.json,packages/**/data/*.json,packages/**/*-server.ts,packages/**/*-client.tsx,packages/**/*View.tsx,packages/*/*/*.ts,packages/**/*_spec.server.ts,packages/**/*_spec.client.ts,packages/**/*_spec.e2e.ts,packages/**/*-sketch.md"
+globs: "packages/**/*,src/**/*"
 ```
 
-Whenever you create, alter, or delete a domain-module feature package under
-`packages/` (domain / server / client / View), or tests that package supports.
-Follow these rules.
+Whenever you create, alter, or delete a LERN domain module under `src/`, an epic
+package under `packages/`, or tests they support. Follow these rules.
 
-If this change will not stay here, follow `practices/clean_engineering/code.mdc`. If the tests are Spec-by-Example, also follow `practices/stories/acceptance_tests.mdc`.
+If this change will not stay here, follow `practices/clean_engineering/code.mdc`. If the tests are Spec-by-Example, also follow `practices/stories/acceptance_tests.mdc`. DDD aggregate rules in `.context/rules/ddd/tactics/` apply to domain classes.
 
-- **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON
-  file (`data/<aggregate>.json`). The file's object model is that aggregate and
-  the entities / value objects inside it. Do **not** put several aggregates in
-  one `db.json`. Repositories never open another aggregate's JSON file.
-- **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository`
-  interface is the collection seam for the root. Required operations:
-  `load(id)`, `create(input)`, `search(query?)`, and `update(root)` — named in
-  ubiquitous language. Zod `.parse()` runs at this boundary.
-- **`organize-by-domain-module`** — feature package present with process boot (`app.ts`, `serve.ts`, `main.tsx`) and nested domain dirs each having `{domain}.ts`, `{domain}-server.ts`, `{domain}-client.tsx`.
-- **`share-domain-logic`** — entities, value objects, Zod schemas, and business rules defined once in `<domain>.ts`; `<domain>-server.ts` and `<domain>-client.tsx` import from there, never re-derive.
-- **`maintain-layer-purity`** — `<domain>.ts` is framework-free (no Express, no React, no lowdb); `<domain>-server.ts` and `<domain>-client.tsx` never cross-import each other.
-- **`use-ubiquitous-language`** — names come from the domain model; no `Manager`, `Handler`, `Helper`, or `Domain*` prefixes/suffixes.
-- **`cross-layer-method-naming`** — the same `{verbNoun}` method stem flows through every tier where an operation appears (domain core → client → server → route → HTTP); subclasses keep every inherited base operation unchanged.
-- **`preserve-arg-names-across-layers`** — argument names stay identical across layer boundaries and across base → extension; only types narrow.
+### Layout and tiers
+
+- **`epic-package-screens-only`** — Keep shared domain tiers and lowdb data only under `src/<domain>/` (`<domain>.ts`, `<domain>-node.ts`, `<domain>-client.tsx`, and per-aggregate json). Limit `packages/<epicSlug>/` to epic boot (`app.ts`, `serve.ts`, `main.tsx`, `*-view.tsx`) plus sub-epic screen views and `routes/` — no second `*-node.ts`, `*-client.tsx`, `source/`, or `data/` tree under the epic package.
+- **`domain-core-file-matches-folder-slug`** — Name the domain core file after the folder slug in kebab-case (`<domain-slug>/<domain-slug>.ts`). Keep exported classes PascalCase (`{Domain}`). Place `<domain>-node.ts` and `<domain>-client.tsx` beside the core file in the same `src/<domain>/` folder.
+- **`node-tier-uses-node-suffix`** — Name the Node.js LERN tier with the `Node` suffix and `<domain>-node.ts` filenames (`{Domain}Node`, `*RepositoryNode`). Type request-context fields as `*Node`, not `Server`.
+- **`client-subtypes-domain-hosts-browser-logic`** — For each `src/<domain>/`, derive `<domain>.ts`, `<domain>-client.tsx`, and `<domain>-node.ts` from the folder slug. The `*Client` and `*Node` classes extend the core domain class. Domain operations on the core are the operations the client hosts for the browser; field changes return a new client instance for React state.
+
+### Navigation and views
+
+- **`node-decides-next-page`** — The node class decides the next page. `*Node.destination` maps the domain step to the browser path; path maps stay in `*-node.ts`.
+- **`router-asks-the-node`** — Route modules only ask node classes and return the path they produce. Redirect components fetch that result and mount the view — neither derives the page from a step locally.
+- **`views-render-only`** — A screen view only renders. It keeps the client in React state and paints fields, requirement lines, and actions the client exposes. Field entry, touched flags, host operations, and next-page logic stay on the client or node.
+
+### Persistence and repositories
+
+- **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON file under `src/<domain-slug>/`. Do not put several aggregates in one file. Repositories never open another aggregate's JSON file.
+- **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository` interface is the collection seam for the root: `load`, `create`, `search`, `update` — named in ubiquitous language. Zod `.parse()` runs at this boundary.
+
+### Naming, purity, and packaging
+
+- **`share-domain-logic`** — Entities, value objects, Zod schemas, and business rules defined once in `<domain>.ts`; `-node.ts` and `-client.tsx` import from there, never re-derive.
+- **`maintain-layer-purity`** — `<domain>.ts` is framework-free (no Express, no React, no lowdb); `-node.ts` and `-client.tsx` never cross-import each other.
+- **`use-ubiquitous-language`** — Names come from the domain model; no `Manager`, `Handler`, `Helper`, or `Domain*` prefixes/suffixes.
+- **`cross-layer-method-naming`** — The same `{verbNoun}` method stem flows through core → client → node → route → HTTP; subclasses keep every inherited base operation unchanged.
+- **`preserve-arg-names-across-layers`** — Argument names stay identical across layer boundaries; only types narrow.
 - **`property-casing-transform`** — `camelCase` in TypeScript; `snake_case` in JSON (lowdb documents and HTTP bodies).
-- **`consistent-view-naming`** — React components end in `View` or `CardView`; never `Page`.
-- **`delegate-routes-to-domain-server`** — route handlers in `<domain>-server.ts` are thin: parse the request, delegate to a server-side domain class; never call the repository or apply domain-core logic inline.
-- **`ensure-type-safe-routes`** — route handlers compile without implicit `any`; `req.user` and other request extensions are typed.
-- **`standard-mutation-response`** — every mutation on the same aggregate returns the same response shape.
-- **`implement-domain-entities-correctly`** — business rules live on domain classes; the Zod schema validates at the repository boundary, not inline in routes or views. Production repositories import from `lowdb` / `lowdb/node`.
-- **`implement-full-interfaces`** — every `implements` clause covers all interface members; no stub no-ops standing in for real behavior.
-- **`use-valid-package-names`** — one package per feature (`@scope/epicSlug`) with subpath exports into nested domains (`./recipients`, `./recipients/recipient-server`, …); no placeholder scopes; no phantom imports; no legacy flat `*-shared` / `*-server` / `*-client` package split.
-- **`include-all-external-dependencies`** — every import has a declared dependency (`lowdb` on the server); the project compiles after a clean install.
-- **`test-story-driven`** — tests mirror the story hierarchy (epic → folder, sub-epic → file, story → `describe`, scenario → `it`); Given/When/Then helpers present at all three tiers.
-- **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` present at the workspace root; unit/component and E2E runners stay separate (Vitest vs Playwright), and `vitest.config.ts` / `playwright.config.ts` don't pick up each other's spec files.
-- **`use-thorough-e2e-tests`** — E2E tests are independent (no wiping an entire JSON store or `unlink` of `data/*.json` between tests); delete only the aggregate roots the test created. The feature package must exist and serve the real frontend (`npm run dev`) before E2E tests can pass.
+- **`consistent-view-naming`** — React components end in `View`; screen filenames stay kebab-case.
+- **`ensure-type-safe-routes`** — Route handlers compile without implicit `any`; request extensions are typed.
+- **`standard-mutation-response`** — Every mutation on the same aggregate returns the same response shape.
+- **`implement-domain-entities-correctly`** — Business rules live on domain classes; Zod validates at the repository boundary, not inline in routes or views.
+- **`implement-full-interfaces`** — Every `implements` clause covers all interface members; no stub no-ops.
+- **`use-valid-package-names`** — One epic package per feature with `@src` imports into `src/`; no phantom imports or legacy flat `*-shared` / `*-server` / `*-client` package split.
+- **`include-all-external-dependencies`** — Every import has a declared dependency (`lowdb` on the server); the project compiles after a clean install.
+
+### Testing and story generation
+
+- **`test-story-driven`** — Tests mirror the story hierarchy; Given/When/Then helpers present at server, client, and e2e tiers.
+- **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` at the workspace root; Vitest and Playwright stay separate.
+- **`use-thorough-e2e-tests`** — E2E tests are independent (no wiping entire JSON stores between tests); delete only aggregate roots the test created.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.

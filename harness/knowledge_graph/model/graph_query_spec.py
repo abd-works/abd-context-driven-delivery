@@ -130,12 +130,16 @@ def write_match_all_filter(pack: Path, language: str) -> None:
 
 
 def ensure_examples_db(examples: Path, language: str) -> Path:
+    import shutil
+    import subprocess
+
     codeql = CodeQL(examples)
     database = examples / ".codeql" / f"{language}-db"
     if codeql._database_ready(database):
         return database
+    if database.exists():
+        shutil.rmtree(database, ignore_errors=True)
     database.parent.mkdir(parents=True, exist_ok=True)
-    import subprocess
 
     run = subprocess.run(
         [
@@ -165,9 +169,11 @@ def hit(rows: Iterable[dict], expected: str) -> bool:
 
 
 def _rule_query_path(pack: Path, slug: str) -> Path:
-    nested = pack / "rules" / f"{slug}.ql"
-    if nested.is_file():
-        return nested
+    from harness.knowledge_graph.model.codeql_layout import locate_rule_query
+
+    found = locate_rule_query(pack, slug)
+    if found is not None:
+        return found
     return pack / f"{slug}.ql"
 
 
@@ -184,7 +190,7 @@ def assert_pack_hits(
     write_match_all_filter(pack, language)
     codeql = CodeQL(examples)
     combined = pack / "rules.ql"
-    if combined.is_file():
+    if combined.is_file() and (pack / "rule_hits.qll").is_file():
         batch = codeql.run_rules(
             combined, list(rules), database=database, write_filter=False
         )

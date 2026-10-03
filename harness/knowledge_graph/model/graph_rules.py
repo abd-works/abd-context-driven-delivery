@@ -12,7 +12,13 @@ from harness.guidance.rule import Rule, RulesCollection
 from harness.mcp.mcp_server import mcp
 from installation.files import Skill
 
-from .codeql_layout import codeql_pack, has_graph_query, rule_query
+from .codeql_layout import (
+    codeql_pack,
+    locate_rule_query,
+    pack_root_for_query,
+    parse_query_metadata,
+    rule_query,
+)
 
 _CLASS_TYPES = {
     "OoadClass",
@@ -169,6 +175,7 @@ class GraphRule(Rule):
         practice: str,
         shared: bool = False,
         tag: str = "base",
+        pattern: str | None = None,
         query_pack=None,
     ) -> None:
         super().__init__(rule.slug, rule.body, rule.fidelity)
@@ -179,6 +186,7 @@ class GraphRule(Rule):
         self.practice = practice
         self.shared = shared
         self.tag = tag or "base"
+        self.pattern = pattern
         self._query_pack = None if query_pack is None else Path(query_pack)
 
     def validate(self) -> str:
@@ -215,6 +223,10 @@ class GraphRule(Rule):
 
     @property
     def graphQuery(self) -> Optional[Path]:
+        if self._query_pack is not None:
+            found = locate_rule_query(self._query_pack, self.slug)
+            if found is not None:
+                return found
         return rule_query(self.practice, self.slug)
 
     def load_graph_query(self) -> str:
@@ -229,16 +241,16 @@ class GraphRule(Rule):
             from .codeql_layout import codeql_pack as pack_for
 
             language = CodeQL(graph.root).detect_language()
-            pack = pack_for(self.practice, language)
+            pack = self.query_pack if self._query_pack is not None else pack_for(self.practice, language)
+            query = self.graphQuery
             combined = pack / "rules.ql"
-            query = pack / "rules" / f"{self.slug}.ql"
-            if combined.is_file():
+            if query is None:
+                raise FileNotFoundError(f"no graphQuery file for {self.slug}")
+            if combined.is_file() and (pack / "rule_hits.qll").is_file():
                 grouped = CodeQL(graph.root).run_rules(combined, [self.slug])
                 hits = Rows.from_tuples(grouped.get(self.slug) or [])
-            elif query.is_file():
-                hits = CodeQL(graph.root).run(query)
             else:
-                raise FileNotFoundError(f"no graphQuery file for {self.slug}")
+                hits = CodeQL(graph.root).run(query)
         from .graph_query_spec import refine_rows
 
         hits = refine_rows(self.slug, hits)
@@ -435,12 +447,32 @@ A TypeScript query starts with import javascript, is @kind problem, and selects 
         if not practice:
             return collection
         shared = getattr(parent, "fidelities", None) is not None
+        pack_practice = practice
+        language = getattr(parent, "format", None) or "typescript"
+        query_pack = codeql_pack(pack_practice, str(language))
         for slug, rule in list(collection.entries.items()):
             if not isinstance(rule, Rule) or isinstance(rule, GraphRule):
                 continue
-            if not has_graph_query(practice, slug):
+            if practice == "lern_domain_driven":
+                from .codeql_layout import locate_lern_rule_query
+
+                query = locate_lern_rule_query(slug, str(language))
+            else:
+                query = locate_rule_query(query_pack, slug) or rule_query(practice, slug)
+            if query is None:
                 continue
-            collection.entries[slug] = GraphRule(rule, practice=practice, shared=shared)
+            meta = parse_query_metadata(query)
+            graph_practice = meta.get("practice") or practice
+            graph_fidelity = meta.get("fidelity") or rule.fidelity
+            promoted = Rule(slug, rule.body, graph_fidelity)
+            promoted.scanner = rule.scanner
+            collection.entries[slug] = GraphRule(
+                promoted,
+                practice=graph_practice,
+                shared=shared,
+                pattern=meta.get("pattern"),
+                query_pack=pack_root_for_query(query),
+            )
         return collection
 
 

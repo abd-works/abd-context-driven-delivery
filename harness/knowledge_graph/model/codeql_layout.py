@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Dict, Iterable, Optional
 
 _REPO = Path(__file__).resolve().parents[3]
 _PRACTICES = _REPO / "practices"
 
 SOURCE_LANGUAGES = ("python", "javascript", "typescript")
 PACK_FOLDERS = frozenset({"loaders", "rules", "tests"})
+RULE_QUERY_FOLDERS = ("rules",)
+_LERN_ROOT = (
+    _PRACTICES
+    / "clean_engineering"
+    / "specifications"
+    / "lern_domain_driven"
+)
 EXTRACTOR = {
     "python": "python",
     "javascript": "javascript",
@@ -18,15 +26,37 @@ EXTRACTOR = {
 
 
 def practice_model_root(practice: str) -> Path:
-    if practice == "lern_domain_driven":
-        return (
-            _PRACTICES
-            / "clean_engineering"
-            / "specifications"
-            / "lern_domain_driven"
-            / "model"
-        )
     return _PRACTICES / practice / "model"
+
+
+def lern_spec_root() -> Path:
+    return _LERN_ROOT
+
+
+def lern_codeql_pack(attributed_practice: str, language: str) -> Path:
+    return lern_spec_root() / attributed_practice / "model" / language / "codeql"
+
+
+def lern_codeql_packs(language: str) -> list[Path]:
+    packs: list[Path] = []
+    root = lern_spec_root()
+    if not root.is_dir():
+        return packs
+    for child in sorted(root.iterdir()):
+        if not child.is_dir() or child.name.startswith("."):
+            continue
+        pack = child / "model" / language / "codeql"
+        if (pack / "qlpack.yml").is_file():
+            packs.append(pack)
+    return packs
+
+
+def locate_lern_rule_query(slug: str, language: str = "typescript") -> Optional[Path]:
+    for pack in lern_codeql_packs(language):
+        found = locate_rule_query(pack, slug)
+        if found is not None:
+            return found
+    return None
 
 
 def codeql_pack(practice: str, language: str) -> Path:
@@ -34,19 +64,64 @@ def codeql_pack(practice: str, language: str) -> Path:
 
 
 def pack_root_for_query(ql_path: Path) -> Path:
+    folder = Path(ql_path).resolve().parent
+    while folder != folder.parent:
+        if (folder / "qlpack.yml").is_file():
+            return folder
+        folder = folder.parent
     folder = Path(ql_path).parent
     if folder.name in PACK_FOLDERS:
         return folder.parent
     return folder
 
 
+_QUERY_TAG = re.compile(r"^\s*\*\s*@([a-zA-Z_]+)\s+(.+?)\s*$")
+
+
+def parse_query_metadata(ql_path: Path) -> Dict[str, str]:
+    text = Path(ql_path).read_text(encoding="utf-8")
+    meta: Dict[str, str] = {}
+    if not text.startswith("/**"):
+        return meta
+    end = text.find("*/")
+    if end < 0:
+        return meta
+    for line in text[:end].splitlines():
+        matched = _QUERY_TAG.match(line)
+        if matched:
+            meta[matched.group(1)] = matched.group(2).strip()
+    return meta
+
+
+def _rule_query_roots(pack: Path) -> list[Path]:
+    return [pack / name for name in RULE_QUERY_FOLDERS if (pack / name).is_dir()]
+
+
+def locate_rule_query(pack: Path, slug: str) -> Optional[Path]:
+    for rules_root in _rule_query_roots(pack):
+        flat = rules_root / f"{slug}.ql"
+        if flat.is_file():
+            return flat
+        matches = sorted(rules_root.glob(f"**/{slug}.ql"))
+        if matches:
+            return matches[0]
+    return None
+
+
+def rule_stems_in_pack(pack: Path) -> set[str]:
+    stems: set[str] = set()
+    for rules_root in _rule_query_roots(pack):
+        stems.update(path.stem for path in rules_root.rglob("*.ql"))
+    return stems
+
+
 def rule_query(practice: str, slug: str, language: Optional[str] = None) -> Optional[Path]:
     languages: Iterable[str] = (language,) if language else SOURCE_LANGUAGES
     extra = [lang for lang in SOURCE_LANGUAGES if lang not in languages]
     for lang in (*languages, *extra):
-        path = codeql_pack(practice, lang) / "rules" / f"{slug}.ql"
-        if path.is_file():
-            return path
+        found = locate_rule_query(codeql_pack(practice, lang), slug)
+        if found is not None:
+            return found
     return None
 
 

@@ -1518,7 +1518,17 @@ function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
       if (found.semantic_type !== 'OoadClass') {
         continue;
       }
-      const id = _addType(engineering, seen, file, 'OoadClass', found.name, found.source.start_line, found.source.end_line, null);
+      const id = _addType(
+        engineering,
+        seen,
+        file,
+        'OoadClass',
+        found.name,
+        found.source.start_line,
+        found.source.end_line,
+        null,
+        found.source.text ?? '',
+      );
       if (id) {
         classes.push({ id, start: found.source.start_line, end: found.source.end_line });
       }
@@ -1527,7 +1537,7 @@ function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
       const at = match.index ?? 0;
       const start = text.slice(0, at).split(/\r?\n/).length;
       const end = _blockEndLine(text, start);
-      const id = _addType(engineering, seen, file, 'OoadClass', match[1], start, end, null);
+      const id = _addType(engineering, seen, file, 'OoadClass', match[1], start, end, null, _lineSlice(text, start, end));
       if (id) {
         classes.push({ id, start, end });
       }

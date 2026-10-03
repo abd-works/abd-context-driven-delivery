@@ -120,7 +120,7 @@ export function inlineCallLayout(
   text: string,
   members: FoldMember[],
   owner: string,
-  options: { anchored?: FoldMember[]; listClasses?: boolean; named?: FoldMember[] } = {},
+  options: { anchored?: FoldMember[]; listClasses?: boolean; named?: FoldMember[]; openedClass?: string } = {},
 ): InlineLayout {
   const classes = classCatalog(members);
   const bodies = callCatalog(members, classes, owner);
@@ -148,11 +148,12 @@ export function inlineCallLayout(
         .filter((item): item is ClassBody => Boolean(item)),
     });
   }
+  const opened = options.openedClass ?? "";
   const layout = displayedCallSource(
     text,
     bodies,
     1,
-    [],
+    opened ? known.filter((type) => type.name === opened).map((type) => type.id) : [],
     known,
     anchored,
     options.listClasses ?? false,
@@ -222,7 +223,7 @@ function callCatalog(members: FoldMember[], classes: Map<string, ClassBody>, own
     if (member.kind !== "Operation" && member.kind !== "Property") {
       continue;
     }
-    if (!member.text || isSimpleProperty(member.kind, member.text)) {
+    if (!member.text) {
       continue;
     }
     const key = memberKey(member.owner, member.name);
@@ -275,27 +276,6 @@ function typesIn(kind: string, text: string, classes: Map<string, ClassBody>): C
   return types;
 }
 
-function isSimpleProperty(kind: string, text: string): boolean {
-  if (kind !== "Property") {
-    return false;
-  }
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("//"));
-  if (lines.length === 0) {
-    return true;
-  }
-  const body = lines.join("\n");
-  if (/\b(if|for|while|switch|try|catch|throw)\b/.test(body)) {
-    return false;
-  }
-  if (/\([^)]*\)\s*\{/.test(body)) {
-    return false;
-  }
-  return lines.length <= 2;
-}
-
 function displayedCallSource(
   text: string,
   bodies: Map<string, CallBody>,
@@ -331,7 +311,10 @@ function displayedCallSource(
     }
     const fromCalls = typesOn(calls);
     const mentioned = known.filter(
-      (type) => !fromCalls.some((listed) => listed.id === type.id) && mentionsType(line, type.name),
+      (type) =>
+        !stack.includes(type.id) &&
+        !fromCalls.some((listed) => listed.id === type.id) &&
+        mentionsType(line, type.name),
     );
     for (const type of namedClasses) {
       if (wordHas(line, type.name) && !fromCalls.some((listed) => listed.id === type.id) && !mentioned.some((listed) => listed.id === type.id)) {
@@ -349,7 +332,7 @@ function displayedCallSource(
       appendOperation(output, lineNumbers, folds, call, bodies, depth, stack, pad, known);
     }
     for (const type of [...fromCalls, ...mentioned, ...extras]) {
-      appendClass(output, lineNumbers, folds, type, pad);
+      appendClass(output, lineNumbers, folds, type, pad, stack);
     }
     if (output.length > callLine) {
       folds.push({ start: callLine, end: output.length, kind: calls.length > 0 ? "call" : "class" });
@@ -441,7 +424,17 @@ function appendOperation(
   }
 }
 
-function appendClass(output: string[], lineNumbers: string[], folds: CallFold[], type: ClassBody, pad: string) {
+function appendClass(
+  output: string[],
+  lineNumbers: string[],
+  folds: CallFold[],
+  type: ClassBody,
+  pad: string,
+  stack: string[],
+) {
+  if (stack.includes(type.id)) {
+    return;
+  }
   output.push(`${pad}${type.name}`);
   lineNumbers.push("");
   const classLine = output.length;
@@ -461,7 +454,8 @@ function mentionsType(line: string, name: string): boolean {
   if (SKIP_TYPES.has(name)) {
     return false;
   }
-  return new Set([...signatureTypeNames(line), ...fieldTypeNames(line)]).has(name);
+  const code = line.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, " ");
+  return new RegExp(`\\b${name}\\b`).test(code);
 }
 
 function typesOn(calls: CallBody[]): ClassBody[] {

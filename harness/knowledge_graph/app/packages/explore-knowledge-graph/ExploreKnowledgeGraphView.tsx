@@ -1241,6 +1241,7 @@ function preparedSource(
     anchored,
     named: stepLike ? namedFolds(node, members) : [],
     listClasses: false,
+    openedClass: CLASS_SOURCE_KINDS.has(kind) ? openedClassName(node.name) : "",
   });
   if (!CLASS_SOURCE_KINDS.has(kind)) {
     return layout;
@@ -1254,6 +1255,10 @@ function preparedSource(
     return [{ ...fold, glyph, start: glyph + 1, end }];
   });
   return { text: layout.text, lineNumbers: layout.lineNumbers, folds: [...layout.folds, ...structural] };
+}
+
+function openedClassName(name: string): string {
+  return name.replace(/<<[^>]+>>/g, "").replace(/\*+/g, "").split(/\s+extends\s+/)[0].trim();
 }
 
 function displayedLine(lineNumbers: string[], original: number): number {
@@ -1294,25 +1299,48 @@ function missingSource(node: KnowledgeGraphNode, text: string, members: FoldMemb
   if (!text.trim()) {
     return [];
   }
-  const names = new Set<string>();
-  for (const match of text.matchAll(/\.([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
-    names.add(match[1]);
-  }
+  const wanted = new Set<string>();
+  const pending = [...namesIn(text)];
   const kind = node.nodeType?.name ?? '';
-  const scanned = kind === 'Step' || kind === 'Example' ? text : (text.split('{')[0] ?? text);
-  for (const match of scanned.matchAll(/\b[A-Z][A-Za-z0-9_]*/g)) {
-    names.add(match[0]);
-  }
   if (kind === 'Step' || kind === 'Example') {
     for (const child of node.children ?? []) {
       if (child.name) {
-        names.add(child.name);
+        pending.push(child.name);
+      }
+    }
+  }
+  while (pending.length > 0) {
+    const name = pending.pop() ?? '';
+    if (!name || wanted.has(name)) {
+      continue;
+    }
+    wanted.add(name);
+    for (const member of members) {
+      if (member.name !== name || !member.text || CLASS_SOURCE_KINDS.has(member.kind)) {
+        continue;
+      }
+      for (const nested of namesIn(member.text)) {
+        if (!wanted.has(nested)) {
+          pending.push(nested);
+        }
       }
     }
   }
   return members.filter(
-    (member) => names.has(member.name) && !member.text && member.file && member.start > 0,
+    (member) => wanted.has(member.name) && !member.text && member.file && member.start > 0,
   );
+}
+
+function namesIn(text: string): string[] {
+  const code = text.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, ' ');
+  const names: string[] = [];
+  for (const match of code.matchAll(/\.([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
+    names.push(match[1]);
+  }
+  for (const match of code.matchAll(/\b[A-Z][A-Za-z0-9_]*/g)) {
+    names.push(match[0]);
+  }
+  return names;
 }
 
 function memberFolds(node: KnowledgeGraphNode, lineCount: number): SourceFold[] {
