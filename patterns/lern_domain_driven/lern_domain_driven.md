@@ -23,7 +23,7 @@ they apply; do not treat guidance bullets as a second rule list.
 
 This architecture **is** DDD tactics on JSON-file persistence. Stereotypes,
 invariants, and repository seams come from
-[`practices/ddd/ddd.md`](../../../ddd/ddd.md) **building_blocks**. Honour
+[`practices/ddd/ddd.md`](../../practices/ddd/ddd.md) **building_blocks**. Honour
 those definitions; this spec only says how they land on lowdb.
 
 | Stereotype | Meaning (from `ddd.md`) |

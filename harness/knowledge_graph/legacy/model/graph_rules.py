@@ -203,9 +203,8 @@ class GraphRule(Rule):
         if self._query_pack is not None:
             return self._query_pack
         nested = (
-            _PRACTICES
-            / "clean_engineering"
-            / "specifications"
+            Path(__file__).resolve().parents[4]
+            / "patterns"
             / self.practice
             / "model"
             / "codeql"

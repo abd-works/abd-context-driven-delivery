@@ -49,7 +49,7 @@ class Installer:
             ".git",
         }
     )
-    _CATALOG_DIRS = ("tools", "practices", "actions")
+    _CATALOG_DIRS = ("tools", "practices", "actions", "patterns")
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
     _SKIP_ROOT_TOOLSET_NAMES = frozenset(
@@ -113,7 +113,7 @@ class Installer:
             return False
 
     def import_path_entries(self, repo: Path | str | None = None) -> list[str]:
-        """Repo root plus tools, practices, and actions. Never ``installation/`` or ``harness/`` (those shadow the MCP SDK). The deploy walk still parses ``harness/``."""
+        """Repo root plus tools, practices, actions, and patterns. Never ``installation/`` or ``harness/`` (those shadow the MCP SDK). The deploy walk still parses ``harness/``."""
         root = Path(repo).resolve() if repo is not None else self.repo
         entries = [str(root)]
         for name in self._CATALOG_DIRS:

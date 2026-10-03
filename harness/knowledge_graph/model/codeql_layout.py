@@ -12,12 +12,7 @@ _PRACTICES = _REPO / "practices"
 SOURCE_LANGUAGES = ("python", "javascript", "typescript")
 PACK_FOLDERS = frozenset({"loaders", "rules", "tests"})
 RULE_QUERY_FOLDERS = ("rules",)
-_LERN_ROOT = (
-    _PRACTICES
-    / "clean_engineering"
-    / "specifications"
-    / "lern_domain_driven"
-)
+_LERN_ROOT = _REPO / "patterns" / "lern_domain_driven"
 EXTRACTOR = {
     "python": "python",
     "javascript": "javascript",

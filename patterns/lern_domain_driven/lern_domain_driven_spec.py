@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 _MODULE_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 _root = str(_REPO_ROOT)
 _foreign = str(Path.home() / "OneDrive - abd.works" / "personal" / "paradise-mobile" / "abd-context-driven-delivery")
 sys.path[:] = [
@@ -16,7 +16,7 @@ sys.path[:] = [
 if _root in sys.path:
     sys.path.remove(_root)
 sys.path.insert(0, _root)
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "practices", "actions", "patterns"):
     _p = str(_REPO_ROOT / _cat)
     if _p in sys.path:
         sys.path.remove(_p)
@@ -24,10 +24,11 @@ for _cat in ("tools", "practices", "actions"):
 sys.path.insert(0, _root)
 for _name in list(sys.modules):
     if (
-        _name in {"harness", "scan", "lifecycle", "workspace", "practices", "tools"}
+        _name in {"harness", "scan", "lifecycle", "workspace", "practices", "patterns", "tools"}
         or _name.startswith("harness.")
         or _name.startswith("scan.")
         or _name.startswith("practices.")
+        or _name.startswith("patterns.")
         or _name.startswith("tools.")
     ):
         del sys.modules[_name]
@@ -39,7 +40,7 @@ from practices.clean_engineering.specifications._scan_kit import (
     DOMAIN_MODULE_RULE_GLOBS,
     ScannerCollection,
 )
-from practices.clean_engineering.specifications.lern_domain_driven.lern_domain_driven import (
+from patterns.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
 )
 from practices.stories.stories import Stories

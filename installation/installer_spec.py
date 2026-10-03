@@ -1004,6 +1004,7 @@ with description("the installer import path") as self:
         expect("agent_toolset" in dir(agent_tools)).to(equal(True))
         expect(guidance_actions.GuidanceAction.__name__).to(equal("GuidanceAction"))
         expect(installer.pythonpath()).to(contain("actions"))
+        expect(installer.pythonpath()).to(contain("patterns"))
         expect(installer.pythonpath()).not_to(contain(str(self.repo / "installation") + os.sep))
         expect(installer.pythonpath().split(os.pathsep)).not_to(
             contain(str(self.repo / "harness"))
@@ -1017,6 +1018,8 @@ with description("the installer import path") as self:
     with it("should collect deployable toolsets under harness"):
         refs = Installer(ide="Cursor", path=self.repo / ".cursor", repo=self.repo).collect_toolsets()
         expect(refs).to(contain("harness.transformers.transformers:Transformers"))
+        expect(refs).to(contain("patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
+        expect(refs).to(contain("patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
         expect(refs).to(contain("harness.knowledge_graph.legacy.model.knowledge_graph:KnowledgeGraph"))
         expect(refs).to(contain("harness.guidance.guidance:Guidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))

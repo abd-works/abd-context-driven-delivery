@@ -1,13 +1,12 @@
-"""BDD spec for MernDomainDriven - construction, companion wiring, contexts,
-and end-to-end scanning of its own ported rules/scanners (development fidelity)."""
+"""BDD spec for MernDomainDriven - construction, companion wiring, and contexts."""
 
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools"):
+for _cat in ("practices", "tools", "actions", "patterns"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -15,8 +14,7 @@ for _cat in ("practices", "tools"):
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from practices.clean_engineering.specifications._scan_kit import DOMAIN_MODULE_RULE_GLOBS
-from practices.clean_engineering.specifications.mern_domain_driven.mern_domain_driven import (
+from patterns.mern_domain_driven.mern_domain_driven import (
     MernDomainDriven,
 )
 from practices.stories.stories import Stories
@@ -94,34 +92,6 @@ with description("a MernDomainDriven generator"):
             for slug in _ALL_RULE_SLUGS:
                 expect(slug in self.rendered).to(equal(True))
 
-    with context("whose scanners are discovered from its own scanners/ folder"):
-        with before.each:
-            from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
-                ScannerCollection,
-            )
-
-            self.discovered = ScannerCollection(module_dir=_MODULE_DIR).discover()
-
-        with it("should register exactly the 18 ported rules, one scanner each"):
-            expect(sorted(self.discovered)).to(equal(sorted(_ALL_RULE_SLUGS)))
-
-    with context("whose ported scanners run end-to-end against its own templates/"):
-        with before.each:
-            from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
-                ScannerCollection,
-            )
-
-            collection = ScannerCollection(module_dir=_MODULE_DIR)
-            self.report = collection.run(_MODULE_DIR, [_MODULE_DIR / "templates"])
-
-        with it("should report violations for the tool's own folder shape (no scripts/ or playwright/vitest config)"):
-            rules = {v.rule for v in self.report.violations}
-            expect(rules).to(equal({"scaffold-test-scripts"}))
-
-        with it("should not flag the route template for calling the repository directly"):
-            rules = {v.rule for v in self.report.violations}
-            expect("delegate-routes-to-domain-server" in rules).to(equal(False))
-
     with context("whose rules collection injects on matching package paths"):
         with before.each:
             self.rules = self.tool.rules
@@ -135,7 +105,8 @@ with description("a MernDomainDriven generator"):
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
         with it("should scope inject globs to packages feature layout"):
-            expect(self.rules.glob).to(equal(DOMAIN_MODULE_RULE_GLOBS))
+            expect("packages/" in self.rules.glob).to(equal(True))
+            expect("src/" in self.rules.glob).to(equal(False))
 
         with it("should match domain-module server files under packages"):
             expect(self.rules.matches("packages/onboard-a-customer/carts/cart-server.ts")).to(

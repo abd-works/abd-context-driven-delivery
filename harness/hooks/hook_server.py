@@ -15,7 +15,7 @@ _READY_WAIT_SECONDS = 90
 _READY_POLL_SECONDS = 0.2
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-for _category in ("tools", "practices", "actions"):
+for _category in ("tools", "practices", "actions", "patterns"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)

@@ -16,27 +16,13 @@ if TYPE_CHECKING:
 class MernDomainDriven(PracticeGuidance):
     """# Instructions"""
 
+    pattern = "mern_domain_driven"
+
     def __init__(self) -> None:
         super().__init__(
             format="typescript",
             default_workspace_folder="packages",
         )
-        from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
-            Scan,
-        )
-
-        self.scanner = Scan.from_guidance(self)
-
-    def scanner_collection(self):
-        return self._scanner_collection()
-
-    def _scanner_collection(self):
-        from practices.clean_engineering.specifications.mern_domain_driven.scanners._scan_base import (
-            ScannerCollection,
-        )
-
-        folder = self.install_folder
-        return ScannerCollection(module_dir=folder, root_path=folder / "scanners")
 
     def _stories(self) -> "Stories":
         """Stories companion pinned at acceptance_tests fidelity, typescript format."""
