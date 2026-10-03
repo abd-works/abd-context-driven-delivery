@@ -1,16 +1,16 @@
-/**
- * @name observable-behavior
- * @practice bdd
- * @fidelity
- * @node observation
- * @id bdd/observable-behavior
- * @problem.severity warning
- */
-
-import python
-import subject_filter
-import model
-
-from Call call
-where inSubject(call) and observesPrivate(call)
-select call, "Assertion observes a private attribute instead of stakeholder-visible behaviour.", call
+/**
+ * @name observable-behavior
+ * @practice bdd
+ * @fidelity
+ * @node observation
+ * @id bdd/observable-behavior
+ * @problem.severity warning
+ */
+
+import python
+import subject_filter
+import model
+
+from Call call
+where inSubject(call) and observesPrivate(call)
+select call, "Assertion observes a private attribute instead of stakeholder-visible behaviour.", call
