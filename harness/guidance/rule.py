@@ -12,7 +12,6 @@ from harness.agent_tools.agent_tools import (
     collect,
     agent_toolset,
     instructions,
-    tools,
 )
 from harness.markdown.markdown import MarkdownCollection
 from harness.hooks.hooks import Hook
@@ -71,30 +70,12 @@ class Rule:
         self.body = body
         self.fidelity = fidelity
         self.tag = tag or "base"
-        self.scanner: Any = None
-
-    def bind_scanner(self, module_dir: Path | None) -> None:
-        if module_dir is None:
-            return
-        script = module_dir / "scanners" / f"{self.slug}_scanner.py"
-        if not script.is_file():
-            return
-        class _BoundRuleScan:
-            def scan(self, *args: Any, **kwargs: Any) -> str:
-                return str({"ok": True, "violations": [], "rules": [slug]})
-
-        slug = self.slug
-        self.scanner = _BoundRuleScan()
 
     def validate(self) -> str:
-        text = instructions(
+        return instructions(
             f"Evaluate the current context against this rule ({self.slug}):",
             self.body,
         )
-        if self.scanner is not None:
-            tools(self.scanner.scan)
-            text = text + "\nRun the scanner for this rule."
-        return text
 
     @classmethod
     def from_bullet(cls, text: str, fidelity: str | None = None) -> Rule:

@@ -172,7 +172,6 @@ class GraphRule(Rule):
         query_pack=None,
     ) -> None:
         super().__init__(rule.slug, rule.body, rule.fidelity)
-        self.scanner = rule.scanner
         parent = getattr(rule, "parent", None)
         if parent is not None:
             self.parent = parent

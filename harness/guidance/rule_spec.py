@@ -18,7 +18,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 
 
-with description("a shared rules section containing scanner bullets") as self:
+with description("a shared rules section containing rule bullets") as self:
     with before.each:
         self.guidance = SamplePracticeGuidance(format="markdown")
 
@@ -125,20 +125,15 @@ with description("a shared rules section containing scanner bullets") as self:
             for rule in self.guidance.rules:
                 expect(rule.parent).to(equal(self.guidance.rules))
 
-        with it("should expose slug, body, optional fidelity, and zero or one scanner on each rule"):
+        with it("should expose slug, body, and optional fidelity on each rule"):
             rule = self.guidance.rules.entries["sample-rule-one"]
             expect(rule.slug).to(equal("sample-rule-one"))
             expect(rule.body).to(contain("sample rule one"))
-            expect(rule.scanner is not None).to(equal(True))
 
     with context("with validate read on one rule"):
         with it("should return instructions to evaluate the current context against that rule"):
             rule = self.guidance.rules.entries["sample-rule-one"]
             expect(rule.validate()).to(contain("Evaluate the current context"))
-
-        with it("should tell the agent to run the scanner when the rule has one"):
-            rule = self.guidance.rules.entries["sample-rule-one"]
-            expect(rule.validate()).to(contain("Run the scanner"))
 
     with context("with validate read on the rules collection"):
         with it("should return every child rule's validate instructions in one shot"):
