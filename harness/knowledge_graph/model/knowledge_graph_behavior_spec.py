@@ -17,6 +17,10 @@ from harness.knowledge_graph.model.knowledge_graph_node import (
     retained_tree,
     restored_branches,
     database_build_required,
+    database_graph_from_scratch,
+    extraction_progress,
+    rules_for_filters,
+    rules_from_guidance,
     retag_practice,
     step_members,
     step_callouts,
@@ -150,21 +154,27 @@ with description("a knowledge graph"):
             expect(marker.read_text(encoding="utf-8")).to(equal("keep"))
             expect((ql_root / "python-working-copy").exists()).to(equal(True))
 
-    with context("that has refreshed the master"):
-        with it("should be the document that was just saved"):
-            self.graph.saveKnowledgeGraph()
+    with context("that merges the working copy into master"):
+        with it("should copy the working copy database onto master"):
+            ql_root = Path(self.temp.name) / ".codeql"
+            working = ql_root / "python-working-copy"
+            master = ql_root / "python-master"
+            working.mkdir(parents=True)
+            master.mkdir()
+            (working / "from-working").write_text("working", encoding="utf-8")
+            (master / "from-master").write_text("master", encoding="utf-8")
+            (Path(self.temp.name) / "hello.py").write_text("x = 1\n", encoding="utf-8")
             self.graph.refreshMaster()
-            expect((Path(self.temp.name) / "story-map.kg").read_text(encoding="utf-8")).to(
-                contain("Onboard")
-            )
+            expect((master / "from-working").read_text(encoding="utf-8")).to(equal("working"))
+            expect((master / "from-master").exists()).to(equal(False))
+            expect((Path(self.temp.name) / "story-map.kg").exists()).to(equal(False))
 
-    with context("that has reloaded the working copy"):
-        with it("should be the document that was just saved"):
-            self.graph.saveKnowledgeGraph()
+    with context("that reloads the working copy"):
+        with it("should load the latest files into the working copy"):
+            (Path(self.temp.name) / "hello.py").write_text("x = 1\n", encoding="utf-8")
             self.graph.reloadWorkingCopy()
-            expect((Path(self.temp.name) / "story-map.kg").read_text(encoding="utf-8")).to(
-                contain("Onboard")
-            )
+            expect(Path(self.graph._ql().working_copy).exists()).to(equal(True))
+            expect((Path(self.temp.name) / "story-map.kg").exists()).to(equal(False))
 
     with context("that has updated the working copy"):
         with context("with dirty paths"):
@@ -369,10 +379,24 @@ with description("a knowledge graph"):
             expect(restored_branches(["pkg:domain"], present)).to(equal(["pkg:domain"]))
             expect(restored_branches(["pkg:domain", "missing"], present)).to(equal(["pkg:domain"]))
 
-        with it("should build a database when create database is clicked even if one is already there"):
+        with it("should create the database from scratch and say extraction is in progress"):
             expect(database_build_required("create-database", True)).to(equal(True))
-            expect(database_build_required("refresh-master", True)).to(equal(False))
-            expect(database_build_required("reload-working-copy", False)).to(equal(True))
+            expect(database_graph_from_scratch("create-database")).to(equal(True))
+            expect(database_graph_from_scratch("refresh-master")).to(equal(False))
+            expect(extraction_progress("Create database", "working", 4)).to(
+                equal("Database extraction in progress… 4s")
+            )
+            catalog = rules_from_guidance()
+            stories = rules_for_filters(catalog, ["stories"], None, None)
+            operations = rules_for_filters(
+                catalog, ["clean_engineering"], ["implementation"], ["Operation"]
+            )
+            expect(len(catalog) > 100).to(equal(True))
+            expect("honor-every-rule-in-the-artifact" in stories).to(equal(False))
+            expect(operations).to(contain("keep-operations-small-focused"))
+            expect("verb-noun-format" in operations).to(equal(False))
+            expect(database_build_required("refresh-master", True)).to(equal(True))
+            expect(database_build_required("reload-working-copy", True)).to(equal(True))
 
 
 with description("a practice tree"):

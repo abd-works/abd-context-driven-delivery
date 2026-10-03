@@ -4,14 +4,14 @@ import { bindPage, expand, explorer, openPmlDomain, waitForTree, waitForWork } f
 
 bindPage();
 
-story('Refresh Master', () => {
-  scenario('refreshing master keeps the saved document', ({ given, when, then }) => {
+story('Merge Working Copy To Master', () => {
+  scenario('merging the working copy writes it onto master', ({ given, when, then }) => {
     given('pml-domain is the working folder', async () => {
       await openPmlDomain();
     });
-    when('the Engineer refreshes master', async () => {
-      await explorer().getByTestId('refresh-master').click();
-      await waitForWork('Refresh master');
+    when('the Engineer merges the working copy into master', async () => {
+      await explorer().getByRole('button', { name: 'Merge working to master' }).click();
+      await waitForWork('Merge working to master');
     });
     then('the PracticeGraph lists domain', async () => {
       await waitForTree();

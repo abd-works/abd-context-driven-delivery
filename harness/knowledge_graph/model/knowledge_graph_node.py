@@ -41,6 +41,62 @@ NODE_RULES = {
     "Property": ["hide-inner-details"],
 }
 
+
+def rules_for_filters(catalog, practices, stages, node_types):
+    stage_by_fidelity = {
+        "modules": "discovery",
+        "language": "discovery",
+        "story_map": "discovery",
+        "bounded_context": "discovery",
+        "ia": "discovery",
+        "model": "specification",
+        "scenarios": "specification",
+        "building_blocks": "specification",
+        "mockup": "specification",
+        "behavior": "specification",
+        "code": "implementation",
+        "acceptance_tests": "implementation",
+        "tactics": "implementation",
+        "front_end_code": "implementation",
+    }
+    found = []
+    for rule in catalog:
+        if practices is not None and rule["practice"] not in practices:
+            continue
+        fidelity = rule.get("fidelity") or ""
+        if stages is not None and fidelity:
+            if stage_by_fidelity.get(fidelity, "") not in stages:
+                continue
+        applies = rule.get("applies_to") or []
+        if node_types is not None and not applies:
+            continue
+        if node_types is not None and not any(name in node_types for name in applies):
+            continue
+        slug = rule["slug"]
+        if slug not in found:
+            found.append(slug)
+    return found
+
+
+def rules_from_guidance(root=None):
+    """Rules on each practice guidance object, including that practice's fidelities."""
+    from harness.knowledge_graph.legacy.model.guidance_rules_loader import (
+        load_graph_rules_from_markdown,
+    )
+
+    rows = []
+    for rule in load_graph_rules_from_markdown(root):
+        rows.append(
+            {
+                "slug": rule.slug,
+                "practice": rule.practice,
+                "fidelity": rule.fidelity or "",
+                "applies_to": sorted(rule.applies_to),
+            }
+        )
+    return rows
+
+
 _CALL = re.compile(r"((?:[A-Z][A-Za-z0-9]*\.)?[A-Za-z_][A-Za-z0-9]*)\s*\(")
 _STEP_CALL = re.compile(r"\.([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 _STEP_EXAMPLE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*Examples?)\b")
@@ -135,7 +191,19 @@ def restored_branches(stored, present):
 
 
 def database_build_required(operation, ready):
-    return operation == "create-database" or not ready
+    if operation in ("create-database", "refresh-master", "reload-working-copy"):
+        return True
+    return not ready
+
+
+def database_graph_from_scratch(operation):
+    return operation == "create-database"
+
+
+def extraction_progress(action, phase, seconds):
+    if action == "Create database" and phase == "working":
+        return f"Database extraction in progress… {seconds}s"
+    return None
 
 
 _PRACTICE_IDS = {

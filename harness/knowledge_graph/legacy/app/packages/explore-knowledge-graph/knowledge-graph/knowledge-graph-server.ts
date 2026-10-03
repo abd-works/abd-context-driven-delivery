@@ -492,6 +492,7 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
     repo,
     'harness',
     'knowledge_graph',
+    'legacy',
     'write_practice_hierarchy.py',
   );
   const pythonPath = _pythonEnv();

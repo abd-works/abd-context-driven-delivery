@@ -113,7 +113,25 @@ export function practiceRootLabels(selected: string[]): string[] {
 }
 
 export function databaseBuildRequired(operation: string, ready: boolean): boolean {
-  return operation === "create-database" || !ready;
+  if (
+    operation === "create-database" ||
+    operation === "refresh-master" ||
+    operation === "reload-working-copy"
+  ) {
+    return true;
+  }
+  return !ready;
+}
+
+export function databaseGraphFromScratch(operation: string): boolean {
+  return operation === "create-database";
+}
+
+export function extractionProgress(action: string, phase: string, seconds: number): string | null {
+  if (action === "Create database" && phase === "working") {
+    return `Database extraction in progress… ${seconds}s`;
+  }
+  return null;
 }
 
 export function restoredBranches(stored: string[], present: string[]): string[] {
@@ -288,8 +306,11 @@ export function retainedTree(
     const type = node.nodeType?.name ?? "";
     const practice = node.practice ? practiceId(node.practice) : "";
     const typeFits = allowed.has(type);
-    const practiceFits = !practice || practices.includes(practice);
-    const folder = (type === "Module" || type === "Package") && practiceFits && children.length > 0;
+    const practiceFits = Boolean(practice) && practices.includes(practice);
+    const folder =
+      (type === "Module" || type === "Package") &&
+      children.length > 0 &&
+      (practiceFits || !practice);
     if ((typeFits && practiceFits) || folder) {
       const copy = copyNode(node);
       copy.children = children;
@@ -297,7 +318,7 @@ export function retainedTree(
     }
     return children;
   };
-  return nodes.flatMap(visit);
+  return nodes.flatMap((node) => visit(node));
 }
 
 function copyNode(node: KnowledgeGraphNode): KnowledgeGraphNode {
@@ -428,6 +449,7 @@ class KnowledgeGraph {
     this.saved = {};
     this.master = "";
     this.workingCopy = "";
+    this.loadedLatestFiles = false;
   }
 
   _nodesFromModels(): KnowledgeGraphNode[] {
@@ -440,6 +462,7 @@ class KnowledgeGraph {
   saved: Record<string, string>;
   master: string;
   workingCopy: string;
+  loadedLatestFiles: boolean;
 
   saveKnowledgeGraph(): void {
     this.saved = this.saved ?? {};
@@ -471,19 +494,19 @@ class KnowledgeGraph {
   }
 
   copyWorkingCopyToMaster(): void {
-    this.master = this.workingCopy || `${this.folder}/.codeql/javascript-master`;
+    if (!this.workingCopy) {
+      return;
+    }
+    this.master = this.workingCopy;
   }
 
   refreshMaster(): void {
     this.copyWorkingCopyToMaster();
-    this.saveKnowledgeGraph();
-    this.loadKnowledgeGraph(this.folder);
   }
 
   reloadWorkingCopy(): void {
-    this.saveKnowledgeGraph();
-    this.copyWorkingCopyToMaster();
-    this.loadKnowledgeGraph(this.folder);
+    this.workingCopy = `${this.folder}/.codeql/javascript-working-copy`;
+    this.loadedLatestFiles = true;
   }
 
   updateWorkingCopy(paths: any): void {
@@ -1229,6 +1252,84 @@ class RuleSetFilter {
   }
 }
 
+const NODE_RULES: Record<string, string[]> = {
+  OoadClass: ["keep-operations-small-focused"],
+  Operation: ["keep-operations-small-focused"],
+  Property: ["hide-inner-details"],
+};
+
+export function ruleChoices(types: string[], hits: string[] = []): string[] {
+  const found: string[] = [];
+  const add = (rule: string) => {
+    if (rule && !found.includes(rule)) {
+      found.push(rule);
+    }
+  };
+  for (const type of types) {
+    for (const rule of NODE_RULES[type] ?? []) {
+      add(rule);
+    }
+  }
+  for (const hit of hits) {
+    add(hit);
+  }
+  return found;
+}
+
+const STAGE_BY_FIDELITY: Record<string, string> = {
+  modules: "discovery",
+  language: "discovery",
+  story_map: "discovery",
+  bounded_context: "discovery",
+  ia: "discovery",
+  model: "specification",
+  scenarios: "specification",
+  building_blocks: "specification",
+  mockup: "specification",
+  behavior: "specification",
+  code: "implementation",
+  acceptance_tests: "implementation",
+  tactics: "implementation",
+  front_end_code: "implementation",
+};
+
+export type RuleCatalogEntry = {
+  slug: string;
+  practice: string;
+  fidelity: string;
+  applies_to: string[];
+};
+
+export function rulesForFilters(
+  catalog: RuleCatalogEntry[],
+  practices: string[] | null,
+  stages: string[] | null,
+  nodeTypes: string[] | null,
+): string[] {
+  const found: string[] = [];
+  for (const rule of catalog) {
+    if (practices && !practices.includes(rule.practice)) {
+      continue;
+    }
+    if (stages && rule.fidelity) {
+      const stage = STAGE_BY_FIDELITY[rule.fidelity] ?? "";
+      if (!stages.includes(stage)) {
+        continue;
+      }
+    }
+    if (nodeTypes && rule.applies_to.length === 0) {
+      continue;
+    }
+    if (nodeTypes && !rule.applies_to.some((type) => nodeTypes.includes(type))) {
+      continue;
+    }
+    if (!found.includes(rule.slug)) {
+      found.push(rule.slug);
+    }
+  }
+  return found;
+}
+
 class RuleFilter {
   type: any;
   selected: any[];
@@ -1241,23 +1342,9 @@ class RuleFilter {
   }
 
   available(nodes: any[]): void {
-    const rules: Record<string, string[]> = {
-      OoadClass: ["keep-operations-small-focused"],
-      Operation: ["keep-operations-small-focused"],
-      Property: ["hide-inner-details"],
-    };
-    const found: string[] = [];
-    for (const node of nodes) {
-      const name = node?.name ?? node;
-      for (const rule of rules[name] ?? []) {
-        if (!found.includes(rule)) {
-          found.push(rule);
-        }
-      }
-    }
-    this.choices = found;
+    this.choices = ruleChoices(nodes.map((node) => node?.name ?? node));
     if (!this.selected.length) {
-      this.selected = [...found];
+      this.selected = [...this.choices];
     }
   }
 }

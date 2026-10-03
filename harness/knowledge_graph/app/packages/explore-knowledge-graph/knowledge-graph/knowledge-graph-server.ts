@@ -8,14 +8,11 @@ export class KnowledgeGraphServer extends KnowledgeGraph {
 
   refreshMaster(): void {
     this.copyWorkingCopyToMaster();
-    this.saveKnowledgeGraph();
-    this.loadKnowledgeGraph(this.folder);
   }
 
   reloadWorkingCopy(): void {
-    this.saveKnowledgeGraph();
-    this.copyWorkingCopyToMaster();
-    this.loadKnowledgeGraph(this.folder);
+    this.workingCopy = `${this.folder}/.codeql/javascript-working-copy`;
+    this.loadedLatestFiles = true;
   }
 
   updateWorkingCopy(paths: any): void {

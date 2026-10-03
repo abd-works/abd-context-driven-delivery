@@ -481,6 +481,7 @@ def main(
     ddd: bool = False,
     as_json: bool = False,
     practices: tuple[str, ...] | None = None,
+    rules: bool = False,
 ) -> None:
     workspace = Path(root) if root is not None else _REPO
     names = ",".join(graphs) if graphs else "all"
@@ -497,7 +498,7 @@ def main(
     graph = PracticeGraph(workspace)
     _load_practice_trees(graph, workspace, log)
     ctx = graph.working_context()
-    if as_json and not populate:
+    if as_json and not populate and not rules:
         payload = explorer_dto(graph, workspace)
         export_path = ctx / "explorer-graph.json"
         export_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -705,6 +706,12 @@ def _load_practice_trees(graph: PracticeGraph, workspace: Path, log) -> None:
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--rules",
+        dest="rules",
+        action="store_true",
+        help="Evaluate graph rules against the CodeQL database and write them into the JSON graph.",
+    )
+    parser.add_argument(
         "--no-populate",
         dest="populate",
         action="store_false",
@@ -770,4 +777,5 @@ if __name__ == "__main__":
         ddd=args.ddd,
         as_json=args.as_json,
         practices=tuple(args.practices) if args.practices else None,
+        rules=args.rules,
     )

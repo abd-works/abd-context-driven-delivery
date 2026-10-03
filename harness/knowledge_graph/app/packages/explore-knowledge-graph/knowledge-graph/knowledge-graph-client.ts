@@ -12,7 +12,14 @@ import {
 import { stageFor } from "../../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/catalog";
 
 const GRAPH_DEADLINE_MS = 180_000;
-const DATABASE_DEADLINE_MS = 15 * 60_000;
+const DATABASE_DEADLINE_MS = 2 * 60 * 60 * 1000;
+
+export type RuleCatalogEntry = {
+  slug: string;
+  practice: string;
+  fidelity: string;
+  applies_to: string[];
+};
 
 export type KnowledgeGraphFilterOptions = {
   practices: string[];
@@ -20,6 +27,7 @@ export type KnowledgeGraphFilterOptions = {
   node_types: string[];
   relationship_types: string[];
   rules: string[];
+  ruleCatalog: RuleCatalogEntry[];
 };
 
 const EMPTY_OPTIONS: KnowledgeGraphFilterOptions = {
@@ -28,6 +36,7 @@ const EMPTY_OPTIONS: KnowledgeGraphFilterOptions = {
   node_types: [],
   relationship_types: [],
   rules: [],
+  ruleCatalog: [],
 };
 
 export type PracticeMember = {
@@ -65,7 +74,7 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
       "/api/knowledge-graphs/refresh-master",
       { folder: this.folder },
       DATABASE_DEADLINE_MS,
-      "Refresh master",
+      "Merge working to master",
     );
     this.takeSave(raw);
   }
@@ -130,6 +139,7 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
     this.matching = tree;
     this.nodes = flattenNodes(tree);
     this.options = filterOptions(presented.filter_options, this.nodes);
+    this.options.ruleCatalog = Array.isArray(presented.rule_catalog) ? presented.rule_catalog : [];
     this.members = practiceMembers(dto);
     if (presented.selected_node) {
       const found =

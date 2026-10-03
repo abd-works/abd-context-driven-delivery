@@ -105,20 +105,19 @@ class KnowledgeGraph:
 
     def copyWorkingCopyToMaster(self) -> None:
         ql = self._ql()
-        if Path(ql.master).exists() and Path(ql.working_copy).exists():
-            return
-        if Path(ql.working_copy).exists():
-            ql.copy_working_copy_to_master()
+        if not Path(ql.working_copy).exists():
+            from harness.knowledge_graph.model.codeql import CodeQLRunError
+
+            raise CodeQLRunError(
+                f"There is no working copy at {ql.working_copy} to merge into master."
+            )
+        ql.copy_working_copy_to_master()
 
     def refreshMaster(self) -> None:
         self.copyWorkingCopyToMaster()
-        self.saveKnowledgeGraph()
-        self.loadKnowledgeGraph(self.folder)
 
     def reloadWorkingCopy(self) -> None:
-        self.saveKnowledgeGraph()
-        self.copyWorkingCopyToMaster()
-        self.loadKnowledgeGraph(self.folder)
+        self._ql().rewrite_working_copy()
 
     def updateWorkingCopy(self, paths) -> None:
         self._ql().extract_working_copy([Path(item) for item in paths])

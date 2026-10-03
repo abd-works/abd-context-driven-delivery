@@ -9,7 +9,7 @@ story('Reload Working Copy', () => {
     given('pml-domain is the working folder', async () => {
       await openPmlDomain();
     });
-    when('the Engineer reloads the working copy', async () => {
+    when('the Engineer reloads the latest files into the working copy', async () => {
       await explorer().getByTestId('reload-working-copy').click();
       await waitForWork('Reload working copy');
     });

@@ -13,6 +13,9 @@ story('Create Database', () => {
     });
     when('the Engineer creates the database', async () => {
       await explorer().getByTestId('create-database').click();
+      await expect(explorer().getByTestId('extraction-progress')).toContainText(
+        'Database extraction in progress',
+      );
       await waitForWork('Create database');
     });
     then('master is written', () => {

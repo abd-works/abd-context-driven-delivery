@@ -48,6 +48,6 @@ export async function expand(name: string): Promise<void> {
 
 export async function waitForWork(action: string): Promise<void> {
   await expect(page.getByTestId('work-progress')).toContainText(`${action} done`, {
-    timeout: 15 * 60 * 1000,
+    timeout: 2 * 60 * 60 * 1000,
   });
 }

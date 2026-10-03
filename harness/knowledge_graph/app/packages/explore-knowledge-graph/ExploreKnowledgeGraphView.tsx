@@ -11,8 +11,10 @@ import {
   practiceRootLabels,
   restoredBranches,
   retainedTree,
+  rulesForFilters,
   stepCallouts,
   stepMembers,
+  extractionProgress,
 } from './knowledge-graph/knowledge-graph';
 import { KindMark, kindLabel } from './kind-mark';
 import {
@@ -55,6 +57,25 @@ function pickFromLocation(): FilterPick {
   };
 }
 
+function progressText(status: {
+  action: string;
+  phase: 'working' | 'done' | 'failed';
+  seconds: number;
+  detail: string;
+}): string {
+  const extraction = extractionProgress(status.action, status.phase, status.seconds);
+  if (extraction) {
+    return extraction;
+  }
+  if (status.phase === 'working') {
+    return `${status.action}… ${status.seconds}s`;
+  }
+  if (status.phase === 'done') {
+    return `${status.action} done`;
+  }
+  return status.detail || `${status.action} failed`;
+}
+
 /**
  * ExploreKnowledgeGraphView — feature view.
  * Sources: harness/knowledge_graph/.context/knowledge-graph-explorer-sketch.md
@@ -71,7 +92,6 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     selectedNode,
     selectNode,
     selectFolder,
-    refreshGraph,
     createDatabase,
     refreshMaster,
     reloadWorkingCopy,
@@ -160,6 +180,12 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
   }, [treeKey, showRules]);
 
   useEffect(() => {
+    if (workStatus?.action === 'Create database' && workStatus.phase === 'done') {
+      setShowRules(true);
+    }
+  }, [workStatus?.action, workStatus?.phase]);
+
+  useEffect(() => {
     if (!picked.violations) {
       return;
     }
@@ -239,7 +265,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 disabled={loading || !folder}
                 onClick={() => refreshMaster(folder)}
               >
-                Refresh master
+                Merge working to master
               </button>
               <button
                 type="button"
@@ -251,26 +277,13 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 Reload working copy
               </button>
             </div>
-            <button
-              type="button"
-              className="btn-refresh"
-              data-testid="refresh-graph"
-              disabled={loading}
-              onClick={() => refreshGraph()}
-            >
-              Refresh
-            </button>
             {workStatus ? (
               <p
                 className={`work-progress is-${workStatus.phase}`}
                 data-testid="work-progress"
                 aria-live="polite"
               >
-                {workStatus.phase === 'working'
-                  ? `${workStatus.action}… ${workStatus.seconds}s`
-                  : workStatus.phase === 'done'
-                    ? `${workStatus.action} done`
-                    : workStatus.detail || `${workStatus.action} failed`}
+                {progressText(workStatus)}
               </p>
             ) : null}
           </div>
@@ -397,11 +410,9 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
         </div>
         <div className="split">
           <div className="panel" data-testid="practice-graph-tree">
-            {loading && listedTree.length === 0 && (
-              <p className="empty-state" data-testid="graph-loading">
-                {workStatus
-                  ? `${workStatus.action}… ${workStatus.seconds}s`
-                  : 'Loading KnowledgeGraph...'}
+            {workStatus?.phase === 'working' && (
+              <p className="empty-state work-progress is-working" data-testid="extraction-progress">
+                {progressText(workStatus)}
               </p>
             )}
             {!loading && scanError ? (
@@ -1430,7 +1441,12 @@ function ruleOptions(
   members: PracticeMember[],
   options: KnowledgeGraphFilterOptions,
 ): string[] {
-  return applyNode(picked, picked.node_types, members, options).rules;
+  const practices = restricts(picked.practices, options.practices) ? picked.practices : null;
+  const stageUniverse = practices ? stagesForPractices(practices) : options.stages;
+  const stages = restricts(picked.stages, stageUniverse) ? picked.stages : null;
+  const typeUniverse = nodeOptions(picked, members, options);
+  const nodeTypes = restricts(picked.node_types, typeUniverse) ? picked.node_types : null;
+  return rulesForFilters(options.ruleCatalog, practices, stages, nodeTypes);
 }
 
 const UPLOAD_SKIP = new Set([

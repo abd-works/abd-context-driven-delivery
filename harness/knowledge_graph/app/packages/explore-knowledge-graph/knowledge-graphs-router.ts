@@ -522,12 +522,7 @@ async function _runDatabaseOperation(
     console.log(`${operation} ${root}`);
     _spawnDatabaseCli(operation, root);
   }
-  const cached = join(root, '.context', 'explorer-graph.json');
-  const graph = _fromPracticeHierarchyCli(root, !existsSync(cached));
-  return repo.create({
-    folder: root,
-    practiceGraphs: graph.toDto().practice_graphs,
-  });
+  return KnowledgeGraphsServer.selectFolder(root, repo);
 }
 
 function _spawnDatabaseCli(
@@ -541,7 +536,7 @@ function _spawnDatabaseCli(
     env: _pythonEnv(),
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
-    timeout: 15 * 60 * 1000,
+    timeout: 2 * 60 * 60 * 1000,
   });
   if (result.status !== 0) {
     throw new Error(
@@ -552,7 +547,11 @@ function _spawnDatabaseCli(
   }
 }
 
-function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph {
+function _fromPracticeHierarchyCli(
+  root: string,
+  force = false,
+  fromScratch = false,
+): KnowledgeGraph {
   const cached = join(root, '.context', 'explorer-graph.json');
   if (!force) {
     return _graphFromCache(cached, root);
@@ -562,19 +561,21 @@ function _fromPracticeHierarchyCli(root: string, force = false): KnowledgeGraph 
     repo,
     'harness',
     'knowledge_graph',
+    'legacy',
     'write_practice_hierarchy.py',
   );
   const pythonPath = _pythonEnv();
-  const result = spawnSync(
-    _python(),
-    [script, '--json', '--no-populate', root],
-    {
-      cwd: repo,
-      env: pythonPath,
-      encoding: 'utf8',
-      maxBuffer: 64 * 1024 * 1024,
-    },
-  );
+  const args = [script, '--json'];
+  if (!fromScratch) {
+    args.push('--no-populate');
+  }
+  args.push(root);
+  const result = spawnSync(_python(), args, {
+    cwd: repo,
+    env: pythonPath,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
   if (result.status !== 0) {
     throw new Error(
       result.stderr || result.stdout || 'write_practice_hierarchy.py failed',
@@ -1035,13 +1036,12 @@ function graphFromWorkspaceDto(dto: KnowledgeGraphDto): KnowledgeGraph {
 
 function _attachStorySpecification(graph: KnowledgeGraph, root: string): KnowledgeGraph {
   const dto = graph.toDto();
-  const stories = dto.practice_graphs.find((item) => item.name === 'stories');
   const tests = join(root, 'tests');
-  if (!stories || !_isDir(tests)) {
+  if (!_isDir(tests)) {
     return graph;
   }
-  const files = _storyFiles(tests);
-  for (const file of files) {
+  const stories = _ensurePractice(dto, 'stories');
+  for (const file of _storyFiles(tests)) {
     const parsed = _parseStoryFile(root, file);
     if (!parsed) {
       continue;
@@ -1049,26 +1049,74 @@ function _attachStorySpecification(graph: KnowledgeGraph, root: string): Knowled
     const matches = stories.nodes.filter(
       (node) => node.semantic_type === 'Story' && node.name === parsed.name,
     );
-    for (const story of matches) {
+    const storyId = matches[0]?.node_id ?? _addStory(stories, parsed);
+    const story = stories.nodes.find((node) => node.node_id === storyId);
+    if (story) {
       story.source = {
         file: parsed.file,
         start_line: parsed.line,
         end_line: parsed.endLine,
         text: '',
       };
-      for (const background of parsed.backgrounds) {
-        _own(stories, story.node_id, 'Background', 'Background', parsed.file, background.line, background.endLine, background.steps);
-      }
-      for (const scenario of parsed.scenarios) {
-        _own(stories, story.node_id, 'Scenario', scenario.name, parsed.file, scenario.line, scenario.endLine, scenario.steps);
-      }
-      for (const example of parsed.examples) {
-        _own(stories, story.node_id, 'Example', example.name, example.file, example.line, example.line, []);
-      }
+      story.properties = { ...(story.properties ?? {}), folder: parsed.folder };
+    }
+    if (!storyId) {
+      continue;
+    }
+    for (const background of parsed.backgrounds) {
+      _own(stories, storyId, 'Background', 'Background', parsed.file, background.line, background.endLine, background.steps, parsed.folder);
+    }
+    for (const scenario of parsed.scenarios) {
+      _own(stories, storyId, 'Scenario', scenario.name, parsed.file, scenario.line, scenario.endLine, scenario.steps, parsed.folder);
+    }
+    for (const example of parsed.examples) {
+      _own(stories, storyId, 'Example', example.name, example.file, example.line, example.line, [], parsed.folder);
     }
   }
   _fillEpicSource(stories, root);
   return graphFromWorkspaceDto({ ...dto, folder: root });
+}
+
+function _ensurePractice(
+  dto: KnowledgeGraphDto,
+  name: string,
+): KnowledgeGraphDto['practice_graphs'][number] {
+  const existing = dto.practice_graphs.find((item) => item.name === name);
+  if (existing) {
+    return existing;
+  }
+  const created = {
+    id: `practice:${name}`,
+    name,
+    nodes: [],
+    relationships: [],
+  };
+  dto.practice_graphs.push(created);
+  return created;
+}
+
+function _addStory(
+  stories: KnowledgeGraphDto['practice_graphs'][number],
+  parsed: { name: string; file: string; line: number; endLine: number; folder: string },
+): string {
+  const nodeId = `stories:Story:${parsed.file}:${parsed.name}`;
+  stories.nodes.push({
+    node_id: nodeId,
+    name: parsed.name,
+    practice: 'stories',
+    fidelity: 'scenarios',
+    semantic_type: 'Story',
+    properties: { folder: parsed.folder },
+    applicable_rules: [],
+    violations: [],
+    source: {
+      file: parsed.file,
+      start_line: parsed.line,
+      end_line: parsed.endLine,
+      text: '',
+    },
+  });
+  return nodeId;
 }
 
 function _own(
@@ -1080,6 +1128,7 @@ function _own(
   line: number,
   endLine: number,
   steps: { keyword: string; name: string; line: number; endLine: number }[],
+  folder = '',
 ): string | null {
   const existing = stories.relationships.find(
     (edge) => edge.kind === 'owns' && edge.from_id === parentId && stories.nodes.some((node) => node.node_id === edge.to_id && node.name === name && node.semantic_type === type),
@@ -1098,7 +1147,7 @@ function _own(
     practice: 'stories',
     fidelity: 'scenarios',
     semantic_type: type,
-    properties: {},
+    properties: folder ? { folder } : {},
     applicable_rules: [],
     violations: [],
     source: { file, start_line: line, end_line: Math.max(line, endLine), text: '' },
@@ -1109,7 +1158,7 @@ function _own(
     const keyword = step.keyword === 'and' ? previous : step.keyword;
     previous = keyword;
     const label = `${keyword[0].toUpperCase()}${keyword.slice(1)} ${step.name}`;
-    _own(stories, nodeId, 'Step', label, file, step.line, step.endLine, []);
+    _own(stories, nodeId, 'Step', label, file, step.line, step.endLine, [], folder);
   }
   return nodeId;
 }
@@ -1123,7 +1172,7 @@ function _storyFiles(dir: string): string[] {
     const abs = join(dir, name);
     if (statSync(abs).isDirectory()) {
       found.push(..._storyFiles(abs));
-    } else if (name.endsWith('.e2e.ts')) {
+    } else if (name.endsWith('.e2e.ts') || name.endsWith('.story.playwright.ts')) {
       found.push(abs);
     }
   }
@@ -1138,9 +1187,15 @@ function _parseStoryFile(root: string, abs: string): {
   backgrounds: { line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[];
   scenarios: { name: string; line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[];
   examples: { name: string; file: string; line: number }[];
+  epic: string;
+  subEpic: string;
+  epicFolder: string;
+  folder: string;
 } | null {
   const text = readFileSync(abs, 'utf8');
-  const story = text.match(/story\(\s*['"]([^'"]+)['"]/);
+  const story =
+    text.match(/withStory\(\s*['"]([^'"]+)['"]/) ??
+    text.match(/story\(\s*['"]([^'"]+)['"]/);
   if (!story || story.index == null) {
     return null;
   }
@@ -1150,8 +1205,8 @@ function _parseStoryFile(root: string, abs: string): {
   const scenarios: { name: string; line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[] = [];
   let current: { steps: { keyword: string; name: string; line: number; endLine: number }[] } | null = null;
   lines.forEach((line, index) => {
-    const background = line.match(/background\(\s*['"][^'"]*['"]/);
-    const scenario = line.match(/scenario\(\s*['"]([^'"]+)['"]/);
+    const background = line.match(/(?:withBackground|background)\s*\(/);
+    const scenario = line.match(/(?:withScenario|scenario)\(\s*['"]([^'"]+)['"]/);
     const step = line.match(/(?:^|[^\w])(given|when|then|and)\(\s*['"]([^'"]+)['"]/i);
     if (background) {
       current = { steps: [] };
@@ -1182,11 +1237,19 @@ function _parseStoryFile(root: string, abs: string): {
       step.endLine = _blockEndLine(text, step.line);
     }
   }
+  const parts = file.split('/');
+  const epic = parts.length > 2 ? parts[1] : 'tests';
+  const subEpic = parts.length > 3 ? parts[2] : '';
+  const folder = subEpic ? parts.slice(0, 3).join('/') : parts.slice(0, 2).join('/');
   return {
     name: story[1],
     file,
     line: storyLine,
     endLine: _blockEndLine(text, storyLine),
+    epic,
+    subEpic,
+    epicFolder: parts.slice(0, 2).join('/'),
+    folder,
     backgrounds,
     scenarios,
     examples: _importedExamples(root, abs, text),
@@ -1286,10 +1349,10 @@ function _fillEpicSource(
 
 function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
   const dto = graph.toDto();
-  const engineering = dto.practice_graphs.find((item) => item.name === 'clean_engineering');
-  if (!engineering || !_isDir(root)) {
+  if (!_isDir(root)) {
     return graph;
   }
+  const engineering = _ensurePractice(dto, 'clean_engineering');
   const seen = new Set(engineering.nodes.map((node) => node.node_id));
   for (const abs of _codeFiles(root)) {
     const file = relative(root, abs).replaceAll('\\', '/');
@@ -1423,7 +1486,41 @@ function _importedExamples(
 }
 
 function httpPresent(presented: ReturnType<KnowledgeGraph['present']>) {
-  return { ...presented, listed_nodes: [] };
+  const folder = typeof presented.folder === 'string' ? presented.folder : '';
+  return { ...presented, listed_nodes: [], rule_catalog: _rulesFromGuidance(folder) };
+}
+
+const guidanceRules = new Map<string, { slug: string; practice: string; fidelity: string; applies_to: string[] }[]>();
+
+function _rulesFromGuidance(folder: string) {
+  const key = folder || '*';
+  const cached = guidanceRules.get(key);
+  if (cached) {
+    return cached;
+  }
+  const repo = _repoRoot();
+  const result = spawnSync(
+    _python(),
+    [
+      '-c',
+      'import json,sys; from harness.knowledge_graph.model.knowledge_graph_node import rules_from_guidance; print(json.dumps(rules_from_guidance(sys.argv[1] or None)))',
+      folder,
+    ],
+    {
+      cwd: repo,
+      env: _pythonEnv(),
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  );
+  if (result.status !== 0) {
+    console.error(result.stderr || result.stdout || 'guidance rules failed');
+    return [];
+  }
+  const line = (result.stdout || '').trim().split('\n').filter(Boolean).at(-1) || '[]';
+  const rules = JSON.parse(line) as { slug: string; practice: string; fidelity: string; applies_to: string[] }[];
+  guidanceRules.set(key, rules);
+  return rules;
 }
 
 function _filterFromQuery(query: Record<string, unknown>): GraphFilter {

@@ -136,11 +136,10 @@ export function useKnowledgeGraph(id: string) {
     html: graph?.render() ?? '',
     selectNode,
     selectFolder,
-    refreshGraph: () => selectFolder({ folder: graph?.folder || lastScanFolder() }),
     createDatabase: (folder?: string) =>
       runDatabase('Create database', folder, (item) => item.createDatabase()),
     refreshMaster: (folder?: string) =>
-      runDatabase('Refresh master', folder, (item) => item.refreshMaster()),
+      runDatabase('Merge working to master', folder, (item) => item.refreshMaster()),
     reloadWorkingCopy: (folder?: string) =>
       runDatabase('Reload working copy', folder, (item) => item.reloadWorkingCopy()),
     choose: (node: KnowledgeGraphNode) => graph?.choose(node),

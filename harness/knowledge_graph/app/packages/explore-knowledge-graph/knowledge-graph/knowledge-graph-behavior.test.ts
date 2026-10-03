@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import {
   KnowledgeGraph,
   KnowledgeGraphCallSource,
@@ -10,6 +9,10 @@ import {
   practiceRootLabels,
   restoredBranches,
   databaseBuildRequired,
+  databaseGraphFromScratch,
+  extractionProgress,
+  ruleChoices,
+  rulesForFilters,
   retainedTree,
   retagPractice,
   stepMembers,
@@ -295,19 +298,21 @@ describe("a knowledge graph", () => {
     });
   });
 
-  describe("that has refreshed the master", () => {
-    it("should be the document that was just saved", () => {
-      subject.saveKnowledgeGraph();
+  describe("that merges the working copy into master", () => {
+    it("should copy the working copy database onto master", () => {
+      subject.workingCopy = "/repo/.codeql/javascript-working-copy";
       subject.refreshMaster();
-      expect(subject.saved["story-map.kg"]).toContain("Onboard");
+      expect(subject.master).toBe("/repo/.codeql/javascript-working-copy");
+      expect(subject.saved["story-map.kg"]).toBeUndefined();
     });
   });
 
-  describe("that has reloaded the working copy", () => {
-    it("should be the document that was just saved", () => {
-      subject.saveKnowledgeGraph();
+  describe("that reloads the working copy", () => {
+    it("should load the latest files into the working copy", () => {
       subject.reloadWorkingCopy();
-      expect(subject.saved["story-map.kg"]).toContain("Onboard");
+      expect(subject.workingCopy).toContain("javascript-working-copy");
+      expect(subject.loadedLatestFiles).toBe(true);
+      expect(subject.saved["story-map.kg"]).toBeUndefined();
     });
   });
 
@@ -531,10 +536,39 @@ describe("a knowledge graph", () => {
       expect(restoredBranches(["pkg:domain", "missing"], present)).toEqual(["pkg:domain"]);
     });
 
-    it("should build a database when create database is clicked even if one is already there", () => {
+    it("should create the database from scratch and say extraction is in progress", () => {
       expect(databaseBuildRequired("create-database", true)).toBe(true);
-      expect(databaseBuildRequired("refresh-master", true)).toBe(false);
-      expect(databaseBuildRequired("reload-working-copy", false)).toBe(true);
+      expect(databaseGraphFromScratch("create-database")).toBe(true);
+      expect(databaseGraphFromScratch("refresh-master")).toBe(false);
+      expect(extractionProgress("Create database", "working", 4)).toBe(
+        "Database extraction in progress… 4s",
+      );
+      const guidance = [
+        {
+          slug: "honor-every-rule-in-the-artifact",
+          practice: "clean_engineering",
+          fidelity: "",
+          applies_to: ["Operation", "OoadClass"],
+        },
+        {
+          slug: "verb-noun-format",
+          practice: "stories",
+          fidelity: "story_map",
+          applies_to: ["Story"],
+        },
+        {
+          slug: "keep-operations-small-focused",
+          practice: "clean_engineering",
+          fidelity: "code",
+          applies_to: ["Operation"],
+        },
+      ];
+      expect(rulesForFilters(guidance, ["stories"], null, null)).toEqual(["verb-noun-format"]);
+      expect(
+        rulesForFilters(guidance, ["clean_engineering"], ["implementation"], ["Operation"]),
+      ).toEqual(["honor-every-rule-in-the-artifact", "keep-operations-small-focused"]);
+      expect(databaseBuildRequired("refresh-master", true)).toBe(true);
+      expect(databaseBuildRequired("reload-working-copy", true)).toBe(true);
     });
   });
 });
