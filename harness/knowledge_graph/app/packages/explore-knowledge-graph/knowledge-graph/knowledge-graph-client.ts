@@ -8,11 +8,26 @@ import {
   SourceRange,
   retagPractice,
   taggedPractice,
+  exampleClassNames,
+  uniqueRelationships,
+  uniqueGraphRelationships,
 } from "./knowledge-graph";
 import { stageFor } from "../../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/catalog";
 
 const GRAPH_DEADLINE_MS = 180_000;
 const DATABASE_DEADLINE_MS = 2 * 60 * 60 * 1000;
+
+const CLASS_KINDS = new Set([
+  "OoadClass",
+  "Entity",
+  "EntityRoot",
+  "ValueObject",
+  "Repository",
+  "DomainEvent",
+  "DomainService",
+  "Specification",
+  "Aggregate",
+]);
 
 export type RuleCatalogEntry = {
   slug: string;
@@ -117,6 +132,9 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
   takeSave(raw: any): void {
     const presented = raw ?? {};
     const dto = presented.knowledge_graph ?? presented;
+    for (const graph of dto.practice_graphs ?? []) {
+      graph.relationships = uniqueGraphRelationships(graph.relationships ?? [], graph.nodes ?? []);
+    }
     this.graphId = dto.id ?? presented.id ?? this.graphId;
     this.folder = presented.folder ?? dto.folder ?? this.folder;
     if (typeof window !== "undefined" && this.folder) {
@@ -136,6 +154,7 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
       retagTree(node);
     }
     attachCrossEdges(tree, dto);
+    uniqueNodeRelationships(tree);
     this.matching = tree;
     this.nodes = flattenNodes(tree);
     this.options = filterOptions(presented.filter_options, this.nodes);
@@ -276,7 +295,7 @@ function attachMembers(tree: WebKnowledgeGraphNode[], dto: any): void {
           }
         }
         for (const child of node.children) {
-          pushChild(home.node, child);
+          nestUnderClass(home.node, child);
         }
         continue;
       }
@@ -296,8 +315,11 @@ function attachMembers(tree: WebKnowledgeGraphNode[], dto: any): void {
       if (parentHome && !sameFolderNode(parentHome.node, parentRow)) {
         continue;
       }
-      pushChild(home.node, node);
+      nestUnderClass(home.node, node);
     }
+  }
+  for (const node of tree) {
+    rehomeMembers(node);
   }
 }
 
@@ -310,10 +332,15 @@ function retagTree(node: WebKnowledgeGraphNode): void {
 
 function attachCrossEdges(nodes: WebKnowledgeGraphNode[], dto: any): void {
   const byId = new Map<string, WebKnowledgeGraphNode>();
+  const classesByName = new Map<string, WebKnowledgeGraphNode>();
   const index = (list: WebKnowledgeGraphNode[]) => {
     for (const node of list) {
       if (node.nodeId) {
         byId.set(node.nodeId, node);
+      }
+      const kind = node.nodeType?.name ?? "";
+      if (CLASS_KINDS.has(kind) && node.name && !classesByName.has(node.name)) {
+        classesByName.set(node.name, node);
       }
       index(node.children ?? []);
     }
@@ -321,6 +348,19 @@ function attachCrossEdges(nodes: WebKnowledgeGraphNode[], dto: any): void {
   index(nodes);
   const contains = (node: WebKnowledgeGraphNode, id: string): boolean =>
     node.nodeId === id || (node.children ?? []).some((child) => contains(child, id));
+  const link = (from: WebKnowledgeGraphNode, to: WebKnowledgeGraphNode, kind: string, asChild: boolean) => {
+    if (!from.relationships.some((item) => item.kind === kind && (item.nodeId === to.nodeId || item.name === to.name))) {
+      from.relationships.push({ kind, nodeId: to.nodeId, name: to.name });
+    }
+    if (
+      asChild &&
+      !from.children.some((child) => child.nodeId === to.nodeId) &&
+      !contains(from, to.nodeId) &&
+      !contains(to, from.nodeId)
+    ) {
+      from.children.push(to);
+    }
+  };
   for (const graph of dto.practice_graphs ?? []) {
     for (const edge of graph.relationships ?? []) {
       if (edge.kind !== "invokes" && edge.kind !== "demonstrates" && edge.kind !== "expected") {
@@ -328,16 +368,34 @@ function attachCrossEdges(nodes: WebKnowledgeGraphNode[], dto: any): void {
       }
       const from = byId.get(String(edge.from_id ?? ""));
       const to = byId.get(String(edge.to_id ?? ""));
-      if (!from || !to || contains(to, from.nodeId)) {
+      if (!from || !to) {
         continue;
       }
-      if (!from.relationships.some((link) => link.kind === edge.kind && link.nodeId === to.nodeId)) {
-        from.relationships.push({ kind: edge.kind, nodeId: to.nodeId, name: to.name });
-      }
-      if (!from.children.some((child) => child.nodeId === to.nodeId)) {
-        from.children.push(to);
+      link(from, to, edge.kind, true);
+      if (edge.kind === "demonstrates") {
+        link(to, from, "demonstratedThrough", false);
       }
     }
+  }
+  for (const node of byId.values()) {
+    if ((node.nodeType?.name ?? "") !== "Example") {
+      continue;
+    }
+    for (const name of exampleClassNames(node.source?.text ?? "")) {
+      const cls = classesByName.get(name);
+      if (!cls) {
+        continue;
+      }
+      link(node, cls, "demonstrates", true);
+      link(cls, node, "demonstratedThrough", false);
+    }
+  }
+}
+
+function uniqueNodeRelationships(nodes: WebKnowledgeGraphNode[]): void {
+  for (const node of nodes) {
+    node.relationships = uniqueRelationships(node.relationships ?? []);
+    uniqueNodeRelationships(node.children ?? []);
   }
 }
 
@@ -362,6 +420,97 @@ function indexFolders(
       found.push({ node, path });
       found.push(...indexFolders(node.children ?? [], path));
     }
+  }
+  return found;
+}
+
+function nestUnderClass(folder: WebKnowledgeGraphNode, child: WebKnowledgeGraphNode): void {
+  const kind = child.nodeType?.name ?? "";
+  const owner = classOwning(folder, child);
+  if (kind === "Property" || kind === "Parameter") {
+    if (owner) {
+      pushChild(owner, child);
+    }
+    return;
+  }
+  if (kind === "Operation" && owner) {
+    pushChild(owner, child);
+    return;
+  }
+  pushChild(folder, child);
+}
+
+function rehomeMembers(node: WebKnowledgeGraphNode): void {
+  for (const child of node.children ?? []) {
+    rehomeMembers(child);
+  }
+  if (!isFolderNode(node)) {
+    return;
+  }
+  const kept: WebKnowledgeGraphNode[] = [];
+  for (const child of node.children ?? []) {
+    const kind = child.nodeType?.name ?? "";
+    const owner = classOwning(node, child);
+    if ((kind === "Property" || kind === "Parameter") && owner) {
+      pushChild(owner, child);
+      continue;
+    }
+    if (kind === "Property" || kind === "Parameter") {
+      continue;
+    }
+    if (kind === "Operation" && owner) {
+      pushChild(owner, child);
+      continue;
+    }
+    kept.push(child);
+  }
+  node.children = kept;
+}
+
+function classOwning(folder: WebKnowledgeGraphNode, member: WebKnowledgeGraphNode): WebKnowledgeGraphNode | null {
+  const file = String(member.source?.file ?? "").replaceAll("\\", "/");
+  const line = Number(member.source?.startLine) || 0;
+  const name = member.name;
+  const classes = collectClasses(folder);
+  let best: WebKnowledgeGraphNode | null = null;
+  let span = Number.POSITIVE_INFINITY;
+  for (const cls of classes) {
+    const clsFile = String(cls.source?.file ?? "").replaceAll("\\", "/");
+    if (file && clsFile && clsFile !== file && !clsFile.endsWith(`/${file}`) && !file.endsWith(`/${clsFile}`)) {
+      continue;
+    }
+    const start = Number(cls.source?.startLine) || 0;
+    const end = Number(cls.source?.endLine) || start;
+    if (line > 0 && start > 0 && line >= start && line <= end) {
+      const width = end - start;
+      if (width < span) {
+        span = width;
+        best = cls;
+      }
+    }
+  }
+  if (best) {
+    return best;
+  }
+  const named = classes.filter((cls) => {
+    const text = String(cls.source?.text ?? "");
+    return text.length > 0 && new RegExp(`\\b${name}\\b`).test(text);
+  });
+  return named.length === 1 ? named[0] : null;
+}
+
+function collectClasses(node: WebKnowledgeGraphNode): WebKnowledgeGraphNode[] {
+  const found: WebKnowledgeGraphNode[] = [];
+  const walk = (item: WebKnowledgeGraphNode) => {
+    if (CLASS_KINDS.has(item.nodeType?.name ?? "")) {
+      found.push(item);
+    }
+    for (const child of item.children ?? []) {
+      walk(child);
+    }
+  };
+  for (const child of node.children ?? []) {
+    walk(child);
   }
   return found;
 }

@@ -321,8 +321,47 @@ export function retainedTree(
   return nodes.flatMap((node) => visit(node));
 }
 
-export function shownRelationships<T extends { kind: string }>(links: T[]): T[] {
-  return links.filter((link) => link.kind !== "belongsTo" && link.kind !== "owns");
+export function shownRelationships<T extends { kind: string; name?: string; nodeId?: string }>(
+  links: T[],
+): T[] {
+  return uniqueRelationships(
+    links.filter((link) => link.kind !== "belongsTo" && link.kind !== "owns" && link.kind !== "invokes"),
+  );
+}
+
+export function uniqueRelationships<T extends { kind: string; name?: string; nodeId?: string }>(
+  links: T[],
+): T[] {
+  const seen = new Set<string>();
+  return links.filter((link) => {
+    const key = `${link.kind}\0${link.name || link.nodeId || ""}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+export function uniqueGraphRelationships<
+  T extends { kind: string; from_id: string; to_id: string },
+>(
+  edges: T[],
+  nodes: { node_id: string; name: string }[],
+): T[] {
+  const named = new Set(["demonstrates", "demonstratedThrough", "expected", "hasType"]);
+  const byId = new Map(nodes.map((node) => [node.node_id, node.name]));
+  const seen = new Set<string>();
+  return edges.filter((edge) => {
+    const from = named.has(edge.kind) ? (byId.get(edge.from_id) ?? edge.from_id) : edge.from_id;
+    const to = named.has(edge.kind) ? (byId.get(edge.to_id) ?? edge.to_id) : edge.to_id;
+    const key = `${edge.kind}\0${from}\0${to}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 const TACTICAL_CLASS = new Set([
@@ -640,6 +679,30 @@ export function stepLinks(
     }
   }
   return { invokes, examples: foundExamples, expected };
+}
+
+export function exampleClassNames(text: string): string[] {
+  const skip = new Set(["Promise", "Array", "Readonly", "Partial", "Record", "Map", "Set"]);
+  const names: string[] = [];
+  const seen = new Set<string>();
+  const add = (name: string) => {
+    if (!name || skip.has(name) || seen.has(name) || !/^[A-Z]/.test(name)) {
+      return;
+    }
+    seen.add(name);
+    names.push(name);
+  };
+  const head = text.split("{")[0] ?? "";
+  const returned = [...head.matchAll(/\)\s*:\s*(?:Promise<)?([A-Z][A-Za-z0-9_]*)/g)].map(
+    (match) => match[1],
+  );
+  if (returned.length) {
+    add(returned[returned.length - 1]);
+  }
+  for (const match of text.matchAll(/\bnew\s+([A-Z][A-Za-z0-9_]*)/g)) {
+    add(match[1]);
+  }
+  return names;
 }
 
 function operationFor(operations: StepOperationRef[], receiver: string, method: string): string {

@@ -1608,11 +1608,15 @@ function connectorChoices(
   nodeTypes: string[] | null,
   options: KnowledgeGraphFilterOptions,
 ): string[] {
-  const available = options.relationship_types.filter((kind) => kind !== 'belongsTo' && kind !== 'owns');
+  const available = options.relationship_types.filter(
+    (kind) => kind !== 'belongsTo' && kind !== 'owns' && kind !== 'invokes',
+  );
   if (!nodeTypes) {
     return available;
   }
-  const found = nodeTypes.flatMap((type) => CONNECTORS_BY_TYPE[type] ?? []).filter((kind) => kind !== 'belongsTo' && kind !== 'owns');
+  const found = nodeTypes
+    .flatMap((type) => CONNECTORS_BY_TYPE[type] ?? [])
+    .filter((kind) => kind !== 'belongsTo' && kind !== 'owns' && kind !== 'invokes');
   const ordered = keepOrder(available, found);
   return ordered.length ? ordered : available;
 }

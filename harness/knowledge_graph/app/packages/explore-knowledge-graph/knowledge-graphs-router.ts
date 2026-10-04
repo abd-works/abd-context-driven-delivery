@@ -21,7 +21,7 @@ import { definitionsInFile,
   scanSourceFiles,
   type WorkspaceFile,
 } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
-import { taggedPractice, stepLinks, databaseBuildRequired } from './knowledge-graph/knowledge-graph';
+import { taggedPractice, stepLinks, exampleClassNames, uniqueGraphRelationships, databaseBuildRequired } from './knowledge-graph/knowledge-graph';
 
 type KnowledgeGraphStore = {
   knowledge_graphs: unknown[];
@@ -819,6 +819,9 @@ function _linkStepMembers(graph: KnowledgeGraph, root: string): KnowledgeGraph {
       }
     }
   }
+  for (const practice of dto.practice_graphs) {
+    practice.relationships = uniqueGraphRelationships(practice.relationships, practice.nodes);
+  }
   return KnowledgeGraph.fromDto({ ...dto, folder: graph.folder });
 }
 
@@ -871,9 +874,7 @@ function _exampleExports(root: string): { name: string; classes: string[]; file:
         const line = text.slice(0, match.index ?? 0).split(/\r?\n/).length;
         const end = _balancedEnd(text, openAt, '{', '}');
         const body = _lineSlice(text, line, end);
-        const returned = body.match(/\)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/)?.[1] ?? '';
-        const constructed = [...body.matchAll(/\bnew\s+([A-Z][A-Za-z0-9_]*)/g)].map((item) => item[1]);
-        const classes = [...new Set([returned, ...constructed].filter((item) => /^[A-Z]/.test(item)))];
+        const classes = exampleClassNames(body);
         found.push({ name: match[1], classes, file, line, end, text: body });
       });
     }
@@ -1547,7 +1548,9 @@ function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
         continue;
       }
       const line = found.source.start_line;
-      const owner = classes.find((item) => item.start <= line && line <= item.end);
+      const owner = classes
+        .filter((item) => item.start <= line && line <= item.end)
+        .sort((left, right) => left.end - left.start - (right.end - right.start))[0];
       const body =
         found.semantic_type === 'Operation' || found.semantic_type === 'Property'
           ? _lineSlice(text, line, found.source.end_line)

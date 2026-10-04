@@ -19,9 +19,11 @@ import {
   storyTree,
   retagPractice,
   shownRelationships,
+  uniqueGraphRelationships,
   stepMembers,
   stepCallouts,
   stepLinks,
+  exampleClassNames,
   taggedPractice,
 } from "./knowledge-graph";
 import { classPanelLayout, initialOpenFolds, inlineCallLayout } from "../call-expansion";
@@ -180,6 +182,188 @@ describe("a knowledge graph", () => {
       expect(domain.children[0].children.map((node) => node.name)).toContain("Customer");
       expect(loaded.options.practices).toEqual(["clean_engineering", "ddd"]);
       expect(loaded.options.node_types).toContain("OoadClass");
+    });
+
+    it("should keep class properties under the class, not the folder", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "11111111-1111-1111-1111-111111111111",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "Identity",
+                  node_id: "ce:OoadClass:Identity",
+                  semantic_type: "OoadClass",
+                  practice: "clean_engineering",
+                  properties: { folder: "customer" },
+                  source: { file: "src/customer/customer.ts", start_line: 1, end_line: 20, text: "class Identity {\n  email: string\n  name: string\n}" },
+                },
+                {
+                  name: "Customer",
+                  node_id: "ce:OoadClass:Customer",
+                  semantic_type: "OoadClass",
+                  practice: "clean_engineering",
+                  properties: { folder: "customer" },
+                  source: { file: "src/customer/customer.ts", start_line: 21, end_line: 40, text: "class Customer {\n  identity: Identity\n}" },
+                },
+                {
+                  name: "email",
+                  node_id: "ce:Property:email",
+                  semantic_type: "Property",
+                  practice: "clean_engineering",
+                  properties: { folder: "customer" },
+                  source: { file: "src/customer/customer.ts", start_line: 2, end_line: 2, text: "email: string" },
+                },
+                {
+                  name: "identity",
+                  node_id: "ce:Property:identity",
+                  semantic_type: "Property",
+                  practice: "clean_engineering",
+                  properties: { folder: "customer" },
+                  source: { file: "src/customer/customer.ts", start_line: 22, end_line: 22, text: "identity: Identity" },
+                },
+                {
+                  name: "copyIdentity",
+                  node_id: "ce:Operation:copyIdentity",
+                  semantic_type: "Operation",
+                  practice: "clean_engineering",
+                  properties: { folder: "customer" },
+                  source: { file: "src/customer/customer.ts", start_line: 50, end_line: 52, text: "function copyIdentity() {}" },
+                },
+              ],
+              relationships: [
+                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:OoadClass:Identity" },
+                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:OoadClass:Customer" },
+                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:Property:email" },
+                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:Property:identity" },
+                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:Operation:copyIdentity" },
+              ],
+            },
+          ],
+        },
+        listed_tree: [
+          {
+            name: "customer",
+            node_id: "ce:Module:customer",
+            semantic_type: "Module",
+            practice: "clean_engineering",
+            children: [],
+          },
+        ],
+      });
+      const folder = loaded.matching[0];
+      expect(folder.children.map((node) => node.name)).toEqual(["Identity", "Customer", "copyIdentity"]);
+      expect(folder.children.find((node) => node.name === "Identity")?.children.map((node) => node.name)).toEqual(["email"]);
+      expect(folder.children.find((node) => node.name === "Customer")?.children.map((node) => node.name)).toEqual(["identity"]);
+    });
+
+    it("should list an example as demonstratedThrough on the class it returns", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "11111111-1111-1111-1111-111111111111",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "AccountCredentials",
+                  node_id: "ce:OoadClass:AccountCredentials",
+                  semantic_type: "OoadClass",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: { file: "src/account-credentials.ts", start_line: 1, end_line: 40, text: "class AccountCredentials {}" },
+                },
+                {
+                  name: "unverifiedAccountCredentials",
+                  node_id: "stories:Example:unverified-again",
+                  semantic_type: "Example",
+                  practice: "stories",
+                  properties: { folder: "tests" },
+                  source: {
+                    file: "tests/account-credentials.examples.ts",
+                    start_line: 17,
+                    end_line: 23,
+                    text: "export function unverifiedAccountCredentials(repo: AccountRepository): AccountCredentials {\n  return repo._empty();\n}",
+                  },
+                },
+              ],
+              relationships: [
+                {
+                  kind: "demonstrates",
+                  from_id: "stories:Example:unverified",
+                  to_id: "ce:OoadClass:AccountCredentials",
+                },
+              ],
+            },
+          ],
+        },
+        listed_tree: [
+          {
+            name: "src",
+            node_id: "ce:Module:src",
+            semantic_type: "Module",
+            children: [
+              {
+                name: "AccountCredentials",
+                node_id: "ce:OoadClass:AccountCredentials",
+                semantic_type: "OoadClass",
+                practice: "clean_engineering",
+                source: { file: "src/account-credentials.ts", start_line: 1, end_line: 40, text: "class AccountCredentials {}" },
+              },
+            ],
+          },
+          {
+            name: "tests",
+            node_id: "stories:Module:tests",
+            semantic_type: "Module",
+            children: [
+              {
+                name: "unverifiedAccountCredentials",
+                node_id: "stories:Example:unverified",
+                semantic_type: "Example",
+                practice: "stories",
+                source: {
+                  file: "tests/account-credentials.examples.ts",
+                  start_line: 17,
+                  end_line: 23,
+                  text: "export function unverifiedAccountCredentials(repo: AccountRepository): AccountCredentials {\n  return repo._empty();\n}",
+                },
+              },
+              {
+                name: "unverifiedAccountCredentials",
+                node_id: "stories:Example:unverified-again",
+                semantic_type: "Example",
+                practice: "stories",
+                source: {
+                  file: "tests/account-credentials.examples.ts",
+                  start_line: 17,
+                  end_line: 23,
+                  text: "export function unverifiedAccountCredentials(repo: AccountRepository): AccountCredentials {\n  return repo._empty();\n}",
+                },
+              },
+            ],
+          },
+        ],
+      });
+      const account = loaded.nodes.find((node) => node.name === "AccountCredentials");
+      const example = loaded.nodes.find((node) => node.name === "unverifiedAccountCredentials");
+      expect(
+        account?.relationships.filter((link) => link.kind === "demonstratedThrough"),
+      ).toEqual([
+        {
+          kind: "demonstratedThrough",
+          nodeId: "stories:Example:unverified",
+          name: "unverifiedAccountCredentials",
+        },
+      ]);
+      expect(example?.relationships).toContainEqual({
+        kind: "demonstrates",
+        nodeId: "ce:OoadClass:AccountCredentials",
+        name: "AccountCredentials",
+      });
+      expect(account?.children.map((node) => node.name)).not.toContain("unverifiedAccountCredentials");
     });
 
     it("should mark a violation hit as violating and leave the other rule passing", () => {
@@ -1283,14 +1467,64 @@ describe("a scenario step", () => {
       expect(engineering.map((node) => node.name)).not.toContain("When they send a feedback note");
     });
 
-    it("should leave belongsTo and owns out of the relationship list", () => {
+    it("should leave belongsTo, owns, and invokes out of the relationship list", () => {
       expect(
         shownRelationships([
           { kind: "belongsTo", nodeId: "story", name: "Load Customer" },
           { kind: "owns", nodeId: "customer", name: "Customer" },
           { kind: "invokes", nodeId: "load", name: "load" },
+          { kind: "demonstrates", nodeId: "example", name: "seedCustomer" },
+          { kind: "demonstratedThrough", nodeId: "example", name: "unverifiedAccountCredentials" },
         ]),
-      ).toEqual([{ kind: "invokes", nodeId: "load", name: "load" }]);
+      ).toEqual([
+        { kind: "demonstrates", nodeId: "example", name: "seedCustomer" },
+        { kind: "demonstratedThrough", nodeId: "example", name: "unverifiedAccountCredentials" },
+      ]);
+    });
+
+    it("should show a relationship only once per kind and name", () => {
+      expect(
+        shownRelationships([
+          { kind: "demonstratedThrough", nodeId: "ex-1", name: "unverifiedAccountCredentials" },
+          { kind: "demonstratedThrough", nodeId: "ex-2", name: "unverifiedAccountCredentials" },
+          { kind: "demonstratedThrough", nodeId: "ex-3", name: "verifiedAccountCredentials" },
+          { kind: "expected", nodeId: "c1", name: "Customer" },
+          { kind: "expected", nodeId: "c2", name: "Customer" },
+        ]),
+      ).toEqual([
+        { kind: "demonstratedThrough", nodeId: "ex-1", name: "unverifiedAccountCredentials" },
+        { kind: "demonstratedThrough", nodeId: "ex-3", name: "verifiedAccountCredentials" },
+        { kind: "expected", nodeId: "c1", name: "Customer" },
+      ]);
+      expect(
+        uniqueGraphRelationships(
+          [
+            { kind: "demonstrates", from_id: "ex-1", to_id: "cls" },
+            { kind: "demonstrates", from_id: "ex-2", to_id: "cls" },
+            { kind: "owns", from_id: "step-1", to_id: "ex-1" },
+            { kind: "owns", from_id: "step-2", to_id: "ex-2" },
+          ],
+          [
+            { node_id: "ex-1", name: "unverifiedAccountCredentials" },
+            { node_id: "ex-2", name: "unverifiedAccountCredentials" },
+            { node_id: "cls", name: "AccountCredentials" },
+            { node_id: "step-1", name: "when" },
+            { node_id: "step-2", name: "then" },
+          ],
+        ),
+      ).toEqual([
+        { kind: "demonstrates", from_id: "ex-1", to_id: "cls" },
+        { kind: "owns", from_id: "step-1", to_id: "ex-1" },
+        { kind: "owns", from_id: "step-2", to_id: "ex-2" },
+      ]);
+    });
+
+    it("should read the demonstrated class from an example return type", () => {
+      expect(
+        exampleClassNames(
+          "export function unverifiedAccountCredentials(repo: AccountRepository): AccountCredentials {\n  const accountCredentials = repo._empty();\n  return accountCredentials;\n}",
+        ),
+      ).toEqual(["AccountCredentials"]);
     });
 
     it("should link an invoked operation, a demonstrated example class, and an expected class", () => {
