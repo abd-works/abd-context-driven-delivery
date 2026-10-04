@@ -219,11 +219,18 @@ export function inlineCallLayout(
   text: string,
   members: FoldMember[],
   owner: string,
-  options: { anchored?: FoldMember[]; listClasses?: boolean; named?: FoldMember[]; openedClass?: string } = {},
+  options: {
+    anchored?: FoldMember[];
+    listClasses?: boolean;
+    named?: FoldMember[];
+    openedClass?: string;
+    context?: string;
+  } = {},
 ): InlineLayout {
   const classes = classCatalog(members);
   const bodies = callCatalog(members, classes, owner);
   const known = [...classes.values()];
+  const bindings = variableTypes(options.context ?? "");
   const anchored = (options.anchored ?? [])
     .map((member) => bodies.get(memberKey(member.owner || owner, member.name)) ?? bodiesByMember(bodies).get(member.name))
     .filter((body): body is CallBody => Boolean(body));
@@ -258,6 +265,9 @@ export function inlineCallLayout(
     options.listClasses ?? false,
     namedCalls,
     namedClasses,
+    new Set(),
+    new Set(),
+    bindings,
   );
   return {
     text: layout.text,
@@ -301,6 +311,36 @@ function fieldTypeNames(text: string): string[] {
 
 function typeIdentifiers(text: string): string[] {
   return text.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
+}
+
+function variableTypes(text: string): Map<string, string> {
+  const bindings = new Map<string, string>();
+  const code = text
+    .replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, " ")
+    .replace(/\/\/.*$/gm, " ");
+  const bind = (name: string, typeText: string) => {
+    if (!name || SKIP_TYPES.has(name)) {
+      return;
+    }
+    const typeName = typeIdentifiers(typeText).find((item) => !SKIP_TYPES.has(item) && /^[A-Z]/.test(item));
+    if (typeName) {
+      bindings.set(name, typeName);
+    }
+  };
+  for (const match of code.matchAll(/\b(?:let|const|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^;=]+)/g)) {
+    bind(match[1], match[2]);
+  }
+  for (const match of code.matchAll(
+    /\b(?:let|const|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*new\s+([A-Za-z_][A-Za-z0-9_]*)/g,
+  )) {
+    bind(match[1], match[2]);
+  }
+  for (const match of code.matchAll(
+    /(?:\(|,)\s*(?:(?:public|private|protected|readonly)\s+)*([A-Za-z_][A-Za-z0-9_]*)\s*\??\s*:\s*([^,)=]+)/g,
+  )) {
+    bind(match[1], match[2]);
+  }
+  return bindings;
 }
 
 function classCatalog(members: FoldMember[]): Map<string, ClassBody> {
@@ -390,7 +430,12 @@ function displayedCallSource(
   namedClasses: ClassBody[] = [],
   hold: Set<string> = new Set(),
   seenClasses: Set<string> = new Set(),
+  inherited: Map<string, string> = new Map(),
 ): { text: string; folds: CallFold[]; lineNumbers: string[]; depths: number[] } {
+  const bindings = new Map(inherited);
+  for (const [name, typeName] of variableTypes(text)) {
+    bindings.set(name, typeName);
+  }
   const folds: CallFold[] = [];
   const lineNumbers: string[] = [];
   const depths: number[] = [];
@@ -416,7 +461,7 @@ function displayedCallSource(
       }
     }
     if (depth < MAX_DEPTH) {
-      const calls = callsOnLine(line, bodies, stack);
+      const calls = callsOnLine(line, bodies, stack, bindings);
       if (index === 0) {
         for (const call of anchored) {
           if (!calls.some((listed) => listed.id === call.id)) {
@@ -440,6 +485,16 @@ function displayedCallSource(
         if (wordHas(line, type.name) && !fromCalls.some((listed) => listed.id === type.id) && !mentioned.some((listed) => listed.id === type.id)) {
           mentioned.push(type);
         }
+      }
+      for (const type of typesForVariables(line, bindings, known)) {
+        if (
+          stack.includes(type.id) ||
+          fromCalls.some((listed) => listed.id === type.id) ||
+          mentioned.some((listed) => listed.id === type.id)
+        ) {
+          continue;
+        }
+        mentioned.push(type);
       }
       const listedIds = new Set([...fromCalls, ...mentioned].map((type) => type.id));
       const extras = index === 0 && listClasses ? known.filter((type) => !listedIds.has(type.id)) : [];
@@ -511,7 +566,30 @@ function isSimpleProperty(text: string): boolean {
   return !line.includes("(") && /[:=]/.test(line);
 }
 
-function callsOnLine(line: string, bodies: Map<string, CallBody>, stack: string[]): CallBody[] {
+function typesForVariables(line: string, bindings: Map<string, string>, known: ClassBody[]): ClassBody[] {
+  const code = line.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, " ");
+  const found: ClassBody[] = [];
+  const seen = new Set<string>();
+  for (const [variable, typeName] of bindings) {
+    if (!wordHas(code, variable)) {
+      continue;
+    }
+    const type = known.find((item) => item.name === typeName);
+    if (!type || seen.has(type.id) || SKIP_TYPES.has(type.name)) {
+      continue;
+    }
+    seen.add(type.id);
+    found.push(type);
+  }
+  return found;
+}
+
+function callsOnLine(
+  line: string,
+  bodies: Map<string, CallBody>,
+  stack: string[],
+  bindings: Map<string, string>,
+): CallBody[] {
   const found: CallBody[] = [];
   const seen = new Set<string>();
   const add = (body: CallBody | undefined) => {
@@ -525,7 +603,7 @@ function callsOnLine(line: string, bodies: Map<string, CallBody>, stack: string[
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(line))) {
     if (!SKIP_TYPES.has(match[1])) {
-      add(resolveCall(bodies, match[1], match[2]));
+      add(resolveCall(bodies, match[1], match[2], bindings.get(match[1])));
     }
     const next = match.index + match[1].length + (match[0].includes("?.") ? 2 : 1);
     if (pattern.lastIndex > next) {
@@ -535,7 +613,18 @@ function callsOnLine(line: string, bodies: Map<string, CallBody>, stack: string[
   return found;
 }
 
-function resolveCall(bodies: Map<string, CallBody>, receiver: string, method: string): CallBody | undefined {
+function resolveCall(
+  bodies: Map<string, CallBody>,
+  receiver: string,
+  method: string,
+  typeName?: string,
+): CallBody | undefined {
+  if (typeName) {
+    const typed = bodies.get(`${typeName}.${method}`);
+    if (typed) {
+      return typed;
+    }
+  }
   if (receiver !== "this") {
     const exact = bodies.get(`${receiver}.${method}`);
     if (exact) {

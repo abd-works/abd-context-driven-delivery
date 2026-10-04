@@ -1326,6 +1326,50 @@ describe("inlined operation source", () => {
     expect(layout.folds.some((fold) => fold.kind === "class")).toBe(true);
   });
 
+  it("calls out the declared class of a variable when that class name is not on the line", () => {
+    const members = [
+      {
+        id: "creds",
+        name: "AccountCredentials",
+        kind: "Entity",
+        owner: "",
+        text: "class AccountCredentials {\n  token: string\n}",
+        file: "account.ts",
+        start: 1,
+        end: 3,
+      },
+      {
+        id: "customer",
+        name: "Customer",
+        kind: "Entity",
+        owner: "",
+        text: "class Customer {\n  id: string\n}",
+        file: "customer.ts",
+        start: 1,
+        end: 3,
+      },
+      {
+        id: "identity",
+        name: "Identity",
+        kind: "ValueObject",
+        owner: "",
+        text: "class Identity {\n  email: string\n}",
+        file: "customer.ts",
+        start: 4,
+        end: 6,
+      },
+    ];
+    const layout = inlineCallLayout(
+      "    accountCredentials = unverifiedAccountCredentials(accountCredentialsRepository);\n    expect(customer.identity.email).toBe(accountCredentials.email);",
+      members,
+      "",
+      { context: "let accountCredentials: AccountCredentials;\nlet customer: Customer;" },
+    );
+    expect(layout.text).toContain("class AccountCredentials");
+    expect(layout.text).toContain("class Customer");
+    expect(layout.text).not.toContain("class Identity");
+  });
+
   it("lists Customer under new Customer", () => {
     const layout = inlineCallLayout(
       "private async persistNewCustomer(email: string, accountCredentials: AccountCredentials): Promise<Customer> {\n  const customer = new Customer(accountCredentials, `cus_${this.nextCustomerId}`, new Identity(accountCredentials.email), new Address());\n}",

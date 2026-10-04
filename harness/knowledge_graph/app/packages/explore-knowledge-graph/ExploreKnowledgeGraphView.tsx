@@ -465,6 +465,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 options={filterOptions}
                 showRules={showRules}
                 members={foldMembers}
+                context={widestSource(listedTree, selectedNode.source?.file ?? '')}
               />
             ) : (
               <p className="empty-state">Select a node</p>
@@ -570,15 +571,18 @@ function TreeNode({
     return null;
   }
   const children = visible;
+  const kind = node.nodeType?.name ?? '';
   const rules = rulesFor(node, picked, options, showRules);
   const links = shownRelationships(node.relationships ?? []);
+  const step = kind === 'Step';
+  const directLinks = step ? links : [];
+  const groupedLinks = step ? [] : links;
   const rulesId = `${node.nodeId}::rules`;
   const linksId = `${node.nodeId}::relationships`;
   const open = openIds.has(node.nodeId);
   const rulesOpen = openIds.has(rulesId);
   const linksOpen = openIds.has(linksId);
-  const canOpen = children.length > 0 || rules.length > 0 || links.length > 0;
-  const kind = node.nodeType?.name ?? '';
+  const canOpen = children.length > 0 || rules.length > 0 || directLinks.length > 0 || groupedLinks.length > 0;
   const selected = node.nodeId === selectedId;
   return (
     <li
@@ -637,7 +641,27 @@ function TreeNode({
               onSelect={onSelect}
             />
           ))}
-          {links.length > 0 ? (
+          {directLinks.map((link) => (
+            <li key={`${link.kind}:${link.nodeId}`} data-depth={depth + 1} data-kind={link.kind}>
+              <div className="tree-row">
+                <span className="tree-twist-spacer" />
+                <button
+                  type="button"
+                  data-testid="tree-relationship-target"
+                  title={kindLabel(link.kind, false)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect(link.nodeId);
+                  }}
+                >
+                  <KindMark kind="Relationship" isFile={false} />
+                  <span className="node-name">{link.kind}</span>
+                  <span className="node-name">{link.name}</span>
+                </button>
+              </div>
+            </li>
+          ))}
+          {groupedLinks.length > 0 ? (
             <li data-depth={depth + 1} data-testid="tree-relationships">
               <div className="tree-row">
                 <button
@@ -660,7 +684,7 @@ function TreeNode({
               </div>
               {linksOpen ? (
                 <ul>
-                  {links.map((link) => (
+                  {groupedLinks.map((link) => (
                     <li key={`${link.kind}:${link.nodeId}`} data-depth={depth + 2}>
                       <div className="tree-row">
                         <span className="tree-twist-spacer" />
@@ -785,6 +809,7 @@ function SourcePane({
   options,
   showRules,
   members,
+  context,
 }: {
   node: KnowledgeGraphNode;
   folder: string;
@@ -792,6 +817,7 @@ function SourcePane({
   options: KnowledgeGraphFilterOptions;
   showRules: boolean;
   members: FoldMember[];
+  context: string;
 }) {
   const file = node.source?.file ?? '';
   const [text, setText] = useState('');
@@ -805,7 +831,7 @@ function SourcePane({
   const filled = members.map((member) =>
     fetched[member.id] && !member.text ? { ...member, text: fetched[member.id] } : member,
   );
-  const prepared = preparedSource(node, text, filled);
+  const prepared = preparedSource(node, text, filled, context);
   const foldsRef = useRef(prepared.folds);
   const depthsRef = useRef(prepared.depths);
   const openFoldsRef = useRef(openFolds);
@@ -1276,10 +1302,35 @@ const CLASS_SOURCE_KINDS = new Set([
   'Specification',
 ]);
 
+function widestSource(nodes: KnowledgeGraphNode[], file: string): string {
+  if (!file) {
+    return '';
+  }
+  const wanted = file.replace(/\\/g, '/');
+  let best = '';
+  const walk = (node: KnowledgeGraphNode) => {
+    const src = node.source;
+    const srcFile = (src?.file ?? '').replace(/\\/g, '/');
+    const same =
+      srcFile === wanted || srcFile.endsWith(`/${wanted}`) || wanted.endsWith(`/${srcFile}`);
+    if (same && (src?.text?.length ?? 0) > best.length) {
+      best = src?.text ?? '';
+    }
+    for (const child of node.children ?? []) {
+      walk(child);
+    }
+  };
+  for (const node of nodes) {
+    walk(node);
+  }
+  return best;
+}
+
 function preparedSource(
   node: KnowledgeGraphNode,
   text: string,
   members: FoldMember[],
+  context = '',
 ): { text: string; folds: SourceFold[]; lineNumbers: string[]; depths: number[] } {
   const kind = node.nodeType?.name ?? '';
   const owner = CLASS_SOURCE_KINDS.has(kind)
@@ -1300,6 +1351,7 @@ function preparedSource(
     named: stepLike ? namedFolds(node, members) : [],
     listClasses: false,
     openedClass: CLASS_SOURCE_KINDS.has(kind) ? node.name : '',
+    context,
   });
 }
 
