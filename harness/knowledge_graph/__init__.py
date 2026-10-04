@@ -1,4 +1,4 @@
-"""Knowledge graph package. Replaced graph types live under legacy/."""
+"""Knowledge graph package."""
 
 from .model import CodeQL
 

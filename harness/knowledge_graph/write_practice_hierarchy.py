@@ -25,16 +25,16 @@ for _cat in ("practices", "harness", "tools", "actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from harness.knowledge_graph.legacy.model.practice_graph import PracticeGraph, RuleSlugs
-from harness.knowledge_graph.legacy.model.graph_node import Kind
+from harness.knowledge_graph.model.practice_graph import PracticeGraph, RuleSlugs
+from harness.knowledge_graph.model.graph_node import Kind
 from harness.knowledge_graph.model.codeql import (
     CodeQL,
     attach_query_server,
     detach_query_server,
 )
-from harness.knowledge_graph.legacy.model.graph_rules import closest_fidelity
+from harness.knowledge_graph.model.graph_rules import closest_fidelity
 from harness.mcp.codeql_query_daemon import QueryServerClient
-from harness.knowledge_graph.legacy.model.dot_graph import (
+from harness.knowledge_graph.model.dot_graph import (
     _hierarchy_line,
     _hierarchy_violations,
     graph_name_matches,
@@ -628,7 +628,7 @@ def main(
 
 def _load_practice_trees(graph: PracticeGraph, workspace: Path, log) -> None:
     """Load stories, DDD, and BDD trees. CodeQL fact queries only build the code index."""
-    from harness.knowledge_graph.legacy.model.loader import GraphLoader
+    from harness.knowledge_graph.model.loader import GraphLoader
     from practices.stories.model.story_model import StoryModel as DiskStoryModel
 
     loader = GraphLoader.from_graph(graph)

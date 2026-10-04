@@ -1,4 +1,4 @@
-"""CodeQL infrastructure. Practice graph loaders live under legacy/model."""
+"""CodeQL infrastructure and the practice graph."""
 
 from .codeql import CodeQL, CodeQLRunError, Rows
 

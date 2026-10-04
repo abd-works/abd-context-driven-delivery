@@ -999,7 +999,7 @@ class CodeQL:
             print(f"run-queries populate {query.stem}", flush=True)
             batch.update(self.run_queries([query], db, write_filter=index == 0))
         seconds = time.perf_counter() - started
-        from harness.knowledge_graph.legacy.model.practice_graph import RuleTiming
+        from harness.knowledge_graph.model.practice_graph import RuleTiming
 
         graph.record_rule_timing(
             RuleTiming("run-queries:knowledge-graph", seconds, len(batch.get("classes") or []))
@@ -1069,7 +1069,7 @@ class CodeQL:
                     continue
                 raise
         seconds = time.perf_counter() - started
-        from harness.knowledge_graph.legacy.model.practice_graph import RuleTiming
+        from harness.knowledge_graph.model.practice_graph import RuleTiming
 
         graph.record_rule_timing(
             RuleTiming("decode-facts:knowledge-graph", seconds, len(batch.get("classes") or []))

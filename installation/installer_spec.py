@@ -1020,7 +1020,7 @@ with description("the installer import path") as self:
         expect(refs).to(contain("harness.transformers.transformers:Transformers"))
         expect(refs).to(contain("patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
         expect(refs).to(contain("patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
-        expect(refs).to(contain("harness.knowledge_graph.legacy.model.knowledge_graph:KnowledgeGraph"))
+        expect(refs).to(contain("harness.knowledge_graph.model.graph_rules:GraphRulesCollection"))
         expect(refs).to(contain("harness.guidance.guidance:Guidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:FidelityGuidance"))

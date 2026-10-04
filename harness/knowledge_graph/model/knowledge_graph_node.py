@@ -80,9 +80,7 @@ def rules_for_filters(catalog, practices, stages, node_types):
 
 def rules_from_guidance(root=None):
     """Rules on each practice guidance object, including that practice's fidelities."""
-    from harness.knowledge_graph.legacy.model.guidance_rules_loader import (
-        load_graph_rules_from_markdown,
-    )
+    from harness.knowledge_graph.model.graph_rules import load_graph_rules_from_markdown
 
     rows = []
     for rule in load_graph_rules_from_markdown(root):

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
 
-from harness.knowledge_graph.legacy.model.vocabulary_helper import VocabularyHelper
+from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
 from harness.knowledge_graph.model.codeql import CodeQL, Rows
 from harness.knowledge_graph.model.codeql_layout import extractor_language
 

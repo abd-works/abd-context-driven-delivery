@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set
@@ -535,10 +536,6 @@ class RuleRegistry:
         return registry
 
     def load_from_practices(self, root=None) -> None:
-        from harness.knowledge_graph.legacy.model.guidance_rules_loader import (
-            load_graph_rules_from_markdown,
-        )
-
         self.rules = load_graph_rules_from_markdown(root)
 
     def runnable(
@@ -613,3 +610,50 @@ def closest_fidelity(practice: str, semantic_type: str) -> Optional[str]:
         if semantic_type in scope:
             return fidelity
     return None
+
+
+def load_graph_rules_from_markdown(root=None) -> List[GraphRule]:
+    from patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
+    from practices.bdd.bdd import Bdd
+    from practices.clean_engineering.clean_engineering import CleanEngineering
+    from practices.ddd.ddd import Ddd
+    from practices.stories.stories import Stories
+    from practices.ux.ux import Ux
+
+    wrapped: List[GraphRule] = []
+    for practice, factory in (
+        ("stories", Stories),
+        ("clean_engineering", CleanEngineering),
+        ("ddd", Ddd),
+        ("bdd", Bdd),
+        ("ux", Ux),
+        ("lern_domain_driven", LernDomainDriven),
+    ):
+        try:
+            guidance = factory()
+        except Exception as error:
+            print(f"skipped {practice} rules ({error})", file=sys.stderr)
+            continue
+        wrapped.extend(_wrap_guidance_rules(guidance.rules, practice=practice, shared=True))
+        fidelities = getattr(guidance, "fidelities", None)
+        if fidelities is not None:
+            for name, child in getattr(fidelities, "entries", {}).items():
+                child_rules = getattr(child, "rules", None)
+                for rule in _wrap_guidance_rules(child_rules, practice=practice, shared=False):
+                    if rule.fidelity is None:
+                        rule.fidelity = getattr(child, "fidelity", None) or name
+                    wrapped.append(rule)
+        wrapped.extend(guidance.project_rules(root))
+    return wrapped
+
+
+def _wrap_guidance_rules(collection, *, practice: str, shared: bool) -> List[GraphRule]:
+    if collection is None:
+        return []
+    wrapped: List[GraphRule] = []
+    for rule in collection:
+        if isinstance(rule, GraphRule):
+            wrapped.append(rule)
+        elif isinstance(rule, Rule):
+            wrapped.append(GraphRule(rule, practice=practice, shared=shared, tag="base"))
+    return wrapped
