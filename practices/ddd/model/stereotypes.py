@@ -72,6 +72,59 @@ def ddd_class_kind(name: str) -> Optional[str]:
     return None
 
 
+_VALUE_OBJECT_SUFFIXES = (
+    "Token",
+    "Code",
+    "Message",
+    "Requirement",
+    "Requirements",
+    "Operation",
+)
+_NON_TACTICAL_SUFFIXES = (
+    "Exception",
+    "Error",
+    "Client",
+    "Node",
+    "View",
+    "Routes",
+    "Router",
+)
+_KIND_TAGS = {
+    "EntityRoot": "aggregate root",
+    "Entity": "entity",
+    "ValueObject": "value object",
+    "Repository": "repository",
+    "DomainEvent": "domain event",
+    "DomainService": "domain service",
+    "Specification": "specification",
+}
+
+
+def inferred_tactical_kind(name: str, class_names: Optional[set[str]] = None) -> Optional[str]:
+    """Tactical kind from <<tags>> or from the class name in code."""
+    tagged = ddd_class_kind(name)
+    if tagged:
+        return tagged
+    plain = plain_class_name(name)
+    names = class_names or set()
+    if plain.endswith("Repository"):
+        return "Repository"
+    if any(plain.endswith(suffix) for suffix in _NON_TACTICAL_SUFFIXES):
+        return None
+    if any(plain.endswith(suffix) for suffix in _VALUE_OBJECT_SUFFIXES):
+        return "ValueObject"
+    if f"{plain}Repository" in names:
+        return "EntityRoot"
+    if names and plain[:1].isupper():
+        return "Entity"
+    return None
+
+
+def tactical_tags(kind: str) -> List[str]:
+    tag = _KIND_TAGS.get(kind)
+    return [tag] if tag else []
+
+
 def repository_root_name(repo_name: str) -> Optional[str]:
     plain = plain_class_name(repo_name)
     if plain.endswith("Repository"):

@@ -36,19 +36,11 @@ const definitionCatalogs = new Map<string, SourceDefinition[]>();
 export function overlayWorkspaceTree(dto: KnowledgeGraphDto): KnowledgeGraphDto {
   const root = dto.folder;
   if (!root || !existsSync(root) || !statSync(root).isDirectory()) {
-    retagAccessors(dto);
-    dropObjectLiteralKeyProperties(dto);
-    attachRelatives(dto);
     return dto;
   }
   const folders = collectRelativeFolders(root);
   addFolderPackages(dto, folders);
   fillSourceBodies(dto, root);
-  retagAccessors(dto);
-  dropObjectLiteralKeyProperties(dto);
-  attachClassMembers(dto, root);
-  dropObjectLiteralKeyProperties(dto);
-  attachRelatives(dto);
   attachStepInvokes(dto, root);
   attachMemberInvokes(dto);
   attachComposition(dto, root);

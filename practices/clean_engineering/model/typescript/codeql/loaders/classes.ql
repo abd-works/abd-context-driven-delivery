@@ -10,6 +10,6 @@ import source_span
 
 from ClassDefinition cls
 where inSubject(cls)
-select cls.getName(), cls.getLocation().getFile().getShortName(),
+select cls.getName(), cls.getLocation().getFile().getBaseName(),
   cls.getLocation().getFile().getRelativePath(), sourceStart(cls),
   cls.getLocation().getEndLine()

@@ -21,7 +21,7 @@ from practices.clean_engineering.model.property import (
 )
 from practices.clean_engineering.model.type_refs import domain_type_names
 from practices.ddd.model.nodes import Aggregate, BoundedContext
-from practices.ddd.model.stereotypes import ddd_class_kind
+from practices.ddd.model.stereotypes import ddd_class_kind, inferred_tactical_kind, tactical_tags
 
 from practices.stories.model.source_location import SourceLocation
 from harness.knowledge_graph.model.graph_node import Kind, Node, ownership_kind
@@ -72,18 +72,18 @@ class Property(SourceProperty, CodeQLOoadNode):
     def load_relationship(self) -> None:
         if self.relationship is None:
             return
+        owner = next(iter(self.related(Kind.BELONGS_TO)), None)
+        if owner is None:
+            return
+        kind = ownership_kind(self.relationship.kind)
+        if kind == Kind.RELATIVE:
+            owner.relate_once(Kind.RELATIVE, self, cardinality=self.relationship.cardinality)
+            return
         names = domain_type_names(getattr(self, "type_hint", "") or "")
         target = self.named(names[0], "OoadClass") if names else None
         if target is None and names and getattr(self, "_graph", None) is not None:
             target = self.graph.class_named(names[0])
-        owner = next(iter(self.related(Kind.BELONGS_TO)), None)
-        if owner is None:
-            return
-        owner.relate_once(
-            ownership_kind(self.relationship.kind),
-            target,
-            cardinality=self.relationship.cardinality,
-        )
+        owner.relate_once(kind, target, cardinality=self.relationship.cardinality)
 
 
 class Parameter(SourceParameter, CodeQLOoadNode):
@@ -419,7 +419,16 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
         classes: Dict[str, List[OoadClass]] = {}
         files: Dict[str, File] = {}
         for node in self._graph.nodes.values():
-            if node.semantic_type() == "OoadClass":
+            if node.semantic_type() in {
+                "OoadClass",
+                "Entity",
+                "EntityRoot",
+                "ValueObject",
+                "Repository",
+                "DomainEvent",
+                "DomainService",
+                "Specification",
+            }:
                 classes.setdefault(node.name.lower(), []).append(node)
             if isinstance(node, File):
                 files[node.name.replace("\\", "/").lower()] = node
@@ -454,6 +463,7 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
         return str(getattr(source, "file", "") or "").replace("\\", "/")
 
     def _ensure_classes(self) -> None:
+        names = {str(entry.get("name") or "") for entry in self._rows.classes if entry.get("name")}
         for entry in self._rows.classes:
             module_name = entry.get("module") or ""
             name = entry.get("name") or ""
@@ -464,13 +474,60 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
                 mod = self._model.module_named(module_name, order=self._order)
                 self._order += 1
                 self._modules[module_name.lower()] = mod
+            if not getattr(mod, "folder", None):
+                mod.folder = module_name.replace(".", "/")
             existing = self._class_in_file(entry)
             if existing is not None:
                 self._span.bind(existing, entry)
                 continue
-            created = mod.accept_class(name, entry.get("stereotypes") or [])
+            kind = inferred_tactical_kind(name, names)
+            marks = list(entry.get("stereotypes") or []) or tactical_tags(kind or "")
+            created = mod.accept_class(name, marks)
             self._remember_class(name, created)
             self._span.bind(created, entry)
+        self._ensure_bounded_contexts()
+
+    def _ensure_bounded_contexts(self) -> None:
+        from practices.ddd.model.codeql.codeql_model import BoundedContext
+
+        kinds = {
+            "Entity",
+            "EntityRoot",
+            "ValueObject",
+            "Repository",
+            "DomainEvent",
+            "DomainService",
+            "Specification",
+        }
+        contexts: dict[str, BoundedContext] = {}
+        for node in list(self._graph.nodes.values()):
+            if node.semantic_type() not in kinds:
+                continue
+            module = next(
+                (
+                    owner
+                    for owner in node.related(Kind.BELONGS_TO)
+                    if owner.semantic_type() == "Module"
+                ),
+                None,
+            )
+            folder = str(getattr(module, "folder", "") or getattr(module, "name", "") or "").replace(
+                "\\", "/"
+            )
+            parts = [part for part in folder.split("/") if part]
+            if parts and parts[0] in {"src", "domain"} and len(parts) > 1:
+                bc_name = parts[1]
+            else:
+                bc_name = parts[-1] if parts else "Domain"
+            key = bc_name.lower()
+            context = contexts.get(key)
+            if context is None:
+                context = BoundedContext(bc_name.replace("-", " ").title(), len(contexts) + 1)
+                self._graph.register(context)
+                contexts[key] = context
+            if node.node_id not in {item.node_id for item in context.related(Kind.OWNS)}:
+                context.relate(Kind.OWNS, node)
+
 
     def _owned_member(self, owner, collection: str, name: str):
         return next((node for node in getattr(owner, collection, []) if node.name == name), None)

@@ -6,11 +6,7 @@ import {
   includedPracticeIds,
   isStoryNode,
   practiceId,
-  practiceRootLabels,
   restoredBranches,
-  domainTree,
-  retainedTree,
-  storyTree,
   rulesForFilters,
   shownRelationships,
   extractionProgress,
@@ -21,8 +17,8 @@ import {
   type KnowledgeGraphFilterOptions,
   type PracticeMember,
 } from './knowledge-graph/knowledge-graph-client';
-import { CONNECTORS_BY_TYPE, nodeTypesFor, stagesForPractices } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/catalog';
-import { pickerRelativePath } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
+import { CONNECTORS_BY_TYPE, nodeTypesFor, stagesForPractices } from './knowledge-graph/catalog';
+import { pickerRelativePath } from './knowledge-graph/workspace';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 
@@ -173,8 +169,28 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
 
   const [showRules, setShowRules] = useState(true);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
-  const forest = practiceForest(listedTree, picked, filterOptions);
-  const foldMembers = useMemo(() => collectFoldMembers(listedTree), [listedTree]);
+  const forest = listedTree;
+  const foldMembers = useMemo(() => {
+    const fromTree = collectFoldMembers(listedTree);
+    if (!selectedNode) {
+      return fromTree;
+    }
+    const byId = new Map(fromTree.map((member) => [member.id, member]));
+    for (const member of collectFoldMembers([selectedNode])) {
+      const existing = byId.get(member.id);
+      if (!existing) {
+        byId.set(member.id, member);
+        continue;
+      }
+      if (!existing.owner && member.owner) {
+        existing.owner = member.owner;
+      }
+      if (!existing.text && member.text) {
+        existing.text = member.text;
+      }
+    }
+    return [...byId.values()];
+  }, [listedTree, selectedNode]);
   const treeKey = `${folder}|${listedTree.map((node) => node.nodeId).join('|')}|${forest.map((node) => node.nodeId).join('|')}`;
 
   useEffect(() => {
@@ -528,22 +544,6 @@ function FilterSelect({
   );
 }
 
-const CLASS_TREE_KINDS = new Set([
-  'OoadClass',
-  'Entity',
-  'EntityRoot',
-  'ValueObject',
-  'Repository',
-  'DomainEvent',
-  'DomainService',
-  'Specification',
-  'Aggregate',
-]);
-
-function isFieldGroup(node: KnowledgeGraphNode): boolean {
-  return (node.nodeType?.name ?? '') === 'FieldGroup' || node.name === 'properties' || node.name === 'fields';
-}
-
 function TreeNode({
   node,
   depth,
@@ -569,20 +569,15 @@ function TreeNode({
   if (!shown(node, picked, options)) {
     return null;
   }
-  const grouped = (node.children ?? []).find((child) => isFieldGroup(child));
-  const fields = grouped?.children ?? [];
-  const children = visible.filter((child) => !isFieldGroup(child));
+  const children = visible;
   const rules = rulesFor(node, picked, options, showRules);
   const links = shownRelationships(node.relationships ?? []);
   const rulesId = `${node.nodeId}::rules`;
   const linksId = `${node.nodeId}::relationships`;
-  const fieldsId = `${node.nodeId}::properties`;
-  const showFields = fields.length > 0;
   const open = openIds.has(node.nodeId);
   const rulesOpen = openIds.has(rulesId);
   const linksOpen = openIds.has(linksId);
-  const fieldsOpen = openIds.has(fieldsId);
-  const canOpen = children.length > 0 || showFields || rules.length > 0 || links.length > 0;
+  const canOpen = children.length > 0 || rules.length > 0 || links.length > 0;
   const kind = node.nodeType?.name ?? '';
   const selected = node.nodeId === selectedId;
   return (
@@ -590,6 +585,7 @@ function TreeNode({
       data-depth={depth}
       data-node-id={node.nodeId}
       data-kind={kind}
+      data-testid={kind === 'FieldGroup' ? 'tree-properties' : undefined}
       className={selected ? 'is-selected' : undefined}
     >
       <div className="tree-row">
@@ -597,7 +593,7 @@ function TreeNode({
           <button
             type="button"
             className="tree-twist"
-            data-testid="tree-expand"
+            data-testid={kind === 'FieldGroup' ? 'tree-expand-properties' : 'tree-expand'}
             aria-expanded={open}
             aria-label={`${open ? 'Collapse' : 'Expand'} ${node.name}`}
             onClick={(event) => {
@@ -641,47 +637,6 @@ function TreeNode({
               onSelect={onSelect}
             />
           ))}
-          {showFields ? (
-            <li data-depth={depth + 1} data-testid="tree-properties">
-              <div className="tree-row">
-                <button
-                  type="button"
-                  className="tree-twist"
-                  data-testid="tree-expand-properties"
-                  aria-expanded={fieldsOpen}
-                  aria-label={`${fieldsOpen ? 'Collapse' : 'Expand'} properties`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggle(fieldsId);
-                  }}
-                >
-                  {fieldsOpen ? '▼' : '▶'}
-                </button>
-                <button type="button" title="properties" onClick={() => onToggle(fieldsId)}>
-                  <KindMark kind="FieldGroup" isFile={false} />
-                  <span className="node-name">properties</span>
-                </button>
-              </div>
-              {fieldsOpen ? (
-                <ul>
-                  {fields.map((child) => (
-                    <TreeNode
-                      key={child.nodeId || child.name}
-                      node={child}
-                      depth={depth + 2}
-                      picked={picked}
-                      options={options}
-                      showRules={showRules}
-                      selectedId={selectedId}
-                      openIds={openIds}
-                      onToggle={onToggle}
-                      onSelect={onSelect}
-                    />
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          ) : null}
           {links.length > 0 ? (
             <li data-depth={depth + 1} data-testid="tree-relationships">
               <div className="tree-row">
@@ -1302,58 +1257,6 @@ function practiceAllowed(
   return includedPracticeIds(picked.practices).includes(practiceId(nodePractice));
 }
 
-function practiceMark(id: string): string {
-  if (id === 'stories') {
-    return 'Book';
-  }
-  if (id === 'clean_engineering') {
-    return 'Gear';
-  }
-  if (id === 'ddd') {
-    return 'Entity diagram';
-  }
-  if (id === 'bdd') {
-    return 'Checklist';
-  }
-  return 'Practice';
-}
-
-function practiceForest(
-  nodes: KnowledgeGraphNode[],
-  picked: FilterPick,
-  options: KnowledgeGraphFilterOptions,
-): KnowledgeGraphNode[] {
-  if (!nodes.length) {
-    return nodes;
-  }
-  const selected = restricts(picked.practices, options.practices) ? picked.practices : [];
-  const labels = practiceRootLabels(selected);
-  const roots: KnowledgeGraphNode[] = [];
-  for (const label of labels) {
-    const id =
-      label === 'Clean Engineering'
-        ? 'clean_engineering'
-        : label === 'Domain Driven Design'
-          ? 'ddd'
-          : label === 'BDD'
-            ? 'bdd'
-            : 'stories';
-    const children =
-      id === 'ddd' ? domainTree(nodes) : id === 'stories' ? storyTree(nodes) : retainedTree(nodes, [id], false);
-    if (!children.length) {
-      continue;
-    }
-    const root = new KnowledgeGraphNode();
-    root.name = label;
-    root.nodeId = `practice:${id}`;
-    root.practice = id;
-    root.nodeType = { name: practiceMark(id) } as KnowledgeGraphNode['nodeType'];
-    root.children = children;
-    roots.push(root);
-  }
-  return roots.length ? roots : nodes;
-}
-
 type SourceFold = {
   start: number;
   end: number;
@@ -1379,7 +1282,9 @@ function preparedSource(
   members: FoldMember[],
 ): { text: string; folds: SourceFold[]; lineNumbers: string[]; depths: number[] } {
   const kind = node.nodeType?.name ?? '';
-  const owner = members.find((member) => member.id === node.nodeId)?.owner ?? '';
+  const owner = CLASS_SOURCE_KINDS.has(kind)
+    ? node.name
+    : members.find((member) => member.id === node.nodeId)?.owner ?? '';
   const stepLike = kind === 'Step' || kind === 'Example';
   const anchored = stepLike
     ? (node.children ?? [])

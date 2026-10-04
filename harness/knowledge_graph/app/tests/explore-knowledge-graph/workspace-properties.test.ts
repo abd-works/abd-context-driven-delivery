@@ -1,201 +1,211 @@
 import { describe, expect, it } from 'vitest';
-import { overlayWorkspaceTree } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace-overlay';
-import { definitionsInFile } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/workspace';
+import {
+  arrangeListedClassChildren,
+  KnowledgeGraph,
+} from '../../packages/explore-knowledge-graph/knowledge-graph/graph';
 
-describe('definitionsInFile properties', () => {
-  it('keeps class fields and constructor-parameter fields, not function locals', () => {
-    const found = definitionsInFile({
-      relativePath: 'src/account-credentials.ts',
-      text: [
-        'export class AccountCredentials {',
-        '  email: string;',
-        '  verified = false;',
-        '  private _customer: Customer | null = null;',
-        '  _repository?: AccountRepository;',
-        '  constructor(',
-        '    public password = "",',
-        '  ) {}',
-        '  async verify(validationCode: ValidationCode) {',
-        '    const repository = this.requireRepository();',
-        '    const rejected = REJECTED_VALIDATION_CODES[this.validationCode];',
-        '    this.email = validationCode.code;',
-        '    this.verified = true;',
-        '  }',
-        '  private unmetSignInRequirements() {',
-        '    return this.missingRequirements().filter(',
-        '      r =>',
-        '        r === this.requirements.emailRequired ||',
-        '        r === this.requirements.emailFormat ||',
-        '        r === this.requirements.passwordRequired,',
-        '    );',
-        '  }',
-        '  private failure(',
-        '    operation: AccountCredentialsOperation,',
-        '    message: string,',
-        '    cause: string,',
-        '  ) {',
-        '    return new AccountCredentialsException(operation, this, message, new Error(cause));',
-        '  }',
-        '}',
-      ].join('\n'),
-    });
-    const properties = found
-      .filter((entry) => entry.semantic_type === 'Property')
-      .map((entry) => entry.name)
-      .sort();
-    expect(properties).toEqual(['_customer', '_repository', 'email', 'password', 'verified']);
-  });
-
-  it('lists getters and setters as properties, not operations', () => {
-    const found = definitionsInFile({
-      relativePath: 'src/account-credentials.ts',
-      text: [
-        'export class AccountCredentials {',
-        '  get onboardingStep(): OnboardingStep | null {',
-        '    if (this.token && !this.verified) return OnboardingStep.VerifyAccount;',
-        '    return null;',
-        '  }',
-        '  set email(value: string) {',
-        '    this._email = value;',
-        '  }',
-        '  async verify() {',
-        '    return this.verified;',
-        '  }',
-        '}',
-      ].join('\n'),
-    });
-    const properties = found
-      .filter((entry) => entry.semantic_type === 'Property')
-      .map((entry) => entry.name)
-      .sort();
-    const operations = found
-      .filter((entry) => entry.semantic_type === 'Operation')
-      .map((entry) => entry.name)
-      .sort();
-    expect(properties).toEqual(['email', 'onboardingStep']);
-    expect(operations).toEqual(['verify']);
-  });
-
-  it('keeps a messages field and not the keys inside that object', () => {
-    const found = definitionsInFile({
-      relativePath: 'src/customer.ts',
-      text: [
-        'export class Customer {',
-        '  static readonly messages = {',
-        "    createFailed: 'Could not create customer.',",
-        "    loadFailed: 'Something went wrong when loading your account',",
-        "    terminated: 'Your account has been terminated.',",
-        '  };',
-        '  public id: string;',
-        '}',
-      ].join('\n'),
-    });
-    const properties = found
-      .filter((entry) => entry.semantic_type === 'Property')
-      .map((entry) => entry.name)
-      .sort();
-    expect(properties).toEqual(['id', 'messages']);
-  });
-});
-
-describe('overlayWorkspaceTree object-literal keys', () => {
-  it('drops createFailed, loadFailed, and terminated keys and keeps messages', () => {
-    const dto = overlayWorkspaceTree({
-      id: '11111111-1111-1111-1111-111111111111',
-      folder: '',
-      practice_graphs: [
-        {
-          nodes: [
-            graphNode('Customer', 'OoadClass', 'class Customer {}'),
-            graphNode('messages', 'Property', "  static readonly messages = {\n    createFailed: 'x',\n  };"),
-            graphNode('createFailed', 'Property', "    createFailed: 'Could not create customer.',"),
-            graphNode('loadFailed', 'Property', "    loadFailed: 'Something went wrong when loading your account',"),
-            graphNode('terminated', 'Property', "    terminated: 'Your account has been terminated.',"),
-            graphNode('id', 'Property', '  public id: string;'),
-          ],
-          relationships: [
-            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:messages' },
-            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:createFailed' },
-            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:loadFailed' },
-            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:terminated' },
-            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:id' },
-          ],
-        },
+describe('listed class children', () => {
+  it('keeps relatives on the class and leftover properties under properties', () => {
+    const arranged = arrangeListedClassChildren(
+      { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
+      [
+        listed('token', 'Property'),
+        listed('email', 'Property'),
+        listed('_repository', 'Property'),
+        listed('verify', 'Operation'),
       ],
-    });
-    const names = dto.practice_graphs[0].nodes
-      .filter((node) => node.semantic_type === 'Property')
-      .map((node) => node.name)
-      .sort();
-    expect(names).toEqual(['id', 'messages']);
-  });
-
-  it('adds relative edges for complex field types', () => {
-    const dto = overlayWorkspaceTree({
-      id: '11111111-1111-1111-1111-111111111111',
-      folder: '',
-      practice_graphs: [
-        {
-          nodes: [
-            graphNode('Customer', 'OoadClass', 'class Customer {}'),
-            graphNode('identity', 'Property', '  public identity: Identity;'),
-            graphNode('id', 'Property', '  public id: string;'),
-          ],
-          relationships: [
-            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:identity' },
-            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:id' },
-          ],
-        },
-      ],
-    });
-    expect(dto.practice_graphs[0].relationships.filter((edge) => edge.kind === 'relative')).toEqual([
-      { kind: 'relative', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:identity' },
+      new Set(['ce:Property:token']),
+    );
+    expect(arranged.map((node) => node.name)).toEqual(['token', 'verify', 'properties']);
+    expect(arranged.find((node) => node.name === 'properties')?.children.map((node) => node.name).sort()).toEqual([
+      '_repository',
+      'email',
     ]);
   });
 
-  it('retags getter operations as properties', () => {
-    const dto = overlayWorkspaceTree({
-      id: '11111111-1111-1111-1111-111111111111',
-      folder: '',
+  it('keeps relatives and the properties group if listed children were already arranged', () => {
+    const once = arrangeListedClassChildren(
+      { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
+      [
+        listed('token', 'Property'),
+        listed('email', 'Property'),
+        listed('_repository', 'Property'),
+        listed('verify', 'Operation'),
+      ],
+      new Set(['ce:Property:token']),
+    );
+    const arranged = arrangeListedClassChildren(
+      { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
+      once,
+      new Set(['ce:Property:token']),
+    );
+    expect(arranged.map((node) => node.name)).toEqual(['token', 'verify', 'properties']);
+    expect(arranged.find((node) => node.name === 'properties')?.children.map((node) => node.name).sort()).toEqual([
+      '_repository',
+      'email',
+    ]);
+  });
+
+  it('puts a domain-typed field under properties unless CodeQL marked it relative', () => {
+    const arranged = arrangeListedClassChildren(
+      { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
+      [
+        {
+          ...listed('token', 'Property'),
+          source: {
+            file: 'src/account-credentials.ts',
+            start_line: 53,
+            end_line: 53,
+            text: 'token: AccountToken | null = null',
+          },
+        },
+        listed('email', 'Property'),
+      ],
+    );
+    expect(arranged.map((node) => node.name)).toEqual(['token', 'properties']);
+    expect(arranged.find((node) => node.name === 'properties')?.children.map((node) => node.name)).toEqual([
+      'email',
+    ]);
+  });
+
+  it('lists relatives, then operations, then properties', () => {
+    const arranged = arrangeListedClassChildren(
+      { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
+      [
+        {
+          ...listed('customer', 'Operation'),
+          source: {
+            file: 'src/account-credentials.ts',
+            start_line: 106,
+            end_line: 108,
+            text: 'get customer(): Customer | null {\n    return this._customer;\n  }',
+          },
+        },
+        listed('email', 'Property'),
+        listed('_repository', 'Property'),
+        listed('verify', 'Operation'),
+      ],
+    );
+    expect(arranged.map((node) => node.name)).toEqual(['customer', 'verify', 'properties']);
+    expect(arranged.find((node) => node.name === 'customer')?.semantic_type).toBe('Property');
+    expect(arranged.find((node) => node.name === 'properties')?.children.map((node) => node.name).sort()).toEqual([
+      '_repository',
+      'email',
+    ]);
+  });
+
+  it('presents relatives, then operations, then properties under the class', () => {
+    const presented = KnowledgeGraph.fromDto({
+      id: '11111111-1111-4111-8111-111111111111',
+      folder: 'C:/tmp/kg',
       practice_graphs: [
         {
+          id: 'practice:clean_engineering',
+          name: 'clean_engineering',
           nodes: [
-            graphNode('AccountCredentials', 'OoadClass', 'class AccountCredentials {}'),
-            {
-              name: 'onboardingStep',
-              node_id: 'ce:Operation:onboardingStep',
-              semantic_type: 'Operation',
-              practice: 'clean_engineering',
-              properties: {},
-              source: {
-                file: 'src/account-credentials.ts',
-                start_line: 76,
-                end_line: 79,
-                text: 'get onboardingStep(): OnboardingStep | null {\n    return null;\n  }',
-              },
-            },
+            node('ce:OoadClass:AccountCredentials', 'AccountCredentials', 'OoadClass', {
+              file: 'src/account-credentials.ts',
+              start_line: 29,
+              end_line: 200,
+              text: 'export class AccountCredentials {}',
+            }),
+            node('ce:Property:token', 'token', 'Property', {
+              file: 'src/account-credentials.ts',
+              start_line: 53,
+              end_line: 53,
+              text: 'token: AccountToken | null = null',
+            }),
+            node('ce:Operation:customer', 'customer', 'Operation', {
+              file: 'src/account-credentials.ts',
+              start_line: 106,
+              end_line: 108,
+              text: 'get customer(): Customer | null {\n    return this._customer;\n  }',
+            }),
+            node('ce:Property:email', 'email', 'Property', {
+              file: 'src/account-credentials.ts',
+              start_line: 66,
+              end_line: 66,
+              text: 'public email = \'\'',
+            }),
+            node('ce:Property:_repository', '_repository', 'Property', {
+              file: 'src/account-credentials.ts',
+              start_line: 62,
+              end_line: 62,
+              text: '_repository?: AccountCredentialsRepository',
+            }),
+            node('ce:Operation:verify', 'verify', 'Operation', {
+              file: 'src/account-credentials.ts',
+              start_line: 150,
+              end_line: 160,
+              text: 'verify(): void {}',
+            }),
           ],
           relationships: [
-            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:onboardingStep' },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:token' },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:customer' },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:email' },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:_repository' },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:verify' },
+            { kind: 'relative', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:token' },
           ],
         },
       ],
-    });
-    expect(dto.practice_graphs[0].nodes.find((node) => node.name === 'onboardingStep')?.semantic_type).toBe(
-      'Property',
-    );
+    }).present();
+    const account = walk(presented.listed_tree).find((row) => row.name === 'AccountCredentials');
+    expect(account?.children.map((child) => child.name)).toEqual([
+      'customer',
+      'token',
+      'verify',
+      'properties',
+    ]);
+    expect(account?.children.find((child) => child.name === 'properties')?.children.map((child) => child.name).sort()).toEqual([
+      '_repository',
+      'email',
+    ]);
+    expect(presented.listed_tree.map((row) => row.name)).toEqual(['clean_engineering']);
+    expect(presented.listed_tree[0]?.semantic_type).toBe('Practice');
   });
 });
 
-function graphNode(name: string, semantic_type: 'OoadClass' | 'Property', text: string) {
+function walk(nodes: { name: string; children?: any[] }[]): { name: string; children?: any[] }[] {
+  return nodes.flatMap((node) => [node, ...walk(node.children ?? [])]);
+}
+
+function node(
+  node_id: string,
+  name: string,
+  semantic_type: string,
+  source: { file: string; start_line: number; end_line: number; text: string },
+) {
   return {
+    node_id,
     name,
-    node_id: `ce:${semantic_type}:${name}`,
-    semantic_type,
     practice: 'clean_engineering',
+    fidelity: 'code',
+    semantic_type,
+    properties: { folder: 'src' },
+    applicable_rules: [],
+    violations: [],
+    source,
+  };
+}
+
+function listed(name: string, semantic_type: 'Property' | 'Operation') {
+  return {
+    node_id: `ce:${semantic_type}:${name}`,
+    name,
+    path: name,
+    practice: 'clean_engineering',
+    semantic_type,
+    is_file: false,
     properties: {},
-    applicable_rules: [] as string[],
-    violations: [] as never[],
-    source: { file: 'src/customer.ts', start_line: 1, end_line: 1, text },
+    rule_statuses: {},
+    rules: [],
+    relationships: [],
+    source: null,
+    origin: null,
+    children: [],
+    failed: 0,
+    total: 0,
   };
 }

@@ -11,6 +11,7 @@ from harness.knowledge_graph.model.knowledge_graph_node import (
     KnowledgeGraphNode,
     KnowledgeGraphNodeType,
     KnowledgeGraphSourceFold,
+    WebKnowledgeGraphNode,
     editor_height,
     is_story_node,
     practice_root_labels,
@@ -106,6 +107,23 @@ with description("a knowledge graph"):
     with before.each:
         self.temp = TemporaryDirectory()
         self.graph = _graph(self.temp.name)
+
+    with it("should keep web nodes as a subtype and the same operations as typescript"):
+        expect(issubclass(WebKnowledgeGraphNode, KnowledgeGraphNode)).to(equal(True))
+        for name in (
+            "saveKnowledgeGraph",
+            "loadKnowledgeGraph",
+            "createDatabase",
+            "copyMasterToWorkingCopy",
+            "copyWorkingCopyToMaster",
+            "refreshMaster",
+            "reloadWorkingCopy",
+            "updateWorkingCopy",
+            "choose",
+            "open",
+            "close",
+        ):
+            expect(callable(getattr(self.graph, name))).to(equal(True))
 
     with context("that has been saved"):
         with it("should write the knowledge graph models"):

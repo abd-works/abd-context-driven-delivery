@@ -1,3 +1,5 @@
+import { stageFor } from "./catalog";
+
 const FILTER_PRACTICE: Record<string, string> = {
   clean_engineering: "CleanEngineering",
   stories: "Stories",
@@ -1775,6 +1777,94 @@ class WebKnowledgeGraphNode extends KnowledgeGraphNode {
     this.properties = properties;
     this.isFile = isFile;
     this.isFolder = isFolder;
+  }
+
+  static fromDto(row: any): WebKnowledgeGraphNode {
+    const origin = row.origin
+      ? new SourceRange(
+          row.origin.file,
+          row.origin.start_line ?? row.origin.startLine,
+          row.origin.end_line ?? row.origin.endLine,
+          row.origin.text,
+        )
+      : null;
+    const node = new WebKnowledgeGraphNode(
+      row.keyword ?? "",
+      origin,
+      row.properties ?? {},
+      row.is_file ?? row.isFile ?? false,
+      row.is_folder ?? row.isFolder ?? false,
+    );
+    node.name = row.name ?? "";
+    node.nodeType =
+      row.semantic_type || row.nodeType
+        ? { name: row.semantic_type ?? row.nodeType?.name ?? "" }
+        : node.nodeType;
+    node.practice = row.practice ?? "";
+    node.stage = stageFor(String(row.fidelity ?? row.stage ?? ""));
+    node.ruleHits = WebKnowledgeGraphNode.ruleHitsFrom(row);
+    node.relationships = uniqueRelationships(WebKnowledgeGraphNode.relationshipLinks(row));
+    node.nodeId = row.node_id ?? row.nodeId ?? row.name ?? "";
+    node.isFolder =
+      row.is_folder ??
+      row.isFolder ??
+      node.nodeType?.name === "Module" ??
+      false;
+    node.children = (row.children ?? []).map((child: any) => WebKnowledgeGraphNode.fromDto(child));
+    if (row.source?.file || row.file || row.source?.text) {
+      node.source = new KnowledgeGraphSource(
+        row.source?.text ?? row.text ?? "",
+        row.source?.file ?? row.file ?? "",
+        row.source?.start_line ?? row.start_line ?? 0,
+        row.source?.end_line ?? row.end_line ?? 0,
+        row.source?.language ?? "",
+      );
+    }
+    return node;
+  }
+
+  static relationshipLinks(row: any): { kind: string; nodeId: string; name: string }[] {
+    const groups = Array.isArray(row.relationships) ? row.relationships : [];
+    const links: { kind: string; nodeId: string; name: string }[] = [];
+    for (const group of groups) {
+      const kind = String(group.kind ?? "");
+      if (kind === "belongsTo") {
+        continue;
+      }
+      const targets = Array.isArray(group.targets) ? group.targets : [];
+      for (const target of targets) {
+        const nodeId = String(target.node_id ?? target.nodeId ?? "");
+        const name = String(target.name ?? "");
+        if (!kind || !nodeId || !name) {
+          continue;
+        }
+        links.push({ kind, nodeId, name });
+      }
+    }
+    return links;
+  }
+
+  static ruleHitsFrom(row: any): { slug: string; status: string; message: string }[] {
+    const failing = new Map(
+      (row.violations ?? []).map((hit: any) => [
+        String(hit.rule_slug ?? hit.ruleSlug ?? ""),
+        String(hit.message ?? ""),
+      ]),
+    );
+    if (Array.isArray(row.rules) && row.rules.length) {
+      return row.rules.map((rule: any) => ({
+        slug: String(rule.slug ?? rule.rule_slug ?? ""),
+        status: String(rule.status ?? (failing.has(String(rule.slug ?? rule.rule_slug ?? "")) ? "violating" : "passing")),
+        message: String(rule.message ?? failing.get(String(rule.slug ?? rule.rule_slug ?? "")) ?? ""),
+      }));
+    }
+    const catalogSlugs = (row.rule_catalog ?? []).map((entry: any) => String(entry.slug ?? ""));
+    const slugs = [...new Set([...(row.applicable_rules ?? []), ...catalogSlugs, ...failing.keys()])].filter(Boolean);
+    return slugs.map((slug) => ({
+      slug,
+      status: failing.has(slug) ? "violating" : "passing",
+      message: failing.get(slug) ?? "",
+    }));
   }
 
   render(depth = 0, selected: KnowledgeGraphNode | null = null): string {

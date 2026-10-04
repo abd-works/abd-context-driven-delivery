@@ -15,7 +15,7 @@ from practices.ddd.model.nodes import (
 )
 from practices.ddd.model.stereotypes import ddd_class_kind, plain_class_name
 
-from practices.clean_engineering.model.codeql.codeql_model import OoadClass, _Members
+from practices.clean_engineering.model.codeql.codeql_model import CodeQLOoadNode, OoadClass, _Members
 from harness.knowledge_graph.model.graph_node import Node
 
 
@@ -35,12 +35,12 @@ class Aggregate(SourceAggregate, Node):
         return ddd_graph_class_for(source)
 
 
-class Entity(_Members, SourceEntity, Node):
+class Entity(_Members, SourceEntity, CodeQLOoadNode):
     practice = "ddd"
     _semantic_type_name = "Entity"
 
 
-class EntityRoot(_Members, SourceEntity, Node):
+class EntityRoot(_Members, SourceEntity, CodeQLOoadNode):
     practice = "ddd"
     _semantic_type_name = "EntityRoot"
 
@@ -49,27 +49,27 @@ class EntityRoot(_Members, SourceEntity, Node):
         self.is_root = True
 
 
-class ValueObject(_Members, SourceValueObject, Node):
+class ValueObject(_Members, SourceValueObject, CodeQLOoadNode):
     practice = "ddd"
     _semantic_type_name = "ValueObject"
 
 
-class Repository(_Members, SourceRepository, Node):
+class Repository(_Members, SourceRepository, CodeQLOoadNode):
     practice = "ddd"
     _semantic_type_name = "Repository"
 
 
-class DomainEvent(_Members, SourceDomainEvent, Node):
+class DomainEvent(_Members, SourceDomainEvent, CodeQLOoadNode):
     practice = "ddd"
     _semantic_type_name = "DomainEvent"
 
 
-class DomainService(_Members, SourceDomainService, Node):
+class DomainService(_Members, SourceDomainService, CodeQLOoadNode):
     practice = "ddd"
     _semantic_type_name = "DomainService"
 
 
-class Specification(_Members, SourceSpecification, Node):
+class Specification(_Members, SourceSpecification, CodeQLOoadNode):
     practice = "ddd"
     _semantic_type_name = "Specification"
 

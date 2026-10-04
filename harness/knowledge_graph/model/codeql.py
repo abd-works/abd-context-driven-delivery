@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from .practice_graph import PracticeGraph
 
 _FACT_QUERIES = ("classes", "operations", "parameters", "properties", "relatives", "calls")
-_RUN_QUERIES_FLAGS = ("--threads=0", "--quiet")
+_RUN_QUERIES_FLAGS = ("--threads=0", "--quiet", "--ram=4096")
 
 
 def _extended_path(path: Path) -> Path:
@@ -517,6 +518,7 @@ class CodeQL:
         db = database if database is not None else self.ensure_database(
             self.query_language(queries[0])
         )
+        (db / "results").mkdir(parents=True, exist_ok=True)
         if write_filter:
             self._write_subject_filter(queries[0].parent, path_root=self._ql_path_root(db))
         for query in queries:
@@ -539,8 +541,6 @@ class CodeQL:
                     f"query server failed ({error}); falling back to database run-queries"
                 )
                 self._restart_query_server(server)
-            except CodeQLRunError:
-                raise
             except Exception as error:
                 self._emit(
                     f"query server failed ({error}); falling back to database run-queries"
@@ -841,6 +841,12 @@ class CodeQL:
         name = Path(path).name
         if name.endswith("_spec.py") or name.startswith("test_"):
             return True
+        if "/routes/" in f"/{path}/" or path.endswith("/routes"):
+            return True
+        if re.search(r"-(client|node)\.(tsx|ts|jsx|js)$", name):
+            return True
+        if "/packages/" in f"/{path}/" or path.startswith("packages/"):
+            return True
         if "/examples/" not in f"/{path}":
             return False
         root = self.root.resolve().as_posix().replace("\\", "/").lower()
@@ -960,7 +966,10 @@ class CodeQL:
             if self._skipped_graph_path(file_path):
                 continue
             owning = self._owning_module_prefix(file_path, prefixes)
-            module_name = owning.replace("/", ".") if owning else (entry.get("module") or "")
+            if not owning:
+                parent = Path(str(file_path).replace("\\", "/")).parent.as_posix().strip(".")
+                owning = parent if parent not in ("", ".") else Path(file_path).stem
+            module_name = owning.replace("\\", "/")
             if not module_name:
                 continue
             entry["module"] = module_name
@@ -987,9 +996,12 @@ class CodeQL:
         self._write_subject_filter(populate_queries[0].parent, path_root=self._ql_path_root(db))
         print(f"run-queries populate ({len(populate_queries)} queries) ...", flush=True)
         started = time.perf_counter()
-        batch = self.run_queries(populate_queries, db)
+        batch: Dict[str, List[list]] = {}
+        for index, query in enumerate(populate_queries):
+            print(f"run-queries populate {query.stem}", flush=True)
+            batch.update(self.run_queries([query], db, write_filter=index == 0))
         seconds = time.perf_counter() - started
-        from .practice_graph import RuleTiming
+        from harness.knowledge_graph.legacy.model.practice_graph import RuleTiming
 
         graph.record_rule_timing(
             RuleTiming("run-queries:knowledge-graph", seconds, len(batch.get("classes") or []))
@@ -1059,7 +1071,7 @@ class CodeQL:
                     continue
                 raise
         seconds = time.perf_counter() - started
-        from .practice_graph import RuleTiming
+        from harness.knowledge_graph.legacy.model.practice_graph import RuleTiming
 
         graph.record_rule_timing(
             RuleTiming("decode-facts:knowledge-graph", seconds, len(batch.get("classes") or []))

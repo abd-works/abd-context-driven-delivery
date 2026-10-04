@@ -636,7 +636,7 @@ export class KnowledgeGraph {
       return node;
     }
     if (isClassKind(node.semantic_type)) {
-      return { ...node, children: this._withoutMembers(node.children) };
+      return node;
     }
     if (node.semantic_type === 'Operation' || node.semantic_type === 'Property') {
       return this._memberPane(node, 1, new Set());
@@ -835,7 +835,7 @@ export class KnowledgeGraph {
         continue;
       }
       const cls = this._nodeById(edge.to_id);
-      if (!cls || cls.semanticType !== 'OoadClass' || seen.has(cls.nodeId)) {
+      if (!cls || !isClassKind(cls.semanticType) || seen.has(cls.nodeId)) {
         continue;
       }
       seen.add(cls.nodeId);
@@ -848,7 +848,7 @@ export class KnowledgeGraph {
     const found: GraphNode[] = [];
     const seen = new Set<string>();
     const add = (cls: GraphNode | null) => {
-      if (!cls || cls.semanticType !== 'OoadClass' || seen.has(cls.nodeId)) {
+      if (!cls || !isClassKind(cls.semanticType) || seen.has(cls.nodeId)) {
         return;
       }
       seen.add(cls.nodeId);
@@ -995,7 +995,7 @@ export class KnowledgeGraph {
         continue;
       }
       const match = this._allNodes().find(
-        (node) => node.semanticType === 'OoadClass' && node.name === name,
+        (node) => isClassKind(node.semanticType) && node.name === name,
       );
       if (!match || seen.has(match.nodeId)) {
         continue;
@@ -1068,7 +1068,7 @@ export class KnowledgeGraph {
     }
     let match: SourceRangeDto | null = null;
     for (const other of this._allNodes()) {
-      if (other.semanticType !== 'OoadClass' || !other.source?.file) {
+      if (!isClassKind(other.semanticType) || !other.source?.file) {
         continue;
       }
       const otherKey = other.name.replace(/[^A-Za-z0-9]/g, '').toLowerCase();
@@ -1148,7 +1148,7 @@ export class KnowledgeGraph {
         targets: group.targets.filter((target) => {
           if (
             classModelOnly &&
-            node.semanticType === 'OoadClass' &&
+            isClassKind(node.semanticType) &&
             group.kind === 'invokes'
           ) {
             return false;
@@ -1224,52 +1224,26 @@ export class KnowledgeGraph {
   }
 
   private _listedTree(): ListedTreeNode[] {
-    const practiceTree = this._practiceListedTree();
-    if (practiceTree) {
-      return practiceTree;
-    }
-    const { childrenByParent } = this._treeChildren();
-    const sortChildren = (nodes: GraphNode[]) =>
-      [...nodes].sort((left, right) => this._compareTreeNodes(left, right));
-    const nest = (
-      node: GraphNode,
-      prefix: string,
-      parentOrigin: SourceRangeDto | null,
-    ): ListedTreeNode => {
-      const leaf = this._listedLeaf(node);
-      const origin = leaf.source?.file ? leaf.source : parentOrigin;
-      const path = prefix ? `${prefix}.${leaf.name}` : leaf.name;
-      const nested = sortChildren(childrenByParent.get(node.nodeId) ?? []).map(
-        (child) => nest(child, path, origin),
-      );
-      const folded = this._foldBackground(node, leaf, nested);
-      return {
-        ...leaf,
-        name: folded.name,
-        source: folded.source,
-        path,
-        origin,
-        children: this._arrangeClassChildren(node, path, folded.children),
-        failed: leaf.failed + folded.failed,
-        total: leaf.total + folded.total,
-      };
-    };
-    const folders = this._topLevelFolders();
-    const listedRoots = this._narrowsToHits()
-      ? folders.filter(
-          (folder) => (childrenByParent.get(folder.nodeId) ?? []).length > 0,
-        )
-      : folders;
-    return sortChildren(listedRoots).map((node) => nest(node, '', null));
+    return this._practiceListedTree();
   }
 
-  private _practiceListedTree(): ListedTreeNode[] | null {
-    const practices = listed(this.view.filter.practices, this.view.filter.practice);
-    if (!practices) {
-      return null;
+  private _practiceRootNames(): string[] {
+    const selected = listed(this.view.filter.practices, this.view.filter.practice);
+    if (selected && selected.length > 0) {
+      return selected;
     }
+    const present = new Set(
+      this.dto.practice_graphs
+        .filter((graph) => graph.name && graph.name !== 'workspace' && graph.nodes.length > 0)
+        .map((graph) => graph.name),
+    );
+    return unique([...PRACTICES.filter((name) => present.has(name)), ...present]);
+  }
+
+  private _practiceListedTree(): ListedTreeNode[] {
+    const practices = this._practiceRootNames();
     const closure = this._practiceClosure();
-    const structural = new Set(['StoryMap', 'CleanEngineeringModel']);
+    const structural = new Set(['StoryMap', 'StoryModel', 'CleanEngineeringModel']);
     const parentOf = this._ownsParents(closure);
     const parentsOf = (nodeId: string) =>
       (parentOf.get(nodeId) ?? [])
@@ -1299,8 +1273,7 @@ export class KnowledgeGraph {
             (parentOf.get(child.nodeId) ?? []).includes(node.nodeId),
         ),
       ).map((child) => nest(child, path, next));
-      const withMembers = this._sameClassMembers(node, nested, next, path, nest);
-      const folded = this._foldBackground(node, leaf, withMembers);
+      const folded = this._foldBackground(node, leaf, nested);
       return {
         ...leaf,
         name: folded.name,
@@ -1343,11 +1316,30 @@ export class KnowledgeGraph {
   private _folderPracticeChildren(practice: string): ListedTreeNode[] {
     const parentOf = new Map<string, string>();
     for (const edge of this._treeOwnsEdges()) {
+      const from = this._nodeById(edge.fromId);
+      if (from?.semanticType === 'BoundedContext' || from?.semanticType === 'Aggregate') {
+        continue;
+      }
       parentOf.set(edge.toId, edge.fromId);
     }
     const keep = new Set<string>();
+    const dddTypes = new Set([
+      'Entity',
+      'EntityRoot',
+      'ValueObject',
+      'Repository',
+      'DomainEvent',
+      'DomainService',
+      'Specification',
+    ]);
     for (const node of this.listedNodes()) {
-      if (node.practice !== practice || node.semanticType === 'CleanEngineeringModel' || this._isFileNode(node)) {
+      if (node.semanticType === 'CleanEngineeringModel' || this._isFileNode(node)) {
+        continue;
+      }
+      if (
+        node.practice !== practice &&
+        !(practice === 'clean_engineering' && dddTypes.has(node.semanticType))
+      ) {
         continue;
       }
       keep.add(node.nodeId);
@@ -1403,7 +1395,11 @@ export class KnowledgeGraph {
   ): { name: string; source: SourceRangeDto | null; children: ListedTreeNode[]; failed: number; total: number } {
     const failed = children.reduce((sum, child) => sum + child.failed, 0);
     const total = children.reduce((sum, child) => sum + child.total, 0);
-    return { name: leaf.name, source: leaf.source, children, failed, total };
+    const name =
+      node.semanticType === 'Background' && (leaf.name === 'each' || leaf.name === 'all')
+        ? 'background'
+        : leaf.name;
+    return { name, source: leaf.source, children, failed, total };
   }
 
   private _arrangeClassChildren(
@@ -1424,40 +1420,6 @@ export class KnowledgeGraph {
       children,
       relativeIds,
     );
-  }
-
-  private _sameClassMembers(
-    node: GraphNode,
-    nested: ListedTreeNode[],
-    stack: Set<string>,
-    path: string,
-    nest: (node: GraphNode, prefix: string, stack: Set<string>) => ListedTreeNode,
-  ): ListedTreeNode[] {
-    if (!isClassKind(node.semanticType)) {
-      return nested;
-    }
-    if (nested.some((child) => child.semantic_type === 'Operation' || child.semantic_type === 'Property')) {
-      return nested;
-    }
-    const twin = this._allNodes().find(
-      (other) =>
-        other.nodeId !== node.nodeId &&
-        isClassKind(other.semanticType) &&
-        other.name.toLowerCase() === node.name.toLowerCase(),
-    );
-    if (!twin) {
-      return nested;
-    }
-    const members = this._allEdges()
-      .filter((edge) => edge.kind === 'owns' && edge.from_id === twin.nodeId)
-      .map((edge) => this._nodeById(edge.to_id))
-      .filter(
-        (child): child is GraphNode =>
-          Boolean(child) &&
-          !stack.has(child.nodeId) &&
-          (child.semanticType === 'Operation' || child.semanticType === 'Property'),
-      );
-    return [...nested, ...members.map((member) => nest(member, path, stack))];
   }
 
   private _practiceHead(node: GraphNode, practices: string[]): boolean {
@@ -2648,17 +2610,24 @@ export function arrangeListedClassChildren(
   children: ListedTreeNode[],
   relativeIds: Set<string> = new Set(),
 ): ListedTreeNode[] {
-  const relatives = children.filter(
-    (child) =>
-      child.semantic_type === 'Property' &&
-      (relativeIds.has(child.node_id) || isRelativeProperty(child.source?.text ?? '')),
+  const members = children.flatMap((child) =>
+    child.semantic_type === 'FieldGroup' ? child.children ?? [] : [child],
   );
+  for (const child of members) {
+    if (!child.practice) {
+      child.practice = owner.practice;
+    }
+    if (child.semantic_type === 'Operation' && isAccessorSource(child.source?.text ?? '')) {
+      child.semantic_type = 'Property';
+    }
+  }
+  const relatives = members.filter((child) => isListedRelative(child, relativeIds));
   const relativeSet = new Set(relatives.map((child) => child.node_id));
-  const operations = children.filter((child) => child.semantic_type === 'Operation');
-  const fields = children.filter(
+  const operations = members.filter((child) => child.semantic_type === 'Operation');
+  const fields = members.filter(
     (child) => child.semantic_type === 'Property' && !relativeSet.has(child.node_id),
   );
-  const rest = children.filter(
+  const rest = members.filter(
     (child) =>
       child.semantic_type !== 'Property' &&
       child.semantic_type !== 'Operation' &&
@@ -2685,6 +2654,23 @@ export function arrangeListedClassChildren(
     });
   }
   return [...arranged, ...rest];
+}
+
+function isListedRelative(
+  child: ListedTreeNode,
+  relativeIds: Set<string>,
+): boolean {
+  if (child.semantic_type !== 'Property') {
+    return false;
+  }
+  if (relativeIds.has(child.node_id)) {
+    return true;
+  }
+  const text = child.source?.text ?? '';
+  if (isRelativeProperty(text)) {
+    return true;
+  }
+  return isAccessorSource(text) && returnTypeNames(text).some((name) => isRelativeTypeName(name));
 }
 
 export function signatureTypeNames(text: string): string[] {
@@ -2778,10 +2764,11 @@ function asFolderPath(raw: string): string {
   if (path.includes('/')) {
     return path;
   }
-  if (path.includes('.')) {
-    return path.replaceAll('.', '/');
+  const withoutExt = path.replace(/\.(tsx|ts|jsx|js|mjs|cjs|py)$/i, '');
+  if (withoutExt.includes('.')) {
+    return withoutExt.replaceAll('.', '/');
   }
-  return path;
+  return withoutExt || path;
 }
 
 function practiceNodeTypes(practices: string[] | undefined): string[] {

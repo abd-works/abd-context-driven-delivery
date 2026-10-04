@@ -78,6 +78,7 @@ class CodeQLStory:
     line: int = 0
     actor: str = ""
     owners: list[str] = field(default_factory=list)
+    end_line: int = 0
 
 
 @dataclass

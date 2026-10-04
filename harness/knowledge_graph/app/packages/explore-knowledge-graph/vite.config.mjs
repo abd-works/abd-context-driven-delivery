@@ -11,7 +11,7 @@ export default defineConfig({
     port: uiPort,
     strictPort: true,
     fs: {
-      allow: ['..', '../../..', '../../../legacy/app'],
+      allow: ['..', '../../..'],
     },
     proxy: {
       '/api': {

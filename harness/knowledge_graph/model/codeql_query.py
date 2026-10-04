@@ -22,7 +22,10 @@ from .codeql_export import (
 )
 
 _SKIP_DIRS = {"node_modules", ".git", "dist", "build", "__pycache__", ".codeql", ".kilo"}
-_STORY_FILE = re.compile(r".+_story\.(test|spec)\.[jt]sx?$")
+_STORY_FILE = re.compile(
+    r".+(?:_story\.(?:test|spec)|\.story\.(?:shared|domain\.spec|server\.spec|playwright))\.[jt]sx?$"
+)
+_STORY_HELPERS = {"story-test.ts", "story-playwright.ts"}
 _EXAMPLE_FILE = re.compile(r".+\.examples\.ts$")
 _EXPORT = re.compile(r"^export const (\w+)\s*=", re.M)
 _NAMED_IMPORT = re.compile(
@@ -30,7 +33,7 @@ _NAMED_IMPORT = re.compile(
     re.M,
 )
 _NEW_CLASS = re.compile(r"\bnew\s+([A-Z][A-Za-z0-9_]*)")
-_CALL_NAMES = {"story", "scenario", "background", "given", "when", "then", "and", "but"}
+_CALL_NAMES = {"story", "shareStory", "scenario", "background", "given", "when", "then", "and", "but"}
 _CHAIN_NAMES = {"and", "but"}
 _KEYWORD = {
     "given": "Given",
@@ -106,7 +109,7 @@ class StorySourceQuery:
         examples: List[CodeQLExampleExport] = []
         for path in sorted(self._iter_files(), key=lambda item: self._rel(item)):
             rel = self._rel(path)
-            if _STORY_FILE.match(path.name) and path.name != "story-test.ts":
+            if _STORY_FILE.match(path.name) and path.name not in _STORY_HELPERS:
                 s, sc, bg, st = self._query_story_file(path, rel)
                 stories.extend(s)
                 scenarios.extend(sc)
@@ -140,7 +143,7 @@ class StorySourceQuery:
         epic = owners[0] if owners else ""
         sub_epic = owners[-1] if len(owners) > 1 else ""
         self._epic_by_file[rel] = epic
-        self._story_calls = [c for c in calls if c.name == "story" and c.text]
+        self._story_calls = [c for c in calls if c.name in {"story", "shareStory"} and c.text]
         self._scenario_calls = [c for c in calls if c.name == "scenario" and c.text]
         self._background_calls = [c for c in calls if c.name == "background"]
         stories = [
@@ -152,6 +155,7 @@ class StorySourceQuery:
                 line=c.line,
                 actor=self._actor_before(c.start),
                 owners=list(owners),
+                end_line=self._body_end_line(c),
             )
             for c in self._story_calls
         ]
@@ -189,14 +193,14 @@ class StorySourceQuery:
     def _backgrounds(self) -> List[CodeQLBackground]:
         backgrounds: List[CodeQLBackground] = []
         for call in self._background_calls:
-            end_line = self._source[: max(call.body_end, call.start)].count("\n") + 1
+            end_line = self._body_end_line(call)
             scenario_name = ""
             for scenario in self._scenario_calls:
                 if scenario.contains(call.start):
                     scenario_name = scenario.text
             backgrounds.append(
                 CodeQLBackground(
-                    call.text or "background",
+                    "background" if call.text in {"each", "all", ""} else (call.text or "background"),
                     self._story_for(call.start),
                     self._file,
                     line=call.line,
@@ -364,7 +368,9 @@ class StorySourceQuery:
                 scenario_name = scenario.text
         for background in self._background_calls:
             if background.contains(pos):
-                return scenario_name, background.text or "background"
+                return scenario_name, (
+                    "background" if background.text in {"each", "all", ""} else (background.text or "background")
+                )
         if scenario_name:
             return scenario_name, ""
         return "", ""
@@ -540,7 +546,7 @@ class StorySourceQuery:
 
     def _attach_bodies(self, calls: List[_Call]) -> None:
         for call in calls:
-            if call.name not in {"story", "scenario", "background", "given", "when", "then", "and", "but"}:
+            if call.name not in {"story", "shareStory", "scenario", "background", "given", "when", "then", "and", "but"}:
                 continue
             span = self._callback_body_span(call.start)
             if span is None:

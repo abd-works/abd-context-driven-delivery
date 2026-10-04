@@ -87,6 +87,7 @@ export function collectFoldMembers(nodes: FoldNode[]): FoldMember[] {
   const visit = (node: FoldNode, owner: string, parentIsClass: boolean) => {
     const kind = node.nodeType?.name ?? "";
     const isClass = CLASS_KINDS.has(kind);
+    const grouped = kind === "FieldGroup";
     if ((kind === "Operation" || kind === "Property" || isClass) && node.nodeId) {
       const existing = seen.get(node.nodeId);
       const realOwner = isClass ? "" : parentIsClass ? owner : (existing?.owner ?? "");
@@ -117,7 +118,7 @@ export function collectFoldMembers(nodes: FoldNode[]): FoldMember[] {
     }
     const nextOwner = isClass ? node.name : owner;
     for (const child of node.children ?? []) {
-      visit(child, nextOwner, isClass);
+      visit(child, nextOwner, isClass || (grouped && parentIsClass));
     }
   };
   for (const node of nodes) {

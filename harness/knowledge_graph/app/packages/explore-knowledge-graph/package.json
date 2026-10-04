@@ -7,6 +7,7 @@
     ".": "./ExploreKnowledgeGraphView.tsx",
     "./app": "./app.ts",
     "./knowledge-graph": "./knowledge-graph/knowledge-graph.ts",
+    "./knowledge-graph/knowledge-graph-node": "./knowledge-graph/knowledge-graph-node.ts",
     "./knowledge-graph/knowledge-graph-server": "./knowledge-graph/knowledge-graph-server.ts",
     "./knowledge-graph/knowledge-graph-client": "./knowledge-graph/knowledge-graph-client.ts"
   },

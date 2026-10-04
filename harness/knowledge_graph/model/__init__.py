@@ -1,4 +1,4 @@
-"""CodeQL infrastructure. Replaced graph types live under legacy/."""
+"""CodeQL infrastructure. Practice graph loaders live under legacy/model."""
 
 from .codeql import CodeQL, CodeQLRunError, Rows
 

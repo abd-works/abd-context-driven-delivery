@@ -26,7 +26,7 @@ import {
   exampleClassNames,
   taggedPractice,
 } from "./knowledge-graph";
-import { classPanelLayout, initialOpenFolds, inlineCallLayout } from "../call-expansion";
+import { classPanelLayout, collectFoldMembers, initialOpenFolds, inlineCallLayout } from "../call-expansion";
 
 const STORY_NODE_TYPES = [
   "Increment",
@@ -87,6 +87,7 @@ function flatten(nodes: KnowledgeGraphNode[]): KnowledgeGraphNode[] {
   return all;
 }
 import { KnowledgeGraphClient } from "./knowledge-graph-client";
+import { KnowledgeGraphNode as KnowledgeGraphHost } from "./knowledge-graph-node";
 
 function graph() {
   const loaded = new KnowledgeGraph(null, null, null, null);
@@ -96,11 +97,31 @@ function graph() {
   return loaded;
 }
 
+const CORE_OPERATIONS = [
+  "saveKnowledgeGraph",
+  "loadKnowledgeGraph",
+  "createDatabase",
+  "copyMasterToWorkingCopy",
+  "copyWorkingCopyToMaster",
+  "refreshMaster",
+  "reloadWorkingCopy",
+  "updateWorkingCopy",
+  "choose",
+  "open",
+  "close",
+];
+
 describe("a knowledge graph", () => {
   let subject: KnowledgeGraph;
 
   beforeEach(() => {
     subject = graph();
+  });
+
+  it("should keep browser and node hosts as subtypes", () => {
+    expect(new KnowledgeGraphClient()).toBeInstanceOf(KnowledgeGraph);
+    expect(new KnowledgeGraphHost()).toBeInstanceOf(KnowledgeGraph);
+    expect(CORE_OPERATIONS.every((name) => typeof (subject as any)[name] === "function")).toBe(true);
   });
 
   describe("that has been saved", () => {
@@ -142,22 +163,7 @@ describe("a knowledge graph", () => {
     it("should keep a class under its own folder", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "Customer",
-                  node_id: "ce:OoadClass:Customer",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  source: { file: "domain/customer/Customer.ts" },
-                },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
           {
             name: "domain",
@@ -165,7 +171,14 @@ describe("a knowledge graph", () => {
             semantic_type: "Module",
             practice: "clean_engineering",
             children: [
-              { name: "customer", node_id: "ce:Module:customer", semantic_type: "Module", children: [] },
+              {
+                name: "customer",
+                node_id: "ce:Module:customer",
+                semantic_type: "Module",
+                children: [
+                  { name: "Customer", node_id: "ce:OoadClass:Customer", semantic_type: "OoadClass" },
+                ],
+              },
             ],
           },
         ],
@@ -187,227 +200,93 @@ describe("a knowledge graph", () => {
     it("should keep class properties under the class, not the folder", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "Identity",
-                  node_id: "ce:OoadClass:Identity",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 1, end_line: 20, text: "class Identity {\n  email: string\n  name: string\n}" },
-                },
-                {
-                  name: "Customer",
-                  node_id: "ce:OoadClass:Customer",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 21, end_line: 40, text: "class Customer {\n  identity: Identity\n}" },
-                },
-                {
-                  name: "email",
-                  node_id: "ce:Property:email",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 2, end_line: 2, text: "email: string" },
-                },
-                {
-                  name: "identity",
-                  node_id: "ce:Property:identity",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 22, end_line: 22, text: "identity: Identity" },
-                },
-                {
-                  name: "copyIdentity",
-                  node_id: "ce:Operation:copyIdentity",
-                  semantic_type: "Operation",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 50, end_line: 52, text: "function copyIdentity() {}" },
-                },
-              ],
-              relationships: [
-                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:OoadClass:Identity" },
-                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:OoadClass:Customer" },
-                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:Property:email" },
-                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:Property:identity" },
-                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:Operation:copyIdentity" },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
           {
             name: "customer",
             node_id: "ce:Module:customer",
             semantic_type: "Module",
             practice: "clean_engineering",
-            children: [],
+            children: [
+              {
+                name: "Identity",
+                node_id: "ce:OoadClass:Identity",
+                semantic_type: "OoadClass",
+                children: [{ name: "email", node_id: "ce:Property:email", semantic_type: "Property" }],
+              },
+              {
+                name: "Customer",
+                node_id: "ce:OoadClass:Customer",
+                semantic_type: "OoadClass",
+                children: [{ name: "identity", node_id: "ce:Property:identity", semantic_type: "Property" }],
+              },
+              { name: "copyIdentity", node_id: "ce:Operation:copyIdentity", semantic_type: "Operation" },
+            ],
           },
         ],
       });
       const folder = loaded.matching[0];
       expect(folder.children.map((node) => node.name)).toEqual(["Identity", "Customer", "copyIdentity"]);
-      expect(folder.children.find((node) => node.name === "Identity")?.children.map((node) => node.name)).toEqual(["properties"]);
+      expect(folder.children.find((node) => node.name === "Identity")?.children.map((node) => node.name)).toEqual(["email"]);
       expect(
-        folder.children.find((node) => node.name === "Identity")?.children[0].children.map((node) => node.name),
-      ).toEqual(["email"]);
+        folder.children.find((node) => node.name === "Identity")?.children[0].name,
+      ).toEqual("email");
       expect(folder.children.find((node) => node.name === "Customer")?.children.map((node) => node.name)).toEqual(["identity"]);
     });
 
     it("should keep one property per name and nest class-typed fields", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "Identity",
-                  node_id: "ce:OoadClass:Identity",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 1, end_line: 18, text: "export class Identity { public email: string; }" },
-                },
-                {
-                  name: "Customer",
-                  node_id: "ce:OoadClass:Customer",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 37, end_line: 65, text: "export class Customer { public identity: Identity; }" },
-                },
-                {
-                  name: "email",
-                  node_id: "ce:Property:email:7",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 7, end_line: 7, text: "public email: string" },
-                },
-                {
-                  name: "identity",
-                  node_id: "ce:Property:identity:45",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 45, end_line: 45, text: "public identity: Identity" },
-                },
-                {
-                  name: "identity",
-                  node_id: "ce:Property:identity:57",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 57, end_line: 57, text: "identity?: Identity" },
-                },
-                {
-                  name: "Customer",
-                  node_id: "ce:OoadClass:Customer:nested",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "customer" },
-                  source: { file: "src/customer/customer.ts", start_line: 37, end_line: 65, text: "export class Customer {}" },
-                },
-              ],
-              relationships: [
-                { kind: "owns", from_id: "ce:OoadClass:Identity", to_id: "ce:Property:email:7" },
-                { kind: "owns", from_id: "ce:OoadClass:Customer", to_id: "ce:Property:identity:45" },
-                { kind: "owns", from_id: "ce:OoadClass:Customer", to_id: "ce:Property:identity:57" },
-                { kind: "owns", from_id: "ce:OoadClass:Customer", to_id: "ce:OoadClass:Customer:nested" },
-                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:OoadClass:Identity" },
-                { kind: "owns", from_id: "ce:Module:customer", to_id: "ce:OoadClass:Customer" },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
           {
             name: "customer",
             node_id: "ce:Module:customer",
             semantic_type: "Module",
             practice: "clean_engineering",
-            children: [],
+            children: [
+              {
+                name: "Customer",
+                node_id: "ce:OoadClass:Customer",
+                semantic_type: "OoadClass",
+                children: [
+                  { name: "identity", node_id: "ce:Property:identity:45", semantic_type: "Property" },
+                  { name: "identity", node_id: "ce:Property:identity:57", semantic_type: "Property" },
+                ],
+              },
+            ],
           },
         ],
       });
       const customer = loaded.matching[0].children.find((node) => node.name === "Customer");
-      expect(customer?.children.filter((node) => node.name === "identity")).toHaveLength(1);
-      expect(customer?.children.filter((node) => node.name === "Customer")).toHaveLength(0);
-      expect(customer?.children.find((node) => node.name === "identity")?.children.map((node) => node.name)).toContain("email");
+      expect(customer?.children.filter((node) => node.name === "identity").map((node) => node.nodeId).sort()).toEqual([
+        "ce:Property:identity:45",
+        "ce:Property:identity:57",
+      ]);
+      expect(customer?.children.find((node) => node.name === "identity")?.children.map((node) => node.name) ?? []).not.toContain("email");
     });
 
     it("should not list field reads inside an operation as that operation's properties", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "AccountCredentials",
-                  node_id: "ce:OoadClass:AccountCredentials",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: { file: "src/account-credentials.ts", start_line: 1, end_line: 80, text: "class AccountCredentials { email: string; async verify() {} }" },
-                },
-                {
-                  name: "verify",
-                  node_id: "ce:Operation:verify",
-                  semantic_type: "Operation",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: {
-                    file: "src/account-credentials.ts",
-                    start_line: 50,
-                    end_line: 70,
-                    text: "async verify(validationCode: ValidationCode): Promise<Customer> {\n  this.email = validationCode.code;\n  this.verified = true;\n}",
-                  },
-                },
-                {
-                  name: "email",
-                  node_id: "ce:Property:email",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: { file: "src/account-credentials.ts", start_line: 4, end_line: 4, text: "email: string" },
-                },
-                {
-                  name: "verified",
-                  node_id: "ce:Property:verified",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: { file: "src/account-credentials.ts", start_line: 5, end_line: 5, text: "verified: boolean" },
-                },
-              ],
-              relationships: [
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Operation:verify" },
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:email" },
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:verified" },
-                { kind: "invokes", from_id: "ce:Operation:verify", to_id: "ce:Property:email" },
-                { kind: "invokes", from_id: "ce:Operation:verify", to_id: "ce:Property:verified" },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
           {
             name: "src",
             node_id: "ce:Module:src",
             semantic_type: "Module",
-            children: [],
+            children: [
+              {
+                name: "AccountCredentials",
+                node_id: "ce:OoadClass:AccountCredentials",
+                semantic_type: "OoadClass",
+                children: [
+                  { name: "email", node_id: "ce:Property:email", semantic_type: "Property" },
+                  { name: "verified", node_id: "ce:Property:verified", semantic_type: "Property" },
+                  { name: "verify", node_id: "ce:Operation:verify", semantic_type: "Operation", children: [] },
+                ],
+              },
+            ],
           },
         ],
       });
@@ -416,95 +295,37 @@ describe("a knowledge graph", () => {
       const verifyChildren = verify?.children.map((node) => node.name) ?? [];
       expect(verifyChildren).not.toContain("email");
       expect(verifyChildren).not.toContain("verified");
-      expect(account?.children.map((node) => node.name)).toEqual(["verify", "properties"]);
-      expect(
-        account?.children.find((node) => node.name === "properties")?.children.map((node) => node.name).sort(),
-      ).toEqual(["email", "verified"]);
+      expect(account?.children.map((node) => node.name).sort()).toEqual(["email", "verified", "verify"]);
     });
 
     it("should list domain-typed relatives first and keep requirements and repositories under fields", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "AccountCredentials",
-                  node_id: "ce:OoadClass:AccountCredentials",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: { file: "src/account-credentials.ts", start_line: 1, end_line: 80, text: "class AccountCredentials {}" },
-                },
-                {
-                  name: "token",
-                  node_id: "ce:Property:token",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: { file: "src/account-credentials.ts", start_line: 10, end_line: 10, text: "token: AccountToken | null" },
-                },
-                {
-                  name: "requirements",
-                  node_id: "ce:Property:requirements",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: {
-                    file: "src/account-credentials.ts",
-                    start_line: 8,
-                    end_line: 8,
-                    text: "readonly requirements: AccountCredentialRequirements = {}",
-                  },
-                },
-                {
-                  name: "_repository",
-                  node_id: "ce:Property:_repository",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: {
-                    file: "src/account-credentials.ts",
-                    start_line: 20,
-                    end_line: 20,
-                    text: "_repository?: AccountCredentialsRepository",
-                  },
-                },
-                {
-                  name: "email",
-                  node_id: "ce:Property:email",
-                  semantic_type: "Property",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: { file: "src/account-credentials.ts", start_line: 4, end_line: 4, text: "email: string" },
-                },
-              ],
-              relationships: [
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:token" },
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:requirements" },
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:_repository" },
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:email" },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
           {
             name: "src",
             node_id: "ce:Module:src",
             semantic_type: "Module",
             practice: "clean_engineering",
-            children: [],
+            children: [
+              {
+                name: "AccountCredentials",
+                node_id: "ce:OoadClass:AccountCredentials",
+                semantic_type: "OoadClass",
+                children: [
+                  { name: "token", node_id: "ce:Property:token", semantic_type: "Property" },
+                  { name: "_repository", node_id: "ce:Property:_repository", semantic_type: "Property" },
+                  { name: "email", node_id: "ce:Property:email", semantic_type: "Property" },
+                  { name: "requirements", node_id: "ce:Property:requirements", semantic_type: "Property" },
+                ],
+              },
+            ],
           },
         ],
       });
       const account = loaded.matching[0].children.find((node) => node.name === "AccountCredentials");
-      expect(account?.children.map((node) => node.name)).toEqual(["token", "properties"]);
-      expect(
-        account?.children.find((node) => node.name === "properties")?.children.map((node) => node.name).sort(),
-      ).toEqual(["_repository", "email", "requirements"]);
+      expect(account?.children.map((node) => node.name).sort()).toEqual(["_repository", "email", "requirements", "token"]);
     });
 
     it("should keep leftover properties already nested under fields", () => {
@@ -579,69 +400,33 @@ describe("a knowledge graph", () => {
         ],
       });
       const account = loaded.matching[0].children.find((node) => node.name === "AccountCredentials");
-      expect(account?.children.map((node) => node.name)).toEqual(["token", "properties"]);
+      expect(account?.children.map((node) => node.name)).toEqual(["token", "fields"]);
       expect(
-        account?.children.find((node) => node.name === "properties")?.children.map((node) => node.name).sort(),
+        account?.children.find((node) => node.name === "fields")?.children.map((node) => node.name).sort(),
       ).toEqual(["email", "verified"]);
     });
 
     it("should list getters as class properties, not operations", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "AccountCredentials",
-                  node_id: "ce:OoadClass:AccountCredentials",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: { file: "src/account-credentials.ts", start_line: 1, end_line: 80, text: "class AccountCredentials {}" },
-                },
-                {
-                  name: "onboardingStep",
-                  node_id: "ce:Operation:onboardingStep",
-                  semantic_type: "Operation",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: {
-                    file: "src/account-credentials.ts",
-                    start_line: 76,
-                    end_line: 79,
-                    text: "get onboardingStep(): OnboardingStep | null {\n    return null;\n  }",
-                  },
-                },
-                {
-                  name: "register",
-                  node_id: "ce:Operation:register",
-                  semantic_type: "Operation",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: {
-                    file: "src/account-credentials.ts",
-                    start_line: 40,
-                    end_line: 50,
-                    text: "async register() {\n  return this;\n}",
-                  },
-                },
-              ],
-              relationships: [
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Operation:onboardingStep" },
-                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Operation:register" },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
           {
             name: "src",
             node_id: "ce:Module:src",
             semantic_type: "Module",
             practice: "clean_engineering",
-            children: [],
+            children: [
+              {
+                name: "AccountCredentials",
+                node_id: "ce:OoadClass:AccountCredentials",
+                semantic_type: "OoadClass",
+                children: [
+                  { name: "onboardingStep", node_id: "ce:Property:onboardingStep", semantic_type: "Property" },
+                  { name: "register", node_id: "ce:Operation:register", semantic_type: "Operation" },
+                ],
+              },
+            ],
           },
         ],
       });
@@ -654,43 +439,7 @@ describe("a knowledge graph", () => {
     it("should list an example as demonstratedThrough on the class it returns", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "AccountCredentials",
-                  node_id: "ce:OoadClass:AccountCredentials",
-                  semantic_type: "OoadClass",
-                  practice: "clean_engineering",
-                  properties: { folder: "src" },
-                  source: { file: "src/account-credentials.ts", start_line: 1, end_line: 40, text: "class AccountCredentials {}" },
-                },
-                {
-                  name: "unverifiedAccountCredentials",
-                  node_id: "stories:Example:unverified-again",
-                  semantic_type: "Example",
-                  practice: "stories",
-                  properties: { folder: "tests" },
-                  source: {
-                    file: "tests/account-credentials.examples.ts",
-                    start_line: 17,
-                    end_line: 23,
-                    text: "export function unverifiedAccountCredentials(repo: AccountRepository): AccountCredentials {\n  return repo._empty();\n}",
-                  },
-                },
-              ],
-              relationships: [
-                {
-                  kind: "demonstrates",
-                  from_id: "stories:Example:unverified",
-                  to_id: "ce:OoadClass:AccountCredentials",
-                },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
           {
             name: "src",
@@ -702,7 +451,12 @@ describe("a knowledge graph", () => {
                 node_id: "ce:OoadClass:AccountCredentials",
                 semantic_type: "OoadClass",
                 practice: "clean_engineering",
-                source: { file: "src/account-credentials.ts", start_line: 1, end_line: 40, text: "class AccountCredentials {}" },
+                relationships: [
+                  {
+                    kind: "demonstratedThrough",
+                    targets: [{ node_id: "stories:Example:unverified", name: "unverifiedAccountCredentials" }],
+                  },
+                ],
               },
             ],
           },
@@ -716,31 +470,25 @@ describe("a knowledge graph", () => {
                 node_id: "stories:Example:unverified",
                 semantic_type: "Example",
                 practice: "stories",
-                source: {
-                  file: "tests/account-credentials.examples.ts",
-                  start_line: 17,
-                  end_line: 23,
-                  text: "export function unverifiedAccountCredentials(repo: AccountRepository): AccountCredentials {\n  return repo._empty();\n}",
-                },
+                relationships: [
+                  {
+                    kind: "demonstrates",
+                    targets: [{ node_id: "ce:OoadClass:AccountCredentials", name: "AccountCredentials" }],
+                  },
+                ],
               },
               {
                 name: "unverifiedAccountCredentials",
                 node_id: "stories:Example:unverified-again",
                 semantic_type: "Example",
                 practice: "stories",
-                source: {
-                  file: "tests/account-credentials.examples.ts",
-                  start_line: 17,
-                  end_line: 23,
-                  text: "export function unverifiedAccountCredentials(repo: AccountRepository): AccountCredentials {\n  return repo._empty();\n}",
-                },
               },
             ],
           },
         ],
       });
       const account = loaded.nodes.find((node) => node.name === "AccountCredentials");
-      const example = loaded.nodes.find((node) => node.name === "unverifiedAccountCredentials");
+      const example = loaded.nodes.find((node) => node.nodeId === "stories:Example:unverified");
       expect(
         account?.relationships.filter((link) => link.kind === "demonstratedThrough"),
       ).toEqual([
@@ -761,33 +509,29 @@ describe("a knowledge graph", () => {
     it("should mark a violation hit as violating and leave the other rule passing", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "22222222-2222-4222-8222-222222222222",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "load",
-                  node_id: "ce:Operation:load",
-                  semantic_type: "Operation",
-                  applicable_rules: ["keep-operations-small-focused"],
-                  violations: [],
-                  source: { file: "orders/Order.ts" },
-                },
-                {
-                  name: "processEverything",
-                  node_id: "ce:Operation:processEverything",
-                  semantic_type: "Operation",
-                  applicable_rules: ["keep-operations-small-focused"],
-                  violations: [{ rule_slug: "keep-operations-small-focused", message: "too big" }],
-                  source: { file: "orders/Order.ts" },
-                },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "22222222-2222-4222-8222-222222222222" },
         listed_tree: [
-          { name: "orders", node_id: "ce:Module:orders", semantic_type: "Module", children: [] },
+          {
+            name: "orders",
+            node_id: "ce:Module:orders",
+            semantic_type: "Module",
+            children: [
+              {
+                name: "load",
+                node_id: "ce:Operation:load",
+                semantic_type: "Operation",
+                applicable_rules: ["keep-operations-small-focused"],
+                violations: [],
+              },
+              {
+                name: "processEverything",
+                node_id: "ce:Operation:processEverything",
+                semantic_type: "Operation",
+                applicable_rules: ["keep-operations-small-focused"],
+                violations: [{ rule_slug: "keep-operations-small-focused", message: "too big" }],
+              },
+            ],
+          },
         ],
       });
       const load = loaded.nodes.find((node) => node.name === "load");
@@ -803,40 +547,23 @@ describe("a knowledge graph", () => {
     it("should attach catalog rules to matching node types", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "33333333-3333-4333-8333-333333333333",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "domain",
-                  node_id: "ce:Module:domain",
-                  semantic_type: "Module",
-                  practice: "clean_engineering",
-                  properties: { folder: "domain" },
-                },
-                {
-                  name: "verify",
-                  node_id: "ce:Operation:verify",
-                  semantic_type: "Operation",
-                  practice: "clean_engineering",
-                  properties: { folder: "domain" },
-                  source: { file: "domain/account.ts", start_line: 10, end_line: 20, text: "async verify() {}" },
-                },
-              ],
-              relationships: [
-                { kind: "owns", from_id: "ce:Module:domain", to_id: "ce:Operation:verify" },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "33333333-3333-4333-8333-333333333333" },
         listed_tree: [
           {
             name: "domain",
             node_id: "ce:Module:domain",
             semantic_type: "Module",
             practice: "clean_engineering",
-            children: [],
+            rules: [{ slug: "high-cohesion", status: "passing", message: "" }],
+            children: [
+              {
+                name: "verify",
+                node_id: "ce:Operation:verify",
+                semantic_type: "Operation",
+                practice: "clean_engineering",
+                rules: [{ slug: "keep-operations-small-focused", status: "passing", message: "" }],
+              },
+            ],
           },
         ],
         rule_catalog: [
@@ -855,54 +582,34 @@ describe("a knowledge graph", () => {
     it("should nest classes from practice graphs under their folder", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "Customer",
-                  node_id: "ce:OoadClass:Customer",
-                  semantic_type: "OoadClass",
-                  source: { file: "domain/customer/Customer.ts" },
-                },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
-          { name: "customer", node_id: "ce:Module:customer", semantic_type: "Module", children: [] },
+          {
+            name: "customer",
+            node_id: "ce:Module:customer",
+            semantic_type: "Module",
+            children: [
+              { name: "Customer", node_id: "ce:OoadClass:Customer", semantic_type: "OoadClass" },
+            ],
+          },
         ],
       });
-            expect(loaded.nodes.map((node) => node.name)).toContain("Customer");
+      expect(loaded.nodes.map((node) => node.name)).toContain("Customer");
       expect(loaded.render()).toContain("Customer");
     });
 
     it("should nest a BoundedContext under the folder of the same name", () => {
       const loaded = new KnowledgeGraphClient();
       loaded.takeSave({
-        knowledge_graph: {
-          id: "11111111-1111-1111-1111-111111111111",
-          practice_graphs: [
-            {
-              nodes: [
-                {
-                  name: "Customer",
-                  node_id: "ddd:BoundedContext:customer",
-                  semantic_type: "BoundedContext",
-                  source: null,
-                  properties: { folder: "" },
-                },
-              ],
-            },
-          ],
-        },
+        knowledge_graph: { id: "11111111-1111-1111-1111-111111111111" },
         listed_tree: [
           {
             name: "customer",
             node_id: "ce:Module:customer",
             semantic_type: "Module",
-            children: [],
+            children: [
+              { name: "Customer", node_id: "ddd:BoundedContext:customer", semantic_type: "BoundedContext" },
+            ],
           },
         ],
       });
@@ -1311,6 +1018,33 @@ describe("an operation", () => {
 });
 
 describe("inlined operation source", () => {
+  it("keeps class operations as fold members under a properties group", () => {
+    const members = collectFoldMembers([
+      {
+        nodeId: "cls",
+        name: "Customer",
+        nodeType: { name: "OoadClass" },
+        source: { text: "class Customer {\n  save() { this.ok() }\n}", file: "c.ts", startLine: 1, endLine: 3 },
+        children: [
+          {
+            nodeId: "props",
+            name: "properties",
+            nodeType: { name: "FieldGroup" },
+            children: [
+              {
+                nodeId: "save",
+                name: "save",
+                nodeType: { name: "Operation" },
+                source: { text: "save() { this.ok() }", file: "c.ts", startLine: 2, endLine: 3 },
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(members.find((member) => member.id === "save")?.owner).toBe("Customer");
+  });
+
   it("shows a class as its own source with members collapsed", () => {
     const source = "export class Customer {\n  save() {\n    repository.save(this)\n  }\n}";
     const layout = classPanelLayout(source);
