@@ -42,6 +42,10 @@ const CLASS_KINDS = new Set([
   "EntityRoot",
   "ValueObject",
   "Aggregate",
+  "Repository",
+  "DomainEvent",
+  "DomainService",
+  "Specification",
 ]);
 
 export type FoldNode = {
@@ -66,11 +70,17 @@ export type FoldMember = {
 
 type ClassBody = { id: string; name: string; text: string };
 type CallBody = { id: string; member: string; label: string; text: string; types: ClassBody[] };
-type CallFold = { start: number; end: number; kind: "call" | "class" };
+type CallFold = { start: number; end: number; kind: "call" | "class" | "block"; member?: boolean; listed?: boolean };
 
-export type InlineFold = { start: number; end: number; kind: "call" | "class"; glyph: number };
+export type InlineFold = { start: number; end: number; kind: "call" | "class" | "block"; glyph: number; member?: boolean; listed?: boolean };
 
-export type InlineLayout = { text: string; folds: InlineFold[]; lineNumbers: string[] };
+export function initialOpenFolds(folds: InlineFold[]): number[] {
+  return folds
+    .filter((fold) => fold.kind === "block" && !fold.member)
+    .map((fold) => fold.start);
+}
+
+export type InlineLayout = { text: string; folds: InlineFold[]; lineNumbers: string[]; depths: number[] };
 
 export function collectFoldMembers(nodes: FoldNode[]): FoldMember[] {
   const seen = new Map<string, FoldMember>();
@@ -114,6 +124,94 @@ export function collectFoldMembers(nodes: FoldNode[]): FoldMember[] {
     visit(node, "", false);
   }
   return [...seen.values()];
+}
+
+export function classPanelLayout(text: string, folds: InlineFold[] = []): InlineLayout {
+  const lines = text ? text.split("\n") : [""];
+  return {
+    text,
+    folds: [...folds, ...braceFolds(text)],
+    lineNumbers: lines.map((_, index) => String(index + 1)),
+    depths: lines.map(() => 0),
+  };
+}
+
+function isMemberHead(line: string): boolean {
+  const trimmed = line.trim();
+  if (/^(if|for|while|switch|catch|else|try|do|return|throw)\b/.test(trimmed)) {
+    return false;
+  }
+  if (/=>\s*\{/.test(trimmed) && !/^(public|private|protected|readonly|static|async|get|set|export)\b/.test(trimmed)) {
+    return false;
+  }
+  return /[{]/.test(trimmed);
+}
+
+function braceFolds(text: string): InlineFold[] {
+  const lines = text.split("\n");
+  const folds: InlineFold[] = [];
+  const classLine = /^\s*(export\s+)?(abstract\s+)?class\s+/;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (classLine.test(lines[index]) || braceDepth(lines[index]) <= 0) {
+      continue;
+    }
+    const end = blockEnd(lines, index);
+    if (end <= index) {
+      continue;
+    }
+    folds.push({
+      glyph: index + 1,
+      start: index + 2,
+      end: end + 1,
+      kind: "block",
+      member: isMemberHead(lines[index]),
+    });
+  }
+  return folds;
+}
+
+function braceDepth(line: string): number {
+  return scanBraces(line, 0).depth;
+}
+
+function blockEnd(lines: string[], start: number): number {
+  let depth = 0;
+  let quote = "";
+  for (let line = start; line < lines.length; line += 1) {
+    const scanned = scanBraces(lines[line], depth, quote);
+    depth = scanned.depth;
+    quote = scanned.quote;
+    if (line > start && depth === 0) {
+      return line;
+    }
+  }
+  return start;
+}
+
+function scanBraces(line: string, depth: number, quote = ""): { depth: number; quote: string } {
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (quote) {
+      if (char === "\\") {
+        index += 1;
+        continue;
+      }
+      if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === "'" || char === '"' || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+    }
+  }
+  return { depth, quote };
 }
 
 export function inlineCallLayout(
@@ -163,6 +261,7 @@ export function inlineCallLayout(
   return {
     text: layout.text,
     lineNumbers: layout.lineNumbers,
+    depths: layout.depths,
     folds: layout.folds
       .filter((fold) => fold.end > fold.start)
       .map((fold) => ({
@@ -170,6 +269,8 @@ export function inlineCallLayout(
         start: fold.start + 1,
         end: fold.end,
         kind: fold.kind,
+        member: fold.member,
+        listed: fold.listed,
       })),
   };
 }
@@ -223,7 +324,7 @@ function callCatalog(members: FoldMember[], classes: Map<string, ClassBody>, own
     if (member.kind !== "Operation" && member.kind !== "Property") {
       continue;
     }
-    if (!member.text) {
+    if (!member.text || isSimpleProperty(member.text)) {
       continue;
     }
     const key = memberKey(member.owner, member.name);
@@ -286,76 +387,140 @@ function displayedCallSource(
   listClasses: boolean,
   namedCalls: CallBody[] = [],
   namedClasses: ClassBody[] = [],
-): { text: string; folds: CallFold[]; lineNumbers: string[] } {
+  hold: Set<string> = new Set(),
+  seenClasses: Set<string> = new Set(),
+): { text: string; folds: CallFold[]; lineNumbers: string[]; depths: number[] } {
   const folds: CallFold[] = [];
   const lineNumbers: string[] = [];
+  const depths: number[] = [];
   const output: string[] = [];
+  const nest = Math.max(0, depth - 1);
+  const frames: { at: number; openedTo: number; member: boolean }[] = [];
+  let brace = 0;
+  let quote = "";
+  const classDecl = /^\s*(export\s+)?(abstract\s+)?class\s+/;
   text.split("\n").forEach((line, index) => {
     output.push(line);
     lineNumbers.push(String(index + 1));
-    if (depth >= MAX_DEPTH) {
-      return;
+    depths.push(nest);
+    const sourceLine = output.length;
+    const before = brace;
+    const scanned = scanBraces(line, brace, quote);
+    brace = scanned.depth;
+    quote = scanned.quote;
+    if (!classDecl.test(line)) {
+      const member = isMemberHead(line);
+      for (let next = before + 1; next <= brace; next += 1) {
+        frames.push({ at: sourceLine, openedTo: next, member: member && next === before + 1 });
+      }
     }
-    const calls = callsOnLine(line, bodies, stack);
-    if (index === 0) {
-      for (const call of anchored) {
-        if (!calls.some((listed) => listed.id === call.id)) {
+    if (depth < MAX_DEPTH) {
+      const calls = callsOnLine(line, bodies, stack);
+      if (index === 0) {
+        for (const call of anchored) {
+          if (!calls.some((listed) => listed.id === call.id)) {
+            calls.push(call);
+          }
+        }
+      }
+      for (const call of namedCalls) {
+        if (wordHas(line, call.member) && !calls.some((listed) => listed.id === call.id) && !stack.includes(call.id)) {
           calls.push(call);
         }
       }
-    }
-    for (const call of namedCalls) {
-      if (wordHas(line, call.member) && !calls.some((listed) => listed.id === call.id) && !stack.includes(call.id)) {
-        calls.push(call);
+      const fromCalls = typesOn(calls);
+      const mentioned = known.filter(
+        (type) =>
+          !stack.includes(type.id) &&
+          !fromCalls.some((listed) => listed.id === type.id) &&
+          mentionsType(line, type.name),
+      );
+      for (const type of namedClasses) {
+        if (wordHas(line, type.name) && !fromCalls.some((listed) => listed.id === type.id) && !mentioned.some((listed) => listed.id === type.id)) {
+          mentioned.push(type);
+        }
+      }
+      const listedIds = new Set([...fromCalls, ...mentioned].map((type) => type.id));
+      const extras = index === 0 && listClasses ? known.filter((type) => !listedIds.has(type.id)) : [];
+      const constructed = typesConstructed(line, known);
+      const listedTypes = [...fromCalls, ...mentioned, ...extras, ...constructed].filter(
+        (type, typeIndex, all) =>
+          all.findIndex((item) => item.id === type.id) === typeIndex &&
+          (!hold.has(type.id) || constructed.some((item) => item.id === type.id)),
+      );
+      const pad = `${indentOf(line)}    `;
+      const callLine = output.length;
+      const held = new Set(listedTypes.map((type) => type.id));
+      for (const call of calls) {
+        appendOperation(output, lineNumbers, depths, folds, call, bodies, depth, stack, pad, known, held, seenClasses);
+      }
+      for (const type of listedTypes) {
+        appendClass(
+          output,
+          lineNumbers,
+          depths,
+          folds,
+          type,
+          pad,
+          stack,
+          depth,
+          seenClasses,
+          constructed.some((item) => item.id === type.id),
+        );
+      }
+      if ((calls.length > 0 || listedTypes.length > 0) && output.length > callLine) {
+        folds.push({
+          start: callLine,
+          end: output.length,
+          kind: calls.length > 0 ? "call" : "class",
+          listed: calls.length === 0,
+        });
       }
     }
-    const fromCalls = typesOn(calls);
-    const mentioned = known.filter(
-      (type) =>
-        !stack.includes(type.id) &&
-        !fromCalls.some((listed) => listed.id === type.id) &&
-        mentionsType(line, type.name),
-    );
-    for (const type of namedClasses) {
-      if (wordHas(line, type.name) && !fromCalls.some((listed) => listed.id === type.id) && !mentioned.some((listed) => listed.id === type.id)) {
-        mentioned.push(type);
+    while (frames.length > 0 && brace < frames[frames.length - 1].openedTo) {
+      const frame = frames.pop();
+      if (!frame || output.length <= frame.at) {
+        continue;
       }
-    }
-    const listedIds = new Set([...fromCalls, ...mentioned].map((type) => type.id));
-    const extras = index === 0 && listClasses ? known.filter((type) => !listedIds.has(type.id)) : [];
-    if (calls.length === 0 && mentioned.length === 0 && extras.length === 0) {
-      return;
-    }
-    const pad = `${indentOf(line)}    `;
-    const callLine = output.length;
-    for (const call of calls) {
-      appendOperation(output, lineNumbers, folds, call, bodies, depth, stack, pad, known);
-    }
-    for (const type of [...fromCalls, ...mentioned, ...extras]) {
-      appendClass(output, lineNumbers, folds, type, pad, stack);
-    }
-    if (output.length > callLine) {
-      folds.push({ start: callLine, end: output.length, kind: calls.length > 0 ? "call" : "class" });
+      const listed = folds.some(
+        (fold) => fold.start === frame.at && (fold.kind === "call" || fold.kind === "class"),
+      );
+      if (listed) {
+        continue;
+      }
+      folds.push({ start: frame.at, end: output.length, kind: "block", member: frame.member });
     }
   });
-  return { text: output.join("\n"), folds, lineNumbers };
+  return { text: output.join("\n"), folds, lineNumbers, depths };
 }
 
 function wordHas(line: string, name: string): boolean {
   return new RegExp(`\\b${name}\\b`).test(line);
 }
 
+function isSimpleProperty(text: string): boolean {
+  const lines = text.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  if (lines.length !== 1) {
+    return false;
+  }
+  const line = lines[0];
+  if (/^(?:public\s+|private\s+|protected\s+|readonly\s+|static\s+|abstract\s+|override\s+|declare\s+)*(?:get|set)\s+[A-Za-z_]/.test(line) && line.includes("{") && line.includes("}")) {
+    return true;
+  }
+  return !line.includes("(") && /[:=]/.test(line);
+}
+
 function callsOnLine(line: string, bodies: Map<string, CallBody>, stack: string[]): CallBody[] {
   const found: CallBody[] = [];
   const seen = new Set<string>();
   const add = (body: CallBody | undefined) => {
-    if (!body || stack.includes(body.id) || seen.has(body.id)) {
+    if (!body || stack.includes(body.id) || seen.has(body.id) || isSimpleProperty(body.text)) {
       return;
     }
     seen.add(body.id);
     found.push(body);
   };
-  const pattern = /\b([A-Za-z_][A-Za-z0-9_]*)\??\.([A-Za-z_][A-Za-z0-9_]*)\b/g;
+  const pattern = /\b([A-Za-z_][A-Za-z0-9_]*)\??\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(line))) {
     if (!SKIP_TYPES.has(match[1])) {
@@ -392,6 +557,7 @@ function resolveCall(bodies: Map<string, CallBody>, receiver: string, method: st
 function appendOperation(
   output: string[],
   lineNumbers: string[],
+  depths: number[],
   folds: CallFold[],
   call: CallBody,
   bodies: Map<string, CallBody>,
@@ -399,27 +565,45 @@ function appendOperation(
   stack: string[],
   pad: string,
   known: ClassBody[],
+  hold: Set<string>,
+  seenClasses: Set<string>,
 ) {
-  const nested = displayedCallSource(call.text, bodies, depth + 1, [...stack, call.id], known, [], false);
-  const nestedLines = nested.text.split("\n");
-  output.push(nestedLines[0].length > 0 ? `${pad}${nestedLines[0]}` : pad);
+  output.push(`${pad}${call.member}`);
   lineNumbers.push("");
+  depths.push(depth);
   const operationLine = output.length;
-  for (const nestedLine of nestedLines.slice(1)) {
-    output.push(nestedLine.length > 0 ? `${pad}${nestedLine}` : pad);
+  const nested = displayedCallSource(
+    call.text,
+    bodies,
+    depth + 1,
+    [...stack, call.id],
+    known,
+    [],
+    false,
+    [],
+    [],
+    hold,
+    seenClasses,
+  );
+  const bodyPad = `${pad}    `;
+  for (const [index, nestedLine] of nested.text.split("\n").entries()) {
+    output.push(nestedLine.length > 0 ? `${bodyPad}${nestedLine}` : bodyPad);
     lineNumbers.push("");
+    depths.push((nested.depths[index] ?? depth) + 1);
   }
   if (output.length > operationLine) {
     folds.push({ start: operationLine, end: output.length, kind: "call" });
   }
   for (const fold of nested.folds) {
-    if (fold.start === 1) {
+    if (fold.start === 1 && fold.kind === "block") {
       continue;
     }
     folds.push({
-      start: operationLine + fold.start - 1,
-      end: operationLine + fold.end - 1,
+      start: operationLine + fold.start,
+      end: operationLine + fold.end,
       kind: fold.kind,
+      member: fold.member,
+      listed: fold.listed,
     });
   }
 }
@@ -427,16 +611,22 @@ function appendOperation(
 function appendClass(
   output: string[],
   lineNumbers: string[],
+  depths: number[],
   folds: CallFold[],
   type: ClassBody,
   pad: string,
   stack: string[],
+  depth: number,
+  seenClasses: Set<string>,
+  again = false,
 ) {
-  if (stack.includes(type.id)) {
+  if (stack.includes(type.id) || (seenClasses.has(type.id) && !again)) {
     return;
   }
+  seenClasses.add(type.id);
   output.push(`${pad}${type.name}`);
   lineNumbers.push("");
+  depths.push(depth);
   const classLine = output.length;
   const classLines = type.text.split("\n");
   if (classLines.length === 0 || (classLines.length === 1 && classLines[0].trim() === type.name)) {
@@ -446,8 +636,32 @@ function appendClass(
   for (const classLineText of classLines) {
     output.push(classLineText.length > 0 ? `${classPad}${classLineText}` : classPad);
     lineNumbers.push("");
+    depths.push(depth + 1);
   }
-  folds.push({ start: classLine, end: output.length, kind: "class" });
+  folds.push({ start: classLine, end: output.length, kind: "class", listed: true });
+  for (const brace of braceFolds(type.text)) {
+    folds.push({
+      start: classLine + brace.glyph,
+      end: classLine + brace.end,
+      kind: "block",
+      member: brace.member,
+    });
+  }
+}
+
+function typesConstructed(line: string, known: ClassBody[]): ClassBody[] {
+  const code = line.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, " ");
+  const found: ClassBody[] = [];
+  const seen = new Set<string>();
+  for (const match of code.matchAll(/\bnew\s+([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
+    const type = known.find((item) => item.name === match[1]);
+    if (!type || seen.has(type.id) || SKIP_TYPES.has(type.name)) {
+      continue;
+    }
+    seen.add(type.id);
+    found.push(type);
+  }
+  return found;
 }
 
 function mentionsType(line: string, name: string): boolean {

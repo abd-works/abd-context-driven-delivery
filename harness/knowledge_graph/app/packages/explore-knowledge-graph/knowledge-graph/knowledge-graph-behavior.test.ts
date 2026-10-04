@@ -24,7 +24,7 @@ import {
   stepLinks,
   taggedPractice,
 } from "./knowledge-graph";
-import { inlineCallLayout } from "../call-expansion";
+import { classPanelLayout, initialOpenFolds, inlineCallLayout } from "../call-expansion";
 
 const STORY_NODE_TYPES = [
   "Increment",
@@ -683,6 +683,14 @@ describe("an operation", () => {
 });
 
 describe("inlined operation source", () => {
+  it("shows a class as its own source with members collapsed", () => {
+    const source = "export class Customer {\n  save() {\n    repository.save(this)\n  }\n}";
+    const layout = classPanelLayout(source);
+    expect(layout.text).toBe(source);
+    expect(layout.text).not.toContain("store.set");
+    expect(layout.folds).toEqual([{ glyph: 2, start: 3, end: 4, kind: "block", member: true }]);
+  });
+
   const members = [
     {
       id: "save",
@@ -726,6 +734,112 @@ describe("inlined operation source", () => {
     },
   ];
 
+  it("lists operations and types under a call until each one is expanded", () => {
+    const layout = inlineCallLayout(
+      "onboardingRepository.create(customer)",
+      [
+        {
+          id: "create",
+          name: "create",
+          kind: "Operation",
+          owner: "OnboardingRepository",
+          text: "create(customer: Customer): Onboarding {\n  return stored\n}",
+          file: "onboarding.ts",
+          start: 1,
+          end: 3,
+        },
+        {
+          id: "customer",
+          name: "Customer",
+          kind: "OoadClass",
+          owner: "",
+          text: "class Customer {\n  email: string\n}",
+          file: "customer.ts",
+          start: 1,
+          end: 3,
+        },
+        {
+          id: "onboarding",
+          name: "Onboarding",
+          kind: "OoadClass",
+          owner: "",
+          text: "class Onboarding {\n  id: string\n}",
+          file: "onboarding.ts",
+          start: 1,
+          end: 3,
+        },
+      ],
+      "",
+    );
+    const lines = layout.text.split("\n");
+    expect(lines[0]).toBe("onboardingRepository.create(customer)");
+    expect(lines.filter((line) => line.trim() === "create").length).toBe(1);
+    expect(lines.filter((line) => line.trim() === "Customer").length).toBe(1);
+    expect(lines.filter((line) => line.trim() === "Onboarding").length).toBe(1);
+    const createFold = layout.folds.find((fold) => fold.kind === "call" && lines[fold.glyph - 1]?.trim() === "create");
+    expect(createFold).toBeTruthy();
+    expect(lines[createFold!.start - 1]).toContain("create(customer: Customer): Onboarding {");
+    expect(initialOpenFolds(layout.folds)).not.toContain(createFold!.start);
+    const customerFold = layout.folds.find((fold) => fold.kind === "class" && lines[fold.glyph - 1]?.trim() === "Customer");
+    expect(customerFold).toBeTruthy();
+    expect(lines[customerFold!.start - 1]).toContain("class Customer {");
+    expect(initialOpenFolds(layout.folds)).not.toContain(customerFold!.start);
+    expect(layout.text).toContain("class Onboarding {");
+  });
+
+  it("lists a collapsed operation and class under a call, without a block fold on that line", () => {
+    const layout = inlineCallLayout(
+      "this.save(customer);\nthis.customers.set(customer.id, {\n  id: customer.id,\n});",
+      [
+        {
+          id: "save",
+          name: "save",
+          kind: "Operation",
+          owner: "CustomerRepository",
+          text: "save(customer: Customer): void {\n  this.customers.set(customer.id, {\n    id: customer.id,\n  });\n}",
+          file: "customer.ts",
+          start: 264,
+          end: 276,
+        },
+        {
+          id: "customer",
+          name: "Customer",
+          kind: "Entity",
+          owner: "",
+          text: "class Customer {\n  id: string\n}",
+          file: "customer.ts",
+          start: 1,
+          end: 3,
+        },
+        {
+          id: "set",
+          name: "set",
+          kind: "Operation",
+          owner: "CustomerStore",
+          text: "set(id: string, value: Customer): void {\n  return stored\n}",
+          file: "customer.ts",
+          start: 10,
+          end: 12,
+        },
+      ],
+      "CustomerRepository",
+    );
+    const lines = layout.text.split("\n");
+    const save = lines.findIndex((line) => line.trim() === "save");
+    const customer = lines.findIndex((line) => line.trim() === "Customer");
+    expect(save).toBeGreaterThan(0);
+    expect(customer).toBeGreaterThan(save);
+    const saveFold = layout.folds.find((fold) => fold.kind === "call" && fold.glyph === save + 1);
+    const customerFold = layout.folds.find((fold) => fold.kind === "class" && fold.glyph === customer + 1);
+    expect(saveFold).toBeTruthy();
+    expect(customerFold).toBeTruthy();
+    expect(initialOpenFolds(layout.folds)).not.toContain(saveFold?.start);
+    expect(initialOpenFolds(layout.folds)).not.toContain(customerFold?.start);
+    const setLine = lines.findIndex((line) => line.includes("this.customers.set(customer.id, {"));
+    const setFolds = layout.folds.filter((fold) => fold.glyph === setLine + 1);
+    expect(setFolds.map((fold) => fold.kind)).toEqual(["call"]);
+  });
+
   it("inlines an internal call and the parameter and return types", () => {
     const layout = inlineCallLayout(
       "persist(customer: Customer): void {\n  this.save(customer)\n}",
@@ -735,11 +849,67 @@ describe("inlined operation source", () => {
     expect(layout.text).toContain("save(customer: Customer): void {");
     expect(layout.text).toContain("store.set(customer)");
     expect(layout.text).toContain("class Customer {");
+    const lines = layout.text.split("\n");
+    const save = lines.findIndex((line) => line.trim() === "save");
+    const body = lines.findIndex((line) => line.includes("store.set(customer)"));
+    expect(save).toBeGreaterThan(0);
+    expect(lines[save + 1]).toContain("save(customer: Customer): void {");
+    const saveFold = layout.folds.find((fold) => fold.kind === "call" && fold.glyph === save + 1);
+    expect(saveFold?.start).toBe(save + 2);
+    expect(layout.depths[0]).toBe(0);
+    expect(layout.depths[save]).toBe(1);
+    expect(layout.depths[body]).toBeGreaterThan(layout.depths[save]);
     expect(layout.folds.some((fold) => fold.kind === "call")).toBe(true);
     expect(layout.folds.some((fold) => fold.kind === "class")).toBe(true);
+    expect(initialOpenFolds(layout.folds).every((start) => layout.folds.find((fold) => fold.start === start)?.kind !== "call")).toBe(true);
   });
 
-  it("folds every property and the class named on the line", () => {
+  it("opens a class and keeps its operations collapsed", () => {
+    const source = "export class Customer {\n  save() {\n    repository.save(this)\n  }\n}";
+    const layout = inlineCallLayout(source, members, "Customer", { openedClass: "Customer" });
+    expect(layout.text).toContain("export class Customer {");
+    expect(layout.text).toContain("store.set(customer)");
+    const method = layout.folds.find((fold) => fold.kind === "block" && fold.member);
+    expect(method).toBeTruthy();
+    expect(initialOpenFolds(layout.folds)).not.toContain(method?.start);
+    expect(layout.folds.some((fold) => fold.kind === "call")).toBe(true);
+    const call = layout.folds.find((fold) => fold.kind === "call");
+    expect(initialOpenFolds(layout.folds)).not.toContain(call?.start);
+  });
+
+  it("pastes a class once and keeps its methods folded", () => {
+    const layout = inlineCallLayout(
+      "register(account: AccountRepository): void {\n  return account\n}\nload(account: AccountRepository): void {\n  return account\n}",
+      [
+        {
+          id: "repo",
+          name: "AccountRepository",
+          kind: "OoadClass",
+          owner: "",
+          text: "export class AccountRepository {\n  new() {\n    return this\n  }\n}",
+          file: "account.ts",
+          start: 1,
+          end: 4,
+        },
+      ],
+      "",
+    );
+    expect(layout.text.split("export class AccountRepository").length - 1).toBe(1);
+    const classFold = layout.folds.find((fold) => fold.kind === "class" && fold.glyph > 1);
+    expect(classFold).toBeTruthy();
+    expect(initialOpenFolds(layout.folds)).not.toContain(classFold?.start);
+    expect(
+      layout.folds.some(
+        (fold) =>
+          fold.kind === "block" &&
+          fold.member &&
+          fold.glyph > (classFold?.glyph ?? 0) &&
+          fold.end <= (classFold?.end ?? 0),
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves a simple property access unfolded and still lists the named class", () => {
     const layout = inlineCallLayout(
       "let customer: Customer;\nexpect(customer.identity.email).toBe('x');\nexpect(customer).toBeInstanceOf(Customer);",
       [
@@ -786,12 +956,134 @@ describe("inlined operation source", () => {
       ],
       "",
     );
-    expect(layout.text).toContain("public identity: Identity");
-    expect(layout.text).toContain("public email: string");
+    expect(layout.text).not.toContain("public identity: Identity");
+    expect(layout.text).not.toContain("public email: string");
     expect(layout.text).toContain("class Customer {");
-    expect(layout.text).toContain("class Identity {");
-    expect(layout.folds.some((fold) => fold.kind === "call")).toBe(true);
+    expect(layout.text).not.toContain("class Identity {");
+    expect(layout.folds.some((fold) => fold.kind === "call")).toBe(false);
     expect(layout.folds.some((fold) => fold.kind === "class")).toBe(true);
+  });
+
+  it("lists Customer under new Customer", () => {
+    const layout = inlineCallLayout(
+      "private async persistNewCustomer(email: string, accountCredentials: AccountCredentials): Promise<Customer> {\n  const customer = new Customer(accountCredentials, `cus_${this.nextCustomerId}`, new Identity(accountCredentials.email), new Address());\n}",
+      [
+        {
+          id: "customer",
+          name: "Customer",
+          kind: "Entity",
+          owner: "",
+          text: "class Customer {\n  id: string\n}",
+          file: "customer.ts",
+          start: 1,
+          end: 3,
+        },
+        {
+          id: "identity",
+          name: "Identity",
+          kind: "ValueObject",
+          owner: "",
+          text: "class Identity {\n  email: string\n}",
+          file: "customer.ts",
+          start: 10,
+          end: 12,
+        },
+        {
+          id: "address",
+          name: "Address",
+          kind: "ValueObject",
+          owner: "",
+          text: "class Address {\n  street: string\n}",
+          file: "customer.ts",
+          start: 20,
+          end: 22,
+        },
+        {
+          id: "next",
+          name: "nextCustomerId",
+          kind: "Property",
+          owner: "CustomerRepository",
+          text: "private nextCustomerId = 0",
+          file: "customer.ts",
+          start: 166,
+          end: 166,
+        },
+        {
+          id: "email",
+          name: "email",
+          kind: "Property",
+          owner: "AccountCredentials",
+          text: "get email(): string { return this.record.email }",
+          file: "account.ts",
+          start: 4,
+          end: 4,
+        },
+      ],
+      "CustomerRepository",
+    );
+    const lines = layout.text.split("\n");
+    const constructor = lines.findIndex((line) => line.includes("new Customer("));
+    const under = lines.slice(constructor + 1).map((line) => line.trim());
+    expect(under[0]).toBe("Customer");
+    expect(under).toContain("Identity");
+    expect(under).toContain("Address");
+    expect(under).not.toContain("nextCustomerId");
+    expect(under).not.toContain("email");
+  });
+
+  it("does not fold a one-line getter, setter, or key-value assignment", () => {
+    const layout = inlineCallLayout(
+      "const email = customer.email;\ncustomer.email = next;\nrecord = { id: customer.id, email: customer.email };\nrepository.save(customer);",
+      [
+        {
+          id: "email",
+          name: "email",
+          kind: "Property",
+          owner: "Customer",
+          text: "get email(): string { return this.record.email }",
+          file: "customer.ts",
+          start: 4,
+          end: 4,
+        },
+        {
+          id: "email-set",
+          name: "email",
+          kind: "Property",
+          owner: "Customer",
+          text: "set email(value: string) { this.record.email = value }",
+          file: "customer.ts",
+          start: 5,
+          end: 5,
+        },
+        {
+          id: "id",
+          name: "id",
+          kind: "Property",
+          owner: "Customer",
+          text: "id: string",
+          file: "customer.ts",
+          start: 2,
+          end: 2,
+        },
+        {
+          id: "save",
+          name: "save",
+          kind: "Operation",
+          owner: "CustomerRepository",
+          text: "save(customer: Customer): void {\n  store.set(customer)\n}",
+          file: "customer.ts",
+          start: 20,
+          end: 22,
+        },
+      ],
+      "",
+    );
+    expect(layout.text).not.toContain("return this.record.email");
+    expect(layout.text).not.toContain("this.record.email = value");
+    expect(layout.text).not.toContain("id: string");
+    expect(layout.text).toContain("store.set(customer)");
+    const save = layout.text.split("\n").findIndex((line) => line.trim() === "save");
+    expect(layout.folds.some((fold) => fold.kind === "call" && fold.glyph === save + 1)).toBe(true);
   });
 
   it("does not expand classes nested inside a class fold", () => {
@@ -919,6 +1211,8 @@ describe("inlined operation source", () => {
     expect(layout.text).toContain("e() {");
     expect(layout.text).toContain("this.f()");
     expect(layout.text).not.toContain("leaf");
+    const eLine = layout.text.split("\n").findIndex((line) => line.includes("e()"));
+    expect(layout.depths[eLine]).toBeGreaterThan(layout.depths[0]);
   });
 
   it("inlines a call to an operation on another class", () => {
@@ -989,10 +1283,11 @@ describe("a scenario step", () => {
       expect(engineering.map((node) => node.name)).not.toContain("When they send a feedback note");
     });
 
-    it("should leave belongsTo out of the relationship list", () => {
+    it("should leave belongsTo and owns out of the relationship list", () => {
       expect(
         shownRelationships([
           { kind: "belongsTo", nodeId: "story", name: "Load Customer" },
+          { kind: "owns", nodeId: "customer", name: "Customer" },
           { kind: "invokes", nodeId: "load", name: "load" },
         ]),
       ).toEqual([{ kind: "invokes", nodeId: "load", name: "load" }]);

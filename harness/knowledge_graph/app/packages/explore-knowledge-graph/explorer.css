@@ -653,7 +653,8 @@ ul.tree ul {
 }
 
 .source-snippet .call-fold,
-.source-snippet .class-fold {
+.source-snippet .class-fold,
+.source-snippet .block-fold {
   cursor: pointer;
   background-repeat: no-repeat;
   background-position: center;
@@ -661,8 +662,25 @@ ul.tree ul {
 }
 
 .source-snippet .call-fold.codicon::before,
-.source-snippet .class-fold.codicon::before {
+.source-snippet .class-fold.codicon::before,
+.source-snippet .block-fold.codicon::before {
   content: none;
+}
+
+.source-snippet .block-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5 11.5 8 6 12.5' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.source-snippet .block-fold-open {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6 8 11.5 12.5 6' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+html[data-theme="engineering"] .source-snippet .block-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5 11.5 8 6 12.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+html[data-theme="engineering"] .source-snippet .block-fold-open {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6 8 11.5 12.5 6' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .source-snippet .class-fold {
@@ -680,6 +698,22 @@ html[data-theme="engineering"] .source-snippet .class-fold {
 html[data-theme="engineering"] .source-snippet .call-fold {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 4.5 2.5 8 5 11.5M11 4.5 13.5 8 11 11.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
+
+.source-snippet .lines-content .cdr.call-nest {
+  background-color: #e6dfd2 !important;
+}
+.source-snippet .lines-content .cdr.call-nest-1 { background-color: #e6dfd2 !important; }
+.source-snippet .lines-content .cdr.call-nest-2 { background-color: #d9d0c0 !important; }
+.source-snippet .lines-content .cdr.call-nest-3 { background-color: #cfc3b0 !important; }
+.source-snippet .lines-content .cdr.call-nest-4 { background-color: #c4b6a0 !important; }
+.source-snippet .lines-content .cdr.call-nest-5 { background-color: #b9aa92 !important; }
+
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest,
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-1 { background-color: #32323c !important; }
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-2 { background-color: #3e3e4a !important; }
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-3 { background-color: #4a4a58 !important; }
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-4 { background-color: #565668 !important; }
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-5 { background-color: #626276 !important; }
 
 .source-snippet .source-toggle {
   position: static;
@@ -740,7 +774,7 @@ html[data-theme="engineering"] .source-snippet .call-fold {
 .source-snippet .monaco-editor,
 .source-snippet .monaco-editor-background,
 .source-snippet .margin {
-  background: transparent !important;
+  background: var(--raised) !important;
 }
 
 .source-snippet .monaco-editor,

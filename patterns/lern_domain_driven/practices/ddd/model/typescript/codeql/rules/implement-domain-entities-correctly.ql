@@ -2,9 +2,9 @@
  * @name implement-domain-entities-correctly
  * @practice ddd
  * @pattern lern_domain_driven
- * @fidelity building_blocks
+ * @fidelity model
  * @node class
- * @id ddd/building_blocks/implement-domain-entities-correctly
+ * @id ddd/model/implement-domain-entities-correctly
  */
 
 import javascript

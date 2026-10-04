@@ -322,7 +322,7 @@ export function retainedTree(
 }
 
 export function shownRelationships<T extends { kind: string }>(links: T[]): T[] {
-  return links.filter((link) => link.kind !== "belongsTo");
+  return links.filter((link) => link.kind !== "belongsTo" && link.kind !== "owns");
 }
 
 const TACTICAL_CLASS = new Set([

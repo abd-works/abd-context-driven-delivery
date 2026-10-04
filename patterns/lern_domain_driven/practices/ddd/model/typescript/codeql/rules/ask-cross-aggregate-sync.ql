@@ -1,11 +1,10 @@
 /**
  * @name ask-cross-aggregate-sync
- * @practice stories
+ * @practice ddd
  * @pattern lern_domain_driven
- * @fidelity acceptance_tests
+ * @fidelity building_blocks
  * @node module
- * @id stories/acceptance_tests/ask-cross-aggregate-sync
- * @connection ddd.tactics
+ * @id ddd/building_blocks/ask-cross-aggregate-sync
  */
 
 import javascript
@@ -16,11 +15,11 @@ from Container a, Container b, File f, TopLevel top, string message, AstNode con
 where
   domainFolder(a) and
   domainFolder(b) and
+  a.getParentContainer() = b.getParentContainer() and
   a.getRelativePath() < b.getRelativePath() and
-  not exists(StringLiteral s |
-    s.getValue().toLowerCase().matches("%event-based%") or
-    s.getValue().toLowerCase().matches("%single-aggregate%") or
-    s.getValue().toLowerCase().matches("%direct repository%")
+  not exists(File note |
+    note.getParentContainer() = a.getParentContainer() and
+    note.getBaseName().toLowerCase().matches("%sync%")
   ) and
   f.getParentContainer() = a and
   top.getFile() = f and

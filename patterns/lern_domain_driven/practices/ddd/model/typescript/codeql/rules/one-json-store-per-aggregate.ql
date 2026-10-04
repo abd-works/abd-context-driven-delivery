@@ -2,9 +2,9 @@
  * @name one-json-store-per-aggregate
  * @practice ddd
  * @pattern lern_domain_driven
- * @fidelity tactics
+ * @fidelity model
  * @node module
- * @id ddd/tactics/one-json-store-per-aggregate
+ * @id ddd/model/one-json-store-per-aggregate
  */
 
 import javascript
@@ -14,7 +14,12 @@ import model
 from StringLiteral lit, string message, AstNode contributor
 where
   inSubject(lit) and
-  lit.getValue().toLowerCase().matches("%db.json") and
-  message = "Shared JSON database filename 'db.json' found." and
+  exists(CallExpr call |
+    call.getAnArgument() = lit and
+    call.getCalleeName() = "JSONFilePreset"
+  ) and
+  lit.getValue().regexpMatch(".*\\.json$") and
+  not lit.getValue() = lit.getFile().getParentContainer().getBaseName() + ".json" and
+  message = "Shared JSON database filename '" + lit.getValue() + "' found." and
   contributor = lit
 select lit, message, contributor

@@ -2,9 +2,9 @@
  * @name use-thorough-e2e-tests
  * @practice stories
  * @pattern lern_domain_driven
- * @fidelity acceptance_tests
+ * @fidelity model
  * @node function
- * @id stories/acceptance_tests/use-thorough-e2e-tests
+ * @id stories/model/use-thorough-e2e-tests
  */
 
 import javascript
@@ -14,7 +14,8 @@ import model
 from CallExpr call, string message, AstNode contributor
 where
   inSubject(call) and
-  call.getCalleeName() = "deleteMany" and
+  specFile(call.getFile()) and
+  call.getCalleeName() = ["deleteMany", "deleteAll", "clearAll"] and
   message = "Blanket delete wipes the entire collection. Delete only the aggregate roots this test created." and
   contributor = call
 select call, message, contributor

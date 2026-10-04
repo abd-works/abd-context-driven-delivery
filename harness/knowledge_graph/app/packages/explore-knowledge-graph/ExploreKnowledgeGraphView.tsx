@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useKnowledgeGraph } from './use-knowledge-graph';
 import {
@@ -16,7 +16,7 @@ import {
   extractionProgress,
 } from './knowledge-graph/knowledge-graph';
 import { KindMark, kindLabel } from './kind-mark';
-import { collectFoldMembers, inlineCallLayout, type FoldMember } from './call-expansion';
+import { collectFoldMembers, initialOpenFolds, inlineCallLayout, type FoldMember } from './call-expansion';
 import {
   type KnowledgeGraphFilterOptions,
   type PracticeMember,
@@ -82,6 +82,7 @@ function progressText(status: {
  */
 export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }) {
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [sourceVisit, setSourceVisit] = useState(0);
   const {
     loading,
     workStatus,
@@ -97,6 +98,10 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     reloadWorkingCopy,
     scanError,
   } = useKnowledgeGraph(graphId);
+  const chooseNode = useCallback((nodeId: string) => {
+    selectNode(nodeId);
+    setSourceVisit((visit) => visit + 1);
+  }, [selectNode]);
   const [folder, setFolder] = useState(scannedFolder);
   const [theme, setTheme] = useState(
     () => document.documentElement.dataset.theme ?? '',
@@ -196,9 +201,9 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
     }
     const match = firstViolating(listedTree, picked);
     if (match) {
-      selectNode(match.nodeId);
+      chooseNode(match.nodeId);
     }
-  }, [picked, listedTree, selectedId, selectNode]);
+  }, [picked, listedTree, selectedId, chooseNode]);
 
   function toggleOpen(id: string) {
     setOpenIds((prev) => {
@@ -433,7 +438,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                   selectedId={selectedId}
                   openIds={openIds}
                   onToggle={toggleOpen}
-                  onSelect={selectNode}
+                  onSelect={chooseNode}
                 />
               ))}
             </ul>
@@ -441,6 +446,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
           <div className="panel" data-testid="source-file">
             {selectedNode ? (
               <SourcePane
+                key={`${selectedNode.nodeId}:${sourceVisit}`}
                 node={selectedNode}
                 folder={folder}
                 picked={picked}
@@ -711,6 +717,41 @@ function fittedEditorHeight(contentHeight: number): number {
   return Math.max(SNIPPET_LINE_HEIGHT + 16, Math.ceil(contentHeight));
 }
 
+function foldKey(fold: SourceFold): string {
+  return `${fold.kind}:${fold.start}:${fold.end}`;
+}
+
+function hiddenRanges(folds: SourceFold[], openFolds: string[]): SourceFold[] {
+  const open = new Set(openFolds);
+  return folds
+    .filter((fold) => !open.has(foldKey(fold)) && fold.end >= fold.start)
+    .filter(
+      (fold) =>
+        !folds.some(
+          (other) =>
+            other !== fold &&
+            other.start <= fold.start &&
+            other.end >= fold.end &&
+            !open.has(foldKey(other)),
+        ),
+    );
+}
+
+function visibleLineCount(lineCount: number, folds: SourceFold[], openFolds: string[]): number {
+  const closed = hiddenRanges(folds, openFolds);
+  const outermost = closed.filter(
+    (fold) =>
+      !closed.some(
+        (other) => other !== fold && other.start <= fold.start && other.end >= fold.end,
+      ),
+  );
+  let hidden = 0;
+  for (const fold of outermost) {
+    hidden += fold.end - fold.start + 1;
+  }
+  return Math.max(1, lineCount - hidden);
+}
+
 function SourcePane({
   node,
   folder,
@@ -727,22 +768,29 @@ function SourcePane({
   const file = node.source?.file ?? '';
   const [text, setText] = useState('');
   const [fetched, setFetched] = useState<Record<string, string>>({});
-  const [openFolds, setOpenFolds] = useState<number[]>([]);
+  const [openFolds, setOpenFolds] = useState<string[]>([]);
+  const foldTouch = useRef(false);
   const [mounted, setMounted] = useState(false);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-  const decorations = useRef<{ clear: () => void } | null>(null);
+  const decorations = useRef<{ set: (next: object[]) => void; clear: () => void } | null>(null);
   const hideSource = useRef({ id: 'call-folds' });
   const filled = members.map((member) =>
     fetched[member.id] && !member.text ? { ...member, text: fetched[member.id] } : member,
   );
   const prepared = preparedSource(node, text, filled);
   const foldsRef = useRef(prepared.folds);
+  const depthsRef = useRef(prepared.depths);
+  const openFoldsRef = useRef(openFolds);
   const lineMap = useRef(prepared.lineNumbers);
   foldsRef.current = prepared.folds;
+  depthsRef.current = prepared.depths;
+  openFoldsRef.current = openFolds;
   lineMap.current = prepared.lineNumbers;
   const [height, setHeight] = useState(SNIPPET_LINE_HEIGHT + 16);
   const fitEditor = (editor: Parameters<OnMount>[0]) => {
-    const next = fittedEditorHeight(editor.getContentHeight());
+    const lines = editor.getModel()?.getLineCount() ?? 1;
+    const visible = visibleLineCount(lines, foldsRef.current, openFoldsRef.current);
+    const next = fittedEditorHeight(visible * SNIPPET_LINE_HEIGHT);
     setHeight((current) => (current === next ? current : next));
   };
   const startLine = Number(node.source?.startLine) || 1;
@@ -751,8 +799,15 @@ function SourcePane({
     .join('\n');
 
   useEffect(() => {
-    setOpenFolds([]);
-  }, [node.nodeId]);
+    if (foldTouch.current) {
+      return;
+    }
+    setOpenFolds(
+      prepared.folds
+        .filter((fold) => initialOpenFolds([fold]).length > 0)
+        .map((fold) => foldKey(fold)),
+    );
+  }, [prepared.text]);
 
   useEffect(() => {
     const initial = node.source?.text ?? '';
@@ -831,7 +886,7 @@ function SourcePane({
     };
   }, [folder, missingKey]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const editor = editorRef.current;
     if (!editor) {
       return;
@@ -839,18 +894,15 @@ function SourcePane({
     if (editor.getValue() !== prepared.text) {
       editor.setValue(prepared.text);
     }
-    editor.updateOptions({
-      glyphMargin: prepared.folds.length > 0,
-      lineNumbers: (line) => {
-        const mapped = lineMap.current[line - 1];
-        return mapped ? String(startLine + Number(mapped) - 1) : '';
-      },
-    });
-    applyCallFolds(editor, prepared.folds, openFolds, hideSource.current, decorations);
+    const shown = foldTouch.current
+      ? openFolds
+      : prepared.folds.filter((fold) => initialOpenFolds([fold]).length > 0).map((fold) => foldKey(fold));
+    openFoldsRef.current = shown;
+    applyCallFolds(editor, prepared.folds, shown, hideSource.current, decorations, prepared.depths);
     fitEditor(editor);
-  }, [prepared.text, prepared.folds, openFolds, startLine, mounted]);
+  }, [prepared.text, openFolds, startLine, mounted]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const editor = editorRef.current;
     const dom = editor?.getDomNode();
     if (!editor || !dom || dom.clientWidth <= 0) {
@@ -862,6 +914,14 @@ function SourcePane({
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
     setMounted(true);
+    applyCallFolds(
+      editor,
+      foldsRef.current,
+      foldsRef.current.filter((fold) => initialOpenFolds([fold]).length > 0).map((fold) => foldKey(fold)),
+      hideSource.current,
+      decorations,
+      depthsRef.current,
+    );
     editor.onDidContentSizeChange(() => fitEditor(editor));
     fitEditor(editor);
     const nodeEl = editor.getDomNode();
@@ -872,8 +932,9 @@ function SourcePane({
         const line = target?.position?.lineNumber ?? target?.range?.startLineNumber;
         const markHit =
           event.target instanceof Element &&
-          event.target.closest('.codicon-folding-collapsed, .codicon-folding-expanded, .call-fold, .class-fold') !==
-            null;
+          event.target.closest(
+            '.codicon-folding-collapsed, .codicon-folding-expanded, .call-fold, .class-fold, .block-fold',
+          ) !== null;
         if (!line || !target || (target.type !== GLYPH_MARGIN && !markHit)) {
           return;
         }
@@ -883,18 +944,43 @@ function SourcePane({
         }
         event.preventDefault();
         event.stopPropagation();
+        foldTouch.current = true;
         setOpenFolds((current) => {
-          const next = current.includes(fold.start)
-            ? current.filter((start) => start !== fold.start)
-            : [...current, fold.start];
-          applyCallFolds(editor, foldsRef.current, next, hideSource.current, decorations);
-          return next;
+          const key = foldKey(fold);
+          return current.includes(key) ? current.filter((item) => item !== key) : [...current, key];
         });
       },
       true,
     );
   };
 
+  const editorOptions = useMemo(
+    () => ({
+      readOnly: true,
+      domReadOnly: true,
+      folding: false,
+      showFoldingControls: 'never' as const,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      automaticLayout: true,
+      wordWrap: 'off' as const,
+      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      fontSize: 13,
+      lineHeight: SNIPPET_LINE_HEIGHT,
+      glyphMargin: prepared.folds.length > 0,
+      lineNumbers: (line: number) => {
+        const mapped = lineMap.current[line - 1];
+        return mapped ? String(startLine + Number(mapped) - 1) : '';
+      },
+      padding: { top: 8, bottom: 8 },
+      scrollbar: {
+        alwaysConsumeMouseWheel: false,
+        vertical: 'auto' as const,
+        horizontal: 'auto' as const,
+      },
+    }),
+    [prepared.folds.length, startLine],
+  );
   const hits = showRules
     ? picked.violations || picked.rules.length
       ? visibleHits(node, picked)
@@ -912,25 +998,7 @@ function SourcePane({
             value={prepared.text}
             onMount={onMount}
             loading={<pre className="source-highlight">{prepared.text}</pre>}
-            options={{
-              readOnly: true,
-              domReadOnly: true,
-              folding: false,
-              showFoldingControls: 'never',
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              wordWrap: 'on',
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: 13,
-              lineHeight: SNIPPET_LINE_HEIGHT,
-              glyphMargin: prepared.folds.length > 0,
-              lineNumbers: (line) => {
-                const mapped = lineMap.current[line - 1];
-                return mapped ? String(startLine + Number(mapped) - 1) : '';
-              },
-              padding: { top: 8, bottom: 8 },
-            }}
+            options={editorOptions}
           />
         </div>
       </div>
@@ -1206,7 +1274,13 @@ function practiceForest(
   return roots.length ? roots : nodes;
 }
 
-type SourceFold = { start: number; end: number; kind: 'class' | 'call'; glyph: number };
+type SourceFold = {
+  start: number;
+  end: number;
+  kind: 'class' | 'call' | 'block';
+  glyph: number;
+  member?: boolean;
+};
 
 const CLASS_SOURCE_KINDS = new Set([
   'OoadClass',
@@ -1223,9 +1297,8 @@ function preparedSource(
   node: KnowledgeGraphNode,
   text: string,
   members: FoldMember[],
-): { text: string; folds: SourceFold[]; lineNumbers: string[] } {
+): { text: string; folds: SourceFold[]; lineNumbers: string[]; depths: number[] } {
   const kind = node.nodeType?.name ?? '';
-  const lines = text ? text.split('\n') : [''];
   const owner = members.find((member) => member.id === node.nodeId)?.owner ?? '';
   const stepLike = kind === 'Step' || kind === 'Example';
   const anchored = stepLike
@@ -1237,33 +1310,12 @@ function preparedSource(
         .map((child) => members.find((member) => member.id === child.nodeId))
         .filter((member): member is FoldMember => Boolean(member))
     : [];
-  const layout = inlineCallLayout(text, members, owner, {
+  return inlineCallLayout(text, members, owner, {
     anchored,
     named: stepLike ? namedFolds(node, members) : [],
     listClasses: false,
-    openedClass: CLASS_SOURCE_KINDS.has(kind) ? openedClassName(node.name) : "",
+    openedClass: CLASS_SOURCE_KINDS.has(kind) ? node.name : '',
   });
-  if (!CLASS_SOURCE_KINDS.has(kind)) {
-    return layout;
-  }
-  const structural = memberFolds(node, lines.length).flatMap((fold) => {
-    const glyph = displayedLine(layout.lineNumbers, fold.glyph);
-    const end = displayedLine(layout.lineNumbers, fold.end);
-    if (end <= glyph) {
-      return [];
-    }
-    return [{ ...fold, glyph, start: glyph + 1, end }];
-  });
-  return { text: layout.text, lineNumbers: layout.lineNumbers, folds: [...layout.folds, ...structural] };
-}
-
-function openedClassName(name: string): string {
-  return name.replace(/<<[^>]+>>/g, "").replace(/\*+/g, "").split(/\s+extends\s+/)[0].trim();
-}
-
-function displayedLine(lineNumbers: string[], original: number): number {
-  const index = lineNumbers.indexOf(String(original));
-  return index >= 0 ? index + 1 : original;
 }
 
 function namedFolds(node: KnowledgeGraphNode, members: FoldMember[]): FoldMember[] {
@@ -1343,68 +1395,23 @@ function namesIn(text: string): string[] {
   return names;
 }
 
-function memberFolds(node: KnowledgeGraphNode, lineCount: number): SourceFold[] {
-  const base = Number(node.source?.startLine) || 1;
-  const folds: SourceFold[] = [];
-  for (const child of node.children ?? []) {
-    const type = child.nodeType?.name ?? '';
-    if (type !== 'Operation' && type !== 'Property') {
-      continue;
-    }
-    const start = Number(child.source?.startLine) || 0;
-    const end = Number(child.source?.endLine) || start;
-    if (start < base) {
-      continue;
-    }
-    const signature = start - base + 1;
-    const last = Math.min(lineCount, Math.max(start, end) - base + 1);
-    if (last <= signature || signature <= 1) {
-      continue;
-    }
-    folds.push({
-      start: signature + 1,
-      end: last,
-      kind: type === 'Operation' ? 'call' : 'class',
-      glyph: signature,
-    });
-  }
-  return folds;
-}
-
 function applyCallFolds(
   editor: Parameters<OnMount>[0],
   folds: SourceFold[],
-  openFolds: number[],
+  openFolds: string[],
   source: object,
-  decorations: { current: { clear: () => void } | null },
+  decorations: { current: { set: (next: object[]) => void; clear: () => void } | null },
+  depths: number[] = [],
 ) {
   const open = new Set(openFolds);
-  const ranges = folds
-    .filter((fold) => !open.has(fold.start) && fold.end >= fold.start)
-    .filter(
-      (fold) =>
-        !folds.some(
-          (other) =>
-            other !== fold &&
-            other.start <= fold.start &&
-            other.end >= fold.end &&
-            !open.has(other.start),
-        ),
-    )
-    .map((fold) => ({
-      startLineNumber: fold.start,
-      startColumn: 1,
-      endLineNumber: fold.end,
-      endColumn: 1000,
-    }));
-  (
-    editor as Parameters<OnMount>[0] & {
-      setHiddenAreas(ranges: object[], source?: object): void;
-    }
-  ).setHiddenAreas(ranges, source);
-  decorations.current?.clear();
-  decorations.current = editor.createDecorationsCollection(
-    folds.map((fold) => ({
+  const ranges = hiddenRanges(folds, openFolds).map((fold) => ({
+    startLineNumber: fold.start,
+    startColumn: 1,
+    endLineNumber: fold.end,
+    endColumn: 1000,
+  }));
+  const next = [
+    ...folds.map((fold) => ({
       range: {
         startLineNumber: fold.glyph,
         startColumn: 1,
@@ -1412,22 +1419,75 @@ function applyCallFolds(
         endColumn: 1,
       },
       options: {
-        glyphMarginClassName: glyphClass(fold.kind, open.has(fold.start)),
-        glyphMarginHoverMessage: { value: hoverLabel(fold.kind, open.has(fold.start)) },
+        glyphMarginClassName: glyphClass(fold.kind, open.has(foldKey(fold))),
+        glyphMarginHoverMessage: { value: hoverLabel(fold.kind, open.has(foldKey(fold))) },
       },
     })),
-  );
+    ...depths.flatMap((depth, index) => {
+      if (depth <= 0) {
+        return [];
+      }
+      const level = Math.min(depth, 5);
+      return [
+        {
+          range: {
+            startLineNumber: index + 1,
+            startColumn: 1,
+            endLineNumber: index + 1,
+            endColumn: 1,
+          },
+          options: {
+            isWholeLine: true,
+            className: `call-nest call-nest-${level}`,
+          },
+        },
+      ];
+    }),
+  ];
+  if (decorations.current) {
+    decorations.current.set(next);
+  } else {
+    decorations.current = editor.createDecorationsCollection(next);
+  }
+  const hidden = editor as Parameters<OnMount>[0] & {
+    setHiddenAreas(ranges: object[], source?: object): void;
+  };
+  const token = source as { generation?: number };
+  token.generation = (token.generation ?? 0) + 1;
+  const generation = token.generation;
+  hidden.setHiddenAreas(ranges, source);
+  if (ranges.length > 0 && viewIsStillFullyExpanded(editor)) {
+    requestAnimationFrame(() => {
+      if (token.generation !== generation || !viewIsStillFullyExpanded(editor)) {
+        return;
+      }
+      hidden.setHiddenAreas([], source);
+      hidden.setHiddenAreas(ranges, source);
+    });
+  }
+}
+
+function viewIsStillFullyExpanded(editor: Parameters<OnMount>[0]): boolean {
+  const modelLines = editor.getModel()?.getLineCount() ?? 0;
+  const viewModel = (editor as unknown as {
+    _modelData?: { viewModel?: { getLineCount?: () => number } };
+  })._modelData?.viewModel;
+  const shown = viewModel?.getLineCount?.() ?? modelLines;
+  return modelLines > 1 && shown >= modelLines;
 }
 
 function glyphClass(kind: SourceFold['kind'], open: boolean): string {
   if (kind === 'class') {
     return `class-fold${open ? ' class-fold-open' : ''}`;
   }
+  if (kind === 'block') {
+    return `block-fold${open ? ' block-fold-open' : ''}`;
+  }
   return `call-fold${open ? ' call-fold-open' : ''}`;
 }
 
 function hoverLabel(kind: SourceFold['kind'], open: boolean): string {
-  const noun = kind === 'class' ? 'class' : 'call';
+  const noun = kind === 'class' ? 'class' : kind === 'block' ? 'block' : 'call';
   return open ? `Collapse ${noun}` : `Expand ${noun}`;
 }
 
@@ -1548,11 +1608,11 @@ function connectorChoices(
   nodeTypes: string[] | null,
   options: KnowledgeGraphFilterOptions,
 ): string[] {
-  const available = options.relationship_types.filter((kind) => kind !== 'belongsTo');
+  const available = options.relationship_types.filter((kind) => kind !== 'belongsTo' && kind !== 'owns');
   if (!nodeTypes) {
     return available;
   }
-  const found = nodeTypes.flatMap((type) => CONNECTORS_BY_TYPE[type] ?? []).filter((kind) => kind !== 'belongsTo');
+  const found = nodeTypes.flatMap((type) => CONNECTORS_BY_TYPE[type] ?? []).filter((kind) => kind !== 'belongsTo' && kind !== 'owns');
   const ordered = keepOrder(available, found);
   return ordered.length ? ordered : available;
 }

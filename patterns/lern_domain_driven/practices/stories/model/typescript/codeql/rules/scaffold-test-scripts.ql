@@ -2,9 +2,9 @@
  * @name scaffold-test-scripts
  * @practice stories
  * @pattern lern_domain_driven
- * @fidelity acceptance_tests
+ * @fidelity model
  * @node module
- * @id stories/acceptance_tests/scaffold-test-scripts
+ * @id stories/model/scaffold-test-scripts
  */
 
 import javascript
