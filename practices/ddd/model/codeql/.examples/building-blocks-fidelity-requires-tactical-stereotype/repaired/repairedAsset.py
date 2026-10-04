@@ -1,0 +1,2 @@
+class PlanEntity:
+    id: str

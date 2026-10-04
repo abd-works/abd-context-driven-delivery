@@ -17,7 +17,7 @@ where
     routerModuleFile(f) and
     path.getFile() = f and
     inSubject(path) and
-    path.getValue().matches("/%") and
+    path.getValue().regexpMatch("^/[^/]+/.+") and
     not path.getParent() instanceof JsxAttribute and
     subject = path and
     contributor = path and

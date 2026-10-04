@@ -10,6 +10,11 @@ predicate publicMethod(Class cls, Function method) {
   method = cls.getAMethod() and publicName(method.getName())
 }
 
+predicate missingTacticalStereotype(Class cls) {
+  inSubject(cls) and
+  not cls.getName().regexpMatch(".*(Entity|ValueObject|Repository|Aggregate|Service)")
+}
+
 predicate bagClass(Class bag) {
   inSource(bag) and
   exists(AnnAssign assign | assign.getScope() = bag) and

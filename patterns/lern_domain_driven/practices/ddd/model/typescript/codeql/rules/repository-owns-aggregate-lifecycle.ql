@@ -15,7 +15,10 @@ from InterfaceDefinition iface, string message, AstNode contributor
 where
   inSubject(iface) and
   repositoryType(iface.getName()) and
-  not iface.toString().matches("%load%") and
+  not exists(Function loadFn |
+    loadFn.getName() = "load" and
+    loadFn.getFile() = iface.getFile()
+  ) and
   message =
     "Interface '" + iface.getName() +
       "' is missing load(). A Repository returns the aggregate root via load, create, search, and update." and

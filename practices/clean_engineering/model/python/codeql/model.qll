@@ -902,3 +902,47 @@ string moduleOwningClassPath(Class cls) {
   moduleOwningClass(cls) and
   result = cls.getLocation().getFile().getAbsolutePath()
 }
+
+predicate duplicateOperation(Function left, Function right) {
+  left != right and
+  left.getScope() = right.getScope() and
+  (
+    left.getName().matches("%" + right.getName() + "%") or
+    right.getName().matches("%" + left.getName() + "%")
+  )
+}
+
+predicate narratingComment(Comment comment) {
+  comment.getText().toLowerCase().regexpMatch(".*(transient|carries|this (function|method) ).*")
+}
+
+predicate moduleDocString(Module m, string doc) {
+  exists(StrConst literal |
+    literal.getEnclosingModule() = m and
+    literal.getLocation().getStartLine() < 8 and
+    doc = literal.getText()
+  )
+}
+
+predicate missingSeamOrConstraint(Module m) {
+  exists(string doc |
+    moduleDocString(m, doc) and
+    not doc.toLowerCase().matches("%seam%") and
+    not doc.toLowerCase().matches("%constraint%")
+  )
+}
+
+predicate mixedNamingFunction(Module m, Function f) {
+  f.getEnclosingModule() = m and
+  exists(Function other |
+    other.getEnclosingModule() = m and
+    other != f and
+    f.getName().regexpMatch(".*_.*") and
+    other.getName().regexpMatch(".*[A-Z].*")
+  )
+}
+
+predicate intentionHidingName(Function f, Name nm) {
+  nm.getScope() = f and
+  nm.getId().regexpMatch("^(to|tmp|data|x|n)$")
+}
