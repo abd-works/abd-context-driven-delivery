@@ -780,38 +780,38 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
     def _example_named(self, by_name: Dict[str, Example], name: str):
         return by_name.get(name) or by_name.get(str(name).lower())
 
-    def _example_of_class(self, graph, by_name: Dict[str, Example], name: str):
-        """The example is the class the given or then assigned or evaluated."""
-        cls = graph.class_named(name) if hasattr(graph, "class_named") else None
-        if cls is None:
+    def _example_of_variable(self, graph, by_key: Dict[tuple, Example], spec: dict):
+        """The example is the variable. Its source is the call that created it."""
+        name = spec.get("name") or ""
+        if not name:
             return None
-        example = Example(name, {}, len(by_name) + 1)
-        example._graph = graph
-        graph.register(example)
-        example.demonstrates(cls)
-        by_name[name] = example
-        by_name[name.lower()] = example
+        file_name = spec.get("file") or ""
+        line = int(spec.get("line") or 0)
+        key = (name, file_name, line)
+        example = by_key.get(key)
+        if example is None:
+            example = Example(name, {}, len(by_key) + 1)
+            example._graph = graph
+            if file_name and line:
+                example.source = SourceLocation(file_name, line, int(spec.get("end_line") or line))
+            graph.register(example)
+            by_key[key] = example
+        class_name = spec.get("class_name") or ""
+        cls = graph.class_named(class_name) if class_name and hasattr(graph, "class_named") else None
+        if cls is not None:
+            example.demonstrates(cls)
         return example
 
     def _wire_step_examples(self, graph: "PracticeGraph", created_steps, backgrounds) -> None:
-        by_name: Dict[str, Example] = {}
-        for example in graph.nodes_of_type(Example):
-            by_name[example.name] = example
-            by_name[example.name.lower()] = example
+        by_key: Dict[tuple, Example] = {}
         for entry, step in created_steps:
             examples = []
-            for name in entry.get("uses_examples") or []:
-                example = self._example_named(by_name, name)
-                if example is None:
-                    example = self._example_of_class(graph, by_name, name)
+            for spec in entry.get("example_details") or []:
+                example = self._example_of_variable(graph, by_key, spec)
                 if example is not None:
                     examples.append(example)
-            if step.step_type == StepType.GIVEN:
-                for example in examples:
-                    step.load_loads(example)
-            elif step.step_type == StepType.THEN:
-                for example in examples:
-                    step.own_example(example)
+            for example in examples:
+                step.own_example(example)
         for background in backgrounds:
             for step in background.related(Kind.OWNS):
                 if step.semantic_type() != "Step":
@@ -1090,21 +1090,31 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
             }
             for row in batch.get("steps") or []
         ]
-        examples_by_step: Dict[Tuple[str, int], List[str]] = {}
+        examples_by_step: Dict[Tuple[str, int], List[dict]] = {}
         for row in batch.get("step_examples") or []:
             file_name = self.normalized_file(self._text(row[2] if len(row) > 2 else ""))
             line = int(self._text(row[3]) or 0) if len(row) > 3 else 0
             name = self._text(row[1] if len(row) > 1 else "")
             if not name:
                 continue
-            names = examples_by_step.setdefault((file_name, line), [])
-            if name not in names:
-                names.append(name)
+            spec = {
+                "name": name,
+                "class_name": self._text(row[4] if len(row) > 4 else ""),
+                "file": self.normalized_file(self._text(row[5] if len(row) > 5 else "")),
+                "line": int(self._text(row[6]) or 0) if len(row) > 6 else 0,
+                "end_line": int(self._text(row[7]) or 0) if len(row) > 7 else 0,
+            }
+            details = examples_by_step.setdefault((file_name, line), [])
+            key = (spec["name"], spec["file"], spec["line"])
+            if key not in {(item["name"], item["file"], item["line"]) for item in details}:
+                details.append(spec)
         for step in steps:
-            step["uses_examples"] = examples_by_step.get(
+            details = examples_by_step.get(
                 (self.normalized_file(step["file"]), step["line"]),
                 [],
             )
+            step["example_details"] = details
+            step["uses_examples"] = [item["name"] for item in details]
         story_calls = [
             {
                 "story_file": self._text(row[1] if len(row) > 1 else ""),

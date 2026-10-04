@@ -1,7 +1,8 @@
 /**
  * @name Step examples
- * @description A given or then assigns a class to a variable the rest of the scenario uses,
- * or a then evaluates that class.
+ * @description A given or then assigns a class variable the rest of the story uses,
+ * or a then evaluates that variable. The example is the variable. Its source is the
+ * operation called to create it, or the expression that created it.
  * @kind problem
  * @id cdd/practice-graph/step-examples
  */
@@ -22,38 +23,93 @@ predicate inStep(CallExpr step, Expr use) {
   )
 }
 
-predicate assignedClass(CallExpr step, string className) {
-  step.getCalleeName() = ["given", "then", "and", "but", "background"] and
-  storyFile(step.getFile()) and
-  exists(AssignExpr assign, VarAccess lhs, VarDecl variable, CallExpr later, VarAccess use |
+Expr assignedValue(AssignExpr assign) {
+  result = assign.getRhs().(AwaitExpr).getOperand()
+  or
+  not assign.getRhs() instanceof AwaitExpr and result = assign.getRhs()
+}
+
+predicate classVariable(VarDecl decl, string variable, string className) {
+  storyFile(decl.getFile()) and
+  variable = decl.getName() and
+  className = typeName(decl.getTypeAnnotation())
+}
+
+predicate assigning(CallExpr step, VarDecl decl, Expr value) {
+  exists(AssignExpr assign, VarAccess lhs |
     inStep(step, assign) and
     lhs = assign.getLhs() and
-    variable = lhs.getVariable().getADeclaration().(VarDecl) and
-    className = typeName(variable.getTypeAnnotation()) and
+    decl = lhs.getVariable().getADeclaration() and
+    value = assignedValue(assign)
+  )
+}
+
+predicate usedLater(CallExpr step, VarDecl decl) {
+  exists(CallExpr later, VarAccess use |
     later.getFile() = step.getFile() and
     later.getCalleeName() = ["given", "when", "then", "and", "but"] and
     storyTitle(later) = storyTitle(step) and
-    use.getVariable().getADeclaration().(VarDecl) = variable and
+    use.getVariable().getADeclaration() = decl and
     inStep(later, use) and
     use.getLocation().getStartLine() > stepLine(step)
   )
 }
 
-predicate evaluatedClass(CallExpr step, string className) {
+predicate evaluates(CallExpr step, VarDecl decl) {
   step.getCalleeName() = ["then", "and", "but"] and
   storyFile(step.getFile()) and
-  exists(Expr use |
+  exists(Expr use, VarAccess base |
     inStep(step, use) and
     (
-      className = receiverClass(use.(PropAccess).getBase())
+      base = use.(PropAccess).getBase()
       or
-      className = receiverClass(use.(MethodCallExpr).getReceiver()) and
+      base = use.(MethodCallExpr).getReceiver() and
       not use.(MethodCallExpr).getMethodName() =
         ["toBe", "toEqual", "toBeNull", "toHaveLength", "toContain", "toBeTruthy"]
+    ) and
+    decl = base.getVariable().getADeclaration()
+  )
+}
+
+predicate creatorAt(Expr value, string file, int start, int end) {
+  exists(Function fn |
+    fn = value.(InvokeExpr).getResolvedCallee() and
+    file = fn.getFile().getRelativePath() and
+    start = fn.getLocation().getStartLine() and
+    end = fn.getLocation().getEndLine()
+  )
+  or
+  not exists(Function fn | fn = value.(InvokeExpr).getResolvedCallee()) and
+  file = value.getFile().getRelativePath() and
+  start = value.getLocation().getStartLine() and
+  end = value.getLocation().getEndLine()
+}
+
+predicate activeValue(CallExpr step, VarDecl decl, Expr value) {
+  assigning(step, decl, value)
+  or
+  exists(CallExpr earlier |
+    evaluates(step, decl) and
+    assigning(earlier, decl, value) and
+    earlier.getFile() = step.getFile() and
+    storyTitle(earlier) = storyTitle(step) and
+    stepLine(earlier) < stepLine(step) and
+    not exists(CallExpr between |
+      assigning(between, decl, _) and
+      between.getFile() = step.getFile() and
+      storyTitle(between) = storyTitle(step) and
+      stepLine(between) > stepLine(earlier) and
+      stepLine(between) < stepLine(step)
     )
   )
 }
 
-from CallExpr step, string className
-where assignedClass(step, className) or evaluatedClass(step, className)
-select step, className, step.getFile().getRelativePath(), stepLine(step)
+from CallExpr step, VarDecl decl, string variable, string className, Expr value, string creatorFile,
+  int creatorStart, int creatorEnd
+where
+  classVariable(decl, variable, className) and
+  activeValue(step, decl, value) and
+  (assigning(step, decl, value) and usedLater(step, decl) or evaluates(step, decl)) and
+  creatorAt(value, creatorFile, creatorStart, creatorEnd)
+select step, variable, step.getFile().getRelativePath(), stepLine(step), className, creatorFile,
+  creatorStart, creatorEnd
