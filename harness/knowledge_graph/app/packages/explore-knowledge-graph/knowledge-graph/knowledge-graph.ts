@@ -344,7 +344,7 @@ export function shownRelationships<T extends { kind: string; name?: string; node
   links: T[],
 ): T[] {
   return uniqueRelationships(
-    links.filter((link) => link.kind !== "belongsTo" && link.kind !== "owns" && link.kind !== "invokes"),
+    links.filter((link) => link.kind !== "belongsTo" && link.kind !== "owns"),
   );
 }
 

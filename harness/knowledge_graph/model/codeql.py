@@ -203,8 +203,6 @@ class CodeQL:
                     counts["javascript"] += 1
                 elif suffix == ".py":
                     counts["python"] += 1
-                if sum(counts.values()) >= 80:
-                    return max(counts, key=counts.get)
         return max(counts, key=counts.get)
 
     def has_database(self, language: str | None = None) -> bool:

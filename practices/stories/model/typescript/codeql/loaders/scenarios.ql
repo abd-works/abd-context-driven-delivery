@@ -1,23 +1,19 @@
 /**
  * @name Scenario declarations
- * @description scenario('Name') calls nested in a story() test.
+ * @description scenario() calls nested in a story.
  * @kind problem
  * @id cdd/practice-graph/scenarios
  */
 
 import javascript
+import story_query
 
-from CallExpr call, StringLiteral name, File file, CallExpr story, StringLiteral storyName
+from CallExpr call, StringLiteral name, File file, string storyName
 where
   call.getCalleeName() = "scenario" and
+  storyFile(call.getFile()) and
   name = call.getArgument(0) and
   file = call.getFile() and
-  story.getCalleeName() = "story" and
-  storyName = story.getArgument(0) and
-  call.getParent+() = story and
-  (
-    file.getBaseName().matches("%_story.test.ts") or
-    file.getBaseName().matches("%_story.spec.ts")
-  )
-select call, name.getValue(), storyName.getValue(), file.getRelativePath(),
+  storyName = storyTitle(call)
+select call, name.getValue(), storyName, file.getRelativePath(),
   call.getLocation().getStartLine(), call.getLocation().getEndLine()

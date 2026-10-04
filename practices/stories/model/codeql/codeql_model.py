@@ -76,7 +76,16 @@ class Example(SourceExample, CodeQLStoryNode):
 
     def demonstrates(self, cls: Node) -> None:
         """The example demonstrates the class. A step that loads the example does not."""
-        if cls.semantic_type() != "OoadClass":
+        if cls.semantic_type() not in {
+            "OoadClass",
+            "Entity",
+            "EntityRoot",
+            "ValueObject",
+            "Repository",
+            "DomainEvent",
+            "DomainService",
+            "Specification",
+        }:
             return
         self.relate_once(Kind.DEMONSTRATES, cls)
 
@@ -89,8 +98,11 @@ class Example(SourceExample, CodeQLStoryNode):
         self.relate_once(Kind.RETRIEVED_USING, member)
 
     def load_demonstrates(self, class_names: List[str], member: Optional[Node] = None) -> None:
+        graph = getattr(self, "_graph", None)
         for class_name in class_names:
-            owned = self.named(class_name, "OoadClass")
+            owned = graph.class_named(class_name) if graph is not None and hasattr(graph, "class_named") else None
+            if owned is None:
+                owned = self.named(class_name, "OoadClass")
             if owned is not None:
                 self.demonstrates(owned)
         if member is not None:
@@ -143,7 +155,7 @@ class Step(SourceStep, CodeQLStoryNode):
 
     def invokes(self, target: Node) -> None:
         """A when step calls zero or more operations or properties."""
-        if self.step_type != StepType.WHEN:
+        if self.step_type not in {StepType.WHEN, StepType.GIVEN}:
             return
         if target.semantic_type() not in {"Operation", "Property"}:
             return
@@ -206,82 +218,6 @@ class Step(SourceStep, CodeQLStoryNode):
                 story_call.get("callee_operation") or "",
             )
 
-    def wire_source_invokes(self, graph: "PracticeGraph") -> None:
-        """A when step invokes the operation its body calls."""
-        import re
-
-        self._graph = graph
-        root = getattr(graph, "root", None)
-        if root is None:
-            return
-        classes: Dict[str, Node] = {}
-        for node in graph.nodes.values():
-            if node.semantic_type() == "OoadClass":
-                classes[node.name.lower()] = node
-        call = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*\(")
-        skip = {
-            "expect",
-            "vi",
-            "console",
-            "Math",
-            "JSON",
-            "Object",
-            "Promise",
-            "Array",
-            "describe",
-            "it",
-            "test",
-            "beforeEach",
-            "afterEach",
-        }
-        for step in graph.nodes_of_type(Step):
-            if step.step_type != StepType.WHEN:
-                continue
-            for receiver, method in call.findall(self._step_body(root, step)):
-                if receiver in skip:
-                    continue
-                owner = classes.get(receiver.lower())
-                if owner is None:
-                    continue
-                step.load_invokes(owner.name, method)
-
-    def _step_body(self, root, step) -> str:
-        source = getattr(step, "source", None)
-        if source is None or not getattr(source, "file", ""):
-            return ""
-        path = Path(root) / str(source.file)
-        if not path.is_file():
-            return getattr(source, "text", "") or ""
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-        start = max(int(getattr(source, "line", 0) or 1) - 1, 0)
-        end = int(getattr(source, "end_line", 0) or 0)
-        if end <= int(getattr(source, "line", 0) or 0):
-            end = self._callback_end(lines, start)
-        return "\n".join(lines[start:end])
-
-    def _callback_end(self, lines: List[str], start: int) -> int:
-        text = "\n".join(lines[start:])
-        open_at = text.find("{")
-        if open_at < 0:
-            return start + 1
-        depth = 0
-        for index, char in enumerate(text[open_at:], start=open_at):
-            if char == "{":
-                depth += 1
-            elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    return start + text[: index + 1].count("\n") + 1
-        return min(start + 40, len(lines))
-
-    def _property_named(self, graph: "PracticeGraph", class_name: str, property_name: str):
-        owner = graph.class_named(class_name)
-        if owner is None:
-            return None
-        for node in owner.related(Kind.OWNS):
-            if node.semantic_type() == "Property" and node.name == property_name:
-                return node
-        return None
 
     def wire_observations(self, graph: "PracticeGraph", observations: List[dict]) -> None:
         from practices.clean_engineering.model.codeql.codeql_model import Operation, Property
@@ -307,6 +243,7 @@ class Step(SourceStep, CodeQLStoryNode):
                 continue
             if step.step_type != StepType.THEN:
                 continue
+            step.relate_once(Kind.OBSERVES, target)
             watched = [
                 node for node in step.related(Kind.OWNS) if node.semantic_type() == "Example"
             ]
@@ -331,16 +268,39 @@ class Step(SourceStep, CodeQLStoryNode):
     def at(self, story_file: str, line: int) -> Optional["Step"]:
         self._lookup_file = story_file.replace("\\", "/").lstrip("./")
         self._lookup_line = line
+        on_line = self._step_on_line()
+        if on_line is not None:
+            return on_line
         by_text = self._step_matching_text()
         if by_text is not None:
             return by_text
         return self._step_near_line()
+
+    def _same_file(self, step: "Step") -> bool:
+        src = getattr(step, "source", None)
+        if src is None:
+            return False
+        src_file = str(src.file).replace("\\", "/").lstrip("./")
+        return src_file == self._lookup_file or src_file.endswith("/" + self._lookup_file)
+
+    def _step_on_line(self) -> Optional["Step"]:
+        if self._lookup_line <= 0:
+            return None
+        for step in self._graph.nodes_of_type(Step):
+            src = getattr(step, "source", None)
+            if src is None or not self._same_file(step):
+                continue
+            if int(src.line) == self._lookup_line:
+                return step
+        return None
 
     def _step_matching_text(self) -> Optional["Step"]:
         step_text = self._step_text
         if not step_text:
             return None
         for step in self._graph.nodes_of_type(Step):
+            if not self._same_file(step):
+                continue
             if step_text.lower() in step.text.lower():
                 return step
         return None
@@ -653,7 +613,6 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
         self._wire_step_examples(graph, created_steps, [node for _, node in backgrounds])
         calls = Step("", StepType.GIVEN, 0)
         calls.wire_calls(graph, raw.get("story_calls") or [])
-        calls.wire_source_invokes(graph)
         calls.wire_observations(graph, raw.get("story_observations") or [])
         Example("").wire_demonstrates(graph, raw.get("example_exports") or [])
         self._aggregate_cross_practice(graph)
@@ -706,6 +665,7 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
         phases = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
         for identity in order:
             parent, rows = grouped[identity]
+            rows = sorted(rows, key=lambda row: int(row.get("line") or 0))
             built: List[Step] = []
             previous: Optional[Step] = None
             for row in rows:
@@ -720,6 +680,7 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
                     extra = Step(text, previous.step_type, len(previous.ands) + 1, keyword=word, source=source)
                     previous.ands = [*previous.ands, extra]
                     graph.register(extra)
+                    previous.relate(Kind.OWNS, extra)
                     created.append((row, extra))
                     continue
                 phase = StepType.THEN if word in {"but", "and"} else phases.get(word)
@@ -819,22 +780,38 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
     def _example_named(self, by_name: Dict[str, Example], name: str):
         return by_name.get(name) or by_name.get(str(name).lower())
 
+    def _example_of_class(self, graph, by_name: Dict[str, Example], name: str):
+        """The example is the class the given or then assigned or evaluated."""
+        cls = graph.class_named(name) if hasattr(graph, "class_named") else None
+        if cls is None:
+            return None
+        example = Example(name, {}, len(by_name) + 1)
+        example._graph = graph
+        graph.register(example)
+        example.demonstrates(cls)
+        by_name[name] = example
+        by_name[name.lower()] = example
+        return example
+
     def _wire_step_examples(self, graph: "PracticeGraph", created_steps, backgrounds) -> None:
         by_name: Dict[str, Example] = {}
         for example in graph.nodes_of_type(Example):
             by_name[example.name] = example
             by_name[example.name.lower()] = example
         for entry, step in created_steps:
-            examples = [
-                example
-                for name in (entry.get("uses_examples") or [])
-                if (example := self._example_named(by_name, name)) is not None
-            ]
+            examples = []
+            for name in entry.get("uses_examples") or []:
+                example = self._example_named(by_name, name)
+                if example is None:
+                    example = self._example_of_class(graph, by_name, name)
+                if example is not None:
+                    examples.append(example)
             if step.step_type == StepType.GIVEN:
                 for example in examples:
                     step.load_loads(example)
-            elif step.step_type == StepType.THEN and examples:
-                step.load_observes(examples[0])
+            elif step.step_type == StepType.THEN:
+                for example in examples:
+                    step.own_example(example)
         for background in backgrounds:
             for step in background.related(Kind.OWNS):
                 if step.semantic_type() != "Step":
@@ -895,23 +872,40 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
 
     @classmethod
     def load_content(cls, folder) -> "StoryModel":
-        """One run over a CodeQL database. A folder of story files still uses the story queries."""
+        """Load the story map from a CodeQL database. Source files are not scanned."""
         from pathlib import Path
 
-        root = Path(folder)
-        if (root / "codeql-database.yml").is_file():
-            return cls()._load_database(root)
-        from harness.knowledge_graph.model.codeql_query import query_workspace
-        from harness.knowledge_graph.model.practice_graph import PracticeGraph
+        from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
 
-        export = query_workspace(root)
-        graph = PracticeGraph(root)
-        raw = cls._raw(export)
-        cls._sort_stories(root, raw)
-        cls().ensure(graph, raw)
-        cls._comment_examples(root, graph.story_map)
-        cls._background_example_comments(root, graph.story_map)
-        return graph.story_map
+        root = Path(folder)
+        database = root if (root / "codeql-database.yml").is_file() else None
+        if database is None:
+            codeql = CodeQL(root)
+            database = codeql._ready_database(codeql.detect_language())
+        if database is None:
+            raise CodeQLRunError(f"no CodeQL database for stories under {root}")
+        return cls()._load_database(database)
+
+    def load_on(self, graph, workspace) -> None:
+        """Run the story queries against the workspace database and attach them to this graph."""
+        from pathlib import Path
+
+        from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
+
+        root = Path(workspace)
+        codeql = CodeQL(root)
+        language = codeql.detect_language()
+        database = root if (root / "codeql-database.yml").is_file() else codeql._ready_database(language)
+        if database is None:
+            raise CodeQLRunError(f"no CodeQL database for stories under {root}")
+        if "typescript" in database.name:
+            language = "typescript"
+        elif "javascript" in database.name:
+            language = "javascript"
+        elif "python" in database.name:
+            language = "python"
+        raw = self._query_raw(codeql, database, language)
+        self.ensure(graph, raw)
 
     @staticmethod
     def _comment_examples(root, story_map) -> None:
@@ -1002,17 +996,39 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
 
         queries = [
             loader_query("stories", query_name, language)
-            for query_name in (
-                "stories",
-                "scenarios",
-                "backgrounds",
-                "steps",
-                "example_exports",
-            )
+            for query_name in self._story_query_names(language)
         ]
         batch = codeql.run_queries(queries, database, write_filter=False)
         self.ensure(model.graph, self._database_raw(batch))
         return model.graph.story_map
+
+    def _query_raw(self, codeql, database, language: str) -> dict:
+        from harness.knowledge_graph.model.codeql_layout import loader_query
+
+        names = self._story_query_names(language)
+        queries = [loader_query("stories", name, language) for name in names]
+        batch = codeql.run_queries(queries, database, write_filter=False)
+        return self._database_raw(batch)
+
+    @staticmethod
+    def _story_query_names(language: str) -> tuple:
+        names = ("stories", "scenarios", "backgrounds", "steps", "example_exports")
+        if language in {"typescript", "javascript"}:
+            names = names + ("step_examples", "step_invokes", "step_observes")
+        return names
+
+    @staticmethod
+    def _owners_from_path(file_name: str) -> list:
+        parts = [part for part in str(file_name).replace("\\", "/").split("/") if part]
+        if parts and parts[0] == "tests":
+            parts = parts[1:]
+        dirs = parts[:-1]
+
+        def display(part: str) -> str:
+            words = part.replace("_", "-").split("-")
+            return " ".join(word[:1].upper() + word[1:] for word in words if word)
+
+        return [display(part) for part in dirs]
 
     @staticmethod
     def _text(value) -> str:
@@ -1023,13 +1039,10 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
         return str(value)
 
     def _database_raw(self, batch: dict) -> dict:
-        from harness.knowledge_graph.model.codeql_query import StorySourceQuery
-
-        owners_of = StorySourceQuery(Path("."))
         stories = []
         for row in batch.get("stories") or []:
             file_name = self._text(row[2] if len(row) > 2 else "")
-            owners = owners_of._owner_chain(file_name)
+            owners = self._owners_from_path(file_name)
             stories.append(
                 {
                     "name": self._text(row[1] if len(row) > 1 else ""),
@@ -1054,7 +1067,7 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
         ]
         backgrounds = [
             {
-                "name": self._text(row[1] if len(row) > 1 else "") or "background",
+                "name": self._background_label(self._text(row[1] if len(row) > 1 else "") or "background"),
                 "story": self._text(row[2] if len(row) > 2 else ""),
                 "file": self._text(row[3] if len(row) > 3 else ""),
                 "line": int(self._text(row[4]) or 0) if len(row) > 4 else 0,
@@ -1069,12 +1082,48 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
                 "text": self._text(row[2] if len(row) > 2 else ""),
                 "story": self._text(row[3] if len(row) > 3 else ""),
                 "scenario": self._text(row[4] if len(row) > 4 else ""),
-                "background": self._text(row[5] if len(row) > 5 else ""),
+                "background": self._background_label(self._text(row[5] if len(row) > 5 else "")),
                 "file": self._text(row[6] if len(row) > 6 else ""),
                 "line": int(self._text(row[7]) or 0) if len(row) > 7 else 0,
                 "end_line": int(self._text(row[8]) or 0) if len(row) > 8 else 0,
+                "uses_examples": [],
             }
             for row in batch.get("steps") or []
+        ]
+        examples_by_step: Dict[Tuple[str, int], List[str]] = {}
+        for row in batch.get("step_examples") or []:
+            file_name = self.normalized_file(self._text(row[2] if len(row) > 2 else ""))
+            line = int(self._text(row[3]) or 0) if len(row) > 3 else 0
+            name = self._text(row[1] if len(row) > 1 else "")
+            if not name:
+                continue
+            names = examples_by_step.setdefault((file_name, line), [])
+            if name not in names:
+                names.append(name)
+        for step in steps:
+            step["uses_examples"] = examples_by_step.get(
+                (self.normalized_file(step["file"]), step["line"]),
+                [],
+            )
+        story_calls = [
+            {
+                "story_file": self._text(row[1] if len(row) > 1 else ""),
+                "line": int(self._text(row[2]) or 0) if len(row) > 2 else 0,
+                "callee_class": self._text(row[3] if len(row) > 3 else ""),
+                "callee_operation": self._text(row[4] if len(row) > 4 else ""),
+                "step_text": self._text(row[5] if len(row) > 5 else ""),
+            }
+            for row in batch.get("step_invokes") or []
+        ]
+        story_observations = [
+            {
+                "story_file": self._text(row[1] if len(row) > 1 else ""),
+                "line": int(self._text(row[2]) or 0) if len(row) > 2 else 0,
+                "target_class": self._text(row[3] if len(row) > 3 else ""),
+                "target_member": self._text(row[4] if len(row) > 4 else ""),
+                "member_kind": self._text(row[5] if len(row) > 5 else ""),
+            }
+            for row in batch.get("step_observes") or []
         ]
         examples: Dict[Tuple[str, str], dict] = {}
         for row in batch.get("example_exports") or []:
@@ -1100,7 +1149,15 @@ class StoryModel(SourceStoryModel, CodeQLStoryNode):
             "backgrounds": backgrounds,
             "steps": steps,
             "example_exports": list(examples.values()),
+            "story_calls": story_calls,
+            "story_observations": story_observations,
         }
+
+    @staticmethod
+    def _background_label(name: str) -> str:
+        if name in {"each", "all"}:
+            return "background"
+        return name
 
     @staticmethod
     def _sort_stories(root, raw: dict) -> None:

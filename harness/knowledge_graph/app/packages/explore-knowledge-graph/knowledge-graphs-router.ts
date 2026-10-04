@@ -16,7 +16,7 @@ import {
 } from './knowledge-graph/graph';
 import { KnowledgeGraphNode } from './knowledge-graph/knowledge-graph-node';
 import { resolveNamedFolder } from './knowledge-graph/workspace';
-import { databaseBuildRequired } from './knowledge-graph/knowledge-graph';
+import { databaseBuildRequired, databaseGraphFromScratch } from './knowledge-graph/knowledge-graph';
 
 type KnowledgeGraphStore = {
   knowledge_graphs: unknown[];
@@ -122,12 +122,13 @@ export class KnowledgeGraphsServer {
     folder: string,
     repo: KnowledgeGraphRepository,
     force = false,
+    fromScratch = false,
   ): Promise<KnowledgeGraph> {
     const root = _resolvePickedFolder(folder);
     if (_isDir(root)) {
       _writeLastScanRoot(root);
     }
-    const graph = _fromPracticeHierarchyCli(root, force);
+    const graph = _fromPracticeHierarchyCli(root, force, fromScratch);
     return repo.create({
       folder: root,
       practiceGraphs: graph.toDto().practice_graphs,
@@ -498,7 +499,12 @@ async function _runDatabaseOperation(
     console.log(`${operation} ${root}`);
     _spawnDatabaseCli(operation, root);
   }
-  return KnowledgeGraphsServer.selectFolder(root, repo);
+  return KnowledgeGraphsServer.selectFolder(
+    root,
+    repo,
+    true,
+    databaseGraphFromScratch(operation),
+  );
 }
 
 function _spawnDatabaseCli(

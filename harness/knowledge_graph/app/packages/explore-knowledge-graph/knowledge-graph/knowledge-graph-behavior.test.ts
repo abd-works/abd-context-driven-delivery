@@ -1645,7 +1645,7 @@ describe("a scenario step", () => {
       expect(engineering.map((node) => node.name)).not.toContain("When they send a feedback note");
     });
 
-    it("should leave belongsTo, owns, and invokes out of the relationship list", () => {
+    it("should leave belongsTo and owns out of the relationship list", () => {
       expect(
         shownRelationships([
           { kind: "belongsTo", nodeId: "story", name: "Load Customer" },
@@ -1655,6 +1655,7 @@ describe("a scenario step", () => {
           { kind: "demonstratedThrough", nodeId: "example", name: "unverifiedAccountCredentials" },
         ]),
       ).toEqual([
+        { kind: "invokes", nodeId: "load", name: "load" },
         { kind: "demonstrates", nodeId: "example", name: "seedCustomer" },
         { kind: "demonstratedThrough", nodeId: "example", name: "unverifiedAccountCredentials" },
       ]);

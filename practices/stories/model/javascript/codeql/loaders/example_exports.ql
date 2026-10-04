@@ -1,30 +1,35 @@
 /**
  * @name Example factory exports
- * @description export const in *.examples.ts — the example name and the domain class it constructs.
+ * @description Exported example factories in *.examples.ts.
  * @kind problem
  * @id cdd/practice-graph/example-exports
  */
 
 import javascript
 
-from ExportNamedDeclaration decl, VarDecl exported, VariableDeclarator declarator, File file, string className
+predicate exampleFile(File file) {
+  file.getBaseName().regexpMatch(".*\\.examples\\.[jt]sx?")
+}
+
+string exampleClass(VarDecl exported) {
+  result = exported.getParent().(Function).getReturnTypeAnnotation().(LocalTypeAccess).getName()
+  or
+  exists(VariableDeclarator declarator, NewExpr neu |
+    declarator.getBindingPattern().getABindingVarRef() = exported and
+    neu.getParent*() = declarator.getInit() and
+    result = neu.getCalleeName()
+  )
+}
+
+from ExportNamedDeclaration decl, VarDecl exported, File file, string className
 where
   file = decl.getFile() and
-  file.getBaseName().matches("%.examples.js") and
+  exampleFile(file) and
   exported = decl.getADecl() and
-  declarator.getBindingPattern().getABindingVarRef() = exported and
   (
-    exists(NewExpr neu |
-      neu.getParent*() = declarator.getInit() and
-      className = neu.getCalleeName()
-    )
+    className = exampleClass(exported)
     or
-    not exists(NewExpr neu |
-      exists(declarator.getInit()) and
-      neu.getParent*() = declarator.getInit() and
-      exists(neu.getCalleeName())
-    ) and
-    className = ""
+    not exists(exampleClass(exported)) and className = ""
   )
-select exported, exported.getName(), file.getRelativePath(),
-  exported.getLocation().getStartLine(), className, exported.getLocation().getEndLine()
+select exported, exported.getName(), file.getRelativePath(), exported.getLocation().getStartLine(),
+  className, exported.getLocation().getEndLine()

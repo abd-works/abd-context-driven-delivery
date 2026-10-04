@@ -1,37 +1,24 @@
 /**
  * @name Story backgrounds
- * @description background('each') calls in acceptance tests.
+ * @description background() calls. The scope each/all is a background, not its name.
  * @kind problem
  * @id cdd/practice-graph/backgrounds
  */
 
 import javascript
+import story_query
 
-string enclosingScenario(CallExpr call) {
-  exists(CallExpr scenario, StringLiteral name |
-    scenario.getCalleeName() = "scenario" and
-    name = scenario.getArgument(0) and
-    call.getParent+() = scenario and
-    result = name.getValue()
-  )
-}
-
-from CallExpr call, StringLiteral scope, File file, CallExpr story, StringLiteral storyName, string scenario
+from CallExpr call, File file, string storyName, string scenario, string label
 where
   call.getCalleeName() = "background" and
-  scope = call.getArgument(0) and
+  storyFile(call.getFile()) and
   file = call.getFile() and
-  story.getCalleeName() = "story" and
-  storyName = story.getArgument(0) and
-  call.getParent+() = story and
+  storyName = storyTitle(call) and
+  label = backgroundTitle(call) and
   (
-    scenario = enclosingScenario(call)
+    scenario = scenarioTitle(call)
     or
-    not exists(enclosingScenario(call)) and scenario = ""
-  ) and
-  (
-    file.getBaseName().matches("%_story.test.js") or
-    file.getBaseName().matches("%_story.spec.js")
+    not exists(scenarioTitle(call)) and scenario = ""
   )
-select call, scope.getValue(), storyName.getValue(), file.getRelativePath(),
-  call.getLocation().getStartLine(), scenario, call.getLocation().getEndLine()
+select call, label, storyName, file.getRelativePath(), call.getLocation().getStartLine(),
+  scenario, call.getLocation().getEndLine()

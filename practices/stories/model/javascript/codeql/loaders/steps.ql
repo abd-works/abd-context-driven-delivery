@@ -1,60 +1,29 @@
 /**
  * @name Story steps
- * @description given/when/then/.and/.but calls — keyword and label from the TypeScript test.
+ * @description given/when/then/.and/.but calls.
  * @kind problem
  * @id cdd/practice-graph/steps
  */
 
 import javascript
+import story_query
 
-predicate isStepName(string name) {
-  name = "given" or
-  name = "when" or
-  name = "then" or
-  name = "and" or
-  name = "but"
-}
-
-string scenarioName(CallExpr call) {
-  exists(CallExpr scenario, StringLiteral name |
-    scenario.getCalleeName() = "scenario" and
-    name = scenario.getArgument(0) and
-    call.getParent+() = scenario and
-    result = name.getValue()
-  )
-}
-
-string backgroundName(CallExpr call) {
-  exists(CallExpr background, StringLiteral name |
-    background.getCalleeName() = "background" and
-    name = background.getArgument(0) and
-    call.getParent+() = background and
-    result = name.getValue()
-  )
-}
-
-from CallExpr call, string callee, StringLiteral arg, File file, CallExpr story, StringLiteral storyName, string scenario, string background
+from CallExpr call, string callee, StringLiteral arg, File file, string storyName, string scenario, string background
 where
+  stepCall(call) and
   callee = call.getCalleeName() and
-  isStepName(callee) and
   arg = call.getArgument(0) and
   file = call.getFile() and
-  story.getCalleeName() = "story" and
-  storyName = story.getArgument(0) and
-  call.getParent+() = story and
+  storyName = storyTitle(call) and
   (
-    scenario = scenarioName(call)
+    scenario = scenarioTitle(call)
     or
-    not exists(scenarioName(call)) and scenario = ""
+    not exists(scenarioTitle(call)) and scenario = ""
   ) and
   (
-    background = backgroundName(call)
+    background = backgroundTitle(call)
     or
-    not exists(backgroundName(call)) and background = ""
-  ) and
-  (
-    file.getBaseName().matches("%_story.test.js") or
-    file.getBaseName().matches("%_story.spec.js")
+    not exists(backgroundTitle(call)) and background = ""
   )
-select call, callee, arg.getValue(), storyName.getValue(), scenario, background,
-  file.getRelativePath(), call.getLocation().getStartLine(), call.getLocation().getEndLine()
+select call, callee, arg.getValue(), storyName, scenario, background, file.getRelativePath(),
+  stepLine(call), call.getLocation().getEndLine()

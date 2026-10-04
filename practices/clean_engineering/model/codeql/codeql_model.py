@@ -488,7 +488,7 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
         self._ensure_bounded_contexts()
 
     def _ensure_bounded_contexts(self) -> None:
-        from practices.ddd.model.codeql.codeql_model import BoundedContext
+        from practices.ddd.model.codeql.codeql_model import Aggregate, BoundedContext
 
         kinds = {
             "Entity",
@@ -500,6 +500,7 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
             "Specification",
         }
         contexts: dict[str, BoundedContext] = {}
+        grouped: dict[str, dict] = {}
         for node in list(self._graph.nodes.values()):
             if node.semantic_type() not in kinds:
                 continue
@@ -519,14 +520,35 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
                 bc_name = parts[1]
             else:
                 bc_name = parts[-1] if parts else "Domain"
+            folder_key = "/".join(parts).lower() if parts else bc_name.lower()
+            bucket = grouped.get(folder_key)
+            if bucket is None:
+                bucket = {"bc_name": bc_name, "parts": parts, "nodes": []}
+                grouped[folder_key] = bucket
+            bucket["nodes"].append(node)
+        for folder_key, bucket in grouped.items():
+            bc_name = bucket["bc_name"]
+            parts = bucket["parts"]
+            nodes = bucket["nodes"]
             key = bc_name.lower()
             context = contexts.get(key)
             if context is None:
                 context = BoundedContext(bc_name.replace("-", " ").title(), len(contexts) + 1)
                 self._graph.register(context)
                 contexts[key] = context
-            if node.node_id not in {item.node_id for item in context.related(Kind.OWNS)}:
-                context.relate(Kind.OWNS, node)
+            roots = [node for node in nodes if node.semantic_type() == "EntityRoot"]
+            owner = context
+            if roots:
+                label = (parts[-1] if parts else bc_name).replace("-", " ").title()
+                aggregate = Aggregate(label, len(context.aggregates) + 1)
+                aggregate.root = roots[0]
+                self._graph.register(aggregate)
+                context.relate(Kind.OWNS, aggregate)
+                context.aggregates.append(aggregate)
+                owner = aggregate
+            for node in nodes:
+                if node.node_id not in {item.node_id for item in owner.related(Kind.OWNS)}:
+                    owner.relate(Kind.OWNS, node)
 
 
     def _owned_member(self, owner, collection: str, name: str):

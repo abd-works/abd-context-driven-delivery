@@ -1,20 +1,17 @@
 /**
  * @name Story declarations
- * @description story('Name') calls in acceptance tests — epic/sub-epic from the stories/ folder path.
+ * @description story() and shareStory() calls in acceptance tests.
  * @kind problem
  * @id cdd/practice-graph/stories
  */
 
 import javascript
+import story_query
 
 from CallExpr call, StringLiteral name, File file
 where
-  call.getCalleeName() = "story" and
+  storyCall(call) and
   name = call.getArgument(0) and
-  file = call.getFile() and
-  (
-    file.getBaseName().matches("%_story.test.ts") or
-    file.getBaseName().matches("%_story.spec.ts")
-  )
+  file = call.getFile()
 select call, name.getValue(), file.getRelativePath(), call.getLocation().getStartLine(),
   call.getLocation().getEndLine()

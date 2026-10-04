@@ -532,6 +532,7 @@ def main(
     try:
         codeql = CodeQL(workspace)
         codeql.populate(graph, populate=populate)
+        _load_story_queries(graph, workspace, log)
         ran_rules = populate or codeql.has_database()
         if ran_rules:
             slugs = _slugs_for(graph, selected)
@@ -650,55 +651,22 @@ def _load_practice_trees(graph: PracticeGraph, workspace: Path, log) -> None:
         print(f"stories map did not load ({error})", file=log, flush=True)
     if loader.graph.story_map and loader.graph.story_map.epics:
         return
-    from dataclasses import asdict
 
-    from harness.knowledge_graph.model.codeql_query import query_workspace
+
+def _load_story_queries(graph: PracticeGraph, workspace: Path, log) -> None:
+    """Story queries run after the class index exists, so invokes and observes can bind."""
+    if graph.story_map and graph.story_map.epics:
+        return
     from practices.stories.model.codeql.codeql_model import StoryModel
 
     try:
-        export = query_workspace(workspace)
-        raw = {
-            "stories": [
-                {
-                    "name": story.text,
-                    "file": story.file,
-                    "epic": story.epic,
-                    "sub_epic": story.sub_epic,
-                    "line": story.line,
-                    "actor": story.actor,
-                    "owners": list(story.owners),
-                }
-                for story in export.stories
-            ],
-            "scenarios": [
-                {
-                    "name": scenario.text,
-                    "story": scenario.story,
-                    "file": scenario.file,
-                    "line": scenario.line,
-                }
-                for scenario in export.scenarios
-            ],
-            "backgrounds": [
-                {
-                    "name": background.text,
-                    "story": background.story,
-                    "file": background.file,
-                    "line": background.line,
-                }
-                for background in export.backgrounds
-            ],
-            "steps": [asdict(step) for step in export.steps],
-            "example_exports": [asdict(example) for example in export.example_exports],
-        }
-        if raw["stories"] or raw["example_exports"]:
-            StoryModel().ensure(graph, raw)
-            print(
-                f"stories tree: {len(raw['stories'])} stories, "
-                f"{len(raw['scenarios'])} scenarios",
-                file=log,
-                flush=True,
-            )
+        StoryModel().load_on(graph, workspace)
+        print(
+            f"stories tree: {sum(1 for node in graph.nodes.values() if node.semantic_type() == 'Story')} stories, "
+            f"{sum(1 for edge in graph.relationships if getattr(edge, 'kind', None) == 'invokes')} invokes",
+            file=log,
+            flush=True,
+        )
     except Exception as error:
         print(f"stories tree did not load ({error})", file=log, flush=True)
 

@@ -648,7 +648,11 @@ export class KnowledgeGraph {
       return {
         ...node,
         children: [
+          ...node.children.filter(
+            (child) => child.semantic_type === 'Example' || child.semantic_type === 'Step',
+          ),
           ...this._operationsForStep(node),
+          ...this._observedForStep(node),
           ...this._classesForStep(node).map((cls) => this._paneClass(cls)),
         ],
       };
@@ -819,6 +823,48 @@ export class KnowledgeGraph {
             origin: listed.source,
             children: [],
           },
+          1,
+          new Set(),
+        ),
+      );
+    }
+    return found;
+  }
+
+  private _observedForStep(step: ListedTreeNode): ListedTreeNode[] {
+    const found: ListedTreeNode[] = [];
+    const seen = new Set<string>();
+    const exampleIds = new Set(
+      step.children.filter((child) => child.semantic_type === 'Example').map((child) => child.node_id),
+    );
+    for (const edge of this._allEdges()) {
+      if (edge.kind === 'owns' && edge.from_id === step.node_id) {
+        const owned = this._nodeById(edge.to_id);
+        if (owned?.semanticType === 'Example') {
+          exampleIds.add(owned.nodeId);
+        }
+      }
+    }
+    for (const edge of this._allEdges()) {
+      if (
+        (edge.kind !== 'retrievedUsing' || !exampleIds.has(edge.from_id)) &&
+        (edge.kind !== 'observes' || edge.from_id !== step.node_id)
+      ) {
+        continue;
+      }
+      const member = this._nodeById(edge.to_id);
+      if (
+        !member ||
+        (member.semanticType !== 'Operation' && member.semanticType !== 'Property') ||
+        seen.has(member.nodeId)
+      ) {
+        continue;
+      }
+      seen.add(member.nodeId);
+      const listed = this._listedLeaf(member);
+      found.push(
+        this._memberPane(
+          { ...listed, path: listed.name, origin: listed.source, children: [] },
           1,
           new Set(),
         ),

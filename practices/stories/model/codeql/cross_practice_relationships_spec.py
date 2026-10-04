@@ -181,20 +181,8 @@ with description("Stories CodeQL cross-practice relationships"):
             expect(epic.related(Kind.USES)).to(have_length(1))
             expect(epic.related(Kind.USES)[0]).to(equal(module))
 
-    with it("should invoke the operation a when step calls in its body"):
-        import tempfile
-
-        folder = Path(tempfile.mkdtemp())
-        story_file = folder / _FILE
-        story_file.parent.mkdir(parents=True)
-        story_file.write_text(
-            "\n" * 13
-            + "      when('My Paradise loads the customer', () => {\n"
-            + "        customerRepository.load(id);\n"
-            + "      });\n",
-            encoding="utf-8",
-        )
-        graph = PracticeGraph(folder)
+    with it("should invoke the operation named by the when-step call row"):
+        graph = PracticeGraph(_REPO_ROOT)
         module = Module("Customer", 1)
         graph.register(module)
         repository = OoadClass("CustomerRepository", 1)
@@ -222,6 +210,15 @@ with description("Stories CodeQL cross-practice relationships"):
                         "line": 14,
                         "end_line": 16,
                         "scenario": "customer exists",
+                    }
+                ],
+                "story_calls": [
+                    {
+                        "story_file": _FILE,
+                        "line": 14,
+                        "callee_class": "CustomerRepository",
+                        "callee_operation": "load",
+                        "step_text": "My Paradise loads the customer",
                     }
                 ],
             },

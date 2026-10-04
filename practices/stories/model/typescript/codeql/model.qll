@@ -1,7 +1,7 @@
 import javascript
 import subject_filter
 
-predicate storyCall(CallExpr call) { call.getCalleeName() = "story" }
+predicate storyCall(CallExpr call) { call.getCalleeName() = ["story", "shareStory"] }
 
 predicate scenarioCall(CallExpr call) { call.getCalleeName() = "scenario" }
 
