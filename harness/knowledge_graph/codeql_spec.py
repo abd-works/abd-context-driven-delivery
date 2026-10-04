@@ -249,6 +249,7 @@ with description("CodeQL fact queries"):
                 "operations.ql",
                 "parameters.ql",
                 "properties.ql",
+                "relatives.ql",
                 "calls.ql",
             ]))
             expect(paths[0].parent.name).to(equal("loaders"))
@@ -265,6 +266,7 @@ with description("CodeQL fact queries"):
                 "operations.ql",
                 "parameters.ql",
                 "properties.ql",
+                "relatives.ql",
                 "calls.ql",
             ]))
             expect(paths[0].parent.name).to(equal("loaders"))

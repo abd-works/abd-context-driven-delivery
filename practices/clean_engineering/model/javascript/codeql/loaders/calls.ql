@@ -6,10 +6,11 @@
 
 import javascript
 import subject_filter
+import members
 
 from MethodDefinition caller, CallExpr call, string calleeName
 where
-  inSubject(caller) and
+  classOperation(caller) and
   call.getEnclosingFunction() = caller.getBody() and
   calleeName = call.getCalleeName() and
   exists(calleeName)

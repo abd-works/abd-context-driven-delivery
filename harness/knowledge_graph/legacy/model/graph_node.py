@@ -25,6 +25,7 @@ class Kind:
     INVOKES = "invokes"
     HAS_IDENTITY = "hasIdentity"
     ROOT = "root"
+    RELATIVE = "relative"
     ACCESSES = "accesses"
     SCOPES = "scopes"
     SCOPED_BY = "scopedBy"
@@ -209,6 +210,8 @@ def ownership_kind(kind: str) -> str:
         return Kind.COMPOSITION
     if lowered == "aggregation":
         return Kind.AGGREGATION
+    if lowered == "relative":
+        return Kind.RELATIVE
     return Kind.ASSOCIATES
 
 

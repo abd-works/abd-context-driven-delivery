@@ -528,6 +528,22 @@ function FilterSelect({
   );
 }
 
+const CLASS_TREE_KINDS = new Set([
+  'OoadClass',
+  'Entity',
+  'EntityRoot',
+  'ValueObject',
+  'Repository',
+  'DomainEvent',
+  'DomainService',
+  'Specification',
+  'Aggregate',
+]);
+
+function isFieldGroup(node: KnowledgeGraphNode): boolean {
+  return (node.nodeType?.name ?? '') === 'FieldGroup' || node.name === 'properties' || node.name === 'fields';
+}
+
 function TreeNode({
   node,
   depth,
@@ -549,18 +565,24 @@ function TreeNode({
   onToggle: (id: string) => void;
   onSelect: (nodeId: string) => void;
 }) {
-  const children = (node.children ?? []).filter((child) => shown(child, picked, options));
+  const visible = (node.children ?? []).filter((child) => shown(child, picked, options));
   if (!shown(node, picked, options)) {
     return null;
   }
+  const grouped = (node.children ?? []).find((child) => isFieldGroup(child));
+  const fields = grouped?.children ?? [];
+  const children = visible.filter((child) => !isFieldGroup(child));
   const rules = rulesFor(node, picked, options, showRules);
   const links = shownRelationships(node.relationships ?? []);
   const rulesId = `${node.nodeId}::rules`;
   const linksId = `${node.nodeId}::relationships`;
+  const fieldsId = `${node.nodeId}::properties`;
+  const showFields = fields.length > 0;
   const open = openIds.has(node.nodeId);
   const rulesOpen = openIds.has(rulesId);
   const linksOpen = openIds.has(linksId);
-  const canOpen = children.length > 0 || rules.length > 0 || links.length > 0;
+  const fieldsOpen = openIds.has(fieldsId);
+  const canOpen = children.length > 0 || showFields || rules.length > 0 || links.length > 0;
   const kind = node.nodeType?.name ?? '';
   const selected = node.nodeId === selectedId;
   return (
@@ -619,6 +641,47 @@ function TreeNode({
               onSelect={onSelect}
             />
           ))}
+          {showFields ? (
+            <li data-depth={depth + 1} data-testid="tree-properties">
+              <div className="tree-row">
+                <button
+                  type="button"
+                  className="tree-twist"
+                  data-testid="tree-expand-properties"
+                  aria-expanded={fieldsOpen}
+                  aria-label={`${fieldsOpen ? 'Collapse' : 'Expand'} properties`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggle(fieldsId);
+                  }}
+                >
+                  {fieldsOpen ? '▼' : '▶'}
+                </button>
+                <button type="button" title="properties" onClick={() => onToggle(fieldsId)}>
+                  <KindMark kind="FieldGroup" isFile={false} />
+                  <span className="node-name">properties</span>
+                </button>
+              </div>
+              {fieldsOpen ? (
+                <ul>
+                  {fields.map((child) => (
+                    <TreeNode
+                      key={child.nodeId || child.name}
+                      node={child}
+                      depth={depth + 2}
+                      picked={picked}
+                      options={options}
+                      showRules={showRules}
+                      selectedId={selectedId}
+                      openIds={openIds}
+                      onToggle={onToggle}
+                      onSelect={onSelect}
+                    />
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ) : null}
           {links.length > 0 ? (
             <li data-depth={depth + 1} data-testid="tree-relationships">
               <div className="tree-row">
@@ -1195,6 +1258,8 @@ function visibleHits(
   });
 }
 
+const MEMBER_KINDS = new Set(['Property', 'Operation', 'Parameter', 'FieldGroup']);
+
 function matches(
   node: KnowledgeGraphNode,
   picked: FilterPick,
@@ -1203,13 +1268,20 @@ function matches(
   if (!practiceAllowed(node.practice, picked, options)) {
     return false;
   }
-  if (restricts(picked.stages, options.stages) && node.nodeType?.name !== 'Practice' && !picked.stages.includes(node.stage)) {
+  const kind = node.nodeType?.name ?? '';
+  if (
+    restricts(picked.stages, options.stages) &&
+    kind !== 'Practice' &&
+    !MEMBER_KINDS.has(kind) &&
+    !picked.stages.includes(node.stage)
+  ) {
     return false;
   }
   if (
     restricts(picked.node_types, options.node_types) &&
-    node.nodeType?.name !== 'Practice' &&
-    !picked.node_types.includes(node.nodeType?.name ?? '')
+    kind !== 'Practice' &&
+    !MEMBER_KINDS.has(kind) &&
+    !picked.node_types.includes(kind)
   ) {
     return false;
   }

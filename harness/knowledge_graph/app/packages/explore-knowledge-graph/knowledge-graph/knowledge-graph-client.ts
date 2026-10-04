@@ -12,6 +12,7 @@ import {
   uniqueRelationships,
   uniqueGraphRelationships,
 } from "./knowledge-graph";
+import { isAccessorSource } from "../../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/knowledge-graph";
 import { stageFor } from "../../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/catalog";
 
 const GRAPH_DEADLINE_MS = 180_000;
@@ -156,8 +157,10 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
     attachCrossEdges(tree, dto);
     uniqueNodeRelationships(tree);
     dropFunctionLocals(tree);
+    retagAccessors(tree);
     uniqueClassMembers(tree);
     nestTypedFields(tree);
+    arrangeClassMembers(tree);
     this.options.ruleCatalog = Array.isArray(presented.rule_catalog) ? presented.rule_catalog : [];
     applyCatalogRules(tree, dto, this.options.ruleCatalog);
     this.matching = tree;
@@ -407,6 +410,15 @@ function dropFunctionLocals(nodes: WebKnowledgeGraphNode[]): void {
   }
 }
 
+function retagAccessors(nodes: WebKnowledgeGraphNode[]): void {
+  for (const node of nodes) {
+    if ((node.nodeType?.name ?? "") === "Operation" && isAccessorSource(String(node.source?.text ?? ""))) {
+      node.nodeType = { name: "Property" };
+    }
+    retagAccessors(node.children ?? []);
+  }
+}
+
 const CLASS_MEMBER_KINDS = new Set(["Property", "Parameter", "Operation"]);
 
 function uniqueClassMembers(nodes: WebKnowledgeGraphNode[]): void {
@@ -417,11 +429,19 @@ function uniqueClassMembers(nodes: WebKnowledgeGraphNode[]): void {
       continue;
     }
     const seen = new Set<string>();
+    const propertyNames = new Set(
+      (node.children ?? [])
+        .filter((child) => (child.nodeType?.name ?? "") === "Property")
+        .map((child) => child.name),
+    );
     node.children = (node.children ?? []).filter((child) => {
       if (child.name === node.name && CLASS_KINDS.has(child.nodeType?.name ?? "")) {
         return false;
       }
       const childKind = child.nodeType?.name ?? "";
+      if (childKind === "Operation" && propertyNames.has(child.name)) {
+        return false;
+      }
       if (!CLASS_MEMBER_KINDS.has(childKind)) {
         return true;
       }
@@ -458,10 +478,20 @@ const VALUE_TYPES = new Set([
   "object",
 ]);
 
+function isRelativeTypeName(name: string): boolean {
+  if (!name || VALUE_TYPES.has(name)) {
+    return false;
+  }
+  if (!/^[A-Z]/.test(name)) {
+    return false;
+  }
+  return !/(Repository|Requirements|Operation|Exception|Error)$/.test(name);
+}
+
 function fieldClassName(text: string): string | null {
   const matched = String(text ?? "").match(/:\s*([A-Z][A-Za-z0-9_]*)/);
   const name = matched?.[1] ?? "";
-  if (!name || VALUE_TYPES.has(name)) {
+  if (!isRelativeTypeName(name)) {
     return null;
   }
   return name;
@@ -513,6 +543,63 @@ function nestTypedFields(nodes: WebKnowledgeGraphNode[]): void {
   }
 }
 
+function arrangeClassMembers(nodes: WebKnowledgeGraphNode[]): void {
+  for (const node of nodes) {
+    arrangeClassMembers(node.children ?? []);
+    const kind = node.nodeType?.name ?? "";
+    if (!CLASS_KINDS.has(kind)) {
+      continue;
+    }
+    const children = node.children ?? [];
+    const grouped = children
+      .filter((child) => isPropertyGroup(child))
+      .flatMap((child) => child.children ?? []);
+    const members = [...children.filter((child) => !isPropertyGroup(child)), ...grouped];
+    const properties = members.filter((child) => (child.nodeType?.name ?? "") === "Property");
+    const relatives = properties.filter((child) => Boolean(fieldClassName(String(child.source?.text ?? ""))));
+    const relativeIds = new Set(relatives.map((child) => child.nodeId));
+    const operations = members.filter((child) => (child.nodeType?.name ?? "") === "Operation");
+    const fields = properties.filter((child) => !relativeIds.has(child.nodeId));
+    const rest = members.filter((child) => {
+      const childKind = child.nodeType?.name ?? "";
+      return childKind !== "Property" && childKind !== "Operation";
+    });
+    node.children = fields.length
+      ? [...relatives, ...operations, propertiesGroup(node, uniqueByName(fields)), ...rest]
+      : [...relatives, ...operations, ...rest];
+  }
+}
+
+function isPropertyGroup(node: WebKnowledgeGraphNode): boolean {
+  const kind = node.nodeType?.name ?? "";
+  return kind === "FieldGroup" || node.name === "properties" || node.name === "fields";
+}
+
+function uniqueByName(nodes: WebKnowledgeGraphNode[]): WebKnowledgeGraphNode[] {
+  const seen = new Set<string>();
+  return nodes.filter((node) => {
+    if (seen.has(node.name)) {
+      return false;
+    }
+    seen.add(node.name);
+    return true;
+  });
+}
+
+function propertiesGroup(owner: WebKnowledgeGraphNode, fields: WebKnowledgeGraphNode[]): WebKnowledgeGraphNode {
+  const group = webNode({
+    name: "properties",
+    node_id: `${owner.nodeId}::properties`,
+    semantic_type: "FieldGroup",
+    practice: owner.practice,
+    children: [],
+  });
+  group.children = fields;
+  group.practice = owner.practice;
+  group.stage = owner.stage;
+  return group;
+}
+
 function uniqueNodeRelationships(nodes: WebKnowledgeGraphNode[]): void {
   for (const node of nodes) {
     node.relationships = uniqueRelationships(node.relationships ?? []);
@@ -520,13 +607,17 @@ function uniqueNodeRelationships(nodes: WebKnowledgeGraphNode[]): void {
   }
 }
 
-function inheritPractice(nodes: WebKnowledgeGraphNode[], practice: string): void {
+function inheritPractice(nodes: WebKnowledgeGraphNode[], practice: string, stage = ""): void {
   for (const node of nodes) {
-    const next = node.practice || practice;
-    if (!node.practice && next && (node.nodeType?.name === "File" || node.isFile)) {
-      node.practice = next;
+    const nextPractice = node.practice || practice;
+    const nextStage = node.stage || stage;
+    if (!node.practice && nextPractice) {
+      node.practice = nextPractice;
     }
-    inheritPractice(node.children ?? [], node.practice || practice);
+    if (!node.stage && nextStage) {
+      node.stage = nextStage;
+    }
+    inheritPractice(node.children ?? [], node.practice || practice, node.stage || nextStage);
   }
 }
 

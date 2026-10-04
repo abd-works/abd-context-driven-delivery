@@ -85,7 +85,7 @@ def bind_property_relationship(prop: "Property") -> None:
         prop.relationship = None
         return
     kind = (prop.stereotype or "association").lower()
-    if kind not in {"composition", "aggregation", "association"}:
+    if kind not in {"composition", "aggregation", "association", "relative"}:
         kind = "association"
     prop.stereotype = kind
     prop.relationship = Relationship(

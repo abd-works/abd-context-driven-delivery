@@ -559,7 +559,8 @@ function _scriptProperties(file: WorkspaceFile): NodeDto[] {
     );
     return matched && !TS_SKIP.has(matched[1]) ? matched[1] : null;
   }).filter((node) => !seen.has(node.source?.start_line));
-  return [...fields, ...parameters];
+  const accessors = _scriptAccessors(file).filter((node) => !seen.has(node.source?.start_line));
+  return [...fields, ...parameters, ...accessors];
 }
 
 function _classBodyFieldLines(file: WorkspaceFile, paramLines: Set<number>): NodeDto[] {
@@ -710,6 +711,23 @@ function _operationsIn(file: WorkspaceFile): NodeDto[] {
   return [];
 }
 
+function _scriptAccessors(file: WorkspaceFile): NodeDto[] {
+  const found: NodeDto[] = [];
+  const pattern =
+    /(?:(?:export|public|private|protected|static|abstract|override|readonly)\s+)*(?:get|set)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{}]*\)\s*(?::[^{]+)?\{/g;
+  let match: RegExpExecArray | null = pattern.exec(file.text);
+  while (match) {
+    const name = match[1];
+    if (!TS_SKIP.has(name)) {
+      const start = match.index;
+      const end = _closingBrace(file.text, (match.index ?? 0) + match[0].length - 1);
+      found.push(_memberNode(file, 'Property', name, start, end));
+    }
+    match = pattern.exec(file.text);
+  }
+  return found;
+}
+
 function _scriptOperations(file: WorkspaceFile): NodeDto[] {
   const found: NodeDto[] = [];
   const pattern =
@@ -717,14 +735,18 @@ function _scriptOperations(file: WorkspaceFile): NodeDto[] {
   let match: RegExpExecArray | null = pattern.exec(file.text);
   while (match) {
     const name = match[1];
-    if (!TS_SKIP.has(name)) {
-      const start = match.index;
-      const end = _closingBrace(file.text, (match.index ?? 0) + match[0].length - 1);
+    const start = match.index ?? 0;
+    if (!TS_SKIP.has(name) && !_accessorPrefix(file.text, start)) {
+      const end = _closingBrace(file.text, start + match[0].length - 1);
       found.push(_operationNode(file, name, start, end));
     }
     match = pattern.exec(file.text);
   }
   return found;
+}
+
+function _accessorPrefix(text: string, start: number): boolean {
+  return /(?:^|[^A-Za-z0-9_])(?:get|set)\s+$/.test(text.slice(Math.max(0, start - 32), start));
 }
 
 function _functionBodyLines(file: WorkspaceFile): Set<number> {

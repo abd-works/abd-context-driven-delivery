@@ -6,11 +6,12 @@
 
 import javascript
 import subject_filter
+import members
 
 from MethodDefinition method, Parameter param
 where
-  inSubject(method) and
-  exists(method.getDeclaringType().getName()) and
+  classOperation(method) and
+  method.getName() != "constructor" and
   param = method.getBody().getAParameter() and
   param.getName() != "this"
 select method.getDeclaringType().getName(), method.getName(), param.getName(),

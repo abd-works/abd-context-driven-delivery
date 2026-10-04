@@ -25,7 +25,7 @@ from .codeql_layout import (
 if TYPE_CHECKING:
     from .practice_graph import PracticeGraph
 
-_FACT_QUERIES = ("classes", "operations", "parameters", "properties", "calls")
+_FACT_QUERIES = ("classes", "operations", "parameters", "properties", "relatives", "calls")
 _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet")
 
 
@@ -461,6 +461,15 @@ class CodeQL:
             for row in tuples
             if self._cell(row, 0) and self._cell(row, 1)
         )
+
+    def relative_rows(self, tuples: List[list] | None = None) -> Rows:
+        if tuples is None:
+            query, database = self._fact_query("relatives")
+            tuples = self.run_query_tuples(query, database)
+        rows = self.property_rows(tuples)
+        for row in rows:
+            row["stereotype"] = "relative"
+        return rows
 
     def call_rows(self, tuples: List[list] | None = None) -> Rows:
         if tuples is None:
@@ -1017,6 +1026,7 @@ class CodeQL:
             "classes": [],
             "operations": [],
             "properties": [],
+            "relatives": [],
             "parameters": [],
             "calls": [],
         }
@@ -1039,10 +1049,15 @@ class CodeQL:
             )
         populate_queries = self._populate_query_paths()
         started = time.perf_counter()
-        batch = {
-            query.stem: self._decode_bqrs(self._bqrs_for(database, query))
-            for query in populate_queries
-        }
+        batch = {}
+        for query in populate_queries:
+            try:
+                batch[query.stem] = self._decode_bqrs(self._bqrs_for(database, query))
+            except CodeQLRunError:
+                if query.stem == "relatives":
+                    batch[query.stem] = []
+                    continue
+                raise
         seconds = time.perf_counter() - started
         from .practice_graph import RuleTiming
 
@@ -1059,7 +1074,8 @@ class CodeQL:
         results_path = self._pending_results
         class_rows = list(self.class_rows(batch["classes"]))
         operation_rows = list(self.operation_rows(batch["operations"]))
-        property_rows = list(self.property_rows(batch["properties"]))
+        property_rows = list(self.property_rows(batch.get("properties") or []))
+        relative_rows = list(self.relative_rows(batch.get("relatives") or []))
         parameter_rows = list(self.parameter_rows(batch["parameters"]))
         call_rows = list(self.call_rows(batch["calls"]))
         raw = self._optional_json(results_path)
@@ -1067,7 +1083,9 @@ class CodeQL:
             class_rows = class_rows + list(raw.get("classes") or [])
             operation_rows = operation_rows + list(raw.get("operations") or [])
             property_rows = property_rows + list(raw.get("properties") or [])
+            relative_rows = relative_rows + list(raw.get("relatives") or [])
             call_rows = call_rows + list(raw.get("calls") or [])
+        property_rows = property_rows + relative_rows
         if not class_rows and not operation_rows and not (raw and (raw.get("stories") or raw.get("steps"))):
             raise RuntimeError(f"CodeQL returned no classes or stories for {self.root}")
         self._assign_module_names(class_rows)

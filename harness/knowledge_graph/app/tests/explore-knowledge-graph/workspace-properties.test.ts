@@ -46,6 +46,36 @@ describe('definitionsInFile properties', () => {
     expect(properties).toEqual(['_customer', '_repository', 'email', 'password', 'verified']);
   });
 
+  it('lists getters and setters as properties, not operations', () => {
+    const found = definitionsInFile({
+      relativePath: 'src/account-credentials.ts',
+      text: [
+        'export class AccountCredentials {',
+        '  get onboardingStep(): OnboardingStep | null {',
+        '    if (this.token && !this.verified) return OnboardingStep.VerifyAccount;',
+        '    return null;',
+        '  }',
+        '  set email(value: string) {',
+        '    this._email = value;',
+        '  }',
+        '  async verify() {',
+        '    return this.verified;',
+        '  }',
+        '}',
+      ].join('\n'),
+    });
+    const properties = found
+      .filter((entry) => entry.semantic_type === 'Property')
+      .map((entry) => entry.name)
+      .sort();
+    const operations = found
+      .filter((entry) => entry.semantic_type === 'Operation')
+      .map((entry) => entry.name)
+      .sort();
+    expect(properties).toEqual(['email', 'onboardingStep']);
+    expect(operations).toEqual(['verify']);
+  });
+
   it('keeps a messages field and not the keys inside that object', () => {
     const found = definitionsInFile({
       relativePath: 'src/customer.ts',
@@ -98,6 +128,62 @@ describe('overlayWorkspaceTree object-literal keys', () => {
       .map((node) => node.name)
       .sort();
     expect(names).toEqual(['id', 'messages']);
+  });
+
+  it('adds relative edges for complex field types', () => {
+    const dto = overlayWorkspaceTree({
+      id: '11111111-1111-1111-1111-111111111111',
+      folder: '',
+      practice_graphs: [
+        {
+          nodes: [
+            graphNode('Customer', 'OoadClass', 'class Customer {}'),
+            graphNode('identity', 'Property', '  public identity: Identity;'),
+            graphNode('id', 'Property', '  public id: string;'),
+          ],
+          relationships: [
+            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:identity' },
+            { kind: 'owns', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:id' },
+          ],
+        },
+      ],
+    });
+    expect(dto.practice_graphs[0].relationships.filter((edge) => edge.kind === 'relative')).toEqual([
+      { kind: 'relative', from_id: 'ce:OoadClass:Customer', to_id: 'ce:Property:identity' },
+    ]);
+  });
+
+  it('retags getter operations as properties', () => {
+    const dto = overlayWorkspaceTree({
+      id: '11111111-1111-1111-1111-111111111111',
+      folder: '',
+      practice_graphs: [
+        {
+          nodes: [
+            graphNode('AccountCredentials', 'OoadClass', 'class AccountCredentials {}'),
+            {
+              name: 'onboardingStep',
+              node_id: 'ce:Operation:onboardingStep',
+              semantic_type: 'Operation',
+              practice: 'clean_engineering',
+              properties: {},
+              source: {
+                file: 'src/account-credentials.ts',
+                start_line: 76,
+                end_line: 79,
+                text: 'get onboardingStep(): OnboardingStep | null {\n    return null;\n  }',
+              },
+            },
+          ],
+          relationships: [
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:onboardingStep' },
+          ],
+        },
+      ],
+    });
+    expect(dto.practice_graphs[0].nodes.find((node) => node.name === 'onboardingStep')?.semantic_type).toBe(
+      'Property',
+    );
   });
 });
 

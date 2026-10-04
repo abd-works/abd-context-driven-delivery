@@ -1606,7 +1606,8 @@ function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
       if (
         found.semantic_type === 'Property' &&
         (isObjectLiteralKeyText(found.source.text ?? '') ||
-          operations.some((op) => line > op.source.start_line && line <= op.source.end_line))
+          (operations.some((op) => line > op.source.start_line && line <= op.source.end_line) &&
+            !/^\s*(?:public|private|protected|readonly)\b/.test(found.source.text ?? '')))
       ) {
         continue;
       }

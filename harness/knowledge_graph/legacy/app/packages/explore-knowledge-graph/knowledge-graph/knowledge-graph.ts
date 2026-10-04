@@ -662,7 +662,8 @@ export class KnowledgeGraph {
         (child) =>
           child.semantic_type !== 'Property' &&
           child.semantic_type !== 'Operation' &&
-          child.semantic_type !== 'Parameter',
+          child.semantic_type !== 'Parameter' &&
+          child.semantic_type !== 'FieldGroup',
       )
       .map((child) => ({ ...child, children: this._withoutMembers(child.children) }));
   }
@@ -1248,7 +1249,7 @@ export class KnowledgeGraph {
         source: folded.source,
         path,
         origin,
-        children: folded.children,
+        children: this._arrangeClassChildren(node, path, folded.children),
         failed: leaf.failed + folded.failed,
         total: leaf.total + folded.total,
       };
@@ -1306,7 +1307,7 @@ export class KnowledgeGraph {
         source: folded.source,
         path,
         origin: leaf.source?.file ? leaf.source : null,
-        children: folded.children,
+        children: this._arrangeClassChildren(node, path, folded.children),
         failed: leaf.failed + folded.failed,
         total: leaf.total + folded.total,
       };
@@ -1378,7 +1379,7 @@ export class KnowledgeGraph {
         source: folded.source,
         path,
         origin: leaf.source?.file ? leaf.source : null,
-        children: folded.children,
+        children: this._arrangeClassChildren(node, path, folded.children),
         failed: leaf.failed + folded.failed,
         total: leaf.total + folded.total,
       };
@@ -1403,6 +1404,26 @@ export class KnowledgeGraph {
     const failed = children.reduce((sum, child) => sum + child.failed, 0);
     const total = children.reduce((sum, child) => sum + child.total, 0);
     return { name: leaf.name, source: leaf.source, children, failed, total };
+  }
+
+  private _arrangeClassChildren(
+    node: GraphNode,
+    path: string,
+    children: ListedTreeNode[],
+  ): ListedTreeNode[] {
+    if (!isClassKind(node.semanticType)) {
+      return children;
+    }
+    const relativeIds = new Set(
+      this._allEdges()
+        .filter((edge) => edge.kind === 'relative' && edge.from_id === node.nodeId)
+        .map((edge) => edge.to_id),
+    );
+    return arrangeListedClassChildren(
+      { node_id: node.nodeId, path, practice: node.practice },
+      children,
+      relativeIds,
+    );
   }
 
   private _sameClassMembers(
@@ -2559,6 +2580,13 @@ export function methodSignature(name: string, operationText: string, classText: 
   return line || operationText;
 }
 
+export function isAccessorSource(text: string): boolean {
+  const first = text.split('\n').find((line) => line.trim().length > 0)?.trim() ?? '';
+  return /^(?:(?:public|private|protected|static|abstract|override|readonly)\s+)*(?:get|set)\s+[A-Za-z_]/.test(
+    first,
+  );
+}
+
 export function isSimpleProperty(text: string): boolean {
   const lines = text
     .split('\n')
@@ -2595,6 +2623,69 @@ export function memberCallLabels(text: string): Map<string, string> {
 export function fieldTypeNames(text: string): string[] {
   const declared = text.split(':').slice(1).join(':');
   return typeIdentifiers(declared);
+}
+
+export function isComplexFieldType(text: string): boolean {
+  return isRelativeProperty(text);
+}
+
+export function isRelativeProperty(text: string): boolean {
+  return fieldTypeNames(text).some((name) => isRelativeTypeName(name));
+}
+
+export function isRelativeTypeName(name: string): boolean {
+  if (!name || SKIP_TYPES.has(name) || SKIP_TYPES.has(name.toLowerCase())) {
+    return false;
+  }
+  if (!/^[A-Z]/.test(name)) {
+    return false;
+  }
+  return !/(Repository|Requirements|Operation|Exception|Error)$/.test(name);
+}
+
+export function arrangeListedClassChildren(
+  owner: { node_id: string; path?: string; practice: string },
+  children: ListedTreeNode[],
+  relativeIds: Set<string> = new Set(),
+): ListedTreeNode[] {
+  const relatives = children.filter(
+    (child) =>
+      child.semantic_type === 'Property' &&
+      (relativeIds.has(child.node_id) || isRelativeProperty(child.source?.text ?? '')),
+  );
+  const relativeSet = new Set(relatives.map((child) => child.node_id));
+  const operations = children.filter((child) => child.semantic_type === 'Operation');
+  const fields = children.filter(
+    (child) => child.semantic_type === 'Property' && !relativeSet.has(child.node_id),
+  );
+  const rest = children.filter(
+    (child) =>
+      child.semantic_type !== 'Property' &&
+      child.semantic_type !== 'Operation' &&
+      child.semantic_type !== 'FieldGroup',
+  );
+  return [
+    ...relatives,
+    ...operations,
+    {
+      node_id: `${owner.node_id}::properties`,
+      name: 'properties',
+      path: `${owner.path ?? owner.node_id}.properties`,
+      practice: owner.practice,
+      semantic_type: 'FieldGroup',
+      is_file: false,
+      properties: {},
+      rule_statuses: {},
+      rules: [],
+      relationships: [],
+      source: null,
+      origin: null,
+      children: fields,
+      failed: fields.reduce((sum, child) => sum + child.failed, 0),
+      total: fields.reduce((sum, child) => sum + child.total, 0),
+    },
+    ...rest,
+  ];
 }
 
 export function signatureTypeNames(text: string): string[] {

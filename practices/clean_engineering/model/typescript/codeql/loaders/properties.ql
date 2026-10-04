@@ -6,20 +6,28 @@
 
 import javascript
 import subject_filter
+import members
 
-from FieldDefinition field, string name
+from FieldDefinition field, string name, string hint
 where
-  inSubject(field) and
+  classField(field) and
   name = field.getName() and
-  not name.matches("\\_%") and
-  not exists(ObjectExpr object |
-    field.getLocation().getFile() = object.getLocation().getFile() and
-    field.getLocation().getStartLine() >= object.getLocation().getStartLine() and
-    field.getLocation().getEndLine() <= object.getLocation().getEndLine() and
-    not object = field.getInit()
-  )
+  hint = fieldHint(field) and
+  not isRelativeHint(hint)
 select field.getDeclaringType().getName(), name, field.getFile().getBaseName(),
   field.getLocation().getStartLine(),
   field.getFile().getRelativePath(),
   field.getLocation().getEndLine(),
-  ""
+  hint
+union
+from MethodDefinition accessor, string name, string hint
+where
+  classAccessor(accessor) and
+  name = accessor.getName() and
+  hint = accessorHint(accessor) and
+  not isRelativeHint(hint)
+select accessor.getDeclaringType().getName(), name, accessor.getFile().getBaseName(),
+  accessor.getLocation().getStartLine(),
+  accessor.getFile().getRelativePath(),
+  accessor.getLocation().getEndLine(),
+  hint

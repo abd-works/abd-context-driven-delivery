@@ -27,7 +27,11 @@ string returnedName(Function method) {
 }
 
 from Function method
-where inSubject(method) and exists(graphOwnerName(method))
+where
+  inSubject(method) and
+  exists(graphOwnerName(method)) and
+  not accessorOperation(method) and
+  not decoratorNamed(method, "property")
 select graphOwnerName(method), method.getName(), returnedName(method),
   sourceStart(method),
   method.getLocation().getFile().getRelativePath(),

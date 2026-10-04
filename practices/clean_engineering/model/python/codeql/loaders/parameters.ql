@@ -12,6 +12,9 @@ from Function method, Parameter param
 where
   inSubject(method) and
   exists(graphOwnerName(method)) and
+  not accessorOperation(method) and
+  not decoratorNamed(method, "property") and
+  method.getName() != "__init__" and
   param = method.getAnArg() and
   param.getName() != "self" and
   param.getName() != "cls"

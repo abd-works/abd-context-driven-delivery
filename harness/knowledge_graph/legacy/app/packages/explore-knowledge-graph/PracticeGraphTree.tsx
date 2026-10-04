@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  arrangeListedClassChildren,
   fieldTypeNames,
   isClassKind,
   isSimpleProperty,
@@ -16,6 +17,9 @@ import {
 export function kindLabel(kind: string, isFile: boolean): string {
   if (isFile && kind === 'Module') {
     return 'File';
+  }
+  if (kind === 'FieldGroup') {
+    return 'properties';
   }
   if (kind === 'OoadClass') {
     return 'Class';
@@ -51,6 +55,7 @@ const KNOWN_MARKS = new Set([
   'Rule',
   'Rules',
   'Properties',
+  'fields',
   'Relationships',
   'Relationship',
   'Book',
@@ -169,7 +174,7 @@ function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
           <path d="M4 2.5h8v11.5L8 11.5 4 14z" />
         </g>
       )}
-      {label === 'Properties' && (
+      {(label === 'Properties' || label === 'fields') && (
         <g
           fill="none"
           stroke="currentColor"
@@ -388,6 +393,7 @@ function listedRelationships(node: ListedTreeNode, practices: string[] | null) {
       if (
         group.kind === 'owns' ||
         group.kind === 'belongsTo' ||
+        group.kind === 'relative' ||
         group.kind === 'demonstratedThrough'
       ) {
         return { ...group, targets: [] };
@@ -1049,7 +1055,13 @@ function TreeRow({
   const linked = linkedTypeNodes(node, nodesById, parentOf);
   const composed = composedByFolderRoot(node);
   const structural = node.children.filter((child) => !composed.has(child.node_id));
-  const childNodes = calls.length > 0 || linked.length > 0 ? [...calls, ...linked] : structural;
+  const arranged = isClassKind(node.semantic_type)
+    ? arrangeListedClassChildren(node, structural)
+    : structural;
+  const childNodes =
+    isClassKind(node.semantic_type) || (calls.length === 0 && linked.length === 0)
+      ? arranged
+      : [...calls, ...linked];
   const shownCalls = new Set(calls.map((call) => call.node_id));
   const rules = showRules ? listedRules(node) : [];
   const properties = listedProperties(node);

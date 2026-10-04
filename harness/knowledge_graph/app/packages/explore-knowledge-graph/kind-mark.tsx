@@ -2,6 +2,9 @@ export function kindLabel(kind: string, isFile: boolean): string {
   if (isFile && kind === 'Module') {
     return 'File';
   }
+  if (kind === 'FieldGroup') {
+    return 'properties';
+  }
   if (kind === 'OoadClass') {
     return 'Class';
   }

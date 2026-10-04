@@ -255,7 +255,10 @@ describe("a knowledge graph", () => {
       });
       const folder = loaded.matching[0];
       expect(folder.children.map((node) => node.name)).toEqual(["Identity", "Customer", "copyIdentity"]);
-      expect(folder.children.find((node) => node.name === "Identity")?.children.map((node) => node.name)).toEqual(["email"]);
+      expect(folder.children.find((node) => node.name === "Identity")?.children.map((node) => node.name)).toEqual(["properties"]);
+      expect(
+        folder.children.find((node) => node.name === "Identity")?.children[0].children.map((node) => node.name),
+      ).toEqual(["email"]);
       expect(folder.children.find((node) => node.name === "Customer")?.children.map((node) => node.name)).toEqual(["identity"]);
     });
 
@@ -413,7 +416,239 @@ describe("a knowledge graph", () => {
       const verifyChildren = verify?.children.map((node) => node.name) ?? [];
       expect(verifyChildren).not.toContain("email");
       expect(verifyChildren).not.toContain("verified");
-      expect(account?.children.map((node) => node.name)).toEqual(expect.arrayContaining(["email", "verified", "verify"]));
+      expect(account?.children.map((node) => node.name)).toEqual(["verify", "properties"]);
+      expect(
+        account?.children.find((node) => node.name === "properties")?.children.map((node) => node.name).sort(),
+      ).toEqual(["email", "verified"]);
+    });
+
+    it("should list domain-typed relatives first and keep requirements and repositories under fields", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "11111111-1111-1111-1111-111111111111",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "AccountCredentials",
+                  node_id: "ce:OoadClass:AccountCredentials",
+                  semantic_type: "OoadClass",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: { file: "src/account-credentials.ts", start_line: 1, end_line: 80, text: "class AccountCredentials {}" },
+                },
+                {
+                  name: "token",
+                  node_id: "ce:Property:token",
+                  semantic_type: "Property",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: { file: "src/account-credentials.ts", start_line: 10, end_line: 10, text: "token: AccountToken | null" },
+                },
+                {
+                  name: "requirements",
+                  node_id: "ce:Property:requirements",
+                  semantic_type: "Property",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: {
+                    file: "src/account-credentials.ts",
+                    start_line: 8,
+                    end_line: 8,
+                    text: "readonly requirements: AccountCredentialRequirements = {}",
+                  },
+                },
+                {
+                  name: "_repository",
+                  node_id: "ce:Property:_repository",
+                  semantic_type: "Property",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: {
+                    file: "src/account-credentials.ts",
+                    start_line: 20,
+                    end_line: 20,
+                    text: "_repository?: AccountCredentialsRepository",
+                  },
+                },
+                {
+                  name: "email",
+                  node_id: "ce:Property:email",
+                  semantic_type: "Property",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: { file: "src/account-credentials.ts", start_line: 4, end_line: 4, text: "email: string" },
+                },
+              ],
+              relationships: [
+                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:token" },
+                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:requirements" },
+                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:_repository" },
+                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Property:email" },
+              ],
+            },
+          ],
+        },
+        listed_tree: [
+          {
+            name: "src",
+            node_id: "ce:Module:src",
+            semantic_type: "Module",
+            practice: "clean_engineering",
+            children: [],
+          },
+        ],
+      });
+      const account = loaded.matching[0].children.find((node) => node.name === "AccountCredentials");
+      expect(account?.children.map((node) => node.name)).toEqual(["token", "properties"]);
+      expect(
+        account?.children.find((node) => node.name === "properties")?.children.map((node) => node.name).sort(),
+      ).toEqual(["_repository", "email", "requirements"]);
+    });
+
+    it("should keep leftover properties already nested under fields", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "11111111-1111-1111-1111-111111111111",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "AccountCredentials",
+                  node_id: "ce:OoadClass:AccountCredentials",
+                  semantic_type: "OoadClass",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                },
+              ],
+              relationships: [],
+            },
+          ],
+        },
+        listed_tree: [
+          {
+            name: "src",
+            node_id: "ce:Module:src",
+            semantic_type: "Module",
+            practice: "clean_engineering",
+            children: [
+              {
+                name: "AccountCredentials",
+                node_id: "ce:OoadClass:AccountCredentials",
+                semantic_type: "OoadClass",
+                practice: "clean_engineering",
+                children: [
+                  {
+                    name: "token",
+                    node_id: "ce:Property:token",
+                    semantic_type: "Property",
+                    practice: "clean_engineering",
+                    source: { file: "src/account-credentials.ts", start_line: 10, end_line: 10, text: "token: AccountToken | null" },
+                    children: [],
+                  },
+                  {
+                    name: "fields",
+                    node_id: "ce:OoadClass:AccountCredentials::fields",
+                    semantic_type: "FieldGroup",
+                    practice: "clean_engineering",
+                    children: [
+                      {
+                        name: "email",
+                        node_id: "ce:Property:email",
+                        semantic_type: "Property",
+                        practice: "clean_engineering",
+                        source: { file: "src/account-credentials.ts", start_line: 4, end_line: 4, text: "email: string" },
+                        children: [],
+                      },
+                      {
+                        name: "verified",
+                        node_id: "ce:Property:verified",
+                        semantic_type: "Property",
+                        practice: "clean_engineering",
+                        source: { file: "src/account-credentials.ts", start_line: 6, end_line: 6, text: "verified: boolean" },
+                        children: [],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+      const account = loaded.matching[0].children.find((node) => node.name === "AccountCredentials");
+      expect(account?.children.map((node) => node.name)).toEqual(["token", "properties"]);
+      expect(
+        account?.children.find((node) => node.name === "properties")?.children.map((node) => node.name).sort(),
+      ).toEqual(["email", "verified"]);
+    });
+
+    it("should list getters as class properties, not operations", () => {
+      const loaded = new KnowledgeGraphClient();
+      loaded.takeSave({
+        knowledge_graph: {
+          id: "11111111-1111-1111-1111-111111111111",
+          practice_graphs: [
+            {
+              nodes: [
+                {
+                  name: "AccountCredentials",
+                  node_id: "ce:OoadClass:AccountCredentials",
+                  semantic_type: "OoadClass",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: { file: "src/account-credentials.ts", start_line: 1, end_line: 80, text: "class AccountCredentials {}" },
+                },
+                {
+                  name: "onboardingStep",
+                  node_id: "ce:Operation:onboardingStep",
+                  semantic_type: "Operation",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: {
+                    file: "src/account-credentials.ts",
+                    start_line: 76,
+                    end_line: 79,
+                    text: "get onboardingStep(): OnboardingStep | null {\n    return null;\n  }",
+                  },
+                },
+                {
+                  name: "register",
+                  node_id: "ce:Operation:register",
+                  semantic_type: "Operation",
+                  practice: "clean_engineering",
+                  properties: { folder: "src" },
+                  source: {
+                    file: "src/account-credentials.ts",
+                    start_line: 40,
+                    end_line: 50,
+                    text: "async register() {\n  return this;\n}",
+                  },
+                },
+              ],
+              relationships: [
+                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Operation:onboardingStep" },
+                { kind: "owns", from_id: "ce:OoadClass:AccountCredentials", to_id: "ce:Operation:register" },
+              ],
+            },
+          ],
+        },
+        listed_tree: [
+          {
+            name: "src",
+            node_id: "ce:Module:src",
+            semantic_type: "Module",
+            practice: "clean_engineering",
+            children: [],
+          },
+        ],
+      });
+      const account = loaded.matching[0].children.find((node) => node.name === "AccountCredentials");
+      expect(account?.children.map((node) => node.name)).toEqual(["onboardingStep", "register"]);
+      expect(account?.children.find((node) => node.name === "onboardingStep")?.nodeType?.name).toBe("Property");
+      expect(account?.children.find((node) => node.name === "register")?.nodeType?.name).toBe("Operation");
     });
 
     it("should list an example as demonstratedThrough on the class it returns", () => {

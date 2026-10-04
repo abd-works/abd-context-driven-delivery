@@ -12,6 +12,8 @@ from Function caller, string calleeOwner, string calleeName, string calleeModule
 where
   exists(graphOwnerName(caller)) and
   inSubject(caller) and
+  not accessorOperation(caller) and
+  not decoratorNamed(caller, "property") and
   callerModule = caller.getEnclosingModule().getName() and
   (
     exists(Function callee |

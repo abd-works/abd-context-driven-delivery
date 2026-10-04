@@ -7,9 +7,10 @@
 import javascript
 import subject_filter
 import source_span
+import members
 
 from MethodDefinition method
-where inSubject(method) and exists(method.getDeclaringType().getName())
+where classOperation(method)
 select method.getDeclaringType().getName(), method.getName(), "",
   sourceStart(method),
   method.getFile().getRelativePath(),

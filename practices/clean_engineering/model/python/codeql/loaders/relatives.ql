@@ -1,12 +1,11 @@
 /**
- * @name Practice graph properties
+ * @name Practice graph relatives
  * @kind problem
- * @id cdd/practice-graph/properties
+ * @id cdd/practice-graph/relatives
  */
 
 import python
 import subject_filter
-import model
 import members
 
 from AnnAssign assign, Class cls, string name, string hint
@@ -19,21 +18,9 @@ where
     or
     not exists(assign.getAnnotation()) and hint = ""
   ) and
-  not isRelativeHint(hint)
+  isRelativeHint(hint)
 select cls.getName(), name, assign.getLocation().getFile().getShortName(),
   assign.getLocation().getStartLine(),
   assign.getLocation().getFile().getRelativePath(),
   assign.getLocation().getEndLine(),
   hint
-union
-from Function method, Class cls, string name
-where
-  inSubject(method) and
-  decoratorNamed(method, "property") and
-  cls = method.getScope() and
-  name = method.getName()
-select cls.getName(), name, method.getLocation().getFile().getShortName(),
-  method.getLocation().getStartLine(),
-  method.getLocation().getFile().getRelativePath(),
-  method.getLocation().getEndLine(),
-  ""

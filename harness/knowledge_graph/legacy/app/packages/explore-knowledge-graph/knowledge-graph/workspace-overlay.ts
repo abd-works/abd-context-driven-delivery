@@ -1,7 +1,10 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  isAccessorSource,
   isClassKind,
+  isComplexFieldType,
+  KEEP_OPERATIONS_SMALL_FOCUSED,
   type KnowledgeGraphDto,
   type NodeDto,
   type SourceRangeDto,
@@ -33,19 +36,40 @@ const definitionCatalogs = new Map<string, SourceDefinition[]>();
 export function overlayWorkspaceTree(dto: KnowledgeGraphDto): KnowledgeGraphDto {
   const root = dto.folder;
   if (!root || !existsSync(root) || !statSync(root).isDirectory()) {
+    retagAccessors(dto);
     dropObjectLiteralKeyProperties(dto);
+    attachRelatives(dto);
     return dto;
   }
   const folders = collectRelativeFolders(root);
   addFolderPackages(dto, folders);
   fillSourceBodies(dto, root);
+  retagAccessors(dto);
   dropObjectLiteralKeyProperties(dto);
   attachClassMembers(dto, root);
   dropObjectLiteralKeyProperties(dto);
+  attachRelatives(dto);
   attachStepInvokes(dto, root);
   attachMemberInvokes(dto);
   attachComposition(dto, root);
   return dto;
+}
+
+function retagAccessors(dto: KnowledgeGraphDto) {
+  for (const graph of dto.practice_graphs) {
+    for (const node of graph.nodes) {
+      if (node.semantic_type !== 'Operation' || !isAccessorSource(node.source?.text ?? '')) {
+        continue;
+      }
+      node.semantic_type = 'Property';
+      node.applicable_rules = (node.applicable_rules ?? []).filter(
+        (slug) => slug !== KEEP_OPERATIONS_SMALL_FOCUSED,
+      );
+      node.violations = (node.violations ?? []).filter(
+        (hit) => hit.rule_slug !== KEEP_OPERATIONS_SMALL_FOCUSED,
+      );
+    }
+  }
 }
 
 function dropObjectLiteralKeyProperties(dto: KnowledgeGraphDto) {
@@ -121,6 +145,32 @@ export function compositionByClass(markdown: string): Map<string, string[]> {
     }
   }
   return composed;
+}
+
+function attachRelatives(dto: KnowledgeGraphDto) {
+  for (const graph of dto.practice_graphs) {
+    const nodeById = new Map(graph.nodes.map((node) => [node.node_id, node]));
+    const existing = new Set(graph.relationships.map((edge) => `${edge.kind}:${edge.from_id}:${edge.to_id}`));
+    for (const edge of graph.relationships) {
+      if (edge.kind !== 'owns') {
+        continue;
+      }
+      const owner = nodeById.get(edge.from_id);
+      const member = nodeById.get(edge.to_id);
+      if (!owner || !member || !isClassKind(owner.semantic_type) || member.semantic_type !== 'Property') {
+        continue;
+      }
+      if (!isComplexFieldType(member.source?.text ?? '')) {
+        continue;
+      }
+      const key = `relative:${owner.node_id}:${member.node_id}`;
+      if (existing.has(key)) {
+        continue;
+      }
+      existing.add(key);
+      graph.relationships.push({ kind: 'relative', from_id: owner.node_id, to_id: member.node_id });
+    }
+  }
 }
 
 function attachComposition(dto: KnowledgeGraphDto, root: string) {

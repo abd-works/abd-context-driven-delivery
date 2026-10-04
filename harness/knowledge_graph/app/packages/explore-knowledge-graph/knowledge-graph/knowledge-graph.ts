@@ -177,6 +177,7 @@ export const PRACTICE_NODE_TYPES: Record<string, string[]> = {
     "Relationship",
     "Operation",
     "Parameter",
+    "FieldGroup",
     "File",
     "CleanEngineeringModel",
   ],
@@ -201,11 +202,27 @@ export const PRACTICE_NODE_TYPES: Record<string, string[]> = {
     "DomainEvent",
     "DomainService",
     "Specification",
+    "OoadClass",
+    "Property",
+    "Operation",
+    "Parameter",
+    "FieldGroup",
   ],
   bdd: ["Description", "Context", "Observation"],
 };
 
 const STORY_NODE_TYPES = new Set(PRACTICE_NODE_TYPES.stories);
+const DDD_STEREOTYPES = new Set([
+  "BoundedContext",
+  "Aggregate",
+  "Entity",
+  "EntityRoot",
+  "ValueObject",
+  "Repository",
+  "DomainEvent",
+  "DomainService",
+  "Specification",
+]);
 
 export function taggedPractice(semanticType: string, practice: string): string {
   if (STORY_NODE_TYPES.has(semanticType)) {
@@ -214,7 +231,7 @@ export function taggedPractice(semanticType: string, practice: string): string {
   if ((PRACTICE_NODE_TYPES.bdd ?? []).includes(semanticType)) {
     return "bdd";
   }
-  if ((PRACTICE_NODE_TYPES.ddd ?? []).includes(semanticType)) {
+  if (DDD_STEREOTYPES.has(semanticType)) {
     return "ddd";
   }
   return practice;
@@ -449,6 +466,11 @@ function projectDomain(node: KnowledgeGraphNode): KnowledgeGraphNode | null {
       copy.nodeType = { name: kind } as KnowledgeGraphNode["nodeType"];
       copy.practice = "ddd";
     }
+    return copy;
+  }
+  if (type === "FieldGroup") {
+    const copy = copyNode(node);
+    copy.children = children;
     return copy;
   }
   if (type === "Operation" || type === "Property" || type === "Parameter") {
