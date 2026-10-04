@@ -1040,6 +1040,13 @@ export class KnowledgeGraph {
       properties: withoutFolder(node.properties),
       rule_statuses: node.rules.statuses(),
       rules,
+      applicable_rules: [...node.rules.applicable],
+      violations: node.rules.violations.map((hit) => ({
+        rule_slug: hit.ruleSlug,
+        message: hit.message,
+        practice: hit.practice,
+        fidelity: hit.fidelity,
+      })),
       relationships: this._listedRelationships(node),
       source:
         node.source?.file ||

@@ -8,6 +8,7 @@ import {
 } from './knowledge-graph';
 import {
   definitionsInFile,
+  isObjectLiteralKeyText,
   SKIP_DIR,
   type SourceDefinition,
   type WorkspaceFile,
@@ -32,16 +33,70 @@ const definitionCatalogs = new Map<string, SourceDefinition[]>();
 export function overlayWorkspaceTree(dto: KnowledgeGraphDto): KnowledgeGraphDto {
   const root = dto.folder;
   if (!root || !existsSync(root) || !statSync(root).isDirectory()) {
+    dropObjectLiteralKeyProperties(dto);
     return dto;
   }
   const folders = collectRelativeFolders(root);
   addFolderPackages(dto, folders);
   fillSourceBodies(dto, root);
+  dropObjectLiteralKeyProperties(dto);
   attachClassMembers(dto, root);
+  dropObjectLiteralKeyProperties(dto);
   attachStepInvokes(dto, root);
   attachMemberInvokes(dto);
   attachComposition(dto, root);
   return dto;
+}
+
+function dropObjectLiteralKeyProperties(dto: KnowledgeGraphDto) {
+  for (const graph of dto.practice_graphs) {
+    const nodeById = new Map(graph.nodes.map((node) => [node.node_id, node]));
+    const drop = new Set<string>();
+    const owned = new Map<string, NodeDto[]>();
+    for (const edge of graph.relationships) {
+      if (edge.kind !== 'owns') {
+        continue;
+      }
+      const child = nodeById.get(edge.to_id);
+      if (child?.semantic_type !== 'Property') {
+        continue;
+      }
+      const siblings = owned.get(edge.from_id) ?? [];
+      siblings.push(child);
+      owned.set(edge.from_id, siblings);
+    }
+    for (const siblings of owned.values()) {
+      const keys = new Set<string>();
+      for (const holder of siblings) {
+        for (const name of objectFieldKeys(holder.source?.text ?? '')) {
+          keys.add(name);
+        }
+      }
+      for (const property of siblings) {
+        if (keys.has(property.name) || isObjectLiteralKeyText(property.source?.text ?? '')) {
+          drop.add(property.node_id);
+        }
+      }
+    }
+    if (drop.size === 0) {
+      continue;
+    }
+    graph.nodes = graph.nodes.filter((node) => !drop.has(node.node_id));
+    graph.relationships = graph.relationships.filter(
+      (edge) => !drop.has(edge.from_id) && !drop.has(edge.to_id),
+    );
+  }
+}
+
+function objectFieldKeys(text: string): string[] {
+  if (!/=\s*\{/.test(text)) {
+    return [];
+  }
+  const keys: string[] = [];
+  for (const match of text.matchAll(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/gm)) {
+    keys.push(match[1]);
+  }
+  return keys;
 }
 
 export function compositionByClass(markdown: string): Map<string, string[]> {
@@ -424,8 +479,9 @@ function attachClassMembers(dto: KnowledgeGraphDto, root: string) {
       const end = member.source.end_line || start;
       if (
         member.semantic_type === 'Property' &&
-        insideOperation(catalog, file, start) &&
-        !/^\s*(?:public|private|protected|readonly)\b/.test(member.source.text ?? '')
+        (isObjectLiteralKeyText(member.source.text ?? '') ||
+          (insideOperation(catalog, file, start) &&
+            !/^\s*(?:public|private|protected|readonly)\b/.test(member.source.text ?? '')))
       ) {
         continue;
       }

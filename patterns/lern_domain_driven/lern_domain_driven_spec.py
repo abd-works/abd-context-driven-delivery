@@ -72,6 +72,7 @@ _ALL_RULE_SLUGS = (
     "use-thorough-e2e-tests",
     "one-json-store-per-aggregate",
     "repository-owns-aggregate-lifecycle",
+    "one-repository-per-aggregate",
     "ask-cross-aggregate-sync",
 )
 
@@ -138,6 +139,10 @@ with description("a LernDomainDriven generator"):
             expect("search" in self.rendered.lower()).to(be_true)
             expect("update" in self.rendered.lower()).to(be_true)
 
+        with it("should require one repository per aggregate without a Node or client repository"):
+            expect(self.rendered).to(contain("one-repository-per-aggregate"))
+            expect(self.rendered).to(contain("RepositoryNode"))
+
         with it("should require AskQuestion for cross-aggregate sync when generating stories"):
             expect(self.rendered).to(contain("AskQuestion"))
             expect(self.rendered).to(contain("ask-cross-aggregate-sync"))
@@ -184,6 +189,8 @@ with description("a LernDomainDriven generator"):
         with it("should attribute aggregate rules to ddd"):
             expect(self.rules["one-json-store-per-aggregate"].practice).to(equal("ddd"))
             expect(self.rules["one-json-store-per-aggregate"].fidelity).to(equal("tactics"))
+            expect(self.rules["one-repository-per-aggregate"].practice).to(equal("ddd"))
+            expect(self.rules["one-repository-per-aggregate"].fidelity).to(equal("tactics"))
 
         with it("should attribute story-test rules to stories"):
             expect(self.rules["test-story-driven"].practice).to(equal("stories"))

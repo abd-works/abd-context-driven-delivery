@@ -155,10 +155,15 @@ export class KnowledgeGraphClient extends KnowledgeGraph {
     }
     attachCrossEdges(tree, dto);
     uniqueNodeRelationships(tree);
+    dropFunctionLocals(tree);
+    uniqueClassMembers(tree);
+    nestTypedFields(tree);
+    this.options.ruleCatalog = Array.isArray(presented.rule_catalog) ? presented.rule_catalog : [];
+    applyCatalogRules(tree, dto, this.options.ruleCatalog);
     this.matching = tree;
     this.nodes = flattenNodes(tree);
     this.options = filterOptions(presented.filter_options, this.nodes);
-    this.options.ruleCatalog = Array.isArray(presented.rule_catalog) ? presented.rule_catalog : [];
+    this.options.ruleCatalog = Array.isArray(presented.rule_catalog) ? presented.rule_catalog : this.options.ruleCatalog;
     this.members = practiceMembers(dto);
     if (presented.selected_node) {
       const found =
@@ -371,7 +376,8 @@ function attachCrossEdges(nodes: WebKnowledgeGraphNode[], dto: any): void {
       if (!from || !to) {
         continue;
       }
-      link(from, to, edge.kind, true);
+      const nestInvoked = (to.nodeType?.name ?? "") === "Operation";
+      link(from, to, edge.kind, edge.kind !== "invokes" || nestInvoked);
       if (edge.kind === "demonstrates") {
         link(to, from, "demonstratedThrough", false);
       }
@@ -389,6 +395,121 @@ function attachCrossEdges(nodes: WebKnowledgeGraphNode[], dto: any): void {
       link(node, cls, "demonstrates", true);
       link(cls, node, "demonstratedThrough", false);
     }
+  }
+}
+
+function dropFunctionLocals(nodes: WebKnowledgeGraphNode[]): void {
+  for (const node of nodes) {
+    if ((node.nodeType?.name ?? "") === "Operation") {
+      node.children = (node.children ?? []).filter((child) => (child.nodeType?.name ?? "") !== "Property");
+    }
+    dropFunctionLocals(node.children ?? []);
+  }
+}
+
+const CLASS_MEMBER_KINDS = new Set(["Property", "Parameter", "Operation"]);
+
+function uniqueClassMembers(nodes: WebKnowledgeGraphNode[]): void {
+  for (const node of nodes) {
+    uniqueClassMembers(node.children ?? []);
+    const kind = node.nodeType?.name ?? "";
+    if (!CLASS_KINDS.has(kind) && kind !== "OoadClass") {
+      continue;
+    }
+    const seen = new Set<string>();
+    node.children = (node.children ?? []).filter((child) => {
+      if (child.name === node.name && CLASS_KINDS.has(child.nodeType?.name ?? "")) {
+        return false;
+      }
+      const childKind = child.nodeType?.name ?? "";
+      if (!CLASS_MEMBER_KINDS.has(childKind)) {
+        return true;
+      }
+      const key = `${childKind}:${child.name}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+}
+
+const VALUE_TYPES = new Set([
+  "string",
+  "number",
+  "boolean",
+  "bigint",
+  "symbol",
+  "void",
+  "never",
+  "any",
+  "unknown",
+  "null",
+  "undefined",
+  "Date",
+  "Error",
+  "Map",
+  "Set",
+  "Promise",
+  "Record",
+  "Array",
+  "Function",
+  "object",
+]);
+
+function fieldClassName(text: string): string | null {
+  const matched = String(text ?? "").match(/:\s*([A-Z][A-Za-z0-9_]*)/);
+  const name = matched?.[1] ?? "";
+  if (!name || VALUE_TYPES.has(name)) {
+    return null;
+  }
+  return name;
+}
+
+function copyOutline(node: WebKnowledgeGraphNode): WebKnowledgeGraphNode {
+  const copy = Object.assign(Object.create(Object.getPrototypeOf(node)), node) as WebKnowledgeGraphNode;
+  copy.children = [];
+  copy.relationships = [...(node.relationships ?? [])];
+  copy.ruleHits = [...(node.ruleHits ?? [])];
+  return copy;
+}
+
+function nestTypedFields(nodes: WebKnowledgeGraphNode[]): void {
+  const classes = new Map<string, WebKnowledgeGraphNode>();
+  const index = (list: WebKnowledgeGraphNode[]) => {
+    for (const node of list) {
+      if (CLASS_KINDS.has(node.nodeType?.name ?? "") && node.name && !classes.has(node.name)) {
+        classes.set(node.name, node);
+      }
+      index(node.children ?? []);
+    }
+  };
+  index(nodes);
+  const expand = (node: WebKnowledgeGraphNode, stack: string[]) => {
+    const kind = node.nodeType?.name ?? "";
+    if (kind === "Property" || kind === "Parameter") {
+      const typeName = fieldClassName(String(node.source?.text ?? ""));
+      const typeClass = typeName ? classes.get(typeName) : undefined;
+      if (typeClass && typeName && !stack.includes(typeName) && typeClass.nodeId !== node.nodeId) {
+        const next = [...stack, typeName];
+        node.children = (typeClass.children ?? [])
+          .filter((child) => CLASS_MEMBER_KINDS.has(child.nodeType?.name ?? ""))
+          .map((child) => {
+            const copied = copyOutline(child);
+            copied.nodeId = `${node.nodeId}::${child.nodeId}`;
+            expand(copied, next);
+            return copied;
+          });
+        return;
+      }
+    }
+    for (const child of node.children ?? []) {
+      expand(child, stack);
+    }
+  };
+  for (const node of nodes) {
+    expand(node, []);
   }
 }
 
@@ -587,24 +708,87 @@ function relationshipLinks(row: any): { kind: string; nodeId: string; name: stri
 }
 
 function ruleHitsFrom(row: any): { slug: string; status: string; message: string }[] {
-  if (Array.isArray(row.rules) && row.rules.length) {
-    return row.rules.map((rule: any) => ({
-      slug: String(rule.slug ?? rule.rule_slug ?? ""),
-      status: String(rule.status ?? "passing"),
-      message: String(rule.message ?? ""),
-    }));
-  }
   const failing = new Map(
     (row.violations ?? []).map((hit: any) => [
       String(hit.rule_slug ?? hit.ruleSlug ?? ""),
       String(hit.message ?? ""),
     ]),
   );
-  return (row.applicable_rules ?? []).map((slug: string) => ({
+  if (Array.isArray(row.rules) && row.rules.length) {
+    return row.rules.map((rule: any) => ({
+      slug: String(rule.slug ?? rule.rule_slug ?? ""),
+      status: String(rule.status ?? (failing.has(String(rule.slug ?? rule.rule_slug ?? "")) ? "violating" : "passing")),
+      message: String(rule.message ?? failing.get(String(rule.slug ?? rule.rule_slug ?? "")) ?? ""),
+    }));
+  }
+  const catalogSlugs = (row.rule_catalog ?? []).map((entry: any) => String(entry.slug ?? ""));
+  const slugs = [...new Set([...(row.applicable_rules ?? []), ...catalogSlugs, ...failing.keys()])].filter(Boolean);
+  return slugs.map((slug) => ({
     slug,
     status: failing.has(slug) ? "violating" : "passing",
     message: failing.get(slug) ?? "",
   }));
+}
+
+const FALLBACK_RULES: Record<string, string[]> = {
+  OoadClass: ["keep-operations-small-focused"],
+  Operation: ["keep-operations-small-focused"],
+  Property: ["hide-inner-details"],
+};
+
+function applyCatalogRules(
+  nodes: WebKnowledgeGraphNode[],
+  dto: any,
+  catalog: RuleCatalogEntry[],
+): void {
+  const byId = new Map<string, any>();
+  for (const graph of dto.practice_graphs ?? []) {
+    for (const row of graph.nodes ?? []) {
+      byId.set(String(row.node_id ?? ""), row);
+    }
+  }
+  const walk = (node: WebKnowledgeGraphNode) => {
+    const row = byId.get(node.nodeId);
+    if (row) {
+      const hits = ruleHitsFrom(row);
+      if (hits.length) {
+        node.ruleHits = hits;
+      }
+    }
+    const kind = node.nodeType?.name ?? "";
+    const practice = node.practice ?? "";
+    const failing = new Map(node.ruleHits.map((hit) => [hit.slug, hit]));
+    for (const slug of FALLBACK_RULES[kind] ?? []) {
+      if (!failing.has(slug)) {
+        node.ruleHits.push({ slug, status: "passing", message: "" });
+        failing.set(slug, node.ruleHits[node.ruleHits.length - 1]);
+      }
+    }
+    for (const rule of catalog ?? []) {
+      if (rule.practice && practice && rule.practice !== practice) {
+        continue;
+      }
+      if (!rule.applies_to?.length || !rule.applies_to.includes(kind)) {
+        continue;
+      }
+      const existing = failing.get(rule.slug);
+      if (existing) {
+        continue;
+      }
+      node.ruleHits.push({
+        slug: rule.slug,
+        status: "passing",
+        message: "",
+      });
+      failing.set(rule.slug, node.ruleHits[node.ruleHits.length - 1]);
+    }
+    for (const child of node.children ?? []) {
+      walk(child);
+    }
+  };
+  for (const node of nodes) {
+    walk(node);
+  }
 }
 
 function practiceMembers(dto: any): PracticeMember[] {
@@ -684,7 +868,10 @@ function filterOptions(given: any, nodes: KnowledgeGraphNode[]): KnowledgeGraphF
     stages: listed(source.stages, nodes.map((node) => node.stage)),
     node_types: listed(source.node_types, nodes.map((node) => node.nodeType?.name ?? "")),
     relationship_types: listed(source.relationship_types, []),
-    rules: listed(source.rules, []),
+    rules: listed(
+      source.rules,
+      nodes.flatMap((node) => (node.ruleHits ?? []).map((hit) => hit.slug)),
+    ),
   };
 }
 

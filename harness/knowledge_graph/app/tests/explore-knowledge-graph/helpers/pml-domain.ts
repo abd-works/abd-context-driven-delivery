@@ -46,6 +46,32 @@ export async function expand(name: string): Promise<void> {
   await button.click();
 }
 
+export async function expandClosedNodes(limit = 40): Promise<void> {
+  for (let step = 0; step < limit; step += 1) {
+    const closed = page.locator('[data-testid="tree-expand"][aria-expanded="false"]');
+    if ((await closed.count()) === 0) {
+      return;
+    }
+    await closed.first().click();
+  }
+}
+
+export async function showRules(): Promise<void> {
+  const toggle = page.getByRole('button', { name: 'Show rules' });
+  await expect(toggle).toBeVisible({ timeout: 5_000 });
+  if ((await toggle.getAttribute('aria-pressed')) !== 'true') {
+    await toggle.click();
+  }
+}
+  for (let step = 0; step < limit; step += 1) {
+    const closed = page.locator('[data-testid="tree-expand-rules"][aria-expanded="false"]');
+    if ((await closed.count()) === 0) {
+      return;
+    }
+    await closed.first().click();
+  }
+}
+
 export async function waitForWork(action: string): Promise<void> {
   await expect(page.getByTestId('work-progress')).toContainText(`${action} done`, {
     timeout: 2 * 60 * 60 * 1000,

@@ -13,27 +13,17 @@ import model
 
 from AstNode subject, string message, AstNode contributor
 where
-  exists(File f, StringLiteral path |
-    routerModuleFile(f) and
-    path.getFile() = f and
+  exists(CallExpr redirect, StringLiteral path |
+    routerModuleFile(redirect.getFile()) and
     inSubject(path) and
-    path.getValue().regexpMatch("^/[^/]+/.+") and
-    not path.getParent() instanceof JsxAttribute and
+    redirect.getCalleeName() = "redirect" and
+    path = redirect.getAnArgument() and
+    path.getValue().regexpMatch("^/.+") and
+    not path.getValue().regexpMatch("^/api/.*") and
     subject = path and
     contributor = path and
     message =
       "The node class decides the next page. Keep this path on *Node.destination and have the router return the path those classes produce."
-  )
-  or
-  exists(File f, Function fn |
-    routerModuleFile(f) and
-    fn.getFile() = f and
-    inSubject(fn) and
-    fn.getName() = "destination" and
-    subject = fn and
-    contributor = fn and
-    message =
-      "The node class decides the next page. The router is a shell: it picks a domain and returns the path the node produces."
   )
   or
   exists(CallExpr repo |

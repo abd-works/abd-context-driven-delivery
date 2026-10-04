@@ -15,9 +15,10 @@ from expects import equal, expect
 from mamba import description, it
 
 from harness.knowledge_graph.model import CodeQL
+from harness.knowledge_graph.model.codeql import Rows
 
 _PACK = Path(__file__).resolve().parents[1] / "python" / "codeql"
-_EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
+_EXAMPLES = Path(__file__).resolve().parents[1] / "python" / "codeql" / ".examples"
 _TESTS = _PACK / "tests"
 _DB = _EXAMPLES / ".codeql" / "python-db"
 
@@ -39,8 +40,8 @@ _RULES = {
     "put-logic-on-the-owning-resource": "validate_last_transaction",
     "use-typed-signatures": "checkout",
     "provide-meaningful-context": "split_items",
-    "deep-module": "faultyAsset.py",
-    "one-way-deps": "one-way-deps/alpha.py",
+    "deep-module": "classes publicly",
+    "one-way-deps": "alpha",
     "extensions-live-with-the-domain": "GraphEpic",
     "layer-separation": "subtotal",
     "use-intention-revealing-names": "to",
@@ -153,14 +154,24 @@ with description("Clean Engineering graphQuery rules"):
         db = ExamplesQuery().ensure()
         misses = []
         for predicate, expected in _PREDICATES.items():
-            rows = CodeQL(_EXAMPLES).run(_TESTS / f"{predicate}.ql", database=db)
+            rows = Rows.from_tuples(
+                CodeQL(_EXAMPLES).run_queries(
+                    [_TESTS / f"{predicate}.ql"], database=db, write_filter=False
+                ).get(predicate)
+                or []
+            )
             if not ExamplesQuery().hit(rows, expected):
                 misses.append(f"{predicate} expected {expected}")
         expect(misses).to(equal([]))
 
     with it("should not treat every __init__ as calling every other __init__"):
         db = ExamplesQuery().ensure()
-        rows = CodeQL(_EXAMPLES).run(_TESTS / "unrelatedInitCall.ql", database=db)
+        rows = Rows.from_tuples(
+            CodeQL(_EXAMPLES).run_queries(
+                [_TESTS / "unrelatedInitCall.ql"], database=db, write_filter=False
+            ).get("unrelatedInitCall")
+            or []
+        )
         expect(rows).to(equal([]))
 
     with it("should not treat two collaborating resources as a service-plus-bag"):

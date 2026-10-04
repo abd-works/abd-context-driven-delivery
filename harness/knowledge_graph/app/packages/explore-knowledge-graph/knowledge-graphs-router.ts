@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { basename, dirname, delimiter, isAbsolute, join, relative, resolve } from 'node:path';
 import {
+  KEEP_OPERATIONS_SMALL_FOCUSED,
   KnowledgeGraph,
   KnowledgeGraphSchema,
   type CreateKnowledgeGraphInput,
@@ -16,6 +17,7 @@ import {
 } from '../../../legacy/app/packages/explore-knowledge-graph/knowledge-graph/knowledge-graph';
 import { KnowledgeGraphServer } from './knowledge-graph/knowledge-graph-server';
 import { definitionsInFile,
+  isObjectLiteralKeyText,
   knowledgeGraphFromWorkspace,
   resolveNamedFolder,
   scanSourceFiles,
@@ -141,8 +143,8 @@ export class KnowledgeGraphsServer {
     const nested = _nestDiskFolders(graph, root);
     const specified = _attachStorySpecification(nested, root);
     const coded = _attachClasses(specified, root);
-    const linked = _linkStepMembers(coded, root);
-    const tagged = _retagPractices(linked);
+    const linked = _keepExamplesOnSteps(_linkStepMembers(coded, root));
+    const tagged = _stampGuidanceRules(_retagPractices(linked), root);
     return repo.create({
       folder: root,
       practiceGraphs: tagged.toDto().practice_graphs,
@@ -825,6 +827,35 @@ function _linkStepMembers(graph: KnowledgeGraph, root: string): KnowledgeGraph {
   return KnowledgeGraph.fromDto({ ...dto, folder: graph.folder });
 }
 
+function _keepExamplesOnSteps(graph: KnowledgeGraph): KnowledgeGraph {
+  const dto = graph.toDto();
+  for (const practice of dto.practice_graphs) {
+    const byId = new Map(practice.nodes.map((node) => [node.node_id, node]));
+    practice.relationships = practice.relationships.filter((edge) => {
+      if (edge.kind !== 'owns') {
+        return true;
+      }
+      const child = byId.get(edge.to_id);
+      const parent = byId.get(edge.from_id);
+      if (child?.semantic_type !== 'Example') {
+        return true;
+      }
+      return parent?.semantic_type === 'Step' || parent?.semantic_type === 'Background';
+    });
+    const kept = new Set(
+      practice.relationships.filter((edge) => edge.kind === 'owns').map((edge) => edge.to_id),
+    );
+    practice.nodes = practice.nodes.filter(
+      (node) => node.semantic_type !== 'Example' || kept.has(node.node_id),
+    );
+    const live = new Set(practice.nodes.map((node) => node.node_id));
+    practice.relationships = practice.relationships.filter(
+      (edge) => live.has(edge.from_id) && live.has(edge.to_id),
+    );
+  }
+  return KnowledgeGraph.fromDto({ ...dto, folder: graph.folder });
+}
+
 function _relate(
   practice: KnowledgeGraphDto['practice_graphs'][number],
   kind: string,
@@ -862,7 +893,7 @@ function _exampleExports(root: string): { name: string; classes: string[]; file:
       }
       const text = readFileSync(abs, 'utf8');
       const file = relative(root, abs).replaceAll('\\', '/');
-      const matches = [...text.matchAll(/export\s+function\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
+      const matches = [...text.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
       matches.forEach((match, index) => {
         const next = matches[index + 1]?.index ?? text.length;
         const local = text.slice(match.index ?? 0, next);
@@ -1111,6 +1142,35 @@ function graphFromWorkspaceDto(dto: KnowledgeGraphDto): KnowledgeGraph {
   return KnowledgeGraph.fromDto(dto);
 }
 
+function _stampGuidanceRules(graph: KnowledgeGraph, root: string): KnowledgeGraph {
+  const dto = graph.toDto();
+  const catalog = _rulesFromGuidance(root);
+  for (const practice of dto.practice_graphs) {
+    for (const node of practice.nodes) {
+      const matched = catalog.filter(
+        (rule) =>
+          (!rule.practice || rule.practice === node.practice) &&
+          Array.isArray(rule.applies_to) &&
+          rule.applies_to.includes(node.semantic_type),
+      );
+      const slugs = [
+        ...new Set([...(node.applicable_rules ?? []), ...matched.map((rule) => rule.slug)]),
+      ];
+      node.applicable_rules = slugs;
+      const catalogRows = [...(node.rule_catalog ?? [])];
+      const seen = new Set(catalogRows.map((entry) => entry.slug));
+      for (const rule of matched) {
+        if (!seen.has(rule.slug)) {
+          catalogRows.push({ slug: rule.slug, tag: 'base' });
+          seen.add(rule.slug);
+        }
+      }
+      node.rule_catalog = catalogRows;
+    }
+  }
+  return graphFromWorkspaceDto({ ...dto, folder: root || graph.folder });
+}
+
 function _attachStorySpecification(graph: KnowledgeGraph, root: string): KnowledgeGraph {
   const dto = graph.toDto();
   const tests = join(root, 'tests');
@@ -1145,9 +1205,6 @@ function _attachStorySpecification(graph: KnowledgeGraph, root: string): Knowled
       }
       for (const scenario of parsed.scenarios) {
         _own(stories, storyId, 'Scenario', scenario.name, parsed.file, scenario.line, scenario.endLine, scenario.steps, parsed.folder);
-      }
-      for (const example of parsed.examples) {
-        _own(stories, storyId, 'Example', example.name, example.file, example.line, example.line, [], parsed.folder);
       }
     }
   }
@@ -1288,7 +1345,6 @@ function _parseStoryFile(root: string, abs: string): {
   endLine: number;
   backgrounds: { line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[];
   scenarios: { name: string; line: number; endLine: number; steps: { keyword: string; name: string; line: number; endLine: number }[] }[];
-  examples: { name: string; file: string; line: number }[];
   epic: string;
   subEpic: string;
   epicFolder: string;
@@ -1301,7 +1357,6 @@ function _parseStoryFile(root: string, abs: string): {
   }
   const file = relative(root, abs).replaceAll('\\', '/');
   const lines = text.split(/\r?\n/);
-  const examples = _importedExamples(root, abs, text);
   const parts = file.split('/');
   const epic = parts.length > 2 ? parts[1] : 'tests';
   const subEpic = parts.length > 3 ? parts[2] : '';
@@ -1355,7 +1410,6 @@ function _parseStoryFile(root: string, abs: string): {
       folder,
       backgrounds,
       scenarios,
-      examples: storyIndex === 0 ? examples : [],
     };
   });
 }
@@ -1543,11 +1597,19 @@ function _attachClasses(graph: KnowledgeGraph, root: string): KnowledgeGraph {
         classes.push({ id, start, end });
       }
     }
+    const operations = definitionsInFile(workspace).filter((found) => found.semantic_type === 'Operation');
     for (const found of definitionsInFile(workspace)) {
       if (found.semantic_type === 'OoadClass') {
         continue;
       }
       const line = found.source.start_line;
+      if (
+        found.semantic_type === 'Property' &&
+        (isObjectLiteralKeyText(found.source.text ?? '') ||
+          operations.some((op) => line > op.source.start_line && line <= op.source.end_line))
+      ) {
+        continue;
+      }
       const owner = classes
         .filter((item) => item.start <= line && line <= item.end)
         .sort((left, right) => left.end - left.start - (right.end - right.start))[0];
@@ -1614,7 +1676,7 @@ function _linkOperationCalls(dto: KnowledgeGraphDto): void {
       if (!className || !child) {
         continue;
       }
-      if (child.semantic_type !== 'Operation' && child.semantic_type !== 'Property') {
+      if (child.semantic_type !== 'Operation') {
         continue;
       }
       operations.set(`${className.toLowerCase()}.${child.name}`, child.node_id);
@@ -1681,7 +1743,7 @@ function _addType(
     fidelity: 'code',
     semantic_type: type,
     properties: folder ? { folder } : {},
-    applicable_rules: [],
+    applicable_rules: type === 'Operation' ? [KEEP_OPERATIONS_SMALL_FOCUSED] : [],
     violations: [],
     source: { file, start_line: start, end_line: Math.max(start, end), text: body },
   });
@@ -1709,37 +1771,6 @@ function _codeFiles(dir: string, root = dir): string[] {
       found.push(..._codeFiles(abs, root));
     } else if (/\.(ts|tsx)$/.test(name) && !name.endsWith('.d.ts')) {
       found.push(abs);
-    }
-  }
-  return found;
-}
-
-function _importedExamples(
-  root: string,
-  storyFile: string,
-  text: string,
-): { name: string; file: string; line: number }[] {
-  const found: { name: string; file: string; line: number }[] = [];
-  const seen = new Set<string>();
-  for (const match of text.matchAll(/from\s+['"]([^'"]+)['"]/g)) {
-    const spec = match[1];
-    if (!spec.includes('examples')) {
-      continue;
-    }
-    const abs = join(dirname(storyFile), spec.endsWith('.ts') ? spec : `${spec}.ts`);
-    if (!existsSync(abs) || seen.has(abs)) {
-      continue;
-    }
-    seen.add(abs);
-    const body = readFileSync(abs, 'utf8');
-    const file = relative(root, abs).replaceAll('\\', '/');
-    for (const exported of body.matchAll(/export (?:const|function) (\w+)/g)) {
-      const at = exported.index ?? 0;
-      found.push({
-        name: exported[1],
-        file,
-        line: body.slice(0, at).split(/\r?\n/).length,
-      });
     }
   }
   return found;

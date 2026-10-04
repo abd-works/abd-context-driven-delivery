@@ -160,6 +160,28 @@ const TS_SKIP = new Set([
   'return',
   'with',
   'constructor',
+  'const',
+  'let',
+  'var',
+  'this',
+  'new',
+  'await',
+  'throw',
+  'async',
+  'public',
+  'private',
+  'protected',
+  'readonly',
+  'static',
+  'get',
+  'set',
+  'try',
+  'finally',
+  'import',
+  'export',
+  'type',
+  'interface',
+  'enum',
 ]);
 
 export type SourceDefinition = {
@@ -525,15 +547,8 @@ function _propertiesIn(file: WorkspaceFile): NodeDto[] {
 }
 
 function _scriptProperties(file: WorkspaceFile): NodeDto[] {
-  const fields = _fieldLines(file, (line) => {
-    if (line.includes('(') || /\bclass\s+/.test(line)) {
-      return null;
-    }
-    const matched = line.match(
-      /^(?:\s+)(?:(?:public|private|protected|readonly|static|declare|abstract|override)\s+)*([A-Za-z_][A-Za-z0-9_]*)\??\s*(?::\s*[^=;{(]+)?\s*(?:=[^;]*)?;?\s*$/,
-    );
-    return matched && !TS_SKIP.has(matched[1]) ? matched[1] : null;
-  });
+  const paramLines = _parameterListLines(file);
+  const fields = _classBodyFieldLines(file, paramLines);
   const seen = new Set(fields.map((node) => node.source?.start_line));
   const parameters = _fieldLines(file, (line) => {
     if (line.includes('(') || line.includes(')') || /\bclass\s+/.test(line)) {
@@ -547,8 +562,88 @@ function _scriptProperties(file: WorkspaceFile): NodeDto[] {
   return [...fields, ...parameters];
 }
 
+function _classBodyFieldLines(file: WorkspaceFile, paramLines: Set<number>): NodeDto[] {
+  const found: NodeDto[] = [];
+  const lines = file.text.split(/\r?\n/);
+  let depth = 0;
+  let inClass = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (depth === 0 && /\bclass\s+/.test(line)) {
+      inClass = true;
+    }
+    if (
+      inClass &&
+      depth === 1 &&
+      !paramLines.has(index + 1) &&
+      !line.includes('(') &&
+      !/\bclass\s+/.test(line) &&
+      !/\b(?:const|let|var)\s+/.test(line)
+    ) {
+      const name = _scriptFieldName(line);
+      if (name) {
+        const start = _offsetAtLine(file.text, index);
+        found.push(_memberNode(file, 'Property', name, start, start + line.length));
+      }
+    }
+    depth += (line.match(/\{/g) ?? []).length - (line.match(/\}/g) ?? []).length;
+    if (depth <= 0) {
+      depth = 0;
+      inClass = false;
+    }
+  }
+  return found;
+}
+
+export function isObjectLiteralKeyText(text: string): boolean {
+  return /^\s*[A-Za-z_][A-Za-z0-9_]*\s*:\s*['"`]/.test(text);
+}
+
+function _scriptFieldName(line: string): string | null {
+  if (isObjectLiteralKeyText(line)) {
+    return null;
+  }
+  const matched = line.match(
+    /^(?:\s+)(?:(?:public|private|protected|readonly|static|declare|abstract|override)\s+)+([A-Za-z_][A-Za-z0-9_]*)\??\s*(?::|=|;)/,
+  );
+  if (matched && !TS_SKIP.has(matched[1])) {
+    return matched[1];
+  }
+  const annotated = line.match(/^(?:\s+)([A-Za-z_][A-Za-z0-9_]*)\??\s*:\s*[^=;{(]+/);
+  if (annotated && !TS_SKIP.has(annotated[1])) {
+    const type = line.slice(line.indexOf(':') + 1).trim();
+    if (/^['"`]/.test(type) || /^[\d{[]/.test(type)) {
+      return null;
+    }
+    return annotated[1];
+  }
+  const assigned = line.match(/^(?:\s+)([A-Za-z_][A-Za-z0-9_]*)\??\s*=(?![=>])/);
+  return assigned && !TS_SKIP.has(assigned[1]) ? assigned[1] : null;
+}
+
+function _parameterListLines(file: WorkspaceFile): Set<number> {
+  const lines = new Set<number>();
+  const pattern = /\b(?:constructor|[A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+  let match: RegExpExecArray | null = pattern.exec(file.text);
+  while (match) {
+    const open = (match.index ?? 0) + match[0].length - 1;
+    const close = _closingParen(file.text, open);
+    const from = _lineAt(file.text, open);
+    const to = _lineAt(file.text, close);
+    for (let line = from; line <= to; line += 1) {
+      lines.add(line);
+    }
+    match = pattern.exec(file.text);
+  }
+  return lines;
+}
+
 function _pythonProperties(file: WorkspaceFile): NodeDto[] {
-  return _fieldLines(file, (line) => {
+  const bodyLines = _pythonFunctionBodyLines(file);
+  return _fieldLines(file, (line, index) => {
+    if (bodyLines.has(index + 1)) {
+      return null;
+    }
     const matched = line.match(/^(\s+)([A-Za-z_][A-Za-z0-9_]*)\s*[:=]/);
     if (!matched || matched[1].length === 0) {
       return null;
@@ -563,12 +658,12 @@ function _pythonProperties(file: WorkspaceFile): NodeDto[] {
 
 function _fieldLines(
   file: WorkspaceFile,
-  nameOn: (line: string) => string | null,
+  nameOn: (line: string, index: number) => string | null,
 ): NodeDto[] {
   const found: NodeDto[] = [];
   const lines = file.text.split(/\r?\n/);
   for (let index = 0; index < lines.length; index += 1) {
-    const name = nameOn(lines[index]);
+    const name = nameOn(lines[index], index);
     if (!name) {
       continue;
     }
@@ -630,6 +725,41 @@ function _scriptOperations(file: WorkspaceFile): NodeDto[] {
     match = pattern.exec(file.text);
   }
   return found;
+}
+
+function _functionBodyLines(file: WorkspaceFile): Set<number> {
+  const lines = new Set<number>();
+  const pattern =
+    /(?:(?:export|public|private|protected|static|async)\s+)*([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{}]*\)\s*(?::[^{]+)?\{/g;
+  let match: RegExpExecArray | null = pattern.exec(file.text);
+  while (match) {
+    if (!TS_SKIP.has(match[1])) {
+      const braceAt = (match.index ?? 0) + match[0].length - 1;
+      const end = _closingBrace(file.text, braceAt);
+      const from = _lineAt(file.text, braceAt) + 1;
+      const to = _lineAt(file.text, end);
+      for (let line = from; line <= to; line += 1) {
+        lines.add(line);
+      }
+    }
+    match = pattern.exec(file.text);
+  }
+  return lines;
+}
+
+function _pythonFunctionBodyLines(file: WorkspaceFile): Set<number> {
+  const body = new Set<number>();
+  const lines = file.text.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!/^(\s*)(?:async\s+)?def\s+/.test(lines[index])) {
+      continue;
+    }
+    const end = pythonBlockEnd(lines, index);
+    for (let line = signatureEnd(lines, index) + 2; line <= end + 1; line += 1) {
+      body.add(line);
+    }
+  }
+  return body;
 }
 
 function _pythonOperations(file: WorkspaceFile): NodeDto[] {
@@ -765,6 +895,22 @@ function _statementCount(source: string): number {
     count += 1;
   }
   return count;
+}
+
+function _closingParen(text: string, openIndex: number): number {
+  let depth = 0;
+  for (let index = openIndex; index < text.length; index += 1) {
+    const ch = text[index];
+    if (ch === '(') {
+      depth += 1;
+    } else if (ch === ')') {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+  return text.length;
 }
 
 function _closingBrace(text: string, openIndex: number): number {

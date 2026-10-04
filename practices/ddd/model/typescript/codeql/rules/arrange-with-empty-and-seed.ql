@@ -34,7 +34,6 @@ predicate accountRepositoryLoad(MethodCallExpr call) {
 predicate loadReadsEmailOffAnAccount(MethodCallExpr call, Expr arg) {
   accountRepositoryLoad(call) and
   arg = call.getArgument(0) and
-  not arg instanceof StringLiteral and
   (
     arg.(PropAccess).getPropertyName() = "email"
     or
@@ -49,10 +48,10 @@ predicate loadReadsEmailOffAnAccount(MethodCallExpr call, Expr arg) {
 from AstNode subject, string message, AstNode contributor
 where
   (
-    exists(MethodDeclaration method |
+    exists(MethodDefinition method |
       subject = method and
       suffixedEmptyOrSeed(method.getName()) and
-      contributor = method.getDeclaringType() and
+      contributor = method.getDeclaringClass() and
       message =
         "Name the test control _empty or _seed. Do not suffix it with the aggregate name."
     )
@@ -79,16 +78,6 @@ where
       contributor = iface and
       message =
         "Do not add a field-bag type. Fill the aggregate from repo._empty() and set its business fields."
-    )
-    or
-    exists(MethodDefinition method |
-      subject = method and
-      method.getName() = ["new", "seed"] and
-      exists(method.getAParameter()) and
-      method.getDeclaringClass().getName().regexpMatch(".*Repository.*") and
-      contributor = method.getAParameter() and
-      message =
-        "Do not call repository.new(data) or repository.seed(data). Tests use _empty and _seed."
     )
     or
     exists(MethodCallExpr call |

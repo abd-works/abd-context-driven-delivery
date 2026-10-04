@@ -42,6 +42,7 @@ _RULES_BY_PACK = {
         "implement-domain-entities-correctly": "no behaviour",
         "one-json-store-per-aggregate": "db.json",
         "repository-owns-aggregate-lifecycle": "missing load",
+        "one-repository-per-aggregate": "One aggregate has one Repository",
         "ask-cross-aggregate-sync": "more than one aggregate",
         "use-ctx-repository-directly": "Do not wrap the ctx binding",
     },

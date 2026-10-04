@@ -15,6 +15,7 @@ from ClassDefinition cls, string message, AstNode contributor
 where
   inSubject(cls) and
   coreFile(cls.getFile()) and
+  cls.getName() = pascalFromSlug(cls.getFile().getParentContainer().getBaseName()) and
   not exists(MethodDeclaration m | m = cls.getAMethod() and m.getName() != "constructor") and
   message = "Class '" + cls.getName() + "' holds state but has no behaviour." and
   contributor = cls

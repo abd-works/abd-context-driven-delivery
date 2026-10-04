@@ -46,6 +46,8 @@ where
     inSubject(top) and
     core.getRelativePath().regexpMatch("src/[^/]+/[A-Z][A-Za-z0-9]*\\.ts") and
     not core.getRelativePath().regexpMatch("src/systems/.*") and
+    core.getBaseName() =
+      pascalFromSlug(core.getParentContainer().getBaseName()) + ".ts" and
     subject = top and
     contributor = top and
     message =
@@ -74,6 +76,7 @@ where
   or
   exists(Container domain, string slug, TopLevel top |
     srcDomainFolder(domain, slug) and
+    (hasKebabCore(domain, slug) or hasClient(domain, slug) or hasNode(domain, slug)) and
     (
       not hasKebabCore(domain, slug) or
       not hasClient(domain, slug) or

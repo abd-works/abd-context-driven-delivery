@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, expand, explorer, openPmlDomain, waitForTree } from './helpers/pml-domain';
+import { bindPage, expand, explorer, expandClosedNodes, expandClosedRules, openPmlDomain, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -12,6 +12,8 @@ story('Browse Practice Graphs', () => {
     }).and('whose source includes a Node that fails keep-operations-small-focused', async () => {});
     when('the Engineer browses the KnowledgeGraph', async () => {
       await explorer().getByRole('button', { name: 'Show rules' }).click({ timeout: 5_000 });
+      await expandClosedNodes();
+      await expandClosedRules();
     });
     then('the passing Node lists keep-operations-small-focused as passing', async () => {
       await expect(explorer().locator('.rule-status.passing', { hasText: 'keep-operations-small-focused' })).toBeVisible();

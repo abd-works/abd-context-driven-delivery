@@ -16,7 +16,7 @@ predicate storyLabel(CallExpr call, string label) {
 
 predicate kebabPath(File file) {
   file.getRelativePath().regexpMatch(".*[A-Z_].*") and
-  file.getBaseName().matches("%_story.test.ts")
+  file.getBaseName().regexpMatch(".*_story\\.test\\.(js|ts)$")
 }
 
 bindingset[label]

@@ -26,7 +26,8 @@ where
   or
   exists(Function fn |
     inSubject(fn) and
-    (clientFile(fn.getFile()) or screenViewFile(fn.getFile())) and
+    screenViewFile(fn.getFile()) and
+    exists(ExportDeclaration exp | exp.getAChild*() = fn) and
     fn.getName().regexpMatch("^[A-Z].*") and
     not fn.getName().matches("%View") and
     subject = fn and

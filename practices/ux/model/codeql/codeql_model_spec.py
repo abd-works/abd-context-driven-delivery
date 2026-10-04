@@ -23,7 +23,7 @@ from mamba import description, it
 from harness.knowledge_graph.model.graph_query_spec import assert_pack_hits
 
 _PACK = Path(__file__).resolve().parents[1] / "javascript" / "codeql"
-_EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
+_EXAMPLES = Path(__file__).resolve().parents[1] / "javascript" / "codeql" / ".examples"
 
 _RULES = {
     "story-domain-js-imported": "stub adapter",

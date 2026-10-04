@@ -47,6 +47,10 @@ _FIELD_RE = re.compile(
     r"^\s*(?:(?:public|private|protected|readonly|static)\s+)*(\w+)\s*:\s*([^;=]+);",
     re.M,
 )
+_ASSIGN_FIELD_RE = re.compile(
+    r"^\s*(?:(?:public|private|protected|readonly|static|declare|override)\s+)+(\w+)\s*=",
+    re.M,
+)
 _SKIP_TYPES = frozenset({
     "String", "Number", "Boolean", "Void", "Any", "Unknown", "Object",
     "Record", "Array", "Promise", "Partial", "Omit", "Pick", "Date", "Error",
@@ -274,14 +278,29 @@ class CFamilyParse:
     def _fields_from_body(self, oclass: OoadClass, body: str) -> list:
         outside = self._outside_braces(body)
         props = []
+        seen: set[str] = set()
         load = getattr(oclass, "load_property_field", None)
         cursor = 0
-        for index, match in enumerate(_FIELD_RE.finditer(outside), start=1):
-            prop = Property(name=match.group(1), sequential_order=index, type_hint=match.group(2).strip())
+        for match in _FIELD_RE.finditer(outside):
+            name = match.group(1)
+            if name in seen:
+                continue
+            seen.add(name)
+            prop = Property(name=name, sequential_order=len(props) + 1, type_hint=match.group(2).strip())
             for note in self._comments_above(outside[cursor:match.start()]):
                 take_property_note(prop, note)
             props.append(load(prop) if load is not None else prop)
             cursor = match.end()
+        for match in _ASSIGN_FIELD_RE.finditer(outside):
+            name = match.group(1)
+            if name in seen:
+                continue
+            seen.add(name)
+            props.append(
+                load(Property(name=name, sequential_order=len(props) + 1))
+                if load is not None
+                else Property(name=name, sequential_order=len(props) + 1)
+            )
         return props
 
     def _comments_above(self, prefix: str) -> list[str]:

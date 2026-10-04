@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { story, scenario } from '../story-test';
-import { bindPage, explorer, openPmlDomain, RULE_OUTCOMES, waitForTree } from './helpers/pml-domain';
+import { bindPage, explorer, expandClosedNodes, expandClosedRules, openPmlDomain, RULE_OUTCOMES, showRules, waitForTree } from './helpers/pml-domain';
 
 bindPage();
 
@@ -15,7 +15,9 @@ story('Select Working Folder', () => {
       await chosen.fill(RULE_OUTCOMES);
       await chosen.press('Enter');
       await waitForTree('Clean Engineering');
-      await explorer().getByRole('button', { name: 'Show rules' }).click({ timeout: 5_000 });
+      await showRules();
+      await expandClosedNodes();
+      await expandClosedRules();
     });
     then('the passing Node lists keep-operations-small-focused as passing', async () => {
       await expect(

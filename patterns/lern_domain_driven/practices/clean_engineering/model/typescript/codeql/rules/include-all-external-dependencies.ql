@@ -31,8 +31,11 @@ from ImportDeclaration imp, string path, string name, string message, AstNode co
 where
   inSubject(imp) and
   importedPath(imp, path) and
+  not specFile(imp.getFile()) and
   not path.matches(".%") and
   not path.matches("node:%") and
+  not path.matches("@src/%") and
+  not path.matches("tests/%") and
   packageName(path, name) and
   not declaredNpmName(name) and
   message = "Import '" + path + "' is not declared in package.json." and

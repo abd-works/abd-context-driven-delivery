@@ -657,18 +657,13 @@ export function stepLinks(
   }
   const foundExamples: StepExampleRef[] = [];
   const seenExamples = new Set<string>();
-  for (const match of text.matchAll(/(^|[^.\w])([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
-    const name = match[2];
-    if (STEP_CALL_SKIP.has(name) || STEP_RECEIVER_SKIP.has(name) || seenExamples.has(name)) {
+  for (const example of examples) {
+    if (seenExamples.has(example.name) || !exampleMentioned(text, example.name)) {
       continue;
     }
-    const example = examples.find((item) => item.name === name);
-    if (!example) {
-      continue;
-    }
-    seenExamples.add(name);
+    seenExamples.add(example.name);
     foundExamples.push({
-      name,
+      name: example.name,
       classes: example.classes.filter((item) => classNames.has(item)),
     });
   }
@@ -703,6 +698,14 @@ export function exampleClassNames(text: string): string[] {
     add(match[1]);
   }
   return names;
+}
+
+function exampleMentioned(text: string, name: string): boolean {
+  if (!name) {
+    return false;
+  }
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^.\\w])${escaped}\\b`).test(text);
 }
 
 function operationFor(operations: StepOperationRef[], receiver: string, method: string): string {

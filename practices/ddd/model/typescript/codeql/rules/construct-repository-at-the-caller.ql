@@ -29,6 +29,6 @@ where
     or
     storyOrTest(decl.getFile()) and
     message =
-      "Create new RepositoryNode() in the scenario that needs it. Do not construct a repository at module scope."
+      "Create new Repository() in the scenario that needs it. Do not construct a repository at module scope."
   )
 select decl, message, construction

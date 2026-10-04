@@ -104,9 +104,10 @@ Required operations, named in ubiquitous language:
 | `search(query?)` | aggregate roots | find by attributes / example |
 | `update(root)` | updated aggregate root | persist a mutation already applied on the root |
 
-Zod `.parse()` runs at the repository boundary. The `*RepositoryNode` class
-implements persistence with lowdb; routes and views never call `JSONFilePreset`
-/ `db.data` themselves.
+Zod `.parse()` runs at the repository boundary. One `*Repository` class per
+aggregate lives on the domain core (`<domain>.ts`). It is not a client type and
+does not take a `Node` suffix — `{Domain}Node` is the Express host, not the
+collection. Routes and views never call `JSONFilePreset` / `db.data` themselves.
 
 Cross-aggregate consistency is **outside** a single JSON file. Choose one
 coordination style **when generating stories** (see `ask-cross-aggregate-sync`
@@ -119,7 +120,7 @@ in § Shared rules) — then keep that choice for the slice.
 | File | Suffix | Role |
 |---|---|---|
 | `<domain-slug>.ts` | *(none)* | Core aggregate, repository interface, value objects, exceptions — framework-free |
-| `<domain-slug>-node.ts` | `Node` | Express wiring, `*RepositoryNode`, `destination`, session on the request context |
+| `<domain-slug>-node.ts` | `Node` | Express wiring, `{Domain}Node`, `destination`, session on the request context |
 | `<domain-slug>-client.tsx` | `Client` | Browser subtype: field entry, touched flags, requirement lines, host operations |
 
 Rule `node-tier-uses-node-suffix` names the Node.js tier **`Node`**, not
@@ -168,9 +169,9 @@ Route handlers stay thin: parse the request, delegate to a `*Node` class or
 call `*Node.destination`. Rules `router-asks-the-node`, `ensure-type-safe-routes`
 (typed request extensions), and `standard-mutation-response` govern this tier.
 
-Create repositories at the **caller** — production passes repository node
-instances into route factories; tests construct their own in the scenario that
-needs one. Node modules export the class only.
+Create the aggregate's one repository at the **caller** — production passes the
+`*Repository` into route factories; tests construct their own in the scenario
+that needs one. Node modules export `{Domain}Node`, not a second repository.
 
 ### Types & entities
 
@@ -281,7 +282,7 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 
 - **`epic-package-screens-only`** — Keep shared domain tiers and lowdb data only under `src/<domain>/` (`<domain>.ts`, `<domain>-node.ts`, `<domain>-client.tsx`, and per-aggregate json). Limit `packages/<epicSlug>/` to epic boot (`app.ts`, `serve.ts`, `main.tsx`, `*-view.tsx`) plus sub-epic screen views and `routes/` — no second `*-node.ts`, `*-client.tsx`, `source/`, or `data/` tree under the epic package.
 - **`domain-core-file-matches-folder-slug`** — Name the domain core file after the folder slug in kebab-case (`<domain-slug>/<domain-slug>.ts`). Keep exported classes PascalCase (`{Domain}`). Place `<domain>-node.ts` and `<domain>-client.tsx` beside the core file in the same `src/<domain>/` folder.
-- **`node-tier-uses-node-suffix`** — Name the Node.js LERN tier with the `Node` suffix and `<domain>-node.ts` filenames (`{Domain}Node`, `*RepositoryNode`). Type request-context fields as `*Node`, not `Server`.
+- **`node-tier-uses-node-suffix`** — Name the Node.js LERN tier with the `Node` suffix and `<domain>-node.ts` filenames (`{Domain}Node`). Type request-context fields as `*Node`, not `Server`. The repository is `*Repository`, never `*RepositoryNode`.
 - **`client-subtypes-domain-hosts-browser-logic`** — For each `src/<domain>/`, derive `<domain>.ts`, `<domain>-client.tsx`, and `<domain>-node.ts` from the folder slug. The `*Client` and `*Node` classes extend the core domain class. Domain operations on the core are the operations the client hosts for the browser; field changes return a new client instance for React state.
 
 ### Navigation and views
@@ -294,6 +295,7 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 
 - **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON file under `src/<domain-slug>/`. Do not put several aggregates in one file. Repositories never open another aggregate's JSON file.
 - **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository` interface is the collection seam for the root: `load`, `create`, `search`, `update` — named in ubiquitous language. Zod `.parse()` runs at this boundary.
+- **`one-repository-per-aggregate`** — One `*Repository` per `src/<domain>/`, declared on the aggregate. The client does not declare a repository. Repository names keep the `Repository` suffix only — never `*RepositoryNode`.
 
 ### Naming, purity, and packaging
 

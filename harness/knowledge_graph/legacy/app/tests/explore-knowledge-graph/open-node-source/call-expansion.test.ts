@@ -179,6 +179,22 @@ describe('call expansion', () => {
     expect(fields.find((entry) => entry.name === 'accountCredentials')?.source.text).toContain(
       'public accountCredentials: AccountCredentials',
     );
+    const locals = definitionsInFile({
+      relativePath: 'src/account-credentials.ts',
+      text: [
+        'export class AccountCredentials {',
+        '  email: string;',
+        '  verified = false;',
+        '  async verify(validationCode: ValidationCode) {',
+        '    const repository = this.requireRepository();',
+        '    const rejected = REJECTED_VALIDATION_CODES[this.validationCode];',
+        '    this.email = validationCode.code;',
+        '    this.verified = true;',
+        '  }',
+        '}',
+      ].join('\n'),
+    }).filter((entry) => entry.semantic_type === 'Property');
+    expect(locals.map((entry) => entry.name).sort()).toEqual(['email', 'verified']);
   });
 
   it('folds this.callee from source even without an invoke edge', () => {

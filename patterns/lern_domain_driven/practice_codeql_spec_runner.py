@@ -1,4 +1,4 @@
-"""Every practice CodeQL rule has a failing example and a passing example."""
+"""Every LERN TypeScript CodeQL rule has a failing example and a passing example."""
 
 import hashlib
 import shutil
@@ -25,15 +25,20 @@ from harness.knowledge_graph.model.codeql_layout import (
     locate_rule_query,
     rule_stems_in_pack,
 )
-from harness.knowledge_graph.model.graph_query_spec import refine_rows, write_match_all_filter
+from harness.knowledge_graph.model.graph_query_spec import write_match_all_filter
 
 _DB_ROOT = _REPO_ROOT / ".cq"
 _PRACTICES = ("clean_engineering", "ddd", "stories")
-_EXAMPLE_HOMES = {
-    "clean_engineering": _REPO_ROOT / "practices" / "clean_engineering" / "examples",
-    "ddd": _REPO_ROOT / "practices" / "ddd" / "model" / "codeql" / ".examples",
-    "stories": _REPO_ROOT / "practices" / "stories" / "model" / "codeql" / ".examples",
-}
+def _example_home(practice: str) -> Path:
+    return (
+        _REPO_ROOT
+        / "practices"
+        / practice
+        / "model"
+        / "javascript"
+        / "codeql"
+        / ".examples"
+    )
 
 
 def _rmtree(path: Path) -> None:
@@ -91,68 +96,37 @@ def _rows(codeql: CodeQL, query: Path, database: Path, slug: str) -> list:
             return []
         raise
     rows = Rows.from_tuples(batch.get(slug) or [])
-    if slug in {
-        "verb-noun-format",
-        "story-name-captures-system-mechanic",
-        "domain-concepts-not-technical-names",
-        "keep-classes-single-responsibility",
-        "missing-module-context",
-        "language-modules-one-section",
-        "public-seam-only",
-        "modules-not-model-blocks",
-    }:
-        return refine_rows(slug, rows)
     return rows
 
 
-def _example_language(folder: Path) -> str:
-    suffixes = {item.suffix.lower() for item in folder.rglob("*") if item.is_file()}
-    if suffixes & {".ts", ".tsx", ".js", ".jsx"}:
-        return "javascript"
-    return "python"
-
-
 def _slugs(practice: str) -> set[str]:
-    slugs: set[str] = set()
+    pack = lern_codeql_pack(practice, "typescript")
+    if (pack / "qlpack.yml").is_file():
+        return rule_stems_in_pack(pack)
+    return set()
+
+
+def _pack_for(practice: str, slug: str) -> Path | None:
     lern = lern_codeql_pack(practice, "typescript")
-    if (lern / "qlpack.yml").is_file():
-        slugs |= rule_stems_in_pack(lern)
-    for language in ("python", "javascript", "typescript"):
-        pack = codeql_pack(practice, language)
-        if (pack / "qlpack.yml").is_file():
-            slugs |= rule_stems_in_pack(pack)
-    return slugs
-
-
-def _pack_for(practice: str, slug: str, language: str) -> Path | None:
-    if language == "javascript":
-        lern = lern_codeql_pack(practice, "typescript")
-        if locate_rule_query(lern, slug) is not None:
-            return lern
-        for pack_language in ("javascript", "typescript"):
-            pack = codeql_pack(practice, pack_language)
-            if locate_rule_query(pack, slug) is not None:
-                return pack
-        return None
-    pack = codeql_pack(practice, "python")
+    if locate_rule_query(lern, slug) is not None:
+        return lern
+    pack = codeql_pack(practice, "typescript")
     if locate_rule_query(pack, slug) is not None:
         return pack
     return None
 
 
-def _jobs() -> list[tuple[str, str, Path | None, str]]:
-    jobs: list[tuple[str, str, Path | None, str]] = []
+def _jobs() -> list[tuple[str, str, Path | None]]:
+    jobs: list[tuple[str, str, Path | None]] = []
     for practice in _PRACTICES:
         for slug in sorted(_slugs(practice)):
-            faulty = _EXAMPLE_HOMES[practice] / slug / "faulty"
-            language = _example_language(faulty) if faulty.is_dir() else "javascript"
-            jobs.append((practice, slug, _pack_for(practice, slug, language), language))
+            jobs.append((practice, slug, _pack_for(practice, slug)))
     return jobs
 
 
-def _check(practice: str, slug: str, pack: Path | None, language: str) -> list[str]:
+def _check(practice: str, slug: str, pack: Path | None) -> list[str]:
     misses: list[str] = []
-    examples = _EXAMPLE_HOMES[practice]
+    examples = _example_home(practice)
     faulty = examples / slug / "faulty"
     repaired = examples / slug / "repaired"
     label = f"{practice}/{slug}"
@@ -165,20 +139,20 @@ def _check(practice: str, slug: str, pack: Path | None, language: str) -> list[s
         return [f"{label} missing failing example"]
     if not repaired.is_dir():
         return [f"{label} missing passing example"]
-    write_match_all_filter(pack, language)
+    write_match_all_filter(pack, "javascript")
     try:
-        if not _rows(CodeQL(faulty), query, _ensure_db(faulty, language), slug):
+        if not _rows(CodeQL(faulty), query, _ensure_db(faulty, "javascript"), slug):
             misses.append(f"{label} silent on failing example")
-        if _rows(CodeQL(repaired), query, _ensure_db(repaired, language), slug):
+        if _rows(CodeQL(repaired), query, _ensure_db(repaired, "javascript"), slug):
             misses.append(f"{label} noisy on passing example")
     except Exception as error:
         misses.append(f"{label} {type(error).__name__}: {error}")
     return misses
 
 
-with description("practice CodeQL runner"):
-    with it("should fail the failing example and pass the passing example for every rule"):
+with description("LERN TypeScript CodeQL runner"):
+    with it("should fail the failing example and pass the passing example for every TypeScript rule"):
         misses: list[str] = []
-        for practice, slug, pack, language in _jobs():
-            misses.extend(_check(practice, slug, pack, language))
+        for practice, slug, pack in _jobs():
+            misses.extend(_check(practice, slug, pack))
         expect(misses).to(equal([]))

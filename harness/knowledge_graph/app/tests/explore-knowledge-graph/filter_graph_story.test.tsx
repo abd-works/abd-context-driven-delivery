@@ -96,12 +96,17 @@ story('Filter Graph', () => {
       ).toBe(true);
     }).and('Show rules lists high-cohesion on domain', async () => {
       await explorer().getByRole('button', { name: 'Show rules' }).click();
+      await expand('Clean Engineering');
       const domain = explorer().locator('li').filter({
         has: explorer().getByRole('button', { name: 'domain', exact: true }),
       }).first();
+      const domainTwist = domain.getByRole('button', { name: /^Expand domain$/ });
+      if (await domainTwist.count()) {
+        await domainTwist.click();
+      }
+      await domain.getByTestId('tree-expand-rules').click();
       await expect(domain.locator('.rule-status', { hasText: 'high-cohesion' }).first()).toBeVisible();
     }).and('epics and the tests folder are not tagged as clean engineering', async () => {
-      await expand('Clean Engineering');
       const engineering = explorer().locator('li[data-node-id="practice:clean_engineering"]');
       await expect(engineering.locator('> ul > li > .tree-row .node-name', { hasText: /^tests$/ })).toHaveCount(0);
       await expect(engineering.locator('.node-name', { hasText: /^access-selfcare$/ })).toHaveCount(0);

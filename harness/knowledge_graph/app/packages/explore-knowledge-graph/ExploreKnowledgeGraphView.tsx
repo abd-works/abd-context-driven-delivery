@@ -171,19 +171,15 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
   const engineering = theme === 'engineering';
   const selectedId = selectedNode?.nodeId ?? '';
 
-  const [showRules, setShowRules] = useState(false);
+  const [showRules, setShowRules] = useState(true);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const forest = practiceForest(listedTree, picked, filterOptions);
   const foldMembers = useMemo(() => collectFoldMembers(listedTree), [listedTree]);
   const treeKey = `${folder}|${listedTree.map((node) => node.nodeId).join('|')}|${forest.map((node) => node.nodeId).join('|')}`;
 
   useEffect(() => {
-    const next = new Set(restoredBranches(readStoredBranches(folder), branchIds(forest)));
-    if (showRules) {
-      openAllRules(forest, next);
-    }
-    setOpenIds(next);
-  }, [treeKey, showRules]);
+    setOpenIds(new Set(restoredBranches(readStoredBranches(folder), branchIds(forest))));
+  }, [treeKey]);
 
   useEffect(() => {
     if (workStatus?.action === 'Create database' && workStatus.phase === 'done') {
@@ -450,6 +446,7 @@ export function ExploreKnowledgeGraphView({ graphId = '' }: { graphId?: string }
                 node={selectedNode}
                 folder={folder}
                 picked={picked}
+                options={filterOptions}
                 showRules={showRules}
                 members={foldMembers}
               />
@@ -556,7 +553,7 @@ function TreeNode({
   if (!shown(node, picked, options)) {
     return null;
   }
-  const rules = rulesFor(node, picked, showRules);
+  const rules = rulesFor(node, picked, options, showRules);
   const links = shownRelationships(node.relationships ?? []);
   const rulesId = `${node.nodeId}::rules`;
   const linksId = `${node.nodeId}::relationships`;
@@ -622,41 +619,6 @@ function TreeNode({
               onSelect={onSelect}
             />
           ))}
-          {rules.length > 0 ? (
-            <li data-depth={depth + 1} data-testid="tree-rules">
-              <div className="tree-row">
-                <button
-                  type="button"
-                  className="tree-twist"
-                  data-testid="tree-expand-rules"
-                  aria-expanded={rulesOpen}
-                  aria-label={`${rulesOpen ? 'Collapse' : 'Expand'} rules`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggle(rulesId);
-                  }}
-                >
-                  {rulesOpen ? '▼' : '▶'}
-                </button>
-                <button type="button" title="Rules" onClick={() => onToggle(rulesId)}>
-                  <KindMark kind="Rules" isFile={false} />
-                  <span className="node-name">rules</span>
-                </button>
-              </div>
-              {rulesOpen ? (
-                <ul>
-                  {rules.map((hit) => (
-                    <li key={hit.slug} data-depth={depth + 2}>
-                      <div className="tree-row">
-                        <span className="tree-twist-spacer" />
-                        <span className={`rule-status ${hit.status}`}>{hit.slug}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          ) : null}
           {links.length > 0 ? (
             <li data-depth={depth + 1} data-testid="tree-relationships">
               <div className="tree-row">
@@ -696,6 +658,52 @@ function TreeNode({
                           <KindMark kind="Relationship" isFile={false} />
                           <span className="node-name">{link.kind}</span>
                           <span className="node-name">{link.name}</span>
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ) : null}
+          {rules.length > 0 ? (
+            <li data-depth={depth + 1} data-testid="tree-rules">
+              <div className="tree-row">
+                <button
+                  type="button"
+                  className="tree-twist"
+                  data-testid="tree-expand-rules"
+                  aria-expanded={rulesOpen}
+                  aria-label={`${rulesOpen ? 'Collapse' : 'Expand'} rules`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggle(rulesId);
+                  }}
+                >
+                  {rulesOpen ? '▼' : '▶'}
+                </button>
+                <button type="button" title="Rules" onClick={() => onToggle(rulesId)}>
+                  <KindMark kind="Rules" isFile={false} />
+                  <span className="node-name">rules</span>
+                </button>
+              </div>
+              {rulesOpen ? (
+                <ul>
+                  {rules.map((hit) => (
+                    <li key={hit.slug} data-depth={depth + 2}>
+                      <div className="tree-row">
+                        <span className="tree-twist-spacer" />
+                        <button
+                          type="button"
+                          title="Rule"
+                          className={`rule-status ${hit.status}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSelect(node.nodeId);
+                          }}
+                        >
+                          <KindMark kind="Rule" isFile={false} />
+                          <span className="node-name">{hit.slug}</span>
                         </button>
                       </div>
                     </li>
@@ -756,12 +764,14 @@ function SourcePane({
   node,
   folder,
   picked,
+  options,
   showRules,
   members,
 }: {
   node: KnowledgeGraphNode;
   folder: string;
   picked: FilterPick;
+  options: KnowledgeGraphFilterOptions;
   showRules: boolean;
   members: FoldMember[];
 }) {
@@ -787,6 +797,7 @@ function SourcePane({
   openFoldsRef.current = openFolds;
   lineMap.current = prepared.lineNumbers;
   const [height, setHeight] = useState(SNIPPET_LINE_HEIGHT + 16);
+  const [paneRulesOpen, setPaneRulesOpen] = useState(false);
   const fitEditor = (editor: Parameters<OnMount>[0]) => {
     const lines = editor.getModel()?.getLineCount() ?? 1;
     const visible = visibleLineCount(lines, foldsRef.current, openFoldsRef.current);
@@ -981,14 +992,37 @@ function SourcePane({
     }),
     [prepared.folds.length, startLine],
   );
-  const hits = showRules
-    ? picked.violations || picked.rules.length
-      ? visibleHits(node, picked)
-      : node.ruleHits
-    : [];
+  const hits = rulesFor(node, picked, options, showRules);
   return (
     <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={file}>
       <p className="source-path">{file || node.name}</p>
+      {hits.length > 0 ? (
+        <div className="rule-report" data-testid="rule-report">
+          <button
+            type="button"
+            className="rules-toggle"
+            data-testid="expand-pane-rules"
+            aria-expanded={paneRulesOpen}
+            onClick={() => setPaneRulesOpen((open) => !open)}
+          >
+            <span aria-hidden="true">{paneRulesOpen ? '▼' : '▶'}</span>
+            rules ({hits.length})
+          </button>
+          {paneRulesOpen ? (
+            <article className="rule-card" data-testid="rule-section">
+              {hits.map((hit) => (
+                <div key={hit.slug} className={`rule-line ${hit.status}`}>
+                  <h3>
+                    {hit.slug}{' '}
+                    <span className={`rule-status ${hit.status}`}>{hit.status}</span>
+                  </h3>
+                  {hit.message ? <p className="violation">{hit.message}</p> : null}
+                </div>
+              ))}
+            </article>
+          ) : null}
+        </div>
+      ) : null}
       <div className="panel-source" data-testid="source-excerpt">
         <div data-testid="source-editor" style={{ height }}>
           <Editor
@@ -1002,16 +1036,6 @@ function SourcePane({
           />
         </div>
       </div>
-      {hits.length > 0 ? (
-        <ul className="rule-list">
-          {hits.map((hit) => (
-            <li key={hit.slug} className={`rule-status ${hit.status}`}>
-              {hit.slug}
-              {hit.message ? ` — ${hit.message}` : ''}
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </section>
   );
 }
@@ -1055,35 +1079,19 @@ function writeStoredBranches(folder: string, ids: string[]): void {
   window.localStorage.setItem(openBranchKey(folder), JSON.stringify(ids));
 }
 
-function openAllRules(nodes: KnowledgeGraphNode[], open: Set<string>): void {
-  for (const node of nodes) {
-    const children = node.children ?? [];
-    const classNode = node.nodeType?.name === 'OoadClass';
-    if (node.ruleHits.length > 0) {
-      if (!classNode) {
-        open.add(node.nodeId);
-      }
-      open.add(`${node.nodeId}::rules`);
-    }
-    if (children.length > 0 && !classNode) {
-      open.add(node.nodeId);
-      openAllRules(children, open);
-    }
-  }
-}
-
 function rulesFor(
   node: KnowledgeGraphNode,
   picked: FilterPick,
+  options: KnowledgeGraphFilterOptions,
   showRules: boolean,
 ): { slug: string; status: string; message: string }[] {
   if (!showRules) {
     return [];
   }
-  if (picked.violations || picked.rules.length > 0) {
+  if (picked.violations || restricts(picked.rules, options.rules)) {
     return visibleHits(node, picked);
   }
-  return node.ruleHits;
+  return node.ruleHits ?? [];
 }
 
 function languageFor(file: string): string {

@@ -22,11 +22,11 @@ predicate orchestrationLayerClass(ClassDefinition type) {
 }
 
 predicate persistenceMethod(MethodDefinition method) {
-  method.getName() = ["rehydrate", "save", "hydrate", "accountFor", "seed"]
+  method.getName() = ["save", "seed"]
 }
 
 predicate relatedAggregateCrud(string name) {
-  name = ["load", "rehydrate", "find", "store"]
+  name = ["load", "find", "store"]
 }
 
 predicate crossRepositorySingletonCall(MethodCallExpr call, string calleeRepo) {
