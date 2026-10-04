@@ -46,6 +46,8 @@ tools/prompt_log/prompt_log.debug
 /_req*.yaml
 
 # CodeQL extracted databases and local scan output (regenerate with .codeql/README.md)
+.cq/
+**/.cq/
 .codeql/**-db/
 **/.codeql/**-db/
 .codeql/**-master/
