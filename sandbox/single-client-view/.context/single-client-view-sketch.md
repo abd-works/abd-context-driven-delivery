@@ -6,28 +6,61 @@ source: sandbox/single-client-view/.context/emil;-discussion.,txtx (open questio
 theme: View Client
 ---------
 stories:
-View Client < scaffold
-    * approx — one display story per perspective × system × bank < scaffold
+View Client
     Render Client Dashboard
         Call Center --> Render Client Dashboard
-    Display Client Perspective
-        Call Center --> Display {Bank} {System} Prospect < scaffold
-        Call Center --> Display {Bank} {System} Onboarding < scaffold
-        Call Center --> Display {Bank} {System} Subscription < scaffold
-        Call Center --> Display {Bank} {System} Active Account < scaffold
-        * approx — another display story for every other perspective on a bank-specific system < scaffold
-        // display only; bank names and system names still unknown
-    Integrate Client System
-        * approx — one integration story per system, separate from display < scaffold
-        * approx — further call-out stories when a perspective must be called out beyond display < scaffold
+    Display PC Bank Client
+        Call Center --> Display PC Bank Prospect
+        Call Center --> Display PC Bank Onboarding Retail Deposits
+        Call Center --> Display PC Bank Onboarding Business Banking
+        Call Center --> Display PC Bank Onboarding International Banking
+        Call Center --> Display PC Bank Account Retail Deposits
+        Call Center --> Display PC Bank Account Business Banking
+        Call Center --> Display PC Bank Account International Banking
+        // prospect system name unknown
+    Display EQ Bank Client
+        Call Center --> Display EQ Bank Prospect
+        Call Center --> Display EQ Bank Onboarding Retail Deposits
+        Call Center --> Display EQ Bank Onboarding Business Banking
+        Call Center --> Display EQ Bank Onboarding International Banking
+        Call Center --> Display EQ Bank Account Retail Deposits
+        Call Center --> Display EQ Bank Account Business Banking
+        Call Center --> Display EQ Bank Account International Banking
+        // prospect system name unknown
+    Integrate PC Bank System
+        Single Client View --> Integrate PC Bank Prospect
+        Single Client View --> Integrate PC Bank Onboarding Retail Deposits
+        Single Client View --> Integrate PC Bank Onboarding Business Banking
+        Single Client View --> Integrate PC Bank Onboarding International Banking
+        Single Client View --> Integrate PC Bank Account Retail Deposits
+        Single Client View --> Integrate PC Bank Account Business Banking
+        Single Client View --> Integrate PC Bank Account International Banking
+    Integrate EQ Bank System
+        Single Client View --> Integrate EQ Bank Prospect
+        Single Client View --> Integrate EQ Bank Onboarding Retail Deposits
+        Single Client View --> Integrate EQ Bank Onboarding Business Banking
+        Single Client View --> Integrate EQ Bank Onboarding International Banking
+        Single Client View --> Integrate EQ Bank Account Retail Deposits
+        Single Client View --> Integrate EQ Bank Account Business Banking
+        Single Client View --> Integrate EQ Bank Account International Banking
+        // further call-out stories stay out until a perspective must be called out beyond display
 ce:
-Client < scaffold
-ClientPerspective < scaffold
-Bank < scaffold
-System < scaffold
-Product < scaffold
-// "services" is a source word; property or subtype of Product, not a second class yet
-// Bank and System are both source words; whether a bank is a system is unresolved
+Client
+  render
+       -> System.display
+Bank
+  system
+  // instances: PC Bank, EQ Bank
+System
+  perspective
+  line
+  display
+  integrate
+  // perspective: prospect | onboarding | account
+  // prospect: one system per bank; system name unknown; no line
+  // onboarding and account: one system per line — retail deposits, business banking, international banking
+  // line is a property; retail deposits, business banking, and international banking are not classes
+  // PC Bank and EQ Bank are instances, not subtypes
 
 =========
 theme: Cross Sell Products
