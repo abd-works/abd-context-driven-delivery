@@ -859,6 +859,7 @@ class CodeQLGraph:
         self._languages: dict[str, str] = {}
         self._executable = shutil.which("codeql") or "codeql"
         self.practices: dict[str, CodeQLPracticeGraph] = {}
+        self._query_rows: list[dict] = []
         self.filter = CodeQLFilter(self)
         super().__init__()
 
@@ -894,11 +895,14 @@ class CodeQLGraph:
     def reload_working_copy(self) -> str:
         """Populate the graph from each working copy.
 
-        The working copy is rebuilt only when it is missing or the practice source or CodeQL queries are newer than the stamp. Queries always read the working copy.
+        The working copy is rebuilt only when it is missing or the practice source or CodeQL queries are newer than the stamp. When the query packs match the saved graph, that graph is loaded instead of querying.
         """
         self._require_practices()
         stale = [name for name in self._practice_roots if not self._working_copy_current(name)]
         self._rewrite_working_copies(stale)
+        if not stale and self._saved_graph_current():
+            self._restore_saved_graph()
+            return "Working copies are current. Loaded the saved knowledge graph."
         self._load_all(reuse=not stale)
         for name in stale:
             self._write_stamp(name)
@@ -922,17 +926,20 @@ class CodeQLGraph:
         return f"Updated the working copy for {names}."
 
     def load_working_copy(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
-        """Populate the graph from query results already stored on each working copy.
+        """Populate the graph from the saved graph, or from query results on each working copy.
 
         folder is the repo. database stores a subset's databases so a test does not overwrite the repo database.
-        This does not create a database or write into the working copy.
+        A newer query pack re-runs the queries and saves the graph again. This does not create a database.
         """
         self._bind(folder, practices, database)
         missing = [name for name in self._practice_roots if not self._database_ready(self._working_copy(name))]
         if missing:
             names = ", ".join(missing)
             raise QueryFailure("load_working_copy", f"No working copy for {names}.")
-        self._load_all(reuse=True)
+        if self._saved_graph_current():
+            self._restore_saved_graph()
+            return "Loaded the saved knowledge graph."
+        self._load_all(reuse=not self._queries_newer_than_graph())
         return "Loaded the working copies."
 
     @mcp
@@ -941,7 +948,7 @@ class CodeQLGraph:
         """Return matching graph nodes as JSON, with ancestors, children, and relationships."""
         self._require_practices()
         if not self.practices:
-            self._load_all()
+            self._load_saved_or_query()
         wanted = dict(filter or {})
         if "practice" not in wanted and "practices" not in wanted and self.filter.practices:
             wanted["practices"] = self.filter._scope()
@@ -1066,8 +1073,21 @@ class CodeQLGraph:
         except Exception:
             self.practices = previous
             raise
+        self._save_graph()
+
+    def _load_saved_or_query(self) -> None:
+        if self._saved_graph_current():
+            self._restore_saved_graph()
+            return
+        self._load_all(reuse=not self._queries_newer_than_graph())
 
     def _replace_practices(self, reuse: bool = False) -> None:
+        grouped = self._open_practices()
+        batches = [self._query_batch(names, reuse) for names in grouped.values()]
+        self._query_rows = [self._batch_record(batch) for batch in batches]
+        self._apply_batches(batches)
+
+    def _open_practices(self) -> dict[tuple[str, str], list[str]]:
         self.practices = {}
         groups: dict[tuple[str, str], list[str]] = {}
         for name, source in self._practice_roots.items():
@@ -1077,46 +1097,56 @@ class CodeQLGraph:
             practice.database = self._working_copy(name)
             practice.by_id[practice.root_node.node_id] = practice.root_node
             groups.setdefault((str(source), self._languages[name]), []).append(name)
-        batches: list[tuple[list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]], dict[str, list[Tuple]]]] = []
-        for names in groups.values():
-            node_queries: list[tuple[str, str]] = []
-            edge_queries: list[tuple[str, str]] = []
-            rule_queries: list[tuple[str, str]] = []
-            for name in names:
-                node_queries.extend((name, query) for query in self.query_files(name, "nodes"))
-                edge_queries.extend((name, query) for query in self.query_files(name, "edges"))
-                rule_queries.extend((name, query) for query in self.query_files(name, "rules"))
-            rows = self.run_queries(
-                [query for _, query in node_queries + edge_queries + rule_queries],
-                self._working_copy(names[0]),
-                reuse=reuse,
-            )
-            batches.append((node_queries, edge_queries, rule_queries, rows))
-        for node_queries, _, _, rows in batches:
-            seen: set[str] = set()
-            for name, query in node_queries:
-                self.practice(name).apply_nodes(rows.get(query, []))
-                if name not in seen:
-                    self.practice(name).loaded.append("nodes")
-                    seen.add(name)
-        for _, edge_queries, _, rows in batches:
-            seen = set()
-            for name, query in edge_queries:
-                self.practice(name).apply_edges(rows.get(query, []))
-                if name not in seen:
-                    self.practice(name).loaded.append("edges")
-                    seen.add(name)
+        return groups
+
+    def _query_batch(self, names: list[str], reuse: bool) -> dict:
+        node_queries: list[tuple[str, str]] = []
+        edge_queries: list[tuple[str, str]] = []
+        rule_queries: list[tuple[str, str]] = []
+        for name in names:
+            node_queries.extend((name, query) for query in self.query_files(name, "nodes"))
+            edge_queries.extend((name, query) for query in self.query_files(name, "edges"))
+            rule_queries.extend((name, query) for query in self.query_files(name, "rules"))
+        rows = self.run_queries(
+            [query for _, query in node_queries + edge_queries + rule_queries],
+            self._working_copy(names[0]),
+            reuse=reuse,
+        )
+        return {"nodes": node_queries, "edges": edge_queries, "rules": rule_queries, "rows": rows}
+
+    def _batch_record(self, batch: dict) -> dict:
+        rows = batch["rows"]
+        return {
+            "nodes": [[name, query, rows.get(query, [])] for name, query in batch["nodes"]],
+            "edges": [[name, query, rows.get(query, [])] for name, query in batch["edges"]],
+            "rules": [[name, query, rows.get(query, [])] for name, query in batch["rules"]],
+        }
+
+    def _apply_batches(self, batches: list[dict]) -> None:
+        for batch in batches:
+            self._apply_kind(batch["nodes"], batch["rows"], "nodes")
+        for batch in batches:
+            self._apply_kind(batch["edges"], batch["rows"], "edges")
         for practice in self.practices.values():
             practice.root_node.populate()
-        for _, _, rule_queries, rows in batches:
-            seen = set()
-            for name, query in rule_queries:
-                practice = self.practice(name)
+        for batch in batches:
+            self._apply_kind(batch["rules"], batch["rows"], "rules")
+
+    def _apply_kind(self, queries: list[tuple[str, str]], rows: dict[str, list[Tuple]], kind: str) -> None:
+        seen: set[str] = set()
+        for name, query in queries:
+            practice = self.practice(name)
+            tuples = rows.get(query, [])
+            if kind == "nodes":
+                practice.apply_nodes(tuples)
+            elif kind == "edges":
+                practice.apply_edges(tuples)
+            else:
                 practice.bind_rule(Path(query).stem, self._rule_node_types(Path(query).read_text(encoding="utf-8")))
-                practice.apply_rules(Path(query).stem, rows.get(query, []))
-                if name not in seen:
-                    self.practice(name).loaded.append("rules")
-                    seen.add(name)
+                practice.apply_rules(Path(query).stem, tuples)
+            if name not in seen:
+                practice.loaded.append(kind)
+                seen.add(name)
 
     def _rule_node_types(self, text: str) -> list[str]:
         found: list[str] = []
@@ -1141,10 +1171,79 @@ class CodeQLGraph:
         return (str(self._practice_roots[name]), self._languages[name])
 
     def _delete_databases(self) -> None:
+        snapshot = self._snapshot_path()
+        if snapshot.is_file():
+            snapshot.unlink()
         for name in self._practice_roots:
             for path in (self._master(name), self._working_copy(name), self._stamp_path(name)):
                 if path.is_dir() or path.is_file():
                     remove_tree(path)
+
+    def _snapshot_path(self) -> Path:
+        folder = self._folder or Path()
+        return folder / ".codeql" / "knowledge-graph.json"
+
+    def _read_snapshot(self) -> dict | None:
+        path = self._snapshot_path()
+        if not path.is_file():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return None
+
+    def _saved_graph_current(self) -> bool:
+        """The saved graph matches the query packs. A newer query file means the graph is rebuilt."""
+        saved = self._read_snapshot()
+        if saved is None or not saved.get("batches"):
+            return False
+        recorded = saved.get("queries_ns") or {}
+        if set(recorded) != set(self._practice_roots):
+            return False
+        for name in self._practice_roots:
+            if recorded.get(name) != self._watched_stamp(name)["queries_ns"]:
+                return False
+        return True
+
+    def _queries_newer_than_graph(self) -> bool:
+        saved = self._read_snapshot()
+        if saved is None:
+            return False
+        return not self._saved_graph_current()
+
+    def _save_graph(self) -> None:
+        if self._folder is None or not self._query_rows:
+            return
+        path = self._snapshot_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "queries_ns": {name: self._watched_stamp(name)["queries_ns"] for name in self._practice_roots},
+            "batches": self._query_rows,
+        }
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+    def _restore_saved_graph(self) -> None:
+        saved = self._read_snapshot() or {}
+        self._query_rows = list(saved.get("batches") or [])
+        self._open_practices()
+        self._apply_batches(self._batches_from_disk(self._query_rows))
+
+    def _batches_from_disk(self, records: list[dict]) -> list[dict]:
+        batches = []
+        for record in records:
+            rows: dict[str, list[Tuple]] = {}
+            listed = record["nodes"] + record["edges"] + record["rules"]
+            for _name, query, tuples in listed:
+                rows[query] = tuples
+            batches.append(
+                {
+                    "nodes": [(name, query) for name, query, _tuples in record["nodes"]],
+                    "edges": [(name, query) for name, query, _tuples in record["edges"]],
+                    "rules": [(name, query) for name, query, _tuples in record["rules"]],
+                    "rows": rows,
+                }
+            )
+        return batches
 
     def _ensure_masters(self) -> None:
         built: dict[tuple[str, str], Path] = {}

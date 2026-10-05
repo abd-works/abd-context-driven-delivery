@@ -61,7 +61,9 @@ class GraphHost:
         }
 
     def create_database(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
-        return self.graph.create_database(folder, practices, database)
+        message = self.graph.create_database(folder, practices, database)
+        self.graph.load_working_copy(folder, practices, database)
+        return message
 
     def reload_working_copy(self) -> str:
         return self.graph.reload_working_copy()

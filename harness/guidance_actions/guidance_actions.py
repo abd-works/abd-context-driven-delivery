@@ -13,6 +13,8 @@ from harness.mcp.mcp_server import mcp
 
 # Guidance list, one Guidance (ref or {toolset, …}), or a string to act on directly.
 GuidanceArg = str | dict[str, Any] | list[str | dict[str, Any]]
+_TOOLSET_REF = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
+_GUIDANCE_SLUG = re.compile(r"^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$")
 
 
 def listed(action) -> list:
@@ -94,9 +96,14 @@ class GuidanceAction:
                 parsed = None
             if isinstance(parsed, dict) and parsed.get("toolset"):
                 return parsed
-        if ":" in text and "\n" not in text:
+        if _TOOLSET_REF.match(text):
             return text
-        return None
+        return self._guidance_slug(text)
+
+    def _guidance_slug(self, text: str) -> str | dict[str, Any] | None:
+        if not _GUIDANCE_SLUG.match(text):
+            return None
+        return GuidanceCatalog.ref_for(text)
 
     def guidance_text(self) -> str | None:
         """The string to run this action on, when guidance was not a Guidance list."""
@@ -226,3 +233,43 @@ class GuidanceAction:
         """Close the guidance action by committing the session turn."""
         return ""
         # tools(self._turn().turn(utility="guidance_action"))
+
+
+class GuidanceCatalog:
+    """Map a practice or fidelity slug to the toolset ref an action can list."""
+
+    _refs: dict[str, str | dict[str, Any]] | None = None
+
+    @classmethod
+    def ref_for(cls, slug: str) -> str | dict[str, Any] | None:
+        cls._load()
+        return (cls._refs or {}).get(slug)
+
+    @classmethod
+    def _load(cls) -> None:
+        if cls._refs is not None:
+            return
+        from installation.installer import Installer
+        from harness.agent_tools.agent_tools import AgentToolSet
+
+        refs: dict[str, str | dict[str, Any]] = {}
+        for ref in Installer().collect_toolsets():
+            cls._index_ref(refs, ref, AgentToolSet)
+        cls._refs = refs
+
+    @classmethod
+    def _index_ref(cls, refs: dict[str, str | dict[str, Any]], ref: str, toolsets: Any) -> None:
+        try:
+            practice = toolsets.instantiate(ref)
+        except (ImportError, ModuleNotFoundError, TypeError, ValueError, AttributeError, OSError):
+            return
+        fidelities = getattr(getattr(practice, "fidelities", None), "entries", None)
+        if not isinstance(fidelities, dict) or not fidelities:
+            return
+        slug = str(getattr(practice, "slug", "") or "")
+        if slug and slug not in refs:
+            refs[slug] = ref
+        for name, child in fidelities.items():
+            child_slug = str(getattr(child, "slug", "") or "")
+            if child_slug and child_slug not in refs:
+                refs[child_slug] = {"toolset": ref, "fidelity": name}

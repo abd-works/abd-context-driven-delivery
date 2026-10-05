@@ -64,6 +64,13 @@ with description("an MCP host input schema"):
                     equal({"type": "array", "items": {"type": "string"}})
                 )
 
+        with context("with a dict of unrestricted values parameter"):
+            with it("should leave additionalProperties unrestricted"):
+                schema = self.host.input_schema_for_callable(ParameterTypes().echo_open)
+                expect(schema["properties"]["fields"]).to(
+                    equal({"type": "object", "additionalProperties": {}})
+                )
+
         with context("with a dict of string values parameter"):
             with it("should advertise JSON Schema object with string additionalProperties"):
                 expect(self.properties["fields"]).to(

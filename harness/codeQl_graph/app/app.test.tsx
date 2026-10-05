@@ -482,7 +482,9 @@ it('should create the database for the chosen folder', async () => {
   await openFolder(user);
   await user.click(screen.getByTestId('create-database'));
   expect((await screen.findByTestId('work-progress')).textContent).toContain('Created the database');
-  expect(calls.at(-1)?.operation).toBe('create_database');
+  const created = calls.findIndex((call) => call.operation === 'create_database');
+  expect(created).toBeGreaterThan(-1);
+  expect(calls[created + 1]?.operation).toBe('load_working_copy');
 });
 
 it('should merge the working copy onto master', async () => {

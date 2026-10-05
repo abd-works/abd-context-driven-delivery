@@ -255,6 +255,47 @@ with description("Sketch toolset"):
             expect(joined).to(contain("not a graph .ql query"))
 
 
+with description("an MCP sketch prompt"):
+    with it("should return sketch instructions for prose that contains a colon"):
+        from harness.mcp.mcp_server import McpHost
+
+        repo = Path(__file__).resolve().parents[2]
+        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
+        prose = "Three client perspectives: prospect onboarding and active account."
+        result = str(host._runtime.invoke_prompt("sketch.sketch", {"guidance": prose}))
+        expect(result).to(contain("Grill the sketch plan"))
+        expect("ModuleNotFoundError" in result).to(equal(False))
+
+    with it("should inline listed practice rules into the sketch instructions"):
+        from harness.mcp.mcp_server import McpHost
+
+        repo = Path(__file__).resolve().parents[2]
+        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
+        result = str(
+            host._runtime.invoke_prompt(
+                "sketch.sketch",
+                {"guidance": ["practices.bdd.bdd:Bdd"]},
+            )
+        )
+        expect(result).to(contain("observable-behavior"))
+
+    with it("should include each practice sketch template and rules"):
+        from harness.mcp.mcp_server import McpHost
+
+        repo = Path(__file__).resolve().parents[2]
+        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
+        result = str(
+            host._runtime.invoke_prompt(
+                "sketch.sketch",
+                {"guidance": ["stories", "clean-engineering-model"]},
+            )
+        )
+        expect(result).to(contain("verb-noun-format"))
+        expect(result).to(contain("shape-classes-around-resources"))
+        expect(result).to(contain("Sketch the story hierarchy"))
+        expect(result).to(contain("terse indent notation"))
+
+
 with description("a sketch action"):
     with context("that expands with context tools"):
         with it("should include the sketch session body in sketch"):

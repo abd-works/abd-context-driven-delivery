@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.mcp.mcp_server import Mcp
@@ -63,6 +64,12 @@ class ParameterTypes:
             "optional_fields": optional_fields,
             "text_or_count": text_or_count,
         }
+
+    @Mcp
+    @agent_tool
+    def echo_open(self, fields: dict[str, Any]) -> dict[str, Any]:
+        """Return a dict whose values are not restricted to one JSON type."""
+        return dict(fields)
 
     @Mcp
     @agent_tool

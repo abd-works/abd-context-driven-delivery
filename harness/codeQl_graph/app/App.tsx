@@ -160,7 +160,7 @@ export function App() {
               loading={loading}
               folder={folder}
               status={status}
-              onCreate={() => runStatus(data.createDatabase(folder, practiceRoots(folder)))}
+              onCreate={() => runStatus(data.createDatabase(folder, practiceRoots(folder)).then((message) => load(folder).then(() => message)))}
               onMerge={() => runStatus(data.mergeWorkingToMaster().then((message) => load(folder).then(() => message)))}
               onReload={() => runStatus(data.reloadWorkingCopy(folder, practiceRoots(folder)).then((message) => load(folder).then(() => message)))}
             />

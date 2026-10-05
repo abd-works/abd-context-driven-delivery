@@ -64,6 +64,25 @@ with description("GuidanceAction"):
         kit.run("just this text", seen.append, action="generate")
         expect(seen).to(equal(["just this text"]))
 
+    with it("should list a practice and a fidelity from their guidance slugs"):
+        from harness.guidance_actions import GuidanceAction
+
+        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-slugs-"))))
+        kit._bind_guidance(["stories", "clean-engineering-model"])
+        listed = kit.listed()
+        expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
+        expect(listed[0].fidelities.current.name).to(equal("story_map"))
+        expect(listed[1].fidelities.current.name).to(equal("model"))
+
+    with it("should keep prose that contains a colon as guidance text"):
+        from harness.guidance_actions import GuidanceAction
+
+        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-prose-"))))
+        prose = "Three client perspectives: prospect onboarding, subscription, and active account."
+        kit._bind_guidance(prose)
+        expect(kit.guidance_text()).to(equal(prose))
+        expect(kit.listed()).to(equal([]))
+
     with it("should treat a module class ref as a listed Guidance"):
         from harness.guidance_actions import GuidanceAction
 

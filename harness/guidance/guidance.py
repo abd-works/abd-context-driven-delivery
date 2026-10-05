@@ -87,6 +87,28 @@ class Guidance:
         """Active template file for this Guidance format and fidelity."""
 
     @property
+    @agent_instructions
+    def sketch_template(self) -> str:
+        """Sketch notation for this practice."""
+        return self._sketch_template_text()
+
+    def _sketch_template_text(self) -> str:
+        folder = self._sketch_template_folder()
+        if not folder.is_dir():
+            return ""
+        parts = [
+            path.read_text(encoding="utf-8")
+            for path in sorted(folder.glob("*-sketch.*"))
+            if path.is_file()
+        ]
+        return "\n\n".join(part.strip() for part in parts if part.strip())
+
+    def _sketch_template_folder(self) -> Path:
+        practice = getattr(self, "practice_guidance", None)
+        owner = practice if practice is not None else self
+        return Path(inspect.getfile(type(owner))).resolve().parent / "templates"
+
+    @property
     @echo
     @skill
     @mcp

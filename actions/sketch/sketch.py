@@ -113,10 +113,11 @@ class Sketch(GuidanceAction):
     @agent_instructions
     def sketch(self, guidance: GuidanceArg) -> str:
         """Grill the sketch plan with grill_with_context: ask short framed questions and wait for answers. After each small batch of answers, sketch only what those answers unlocked, save_sketch, then review_sketch, and get user feedback before asking more. Carry forward named review mistakes into the next sketch; do not regenerate as if those mistakes never happened. Regenerating as if named mistakes never happened is a defect. Asking another grill question before review_sketch confirms correct is a defect. Never defer persistence or review to the end of the grill. Work in short cycles until the sketch is agreed. Then generate the formal artifact from that sketch — do not generate the full product during the sketch loop. Check the sketch against each listed practice's rules.markdown_block (original Rules markdown for the practice and the active fidelity). That check is an AI evaluation of the vanilla Rules block — not a graph .ql query. *Fix all violations before presenting the sketch to the user.*
-        Pass a string to sketch that text once."""
+        Pass one or more guidance tools — practice or fidelity slugs such as stories and clean-engineering-model, or module:Class refs. A list passes every practice in the session. The reply includes these sketch instructions, each practice's sketch template, and each practice's rules."""
         self.begin(guidance, action="sketch")
         for item in self.listed():
             instructions(item.rules.markdown_block)
+            instructions(item.sketch_template)
         self._grill_context().grill_with_context()
         self.find_template()
         self.save_sketch()

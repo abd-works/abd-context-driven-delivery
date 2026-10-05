@@ -483,6 +483,8 @@ class McpPrompt:
         if name == "instructions" and hasattr(tool, "instructions"):
             return tool.instructions
         member = self.callable
+        if getattr(member, "_is_agent_instructions", False):
+            return self._expanded_instructions(tool, member, dict(arguments or {}))
         if callable(member):
             try:
                 result = member(**dict(arguments or {}))
@@ -494,6 +496,18 @@ class McpPrompt:
         if hasattr(tool, "instructions"):
             return tool.instructions
         return member
+
+    def _expanded_instructions(self, tool: Any, member: Any, arguments: dict[str, object]) -> str:
+        if hasattr(tool, "begin") and "guidance" in arguments:
+            tool.begin(arguments["guidance"], action=self._op.operation)
+        from harness.agent_tools.agent_tools import AgentInstructions
+
+        expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+        body = (expanded.instructions or "").strip()
+        doc = (inspect.getdoc(member) or "").strip()
+        if doc and doc not in body:
+            return f"{doc}\n\n{body}".strip() if body else doc
+        return body or self.prompt_text or doc
 
 
 class McpServer:
@@ -690,6 +704,8 @@ class McpHost:
         return self._annotation_schema(annotation)
 
     def _annotation_schema(self, annotation: object) -> dict[str, Any]:
+        if annotation is Any:
+            return {}
         origin = get_origin(annotation)
         if origin in _UNION_ORIGINS:
             return self._union_schema(annotation)
