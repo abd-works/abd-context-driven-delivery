@@ -1792,3 +1792,11 @@
 2026-10-05T19:34:33Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
 2026-10-05T19:34:33Z ENABLED ['PromptEcho.on_pre_tool_use']
 2026-10-05T19:34:33Z MERGED {"permission": "allow"}
+2026-10-05T19:34:43Z EVENT 'preToolUse' tool='Shell' path='' conversation_id='d92e0240-9d10-41e2-9f95-819c55bdab3b' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-10-05T19:34:44Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-10-05T19:34:44Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-10-05T19:34:44Z MERGED {"permission": "allow"}
+2026-10-05T19:34:44Z EVENT 'preToolUse' tool='Shell' path='' conversation_id='d92e0240-9d10-41e2-9f95-819c55bdab3b' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-10-05T19:34:44Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-10-05T19:34:44Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-10-05T19:34:44Z MERGED {"permission": "allow"}
