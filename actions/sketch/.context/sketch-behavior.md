@@ -41,4 +41,4 @@ Two paths:
 
 ## When to change the default template
 
-Change `sketch-template.md` only when the terse-indent notation itself is being revised. Domain-specific templates should live at `{agent_dir}/sketch-template.*` (per the convention tier of discovery) — do not modify the default to cater to one domain.
+Change `sketch-template.md` only when the heading-and-indent notation itself is being revised. Domain-specific templates should live at `{agent_dir}/sketch-template.*` (per the convention tier of discovery) — do not modify the default to cater to one domain.

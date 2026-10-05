@@ -41,7 +41,7 @@ with description("Sketch toolset"):
         with it("returns the default template when agent_dir was not set at construction"):
             sketcher = Sketch()
             content = sketcher.sketch_template
-            expect(content).to(contain("terse-indent notation"))
+            expect(content).to(contain("heading-and-indent notation"))
 
         with it("returns the agent-dir template when agent_dir was set at construction"):
             import tempfile
@@ -58,7 +58,7 @@ with description("Sketch toolset"):
         with it("falls back to the default template when no agent_dir template exists"):
             sketcher = Sketch()
             content = sketcher.find_template(agent_dir="")
-            expect(content).to(contain("terse-indent notation"))
+            expect(content).to(contain("heading-and-indent notation"))
 
         with it("returns the agent's own *-sketch.* when the templates directory contains one"):
             import tempfile
@@ -74,7 +74,7 @@ with description("Sketch toolset"):
         with it("falls back to the default when agent_dir is set but the directory is missing"):
             sketcher = Sketch()
             content = sketcher.find_template(agent_dir="does/not/exist")
-            expect(content).to(contain("terse-indent notation"))
+            expect(content).to(contain("heading-and-indent notation"))
 
     with context("save_sketch tool"):
         with before.each:

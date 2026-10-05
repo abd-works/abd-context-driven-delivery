@@ -53,7 +53,7 @@ class Sketch(GuidanceAction):
         """Locate a sketch template using tiered discovery.
         1. Session context - the caller passes an example directly (skip this tool).
         2. Convention - {agent_dir}/templates/*-sketch.* inside the wrapped agent's templates folder.
-        3. Default - sketch/templates/sketch-template.md (this toolset's canonical terse-indent notation).
+        3. Default - sketch/templates/sketch-template.md (this toolset's canonical heading-and-indent notation).
         Returns the resolved template contents as a string."""
         if agent_dir:
             root = Path(agent_dir)
