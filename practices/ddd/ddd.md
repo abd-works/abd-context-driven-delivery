@@ -81,6 +81,8 @@ Draw where language changes — context boundaries, the aggregates that protect 
 
 #### Sketch
 
+Keep a separate `domain driven design:` section and a separate `clean engineering:` section. The clean engineering section is the architectural structure: modules, public seams, and classes. The domain driven design section is the domain model: bounded contexts, aggregates, key facts, and the dependencies and integrations. Domain Driven Design relies on Clean Engineering's principles and uses that same approach, and it remains a different model. Ask the questions below. While you do, read Clean Engineering's Guidance and Rules for **modules** and **model**. Do not ask the Clean Engineering Sketch questions. Write the domain model in `domain driven design:`. Shape `clean engineering:` from those same answers.
+
 - Ask what the main areas of the business are that this solution has to represent.
 - In each area, ask which concepts have to change together so the business stays consistent.
 - Ask what the key facts are inside each of those groups.

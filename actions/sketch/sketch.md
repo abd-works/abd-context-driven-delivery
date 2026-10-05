@@ -113,6 +113,8 @@ If no template is found, say so and stop. Do not invent a notation.
 
 When more than one practice is active (Stories, Clean Engineering, Domain Driven Design, User Experience, Behavior Driven Development), they share one sketch file. Each practice has one section. A theme is worked inside those sections. It does not get its own block.
 
+`clean engineering:` and `domain driven design:` stay separate. The clean engineering section is the architectural structure: modules, public seams, and classes. The domain driven design section is the domain model: bounded contexts, aggregates, key facts, and the dependencies and integrations. When Domain Driven Design is active, ask its Sketch questions. Read Clean Engineering's Guidance and Rules while you do. Do not ask the Clean Engineering Sketch questions. Domain Driven Design relies on those principles, and it remains a different model. Shape `clean engineering:` from the same answers.
+
 ```
 stories:
 clean engineering:
