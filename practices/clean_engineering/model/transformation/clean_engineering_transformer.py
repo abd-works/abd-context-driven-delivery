@@ -7,6 +7,7 @@ from pathlib import Path
 
 from jinja2 import Environment
 
+from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
 from practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel as SourceModel,
@@ -20,8 +21,7 @@ from practices.clean_engineering.model.operation import Operation as SourceOpera
 from practices.clean_engineering.model.operation import Parameter as SourceParameter
 from practices.clean_engineering.model.property import Property as SourceProperty
 
-_LENS = "ce:"
-_NEXT_LENSES = ("stories:", "bdd:", "ddd:", "ux:")
+_NESTING_INDENT = 2
 _SNAKE = re.compile(r"([^0-9a-z]+)")
 
 
@@ -131,7 +131,8 @@ def _parse_ce_sketch(root: CleanEngineeringTransformer, sketch: str) -> None:
     stack: list[ModuleTransformer] = []
     current_class: OoadClassTransformer | None = None
     current_operation: OperationTransformer | None = None
-    for raw in _lens_body(sketch).splitlines():
+    body = SketchOutline(sketch, _NESTING_INDENT).body_for(SketchLens.clean_engineering)
+    for raw in body.splitlines():
         indent, stripped, comment = _split_line(raw)
         if stripped.startswith("build-order:"):
             continue
@@ -309,16 +310,3 @@ def _split_line(raw: str) -> tuple[int, str, str]:
         code, comment = body.split("//", 1)
         return indent, code.strip(), comment.strip()
     return indent, body, ""
-
-
-def _lens_body(sketch: str) -> str:
-    lines = sketch.splitlines()
-    start = next((i for i, line in enumerate(lines) if line.startswith(_LENS)), None)
-    if start is None:
-        return sketch
-    end = len(lines)
-    for i in range(start + 1, len(lines)):
-        if any(lines[i].startswith(marker) for marker in _NEXT_LENSES):
-            end = i
-            break
-    return "\n".join(lines[start + 1 : end])

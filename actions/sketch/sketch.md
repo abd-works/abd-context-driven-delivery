@@ -116,14 +116,20 @@ When more than one practice is active (Stories, Clean Engineering, Domain Driven
 `clean engineering:` and `domain driven design:` stay separate. The clean engineering section is the architectural structure: modules, public seams, and classes. The domain driven design section is the domain model: bounded contexts, aggregates, key facts, and the dependencies and integrations. When Domain Driven Design is active, ask its Sketch questions. Read Clean Engineering's Guidance and Rules while you do. Do not ask the Clean Engineering Sketch questions. Domain Driven Design relies on those principles, and it remains a different model. Shape `clean engineering:` from the same answers.
 
 ```
-stories:
-clean engineering:
-domain driven design:
-user experience:
-behavior driven development:
+## stories:
+## clean engineering:
+## domain driven design:
+## user experience:
+## behavior driven development:
 ```
 
 Omit a section when that practice is not active. Use that practice's sketch template inside its section. Do not invent a notation.
+
+### Headings carry the hierarchy
+
+Each practice section is a `##` heading. Inside it, the practice's tree nests through deeper headings — `###` for the top of that practice's shape, `####` for its children, and so on — so every epic, module, context, journey, and subject folds on its own. Detail that has not earned a heading sits in a fenced block under the heading that owns it. Each practice's sketch template names which heading depth holds what.
+
+Prose that is not part of a practice's tree — open questions, what is settled, false cognates, the theme list — is its own `##` section beside the practice sections, never a heading inside one.
 
 ### Rules
 
@@ -136,6 +142,7 @@ Omit a section when that practice is not active. Use that practice's sketch temp
 - **`generate-on-the-way-through`** — When a theme finishes a fidelity, ask whether to generate the official document. Call `generate.generate(guidance: [{toolset, fidelity, format}, …])` as the generate skill describes. One entry per format: `markdown`, `drawio`, or the practice's code format.
 - **`one-sketch-per-engagement`** — One sketch file. Deepen it in place. Do not add a second file per fidelity or practice.
 - **`lens-from-child-template`** — Section bodies use that practice's sketch template. No free prose inside `stories:` / `clean engineering:` / `domain driven design:` / `user experience:` / `behavior driven development:`.
+- **`headings-carry-the-hierarchy`** — Nest each practice's tree through markdown headings below its `##` section, at the depths that practice's template names. Keep leaf detail in a fenced block under the heading that owns it. Open questions, settled decisions, and the theme list are their own `##` sections, not headings inside a practice section.
 
 ### Common mistakes
 

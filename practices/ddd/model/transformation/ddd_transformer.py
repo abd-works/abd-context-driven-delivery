@@ -7,11 +7,12 @@ from pathlib import Path
 
 from jinja2 import Environment
 
+from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
 from practices.ddd.model.nodes import Aggregate, BoundedContext
 
-_LENS = "ddd:"
-_NEXT_LENSES = ("stories:", "ce:", "bdd:", "ux:")
+_NESTING_INDENT = 2
+_EVENT_MAP = ("event_map", "event map")
 _SNAKE = re.compile(r"([^0-9a-z]+)")
 
 
@@ -64,20 +65,24 @@ class AggregateTransformer(Transformer, Aggregate):
 
 def _parse_ddd_sketch(root: DddTransformer, sketch: str) -> None:
     context: BoundedContextTransformer | None = None
-    for raw in _lens_body(sketch).splitlines():
-        if not raw.strip():
+    body = SketchOutline(sketch, _NESTING_INDENT).body_for(SketchLens.domain_driven_design)
+    for raw in body.splitlines():
+        if not raw.strip() or raw.strip().startswith("-"):
             continue
         indent = len(raw) - len(raw.lstrip(" "))
-        level = indent // 2
+        level = indent // _NESTING_INDENT
         name, _, owner = raw.strip().partition("|")
-        name = name.strip().rstrip("/")
+        name = name.strip().rstrip("/").rstrip(":")
         owner = owner.strip()
-        if level <= 1:
+        if name.lower() in _EVENT_MAP:
+            context = None
+            continue
+        if level == 0:
             context = BoundedContextTransformer(name, len(root.contexts) + 1)
             context.owner = owner
             root.contexts.append(context)
             continue
-        if context is None or level != 2:
+        if context is None or level != 1:
             continue
         context.aggregates.append(AggregateTransformer(name, len(context.aggregates) + 1))
 
@@ -85,16 +90,3 @@ def _parse_ddd_sketch(root: DddTransformer, sketch: str) -> None:
 def _to_kebab(name: str) -> str:
     spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
     return _SNAKE.sub("-", spaced.strip().lower()).strip("-") or "unnamed"
-
-
-def _lens_body(sketch: str) -> str:
-    lines = sketch.splitlines()
-    start = next((i for i, line in enumerate(lines) if line.startswith(_LENS)), None)
-    if start is None:
-        return ""
-    end = len(lines)
-    for index in range(start + 1, len(lines)):
-        if any(lines[index].startswith(marker) for marker in _NEXT_LENSES):
-            end = index
-            break
-    return "\n".join(lines[start + 1 : end])

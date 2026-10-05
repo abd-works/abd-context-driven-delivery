@@ -7,11 +7,11 @@ from pathlib import Path
 
 from jinja2 import Environment
 
+from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
 from practices.bdd.model.nodes import Context, Description, Observation
 
-_LENS = "bdd:"
-_NEXT_LENSES = ("stories:", "ce:", "ddd:", "ux:")
+_NESTING_INDENT = 2
 _SNAKE = re.compile(r"([^0-9a-z]+)")
 
 
@@ -59,7 +59,10 @@ class ObservationTransformer(Transformer, Observation):
 def _parse_bdd_sketch(root: BddTransformer, sketch: str) -> None:
     description: DescriptionTransformer | None = None
     stack: list[tuple[int, ContextTransformer]] = []
-    for raw in _lens_body(sketch).splitlines():
+    body = SketchOutline(sketch, _NESTING_INDENT).body_for(
+        SketchLens.behavior_driven_development
+    )
+    for raw in body.splitlines():
         if not raw.strip():
             continue
         indent = len(raw) - len(raw.lstrip(" "))
@@ -92,16 +95,3 @@ def _parse_bdd_sketch(root: BddTransformer, sketch: str) -> None:
 def _to_snake(name: str) -> str:
     spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
     return _SNAKE.sub("_", spaced.strip().lower()).strip("_") or "unnamed"
-
-
-def _lens_body(sketch: str) -> str:
-    lines = sketch.splitlines()
-    start = next((i for i, line in enumerate(lines) if line.startswith(_LENS)), None)
-    if start is None:
-        return ""
-    end = len(lines)
-    for i in range(start + 1, len(lines)):
-        if any(lines[i].startswith(marker) for marker in _NEXT_LENSES):
-            end = i
-            break
-    return "\n".join(lines[start + 1 : end])

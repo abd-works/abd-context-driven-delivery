@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from practices.stories.model.story_model import (
     Background,
     Epic,
@@ -16,7 +17,7 @@ from practices.stories.model.story_model import (
     StoryType,
 )
 
-_FENCE = re.compile(r"```(?:\w*)\n(.*?)```", re.DOTALL)
+_NESTING_INDENT = 4
 _STORY = re.compile(r"^(?:\(S\)\s+)?(.+?)\s*-->\s+(.+)$")
 _OUTLINE_EPIC = re.compile(r"^\(E\)\s+(.+)$")
 _ESTIMATE = re.compile(r"^\*\s+(\S.+)$")
@@ -27,7 +28,7 @@ _STEP = re.compile(r"^(given|when|then|and|but)\s+(.+)$", re.I)
 class SketchStoryModel(StoryModel):
     def parse(self, text: str) -> "SketchStoryModel":
         model = type(self)()
-        body = _FENCE.sub(lambda match: "\n" + match.group(1) + "\n", text)
+        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.stories)
         epic: Epic | None = None
         subs: list[Epic] = []
         story: Story | None = None

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
@@ -12,7 +13,7 @@ from practices.clean_engineering.model.base_class_model import (
 from practices.clean_engineering.model.operation import Operation, Parameter
 from practices.clean_engineering.model.property import Property, append_invariant, take_property_note
 
-_FENCE = re.compile(r"```(?:\w*)\n(.*?)```", re.DOTALL)
+_NESTING_INDENT = 2
 _CLASS = re.compile(r"^([A-Z][A-Za-z0-9]+)(?:\s*:\s*(.+))?$")
 _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _RETURN_TYPE = re.compile(
@@ -30,7 +31,7 @@ class SketchCleanEngineeringModel(CleanEngineeringModel):
     def parse(cls, text: str) -> "SketchCleanEngineeringModel":
         model = cls(name="KnowledgeGraph", sequential_order=1)
         module = Module(name="KnowledgeGraph", sequential_order=1)
-        body = _FENCE.sub(lambda match: "\n" + match.group(1) + "\n", text)
+        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.clean_engineering)
         for oclass in _classes_in(body):
             existing = next((row for row in module.classes if row.name == oclass.name), None)
             if existing is None:

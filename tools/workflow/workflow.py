@@ -9,10 +9,9 @@ import yaml
 
 from git import NullGitRepo, Ticket, TicketNotFoundError
 from git.git import Repo
-from handoff.handoff import Handoff
 from installation.files import skill
 from harness.mcp.mcp_server import mcp
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, subAgent
 from harness.agent_tools.agent_tools import agent_tool
 from workflow.work_ticket import WorkTicket
 from workspace.legacy.workspace import Workspace
@@ -173,11 +172,7 @@ class Workflow:
         self._commit_if_dirty(workspace, focus)
         transcript_path = self._find_transcript_path(workspace)
 
-        handoff = self._handoff()
-        handoff_md = handoff._render_handoff_markdown(
-            handoff._collect_state(destination), next_focus=focus
-        )
-        body = self._backlog_issue_body(handoff_md, focus=focus, context=context)
+        body = self._backlog_issue_body(focus=focus, context=context)
 
         return {
             "committed": "yes",
@@ -193,16 +188,15 @@ class Workflow:
             ),
         }
 
-    def _backlog_issue_body(self, handoff_md: str, focus: str, context: str) -> str:
-        parts = [(handoff_md or "").strip()]
+    def _backlog_issue_body(self, focus: str, context: str) -> str:
         request: list[str] = []
         if focus.strip():
             request.append(f"**Focus:** {focus.strip()}")
         if context.strip():
             request.append(context.strip())
-        if request:
-            parts.extend(["", "## Request", "", *request])
-        return "\n".join(part for part in parts if part is not None).strip() + "\n"
+        if not request:
+            return ""
+        return "\n".join(["## Request", "", *request]).strip() + "\n"
 
     def _find_transcript_path(self, workspace: str = "") -> str:
         """Locate the most recent Cursor agent transcript for this workspace."""
@@ -234,7 +228,7 @@ class Workflow:
                 f"backlog: {focus.strip()[:60]}" if focus.strip() else "backlog: close turn"
             )
             if session is not None:
-                turn = session.open_turn or Turn(root=str(repo.root))
+                turn = session.open_turn or Turn(root=str(repo.root), git=repo)
                 turn.turn(
                     commit_message=subject,
                     utility="backlog",
@@ -310,6 +304,7 @@ class Workflow:
         return text
 
 
+    @subAgent
     @agent_tool
     @mcp
     @skill
@@ -348,7 +343,9 @@ class Workflow:
                 workflow_state=workflow_state,
                 workspace=workspace,
             )
-            turn = session.open_turn or Turn(root=str(session.git.root))
+            turn = session.open_turn or Turn(
+                root=str(session.git.root), git=session.git
+            )
             turn.turn(commit_message=message, utility="start-ticket")
         if session is not None:
             session.git.checkout_or_create(session.session_branch)
@@ -379,7 +376,7 @@ class Workflow:
         ws = self._workspace(workspace)
         session = ws.current_work_session
         if session is not None and session.git.is_dirty(untracked=False):
-            Turn(root=str(session.git.root)).turn(
+            Turn(root=str(session.git.root), git=session.git).turn(
                 message=outcome or "finish",
                 utility="finish-ticket",
                 subject=session_name,
@@ -399,9 +396,6 @@ class Workflow:
             "ticket": resolved_ticket,
             "project_status": "Done",
         }
-
-    def _handoff(self) -> Handoff:
-        return Handoff()
 
     def workspace_tool(self, path: str = "") -> Workspace:
         return self._workspace(path)
@@ -849,12 +843,13 @@ class Workflow:
         workflow_state: str = "specification",
     ) -> dict[str, str]:
         repo_root = self._repo_root(workspace)
-        issue = self._repo(workspace).ticket(ticket)
+        repo = self._repo(workspace)
+        issue = repo.ticket(ticket)
         if issue is None:
             raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
         session_name = self._session_name_from_issue(issue.title, issue.number)
         ws = self._workspace(workspace)
-        git = NullGitRepo(repo_root) if self._repo_override is not None else None
+        git = repo if self._repo_override is not None else None
         goal = instructions.strip() or issue.title
         session = ws.open_work_session(
             name=session_name,

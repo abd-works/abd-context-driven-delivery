@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import re
-
+from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from practices.ddd.model.markdown.nodes import (
     MarkdownAggregate,
     MarkdownBoundedContext,
@@ -13,7 +12,7 @@ from practices.ddd.model.markdown.nodes import (
     _wire_event,
 )
 
-_FENCE = re.compile(r"```(?:\w*)\n(.*?)```", re.DOTALL)
+_NESTING_INDENT = 2
 _KEYS = (
     "owner:",
     "system:",
@@ -33,7 +32,7 @@ _KEYS = (
 class SketchDddModel(MarkdownBoundedContextMap):
     def parse(self, text: str) -> "SketchDddModel":
         model = type(self)()
-        body = _FENCE.sub(lambda match: "\n" + match.group(1) + "\n", text)
+        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.domain_driven_design)
         context: MarkdownBoundedContext | None = None
         aggregate: MarkdownAggregate | None = None
         event_lines: list[str] = []
@@ -53,7 +52,7 @@ class SketchDddModel(MarkdownBoundedContextMap):
                     event_lines.append(stripped[2:])
                 continue
             indent = len(raw) - len(raw.lstrip(" "))
-            level = indent // 2
+            level = indent // _NESTING_INDENT
             if lowered.startswith("owner:") and context is not None:
                 context.owner = stripped.split(":", 1)[1].strip()
                 continue
@@ -63,8 +62,9 @@ class SketchDddModel(MarkdownBoundedContextMap):
                 aggregate._body.append(raw)
                 continue
             if level <= 0:
-                name = stripped.rstrip(":")
-                context = MarkdownBoundedContext(name, len(model.contexts) + 1)
+                name, _, vendor = stripped.rstrip(":").partition("|")
+                context = MarkdownBoundedContext(name.strip(), len(model.contexts) + 1)
+                context.owner = vendor.strip()
                 context._map = model
                 model.contexts.append(context)
                 aggregate = None

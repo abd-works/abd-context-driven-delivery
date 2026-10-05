@@ -6,61 +6,103 @@ Rough shape for sketching an clean_engineering analysis before generating the fo
 
 This template is the clean_engineering notation for a section of the engagement sketch. When sketched with another practice in the same session (bdd-behavior), keep that notation in `{slug}-sketch.md` so the object model and BDD stay paired; do not write a second sketch file.
 
+## Notation — headings carry the hierarchy
+
+Modules and classes nest through markdown headings, so every module and class folds on its own. `## clean engineering:` is the section heading; the structure starts one level below it.
+
+| Heading | Holds |
+|---|---|
+| `### {module}/` | a first-class module — a domain noun, trailing `/` |
+| `#### {nested module}/` | a nested module, only when it shares a base seam or is a sub-system |
+| `##### {ClassName} : {BaseClass}` | one class, recording only the delta from its base |
+
+Under a class heading, a fenced block holds its properties, operations, `->` interactions, and `//` notes. Peer classes each get their own heading rather than a `----` separator.
+
 ## Module nest (before class detail)
 
 Sketch **nested modules** when children share a base seam. Paths are domain nouns (`powers/attack`).
 
+~~~markdown
+### powers/
+
 ```
-powers/                              //public seams only, express anouns / resources
-  control 
-  effect                             
-  defense 
-  movement 
-  sensory 
-  general 
-  extras                  
-  flaws  
-
-  
-
-conflicts/                           //nested modules where it makes sense 
-  turns/       < -- characters       //note dependecies on a module <-> module basis             
-  actions/     <- checks                        
-  conditions/  <- checks                     
-
-gear/
-  equipment
-  headquarters
-  vehicles
-
-checks/                              
+// public seams only — express nouns / resources
+control
+effect
+defense
+movement
+sensory
+general
+extras
+flaws
 ```
+
+### conflicts/
+
+#### turns/
+
+```
+// dep -> characters — note dependencies on a module <-> module basis
+```
+
+#### actions/
+
+```
+// dep -> checks
+```
+
+#### conditions/
+
+```
+// dep -> checks
+```
+
+### gear/
+
+```
+equipment
+headquarters
+vehicles
+```
+
+### checks/
+~~~
 
 **Hard rules:** nest only when there is a **shared base** or clear sub-system; children implement independently with siblings stubbed; shared mechanics live once under the parent (e.g. `powers/effect`), not copy-pasted.
 
-## Notation
+## Class notation
+
+~~~markdown
+### {module}/
+
+##### {ClassName} : {BaseClass}
 
 ```
-ClassName : BaseClass
-  propertyName
-  operationName param param
-  otherPropertyOrOperationName
-       nestedThing                      <-- a owned class
-       nestedOperation param
-  RelatedClass                          <-- association candidate
-
-  ----
- SubtypeName : ClassName
-      otherCollaborator                 <-- construction property (delta)
-      operationName param
-       -> otherCollaborator.operation   <-- real call on a held collaborator
-       -> super.operation               <-- base operation when subtype extends it
-       // invariant or sequencing note
-      ----
- Collaborator
-      property
-      operation param
+propertyName
+operationName param param
+otherPropertyOrOperationName
+     nestedThing                      <-- an owned class
+     nestedOperation param
+RelatedClass                          <-- association candidate
 ```
+
+##### {SubtypeName} : {ClassName}
+
+```
+otherCollaborator                     <-- construction property (delta)
+operationName param
+   -> otherCollaborator.operation     <-- real call on a held collaborator
+   -> super.operation                 <-- base operation when subtype extends it
+   // invariant or sequencing note
+```
+
+##### {Collaborator}
+
+```
+property
+operation param
+```
+~~~
 
 ## Legend
 
@@ -70,8 +112,8 @@ ClassName : BaseClass
 | `ClassName : BaseClass` | subtype of BaseClass; record only the delta |
 | `propertyName` | something the class holds (noun phrase) |
 | `operationName param` | something the class does (verb phrase); trailing tokens are parameters |
-| indent | ownership / composition / subordination |
-| `----` | separator between the primary class block and a peer class it relates to |
+| heading depth | module nesting, then the classes that module owns |
+| indent inside a fence | ownership / composition / subordination |
 | `-> collaborator.operation` | interaction — a real operation on a property, peer, or `super` |
 | `-> _private_helper` | rare — only when no public collaborator operation exists and the helper is essential to the story |
 | `// …` | invariant or sequencing note (`write-invariants` / `limit-comments` — must/never/before/after) |
@@ -147,7 +189,7 @@ CartExampleFactory
 ## Rules
 
 - Nothing needs a formal name until the grill reveals it. `thing` is fine as a placeholder if the concept isn't stable yet.
-- Indent = owned or subordinate. Never use indent for association — put associated classes as peers below `----`.
+- Inside a class fence, indent = owned or subordinate. Never use indent for association — an associated class gets its own `#####` heading beside this one.
 - One class family per file (`cohesive-file`): a class plus its subtypes and tightly connected peers (element + collection, small aggregate + part). Multiple unrelated families belong in separate sketches / separate code files. Example factories always go in a sibling `{type}_example_factory` file (`example-factory-separate-file`).
 - **No `I{Type}` interface names in informal or modules-fidelity sketches.** Use concrete class names only. Interface types (`ICart`, `IRepository`, etc.) never appear before model fidelity, and even at model/code they are **opt-in** — only when requested or a genuine multi-layer/multi-implementation seam exists (see `clean_engineering.md` § Interfaces). Default sketches stay on the concrete class name throughout.
 

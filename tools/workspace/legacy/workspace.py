@@ -248,8 +248,9 @@ class Turn:
 
     TURN_NOTES_REF = "refs/notes/cdd-turns"
 
-    def __init__(self, root: str = "") -> None:
+    def __init__(self, root: str = "", git: GitRepo | None = None) -> None:
         self._root = (root or "").strip()
+        self._repo = git
         self.id = uuid.uuid4().hex[:8]
         self.context_tool = ""
         self.action = ""
@@ -350,8 +351,9 @@ class Turn:
             self.subject = str(artifact)
 
     def _git(self) -> GitRepo | None:
-        start = self._root or "."
-        root = Repo(start).find_root()
+        if self._repo is not None:
+            return self._repo
+        root = Repo(self._root or ".").find_root()
         if root is None:
             return None
         return GitRepo(root)
@@ -954,7 +956,7 @@ class WorkSession:
     def turn(self) -> Turn:
         """Optional in-memory turn for mistake/correction during a session."""
         if self.open_turn is None:
-            hanging = Turn(root=str(self.git.root))
+            hanging = Turn(root=str(self.git.root), git=self.git)
             if self.context_index_key:
                 hanging.context_tool = self.context_index_key
             self.open_turn = hanging
@@ -1650,13 +1652,9 @@ class WorkSession:
         number = self._ticket_number_from_session_name()
         if number is None:
             return
-        try:
-            from workflow.work_ticket import format_session_ticket_context
+        from workflow.work_ticket import format_session_ticket_context
 
-            gh_repo = Repo.open(str(self._repository_root()))
-        except (GitConnectError, ValueError):
-            return
-        body, contexts = format_session_ticket_context(gh_repo, number)
+        body, contexts = format_session_ticket_context(self.git, number)
         if body and not (self.body or "").strip():
             self.body = body
         if contexts and not (self.contexts or "").strip():
@@ -1958,7 +1956,7 @@ class WorkSession:
 
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
         running_chats = self._running_chat_paths()
-        turn = self.open_turn or Turn(root=str(self.git.root))
+        turn = self.open_turn or Turn(root=str(self.git.root), git=self.git)
         turn.turn(
             message=outcome or "session close",
             utility="finish-work-session",
@@ -2070,7 +2068,7 @@ class WorkSession:
     def _finish_without_session(self, *, outcome: str = "") -> str:
         """No open session: commit via Turn, attach this chat, push."""
         git = self.git
-        Turn(root=str(git.root)).turn(
+        Turn(root=str(git.root), git=git).turn(
             message=outcome or "finish without session",
             utility="finish-work-session",
         )
@@ -2610,7 +2608,7 @@ class ContextTool:
         )
         resolved = self.resolve_edit_path(explicit=path)
         self.artifact_path = resolved
-        open_turn = Turn(root=str(self._git.root))
+        open_turn = Turn(root=str(self._git.root), git=self._git)
         open_turn.bind_from_tool(self, action=action)
         open_turn.artifact_path = resolved
         session.open_turn = open_turn
@@ -2641,7 +2639,7 @@ class ContextTool:
         turn = (
             session.open_turn
             if session is not None and session.open_turn is not None
-            else Turn(root=str(self._git.root))
+            else Turn(root=str(self._git.root), git=self._git)
         )
         turn.bind_from_tool(self)
         commit = turn.turn(message=result, action=turn.action or "run")

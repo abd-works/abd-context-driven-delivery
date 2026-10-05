@@ -8,15 +8,13 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.mcp.mcp_server import mcp
+from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
 from installation.files import Skill
 from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd
 from practices.stories.stories import Stories
-
-
-_LENS_MARKERS = ("stories:", "ce:", "bdd:", "ddd:", "ux:")
 
 
 @agent_toolset
@@ -44,20 +42,17 @@ class Transformers:
         return practice_models
 
     def determine_practices_from(self, sketch: str) -> list:
+        outline = SketchOutline(sketch)
         practices = []
-        if _has_lens(sketch, "stories:"):
+        if outline.holds(SketchLens.stories):
             practices.append(Stories())
-        if _has_lens(sketch, "ce:"):
+        if outline.holds(SketchLens.clean_engineering):
             practices.append(CleanEngineering())
-        if _has_lens(sketch, "bdd:"):
+        if outline.holds(SketchLens.behavior_driven_development):
             practices.append(Bdd())
-        if _has_lens(sketch, "ddd:"):
+        if outline.holds(SketchLens.domain_driven_design):
             practices.append(Ddd())
         return practices
-
-
-def _has_lens(sketch: str, marker: str) -> bool:
-    return any(line.startswith(marker) for line in sketch.splitlines())
 
 
 def _environment_for(practices: list) -> Environment:
