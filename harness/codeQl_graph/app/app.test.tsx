@@ -13,10 +13,12 @@ const foldMarks = vi.hoisted(() => ({
 vi.mock('@monaco-editor/react', () => ({
   default: ({
     value,
+    defaultValue,
     options,
     onMount,
   }: {
-    value: string;
+    value?: string;
+    defaultValue?: string;
     options?: {
       scrollbar?: { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean };
       lineNumbers?: (line: number) => string;
@@ -34,6 +36,7 @@ vi.mock('@monaco-editor/react', () => ({
       setHiddenAreas: (ranges: { startLineNumber: number; endLineNumber: number }[]) => void;
     }) => void;
   }) => {
+    const text = value ?? defaultValue ?? '';
     const host = useRef<HTMLDivElement>(null);
     const marks = useRef<{ range: { startLineNumber: number }; options: { glyphMarginClassName?: string } }[]>([]);
     const hidden = useRef<{ startLineNumber: number; endLineNumber: number }[]>([]);
@@ -45,7 +48,7 @@ vi.mock('@monaco-editor/react', () => ({
       }
       foldMarks.names = marks.current.flatMap((item) => (item.options.glyphMarginClassName ? [item.options.glyphMarginClassName] : []));
       editor.replaceChildren();
-      value.split('\n').forEach((line, index) => {
+      text.split('\n').forEach((line, index) => {
         const lineNumber = index + 1;
         const shown = options?.lineNumbers?.(lineNumber) || String(lineNumber);
         const covered = hidden.current.some((range) => lineNumber >= range.startLineNumber && lineNumber <= range.endLineNumber);
@@ -68,9 +71,9 @@ vi.mock('@monaco-editor/react', () => ({
     };
     useLayoutEffect(() => {
       onMount?.({
-        getValue: () => value,
+        getValue: () => text,
         setValue: () => undefined,
-        getModel: () => ({ getLineCount: () => value.split('\n').length }),
+        getModel: () => ({ getLineCount: () => text.split('\n').length }),
         getDomNode: () => host.current ?? document.body,
         getTargetAtClientPoint: () => null,
         createDecorationsCollection: (next) => {
@@ -92,7 +95,7 @@ vi.mock('@monaco-editor/react', () => ({
           paint();
         },
       });
-    }, [onMount, value]);
+    }, [onMount, text]);
     return <div ref={host} data-testid="source-editor" />;
   },
 }));

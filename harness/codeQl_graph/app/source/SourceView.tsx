@@ -89,7 +89,7 @@ function SourceEditor({ source }: { source: SourceText }) {
           height={Math.max(LINE_HEIGHT + 16, shownLineCount(prepared.text, prepared.folds, openFolds) * LINE_HEIGHT)}
           language={languageFor(source.file)}
           theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
-          value={prepared.text}
+          defaultValue={prepared.text}
           onMount={onMount}
           options={{
             readOnly: true,
@@ -202,6 +202,8 @@ function applyCallFolds(
       ];
     }),
   ];
+  const withOptions = editor as Parameters<OnMount>[0] & { updateOptions?(options: { glyphMargin: boolean }): void };
+  withOptions.updateOptions?.({ glyphMargin: folds.length > 0 });
   if (decorations.current) {
     decorations.current.set(next);
   } else {
@@ -215,13 +217,28 @@ function applyCallFolds(
   const token = source as { generation?: number };
   token.generation = (token.generation ?? 0) + 1;
   const generation = token.generation;
-  requestAnimationFrame(() => {
-    if (token.generation !== generation) {
+  let frames = 0;
+  const restore = () => {
+    if (token.generation !== generation || frames >= 8) {
       return;
     }
-    decorations.current?.set(next);
-    hidden.setHiddenAreas(ranges, source);
-  });
+    frames += 1;
+    if (viewIsStillFullyExpanded(editor)) {
+      decorations.current?.set(next);
+      hidden.setHiddenAreas([], source);
+      hidden.setHiddenAreas(ranges, source);
+      requestAnimationFrame(restore);
+    }
+  };
+  requestAnimationFrame(restore);
+}
+
+function viewIsStillFullyExpanded(editor: Parameters<OnMount>[0]): boolean {
+  const modelLines = editor.getModel()?.getLineCount() ?? 0;
+  const viewModel = (editor as unknown as { _modelData?: { viewModel?: { getLineCount?: () => number } } })._modelData
+    ?.viewModel;
+  const shown = viewModel?.getLineCount?.() ?? modelLines;
+  return modelLines > 1 && shown >= modelLines;
 }
 
 export type { FoldMember };
