@@ -687,17 +687,13 @@ class MarkdownStoryModel(StoryModel):
         return "\n".join(lines)
 
     def _should_render_outline(self, story_map: "MarkdownStoryModel", previous: Optional[str]) -> bool:
-        if any(epic.epics for epic in story_map.epics):
-            return True
+        """Outline notation is for documents already written that way, or that carry
+        estimates. Nesting on its own renders as deeper headings."""
         if previous and self._contains_outline_structure(previous.splitlines()):
             return True
-        for epic in story_map.epics:
-            if getattr(epic, "estimate", ""):
-                return True
-            for sub in epic.epics:
-                if self._sub_tree_has_outline_signal(sub):
-                    return True
-        return False
+        return any(
+            self._sub_tree_has_outline_signal(epic) for epic in story_map.epics
+        )
 
     def _sub_tree_has_outline_signal(self, sub: MarkdownEpic) -> bool:
         if getattr(sub, "estimate", ""):

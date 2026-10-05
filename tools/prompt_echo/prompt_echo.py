@@ -70,6 +70,7 @@ class PromptEcho:
 
     _catalog: ClassVar[list[tuple[str, str]] | None] = None
     _echo_toolsets: ClassVar[list | None] = None
+    _installed_extension: ClassVar[Path | None] = None
 
     def __init__(self) -> None:
         self.repo: Path | None = None
@@ -179,10 +180,14 @@ class PromptEcho:
         }
 
     def install_ide_toast_extension(self) -> Path:
+        """Every preToolUse asks for this, so copy the tree once per process."""
+        if type(self)._installed_extension is not None:
+            return type(self)._installed_extension
         source = Path(__file__).resolve().parent / "ide_toast"
         dest = Path.home() / ".cursor" / "extensions" / IDE_TOAST_EXTENSION
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(source, dest, dirs_exist_ok=True)
+        type(self)._installed_extension = dest
         return dest
 
     def _detected(self, hook_payload: dict, toolsets: list | None) -> tuple[str, str] | None:

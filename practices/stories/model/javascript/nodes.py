@@ -197,9 +197,6 @@ class JavaScriptStory(CodeStory):
 
 
 class JavaScriptEpic(CodeEpic):
-    def _file_stories(self):
-        return [story for story in self.stories if story.scenarios]
-
     def _write_stories(self, parent: str, files: dict, tests_root: str) -> None:
         stories = self._file_stories()
         if not stories:

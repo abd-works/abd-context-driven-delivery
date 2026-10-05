@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import List, Optional, Tuple
 
 from pathlib import Path
 
@@ -104,16 +104,28 @@ class TypeScriptScenario(CodeScenario):
         for background in scenario.backgrounds:
             scope = background.name if re.fullmatch(r"\w+", background.name or "") else "background"
             lines.append(f"    background('{scope}', ({{ given }}) => {{")
-            for step in background.steps:
-                lines.extend(_ts_call("      ", _lead_verb(step, "given"), step))
+            for lead, continuations in cls._clauses(background.steps):
+                lines.extend(_ts_call("      ", _lead_verb(lead, "given"), lead, continuations))
             lines.append("    });")
         if scenario.examples:
             lines.append("    // examples: " + ", ".join(scenario.examples))
-        for step in scenario.steps:
-            lines.extend(_ts_call("    ", _lead_verb(step, step.keyword.lower()), step))
+        for lead, continuations in cls._clauses(scenario.steps):
+            lines.extend(_ts_call("    ", _lead_verb(lead, lead.keyword.lower()), lead, continuations))
         lines.append("  });")
         lines.append("")
         return lines
+
+    @classmethod
+    def _clauses(cls, steps) -> List[Tuple[object, List[object]]]:
+        """A step repeating the previous step's phase continues that clause, so the
+        fluent surface chains it rather than opening a second given/when/then."""
+        clauses: List[Tuple[object, List[object]]] = []
+        for step in steps:
+            if clauses and step.step_type == clauses[-1][0].step_type:
+                clauses[-1][1].append(step)
+                continue
+            clauses.append((step, []))
+        return clauses
 
 
 def _lead_verb(step, fallback: str) -> str:
@@ -128,16 +140,15 @@ def _chain_verb(step) -> str:
     return ".but" if step.keyword == "But" else ".and"
 
 
-def _ts_call(indent: str, verb: str, step) -> List[str]:
+def _ts_call(indent: str, verb: str, step, continuations: Optional[List] = None) -> List[str]:
     lines = [
         f"{indent}{verb}({_ts_string(step.text)}, () => {{",
         f"{indent}  // TODO: implement step",
         f"{indent}}})",
     ]
-    for extra in step.ands:
-        join = ".but" if extra.keyword == "But" else ".and"
+    for extra in [*step.ands, *(continuations or [])]:
         lines.extend([
-            f"{indent}  {join}({_ts_string(extra.text)}, () => {{",
+            f"{indent}  {_chain_verb(extra)}({_ts_string(extra.text)}, () => {{",
             f"{indent}    // TODO: implement step",
             f"{indent}  }})",
         ])

@@ -24,7 +24,13 @@ from mamba import after, before, context, description, it
 from harness.agent_tools import agent_toolset
 
 from harness.agent_tools.agent_tools import agent_tool
-from harness.hooks.hook_server import CursorEvent, HandlerCatalog, HookPayload, HookServer
+from harness.hooks.hook_server import (
+    CursorEvent,
+    HandlerCatalog,
+    HookPayload,
+    HookResult,
+    HookServer,
+)
 from harness.hooks.hooks import Hook, Hooks
 from installation.installer import Installer
 
@@ -595,6 +601,47 @@ with description("hook process helpers"):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             expect(HookDaemon().repo_port(repo)).to(equal(HookDaemon().repo_port(repo)))
+
+    with it("should stay reachable while a dispatch is still in flight"):
+        from harness.hooks.hook_daemon import HookDaemon
+
+        class _BlockingServer:
+            def __init__(self) -> None:
+                self.started = threading.Event()
+                self.release = threading.Event()
+
+            def handle_stdin(self, raw: bytes) -> HookResult:
+                self.started.set()
+                self.release.wait(10)
+                return HookResult()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            marker = root / ".cursor" / "hook-server.json"
+            original_state_path = HookServer.state_path
+            HookServer.state_path = classmethod(lambda cls, _repo: marker)
+            blocking = _BlockingServer()
+            try:
+                threading.Thread(
+                    target=HookDaemon().serve,
+                    args=(root,),
+                    kwargs={"inner": blocking},
+                    daemon=True,
+                ).start()
+                deadline = time.time() + 5
+                while not marker.is_file() and time.time() < deadline:
+                    time.sleep(0.05)
+                state = json.loads(marker.read_text(encoding="utf-8"))
+                threading.Thread(
+                    target=HookDaemon(state["host"], state["port"]).call_handle_stdin,
+                    args=(b'{"hook_event_name":"stop"}',),
+                    daemon=True,
+                ).start()
+                expect(blocking.started.wait(5)).to(equal(True))
+                expect(HookDaemon().live_address(marker) is not None).to(equal(True))
+            finally:
+                blocking.release.set()
+                HookServer.state_path = original_state_path
 
 
 with description("the Cursor hook_server.py command"):

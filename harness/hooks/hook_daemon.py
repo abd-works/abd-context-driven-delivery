@@ -7,6 +7,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -27,6 +28,7 @@ class HookDaemon:
     def __init__(self, host: str | None = None, port: int | None = None) -> None:
         self.host = host or self.HOST
         self.port = port
+        self._dispatch = threading.Lock()
 
     def live_address(self, path: Path) -> tuple[str, int, int | None] | None:
         if not path.is_file():
@@ -121,7 +123,7 @@ class HookDaemon:
         except OSError:
             sock.close()
             return None
-        sock.listen(8)
+        sock.listen(socket.SOMAXCONN)
         return sock
 
     def _publish_address(self, path: Path, port: int) -> None:
@@ -132,12 +134,23 @@ class HookDaemon:
         )
 
     def _serve_until_stopped(self, listener: socket.socket, server) -> None:
+        """Answer every caller off the accept loop.
+
+        A caller served inline holds the loop for the whole dispatch, so the backlog
+        fills, Windows refuses the rest, and each refused hook starts another daemon
+        wait instead of being answered.
+        """
         while True:
             conn, _ = listener.accept()
-            try:
-                self._handle(conn, server)
-            finally:
-                conn.close()
+            threading.Thread(
+                target=self._answer, args=(conn, server), daemon=True
+            ).start()
+
+    def _answer(self, conn: socket.socket, server) -> None:
+        try:
+            self._handle(conn, server)
+        finally:
+            conn.close()
 
     def _handle(self, conn: socket.socket, server) -> None:
         raw = self._read_json(conn)
@@ -148,7 +161,8 @@ class HookDaemon:
         if method != "handle_stdin":
             self._write_json(conn, {"error": f"unknown method {method}"})
             return
-        result = server.handle_stdin((raw.get("raw") or "").encode("utf-8"))
+        with self._dispatch:
+            result = server.handle_stdin((raw.get("raw") or "").encode("utf-8"))
         self._write_json(conn, result.as_dict())
 
     def _rpc(self, payload: dict) -> dict:
