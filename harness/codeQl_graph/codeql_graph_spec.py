@@ -11,12 +11,11 @@ if str(_HERE) not in sys.path:
 from expects import be_above, contain, equal, expect
 from mamba import before, context, description, it
 
-from graph import CodeQLGraph, CodeQLNode
+from graph import CodeQLGraph, CodeQLNode, CodeQLPracticeGraph, Source, query_pack
 
 _ROOT = _HERE
 _SAMPLE = _ROOT / "examples" / "input"
 _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]
-_QUERIES = _ROOT / "queries"
 
 
 def child_names(node: CodeQLNode) -> list[str]:
@@ -499,7 +498,39 @@ with description("a CodeQL graph"):
 
         with context("with a typescript pack and a python pack"):
             with it("should load the typescript class query"):
-                expect((_QUERIES / "typescript" / "clean_engineering" / "nodes" / "classes.ql").is_file()).to(equal(True))
+                expect((query_pack("clean_engineering", "typescript") / "nodes" / "classes.ql").is_file()).to(equal(True))
 
             with it("should load the python class query"):
-                expect((_QUERIES / "python" / "clean_engineering" / "nodes" / "classes.ql").is_file()).to(equal(True))
+                expect((query_pack("clean_engineering", "python") / "nodes" / "classes.ql").is_file()).to(equal(True))
+
+
+def _node(practice: CodeQLPracticeGraph, kind: str, name: str) -> CodeQLNode:
+    return CodeQLNode(practice, kind, f"ddd:{kind}:.:{name}", name, Source(".", 0, 0))
+
+
+with description("an aggregate reached first through a relationship"):
+    with it("should keep the aggregate children where the bounded context owns it"):
+        practice = CodeQLPracticeGraph("ddd")
+        context_node = _node(practice, "BoundedContext", "bounded context")
+        account = _node(practice, "Aggregate", "account-credentials")
+        credentials = _node(practice, "EntityRoot", "AccountCredentials")
+        associates = _node(practice, "associates", "associates")
+        customer_entity = _node(practice, "EntityRoot", "Customer")
+        belongs = _node(practice, "belongsTo", "belongsTo")
+        customer = _node(practice, "Aggregate", "customer")
+        repository = _node(practice, "Repository", "CustomerRepository")
+        address = _node(practice, "ValueObject", "Address")
+        identity = _node(practice, "ValueObject", "Identity")
+        context_node.children = [account, customer]
+        account.children = [credentials]
+        credentials.children = [associates]
+        associates.children = [customer_entity]
+        customer_entity.children = [belongs]
+        belongs.children = [customer]
+        customer.children = [customer_entity, repository, address, identity]
+
+        tree = context_node.serialize()
+        owned = tree["children"][1]
+
+        expect(owned["name"]).to(equal("customer"))
+        expect([child["name"] for child in owned["children"]]).to(equal(["Customer", "CustomerRepository", "Address", "Identity"]))

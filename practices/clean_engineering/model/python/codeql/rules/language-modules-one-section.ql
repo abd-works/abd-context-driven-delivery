@@ -1,17 +1,16 @@
 /**
  * @name language-modules-one-section
- * @practice clean_engineering
- * @fidelity modules
- * @node module
- * @id clean_engineering/modules/language-modules-one-section
- * CodeQL names the class and its source file. Python then reads
- * `.context/module-context.md` for a `## Modules` heading.
+ * @kind problem
+ * @id cdd/clean_engineering/rules/language-modules-one-section
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "language-modules-one-section")
-select subject, message, contributor
+from string rule, string node, string violation, Comment comment
+where
+  rule = "language-modules-one-section" and
+  comment.getContents().toLowerCase().matches("%modules%") and
+  node = nodeId("clean_engineering", "Module", slash(comment.getLocation().getFile().getRelativePath()), comment.getLocation().getFile().getStem()) and
+  violation = ruleViolation(rule, node, "Module context has a Modules heading.")
+select rule, node, violation

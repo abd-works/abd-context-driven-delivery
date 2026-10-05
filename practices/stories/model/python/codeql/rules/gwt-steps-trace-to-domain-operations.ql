@@ -1,20 +1,22 @@
 /**
  * @name gwt-steps-trace-to-domain-operations
- * @practice stories
- * @fidelity scenarios
- * @node steps
- * @id stories/scenarios/gwt-steps-trace-to-domain-operations
- * @connection clean_engineering.class
+ * @kind problem
+ * @id cdd/stories/rules/gwt-steps-trace-to-domain-operations
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Call call, string keyword, string label
+from string rule, string node, string violation, Call call, string label
 where
-  inSubject(call) and
-  stepCall(call, keyword) and
-  label = call.getArg(0).(StringLiteral).getValue() and
-  not exists(Class cls | label.toLowerCase().matches("%" + cls.getName().toLowerCase() + "%"))
-select call, "Step '" + label + "' does not mention a domain type from the rest of the graph.", call
+  rule = "gwt-steps-trace-to-domain-operations" and
+  (
+    call.getFunc().(Name).getId() = "given" or
+    call.getFunc().(Name).getId() = "when" or
+    call.getFunc().(Name).getId() = "then"
+  ) and
+  label = call.getArg(0).(StringLiteral).getS() and
+  not exists(Class cls | label.toLowerCase().matches("%" + cls.getName().toLowerCase() + "%")) and
+  node = nodeId("stories", "Step", slash(call.getLocation().getFile().getRelativePath()), label) and
+  violation = ruleViolation(rule, node, "Step '" + label + "' does not mention a domain type.")
+select rule, node, violation

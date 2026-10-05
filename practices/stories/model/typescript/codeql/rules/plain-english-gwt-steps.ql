@@ -1,19 +1,18 @@
 /**
  * @name plain-english-gwt-steps
- * @practice stories
- * @fidelity scenarios
- * @node steps
- * @id stories/scenarios/plain-english-gwt-steps
+ * @kind problem
+ * @id cdd/stories/rules/plain-english-gwt-steps
  */
 
 import javascript
-import subject_filter
-import model
+import graph_rule
 
-from CallExpr call, string keyword, string label
+from string rule, string node, string violation, CallExpr step, string label
 where
-  inSubject(call) and
-  stepCall(call, keyword) and
-  label = call.getArgument(0).(StringLiteral).getValue() and
-  identifierStep(label)
-select call, "Step '" + label + "' is a code identifier, not a plain-English sentence.", call
+  rule = "plain-english-gwt-steps" and
+  step.getCalleeName() = ["given", "when", "then"] and
+  label = step.getArgument(0).(StringLiteral).getValue() and
+  label.regexpMatch("[A-Za-z_][A-Za-z0-9_]*") and
+  node = nodeId("stories", "Step", fileOf(step), label) and
+  violation = ruleViolation(rule, node, "Step '" + label + "' is not plain English.")
+select rule, node, violation

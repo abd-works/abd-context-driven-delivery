@@ -1,21 +1,17 @@
 /**
  * @name do-not-invent-parallel-object-models
- * @practice clean_engineering
- * @fidelity
- * @node class
- * @id clean_engineering/do-not-invent-parallel-object-models
- * Compare the subject to the rest of the graph.
- * Join: a public method constructs or takes two types the rest of the graph
- * never joins.
- * Copy: same stem as a live type, no inheritance — a second type for one concept.
- * Split: stem-copies of a pair the rest of the graph keeps together, with no
- * edge between the copies.
+ * @kind problem
+ * @id cdd/clean_engineering/rules/do-not-invent-parallel-object-models
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "do-not-invent-parallel-object-models")
-select subject, message, contributor
+from string rule, string node, string violation, Class copy, Class original
+where
+  rule = "do-not-invent-parallel-object-models" and
+  copy != original and
+  copy.getName().matches("%Entry") and
+  node = nodeId("clean_engineering", "OoadClass", classPath(copy), copy.getName()) and
+  violation = ruleViolation(rule, node, "Class '" + copy.getName() + "' restates another type.")
+select rule, node, violation

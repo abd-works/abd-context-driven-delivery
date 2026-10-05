@@ -1,17 +1,21 @@
 /**
  * @name vocabulary-traces-to-domain-source
- * @practice stories
- * @fidelity
- * @node stories
- * @id stories/vocabulary-traces-to-domain-source
- * @connection clean_engineering.class
+ * @kind problem
+ * @id cdd/stories/rules/vocabulary-traces-to-domain-source
  */
 
 import javascript
-import model
+import graph_rule
 
-from CallExpr call, string name
-where untracedStory(call, name)
-select call,
-  "Story name '" + name +
-    "' does not trace to a domain or Clean Engineering type.", call
+from string rule, string node, string violation, CallExpr story, string title
+where
+  rule = "vocabulary-traces-to-domain-source" and
+  story.getCalleeName() = "story" and
+  title = story.getArgument(0).(StringLiteral).getValue() and
+  not exists(ClassDefinition cls |
+    cls.getFile() = story.getFile() and
+    title.matches("%" + cls.getName() + "%")
+  ) and
+  node = nodeId("stories", "Story", fileOf(story), title) and
+  violation = ruleViolation(rule, node, "Story '" + title + "' names no class in the file.")
+select rule, node, violation

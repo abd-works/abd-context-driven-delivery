@@ -1,16 +1,17 @@
 /**
  * @name shape-classes-around-resources
- * @practice clean_engineering
- * @fidelity model
- * @node class
- * @id clean_engineering/model/shape-classes-around-resources
+ * @kind problem
+ * @id cdd/clean_engineering/rules/shape-classes-around-resources
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "shape-classes-around-resources")
-
-select subject, message, contributor
+from string rule, string node, string violation, Class cls
+where
+  rule = "shape-classes-around-resources" and
+  not exists(Function method | method = cls.getAMethod() and not method.getName() = "__init__") and
+  exists(AnnAssign field | field.getScope() = cls) and
+  node = nodeId("clean_engineering", "OoadClass", classPath(cls), cls.getName()) and
+  violation = ruleViolation(rule, node, "Class '" + cls.getName() + "' only holds data.")
+select rule, node, violation

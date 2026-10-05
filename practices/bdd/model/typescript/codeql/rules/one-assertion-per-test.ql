@@ -1,18 +1,19 @@
 /**
  * @name one-assertion-per-test
- * @practice bdd
- * @fidelity development
- * @node observation
- * @id bdd/development/one-assertion-per-test
+ * @kind problem
+ * @id cdd/bdd/rules/one-assertion-per-test
  */
 
 import javascript
-import subject_filter
-import model
+import graph_rule
 
-from CallExpr itCall
+from string rule, string node, string violation, CallExpr itCall, Function body, string label
 where
-  inSubject(itCall) and
-  mambaIt(itCall) and
-  twoAssertions(itCall.getArgument(1).(Function))
-select itCall, "Example has more than one assertion.", itCall
+  rule = "one-assertion-per-test" and
+  itCall.getCalleeName() = "it" and
+  body = itCall.getArgument(1) and
+  label = itCall.getArgument(0).(StringLiteral).getValue() and
+  count(CallExpr assertion | assertion.getCalleeName() = "expect" and assertion.getEnclosingFunction() = body) > 1 and
+  node = nodeId("bdd", "Observation", fileOf(itCall), label) and
+  violation = ruleViolation(rule, node, "Example has more than one assertion.")
+select rule, node, violation

@@ -1,17 +1,19 @@
 /**
  * @name modules-not-model-blocks
- * @practice clean_engineering
- * @fidelity modules
- * @node module
- * @id clean_engineering/modules/modules-not-model-blocks
- * CodeQL names the class and its source file. Python then reads
- * `.context/module-context.md` for typed dumps that belong at model.
+ * @kind problem
+ * @id cdd/clean_engineering/rules/modules-not-model-blocks
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "modules-not-model-blocks")
-select subject, message, contributor
+from string rule, string node, string violation, Comment comment
+where
+  rule = "modules-not-model-blocks" and
+  (
+    comment.getContents().matches("%------%") or
+    comment.getContents().toLowerCase().matches("%live instance%")
+  ) and
+  node = nodeId("clean_engineering", "Module", slash(comment.getLocation().getFile().getRelativePath()), comment.getLocation().getFile().getStem()) and
+  violation = ruleViolation(rule, node, "Module context dumps a model block.")
+select rule, node, violation

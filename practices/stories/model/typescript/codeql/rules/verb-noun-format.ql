@@ -1,16 +1,18 @@
 /**
  * @name verb-noun-format
- * @practice stories
- * @fidelity story_map
- * @node stories
- * @id stories/story_map/verb-noun-format
- * CodeQL emits the story label. Python WordNet decides verb then noun.
+ * @kind problem
+ * @id cdd/stories/rules/verb-noun-format
  */
 
 import javascript
-import subject_filter
-import model
+import graph_rule
 
-from CallExpr call, string label
-where inSubject(call) and storyLabel(call, label)
-select call, label, call
+from string rule, string node, string violation, CallExpr story, string title
+where
+  rule = "verb-noun-format" and
+  story.getCalleeName() = "story" and
+  title = story.getArgument(0).(StringLiteral).getValue() and
+  not title.matches("% %") and
+  node = nodeId("stories", "Story", fileOf(story), title) and
+  violation = ruleViolation(rule, node, "Story '" + title + "' is not verb-noun.")
+select rule, node, violation

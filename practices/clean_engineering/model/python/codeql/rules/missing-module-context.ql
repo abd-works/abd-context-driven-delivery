@@ -1,17 +1,19 @@
 /**
  * @name missing-module-context
- * @practice clean_engineering
- * @fidelity modules
- * @node module
- * @id clean_engineering/modules/missing-module-context
- * CodeQL names the class and its source file. Python then checks that the
- * folder owns `.context/module-context.md` — markdown is not in the Python DB.
+ * @kind problem
+ * @id cdd/clean_engineering/rules/missing-module-context
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "missing-module-context")
-select subject, message, contributor
+from string rule, string node, string violation, Class cls
+where
+  rule = "missing-module-context" and
+  not exists(Comment comment |
+    comment.getLocation().getFile() = cls.getLocation().getFile() and
+    comment.getContents().matches("%module-context%")
+  ) and
+  node = nodeId("clean_engineering", "OoadClass", classPath(cls), cls.getName()) and
+  violation = ruleViolation(rule, node, "Class '" + cls.getName() + "' has no module context.")
+select rule, node, violation

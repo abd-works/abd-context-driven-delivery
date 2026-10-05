@@ -1,15 +1,19 @@
 /**
  * @name observable-behavior
- * @practice bdd
- * @fidelity
- * @node observation
- * @id bdd/observable-behavior
+ * @kind problem
+ * @id cdd/bdd/rules/observable-behavior
  */
 
 import javascript
-import subject_filter
-import model
+import graph_rule
 
-from CallExpr call
-where inSubject(call) and observesPrivate(call)
-select call, "Assertion observes a private attribute instead of stakeholder-visible behaviour.", call
+from string rule, string node, string violation, CallExpr call, PropAccess access
+where
+  rule = "observable-behavior" and
+  call.getCalleeName() = "expect" and
+  access = call.getArgument(0) and
+  access.getPropertyName().matches("_%") and
+  not access.getPropertyName().matches("__%") and
+  node = nodeId("bdd", "Observation", fileOf(call), access.getPropertyName()) and
+  violation = ruleViolation(rule, node, "Assertion observes a private attribute instead of stakeholder-visible behaviour.")
+select rule, node, violation

@@ -1,15 +1,21 @@
 /**
  * @name avoid-vague-parameter-names
- * @practice clean_engineering
- * @fidelity model
- * @node parameter
- * @id clean_engineering/model/avoid-vague-parameter-names
+ * @kind problem
+ * @id cdd/clean_engineering/rules/avoid-vague-parameter-names
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "avoid-vague-parameter-names")
-select subject, message, contributor
+from string rule, string node, string violation, Function method, Parameter param
+where
+  rule = "avoid-vague-parameter-names" and
+  param = method.getAnArg() and
+  (
+    param.asName().getId() = "data" or
+    param.asName().getId() = "options" or
+    param.asName().getId() = "info"
+  ) and
+  node = nodeId("clean_engineering", "Parameter", functionPath(method), param.asName().getId()) and
+  violation = ruleViolation(rule, node, "Parameter '" + param.asName().getId() + "' is a vague name.")
+select rule, node, violation

@@ -1,15 +1,17 @@
 /**
  * @name use-exceptions-properly
- * @practice clean_engineering
- * @fidelity code
- * @node operation
- * @id clean_engineering/code/use-exceptions-properly
+ * @kind problem
+ * @id cdd/clean_engineering/rules/use-exceptions-properly
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "use-exceptions-properly")
-select subject, message, contributor
+from string rule, string node, string violation, Function method, ExceptStmt handler
+where
+  rule = "use-exceptions-properly" and
+  handler.getScope() = method and
+  not exists(handler.getType()) and
+  node = nodeId("clean_engineering", "Operation", functionPath(method), method.getName()) and
+  violation = ruleViolation(rule, node, "Operation '" + method.getName() + "' has a bare except.")
+select rule, node, violation

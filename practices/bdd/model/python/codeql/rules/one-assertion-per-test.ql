@@ -1,19 +1,19 @@
 /**
  * @name one-assertion-per-test
- * @practice bdd
- * @fidelity development
- * @node observation
- * @id bdd/development/one-assertion-per-test
+ * @kind problem
+ * @id cdd/bdd/rules/one-assertion-per-test
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from With block, Call itCall
+from string rule, string node, string violation, With block, Call itCall, string label
 where
-  inSubject(block) and
-  itCall = block.getContextExpr() and
-  mambaIt(itCall) and
-  count(Call assertion | expectCall(assertion) and assertion.getParentNode*() = block) > 1
-select itCall, "Example has more than one assertion.", itCall
+  rule = "one-assertion-per-test" and
+  itCall.getFunc().(Name).getId() = "it" and
+  block.getContextExpr() = itCall and
+  label = itCall.getArg(0).(StringLiteral).getS() and
+  count(Call assertion | assertion.getFunc().(Name).getId() = "expect" and assertion.getParentNode*() = block) > 1 and
+  node = nodeId("bdd", "Observation", slash(itCall.getLocation().getFile().getRelativePath()), label) and
+  violation = ruleViolation(rule, node, "Example has more than one assertion.")
+select rule, node, violation

@@ -1,15 +1,16 @@
 /**
  * @name keep-classes-single-responsibility
- * @practice clean_engineering
- * @fidelity model
- * @node class
- * @id clean_engineering/model/keep-classes-single-responsibility
+ * @kind problem
+ * @id cdd/clean_engineering/rules/keep-classes-single-responsibility
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "keep-classes-single-responsibility")
-select subject, message, contributor
+from string rule, string node, string violation, Class cls
+where
+  rule = "keep-classes-single-responsibility" and
+  count(Function method | method = cls.getAMethod() and method.getName() != "__init__") > 1 and
+  node = nodeId("clean_engineering", "OoadClass", classPath(cls), cls.getName()) and
+  violation = ruleViolation(rule, node, "Class '" + cls.getName() + "' owns more than one operation.")
+select rule, node, violation

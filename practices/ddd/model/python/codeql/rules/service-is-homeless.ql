@@ -1,15 +1,16 @@
 /**
  * @name service-is-homeless
- * @practice ddd
- * @fidelity building_blocks
- * @node class
- * @id ddd/building_blocks/service-is-homeless
+ * @kind problem
+ * @id cdd/ddd/rules/service-is-homeless
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Class cls
-where inSubject(cls) and homelessService(cls)
-select cls, "Class '" + cls.getName() + "' parks verbs that belong on a domain object.", cls
+from string rule, string node, string violation, Class cls
+where
+  rule = "service-is-homeless" and
+  cls.getName().matches("%Service") and
+  node = nodeId("ddd", "OoadClass", classPath(cls), cls.getName()) and
+  violation = ruleViolation(rule, node, "Class '" + cls.getName() + "' parks verbs that belong on a domain object.")
+select rule, node, violation

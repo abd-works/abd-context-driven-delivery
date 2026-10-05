@@ -1,17 +1,16 @@
 /**
  * @name limit-comments
- * @practice clean_engineering
- * @fidelity code
- * @node operation
- * @id clean_engineering/code/limit-comments
+ * @kind problem
+ * @id cdd/clean_engineering/rules/limit-comments
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Comment c
+from string rule, string node, string violation, Class cls, Comment comment
 where
-  inSubjectPath(c.getLocation().getFile().getRelativePath()) and
-  narratingComment(c)
-select c, "Comment narrates code instead of stating a constraint: '" + c.getText() + "'.", c
+  rule = "limit-comments" and
+  comment.getLocation().getFile() = cls.getLocation().getFile() and
+  node = nodeId("clean_engineering", "OoadClass", classPath(cls), cls.getName()) and
+  violation = ruleViolation(rule, node, "Class '" + cls.getName() + "' is explained by a comment.")
+select rule, node, violation

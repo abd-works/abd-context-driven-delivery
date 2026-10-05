@@ -1,15 +1,16 @@
 /**
  * @name named-seam-and-constraint
- * @practice clean_engineering
- * @fidelity modules
- * @node module
- * @id clean_engineering/modules/named-seam-and-constraint
+ * @kind problem
+ * @id cdd/clean_engineering/rules/named-seam-and-constraint
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Module m, string doc
-where inSubject(m) and missingSeamOrConstraint(m) and moduleDocString(m, doc)
-select m, "Module docstring does not name both seam and constraint: " + doc, m
+from string rule, string node, string violation, StringLiteral text
+where
+  rule = "named-seam-and-constraint" and
+  text.getS().toLowerCase().matches("%module for%") and
+  node = nodeId("clean_engineering", "Module", slash(text.getLocation().getFile().getRelativePath()), text.getLocation().getFile().getStem()) and
+  violation = ruleViolation(rule, node, "Module context names the seam in a docstring only.")
+select rule, node, violation

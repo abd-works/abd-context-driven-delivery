@@ -1,19 +1,22 @@
 /**
  * @name plain-english-gwt-steps
- * @practice stories
- * @fidelity scenarios
- * @node steps
- * @id stories/scenarios/plain-english-gwt-steps
+ * @kind problem
+ * @id cdd/stories/rules/plain-english-gwt-steps
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Call call, string keyword, string label
+from string rule, string node, string violation, Call call, string label
 where
-  inSubject(call) and
-  stepCall(call, keyword) and
-  label = call.getArg(0).(StringLiteral).getValue() and
-  identifierStep(label)
-select call, "Step '" + label + "' is a code identifier, not a plain-English sentence.", call
+  rule = "plain-english-gwt-steps" and
+  (
+    call.getFunc().(Name).getId() = "given" or
+    call.getFunc().(Name).getId() = "when" or
+    call.getFunc().(Name).getId() = "then"
+  ) and
+  label = call.getArg(0).(StringLiteral).getS() and
+  label.regexpMatch("[A-Za-z_][A-Za-z0-9_]*") and
+  node = nodeId("stories", "Step", slash(call.getLocation().getFile().getRelativePath()), label) and
+  violation = ruleViolation(rule, node, "Step '" + label + "' is a code identifier, not a plain-English sentence.")
+select rule, node, violation

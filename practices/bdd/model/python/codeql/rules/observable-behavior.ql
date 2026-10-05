@@ -1,15 +1,19 @@
 /**
  * @name observable-behavior
- * @practice bdd
- * @fidelity
- * @node observation
- * @id bdd/observable-behavior
+ * @kind problem
+ * @id cdd/bdd/rules/observable-behavior
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Call call
-where inSubject(call) and observesPrivate(call)
-select call, "Assertion observes a private attribute instead of stakeholder-visible behaviour.", call
+from string rule, string node, string violation, Call call, Attribute access
+where
+  rule = "observable-behavior" and
+  call.getFunc().(Name).getId() = "expect" and
+  access = call.getArg(0) and
+  access.getName().matches("_%") and
+  not access.getName().matches("__%") and
+  node = nodeId("bdd", "Observation", slash(call.getLocation().getFile().getRelativePath()), access.getName()) and
+  violation = ruleViolation(rule, node, "Assertion observes a private attribute instead of stakeholder-visible behaviour.")
+select rule, node, violation

@@ -1,17 +1,16 @@
 /**
  * @name public-seam-only
- * @practice clean_engineering
- * @fidelity modules
- * @node module
- * @id clean_engineering/modules/public-seam-only
- * CodeQL names the class and its source file. Python then reads
- * `.context/module-context.md` for leaked internals.
+ * @kind problem
+ * @id cdd/clean_engineering/rules/public-seam-only
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "public-seam-only")
-select subject, message, contributor
+from string rule, string node, string violation, StringLiteral text
+where
+  rule = "public-seam-only" and
+  text.getS().toLowerCase().matches("%internal%") and
+  node = nodeId("clean_engineering", "Module", slash(text.getLocation().getFile().getRelativePath()), text.getLocation().getFile().getStem()) and
+  violation = ruleViolation(rule, node, "Module context names an internal detail.")
+select rule, node, violation

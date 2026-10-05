@@ -1,17 +1,18 @@
 /**
  * @name domain-concepts-not-technical-names
- * @practice ddd
- * @fidelity bounded_context
- * @node class
- * @id ddd/bounded_context/domain-concepts-not-technical-names
- * CodeQL emits the class name. Python WordNet decides agent nouns; leftover
- * technical suffixes stay in Python.
+ * @kind problem
+ * @id cdd/ddd/rules/domain-concepts-not-technical-names
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Class cls
-where inSubject(cls)
-select cls, cls.getName(), cls
+from string rule, string node, string violation, Class cls
+where
+  rule = "domain-concepts-not-technical-names" and
+  (
+    cls.getName().matches("%Manager") or cls.getName().matches("%Helper") or cls.getName().matches("%Util%")
+  ) and
+  node = nodeId("ddd", "OoadClass", classPath(cls), cls.getName()) and
+  violation = ruleViolation(rule, node, "Class '" + cls.getName() + "' uses a technical name.")
+select rule, node, violation

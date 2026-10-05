@@ -1,15 +1,18 @@
 /**
  * @name state-not-when
- * @practice bdd
- * @fidelity
- * @node describe
- * @id bdd/state-not-when
+ * @kind problem
+ * @id cdd/bdd/rules/state-not-when
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Call call
-where inSubject(call) and whenContext(call)
-select call, "Nested state is named with 'when' instead of a condition.", call
+from string rule, string node, string violation, Call call, string label
+where
+  rule = "state-not-when" and
+  call.getFunc().(Name).getId() = "context" and
+  label = call.getArg(0).(StringLiteral).getS() and
+  label.toLowerCase().matches("when %") and
+  node = nodeId("bdd", "Context", slash(call.getLocation().getFile().getRelativePath()), label) and
+  violation = ruleViolation(rule, node, "Nested state is named with 'when' instead of a condition.")
+select rule, node, violation

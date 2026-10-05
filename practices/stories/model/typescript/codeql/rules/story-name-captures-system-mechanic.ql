@@ -1,17 +1,18 @@
 /**
  * @name story-name-captures-system-mechanic
- * @practice stories
- * @fidelity story_map
- * @node stories
- * @id stories/story_map/story-name-captures-system-mechanic
- * CodeQL emits the story label. Python WordNet decides whether the verb is a
- * vague doer word over a generic noun.
+ * @kind problem
+ * @id cdd/stories/rules/story-name-captures-system-mechanic
  */
 
 import javascript
-import subject_filter
-import model
+import graph_rule
 
-from CallExpr call, string label
-where inSubject(call) and storyLabel(call, label)
-select call, label, call
+from string rule, string node, string violation, CallExpr story, string title
+where
+  rule = "story-name-captures-system-mechanic" and
+  story.getCalleeName() = "story" and
+  title = story.getArgument(0).(StringLiteral).getValue() and
+  title.regexpMatch("(Handle|Process|Manage|Do|Run)( .*)?") and
+  node = nodeId("stories", "Story", fileOf(story), title) and
+  violation = ruleViolation(rule, node, "Story '" + title + "' names a system mechanic.")
+select rule, node, violation

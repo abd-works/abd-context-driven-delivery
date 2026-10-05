@@ -21,8 +21,11 @@ from harness.mcp.mcp_server import mcp
 
 Display = str
 Tuple = list[str]
-QUERIES_ROOT = Path(__file__).resolve().parent / "queries"
 _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet", "--ram=8192")
+
+
+def query_pack(practice: str, language: str) -> Path:
+    return _REPO / "practices" / practice / "model" / language / "codeql"
 
 
 class QueryFailure(Exception):
@@ -350,11 +353,15 @@ class CodeQLFilter:
         self.relationships_selected = True
 
     def select_practices(self, practices: list[str]) -> None:
+        self.violations = False
+        self.relationships_selected = False
         self.practices = list(practices)
         self.node_types = self._available_node_types()
         self._fill_from_nodes()
 
     def select_node_types(self, node_types: list[str]) -> None:
+        self.violations = False
+        self.relationships_selected = False
         self.node_types = list(node_types)
         self._fill_from_nodes()
 
@@ -546,15 +553,23 @@ class CodeQLNode:
         return None
 
     def serialize(self, seen: set[str] | None = None) -> dict:
+        """Structural children keep their tree. A relationship names its target and leaves that target free for its own place."""
         seen = set() if seen is None else seen
         if self.node_id in seen:
             return {"type": self.type, "name": self.name, "node_id": self.node_id, "children": []}
         seen.add(self.node_id)
+        holder = self.type == self.name
+        children = []
+        for child in self.children:
+            if holder:
+                children.append({"type": child.type, "name": child.name, "node_id": child.node_id, "children": []})
+            else:
+                children.append(child.serialize(seen))
         return {
             "type": self.type,
             "name": self.name,
             "node_id": self.node_id,
-            "children": [child.serialize(seen) for child in self.children],
+            "children": children,
         }
 
     def _new_kind_node(self, kind: str) -> CodeQLNode:
@@ -791,7 +806,7 @@ class CodeQLGraph:
         return self.practices.setdefault(name, CodeQLPracticeGraph(name))
 
     def query_files(self, practice: str, kind: str) -> list[str]:
-        folder = QUERIES_ROOT / self._languages[practice] / practice / kind
+        folder = query_pack(practice, self._languages[practice]) / kind
         if not folder.is_dir():
             return []
         return [str(path) for path in sorted(folder.glob("*.ql"))]
@@ -852,6 +867,20 @@ class CodeQLGraph:
             for query, tuples in pool.map(self._decode_query, located):
                 decoded[query] = tuples
         return decoded
+
+    def inventory(self) -> dict[str, dict]:
+        """Node and edge counts for each loaded practice, taken from the graph."""
+        report: dict[str, dict] = {}
+        for name, practice in self.practices.items():
+            report[name] = {
+                "node_counts": {type: practice.node_count(type) for type in practice.node_types},
+                "edge_count": practice.edge_count,
+                "node_types": sorted(practice.node_types),
+                "edge_types": list(practice.edge_type_kinds),
+                "rules": list(practice.rules_run),
+                "tree": practice.root_node.serialize(),
+            }
+        return report
 
     def write_actual(self, out_dir: str) -> None:
         destination = Path(out_dir)
@@ -987,10 +1016,9 @@ class CodeQLGraph:
 
     def _watched_stamp(self, name: str) -> dict[str, int | str]:
         language = self._languages[name]
-        query_root = QUERIES_ROOT / language / name
-        pack = QUERIES_ROOT / language / "qlpack.yml"
+        pack = query_pack(name, language)
         source_ns = self._latest_mtime(self._practice_roots[name])
-        queries_ns = max(self._latest_mtime(query_root), self._latest_mtime(pack))
+        queries_ns = self._latest_mtime(pack)
         return {
             "source_ns": source_ns,
             "queries_ns": queries_ns,

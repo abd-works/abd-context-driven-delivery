@@ -1,15 +1,18 @@
 /**
  * @name use-explicit-dependencies
- * @practice clean_engineering
- * @fidelity model
- * @node class
- * @id clean_engineering/model/use-explicit-dependencies
+ * @kind problem
+ * @id cdd/clean_engineering/rules/use-explicit-dependencies
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "use-explicit-dependencies")
-select subject, message, contributor
+from string rule, string node, string violation, Class owner, Call created
+where
+  rule = "use-explicit-dependencies" and
+  created.getScope() = owner.getAMethod() and
+  created.getFunc().(Name).getId() != owner.getName() and
+  exists(Class other | other != owner and other.getName() = created.getFunc().(Name).getId()) and
+  node = nodeId("clean_engineering", "OoadClass", classPath(owner), owner.getName()) and
+  violation = ruleViolation(rule, node, "Class '" + owner.getName() + "' constructs '" + created.getFunc().(Name).getId() + "'.")
+select rule, node, violation

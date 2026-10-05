@@ -1,15 +1,16 @@
 /**
  * @name kebab-case-paths
- * @practice stories
- * @fidelity story_map
- * @node stories
- * @id stories/story_map/kebab-case-paths
+ * @kind problem
+ * @id cdd/stories/rules/kebab-case-paths
  */
 
 import javascript
-import subject_filter
-import model
+import graph_rule
 
-from File file
-where kebabPath(file)
-select file, "Story file path is not kebab-case: " + file.getRelativePath(), file
+from string rule, string node, string violation, File file
+where
+  rule = "kebab-case-paths" and
+  slash(file.getRelativePath()).regexpMatch(".*_story\\.test\\..*") and
+  node = nodeId("stories", "Module", slash(file.getRelativePath()), file.getStem()) and
+  violation = ruleViolation(rule, node, "Story path uses underscores.")
+select rule, node, violation

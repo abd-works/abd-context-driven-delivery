@@ -1,18 +1,16 @@
 /**
  * @name domain-objects-own-their-attributes
  * @kind problem
- * @id paradise/domain-objects-own-their-attributes
- * @problem.severity warning
+ * @id cdd/ddd/rules/domain-objects-own-their-attributes
  */
 
 import javascript
+import graph_rule
 
-from FieldDefinition field, ClassDefinition owner
+from string rule, string node, string violation, FieldDeclaration field
 where
-  field.getDeclaringClass() = owner and
-  owner.getName() = "Onboarding" and
-  field.getName() = ["simType", "iccid"]
-select field,
-  "Onboarding." + field.getName() +
-    " describes a child aggregate or an application flag. Put the attribute on the object that owns that fact.",
-  field
+  rule = "domain-objects-own-their-attributes" and
+  field.getName() = ["simType", "iccid"] and
+  node = nodeId("ddd", "Operation", fileOf(field), field.getName()) and
+  violation = ruleViolation(rule, node, "Field '" + field.getName() + "' belongs to another aggregate.")
+select rule, node, violation

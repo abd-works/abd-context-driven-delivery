@@ -1,15 +1,18 @@
 /**
  * @name low-coupling
- * @practice clean_engineering
- * @fidelity modules
- * @node module
- * @id clean_engineering/modules/low-coupling
+ * @kind problem
+ * @id cdd/clean_engineering/rules/low-coupling
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "low-coupling")
-select subject, message, contributor
+from string rule, string node, string violation, Function method, Attribute access
+where
+  rule = "low-coupling" and
+  access.getScope() = method and
+  access.getName().matches("_%") and
+  not access.getObject().(Name).getId() = "self" and
+  node = nodeId("clean_engineering", "Operation", functionPath(method), method.getName()) and
+  violation = ruleViolation(rule, node, "Operation '" + method.getName() + "' reaches through '" + access.getName() + "'.")
+select rule, node, violation

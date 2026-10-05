@@ -1,15 +1,17 @@
 /**
  * @name prefer-class-operations
- * @practice clean_engineering
- * @fidelity model
- * @node operation
- * @id clean_engineering/model/prefer-class-operations
+ * @kind problem
+ * @id cdd/clean_engineering/rules/prefer-class-operations
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "prefer-class-operations")
-select subject, message, contributor
+from string rule, string node, string violation, Function method
+where
+  rule = "prefer-class-operations" and
+  not method.isMethod() and
+  exists(method.getName()) and
+  node = nodeId("clean_engineering", "Operation", functionPath(method), method.getName()) and
+  violation = ruleViolation(rule, node, "Operation '" + method.getName() + "' is a module function.")
+select rule, node, violation

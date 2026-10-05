@@ -1,34 +1,16 @@
 /**
  * @name no-screen-map-banner-comments
  * @kind problem
- * @id paradise/no-screen-map-banner-comments
- * @problem.severity warning
+ * @id cdd/clean_engineering/rules/no-screen-map-banner-comments
  */
 
 import javascript
+import graph_rule
 
-predicate isStoryMapBannerComment(Comment c) {
-  c.getText().toLowerCase().regexpMatch("(?s).*(screen|story|sub-epic|sources)\\s*:.*")
-}
-
-predicate isFileHeaderComment(File f, Comment c) {
-  c.getLocation().getFile() = f and
-  (
-    exists(ImportDeclaration imp |
-      imp.getFile() = f and
-      c.getLocation().getEndLine() < imp.getLocation().getStartLine()
-    )
-    or
-    not exists(ImportDeclaration imp | imp.getFile() = f) and
-    c.getLocation().getStartLine() <= 12
-  )
-}
-
-from File f, Comment c
+from string rule, string node, string violation, Comment comment
 where
-  isStoryMapBannerComment(c) and
-  isFileHeaderComment(f, c)
-select c,
-  "File '" + f.getRelativePath() +
-    "' already names its type from folder and filename. Delete the Screen/Story/Sub-epic/Sources header comment block and keep only code.",
-  f
+  rule = "no-screen-map-banner-comments" and
+  comment.getText().matches("%Screen:%") and
+  node = nodeId("clean_engineering", "Module", slash(comment.getLocation().getFile().getRelativePath()), "Screen") and
+  violation = ruleViolation(rule, node, "Comment maps a screen.")
+select rule, node, violation

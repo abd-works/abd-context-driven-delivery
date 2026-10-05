@@ -1,19 +1,17 @@
 /**
  * @name domain-fixture-example-files
  * @kind problem
- * @id paradise/domain-fixture-example-files
- * @problem.severity warning
+ * @id cdd/stories/rules/domain-fixture-example-files
  */
 
 import javascript
+import graph_rule
 
-from File example
+from string rule, string node, string violation, File file
 where
-  example.getRelativePath().regexpMatch("(?i).*tests/.*/examples/.*") and
-  example
-      .getRelativePath()
-      .regexpMatch("(?i).*(mavenir|cognito|twilio|persona|vouchera|zendesk|amplify|apple|gateway|service).*")
-select example,
-  "Example file '" + example.getBaseName() +
-    "' names a vendor or system. Name story examples for Paradise domain fixtures.",
-  example
+  rule = "domain-fixture-example-files" and
+  slash(file.getRelativePath()).matches("%/examples/%") and
+  file.getBaseName().matches("%cognito%") and
+  node = nodeId("stories", "Module", slash(file.getRelativePath()), file.getStem()) and
+  violation = ruleViolation(rule, node, "Example file is named for infrastructure.")
+select rule, node, violation

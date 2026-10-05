@@ -1,15 +1,22 @@
 /**
  * @name use-explicit-dependencies
- * @practice clean_engineering
- * @fidelity model
- * @node class
- * @id clean_engineering/model/use-explicit-dependencies
+ * @kind problem
+ * @id cdd/ce/rules/use-explicit-dependencies
  */
 
 import javascript
-import subject_filter
-import rule_hits
+import ce
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "use-explicit-dependencies")
-select subject, message, contributor
+from string rule, string node, string violation, ClassDefinition cls, NewExpr created
+where
+  rule = "use-explicit-dependencies" and
+  domainClass(cls) and
+  node = classId(cls) and
+  exists(MethodDefinition ctor |
+    ctor.getDeclaringType() = cls and
+    ctor.getName() = "constructor" and
+    created.getEnclosingFunction() = ctor.getBody() and
+    created.getCalleeName() != cls.getName() and
+    violation = ruleViolation(rule, node, "Class '" + cls.getName() + "' constructs '" + created.getCalleeName() + "' inside its constructor.")
+  )
+select rule, node, violation

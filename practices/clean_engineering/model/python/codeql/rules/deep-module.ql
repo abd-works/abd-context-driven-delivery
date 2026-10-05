@@ -1,15 +1,18 @@
 /**
  * @name deep-module
- * @practice clean_engineering
- * @fidelity modules
- * @node module
- * @id clean_engineering/modules/deep-module
+ * @kind problem
+ * @id cdd/clean_engineering/rules/deep-module
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "deep-module")
-select subject, message, contributor
+from string rule, string node, string violation, Module mod, int classes
+where
+  rule = "deep-module" and
+  mod.getFile().getRelativePath().matches("%__init__.py") and
+  classes = count(Class cls | cls.getLocation().getFile() = mod.getFile()) and
+  classes > 1 and
+  node = nodeId("clean_engineering", "Module", slash(mod.getFile().getRelativePath()), mod.getFile().getStem()) and
+  violation = ruleViolation(rule, node, "Module publishes " + classes.toString() + " classes.")
+select rule, node, violation

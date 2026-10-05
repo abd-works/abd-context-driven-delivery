@@ -10,9 +10,8 @@ if str(_HERE) not in sys.path:
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from graph import CodeQLGraph, CodeQLNode, CodeQLPracticeGraph, RuleResult, Source
+from graph import CodeQLGraph, CodeQLNode, CodeQLPracticeGraph, RuleResult, Source, query_pack
 
-_QUERIES = _HERE / "queries"
 _CASES: dict[tuple[str, str], dict] = {}
 
 
@@ -27,19 +26,16 @@ def rule_names(examples: Path) -> list[str]:
 def packs() -> dict[str, list[tuple[str, Path]]]:
     found: dict[str, list[tuple[str, Path]]] = {}
     for language in ("python", "typescript"):
-        base = _QUERIES / language
-        if not base.is_dir():
-            continue
-        for practice_dir in sorted(path for path in base.iterdir() if path.is_dir()):
-            examples = practice_dir / ".examples"
-            rules = practice_dir / "rules"
-            if rule_names(examples) and rules.is_dir() and any(rules.glob("*.ql")):
-                found.setdefault(practice_dir.name, []).append((language, examples))
+        for practice in ("bdd", "clean_engineering", "ddd", "stories", "ux"):
+            examples = query_pack(practice, language) / ".examples"
+            rules = query_pack(practice, language) / "rules"
+            if examples.is_dir() and rule_names(examples) and rules.is_dir() and any(rules.glob("*.ql")):
+                found.setdefault(practice, []).append((language, examples))
     return found
 
 
 def query_paths(practice: str, language: str) -> list[Path]:
-    folder = _QUERIES / language / practice / "rules"
+    folder = query_pack(practice, language) / "rules"
     if not folder.is_dir():
         return []
     return sorted(folder.glob("*.ql"))
@@ -156,7 +152,7 @@ with description("a CodeQL graph"):
     with context("with clean engineering"):
         with context("with python"):
             with before.all:
-                _CASES[("clean_engineering", "python")] = load_rule_cases("clean_engineering", "python", _QUERIES / "python" / "clean_engineering" / ".examples")
+                _CASES[("clean_engineering", "python")] = load_rule_cases("clean_engineering", "python", query_pack("clean_engineering", "python") / ".examples")
             with context("with avoid-vague-parameter-names"):
                 with context("with the faulty example"):
                     with it("should record a violation on the node"):
@@ -438,7 +434,7 @@ with description("a CodeQL graph"):
                         repaired_clear("clean_engineering", "python", "use-typed-signatures")
         with context("with typescript"):
             with before.all:
-                _CASES[("clean_engineering", "typescript")] = load_rule_cases("clean_engineering", "typescript", _QUERIES / "typescript" / "clean_engineering" / ".examples")
+                _CASES[("clean_engineering", "typescript")] = load_rule_cases("clean_engineering", "typescript", query_pack("clean_engineering", "typescript") / ".examples")
             with context("with constants-not-magic-strings"):
                 with context("with the faulty example"):
                     with it("should record a violation on the node"):
@@ -559,7 +555,7 @@ with description("a CodeQL graph"):
     with context("with ddd"):
         with context("with python"):
             with before.all:
-                _CASES[("ddd", "python")] = load_rule_cases("ddd", "python", _QUERIES / "python" / "ddd" / ".examples")
+                _CASES[("ddd", "python")] = load_rule_cases("ddd", "python", query_pack("ddd", "python") / ".examples")
             with context("with building-blocks-fidelity-requires-tactical-stereotype"):
                 with context("with the faulty example"):
                     with it("should record a violation on the node"):
@@ -643,7 +639,7 @@ with description("a CodeQL graph"):
                         repaired_clear("ddd", "python", "service-is-homeless")
         with context("with typescript"):
             with before.all:
-                _CASES[("ddd", "typescript")] = load_rule_cases("ddd", "typescript", _QUERIES / "typescript" / "ddd" / ".examples")
+                _CASES[("ddd", "typescript")] = load_rule_cases("ddd", "typescript", query_pack("ddd", "typescript") / ".examples")
             with context("with aggregate-lives-in-its-own-folder"):
                 with context("with the faulty example"):
                     with it("should record a violation on the node"):
@@ -809,7 +805,7 @@ with description("a CodeQL graph"):
     with context("with stories"):
         with context("with typescript"):
             with before.all:
-                _CASES[("stories", "typescript")] = load_rule_cases("stories", "typescript", _QUERIES / "typescript" / "stories" / ".examples")
+                _CASES[("stories", "typescript")] = load_rule_cases("stories", "typescript", query_pack("stories", "typescript") / ".examples")
             with context("with browser-then-asserts-screen-widgets"):
                 with context("with the faulty example"):
                     with it("should record a violation on the node"):

@@ -1,18 +1,16 @@
 /**
  * @name originating-sub-epic-examples
  * @kind problem
- * @id paradise/originating-sub-epic-examples
- * @problem.severity warning
+ * @id cdd/stories/rules/originating-sub-epic-examples
  */
 
 import javascript
+import graph_rule
 
-from File example
+from string rule, string node, string violation, File file
 where
-  example
-      .getRelativePath()
-      .regexpMatch("(?i).*tests/[^/]+/examples/.*\\.examples\\.ts")
-select example,
-  "Example file '" + example.getBaseName() +
-    "' sits in the epic examples folder. Place it in the examples folder of the sub-epic whose story originates the fixture.",
-  example
+  rule = "originating-sub-epic-examples" and
+  slash(file.getRelativePath()).regexpMatch(".*tests/[^/]+/examples/.*") and
+  node = nodeId("stories", "Module", slash(file.getRelativePath()), file.getStem()) and
+  violation = ruleViolation(rule, node, "Examples sit on the epic instead of the sub-epic.")
+select rule, node, violation

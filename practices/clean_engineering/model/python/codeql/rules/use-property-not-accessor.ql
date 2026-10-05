@@ -1,15 +1,17 @@
 /**
  * @name use-property-not-accessor
- * @practice clean_engineering
- * @fidelity model
- * @node operation
- * @id clean_engineering/model/use-property-not-accessor
+ * @kind problem
+ * @id cdd/clean_engineering/rules/use-property-not-accessor
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "use-property-not-accessor")
-select subject, message, contributor
+from string rule, string node, string violation, Function method
+where
+  rule = "use-property-not-accessor" and
+  method.isMethod() and
+  (method.getName().matches("get_%") or method.getName().matches("set_%")) and
+  node = nodeId("clean_engineering", "Operation", functionPath(method), method.getName()) and
+  violation = ruleViolation(rule, node, "Operation '" + method.getName() + "' is an accessor.")
+select rule, node, violation

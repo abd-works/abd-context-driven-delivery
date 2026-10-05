@@ -1,34 +1,17 @@
 /**
  * @name construct-repository-at-the-caller
  * @kind problem
- * @id paradise/construct-repository-at-the-caller
- * @problem.severity warning
+ * @id cdd/ddd/rules/construct-repository-at-the-caller
  */
 
 import javascript
+import graph_rule
 
-predicate repositoryConstruction(NewExpr construction) {
-  construction.getCalleeName().regexpMatch(".*Repository.*")
-}
-
-predicate moduleScope(AstNode node) { not exists(Function f | node.getParent*() = f) }
-
-predicate nodeModule(File file) { file.getBaseName().regexpMatch(".*-node\\.ts") }
-
-predicate storyOrTest(File file) { file.getRelativePath().regexpMatch(".*tests/.*") }
-
-from VariableDeclarator decl, NewExpr construction, string message
+from string rule, string node, string violation, NewExpr created
 where
-  moduleScope(decl) and
-  construction = decl.getInit() and
-  repositoryConstruction(construction) and
-  (
-    nodeModule(decl.getFile()) and
-    message =
-      "The node module exports the class only. Production creates the repository in the route and passes it into destination. A test creates it in the scenario."
-    or
-    storyOrTest(decl.getFile()) and
-    message =
-      "Create new Repository() in the scenario that needs it. Do not construct a repository at module scope."
-  )
-select decl, message, construction
+  rule = "construct-repository-at-the-caller" and
+  created.getCalleeName().matches("%Repository") and
+  not exists(created.getEnclosingFunction()) and
+  node = nodeId("ddd", "Module", fileOf(created), created.getCalleeName()) and
+  violation = ruleViolation(rule, node, "Repository '" + created.getCalleeName() + "' is constructed at the top level.")
+select rule, node, violation

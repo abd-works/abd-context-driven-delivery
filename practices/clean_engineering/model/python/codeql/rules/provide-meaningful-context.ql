@@ -1,15 +1,17 @@
 /**
  * @name provide-meaningful-context
- * @practice clean_engineering
- * @fidelity code
- * @node operation
- * @id clean_engineering/code/provide-meaningful-context
+ * @kind problem
+ * @id cdd/clean_engineering/rules/provide-meaningful-context
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "provide-meaningful-context")
-select subject, message, contributor
+from string rule, string node, string violation, Function method, Parameter param
+where
+  rule = "provide-meaningful-context" and
+  param = method.getAnArg() and
+  param.asName().getId().regexpMatch(".*[0-9]$") and
+  node = nodeId("clean_engineering", "Parameter", functionPath(method), param.asName().getId()) and
+  violation = ruleViolation(rule, node, "Parameter '" + param.asName().getId() + "' is numbered.")
+select rule, node, violation

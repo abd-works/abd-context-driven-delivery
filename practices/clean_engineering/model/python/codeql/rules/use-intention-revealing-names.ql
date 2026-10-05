@@ -1,16 +1,18 @@
 /**
  * @name use-intention-revealing-names
- * @practice clean_engineering
- * @fidelity model
- * @node class
- * @id clean_engineering/model/use-intention-revealing-names
+ * @kind problem
+ * @id cdd/clean_engineering/rules/use-intention-revealing-names
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from Function f, Name nm
-where inSubject(f) and intentionHidingName(f, nm)
-select f,
-  "Operation '" + f.getName() + "' assigns the unclear name '" + nm.getId() + "'.", nm
+from string rule, string node, string violation, Function method, Name local
+where
+  rule = "use-intention-revealing-names" and
+  local.getScope() = method and
+  local.getId().length() <= 2 and
+  not local.getId() = "id" and
+  node = nodeId("clean_engineering", "Operation", functionPath(method), method.getName()) and
+  violation = ruleViolation(rule, node, "Operation '" + method.getName() + "' uses the name '" + local.getId() + "'.")
+select rule, node, violation

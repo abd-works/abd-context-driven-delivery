@@ -1,15 +1,18 @@
 /**
  * @name put-logic-on-the-owning-resource
- * @practice clean_engineering
- * @fidelity model
- * @node class
- * @id clean_engineering/model/put-logic-on-the-owning-resource
+ * @kind problem
+ * @id cdd/clean_engineering/rules/put-logic-on-the-owning-resource
  */
 
 import python
-import subject_filter
-import rule_hits
+import graph_rule
 
-from AstNode subject, string message, AstNode contributor
-where graphRuleHit(subject, message, contributor, "put-logic-on-the-owning-resource")
-select subject, message, contributor
+from string rule, string node, string violation, Function method, Attribute access
+where
+  rule = "put-logic-on-the-owning-resource" and
+  access.getScope() = method and
+  access.getObject() instanceof Name and
+  access.getObject().(Name).getId() != "self" and
+  node = nodeId("clean_engineering", "Operation", functionPath(method), method.getName()) and
+  violation = ruleViolation(rule, node, "Operation '" + method.getName() + "' works through '" + access.getObject().(Name).getId() + "'.")
+select rule, node, violation

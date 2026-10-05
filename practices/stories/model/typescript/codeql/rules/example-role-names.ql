@@ -1,19 +1,16 @@
 /**
  * @name example-role-names
  * @kind problem
- * @id paradise/example-role-names
- * @problem.severity warning
+ * @id cdd/stories/rules/example-role-names
  */
 
 import javascript
+import graph_rule
 
-from VariableDeclarator example, VarDecl binding, File file, string name
+from string rule, string node, string violation, VarDecl decl
 where
-  file = example.getFile() and
-  file.getRelativePath().matches("%/examples/%") and
-  binding = example.getBindingPattern() and
-  name = binding.getName() and
-  name.regexpMatch("valid[A-Z].*") and
-  not name.regexpMatch("(entered|stored|expected).*")
-select example,
-  "Example '" + name + "' does not say whether it is entered, stored, or expected.", example
+  rule = "example-role-names" and
+  decl.getName().matches("valid%") and
+  node = nodeId("stories", "Module", fileOf(decl), decl.getName()) and
+  violation = ruleViolation(rule, node, "Example '" + decl.getName() + "' is named for a role.")
+select rule, node, violation

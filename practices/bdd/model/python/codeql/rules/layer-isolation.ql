@@ -1,16 +1,23 @@
 /**
  * @name layer-isolation
- * @practice bdd
- * @fidelity development
- * @node observation
- * @id bdd/development/layer-isolation
+ * @kind problem
+ * @id cdd/bdd/rules/layer-isolation
  */
 
 import python
-import model
+import graph_rule
 
-from Call c, string target
-where relativeInternalMock(c, target)
-select c,
-  "Mock targets internal module '" + target +
-    "'. Only mock external boundaries (APIs, databases, third-party services)."
+from string rule, string node, string violation, Call call, string target
+where
+  rule = "layer-isolation" and
+  (
+    call.getFunc().(Name).getId() = "patch" or
+    call.getFunc().(Name).getId() = "mock" or
+    call.getFunc().(Attribute).getName() = "patch" or
+    call.getFunc().(Attribute).getName() = "mock"
+  ) and
+  target = call.getArg(0).(StringLiteral).getS() and
+  (target.matches("./%") or target.matches("../%") or target.matches(".%")) and
+  node = nodeId("bdd", "Observation", slash(call.getLocation().getFile().getRelativePath()), target) and
+  violation = ruleViolation(rule, node, "Mock targets internal module '" + target + "'.")
+select rule, node, violation

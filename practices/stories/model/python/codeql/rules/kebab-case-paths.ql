@@ -1,15 +1,17 @@
 /**
  * @name kebab-case-paths
- * @practice stories
- * @fidelity story_map
- * @node stories
- * @id stories/story_map/kebab-case-paths
+ * @kind problem
+ * @id cdd/stories/rules/kebab-case-paths
  */
 
 import python
-import subject_filter
-import model
+import graph_rule
 
-from File file
-where kebabPath(file)
-select file, "Story file path is not kebab-case: " + file.getRelativePath(), file
+from string rule, string node, string violation, File file
+where
+  rule = "kebab-case-paths" and
+  file.getRelativePath().regexpMatch(".*[A-Z_].*") and
+  file.getRelativePath().regexpMatch(".*_story\\.test\\.py$") and
+  node = nodeId("stories", "Story", slash(file.getRelativePath()), file.getRelativePath()) and
+  violation = ruleViolation(rule, node, "Story file path is not kebab-case: " + slash(file.getRelativePath()))
+select rule, node, violation
