@@ -15,7 +15,7 @@ from pathlib import Path
 
 REPOSITORY = Path(__file__).resolve().parent.parent
 MAMBA = Path(sys.executable).parent / "mamba.exe"
-SOURCE_ROOTS = (".",)
+SOURCE_ROOTS = (".", "actions", "tools", "practices", "patterns")
 EXCLUDED_DIRECTORY_NAMES = {
     ".codeql",
     ".cq",
