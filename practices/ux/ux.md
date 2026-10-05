@@ -75,7 +75,14 @@ Decide what screens exist and how users move between them.
 
 #### Sketch
 
-Ask where a person goes to accomplish the outcome, and what they move between. Write the screens and the moves from those answers.
+- Ask who is trying to get this outcome done, and what finished looks like for them.
+- Ask where they begin.
+- At each step, ask what they need to see, decide, or finish before they can go on.
+- Ask what they do when they are done, when they are blocked, and when they choose a different path.
+- Ask what stays available the whole time, and what changes as they move.
+- Ask where another person reaches the same outcome by a different path.
+- From those answers, write the places they work, what each place shows, and how they move between them.
+- Do not ask the user to name screens or draw the map.
 
 #### Guidance
 
