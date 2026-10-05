@@ -343,13 +343,8 @@ with description("a CodeQL graph"):
                         )
                     )
 
-                with it("should parent the example on scopes"):
-                    step = tree_with(self.stories_tree, "Step", "scopes")
-                    expect(typed_child(step, "scopes", "Example")["type"]).to(equal("Example"))
-
-                with it("should parent scopes on the step"):
-                    step = tree_with(self.stories_tree, "Step", "scopes")
-                    expect(tree_child(step, "scopes")["type"]).to(equal("scopes"))
+                with it("should leave scopes out of the serialized graph"):
+                    expect("scopes" in json.dumps(self.stories_tree)).to(equal(False))
 
             with context("with a step that invokes an operation"):
                 with before.all:

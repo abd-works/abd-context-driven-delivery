@@ -3,6 +3,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { useLayoutEffect, useRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { GraphView } from './graph/GraphView';
 import { SourceView } from './source/SourceView';
 
 const foldMarks = vi.hoisted(() => ({
@@ -475,6 +476,59 @@ it('should send violations when the switch is turned on', async () => {
   await waitFor(() =>
     expect(calls.some((call) => call.operation === 'return_nodes' && (call.body.filter as { violations: boolean }).violations)).toBe(true),
   );
+});
+
+it('should show invokes, observes, and demonstrates on a step', async () => {
+  const user = userEvent.setup();
+  const step = {
+    type: 'Step',
+    name: 'when the User enters valid account credentials',
+    node_id: 'step-valid',
+    children: [
+      {
+        type: 'scopes',
+        name: 'scopes',
+        node_id: 'scopes-valid',
+        children: [{ type: 'Example', name: 'hiddenExample', node_id: 'hidden', children: [] }],
+      },
+      {
+        type: 'invokes',
+        name: 'invokes',
+        node_id: 'invokes-valid',
+        children: [{ type: 'Operation', name: 'register', node_id: 'op-register', children: [] }],
+      },
+      {
+        type: 'observes',
+        name: 'observes',
+        node_id: 'observes-valid',
+        children: [
+          {
+            type: 'Example',
+            name: 'unverifiedAccountCredentials',
+            node_id: 'example-unverified',
+            children: [
+              {
+                type: 'demonstrates',
+                name: 'demonstrates',
+                node_id: 'demonstrates-account',
+                children: [{ type: 'OoadClass', name: 'AccountCredentials', node_id: 'class-account', children: [] }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  render(<GraphView trees={[step]} loading={false} error="" selectedId="" onSelect={() => undefined} />);
+  await user.click(screen.getByRole('button', { name: 'Expand when the User enters valid account credentials' }));
+  expect(document.querySelector('[data-node-id="scopes-valid"]')).toBeNull();
+  expect(document.querySelector('[data-node-id="invokes-valid"]')).toBeTruthy();
+  expect(document.querySelector('[data-node-id="observes-valid"]')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Expand observes' }));
+  await user.click(screen.getByRole('button', { name: 'Expand unverifiedAccountCredentials' }));
+  expect(document.querySelector('[data-node-id="demonstrates-account"]')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Expand demonstrates' }));
+  expect(document.querySelector('[data-node-id="class-account"]')).toBeTruthy();
 });
 
 it('should create the database for the chosen folder', async () => {

@@ -219,6 +219,11 @@ MethodDefinition resolvedMethod(MethodCallExpr call) {
     count(MethodDefinition other |
       classOperation(other) and other.getName() = call.getMethodName()
     ) = 1
+    or
+    exists(string file, string exampleName |
+      call.getReceiver().(CallExpr).getCalleeName() = exampleName and
+      result.getDeclaringType().getName() = exampleReturnClassName(file, exampleName)
+    )
   )
 }
 

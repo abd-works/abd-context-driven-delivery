@@ -9,11 +9,7 @@ import stories
 
 from CallExpr step, Expr use, string exampleFile, string exampleName, string parent, string child
 where
-  (
-    storyStep(step, "then", _, _, parent)
-    or
-    continuesThen(step) and storyStep(step, _, _, _, parent)
-  ) and
+  storyStep(step, ["given", "when", "then", "and", "but"], _, _, parent) and
   callInsideStep(step, use) and
   exists(ExportNamedDeclaration decl |
     exampleExport(decl, exampleName, _, _) and

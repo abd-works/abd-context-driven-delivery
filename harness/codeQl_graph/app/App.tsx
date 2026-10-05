@@ -238,7 +238,7 @@ export function App() {
 }
 
 function visibleRelationships(values: string[]): string[] {
-  return values.filter((value) => value !== 'belongsTo');
+  return values.filter((value) => value !== 'belongsTo' && value !== 'scopes');
 }
 
 function unique(values: string[]): string[] {
