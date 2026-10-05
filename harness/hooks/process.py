@@ -16,11 +16,29 @@ def hook_python_executable(python: str | None = None) -> str:
     return str(exe)
 
 
+_CREATE_BREAKAWAY_FROM_JOB = 0x01000000
+
+
 def detached_creationflags() -> int:
+    """Flags that keep a daemon alive without opening a console window.
+
+    DETACHED_PROCESS makes Windows ignore CREATE_NO_WINDOW, so a console
+    subsystem child allocates a visible console. Break away from the parent
+    job instead, and hide the window.
+    """
     if sys.platform != "win32":
         return 0
     flags = 0
-    flags |= getattr(subprocess, "DETACHED_PROCESS", 0)
     flags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     flags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    flags |= _CREATE_BREAKAWAY_FROM_JOB
     return flags
+
+
+def hidden_process_startupinfo() -> subprocess.STARTUPINFO | None:
+    if sys.platform != "win32":
+        return None
+    info = subprocess.STARTUPINFO()
+    info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    info.wShowWindow = subprocess.SW_HIDE
+    return info

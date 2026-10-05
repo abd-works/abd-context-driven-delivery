@@ -62,19 +62,24 @@ class HookDaemon:
         env["PYTHONPATH"] = os.pathsep.join(
             [*extra, *(existing.split(os.pathsep) if existing else ())]
         )
-        from harness.hooks.process import detached_creationflags
+        from harness.hooks.process import (
+            detached_creationflags,
+            hidden_process_startupinfo,
+            hook_python_executable,
+        )
 
         flags = detached_creationflags()
         log = path.parent / "hook-server.log"
         stream = open(log, "a", encoding="utf-8")
         subprocess.Popen(
-            [sys.executable, "-m", "harness.hooks.hook_daemon", root],
+            [hook_python_executable(), "-m", "harness.hooks.hook_daemon", root],
             cwd=root,
             env=env,
             stdin=subprocess.DEVNULL,
             stdout=stream,
             stderr=subprocess.STDOUT,
             creationflags=flags,
+            startupinfo=hidden_process_startupinfo(),
             close_fds=True,
         )
 
