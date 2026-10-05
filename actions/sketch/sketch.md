@@ -39,12 +39,12 @@ Practice Rules apply when sketching after the three or four answers. They do not
 
 ## When asking a question (grill inside sketch)
 
-Ask questions that the active guidance is designed to answer. See the **Sketch** section of that fidelity. Ask three or four of those questions, then sketch. Do not ask mechanical questions
+Ask questions that the active guidance is designed to answer. See the **Sketch** section of that fidelity. Ask three or four of those questions, then sketch. Do not start by asking mechanical questions "EG how would you like to break up the stories" Unless it's germane to answering a specific business outcome. Focus first on questions that speak to outcomes, activities, steps, state, structure, and experience; Then drill into the more mechanical asects afterwards.
 
 Each question is one of these:
 
 - A recommended choice, with options, asked with AskQuestion.
-- Or the same kind of question after you have read context. Still ask. Point the recommendation at the file you read.
+- Or the same kind of question after you have read context. Still ask. Link to the recommendation source and location at the file you read.
 
 Do not skip the question because you found an answer. Do not sketch between these questions.
 
@@ -65,11 +65,11 @@ Question shape is the AskQuestion block above. What to ask is the **Sketch** sec
 
 ## Template discovery (tiered)
 
-1. **Session context** — templates or examples the caller passed in at invocation time. Owned by the current session. Highest priority: a user pasting an example in chat immediately shapes the sketch.
-2. **Convention (wrapped agent's own template)** — `{agent_dir}/templates/*-sketch.*` inside the wrapped agent's `templates/` folder (e.g. `bdd/templates/bdd-sketch.md`). Owned by whoever wrote that agent; lets each agent shape its own sketches without touching the sketch toolset.
-3. **Default (built-in fallback)** — `sketch/templates/sketch-template.md` shipped inside the sketch toolset itself. Owned by this toolset; used only when nobody upstream supplied a template.
+1. **Pasted example** — an example the user pasted in the chat. Use that shape.
+2. **Practice template** — `practices/{practice}/templates/*-sketch.md` for each active practice (stories, clean engineering, DDD, UX).
+3. **Built-in** — `actions/sketch/templates/sketch-template.md`, only when that practice has no sketch template.
 
-If none of the above yield a template, say so and stop. Use the practice's sketch template. Do not invent a notation.
+If no template is found, say so and stop. Do not invent a notation.
 
 ## Persistence lifecycle
 

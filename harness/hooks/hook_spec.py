@@ -5,6 +5,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -489,6 +491,47 @@ with description("hook process helpers"):
         flags = detached_creationflags()
         if sys.platform == "win32":
             expect(bool(flags & getattr(subprocess, "CREATE_NO_WINDOW", 0))).to(equal(True))
+            expect(bool(flags & getattr(subprocess, "DETACHED_PROCESS", 0))).to(equal(False))
+
+    with it("should start a single daemon when several hook commands arrive together"):
+        from harness.hooks.hook_daemon import HookDaemon
+
+        calls: list[float] = []
+
+        def fake_connect(repo, path):
+            if calls and time.time() >= calls[0] + 0.4:
+                return HookServer(repo)
+            return None
+
+        def fake_spawn(self, repo, path):
+            calls.append(time.time())
+
+        original_connect = HookServer._connect
+        original_spawn = HookDaemon.spawn
+        HookServer._connect = fake_connect
+        HookDaemon.spawn = fake_spawn
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                path = repo / ".cursor" / "hook-server.json"
+                errors: list[BaseException] = []
+
+                def arrive():
+                    try:
+                        HookServer._spawn(repo, path)
+                    except BaseException as exc:
+                        errors.append(exc)
+
+                arrivals = [threading.Thread(target=arrive) for _ in range(4)]
+                for arrival in arrivals:
+                    arrival.start()
+                for arrival in arrivals:
+                    arrival.join(5)
+            expect(errors).to(equal([]))
+            expect(len(calls)).to(equal(1))
+        finally:
+            HookServer._connect = original_connect
+            HookDaemon.spawn = original_spawn
 
 
 with description("the Cursor hook_server.py command"):
