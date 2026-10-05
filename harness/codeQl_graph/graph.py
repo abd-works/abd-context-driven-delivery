@@ -704,18 +704,28 @@ class CodeQLNode:
                 return child
         return None
 
-    def serialize(self, seen: set[str] | None = None, via: CodeQLNode | None = None) -> dict:
-        """Write children on the home parent. A later relationship copy is a stub and does not consume the id."""
+    def serialize(self, seen: set[str] | None = None, via: CodeQLNode | None = None, stack: set[str] | None = None) -> dict:
+        """Write the full child list once, on the home parent.
+
+        Every copy still lists invokes, observes, and demonstrates. A node already on the path is a stub, so a call back to this step stops.
+        """
         seen = set() if seen is None else seen
-        home = via is None or via is self.parent
-        if not home or self.node_id in seen:
+        stack = set() if stack is None else stack
+        if self.node_id in stack:
             return {"type": self.type, "name": self.name, "node_id": self.node_id, "children": []}
-        seen.add(self.node_id)
+        home = via is None or via is self.parent
+        first_home = home and self.node_id not in seen
+        if first_home:
+            seen.add(self.node_id)
+            children = self.children
+        else:
+            children = [child for child in self.children if child.type == child.name and child.name in {"invokes", "observes", "demonstrates"}]
+        path = stack | {self.node_id}
         return {
             "type": self.type,
             "name": self.name,
             "node_id": self.node_id,
-            "children": [child.serialize(seen, self) for child in self.children],
+            "children": [child.serialize(seen, self, path) for child in children],
         }
 
     def _new_kind_node(self, kind: str) -> CodeQLNode:
