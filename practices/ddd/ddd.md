@@ -82,11 +82,11 @@ Draw where language changes — context boundaries, the aggregates that protect 
 #### Sketch
 
 - Ask what the main areas of the business are that this solution has to represent.
-- In each area, ask which things have to stay true together when something changes, and what people start from when they work with that group.
-- Ask what the important things are inside each of those groups.
-- Ask where two areas look at the same situation and care about different facts, or follow a different rule.
-- Ask where one area relies on another, and what has to be told or kept in step when something changes.
-- From those answers, write each context, the groups it holds, the important things in each group, and where one context depends on another.
+- In each area, ask which concepts have to change together so the business stays consistent.
+- Ask what the key facts are inside each of those groups.
+- Ask where a group in one area and a group in another area are different views of the same fact: what each area cares about, and how those facts connect and stay in step.
+- Ask where one area relies on another for something that is not that same fact.
+- From those answers, write each area as a context, each group that changes together, the key facts inside it, and where two areas hold different views of the same fact and how those facts connect.
 - Do not ask the user to name a bounded context or an aggregate.
 
 #### Guidance
