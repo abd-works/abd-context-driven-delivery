@@ -58,7 +58,7 @@ Ask who is trying to reach this outcome, what they need in front of them before 
 
 #### Scaffold
 
-**When scaffolding only** (`/partition` or a names only first cut), follow this subsection. Write only verb-noun Epic, Sub-Epic, and Story names. Read the source material in full, split distinct mechanics, and apply `verb-noun-format`, `branch-on-mechanical-uniqueness`, and `do-not-invent-requirements`. Do not write Scenarios, increments, or explanatory prose. Do not read or apply the Rules below. **Stop reading this skill when scaffolding.**
+**When scaffolding only** (`/partition` or a names only first cut), follow this subsection. Write only verb-noun Epic, Sub-Epic, and Story names. Carry the actor on every Story — `{Actor} --> {Verb Noun}` — because the actor is part of the Story's name at every depth. Read the source material in full, split distinct mechanics, and apply `verb-noun-format`, `branch-on-mechanical-uniqueness`, and `do-not-invent-requirements`. Do not write Scenarios, increments, or explanatory prose. Do not read or apply the Rules below. **Stop reading this skill when scaffolding.**
 
 #### Rules
 
