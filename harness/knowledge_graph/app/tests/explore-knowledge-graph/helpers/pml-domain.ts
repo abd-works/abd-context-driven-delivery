@@ -63,6 +63,8 @@ export async function showRules(): Promise<void> {
     await toggle.click();
   }
 }
+
+export async function expandClosedRules(limit = 40): Promise<void> {
   for (let step = 0; step < limit; step += 1) {
     const closed = page.locator('[data-testid="tree-expand-rules"][aria-expanded="false"]');
     if ((await closed.count()) === 0) {

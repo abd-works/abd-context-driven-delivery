@@ -58,7 +58,7 @@ model = CleanEngineeringModelFactory.load(path)
 - load_content(): None
 	// each channel overrides this. load calls this one operation
 	// a file channel prepares its cursor over the path
-	// CodeQL runs once over the database. Its cursor is the row lists
+	// CodeQL: the node rows and edge rows from that one run
 - load_modules(): None
 	// while has_more_module: append load_next_module()
 - has_more_module(): bool
@@ -562,7 +562,39 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 
 ## CodeQL class model
 
-CodeQL mixes the graph node into the class-model types. `Node` is that common node: identity, edges, and the graph. `CodeQLOoadNode` adds the clean-engineering behavior every CodeQL class-model type uses. Each type then adds only its own links. CodeQL runs over the database built from a folder, or a collection of folders. It does not copy another model. Its `load_content` is that one run, and it returns five row lists: classes, operations, properties, parameters, and calls. `load_next` reads the next row for the node it is building. `named()` looks up a node that run already loaded. Markdown, JSON, Draw.io, Miro, and the code languages do not resolve it.
+CodeQL mixes the graph node into the class-model types. `Node` is that common node. `CodeQLOoadNode` is every Clean Engineering type on the graph. CodeQL runs over the database for a folder. It does not copy another model. `load_content` is that one run.
+
+Every noun is a node query. Every `Kind` is an edge query. `PracticeGraph` registers each node row, then relates each edge row. A CodeQL class, property, or operation is the node already registered — a filtered view of those rows. `load_next` reads the next child on an edge of that kind, already ordered. `named()` is lookup of a node_id this run already registered. Markdown, JSON, Draw.io, Miro, and the code languages do not resolve it.
+
+A class on this graph is an `OoadClass`. DDD stereotypes are DDD node queries, not this practice.
+
+### Node queries — `practices/clean_engineering/model/{language}/codeql/loaders`
+
+Each row: node_id, name, semantic_type, practice, file, line, end_line.
+
+- **modules.ql** — Module. Folder or package the classes sit in
+- **classes.ql** — OoadClass. Every class in subject. semantic_type is OoadClass
+- **operations.ql** — Operation. Every class method that is not an accessor
+- **properties.ql** — Property. Every field and accessor, relatives included
+- **parameters.ql** — Parameter. Every operation parameter
+
+### Edge queries — one file per kind
+
+Each row: parent_id, child_id, kind, sequential_order, immediate. `order by sequential_order`.
+
+- **owns.ql** — Module → Module, Module → OoadClass, OoadClass → Operation (order 2, immediate), OoadClass → leftover Property (order 3, immediate false)
+- **belongs-to.ql** — the inverse of owns
+- **relative.ql** — OoadClass → Property when the type hint names another loaded class. order 1, immediate
+- **has-type.ql** — Property → OoadClass named by the type hint
+- **has-parameter.ql** — Operation → Parameter. order is parameter position, immediate
+- **returns.ql** — Operation → OoadClass named by the return type
+- **invokes.ql** — Operation → Operation this body calls
+- **depends-on.ql** — OoadClass → OoadClass, Module → Module, when an invokes edge leaves the owner
+- **associates.ql** — OoadClass → OoadClass from a property association
+- **composition.ql** — OoadClass → OoadClass from a property composition
+- **aggregation.ql** — OoadClass → OoadClass from a property aggregation
+
+Display reads only sequential_order and immediate. Relatives sit under the class. Operations follow. Leftover properties sit under a properties collapse.
 
 ## Node
 
@@ -572,7 +604,7 @@ The same graph node the story types mix in.
 + source
 	// the file and line this node was read from
 + node_id: str
-	// the same id is the same node
+	// the same id is the same node. CodeQL writes it on the node row
 + graph
 	// the practice graph this node has joined
 ----
@@ -580,12 +612,24 @@ The same graph node the story types mix in.
 + slug(name: str): str
 + join(graph): Node
 	// registers this node and sets node_id
-+ relate(kind, to): Relationship
-	// one edge from this node to another
++ relate(kind, to, sequential_order, immediate): GraphEdge
+	// one edge from this node to another. Values come from the edge row
 + related(kind): list
 	// the nodes on that edge. Incoming edges are read with direction in
 + children(): list
-	// the nodes this node owns
+	// outgoing owns and relative, sorted by sequential_order
+	// immediate true: the child is listed here
+	// immediate false: the child sits in a collapse named after kind
+
+## GraphEdge
+
++ kind: str
++ parent_id: str
++ child_id: str
++ sequential_order: int
++ immediate: bool
+	// true: child listed under parent
+	// false: child listed under a collapse named after kind
 
 ## CodeQLOoadNode : Node
 
@@ -593,10 +637,8 @@ The same graph node the story types mix in.
 + home_module: Node
 	// the module this node belongs to, or empty
 ----
-- relate_once(kind, to): None
-	// relate when this kind does not already hold that node_id
 - named(name, semantic_type): Node
-	// the node this run already loaded, with this name and type
+	// the node this run already registered, with this name and type
 
 ## CodeQLCleanEngineeringModel : CleanEngineeringModel, CodeQLOoadNode
 
@@ -607,97 +649,81 @@ The same graph node the story types mix in.
 + module_type: CodeQLModule
 ----
 - load_content(): None
-	// CodeQL override: one run over the database
-	// cursor is the class rows, operation rows, property rows, parameter rows, and call rows
+	// CodeQL.populate: node queries, then edge queries
+	// this model is the registered CleanEngineeringModel node
 - has_more_module(): bool
-	// another class row names a module not yet built
+	// another owns edge from this model whose child is a module
 - get_next_module_from_file(): CodeQLModule
-	// the module named on that class row
+	// that child, already registered
 + save(): str
 	// no-op. The graph is the structure this model built
 
 ## CodeQLModule : Module, CodeQLOoadNode
 
 + CodeQLModule()
-	// built from the module name on a class row
-	// owns is each child module and each class row for this module
-	// depends_on is each module a call row leaves for another module
+	// the next modules.ql row
 ------
 + owns
-	// each child module and class. The child belongs to this module
+	// child modules and classes. belongs-to is the inverse
 + depends_on
-	// a module whose operation this module's operation invokes
+	// a module an invokes edge leaves this module for
 ----
 - load_next_module(): CodeQLModule
-	// the next class row names a child module. relate_once stores owns, and the child belongs to this module
+	// the next owns edge whose child is a module
 - load_next_class(): CodeQLOoadClass
-	// the next class row for this module. relate_once stores owns, and the class belongs to this module
-	// a class whose name carries a DDD stereotype is that DDD graph class
+	// the next owns edge whose child is a class
 
 ## CodeQLOoadClass : OoadClass, CodeQLOoadNode
 
 + CodeQLOoadClass()
-	// the next class row
-	// owns is each property row and operation row for this class
-	// depends_on is each class a call row leaves for another class
+	// the next classes.ql row
 ------
++ relative
+	// relative.ql. order 1, immediate
 + owns
-	// each property and operation. The member belongs to this class
+	// operations order 2 immediate; leftover properties order 3 not immediate
 + depends_on
-	// a class whose operation this class's operation invokes
+	// a class an invokes edge leaves this class for
 ----
 - load_next_property(): CodeQLProperty
-	// the next property row for this class. relate_once stores owns, and the property belongs to this class
-	// -> property.load_has_type()
-	// -> property.load_relationship()
+	// the next relative or owns edge whose child is a property
 - load_next_operation(): CodeQLOperation
-	// the next operation row for this class. relate_once stores owns, and the operation belongs to this class
-	// -> operation.load_parameters()
-	// -> operation.load_returns()
-	// -> operation.load_invokes()
+	// the next owns edge whose child is an operation
 
 ## CodeQLProperty : Property, CodeQLOoadNode
 
 + CodeQLProperty()
-	// the next property row for this class
-	// has_type and the relationship are the class named on that row
+	// the next properties.ql row
 ------
 + has_type
-	// the class named by the type hint. A primitive or a third-party type has none
+	// has-type.ql. The class named by the type hint
 ----
 - load_has_type(): None
-	// named() finds the class this run already loaded. relate_once stores it on has_type
-- load_relationship(): None
-	// composition, aggregation, or associates, from the property stereotype
-	// relate_once stores that edge from this class to the same class
+	// the hasType edge already related on this node
 
 ## CodeQLOperation : Operation, CodeQLOoadNode
 
 + CodeQLOperation()
-	// the next operation row for this class
-	// has_parameter is each parameter row for this operation
-	// returns and invokes are the call rows and the return named on this operation row
+	// the next operations.ql row
 ------
 + has_parameter
-	// each parameter. The parameter belongs to this operation
+	// has-parameter.ql
 + returns
-	// the class named by the return type, or empty
+	// returns.ql
 + invokes
-	// each operation this operation calls. The operation includes its class
+	// invokes.ql
 ----
 - load_parameters(): None
-	// the next parameter row for this operation. relate_once stores has_parameter, and the parameter belongs to this operation
+	// the hasParameter edges already related on this node
 - load_returns(): None
-	// named() finds the class this run already loaded. relate_once stores it on returns
+	// the returns edge already related on this node
 - load_invokes(): None
-	// the next call row for this operation. named() finds the callee this run already loaded. relate_once stores it on invokes
-	// a callee on another class: relate_once stores depends_on on this class
-	// a callee in another module: relate_once stores depends_on on this module
+	// the invokes edges already related on this node
 
 ## CodeQLParameter : Parameter, CodeQLOoadNode
 
 + CodeQLParameter()
-	// the next parameter row for this operation
+	// the next parameters.ql row
 
 A transform builds the other channel from this model. The copy traverses owns, belongs to, has type, the relationship, has parameter, returns, invokes, and depends on, and writes each related node in that channel's format.
 

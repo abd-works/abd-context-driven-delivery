@@ -10,7 +10,7 @@
 
 `PracticeGraph` is the seam. `Node` is mixed into practice types. `CodeQL` runs queries. `RuleRegistry` evaluates graphQuery files that live on each practice.
 
-Constraint: populate from CodeQL facts, not from markdown. A *GraphRule* that is not graph-evaluated stays in the registry and is not run. This package does not import practice node classes — those extensions import `Node` from here.
+Constraint: populate from CodeQL facts, not from markdown. Node queries load nouns. Edge queries load every relationship — one query per kind — with `sequential_order` and `immediate`. `PracticeGraph` registers nodes, then relates edges. It does not infer DDD stereotypes, guess relatives from source text, or rearrange a class's children. A *GraphRule* that is not graph-evaluated stays in the registry and is not run. This package does not import practice node classes — those extensions import `Node` from here.
 
 ## Public API
 

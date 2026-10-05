@@ -753,7 +753,36 @@ The Miro REST API. `MiroStoryModel.upload` posts shapes through `create_shape`. 
 
 ## CodeQL story types
 
-CodeQL mixes the graph node into the story types. `Node` is that common node: identity, edges, and the graph. `CodeQLStoryNode` adds the story behavior every CodeQL story type uses. Each story type then adds only its own links. CodeQL runs over the database built from a folder, or a collection of folders. It does not copy another model. `load_content` is that one run, and it returns five row lists: stories, scenarios, backgrounds, steps, and examples. The epic is a column on the story row. `load_next` reads the next row for the node it is building. `named()` looks up a node that run already loaded. Markdown, JSON, Draw.io, Miro, and the code languages do not resolve it.
+CodeQL mixes the graph node into the story types. `Node` is that common node. `CodeQLStoryNode` is every Stories type on the graph. CodeQL runs over the database for a folder. It does not copy another model. `load_content` is that one run.
+
+Every noun is a node query. Every `Kind` is an edge query. `PracticeGraph` registers each node row, then relates each edge row. A CodeQL story, step, or example is the node already registered. `load_next` reads the next child on an edge of that kind, already ordered. `named()` is lookup of a node_id this run already registered. Clean Engineering node_ids are already on the graph when a story edge names a class, operation, or property.
+
+### Node queries — `practices/stories/model/{language}/codeql/loaders`
+
+Each row: node_id, name, semantic_type, practice, file, line, end_line.
+
+- **epics.ql** — Epic. The epic column on each story file
+- **stories.ql** — Story. story() and shareStory()
+- **scenarios.ql** — Scenario. scenario() nested in a story
+- **backgrounds.ql** — Background. background() on a story
+- **steps.ql** — Step. given, when, then, and, but
+- **examples.ql** — Example. Exported factories in *.examples files
+
+### Edge queries — one file per kind
+
+Each row: parent_id, child_id, kind, sequential_order, immediate. `order by sequential_order`.
+
+- **owns.ql** — Epic → Story, Story → Scenario, Story → Background, Scenario → Step, Step → Example (given/then examples, order after the step text, immediate false under an examples collapse)
+- **belongs-to.ql** — the inverse of owns
+- **scopes.ql** — Background → Example when the background's given steps own that example
+- **invokes.ql** — Step → Operation or Property on a when (and an and that continues a when). Scenario and Story collect the same edges by walking owns
+- **demonstrates.ql** — Example → OoadClass the factory builds. order 1, immediate false under an examples collapse on the class
+- **demonstrated-through.ql** — the inverse of demonstrates
+- **retrieved-using.ql** — Example → Operation or Property that reads the example back
+- **observes.ql** — then Step → Example (or the member the then names)
+- **uses.ql** — Epic → Module. The home module of a demonstrated class or of an invoked member
+
+Display reads only sequential_order and immediate. Examples sit under an examples collapse. Steps sit immediately under the scenario.
 
 ## Node
 
@@ -763,7 +792,7 @@ The graph node mixed into a CodeQL practice type. Stories, clean engineering, an
 + source
 	// the file and line this node was read from
 + node_id: str
-	// the same id is the same node
+	// the same id is the same node. CodeQL writes it on the node row
 + graph
 	// the practice graph this node has joined
 ----
@@ -772,23 +801,21 @@ The graph node mixed into a CodeQL practice type. Stories, clean engineering, an
 + slug(name: str): str
 + join(graph): Node
 	// registers this node and sets node_id
-+ relate(kind, to): Relationship
-	// one edge from this node to another
++ relate(kind, to, sequential_order, immediate): GraphEdge
+	// one edge from this node to another. Values come from the edge row
 + related(kind): list
 	// the nodes on that edge. Incoming edges are read with direction in
 + children(): list
-	// the nodes this node owns
+	// outgoing owns, sorted by sequential_order
+	// immediate true: the child is listed here
+	// immediate false: the child sits in a collapse named after kind
 
 ## CodeQLStoryNode : Node
 
 + practice: stories
 ----
-- relate_once(kind, to): None
-	// relate when this kind does not already hold that node_id
-- own_example(example): None
-	// an example is a child, the same owns collection as the node's other children
 - named(name, semantic_type): Node
-	// the node this run already loaded, with this name and type
+	// the node this run already registered, with this name and type
 
 ## CodeQLStoryModel : StoryModel, CodeQLStoryNode
 
@@ -800,97 +827,89 @@ The graph node mixed into a CodeQL practice type. Stories, clean engineering, an
 + story_type: CodeQLStory
 ----
 - load_content(): None
-	// one run over the database
-	// cursor is the story rows, scenario rows, background rows, step rows, and example rows
-	// the epic is a column on the story row
+	// CodeQL.populate: node queries, then edge queries
+	// this model is the registered StoryModel node
 - has_more_epic(): bool
-	// another story row names an epic not yet built
+	// another owns edge from this model whose child is an epic
 - get_next_epic_from_file(): CodeQLEpic
-	// the epic named on that story row
+	// that child, already registered
 + save(): str
 	// no-op. The graph is the structure this model built
 
 ## CodeQLEpic : Epic, CodeQLStoryNode
 
 + CodeQLEpic()
-	// built from the epic column on a story row
-	// uses is each module named() finds from the stories in this epic
+	// the next epics.ql row
 ------
++ owns
+	// each story
 + uses
-	// each module is the node already in the graph
-	// taken from the class an example demonstrates, or the class that owns an invoked member
+	// uses.ql. Each module already registered
 ----
 - load_uses(): None
-	// named() finds each module this run already loaded. relate_once stores it on uses
-	// the module is the home module of a demonstrated class, or of an invoked member
+	// the uses edges already related on this epic
 
 ## CodeQLStory : Story, CodeQLStoryNode
 
 + CodeQLStory()
-	// the next story row for this epic
-	// invokes is the union of the scenario rows for this story
+	// the next stories.ql row
 ------
++ owns
+	// scenarios and background
 + invokes
-	// the operations and properties its scenarios invoke
-----
-- aggregate_from_scenarios(): None
-	// union of each scenario's invokes
+	// union of invokes edges on the steps this story owns
 
 ## CodeQLBackground : Background, CodeQLStoryNode
 
 + CodeQLBackground()
-	// the background row for this story
-	// the examples its given steps own are children of this background too
+	// the next backgrounds.ql row
 ------
-----
-- load_loads(): None
-	// own_example stores each example the given steps already own
++ owns
+	// given steps
++ scopes
+	// examples those given steps own
 
 ## CodeQLScenario : Scenario, CodeQLStoryNode
 
 + CodeQLScenario()
-	// the next scenario row for this story
-	// invokes is the union of the step rows for this scenario
+	// the next scenarios.ql row
 ------
++ owns
+	// steps, sequential_order is step order, immediate
 + invokes
-	// the operations and properties its steps invoke
-----
-- aggregate_from_steps(): None
-	// union of each step's invokes, ands included
+	// union of invokes edges on those steps
 
 ## CodeQLStep : Step, CodeQLStoryNode
 
 + CodeQLStep()
-	// the next step row for this scenario
-	// examples are children. invokes is the link named on a when row
+	// the next steps.ql row
 ------
++ owns
+	// examples. immediate false
 + invokes
-	// when, and an and that continues a when. Each operation or property is the node already in the graph. The operation includes its class
+	// invokes.ql when, and an and that continues a when
++ observes
+	// observes.ql then, and an and that continues a then
 ----
 - load_loads(): None
-	// given, and an and that continues a given
-	// own_example stores each example this run already loaded as a child
+	// the owns edges whose child is an example
 - load_invokes(): None
-	// when, and an and that continues a when
-	// named() finds each operation or property this run already loaded. relate_once stores it on invokes
+	// the invokes edges already related on this step
 - load_observes(): None
-	// then, and an and that continues a then
-	// own_example stores the one example this run already loaded as a child
+	// the observes edges already related on this step
 
 ## CodeQLExample : Example, CodeQLStoryNode
 
 + CodeQLExample()
-	// the next example row
-	// demonstrates and retrieved using are the class and the member named on that row
+	// the next examples.ql row
 ------
 + demonstrates
-	// each class is the node already in the graph
+	// demonstrates.ql. Each class already registered
 + retrieved_using
-	// the operation or property that reads this example back, or empty. The operation includes its class
+	// retrieved-using.ql. The operation or property, or empty
 ----
 - load_demonstrates(): None
-	// named() finds the class, and the operation or property, this run already loaded
-	// relate_once stores them on demonstrates and retrieved using
+	// the demonstrates and retrievedUsing edges already related on this example
 
 A transform builds the other channel from this model. The copy traverses uses, owned examples, invokes, demonstrates, and retrieved using, and writes each related node in that channel's format.
 

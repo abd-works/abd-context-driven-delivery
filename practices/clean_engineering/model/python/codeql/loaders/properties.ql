@@ -9,31 +9,35 @@ import subject_filter
 import model
 import members
 
-from AnnAssign assign, Class cls, string name, string hint
+from string className, string name, string base, int start, string path, int end, string hint
 where
-  inSubject(assign) and
-  assign.getScope() = cls and
-  name = assign.getTarget().(Name).getId() and
-  (
-    hint = assign.getAnnotation().toString()
-    or
-    not exists(assign.getAnnotation()) and hint = ""
-  ) and
-  not isRelativeHint(hint)
-select cls.getName(), name, assign.getLocation().getFile().getShortName(),
-  assign.getLocation().getStartLine(),
-  assign.getLocation().getFile().getRelativePath(),
-  assign.getLocation().getEndLine(),
-  hint
-union
-from Function method, Class cls, string name
-where
-  inSubject(method) and
-  decoratorNamed(method, "property") and
-  cls = method.getScope() and
-  name = method.getName()
-select cls.getName(), name, method.getLocation().getFile().getShortName(),
-  method.getLocation().getStartLine(),
-  method.getLocation().getFile().getRelativePath(),
-  method.getLocation().getEndLine(),
-  ""
+  exists(AnnAssign assign, Class cls |
+    inSubject(assign) and
+    assign.getScope() = cls and
+    name = assign.getTarget().(Name).getId() and
+    className = cls.getName() and
+    base = assign.getLocation().getFile().getShortName() and
+    start = assign.getLocation().getStartLine() and
+    path = assign.getLocation().getFile().getRelativePath() and
+    end = assign.getLocation().getEndLine() and
+    (
+      hint = assign.getAnnotation().toString()
+      or
+      not exists(assign.getAnnotation()) and hint = ""
+    ) and
+    not isRelativeHint(hint)
+  )
+  or
+  exists(Function method, Class cls |
+    inSubject(method) and
+    decoratorNamed(method, "property") and
+    cls = method.getScope() and
+    className = cls.getName() and
+    name = method.getName() and
+    base = method.getLocation().getFile().getShortName() and
+    start = method.getLocation().getStartLine() and
+    path = method.getLocation().getFile().getRelativePath() and
+    end = method.getLocation().getEndLine() and
+    hint = ""
+  )
+select className, name, base, start, path, end, hint

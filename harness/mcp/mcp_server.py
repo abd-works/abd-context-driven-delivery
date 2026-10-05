@@ -313,7 +313,7 @@ class McpOperationDefinition:
     def from_tool(cls, tool: Any) -> McpOperationDefinition:
         kind = "tool" if tool.kind == "tool" else "prompt"
         toolset = tool.toolset
-        if getattr(toolset, "practice_guidance", None) is not None:
+        if getattr(toolset, "practice_guidance", None) is not None and tool.name == "instructions":
             mcp_name = tool.slug
         else:
             mcp_name = f"{tool.slug}.{tool.name}"
@@ -562,6 +562,15 @@ class McpServer:
                 McpIllegitimateTool(
                     op.mcp_name,
                     "illegal MCP tool name",
+                ),
+            )
+            return
+        if op.mcp_name in self._tools or op.mcp_name in self._prompts:
+            self.skip(
+                op.mcp_name,
+                McpIllegitimateTool(
+                    op.mcp_name,
+                    "MCP name is already enrolled",
                 ),
             )
             return

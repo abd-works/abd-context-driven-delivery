@@ -20,6 +20,42 @@ practices/ddd/model/knowledge_graph
 harness/knowledge_graph/app          # TypeScript loads the save
 ```
 
+## CodeQL.populate
+
+One run. Node queries first, then edge queries. `PracticeGraph` registers every node row, then relates every edge row. Practice types are constructors from those rows. They do not stitch. Display sorts by `sequential_order` and nests by `immediate`.
+
+```
+CodeQL.populate(graph)
+  run every node query
+    clean_engineering: modules, classes, operations, properties, parameters
+    stories: epics, stories, scenarios, backgrounds, steps, examples
+    ddd: bounded-contexts, aggregates, entities, entity-roots, value-objects,
+         repositories, domain-services, domain-events, specifications, factories
+  for each node row
+    node = type(semantic_type).from_row(row)
+    graph.register(node)
+
+  run every edge query  // one file per Kind
+    clean_engineering: owns, belongs-to, relative, has-type, has-parameter,
+                       returns, invokes, depends-on, associates, composition, aggregation
+    stories: owns, belongs-to, scopes, invokes, demonstrates, demonstrated-through,
+             retrieved-using, observes, uses
+    ddd: owns, belongs-to, root, has-identity, accesses, associates, composition, aggregation
+  for each edge row
+    parent = graph.node(parent_id)
+    child = graph.node(child_id)
+    graph.relate(kind, parent, child, sequential_order, immediate)
+
+children(node)
+  edges from node, sorted by sequential_order
+  immediate true  -> child listed under node
+  immediate false -> child listed under a collapse named after kind
+```
+
+Node row: node_id, name, semantic_type, practice, file, line, end_line.
+
+Edge row: parent_id, child_id, kind, sequential_order, immediate. Query `order by sequential_order`.
+
 ## Populate, then copy, then save
 
 ```
@@ -27,13 +63,12 @@ CodeQL
   root
   database
   populate
-    -> storyModel.load
-    -> cleanEngineeringModel.load
-    -> domainDrivenDesignModel.load
-    // the practice models. CodeQL does not write the knowledge-graph file
+    -> register node rows
+    -> relate edge rows
+    // PracticeGraph is the structure. CodeQL does not write the knowledge-graph file
 
 StoryModel
-  // codeql channel. rows are the cursor. the model builds its own children
+  // codeql channel. nodes and edges already on the graph
 
 CleanEngineeringModel
   // codeql channel

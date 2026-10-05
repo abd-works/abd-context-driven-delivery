@@ -1,0 +1,12 @@
+{
+  "node_types": [],
+  "edge_types": [],
+  "node_counts": {},
+  "edge_count": 0,
+  "tree": {
+    "type": "Practice",
+    "name": "bdd",
+    "node_id": "bdd:Practice:.:bdd",
+    "children": []
+  }
+}

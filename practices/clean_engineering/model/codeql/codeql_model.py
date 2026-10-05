@@ -19,12 +19,10 @@ from practices.clean_engineering.model.property import (
     Property as SourceProperty,
     bind_property_relationship,
 )
-from practices.clean_engineering.model.type_refs import domain_type_names
 from practices.ddd.model.nodes import Aggregate, BoundedContext
-from practices.ddd.model.stereotypes import ddd_class_kind, inferred_tactical_kind, tactical_tags
 
 from practices.stories.model.source_location import SourceLocation
-from harness.knowledge_graph.model.graph_node import Kind, Node, ownership_kind
+from harness.knowledge_graph.model.graph_node import Kind, Node
 
 if TYPE_CHECKING:
     from harness.knowledge_graph.model.practice_graph import PracticeGraph
@@ -63,27 +61,10 @@ class Property(SourceProperty, CodeQLOoadNode):
         self.relate_once(Kind.INVOKES, callee)
 
     def load_has_type(self) -> None:
-        names = domain_type_names(getattr(self, "type_hint", "") or "")
-        target = self.named(names[0], "OoadClass") if names else None
-        if target is None and names and getattr(self, "_graph", None) is not None:
-            target = self.graph.class_named(names[0])
-        self.relate_once(Kind.HAS_TYPE, target)
+        return
 
     def load_relationship(self) -> None:
-        if self.relationship is None:
-            return
-        owner = next(iter(self.related(Kind.BELONGS_TO)), None)
-        if owner is None:
-            return
-        kind = ownership_kind(self.relationship.kind)
-        if kind == Kind.RELATIVE:
-            owner.relate_once(Kind.RELATIVE, self, cardinality=self.relationship.cardinality)
-            return
-        names = domain_type_names(getattr(self, "type_hint", "") or "")
-        target = self.named(names[0], "OoadClass") if names else None
-        if target is None and names and getattr(self, "_graph", None) is not None:
-            target = self.graph.class_named(names[0])
-        owner.relate_once(kind, target, cardinality=self.relationship.cardinality)
+        return
 
 
 class Parameter(SourceParameter, CodeQLOoadNode):
@@ -104,8 +85,6 @@ class Operation(SourceOperation, CodeQLOoadNode):
         param = self.load_parameter(SourceParameter(name, len(self.parameters) + 1))
         self.parameters.append(param)
         self.graph.register(param)
-        self.relate_once(Kind.HAS_PARAMETER, param)
-        param.relate_once(Kind.BELONGS_TO, self)
         return param
 
     def invokes(self, callee: "Operation") -> None:
@@ -192,11 +171,7 @@ class _Members:
         bind_property_relationship(node)
         self.property_nodes.append(node)
         self.graph.register(node)
-        self.relate_once(Kind.OWNS, node)
-        node.relate_once(Kind.BELONGS_TO, self)
         node._graph = self.graph
-        node.load_has_type()
-        node.load_relationship()
         return node
 
     def accept_operation(self, name: str, return_type: str = "", parameters=None) -> Optional[Operation]:
@@ -210,10 +185,7 @@ class _Members:
             node._sync_parameters_from_legacy()
         self.operation_nodes.append(node)
         self.graph.register(node)
-        self.relate_once(Kind.OWNS, node)
-        node.relate_once(Kind.BELONGS_TO, self)
         node._graph = self.graph
-        node.load_returns(return_type)
         return node
 
 
@@ -243,29 +215,15 @@ class Module(SourceModule, CodeQLOoadNode):
     def load_class(self, source: SourceClass) -> OoadClass:
         return OoadClass(source.name, source.sequential_order)
 
-    def accept_class(self, name: str, stereotypes: List[str] | None = None) -> OoadClass:
-        from practices.ddd.model.codeql.codeql_model import ddd_graph_class_for
-
-        decorated = name
-        marks = stereotypes or []
-        if marks:
-            decorated = f"{name} {' '.join(f'<<{s}>>' for s in marks)}"
-        stub = OoadClass(decorated, len(self.classes) + 1)
-        if marks or ddd_class_kind(decorated):
-            cls = ddd_graph_class_for(stub)
-        else:
-            cls = self.load_class(stub)
+    def accept_class(self, name: str) -> OoadClass:
+        cls = self.load_class(OoadClass(name, len(self.classes) + 1))
         self.classes.append(cls)
         self.graph.register(cls)
-        self.relate(Kind.OWNS, cls)
-        cls.relate(Kind.BELONGS_TO, self)
         return cls
 
     def accept_file(self, path: str) -> "File":
         node = File(path.replace("\\", "/"), len(self.classes) + 1)
         self.graph.register(node)
-        self.relate(Kind.OWNS, node)
-        node.relate(Kind.BELONGS_TO, self)
         return node
 
     @property
@@ -348,6 +306,7 @@ class GraphMemberRows:
         self.properties = properties
         self.operations: List[dict] = []
         self.parameters: List[dict] = []
+        self.edges: List[dict] = []
 
 
 class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
@@ -369,7 +328,6 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
         mod = self.load_module(Module(name, order))
         self.graph.register(mod)
         self.modules.append(mod)
-        self.relate(Kind.OWNS, mod)
         return mod
 
 
@@ -403,6 +361,7 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
         self._ensure_classes()
         self._ensure_properties()
         self._ensure_operations()
+        self.relate_edges(graph, rows.edges)
 
     def _indexed_modules(self) -> Dict[str, Module]:
         indexed: Dict[str, Module] = {}
@@ -463,7 +422,6 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
         return str(getattr(source, "file", "") or "").replace("\\", "/")
 
     def _ensure_classes(self) -> None:
-        names = {str(entry.get("name") or "") for entry in self._rows.classes if entry.get("name")}
         for entry in self._rows.classes:
             module_name = entry.get("module") or ""
             name = entry.get("name") or ""
@@ -480,76 +438,9 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
             if existing is not None:
                 self._span.bind(existing, entry)
                 continue
-            kind = inferred_tactical_kind(name, names)
-            marks = list(entry.get("stereotypes") or []) or tactical_tags(kind or "")
-            created = mod.accept_class(name, marks)
+            created = mod.accept_class(name)
             self._remember_class(name, created)
             self._span.bind(created, entry)
-        self._ensure_bounded_contexts()
-
-    def _ensure_bounded_contexts(self) -> None:
-        from practices.ddd.model.codeql.codeql_model import Aggregate, BoundedContext
-
-        kinds = {
-            "Entity",
-            "EntityRoot",
-            "ValueObject",
-            "Repository",
-            "DomainEvent",
-            "DomainService",
-            "Specification",
-        }
-        contexts: dict[str, BoundedContext] = {}
-        grouped: dict[str, dict] = {}
-        for node in list(self._graph.nodes.values()):
-            if node.semantic_type() not in kinds:
-                continue
-            module = next(
-                (
-                    owner
-                    for owner in node.related(Kind.BELONGS_TO)
-                    if owner.semantic_type() == "Module"
-                ),
-                None,
-            )
-            folder = str(getattr(module, "folder", "") or getattr(module, "name", "") or "").replace(
-                "\\", "/"
-            )
-            parts = [part for part in folder.split("/") if part]
-            if parts and parts[0] in {"src", "domain"} and len(parts) > 1:
-                bc_name = parts[1]
-            else:
-                bc_name = parts[-1] if parts else "Domain"
-            folder_key = "/".join(parts).lower() if parts else bc_name.lower()
-            bucket = grouped.get(folder_key)
-            if bucket is None:
-                bucket = {"bc_name": bc_name, "parts": parts, "nodes": []}
-                grouped[folder_key] = bucket
-            bucket["nodes"].append(node)
-        for folder_key, bucket in grouped.items():
-            bc_name = bucket["bc_name"]
-            parts = bucket["parts"]
-            nodes = bucket["nodes"]
-            key = bc_name.lower()
-            context = contexts.get(key)
-            if context is None:
-                context = BoundedContext(bc_name.replace("-", " ").title(), len(contexts) + 1)
-                self._graph.register(context)
-                contexts[key] = context
-            roots = [node for node in nodes if node.semantic_type() == "EntityRoot"]
-            owner = context
-            if roots:
-                label = (parts[-1] if parts else bc_name).replace("-", " ").title()
-                aggregate = Aggregate(label, len(context.aggregates) + 1)
-                aggregate.root = roots[0]
-                self._graph.register(aggregate)
-                context.relate(Kind.OWNS, aggregate)
-                context.aggregates.append(aggregate)
-                owner = aggregate
-            for node in nodes:
-                if node.node_id not in {item.node_id for item in owner.related(Kind.OWNS)}:
-                    owner.relate(Kind.OWNS, node)
-
 
     def _owned_member(self, owner, collection: str, name: str):
         return next((node for node in getattr(owner, collection, []) if node.name == name), None)
@@ -558,11 +449,7 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
         if node is None or getattr(node, "_graph", None) is not None:
             return
         self._graph.register(node)
-        if hasattr(owner, "relate_once"):
-            owner.relate_once(Kind.OWNS, node)
-        else:
-            owner.relate(Kind.OWNS, node)
-        node.relate(Kind.BELONGS_TO, owner)
+        node._graph = self._graph
 
     def _ensure_properties(self) -> None:
         for prop in self._rows.properties:
@@ -647,39 +534,74 @@ class CleanEngineeringModel(SourceModel, CodeQLOoadNode):
             self._order += 1
         return self._modules[key]
 
-    def wire_calls(self, graph: "PracticeGraph", calls: List[dict]) -> None:
-        seen: set[tuple] = set()
-        for call in calls:
-            key = (
-                call.get("caller_class"),
-                call.get("caller_operation"),
-                call.get("callee_class"),
-                call.get("callee_operation"),
-            )
-            if key in seen:
+    def relate_edges(self, graph: "PracticeGraph", edges: List[dict]) -> None:
+        self._graph = graph
+        if not hasattr(self, "_classes"):
+            self._classes, self._files = self._indexed_types()
+            self._modules = self._indexed_modules()
+        for row in edges:
+            parent = self._end_node(row, row.get("parent") or "")
+            child = self._end_node(row, row.get("child") or "", owner=parent)
+            if parent is None or child is None or parent is child:
                 continue
-            seen.add(key)
-            caller = self._member_named(
-                graph, call.get("caller_class") or "", call.get("caller_operation") or ""
+            immediate = row.get("immediate", True)
+            if isinstance(immediate, str):
+                immediate = immediate.lower() in {"true", "1", "yes"}
+            parent.relate(
+                str(row.get("kind") or Kind.OWNS),
+                child,
+                sequential_order=int(row.get("sequential_order") or row.get("order") or 0),
+                immediate=bool(immediate),
             )
-            callee = self._member_named(
-                graph, call.get("callee_class") or "", call.get("callee_operation") or ""
+
+    def wire_calls(self, graph: "PracticeGraph", calls: List[dict]) -> None:
+        self.relate_edges(
+            graph,
+            [
+                {
+                    "kind": Kind.INVOKES,
+                    "parent": f"{call.get('caller_class')}.{call.get('caller_operation')}",
+                    "child": f"{call.get('callee_class')}.{call.get('callee_operation')}",
+                    "sequential_order": int(call.get("sequential_order") or call.get("order") or 0),
+                    "immediate": True,
+                    "file": call.get("file") or "",
+                }
+                for call in calls
+            ],
+        )
+
+    def _end_node(self, row: dict, name: str, owner=None):
+        plain = (name or "").strip()
+        if not plain:
+            return None
+        if owner is not None:
+            member = self._owned_member(owner, "property_nodes", plain) or self._owned_member(
+                owner, "operation_nodes", plain
             )
-            if caller is not None and callee is not None and caller is not callee and hasattr(caller, "load_invokes"):
-                caller.load_invokes(callee)
+            if member is not None:
+                return member
+            parameters = getattr(owner, "parameters", None) or []
+            param = next((item for item in parameters if item.name == plain), None)
+            if param is not None:
+                return param
+        dotted = plain.split(".", 1)
+        if len(dotted) == 2 and "/" not in plain and not plain.endswith(".py"):
+            op = self._graph.operation_named(dotted[0], dotted[1])
+            if op is not None:
+                return op
+            head = self._end_node(row, dotted[0])
+            return self._end_node(row, dotted[1], owner=head)
+        found = self._class_for({**row, "class_name": plain, "name": plain})
+        if found is not None:
+            return found
+        key = plain.replace("\\", "/").lower()
+        if key in getattr(self, "_files", {}):
+            return self._files[key]
+        wanted = plain.lower()
+        for node in self._graph.nodes.values():
+            if getattr(node, "name", "").lower() == wanted:
+                return node
+        return None
 
     def _member_named(self, graph, owner_name: str, member_name: str):
-        owner = graph.class_named(owner_name)
-        if owner is None:
-            wanted = (owner_name or "").lower()
-            for node in graph.nodes.values():
-                if node.semantic_type() == "OoadClass" and node.name.lower() == wanted:
-                    owner = node
-                    break
-        if owner is None:
-            return None
-        for kind in ("Operation", "Property"):
-            for node in owner.related(Kind.OWNS):
-                if node.semantic_type() == kind and node.name == member_name:
-                    return node
-        return None
+        return self._end_node({"file": ""}, f"{owner_name}.{member_name}")

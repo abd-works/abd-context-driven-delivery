@@ -5,7 +5,7 @@ import {
 } from '../../packages/explore-knowledge-graph/knowledge-graph/graph';
 
 describe('listed class children', () => {
-  it('keeps relatives on the class and leftover properties under properties', () => {
+  it('lists immediate children under the parent and the rest under a collapse named after the kind', () => {
     const arranged = arrangeListedClassChildren(
       { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
       [
@@ -14,16 +14,21 @@ describe('listed class children', () => {
         listed('_repository', 'Property'),
         listed('verify', 'Operation'),
       ],
-      new Set(['ce:Property:token']),
+      [
+        edge('relative', 'ce:Property:token', 1, true),
+        edge('owns', 'ce:Operation:verify', 2, true),
+        edge('owns', 'ce:Property:email', 3, false),
+        edge('owns', 'ce:Property:_repository', 4, false),
+      ],
     );
-    expect(arranged.map((node) => node.name)).toEqual(['token', 'verify', 'properties']);
-    expect(arranged.find((node) => node.name === 'properties')?.children.map((node) => node.name).sort()).toEqual([
+    expect(arranged.map((node) => node.name)).toEqual(['token', 'verify', 'owns']);
+    expect(arranged.find((node) => node.name === 'owns')?.children.map((node) => node.name).sort()).toEqual([
       '_repository',
       'email',
     ]);
   });
 
-  it('keeps relatives and the properties group if listed children were already arranged', () => {
+  it('keeps immediate children and the kind collapse if listed children were already arranged', () => {
     const once = arrangeListedClassChildren(
       { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
       [
@@ -32,21 +37,31 @@ describe('listed class children', () => {
         listed('_repository', 'Property'),
         listed('verify', 'Operation'),
       ],
-      new Set(['ce:Property:token']),
+      [
+        edge('relative', 'ce:Property:token', 1, true),
+        edge('owns', 'ce:Operation:verify', 2, true),
+        edge('owns', 'ce:Property:email', 3, false),
+        edge('owns', 'ce:Property:_repository', 4, false),
+      ],
     );
     const arranged = arrangeListedClassChildren(
       { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
       once,
-      new Set(['ce:Property:token']),
+      [
+        edge('relative', 'ce:Property:token', 1, true),
+        edge('owns', 'ce:Operation:verify', 2, true),
+        edge('owns', 'ce:Property:email', 3, false),
+        edge('owns', 'ce:Property:_repository', 4, false),
+      ],
     );
-    expect(arranged.map((node) => node.name)).toEqual(['token', 'verify', 'properties']);
-    expect(arranged.find((node) => node.name === 'properties')?.children.map((node) => node.name).sort()).toEqual([
+    expect(arranged.map((node) => node.name)).toEqual(['token', 'verify', 'owns']);
+    expect(arranged.find((node) => node.name === 'owns')?.children.map((node) => node.name).sort()).toEqual([
       '_repository',
       'email',
     ]);
   });
 
-  it('puts a domain-typed field under properties unless CodeQL marked it relative', () => {
+  it('does not guess a relative from source text', () => {
     const arranged = arrangeListedClassChildren(
       { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
       [
@@ -61,14 +76,19 @@ describe('listed class children', () => {
         },
         listed('email', 'Property'),
       ],
+      [
+        edge('owns', 'ce:Property:token', 1, false),
+        edge('owns', 'ce:Property:email', 2, false),
+      ],
     );
-    expect(arranged.map((node) => node.name)).toEqual(['token', 'properties']);
-    expect(arranged.find((node) => node.name === 'properties')?.children.map((node) => node.name)).toEqual([
+    expect(arranged.map((node) => node.name)).toEqual(['owns']);
+    expect(arranged.find((node) => node.name === 'owns')?.children.map((node) => node.name).sort()).toEqual([
       'email',
+      'token',
     ]);
   });
 
-  it('lists relatives, then operations, then properties', () => {
+  it('sorts by edge order and leaves accessors as the loader emitted them', () => {
     const arranged = arrangeListedClassChildren(
       { node_id: 'ce:OoadClass:AccountCredentials', practice: 'clean_engineering' },
       [
@@ -85,16 +105,22 @@ describe('listed class children', () => {
         listed('_repository', 'Property'),
         listed('verify', 'Operation'),
       ],
+      [
+        edge('relative', 'ce:Operation:customer', 1, true),
+        edge('owns', 'ce:Operation:verify', 2, true),
+        edge('owns', 'ce:Property:email', 3, false),
+        edge('owns', 'ce:Property:_repository', 4, false),
+      ],
     );
-    expect(arranged.map((node) => node.name)).toEqual(['customer', 'verify', 'properties']);
-    expect(arranged.find((node) => node.name === 'customer')?.semantic_type).toBe('Property');
-    expect(arranged.find((node) => node.name === 'properties')?.children.map((node) => node.name).sort()).toEqual([
+    expect(arranged.map((node) => node.name)).toEqual(['customer', 'verify', 'owns']);
+    expect(arranged.find((node) => node.name === 'customer')?.semantic_type).toBe('Operation');
+    expect(arranged.find((node) => node.name === 'owns')?.children.map((node) => node.name).sort()).toEqual([
       '_repository',
       'email',
     ]);
   });
 
-  it('presents relatives, then operations, then properties under the class', () => {
+  it('presents immediate relatives then operations, with leftover owns collapsed', () => {
     const presented = KnowledgeGraph.fromDto({
       id: '11111111-1111-4111-8111-111111111111',
       folder: 'C:/tmp/kg',
@@ -125,7 +151,7 @@ describe('listed class children', () => {
               file: 'src/account-credentials.ts',
               start_line: 66,
               end_line: 66,
-              text: 'public email = \'\'',
+              text: "public email = ''",
             }),
             node('ce:Property:_repository', '_repository', 'Property', {
               file: 'src/account-credentials.ts',
@@ -141,12 +167,13 @@ describe('listed class children', () => {
             }),
           ],
           relationships: [
-            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:token' },
-            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:customer' },
-            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:email' },
-            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:_repository' },
-            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:verify' },
-            { kind: 'relative', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:token' },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:token', sequential_order: 2, immediate: true },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:customer', sequential_order: 1, immediate: true },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:email', sequential_order: 10, immediate: false },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:_repository', sequential_order: 11, immediate: false },
+            { kind: 'owns', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:verify', sequential_order: 3, immediate: true },
+            { kind: 'relative', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Property:token', sequential_order: 2, immediate: true },
+            { kind: 'relative', from_id: 'ce:OoadClass:AccountCredentials', to_id: 'ce:Operation:customer', sequential_order: 1, immediate: true },
           ],
         },
       ],
@@ -156,9 +183,9 @@ describe('listed class children', () => {
       'customer',
       'token',
       'verify',
-      'properties',
+      'owns',
     ]);
-    expect(account?.children.find((child) => child.name === 'properties')?.children.map((child) => child.name).sort()).toEqual([
+    expect(account?.children.find((child) => child.name === 'owns')?.children.map((child) => child.name).sort()).toEqual([
       '_repository',
       'email',
     ]);
@@ -169,6 +196,16 @@ describe('listed class children', () => {
 
 function walk(nodes: { name: string; children?: any[] }[]): { name: string; children?: any[] }[] {
   return nodes.flatMap((node) => [node, ...walk(node.children ?? [])]);
+}
+
+function edge(kind: string, to_id: string, sequential_order: number, immediate: boolean) {
+  return {
+    kind,
+    from_id: 'ce:OoadClass:AccountCredentials',
+    to_id,
+    sequential_order,
+    immediate,
+  };
 }
 
 function node(

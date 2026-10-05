@@ -66,3 +66,69 @@ Error: CodeQL detected code written in GitHub Actions and Python, but not any wr
 [2026-09-24 11:25:23] [build-stderr] No JavaScript or TypeScript code found.
 
 
+run-queries codeql: CodeQLRunError: codeql failed: Not caching stages during query-loading, since max heap size is only 1800 MB.
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\rule_hits.qll:28,44-52)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\rule_hits.qll:41,44-52)
+ERROR: could not resolve type TopLevel (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\rule_hits.qll:49,21-29)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:14,62-70)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:31,43-51)
+ERROR: getFile() cannot be resolved for type Exprs::Call (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:54,7-14)
+ERROR: getFile() cannot be resolved for type Exprs::Call (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:55,7-14)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:56,40-48)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:57,41-49)
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 372, in _evaluate_pack
+    batch = self._rule_rows()
+            ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 439, in _rule_rows
+    batch.update(self._combined_rule_rows())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 471, in _combined_rule_rows
+    return self._codeql.run_rules(pack / "rules.ql", self._combined_slugs, database=db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 612, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 555, in run_queries
+    raise self._failed_codeql(run)
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql failed: Not caching stages during query-loading, since max heap size is only 1800 MB.
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\rule_hits.qll:28,44-52)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\rule_hits.qll:41,44-52)
+ERROR: could not resolve type TopLevel (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\rule_hits.qll:49,21-29)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:14,62-70)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:31,43-51)
+ERROR: getFile() cannot be resolved for type Exprs::Call (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:54,7-14)
+ERROR: getFile() cannot be resolved for type Exprs::Call (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:55,7-14)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:56,40-48)
+ERROR: getValue() cannot be resolved for type Exprs::StringLiteral (C:\dev\abd-context-driven-delivery\practices\stories\model\python\codeql\model.qll:57,41-49)
+
+
+run-queries codeql: CodeQLRunError: codeql failed: ERROR: Referenced pack 'codeql/python-all' was not found locally, and no lock file is present for 'cdd/ux-graph-query-python'. Run 'codeql pack install' to create the lock file and download the dependencies. (C:\dev\abd-context-driven-delivery\practices\ux\model\python\codeql\qlpack.yml:1,1-1)
+ERROR: No valid pack solution found:
+Because 'cdd/ux-graph-query-python' depends on 'codeql/python-all@*', but pack 'codeql/python-all' was not found, version solving failed.
+ (C:\dev\abd-context-driven-delivery\practices\ux\model\python\codeql\qlpack.yml:1,1-1)
+A fatal error occurred: A 'codeql resolve extensions-by-pack' operation failed with error code 2
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 372, in _evaluate_pack
+    batch = self._rule_rows()
+            ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 439, in _rule_rows
+    batch.update(self._combined_rule_rows())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\practice_graph.py", line 471, in _combined_rule_rows
+    return self._codeql.run_rules(pack / "rules.ql", self._combined_slugs, database=db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 612, in run_rules
+    tuples = self.run_queries([query], database, write_filter=write_filter).get(query.stem) or []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 555, in run_queries
+    raise self._failed_codeql(run)
+harness.knowledge_graph.model.codeql.CodeQLRunError: codeql failed: ERROR: Referenced pack 'codeql/python-all' was not found locally, and no lock file is present for 'cdd/ux-graph-query-python'. Run 'codeql pack install' to create the lock file and download the dependencies. (C:\dev\abd-context-driven-delivery\practices\ux\model\python\codeql\qlpack.yml:1,1-1)
+ERROR: No valid pack solution found:
+Because 'cdd/ux-graph-query-python' depends on 'codeql/python-all@*', but pack 'codeql/python-all' was not found, version solving failed.
+ (C:\dev\abd-context-driven-delivery\practices\ux\model\python\codeql\qlpack.yml:1,1-1)
+A fatal error occurred: A 'codeql resolve extensions-by-pack' operation failed with error code 2
+
+

@@ -1689,11 +1689,12 @@ describe("a scenario step", () => {
       expect(engineering.map((node) => node.name)).not.toContain("When they send a feedback note");
     });
 
-    it("should leave belongsTo and owns out of the relationship list", () => {
+    it("should leave belongsTo, owns, and relative out of the relationship list", () => {
       expect(
         shownRelationships([
           { kind: "belongsTo", nodeId: "story", name: "Load Customer" },
           { kind: "owns", nodeId: "customer", name: "Customer" },
+          { kind: "relative", nodeId: "token", name: "token" },
           { kind: "invokes", nodeId: "load", name: "load" },
           { kind: "demonstrates", nodeId: "example", name: "seedCustomer" },
           { kind: "demonstratedThrough", nodeId: "example", name: "unverifiedAccountCredentials" },
@@ -1800,6 +1801,42 @@ describe("a scenario step", () => {
       thenStep.relationships = [{ kind: "expected", nodeId: customer.nodeId, name: customer.name }];
       expect(flatten(retainedTree([thenStep], ["Stories"])).map((node) => node.name)).toContain("Customer");
     });
+});
+
+describe("a practice graph", () => {
+  describe("that has been populated from CodeQL", () => {
+    it("should register every node from node queries", () => {
+      // BDD: SIGNATURE
+    });
+
+    it("should relate every edge from edge queries", () => {
+      // BDD: SIGNATURE
+    });
+  });
+});
+
+describe("a class", () => {
+  describe("that has relative, operation, and property children from CodeQL", () => {
+    it("should list relative children first", () => {
+      // BDD: SIGNATURE
+    });
+
+    it("should list operations after relatives", () => {
+      // BDD: SIGNATURE
+    });
+
+    it("should list a properties collapse after operations", () => {
+      // BDD: SIGNATURE
+    });
+  });
+});
+
+describe("a story", () => {
+  describe("that has demonstrates edges", () => {
+    it("should list examples from those demonstrates edges", () => {
+      // BDD: SIGNATURE
+    });
+  });
 });
 
 describe("a property", () => {

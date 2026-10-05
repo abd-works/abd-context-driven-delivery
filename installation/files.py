@@ -138,10 +138,14 @@ class FileInstallation(Installation):
         return kebab
 
     def _command_stem(self, toolset: Any, op: str) -> str:
-        if getattr(toolset, "practice_guidance", None) is not None:
+        if getattr(toolset, "practice_guidance", None) is not None and op in {"instructions", "rules-markdown"}:
             slug = getattr(toolset, "slug", None)
             if slug:
                 return self._op_slug(str(slug))
+        if getattr(toolset, "practice_guidance", None) is not None:
+            slug = getattr(toolset, "slug", None)
+            if slug:
+                return f"{self._op_slug(str(slug))}-{op}"
         return op
 
     def _skill_ops(self, toolset: Any) -> list[str]:

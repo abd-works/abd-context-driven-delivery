@@ -457,6 +457,18 @@ with description("clean engineering skills registered for deploy") as self:
         shutil.rmtree(self._tmp, ignore_errors=True)
 
     with context("with a Cursor deploy output tree"):
+        with it("should keep new_project_rule off the fidelity MCP name"):
+            from installation.installer import Installer as LiveInstaller
+            from practices.clean_engineering.clean_engineering import CleanEngineering
+
+            mcp = LiveInstaller(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                [CleanEngineering()]
+            )
+            names = [op.mcp_name for op in mcp.mcp_operations]
+            expect(names).to(contain("clean-engineering-model"))
+            expect(names.count("clean-engineering-model")).to(equal(1))
+            expect("clean-engineering-model.new_project_rule" in names).to(equal(True))
+
         with it("should write kebab-case practice and fidelity skills"):
             names = InstalledTree(self.tree).skill_names()
             expect(names).to(contain("clean-engineering"))

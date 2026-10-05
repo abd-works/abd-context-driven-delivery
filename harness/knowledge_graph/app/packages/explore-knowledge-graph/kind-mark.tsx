@@ -3,7 +3,7 @@ export function kindLabel(kind: string, isFile: boolean): string {
     return 'File';
   }
   if (kind === 'FieldGroup') {
-    return 'properties';
+    return 'Properties';
   }
   if (kind === 'OoadClass') {
     return 'Class';

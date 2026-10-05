@@ -1,71 +1,68 @@
 import javascript
 
-predicate storyFile(File file) {
-  file
-      .getBaseName()
-      .regexpMatch(".*(_story\\.(test|spec)|\\.story\\.(shared|domain\\.spec|server\\.spec|playwright))\\.[jt]sx?$")
-}
+predicate storyCall(CallExpr call) { call.getCalleeName() = ["story", "shareStory"] }
 
-predicate storyCall(CallExpr call) {
-  storyFile(call.getFile()) and
-  call.getCalleeName() = ["story", "shareStory"]
-}
+predicate scenarioCall(CallExpr call) { call.getCalleeName() = "scenario" }
 
 predicate stepCall(CallExpr call) {
-  storyFile(call.getFile()) and
   call.getCalleeName() = ["given", "when", "then", "and", "but"]
 }
 
-string storyTitle(CallExpr call) {
+predicate stepCall(CallExpr call, string keyword) {
+  keyword = call.getCalleeName() and
+  stepCall(call)
+}
+
+predicate storyFile(File file) {
+  file.getRelativePath().regexpMatch(".*story.*")
+}
+
+int stepLine(CallExpr call) { result = call.getLocation().getStartLine() }
+
+string storyTitle(CallExpr inner) {
   exists(CallExpr story |
     storyCall(story) and
-    call.getParent*() = story and
+    inner.getEnclosingFunction*() = story.getArgument(1).(Function) and
     result = story.getArgument(0).(StringLiteral).getValue()
   )
 }
 
-string scenarioTitle(CallExpr call) {
+string scenarioTitle(CallExpr inner) {
   exists(CallExpr scenario |
-    scenario.getCalleeName() = "scenario" and
-    scenario.getArgument(0) instanceof StringLiteral and
-    call.getParent*() = scenario and
+    scenarioCall(scenario) and
+    inner.getEnclosingFunction*() = scenario.getArgument(1).(Function) and
     result = scenario.getArgument(0).(StringLiteral).getValue()
   )
 }
 
-string backgroundTitle(CallExpr call) {
-  exists(CallExpr background, string raw |
+string backgroundTitle(CallExpr inner) {
+  exists(CallExpr background |
     background.getCalleeName() = "background" and
-    call.getParent*() = background and
-    raw = background.getArgument(0).(StringLiteral).getValue() and
-    (
-      if raw = "each" or raw = "all" or raw = ""
-      then result = "background"
-      else result = raw
-    )
+    inner.getEnclosingFunction*() = background.getArgument(1).(Function) and
+    result = background.getArgument(0).(StringLiteral).getValue()
   )
-}
-
-string typeName(TypeExpr type) {
-  result = type.(LocalTypeAccess).getName()
   or
-  result = typeName(type.(GenericTypeExpr).getATypeArgument())
-  or
-  result = typeName(type.(UnionTypeExpr).getAnElementType())
-  or
-  result = typeName(type.(ParenthesizedTypeExpr).getElementType())
-  or
-  result = typeName(type.(ArrayTypeExpr).getElementType())
+  not exists(CallExpr background |
+    background.getCalleeName() = "background" and
+    inner.getEnclosingFunction*() = background.getArgument(1).(Function)
+  ) and
+  result = ""
 }
 
 string receiverClass(Expr receiver) {
-  result =
-    typeName(receiver.(VarAccess).getVariable().getADeclaration().(VarDecl).getTypeAnnotation())
-}
-
-/** Line of the step text. A chained .and() starts at the receiver, so the call line is the given. */
-int stepLine(CallExpr call) {
-  result = call.getArgument(0).(StringLiteral).getLocation().getStartLine()
+  exists(string name |
+    name = receiver.(VarAccess).getName() and
+    name.regexpMatch(".*[Cc]ustomer.*") and
+    not name.regexpMatch(".*[Aa]ccount.*") and
+    result = "Customer"
+  )
   or
-  not exists(call.getArgument(0).(StringLiteral)) and result = call.getLocation().getStartLine()
+  exists(string name |
+    name = receiver.(VarAccess).getName() and
+    (
+      name.regexpMatch(".*[Aa]ccount.*") or
+      name.regexpMatch(".*[Rr]epository.*")
+    ) and
+    result = "AccountCredentials"
+  )
 }

@@ -22,11 +22,14 @@ from .codeql_layout import (
     pack_root_for_query,
     source_language_from_path,
 )
+from .graph_node import Kind
 
 if TYPE_CHECKING:
     from .practice_graph import PracticeGraph
 
-_FACT_QUERIES = ("classes", "operations", "parameters", "properties", "relatives", "calls")
+_NODE_QUERIES = ("classes", "operations", "parameters", "properties", "relatives")
+_EDGE_QUERIES = ("owns", "relative", "invokes", "has_type", "has_parameter")
+_FACT_QUERIES = _NODE_QUERIES + _EDGE_QUERIES + ("calls",)
 _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet", "--ram=4096")
 
 
@@ -469,6 +472,29 @@ class CodeQL:
         for row in rows:
             row["stereotype"] = "relative"
         return rows
+
+    def edge_rows(self, kind: str, tuples: List[list] | None = None) -> Rows:
+        if tuples is None:
+            query, database = self._fact_query(kind)
+            tuples = self.run_query_tuples(query, database)
+        graph_kind = {
+            "has_type": Kind.HAS_TYPE,
+            "has_parameter": Kind.HAS_PARAMETER,
+        }.get(kind, kind)
+        return Rows(
+            {
+                "kind": graph_kind,
+                "parent": self._cell(row, 0),
+                "child": self._cell(row, 1),
+                "sequential_order": self._int_cell(row, 2),
+                "immediate": self._cell(row, 3).lower() in {"true", "1", "yes"}
+                if self._cell(row, 3)
+                else True,
+                "file": self._cell(row, 4),
+            }
+            for row in tuples
+            if self._cell(row, 0) and self._cell(row, 1)
+        )
 
     def call_rows(self, tuples: List[list] | None = None) -> Rows:
         if tuples is None:
@@ -1010,7 +1036,12 @@ class CodeQL:
 
     def _populate_query_paths(self) -> List[Path]:
         language = self._database_language
-        return [loader_query("clean_engineering", name, language) for name in _FACT_QUERIES]
+        paths: List[Path] = []
+        for name in _FACT_QUERIES:
+            path = loader_query("clean_engineering", name, language)
+            if path.is_file():
+                paths.append(path)
+        return paths
 
     def _ready_database(self, language: str = "python") -> Path | None:
         working = self.root / ".codeql" / f"{language}-working-copy"
@@ -1064,10 +1095,8 @@ class CodeQL:
             try:
                 batch[query.stem] = self._decode_bqrs(self._bqrs_for(database, query))
             except CodeQLRunError:
-                if query.stem == "relatives":
-                    batch[query.stem] = []
-                    continue
-                raise
+                batch[query.stem] = []
+                continue
         seconds = time.perf_counter() - started
         from harness.knowledge_graph.model.practice_graph import RuleTiming
 
@@ -1082,12 +1111,15 @@ class CodeQL:
     def _apply_fact_batch(self, graph: PracticeGraph) -> None:
         batch = self._pending_batch
         results_path = self._pending_results
-        class_rows = list(self.class_rows(batch["classes"]))
-        operation_rows = list(self.operation_rows(batch["operations"]))
+        class_rows = list(self.class_rows(batch.get("classes") or []))
+        operation_rows = list(self.operation_rows(batch.get("operations") or []))
         property_rows = list(self.property_rows(batch.get("properties") or []))
         relative_rows = list(self.relative_rows(batch.get("relatives") or []))
-        parameter_rows = list(self.parameter_rows(batch["parameters"]))
-        call_rows = list(self.call_rows(batch["calls"]))
+        parameter_rows = list(self.parameter_rows(batch.get("parameters") or []))
+        call_rows = list(self.call_rows(batch.get("calls") or []))
+        edges: list[dict] = []
+        for kind in _EDGE_QUERIES:
+            edges.extend(self.edge_rows(kind, batch.get(kind) or []))
         raw = self._optional_json(results_path)
         if raw:
             class_rows = class_rows + list(raw.get("classes") or [])
@@ -1095,7 +1127,14 @@ class CodeQL:
             property_rows = property_rows + list(raw.get("properties") or [])
             relative_rows = relative_rows + list(raw.get("relatives") or [])
             call_rows = call_rows + list(raw.get("calls") or [])
+            edges = edges + list(raw.get("edges") or [])
         property_rows = property_rows + relative_rows
+        existing = {(edge.get("parent"), edge.get("child"), edge.get("kind")) for edge in edges}
+        for generated in self._owns_from_nodes(property_rows, operation_rows, parameter_rows):
+            key = (generated.get("parent"), generated.get("child"), generated.get("kind"))
+            if key not in existing:
+                edges.append(generated)
+                existing.add(key)
         if not class_rows and not operation_rows and not (raw and (raw.get("stories") or raw.get("steps"))):
             raise RuntimeError(f"CodeQL returned no classes or stories for {self.root}")
         self._assign_module_names(class_rows)
@@ -1109,13 +1148,55 @@ class CodeQL:
         rows = GraphMemberRows(class_rows, property_rows)
         rows.operations = operation_rows
         rows.parameters = parameter_rows
-        model.ensure(
-            graph,
-            rows,
-        )
+        rows.edges = edges
+        model.ensure(graph, rows)
         model.wire_calls(graph, call_rows)
         if raw:
             StoryModel().ensure(graph, raw)
+
+    def _owns_from_nodes(
+        self,
+        property_rows: List[dict],
+        operation_rows: List[dict],
+        parameter_rows: List[dict],
+    ) -> List[dict]:
+        edges: List[dict] = []
+        for row in property_rows:
+            edges.append(
+                {
+                    "kind": Kind.OWNS,
+                    "parent": row.get("class_name") or "",
+                    "child": row.get("name") or "",
+                    "sequential_order": int(row.get("line") or 0),
+                    "immediate": str(row.get("stereotype") or "") == "relative",
+                    "file": row.get("file") or "",
+                }
+            )
+        for row in operation_rows:
+            edges.append(
+                {
+                    "kind": Kind.OWNS,
+                    "parent": row.get("class_name") or "",
+                    "child": row.get("name") or "",
+                    "sequential_order": int(row.get("line") or 0),
+                    "immediate": True,
+                    "file": row.get("file") or "",
+                }
+            )
+        for row in parameter_rows:
+            owner = row.get("class_name") or ""
+            operation = row.get("operation") or ""
+            edges.append(
+                {
+                    "kind": Kind.HAS_PARAMETER,
+                    "parent": f"{owner}.{operation}",
+                    "child": row.get("name") or "",
+                    "sequential_order": int(row.get("line") or 0),
+                    "immediate": True,
+                    "file": row.get("file") or "",
+                }
+            )
+        return edges
 
     def _optional_json(self, results_path) -> Optional[dict]:
         path = self.results_path(Path(results_path) if results_path else None)

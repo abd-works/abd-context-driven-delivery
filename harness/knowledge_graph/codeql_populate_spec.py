@@ -15,7 +15,8 @@ for _cat in ("practices", "tools"):
 from expects import equal, expect, have_length
 from mamba import description, it
 
-from harness.knowledge_graph.model import CodeQL, Kind, PracticeGraph
+from harness.knowledge_graph.model import CodeQL, Kind
+from harness.knowledge_graph.model.practice_graph import PracticeGraph
 from harness.knowledge_graph.model.nodes import GraphStep
 from practices.clean_engineering.model.codeql.codeql_model import (
     CleanEngineeringModel,
@@ -81,6 +82,24 @@ with description("CodeQL class members"):
                 "return_type": "",
             }
         ]
+        rows.edges = [
+            {
+                "kind": "owns",
+                "parent": "Item",
+                "child": "sku",
+                "sequential_order": 12,
+                "immediate": False,
+                "file": "b/Item.ts",
+            },
+            {
+                "kind": "owns",
+                "parent": "Item",
+                "child": "rename",
+                "sequential_order": 14,
+                "immediate": True,
+                "file": "b/Item.ts",
+            },
+        ]
         CleanEngineeringModel("CleanEngineering", 1).ensure(graph, rows)
         owners = [
             node
@@ -108,6 +127,12 @@ with description("CodeQL populate on PracticeGraph"):
         fetch = graph.operation_named("IMavenirClient", "fetchCustomer")
         expect(fetch in load_op.invoked_operations()).to(equal(True))
         expect(load_op in fetch.called_by).to(equal(True))
+        customer = next(
+            node
+            for node in graph.nodes.values()
+            if node.name == "Customer" and node.semantic_type() == "OoadClass"
+        )
+        expect(customer.practice).to(equal("clean_engineering"))
 
     with it("should wire step invokes operation when story source lines match"):
         graph = PracticeGraph(_SLICE)
@@ -150,19 +175,24 @@ with description("CodeQL populate on PracticeGraph"):
             {"class_name": "CreateAgentToolset", "name": "__init__"},
             {"class_name": "Ddd", "name": "__init__"},
         ]
+        rows.edges = [
+            {
+                "kind": "owns",
+                "parent": "CreateAgentToolset",
+                "child": "__init__",
+                "sequential_order": 1,
+                "immediate": True,
+            },
+            {
+                "kind": "owns",
+                "parent": "Ddd",
+                "child": "__init__",
+                "sequential_order": 1,
+                "immediate": True,
+            },
+        ]
         model = CleanEngineeringModel("CleanEngineering", 1)
         model.ensure(graph, rows)
-        model.wire_calls(
-            graph,
-            [
-                {
-                    "caller_class": "CreateAgentToolset",
-                    "caller_operation": "__init__",
-                    "callee_class": "Ddd",
-                    "callee_operation": "__init__",
-                }
-            ],
-        )
         toolset = graph.operation_named("CreateAgentToolset", "__init__")
         ddd_init = graph.operation_named("Ddd", "__init__")
         expect(ddd_init in toolset.invoked_operations()).to(equal(False))
@@ -194,6 +224,16 @@ with description("CodeQL populate on PracticeGraph"):
                 "line": 130,
                 "end_line": 138,
                 "text": "load(customerId: string): Customer {",
+            }
+        ]
+        rows.edges = [
+            {
+                "kind": "owns",
+                "parent": "CustomerRepository",
+                "child": "load",
+                "sequential_order": 130,
+                "immediate": True,
+                "file": "domain/customer/Customer.ts",
             }
         ]
         CleanEngineeringModel("CleanEngineering", 1).ensure(graph, rows)
@@ -228,13 +268,23 @@ with description("CodeQL populate on PracticeGraph"):
                 "end_line": 72,
             }
         ]
+        rows.edges = [
+            {
+                "kind": "owns",
+                "parent": "harness/knowledge_graph/model/dot_graph.py",
+                "child": "walk_hierarchy",
+                "sequential_order": 45,
+                "immediate": True,
+                "file": "harness/knowledge_graph/model/dot_graph.py",
+            }
+        ]
         CleanEngineeringModel("CleanEngineering", 1).ensure(graph, rows)
         walk = graph.operation_named(
             "harness/knowledge_graph/model/dot_graph.py",
             "walk_hierarchy",
         )
         expect(walk is not None).to(equal(True))
-        owner = next(iter(walk.related(Kind.BELONGS_TO)), None)
+        owner = next(iter(walk.related(Kind.OWNS, direction="in")), None)
         expect(owner.semantic_type()).to(equal("File"))
         expect(owner.name).to(equal("harness/knowledge_graph/model/dot_graph.py"))
 

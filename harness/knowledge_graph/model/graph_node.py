@@ -49,11 +49,15 @@ class Relationship:
         from_node: "Node",
         to_node: "Node",
         cardinality: str = "",
+        sequential_order: int = 0,
+        immediate: bool = True,
     ) -> None:
         self.kind = kind
         self.from_node = from_node
         self.to_node = to_node
         self.cardinality = cardinality
+        self.sequential_order = sequential_order
+        self.immediate = immediate
 
     @property
     def from_id(self) -> str:
@@ -68,8 +72,15 @@ class NodeWalk:
     """Walk ownership and incident edges from this node."""
 
     def children(self) -> List["Node"]:
-        owned = self.related(Kind.OWNS)
-        return owned if owned else self.related()
+        edges = [
+            edge
+            for edge in self.graph.edges_from(self)
+            if edge.kind == Kind.OWNS
+        ]
+        if not edges:
+            edges = list(self.graph.edges_from(self))
+        edges.sort(key=lambda edge: (edge.sequential_order, edge.to_node.name or ""))
+        return self._unique([edge.to_node for edge in edges])
 
     def ancestors(self) -> List["Node"]:
         found: List[Node] = []
@@ -136,8 +147,24 @@ class NodeWalk:
 class NodeRelations:
     """Record and read this node's relationships."""
 
-    def relate(self, kind: str, to: "Node", cardinality: str = "") -> Relationship:
-        return self.graph.relate(Relationship(kind, self, to, cardinality=cardinality))
+    def relate(
+        self,
+        kind: str,
+        to: "Node",
+        cardinality: str = "",
+        sequential_order: int = 0,
+        immediate: bool = True,
+    ) -> Relationship:
+        return self.graph.relate(
+            Relationship(
+                kind,
+                self,
+                to,
+                cardinality=cardinality,
+                sequential_order=sequential_order,
+                immediate=immediate,
+            )
+        )
 
     def related(self, kind: Optional[str] = None, *, direction: str = "out") -> List["Node"]:
         if direction == "out":

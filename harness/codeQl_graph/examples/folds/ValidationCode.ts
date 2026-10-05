@@ -1,0 +1,3 @@
+class ValidationCode {
+  value: string
+}

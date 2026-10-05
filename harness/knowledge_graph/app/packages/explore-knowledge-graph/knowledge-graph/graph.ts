@@ -98,6 +98,8 @@ export const RelationshipSchema = z.object({
   kind: z.string(),
   from_id: z.string(),
   to_id: z.string(),
+  sequential_order: z.number().int().default(0),
+  immediate: z.boolean().default(true),
 });
 
 export const PracticeGraphSchema = z.object({
@@ -384,6 +386,14 @@ export class Relationship {
 
   get toId(): string {
     return this.dto.to_id;
+  }
+
+  get sequentialOrder(): number {
+    return this.dto.sequential_order;
+  }
+
+  get immediate(): boolean {
+    return this.dto.immediate;
   }
 
   static fromDto(dto: RelationshipDto): Relationship {
@@ -1326,7 +1336,7 @@ export class KnowledgeGraph {
         source: folded.source,
         path,
         origin: leaf.source?.file ? leaf.source : null,
-        children: this._arrangeClassChildren(node, path, folded.children),
+        children: this._arrangeListedChildren(node, path, folded.children),
         failed: leaf.failed + folded.failed,
         total: leaf.total + folded.total,
       };
@@ -1363,29 +1373,17 @@ export class KnowledgeGraph {
     const parentOf = new Map<string, string>();
     for (const edge of this._treeOwnsEdges()) {
       const from = this._nodeById(edge.fromId);
-      if (from?.semanticType === 'BoundedContext' || from?.semanticType === 'Aggregate') {
+      if (from?.practice === 'ddd') {
         continue;
       }
       parentOf.set(edge.toId, edge.fromId);
     }
     const keep = new Set<string>();
-    const dddTypes = new Set([
-      'Entity',
-      'EntityRoot',
-      'ValueObject',
-      'Repository',
-      'DomainEvent',
-      'DomainService',
-      'Specification',
-    ]);
     for (const node of this.listedNodes()) {
       if (node.semanticType === 'CleanEngineeringModel' || this._isFileNode(node)) {
         continue;
       }
-      if (
-        node.practice !== practice &&
-        !(practice === 'clean_engineering' && dddTypes.has(node.semanticType))
-      ) {
+      if (node.practice !== practice) {
         continue;
       }
       keep.add(node.nodeId);
@@ -1417,7 +1415,7 @@ export class KnowledgeGraph {
         source: folded.source,
         path,
         origin: leaf.source?.file ? leaf.source : null,
-        children: this._arrangeClassChildren(node, path, folded.children),
+        children: this._arrangeListedChildren(node, path, folded.children),
         failed: leaf.failed + folded.failed,
         total: leaf.total + folded.total,
       };
@@ -1448,23 +1446,17 @@ export class KnowledgeGraph {
     return { name, source: leaf.source, children, failed, total };
   }
 
-  private _arrangeClassChildren(
+  private _arrangeListedChildren(
     node: GraphNode,
     path: string,
     children: ListedTreeNode[],
   ): ListedTreeNode[] {
-    if (!isClassKind(node.semanticType)) {
-      return children;
-    }
-    const relativeIds = new Set(
-      this._allEdges()
-        .filter((edge) => edge.kind === 'relative' && edge.from_id === node.nodeId)
-        .map((edge) => edge.to_id),
-    );
     return arrangeListedClassChildren(
       { node_id: node.nodeId, path, practice: node.practice },
       children,
-      relativeIds,
+      this._allEdges().filter(
+        (edge) => edge.from_id === node.nodeId && edge.kind !== 'belongsTo',
+      ),
     );
   }
 
@@ -2588,13 +2580,6 @@ export function methodSignature(name: string, operationText: string, classText: 
   return line || operationText;
 }
 
-export function isAccessorSource(text: string): boolean {
-  const first = text.split('\n').find((line) => line.trim().length > 0)?.trim() ?? '';
-  return /^(?:(?:public|private|protected|static|abstract|override|readonly)\s+)*(?:get|set)\s+[A-Za-z_]/.test(
-    first,
-  );
-}
-
 export function isSimpleProperty(text: string): boolean {
   const lines = text
     .split('\n')
@@ -2633,28 +2618,10 @@ export function fieldTypeNames(text: string): string[] {
   return typeIdentifiers(declared);
 }
 
-export function isComplexFieldType(text: string): boolean {
-  return isRelativeProperty(text);
-}
-
-export function isRelativeProperty(text: string): boolean {
-  return fieldTypeNames(text).some((name) => isRelativeTypeName(name));
-}
-
-export function isRelativeTypeName(name: string): boolean {
-  if (!name || SKIP_TYPES.has(name) || SKIP_TYPES.has(name.toLowerCase())) {
-    return false;
-  }
-  if (!/^[A-Z]/.test(name)) {
-    return false;
-  }
-  return !/(Repository|Requirements|Operation|Exception|Error)$/.test(name);
-}
-
 export function arrangeListedClassChildren(
   owner: { node_id: string; path?: string; practice: string },
   children: ListedTreeNode[],
-  relativeIds: Set<string> = new Set(),
+  edges: RelationshipDto[] = [],
 ): ListedTreeNode[] {
   const members = children.flatMap((child) =>
     child.semantic_type === 'FieldGroup' ? child.children ?? [] : [child],
@@ -2663,28 +2630,51 @@ export function arrangeListedClassChildren(
     if (!child.practice) {
       child.practice = owner.practice;
     }
-    if (child.semantic_type === 'Operation' && isAccessorSource(child.source?.text ?? '')) {
-      child.semantic_type = 'Property';
+  }
+  const byId = new Map(members.map((child) => [child.node_id, child]));
+  const outgoing = edges
+    .filter((edge) => edge.from_id === owner.node_id)
+    .sort((left, right) => {
+      const immediate = Number(right.immediate !== false) - Number(left.immediate !== false);
+      if (immediate !== 0) {
+        return immediate;
+      }
+      return (left.sequential_order ?? 0) - (right.sequential_order ?? 0);
+    });
+  const seen = new Set<string>();
+  const immediate: ListedTreeNode[] = [];
+  const collapsed = new Map<string, ListedTreeNode[]>();
+  const collapseOrder = new Map<string, number>();
+  for (const edge of outgoing) {
+    const child = byId.get(edge.to_id);
+    if (!child || seen.has(child.node_id)) {
+      continue;
+    }
+    seen.add(child.node_id);
+    if (edge.immediate !== false) {
+      immediate.push(child);
+      continue;
+    }
+    const group = collapsed.get(edge.kind) ?? [];
+    group.push(child);
+    collapsed.set(edge.kind, group);
+    if (!collapseOrder.has(edge.kind)) {
+      collapseOrder.set(edge.kind, edge.sequential_order ?? 0);
     }
   }
-  const relatives = members.filter((child) => isListedRelative(child, relativeIds));
-  const relativeSet = new Set(relatives.map((child) => child.node_id));
-  const operations = members.filter((child) => child.semantic_type === 'Operation');
-  const fields = members.filter(
-    (child) => child.semantic_type === 'Property' && !relativeSet.has(child.node_id),
-  );
-  const rest = members.filter(
-    (child) =>
-      child.semantic_type !== 'Property' &&
-      child.semantic_type !== 'Operation' &&
-      child.semantic_type !== 'FieldGroup',
-  );
-  const arranged = [...relatives, ...operations];
-  if (fields.length) {
+  for (const child of members) {
+    if (!seen.has(child.node_id)) {
+      immediate.push(child);
+    }
+  }
+  const arranged = [...immediate];
+  for (const [kind, group] of [...collapsed.entries()].sort(
+    (left, right) => (collapseOrder.get(left[0]) ?? 0) - (collapseOrder.get(right[0]) ?? 0),
+  )) {
     arranged.push({
-      node_id: `${owner.node_id}::properties`,
-      name: 'properties',
-      path: `${owner.path ?? owner.node_id}.properties`,
+      node_id: `${owner.node_id}::${kind}`,
+      name: kind,
+      path: `${owner.path ?? owner.node_id}.${kind}`,
       practice: owner.practice,
       semantic_type: 'FieldGroup',
       is_file: false,
@@ -2694,29 +2684,12 @@ export function arrangeListedClassChildren(
       relationships: [],
       source: null,
       origin: null,
-      children: fields,
-      failed: fields.reduce((sum, child) => sum + child.failed, 0),
-      total: fields.reduce((sum, child) => sum + child.total, 0),
+      children: group,
+      failed: group.reduce((sum, child) => sum + child.failed, 0),
+      total: group.reduce((sum, child) => sum + child.total, 0),
     });
   }
-  return [...arranged, ...rest];
-}
-
-function isListedRelative(
-  child: ListedTreeNode,
-  relativeIds: Set<string>,
-): boolean {
-  if (child.semantic_type !== 'Property') {
-    return false;
-  }
-  if (relativeIds.has(child.node_id)) {
-    return true;
-  }
-  const text = child.source?.text ?? '';
-  if (isRelativeProperty(text)) {
-    return true;
-  }
-  return isAccessorSource(text) && returnTypeNames(text).some((name) => isRelativeTypeName(name));
+  return arranged;
 }
 
 export function signatureTypeNames(text: string): string[] {

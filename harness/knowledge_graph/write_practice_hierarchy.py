@@ -417,6 +417,10 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
             rule_tags[rule.slug] = tag
             rule_catalog.append({"slug": rule.slug, "tag": tag})
         hits = graph.violations_for(node)
+        properties = {"folder": getattr(node, "folder", "") or ""}
+        stereotype = str(getattr(node, "stereotype", "") or "")
+        if stereotype:
+            properties["stereotype"] = stereotype
         grouped[practice]["nodes"].append(
             {
                 "node_id": node.node_id,
@@ -430,7 +434,7 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
                 "semantic_type": semantic,
                 "sequential_order": int(getattr(node, "sequential_order", 0) or 0),
                 "keyword": str(getattr(node, "keyword", "") or ""),
-                "properties": {"folder": getattr(node, "folder", "") or ""},
+                "properties": properties,
                 "applicable_rules": [rule.slug for rule in matched],
                 "rule_tags": rule_tags,
                 "rule_catalog": rule_catalog,
@@ -459,6 +463,8 @@ def explorer_dto(graph: PracticeGraph, folder: Path) -> dict:
                 "from_id": edge.from_id,
                 "to_id": edge.to_id,
                 "cardinality": getattr(edge, "cardinality", "") or "",
+                "sequential_order": int(getattr(edge, "sequential_order", 0) or 0),
+                "immediate": bool(getattr(edge, "immediate", True)),
             }
         )
     all_nodes = [

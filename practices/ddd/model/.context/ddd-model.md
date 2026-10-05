@@ -276,32 +276,89 @@ bounded_context_map = DDDModelFactory.load(path)
 
 ## MarkdownFactory : Factory, MarkdownDomainNode
 
-## CodeqlDomainNode
+## CodeqlDomainNode : Node
 
++ practice: ddd
 + plain_name(text: str): str
 + building_block_type(kind: str): type
-	// the stereotype kind already on the type: Entity, ValueObject, Repository, DomainEvent, DomainService, Specification, Factory. is_root marks the aggregate root
-	// no kind: OoadClass
+	// Entity, EntityRoot, ValueObject, Repository, DomainEvent, DomainService, Specification, Factory
+----
+- named(name, semantic_type): Node
+	// the node this run already registered, with this name and type
 
-## CodeqlBoundedContextMap : BoundedContextMap
+CodeQL mixes the graph node into the DDD types. CodeQL runs over the database for a folder. It does not copy another model. `load_bounded_context_map_content` is that one run.
+
+Every noun is a node query. Every `Kind` is an edge query. `PracticeGraph` registers each node row, then relates each edge row. A CodeQL entity or aggregate is the node already registered. Clean Engineering already registered each class as an OoadClass. A DDD node query emits the stereotyped type with the same source span; `root` and `hasIdentity` edges hang on that DDD node. Populate does not promote a Clean Engineering class into a DDD type.
+
+### Node queries — `practices/ddd/model/{language}/codeql/loaders`
+
+Each row: node_id, name, semantic_type, practice, file, line, end_line.
+
+- **bounded-contexts.ql** — BoundedContext. Top folder (or nested folder) with the context marker
+- **aggregates.ql** — Aggregate. Folder or module that holds a root entity
+- **entities.ql** — Entity. Class with <<entity>>. is_root false
+- **entity-roots.ql** — EntityRoot. Class with <<aggregate root>>. is_root true
+- **value-objects.ql** — ValueObject. Class with <<value object>>
+- **repositories.ql** — Repository. Class with <<repository>>
+- **domain-services.ql** — DomainService. Class with <<domain service>>
+- **domain-events.ql** — DomainEvent. Class or property with <<domain event>>
+- **specifications.ql** — Specification. Class with <<specification>>
+- **factories.ql** — Factory. Class with <<factory>>
+
+### Edge queries — one file per kind
+
+Each row: parent_id, child_id, kind, sequential_order, immediate. `order by sequential_order`.
+
+- **owns.ql** — BoundedContext → BoundedContext, BoundedContext → Aggregate, Aggregate → Entity / EntityRoot / ValueObject / Repository / DomainService / DomainEvent / Specification / Factory
+- **belongs-to.ql** — the inverse of owns
+- **root.ql** — Aggregate → EntityRoot. order 1, immediate
+- **has-identity.ql** — Entity or EntityRoot → Property or Operation that is identity. order 1, immediate
+- **accesses.ql** — Repository → EntityRoot the repository loads
+- **associates.ql** — building block → building block from a property association
+- **composition.ql** — building block → building block from a property composition
+- **aggregation.ql** — building block → building block from a property aggregation
+
+Display reads only sequential_order and immediate. The root sits under the aggregate. Identity sits under the entity. Other members keep the Clean Engineering owns and relative edges on the matching OoadClass.
+
+## CodeqlBoundedContextMap : BoundedContextMap, CodeqlDomainNode
 
 + CodeqlBoundedContextMap(source: BoundedContextMap)
+	// empty until load
 ------
 + bounded_context_type: CodeqlBoundedContext
 + aggregate_type: CodeqlAggregate
 ----
 - load_bounded_context_map_content(): None
-	// cursor is the code query rows in file
+	// CodeQL.populate: node queries, then edge queries
+	// this map is the registered BoundedContextMap node
 - has_more_bounded_context(): bool
+	// another owns edge from this map whose child is a bounded context
 - get_next_bounded_context_from_file(): CodeqlBoundedContext
+	// that child, already registered
 + save(): str
+	// no-op. The graph is the structure this map built
 
 ## CodeqlBoundedContext : BoundedContext, CodeqlDomainNode
 
++ CodeqlBoundedContext()
+	// the next bounded-contexts.ql row
+------
++ owns
+	// child contexts and aggregates
+----
 - has_more_aggregate(): bool
 - get_next_aggregate_from_file(): CodeqlAggregate
+	// the next owns edge whose child is an aggregate
 
 ## CodeqlAggregate : Aggregate, CodeqlDomainNode
+
++ CodeqlAggregate()
+	// the next aggregates.ql row
+------
++ owns
+	// stereotyped classes in this aggregate
++ root
+	// root.ql. The EntityRoot, order 1, immediate
 
 ## CodeqlIntegration : Integration, CodeqlDomainNode
 
@@ -311,17 +368,40 @@ bounded_context_map = DDDModelFactory.load(path)
 
 ## CodeqlEntity : Entity, CodeqlDomainNode
 
++ CodeqlEntity()
+	// the next entities.ql row
+------
++ has_identity
+	// has-identity.ql
++ owns
+	// invariant objects. Clean Engineering already owns the same properties on the OoadClass
+----
 - get_next_property_from_file(): CodeqlProperty
-	// an identity property is recorded on identity
-	// is_root is true on the entity that is the aggregate root
+	// an identity property is on has_identity
+	// is_root is false
 - has_more_invariant_object(): bool
 - get_next_invariant_object_from_file(): CodeqlInvariantObject
+
+## CodeqlEntityRoot : EntityRoot, CodeqlDomainNode
+
++ CodeqlEntityRoot()
+	// the next entity-roots.ql row
+	// is_root is true
+------
++ has_identity
+	// has-identity.ql
 
 ## CodeqlInvariantObject : InvariantObject, CodeqlDomainNode
 
 ## CodeqlValueObject : ValueObject, CodeqlDomainNode
 
 ## CodeqlRepository : Repository, CodeqlDomainNode
+
++ CodeqlRepository()
+	// the next repositories.ql row
+------
++ accesses
+	// accesses.ql. The EntityRoot this repository loads
 
 ## CodeqlDomainService : DomainService, CodeqlDomainNode
 

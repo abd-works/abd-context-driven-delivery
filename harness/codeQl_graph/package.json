@@ -1,0 +1,7 @@
+{
+  "name": "@cdd/codeql-graph",
+  "private": true,
+  "scripts": {
+    "test": "python -m mamba codeql_graph_spec.py"
+  }
+}

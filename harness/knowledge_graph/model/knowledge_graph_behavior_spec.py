@@ -507,6 +507,39 @@ with description("an operation"):
             expect(source.folds[0].kind).to(equal("call"))
 
 
+with description("a practice graph"):
+    with context("that has been populated from CodeQL"):
+        with it("should register every node from node queries"):
+            # BDD: SIGNATURE
+            pass
+
+        with it("should relate every edge from edge queries"):
+            # BDD: SIGNATURE
+            pass
+
+
+with description("a class"):
+    with context("that has relative, operation, and property children from CodeQL"):
+        with it("should list relative children first"):
+            # BDD: SIGNATURE
+            pass
+
+        with it("should list operations after relatives"):
+            # BDD: SIGNATURE
+            pass
+
+        with it("should list a properties collapse after operations"):
+            # BDD: SIGNATURE
+            pass
+
+
+with description("a story"):
+    with context("that has demonstrates edges"):
+        with it("should list examples from those demonstrates edges"):
+            # BDD: SIGNATURE
+            pass
+
+
 with description("a property"):
     with context("that has source"):
         with it("behaves like an operation that has source"):

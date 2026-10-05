@@ -178,6 +178,9 @@ class PracticeGraph:
         for node in owner.related(Kind.OWNS):
             if node.semantic_type() == "Operation" and node.name == operation_name:
                 return node
+        for node in getattr(owner, "operation_nodes", []) or []:
+            if getattr(node, "name", None) == operation_name:
+                return node
         return None
 
     def find_class(self, name: str) -> Optional[Node]:

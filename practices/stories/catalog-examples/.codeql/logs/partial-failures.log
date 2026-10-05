@@ -1,0 +1,32 @@
+load cached facts: CodeQLRunError: no typescript-master or typescript-working-copy under C:\dev\abd-context-driven-delivery\practices\stories\catalog-examples\.codeql
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 1026, in _load_cached_facts
+    self.load_existing_facts(graph, results_path=self._pending_results)
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 1057, in load_existing_facts
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: no typescript-master or typescript-working-copy under C:\dev\abd-context-driven-delivery\practices\stories\catalog-examples\.codeql
+
+load cached facts: CodeQLRunError: no typescript-master or typescript-working-copy under C:\dev\abd-context-driven-delivery\practices\stories\catalog-examples\.codeql
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 1057, in _load_cached_facts
+    self.load_existing_facts(graph, results_path=self._pending_results)
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 1088, in load_existing_facts
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: no typescript-master or typescript-working-copy under C:\dev\abd-context-driven-delivery\practices\stories\catalog-examples\.codeql
+
+load cached facts: CodeQLRunError: no typescript-master or typescript-working-copy under C:\dev\abd-context-driven-delivery\practices\stories\catalog-examples\.codeql
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 1057, in _load_cached_facts
+    self.load_existing_facts(graph, results_path=self._pending_results)
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 1088, in load_existing_facts
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: no typescript-master or typescript-working-copy under C:\dev\abd-context-driven-delivery\practices\stories\catalog-examples\.codeql
+
+load cached facts: CodeQLRunError: no typescript-master or typescript-working-copy under C:\dev\abd-context-driven-delivery\practices\stories\catalog-examples\.codeql
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 1057, in _load_cached_facts
+    self.load_existing_facts(graph, results_path=self._pending_results)
+  File "C:\dev\abd-context-driven-delivery\harness\knowledge_graph\model\codeql.py", line 1088, in load_existing_facts
+    raise CodeQLRunError(
+harness.knowledge_graph.model.codeql.CodeQLRunError: no typescript-master or typescript-working-copy under C:\dev\abd-context-driven-delivery\practices\stories\catalog-examples\.codeql
+
