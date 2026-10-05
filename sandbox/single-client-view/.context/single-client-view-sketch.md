@@ -3,99 +3,91 @@ evidence: intended — user message 2026-10-05
 source: sandbox/single-client-view/.context/emil;-discussion.,txtx (open questions only; no answers yet)
 
 =========
-theme: View Client
+theme: Cross Sell Credit Cards
 ---------
 stories:
-View Client
-    Render Client Dashboard
+Cross Sell Credit Cards
+    Bring The Client Together
+        Sales Person --> See Client Across PC Bank And EQ Bank
+        Call Center --> See Client Across PC Bank And EQ Bank
+        Store --> See Client Across PC Bank And EQ Bank
+        // one person, both banks, so the offer is about the client and not one bank's record
+        // PC Bank holds credit cards; EQ Bank does not
+        // prospect, onboarding, and account say how far the relationship has gone
+        // lines read here: retail deposits, business banking, international banking, and PC Bank credit cards
+        Call Center --> Display PC Bank Onboarding Credit Cards
+        Call Center --> Display PC Bank Account Credit Cards
+        Single Client View --> Integrate PC Bank Onboarding Credit Cards
+        Single Client View --> Integrate PC Bank Account Credit Cards
         Call Center --> Render Client Dashboard
-    Display PC Bank Client
-        Call Center --> Display PC Bank Prospect
-        Call Center --> Display PC Bank Onboarding Retail Deposits
-        Call Center --> Display PC Bank Onboarding Business Banking
-        Call Center --> Display PC Bank Onboarding International Banking
-        Call Center --> Display PC Bank Account Retail Deposits
-        Call Center --> Display PC Bank Account Business Banking
-        Call Center --> Display PC Bank Account International Banking
-        // prospect system name unknown
-    Display EQ Bank Client
-        Call Center --> Display EQ Bank Prospect
-        Call Center --> Display EQ Bank Onboarding Retail Deposits
-        Call Center --> Display EQ Bank Onboarding Business Banking
-        Call Center --> Display EQ Bank Onboarding International Banking
-        Call Center --> Display EQ Bank Account Retail Deposits
-        Call Center --> Display EQ Bank Account Business Banking
-        Call Center --> Display EQ Bank Account International Banking
-        // prospect system name unknown
-    Integrate PC Bank System
-        Single Client View --> Integrate PC Bank Prospect
-        Single Client View --> Integrate PC Bank Onboarding Retail Deposits
-        Single Client View --> Integrate PC Bank Onboarding Business Banking
-        Single Client View --> Integrate PC Bank Onboarding International Banking
-        Single Client View --> Integrate PC Bank Account Retail Deposits
-        Single Client View --> Integrate PC Bank Account Business Banking
-        Single Client View --> Integrate PC Bank Account International Banking
-    Integrate EQ Bank System
-        Single Client View --> Integrate EQ Bank Prospect
-        Single Client View --> Integrate EQ Bank Onboarding Retail Deposits
-        Single Client View --> Integrate EQ Bank Onboarding Business Banking
-        Single Client View --> Integrate EQ Bank Onboarding International Banking
-        Single Client View --> Integrate EQ Bank Account Retail Deposits
-        Single Client View --> Integrate EQ Bank Account Business Banking
-        Single Client View --> Integrate EQ Bank Account International Banking
-        // further call-out stories stay out until a perspective must be called out beyond display
+    Sell Credit Cards
+        Sales Person --> Offer Credit Cards To Client Of Either Bank
+        Sales Person --> Offer Credit Cards To New Client Of One Bank
+    Offer Credit Cards On The Call
+        Call Center --> Offer Credit Cards To Client Of Either Bank
+        Call Center --> Offer Credit Cards To New Client Of One Bank
+    Offer Credit Cards In The Store
+        Store --> Offer Credit Cards To Client Of Either Bank
+        Store --> Offer Credit Cards To New Client Of One Bank
 ce:
 Client
-  render
-       -> System.display
-Bank
-  system
-  // instances: PC Bank, EQ Bank
-System
+  relationship
+  offerCreditCards
+       -> Relationship.read
+       // sales person, call center, and store each offer a PC Bank credit card
+       // offered when the client is known at PC Bank or EQ Bank and does not already hold one
+       // same offer for a client of either bank and for a new client of one bank
+Relationship
+  bank
   perspective
   line
+  read
+       -> System.display
+Bank
+  // instances: PC Bank, EQ Bank
+System
   display
   integrate
-  // perspective: prospect | onboarding | account
-  // prospect: one system per bank; system name unknown; no line
-  // onboarding and account: one system per line — retail deposits, business banking, international banking
-  // line is a property; retail deposits, business banking, and international banking are not classes
-  // PC Bank and EQ Bank are instances, not subtypes
+  // PC Bank credit card systems: onboarding, account
+  // EQ Bank has no credit card system
 
 =========
-theme: Cross Sell Products
+theme: Cross Sell Mortgages
 ---------
 stories:
-Cross Sell Products < scaffold
-    * approx 4–7 total stories < scaffold
-    View Upsell Opportunity < scaffold
-        Call Center --> View Upsell Opportunity < scaffold
-        * approx 2–4 more stories (other operational features; products and services) < scaffold
+Cross Sell Mortgages
+    Bring The Client Together
+        Sales Person --> See Client Across PC Bank And EQ Bank
+        Call Center --> See Client Across PC Bank And EQ Bank
+        Store --> See Client Across PC Bank And EQ Bank
+        // one person, both banks
+        // EQ Bank holds mortgages; PC Bank does not
+        // lines read here: retail deposits, business banking, international banking, and EQ Bank mortgages
+        Call Center --> Display EQ Bank Onboarding Mortgages
+        Call Center --> Display EQ Bank Account Mortgages
+        Single Client View --> Integrate EQ Bank Onboarding Mortgages
+        Single Client View --> Integrate EQ Bank Account Mortgages
+        Call Center --> Render Client Dashboard
+    Hand Off The Mortgage
+        Call Center --> Hand Mortgage Client To Sales Person
+    Sell Mortgages
+        Sales Person --> Offer Mortgages To Client Of Either Bank
+        Sales Person --> Offer Mortgages To New Client Of One Bank
+    Offer Mortgages In The Store
+        Store --> Offer Mortgages To Client Of Either Bank
+        Store --> Offer Mortgages To New Client Of One Bank
 ce:
-UpsellOpportunity < scaffold
-// opportunity is shown while the call center is on with the client; trigger detail waits
-
-=========
-theme: Understand Client Demographics
----------
-stories:
-Understand Client Demographics < scaffold
-    * approx 3–5 total stories < scaffold
-    View Client Demographics < scaffold
-        Call Center --> View Client Demographics < scaffold
-        * approx 2–4 more stories < scaffold
-ce:
-// demographics stays on Client until it owns a rule of its own
-
-=========
-theme: Feed Sales Force
----------
-stories:
-Feed Sales Force < scaffold
-    * approx 3–5 total stories < scaffold
-    Receive Upsell Opportunity < scaffold
-        Sales Force --> Receive Upsell Opportunity < scaffold
-        * approx 2–4 more stories < scaffold
-ce:
-SalesForce < scaffold
-// domain depends on the sales-force contract; the contract does not depend on Client
+Client
+  handOffMortgage
+       // call center spots the mortgage and passes the client to a sales person; call center does not offer it
+  offerMortgages
+       -> Relationship.read
+       // sales person and store offer when the client does not already hold an EQ Bank mortgage
+       // call center hands the client to a sales person and does not offer
+       // same offer for a client of either bank and for a new client of one bank
+Relationship
+  read
+       -> System.display
+System
+  // EQ Bank mortgage systems: onboarding, account
+  // PC Bank has no mortgage system
