@@ -189,6 +189,21 @@ with description("prompt echo detection"):
                     contain("rules : code")
                 )
 
+        with it("should write the toast when Cursor sends a slash-drive workspace root"):
+            with TemporaryDirectory() as tmp:
+                repo = Path(tmp) / "cdd"
+                other = Path(tmp) / "app"
+                repo.mkdir()
+                other.mkdir()
+                resolved = other.resolve()
+                rest = resolved.as_posix().split(":", 1)[1]
+                slash_drive = f"/{resolved.drive[0].lower()}:{rest}"
+                _prompt_echo.repo = repo
+                _prompt_echo.toast_roots = [slash_drive]
+                _prompt_echo.show_ide_toast("chat edit \u2192 rules : code")
+                copied = other / ".cursor" / "prompt-echo-toast.json"
+                expect(copied.is_file()).to(equal(True))
+
         with it("should keep both inject toasts from the same burst"):
             with TemporaryDirectory() as tmp:
                 repo = Path(tmp)

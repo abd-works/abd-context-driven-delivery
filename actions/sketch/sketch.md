@@ -23,7 +23,7 @@ Rough, informal artifacts produced through an interactive grill loop, kept along
 ## Loop
 
 1. **Views** — if the user already named the practices or fidelities, those are the views. Proceed. Otherwise AskQuestion which views to sketch, then proceed.
-2. **Shell** — in that same turn, write the high-level shell and `save_sketch`. Follow each active fidelity's **Scaffold** section for the level of detail, and that practice's sketch template for the notation. When the active fidelity has no **Scaffold** section, use the **Scaffold** section of the earlier fidelity in that same practice. One section per practice in the same file (`stories:`, `ce:`, `ddd:`, `ux:`, `bdd:`). No theme blocks.
+2. **Shell** — in that same turn, write the high-level shell and `save_sketch`. Follow each active fidelity's **Scaffold** section for the level of detail, and that practice's sketch template for the notation. When the active fidelity has no **Scaffold** section, use the **Scaffold** section of the earlier fidelity in that same practice. One section per practice in the same file: `stories:` for Stories, `clean engineering:` for Clean Engineering, `domain driven design:` for Domain Driven Design, `user experience:` for User Experience, `behavior driven development:` for Behavior Driven Development. No theme blocks.
 3. **Themes** — list the themes in priority order and AskQuestion which theme to start with.
 4. **Grill that theme** — ask three or four questions, then stop. See **When asking a question**. Do not sketch the theme during these questions.
 5. **Sketch** — fold those answers into the existing practice sections, using each practice's sketch template. `save_sketch`, then `review_sketch`.
@@ -35,22 +35,26 @@ Carry forward every mistake named in review. Correct the sketch. Do not regenera
 
 Sketches start at **discovery**. Load the **Rules** for each active practice at the fidelity you are in. The level of detail stays at that fidelity. Each practice names discovery differently:
 
-| Stage | Stories | Clean engineering | DDD | UX | BDD |
+| Stage | Stories | Clean Engineering | Domain Driven Design | User Experience | Behavior Driven Development |
 |---|---|---|---|---|---|
 | Discovery | `story_map` | `modules` | `bounded_context` | `ia` | `behavior` |
 | Specification | `scenarios` | `model` | `building_blocks` | `mockup` | `behavior` |
 | Implementation | `acceptance_tests` | `code` | `tactics` | `front_end_code` | `development` |
 
-You may dip into the next fidelity's **Sketch** section and **Rules** when one question needs it. Then return. The goal is to finish the fidelity you are on.
+You may dip into the next fidelity's **Sketch** section and **Rules** when a question needs it. Then return. The goal is to finish the fidelity you are on. Often that means exploring at the next level but that does not mean you're at the next fidelity load the fidelity and its rules as neededand then go backto the previous.
 
-Keep a theme list at the top of the sketch file. Every theme has one status: `scaffold`, `scaffold done`, `discovery done`, `specification done`, or `implementation done`. The shell sets each theme to `scaffold`. Update the status when that stage is finished.
+Keep a theme list at the bottom of the sketch file. Every theme has a collection of check boxes beside each other ->`scaffold done`, `discovery done`, `specification done`, or `implementation done`. The shell sets each theme to `scaffold`. Update the status when that stage is finished. You may add new themes at the request of the user or as you discover new themes you should validate with the user whenever you want to add new themes.
 
 At the bottom of a theme, AskQuestion:
 
 - Get deeper on this theme — move that theme to the next stage in the table and keep working it.
 - Explore another theme — return to the theme list.
 
-When a theme passes through a fidelity (`scaffold done`, `discovery done`, `specification done`, or `implementation done`), ask whether to generate an official document. If yes, AskQuestion which formats, `allow_multiple: true`: markdown, diagram, and code. Then run `generate` for that practice at that fidelity, in each chosen format, following `actions/generate/generate.md`.
+When a theme passes through a fidelity (`scaffold done`, `discovery done`, `specification done`, or `implementation done`), ask whether to generate an official document. If yes, AskQuestion which formats, `allow_multiple: true`: markdown, diagram, and code. Then call the generate skill once, with one guidance entry per chosen format:
+
+`generate.generate(guidance: [{toolset, fidelity, format}, …])`
+
+`toolset` is the practice (`practices.stories.stories:Stories`, `practices.clean_engineering.clean_engineering:CleanEngineering`, `practices.ddd.ddd:Ddd`, `practices.ux.ux:Ux`, `practices.bdd.bdd:Bdd`). `fidelity` is the stage just finished (`story_map`, `modules`, and the other names in the table above). `format` is `markdown`, `drawio` for a diagram, or the practice's code format (`python` or `html`). A fidelity slug such as `stories-story-map` is enough when the format stays that fidelity's default. Follow the instructions the tool returns, and run validate when those instructions say to.
 
 ### Shell before questions
 
@@ -107,14 +111,14 @@ If no template is found, say so and stop. Do not invent a notation.
 
 ## Multi-lens sketching
 
-When more than one practice is active (Stories, DDD, UX, Clean Engineering, BDD), they share one sketch file. Each practice has one section. A theme is worked inside those sections. It does not get its own block.
+When more than one practice is active (Stories, Clean Engineering, Domain Driven Design, User Experience, Behavior Driven Development), they share one sketch file. Each practice has one section. A theme is worked inside those sections. It does not get its own block.
 
 ```
 stories:
-ce:
-ddd:
-ux:
-bdd:
+clean engineering:
+domain driven design:
+user experience:
+behavior driven development:
 ```
 
 Omit a section when that practice is not active. Use that practice's sketch template inside its section. Do not invent a notation.
@@ -124,12 +128,12 @@ Omit a section when that practice is not active. Use that practice's sketch temp
 - **`views-already-named`** — When the user names the practices or fidelities, do not ask which views. Proceed to the shell.
 - **`shell-before-questions`** — The first save is the shell. Its level of detail is that fidelity's **Scaffold** section. Its notation is the practice sketch template. Do not read practice Rules to produce the shell.
 - **`themes-after-shell`** — After the shell is saved, give a prioritized theme list and ask which theme to start.
-- **`grill-then-sketch`** — On the chosen theme, ask three or four questions from that fidelity's **Sketch** section, using that fidelity's **Rules**. Then sketch. Sketching edits the existing `stories:`, `ce:`, `ddd:`, `ux:`, and `bdd:` sections. Stay at discovery until the user asks to go deeper.
+- **`grill-then-sketch`** — On the chosen theme, ask three or four questions from that fidelity's **Sketch** section, using that fidelity's **Rules**. Then sketch. Sketching edits the existing `stories:`, `clean engineering:`, `domain driven design:`, `user experience:`, and `behavior driven development:` sections. Stay at discovery until the user asks to go deeper.
 - **`theme-status`** — The sketch file lists every theme and its status: `scaffold`, `scaffold done`, `discovery done`, `specification done`, or `implementation done`.
 - **`deeper-or-another`** — After review, ask whether to get deeper on this theme or explore another theme.
-- **`generate-on-the-way-through`** — When a theme finishes a fidelity, ask whether to generate the official document. Formats are markdown, diagram, and code. Multiple formats are allowed. Run `generate` at that fidelity in the chosen formats.
+- **`generate-on-the-way-through`** — When a theme finishes a fidelity, ask whether to generate the official document. Call `generate.generate(guidance: [{toolset, fidelity, format}, …])` as the generate skill describes. One entry per format: `markdown`, `drawio`, or the practice's code format.
 - **`one-sketch-per-engagement`** — One sketch file. Deepen it in place. Do not add a second file per fidelity or practice.
-- **`lens-from-child-template`** — Section bodies use that practice's sketch template. No free prose inside `stories:` / `ddd:` / `ux:` / `ce:` / `bdd:`.
+- **`lens-from-child-template`** — Section bodies use that practice's sketch template. No free prose inside `stories:` / `clean engineering:` / `domain driven design:` / `user experience:` / `behavior driven development:`.
 
 ### Common mistakes
 

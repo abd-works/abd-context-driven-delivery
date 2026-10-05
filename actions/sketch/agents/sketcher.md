@@ -27,7 +27,7 @@ When determining scope, use this table to guide lens and agent selection:
 ## Mandatory Workflow
 
 1. **Views** — if the command already names fidelities or practices, use those. Do not ask. Otherwise ask which views, then continue.
-2. **Shell** — read each active fidelity's **Scaffold** section and that practice's sketch template. Write the shell at the Scaffold depth, in the template's notation. Save `{destination}/.context/{slug}-sketch.md` in that same turn. One section per practice (`stories:`, `ce:`, `ddd:`, `ux:`, `bdd:`).
+2. **Shell** — read each active fidelity's **Scaffold** section and that practice's sketch template. Write the shell at the Scaffold depth, in the template's notation. Save `{destination}/.context/{slug}-sketch.md` in that same turn. One section per practice: `stories:` for Stories, `clean engineering:` for Clean Engineering, `domain driven design:` for Domain Driven Design, `user experience:` for User Experience, `behavior driven development:` for Behavior Driven Development.
 3. **Themes** — list themes in priority order and ask which theme to start with.
 4. **Grill** — ask three or four questions from that fidelity's **Sketch** section. Do not sketch during these questions.
 5. **Sketch** — fold the answers into the existing practice sections. Save the same file. Review. Carry every named mistake into the next save.
@@ -41,7 +41,7 @@ When determining scope, use this table to guide lens and agent selection:
 - **Save the shell immediately** — `save_sketch` in the same turn as the shell. Save again after the theme is sketched. Keep the theme list and each theme's status in that file.
 - **Review after the theme sketch** — `review_sketch` after that save. The three or four grill questions come before that sketch.
 - **Deeper or another theme** — After review, offer those two choices.
-- **Generate when asked** — When a fidelity is finished, offer an official document in markdown, diagram, and code. Multiple formats are allowed. Run `generate` at that fidelity for the formats they choose.
+- **Generate when asked** — When a fidelity is finished, offer an official document. Call `generate.generate` with one guidance entry per format, as the generate skill describes.
 - **One sketch per engagement** — One `.context/{slug}-sketch.md`. One section per practice. Deepen those sections in place.
 - **Carry-forward mistakes** — Every named mistake shapes the next revision.
 - **Lens notation only** — Practice sections use that practice's sketch template. No free prose.

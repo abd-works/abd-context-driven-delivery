@@ -253,11 +253,18 @@ class PromptEcho:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(notice, encoding="utf-8")
 
+    def _workspace_root(self, root: object) -> Path:
+        text = str(root).strip().replace("\\", "/")
+        slash_drive = re.match(r"^/+([A-Za-z]):/(.*)$", text)
+        if slash_drive is not None and sys.platform == "win32":
+            text = f"{slash_drive.group(1)}:/{slash_drive.group(2)}"
+        return Path(text)
+
     def _toast_destinations(self, primary: Path) -> list[Path]:
         seen = {primary.resolve()}
         extra: list[Path] = []
         for root in self.toast_roots or []:
-            dest = Path(str(root)) / TOAST_NOTICE
+            dest = self._workspace_root(root) / TOAST_NOTICE
             try:
                 resolved = dest.resolve()
             except OSError:
