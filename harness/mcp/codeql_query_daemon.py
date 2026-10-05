@@ -83,7 +83,7 @@ class QueryServerClient:
         env["PYTHONPATH"] = os.pathsep.join(
             [*extra, *(existing.split(os.pathsep) if existing else ())]
         )
-        from harness.hooks.process import detached_creationflags
+        from harness.hooks.process import detached_creationflags, hidden_process_startupinfo
 
         flags = detached_creationflags()
         log = path.parent / "query-server.log"
@@ -96,6 +96,7 @@ class QueryServerClient:
             stdout=stream,
             stderr=subprocess.STDOUT,
             creationflags=flags,
+            startupinfo=hidden_process_startupinfo(),
             close_fds=True,
         )
 

@@ -13,6 +13,34 @@ from typing import Any
 
 _READY_WAIT_SECONDS = 90
 _READY_POLL_SECONDS = 0.2
+_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+
+def _lock_pid(lock_path: Path) -> int:
+    try:
+        return int(lock_path.read_text(encoding="ascii").strip())
+    except (OSError, ValueError):
+        return 0
+
+
+def _pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        import ctypes
+
+        handle = ctypes.windll.kernel32.OpenProcess(
+            _PROCESS_QUERY_LIMITED_INFORMATION, False, pid
+        )
+        if not handle:
+            return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 for _category in ("tools", "practices", "actions", "patterns"):
@@ -382,25 +410,54 @@ class HookServer:
         path.parent.mkdir(parents=True, exist_ok=True)
         deadline = time.time() + _READY_WAIT_SECONDS
         while time.time() < deadline:
-            connected = cls._connect(repo, path)
-            if connected is not None:
+            if cls._connect(repo, path) is not None:
                 return
-            try:
-                fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            except FileExistsError:
+            if not cls._claim_spawn(lock_path):
                 time.sleep(_READY_POLL_SECONDS)
                 continue
             try:
-                os.write(fd, str(os.getpid()).encode("ascii"))
-            finally:
-                os.close(fd)
-            try:
                 HookDaemon().spawn(repo, path)
+                cls._wait_for_daemon(repo, path, deadline)
             finally:
-                try:
-                    lock_path.unlink(missing_ok=True)
-                except OSError:
-                    pass
+                cls._release_spawn(lock_path)
+            return
+
+    @classmethod
+    def _claim_spawn(cls, lock_path: Path) -> bool:
+        cls._release_dead_spawn(lock_path)
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            return False
+        try:
+            os.write(fd, str(os.getpid()).encode("ascii"))
+        finally:
+            os.close(fd)
+        return True
+
+    @classmethod
+    def _release_dead_spawn(cls, lock_path: Path) -> None:
+        if not lock_path.is_file():
+            return
+        if _pid_alive(_lock_pid(lock_path)):
+            return
+        try:
+            lock_path.unlink()
+        except OSError:
+            return
+
+    @classmethod
+    def _wait_for_daemon(cls, repo: Path, path: Path, deadline: float) -> None:
+        while time.time() < deadline:
+            if cls._connect(repo, path) is not None:
+                return
+            time.sleep(_READY_POLL_SECONDS)
+
+    @classmethod
+    def _release_spawn(cls, lock_path: Path) -> None:
+        try:
+            lock_path.unlink(missing_ok=True)
+        except OSError:
             return
 
     def _absorb_catalog_failures(self) -> None:
