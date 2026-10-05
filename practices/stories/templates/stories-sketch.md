@@ -1,6 +1,8 @@
 # Stories sketch — match active fidelity
 
-**MUST:** Read all source context in full before drafting or refining. **MUST:** Branch on **mechanical uniqueness** only — split distinct mechanics; do not mint one story per TOC / catalog / requirements row. **MUST:** Do not invent requirements — only behaviours the source describes or the user asks for. See `stories.md`: `read-all-source-context-in-full`, `branch-on-mechanical-uniqueness`, `do-not-invent-requirements`.
+The questions to ask are in `stories.md`, under **Sketch** for the active fidelity. The shell's level of detail is that fidelity's **Scaffold** section. This file is the notation for the `stories:` section. Do not invent another shape.
+
+**MUST:** Read all source context in full before detailing a theme, after the grill. **MUST:** Branch on **mechanical uniqueness** only when sketching — split distinct mechanics; do not mint one story per TOC / catalog / requirements row. **MUST:** Do not invent requirements — only behaviours the source describes or the user asks for. See `stories.md`: `read-all-source-context-in-full`, `branch-on-mechanical-uniqueness`, `do-not-invent-requirements`.
 
 Sketch the story hierarchy first, then deepen only as far as the active fidelity needs. Confirm epics and sub-epics (the e2e journey), then drill into exact stories by risk or uncertainty — unique **mechanical** flows first, then scaffold patterns already encountered.
 

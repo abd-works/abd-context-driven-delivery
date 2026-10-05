@@ -79,6 +79,10 @@ Draw where language changes — context boundaries, the aggregates that protect 
 
 **Produce:** `bounded-context-map.md` from `templates/bounded-context-template.md`. Call clean_engineering at **modules**.
 
+#### Sketch
+
+Ask where the business uses a different word, or a different rule, for what looks like the same situation. Ask which facts must change together, and which outside party they rely on. Write the contexts and what they hold from those answers. Do not ask the user to name a bounded context or an aggregate.
+
 #### Guidance
 
 **Start from the language, not the structure.** Read the source context and watch the vocabulary. A **bounded context** is where one model and one ubiquitous language hold — inside it every term has exactly one meaning. So the first move is not drawing boxes; it is noticing where the vocabulary shifts. The same word carrying two meanings in two conversations, or two words describing what looks like one thing, is the signal that you are standing on a boundary. Boundaries drawn from screens, or existing services will cut straight through a single language and leave you translating inside what should have been one model.
@@ -144,6 +148,10 @@ clean_engineering: model
 Classify each concept on the map — entity, value, repository, event, service — and shape the classes that carry them.
 
 **Produce:** Update `bounded-context-map.md` using `templates/bounded-context-template.md`. Call clean_engineering at **model**.
+
+#### Sketch
+
+Ask whether this thing has a life of its own or only exists as part of something else, what the business does to it, and which facts other parts of the business need to hear. Write how the thing is classified from those answers.
 
 #### Guidance
 
@@ -213,6 +221,10 @@ clean_engineering: code
 Decide one implementation pattern for each building block the model uses, then implement the domain against it — preserving every name and boundary from upstream.
 
 **Produce:** Implementation under the project layout; call clean_engineering at **code**. When that build creates folders for bounded contexts and aggregates, write `.context/bounded-context.md` in each context folder.
+
+#### Sketch
+
+Ask how the business finds this thing again later, what should happen when it changes, and which outside system must be told. Write the way it is kept and told from those answers.
 
 #### Guidance
 

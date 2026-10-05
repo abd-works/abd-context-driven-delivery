@@ -1,5 +1,7 @@
 # UX sketch — visual ASCII, match active fidelity
 
+The questions to ask are in `ux.md`, under **Sketch** for the active fidelity. The shell's level of detail is that fidelity's **Scaffold** section. This file is the notation for the `ux:` section.
+
 Sketch the **site map first** (connection tree), then **screen boxes** that show what the user sees. Control types and states are drawn as glyphs inside the box — not written as `type=` / `state=` labels. Put a **key under each screen** for glyph meanings and interaction notes.
 
 **Order:** site map (`ia`) → screen boxes with regions / rows / verb rows (`ia`) → visual controls + states inside boxes (`mockup`) → brand/stub notes in key (`specification`) → real frontend / backend wiring (`front_end_code`, usually outside this sketch).

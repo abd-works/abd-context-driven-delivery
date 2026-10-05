@@ -73,6 +73,10 @@ stage: discovery
 
 Decide what screens exist and how users move between them.
 
+#### Sketch
+
+Ask where a person goes to accomplish the outcome, and what they move between. Write the screens and the moves from those answers.
+
 #### Guidance
 
 Screens, layouts, named regions, transitions, nav components, content types. Story names and domain terms attach as traces. Optional `ux-context.md` for invariants not on the canvas. No control types, no interaction JS, no brand.
@@ -117,6 +121,10 @@ stage: specification
 #### Overview
 
 Lock screens as runnable greybox — typed controls and key interactions.
+
+#### Sketch
+
+Ask what the person does on this screen to accomplish the outcome, and what they need to see there. Write the controls from those answers.
 
 #### Guidance
 
@@ -168,6 +176,10 @@ stage: implementation
 #### Overview
 
 Ship the product UI — production frontend talking to a real backend.
+
+#### Sketch
+
+Ask what the person can complete here against the real product, what they see when it succeeds, and what they see when it fails. Write the working screen from those answers.
 
 #### Guidance
 

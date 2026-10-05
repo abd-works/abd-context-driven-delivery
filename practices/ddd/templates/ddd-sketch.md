@@ -1,6 +1,6 @@
 # DDD sketch
 
-
+The questions to ask are in `ddd.md`, under **Sketch** for the active fidelity. The shell's level of detail is that fidelity's **Scaffold** section. This file is the notation for the `ddd:` section.
 
 Declare fidelity once at the top. Use only the sketch for that fidelity — do not fill later-fidelity detail early.
 

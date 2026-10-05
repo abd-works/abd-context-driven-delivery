@@ -1,5 +1,7 @@
 # clean_engineering sketch template — terse indent notation
 
+The questions to ask are in `clean_engineering.md`, under **Sketch** for the active fidelity. The shell's level of detail is that fidelity's **Scaffold** section. This file is the notation for the `ce:` section.
+
 Rough shape for sketching an clean_engineering analysis before generating the formal artifact. Use clean_engineering vocabulary directly (class, property, operation, subtype, composition, aggregation, association) rather than the generic `thing` fallback.
 
 This template is the clean_engineering notation for a section of the engagement sketch. When sketched with another practice in the same session (bdd-behavior), keep that notation in `{slug}-sketch.md` so the object model and BDD stay paired; do not write a second sketch file.

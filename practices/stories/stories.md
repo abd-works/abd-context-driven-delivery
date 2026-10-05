@@ -42,6 +42,10 @@ stage: discovery
 Scope the solution using a hierarchy of business goals, user interactions, and system behaviors.  
 *a simple graph is easier to change, compare, and reorganize. Humans catch AI Order-of-Magnitude sizing errors.*
 
+#### Sketch
+
+Ask who is trying to reach this outcome, what they need in front of them before they act, what a successful result looks like for them, and what stops them. Ask how that differs for each person who touches the outcome. Write the epic, the people, and the stories from those answers. Do not ask the user to choose one story or a story per system.
+
 #### Guidance
 
 **Name the layers.** Actors are people or systems (`Customer`, `Support Agent`, `Order Service`). Epics name an end-to-end outcome (`Manage Customer Orders`). Sub-Epics name one outcome inside an Epic (`Place Customer Order`). Stories name one observable interaction that can be tested on its own (`Submit Order`).
@@ -87,6 +91,10 @@ stage: specification
 
 Define system behavior by taking concrete examples through scenarios; include preconditions, triggers, and outcomes.  
 *testable specifications ensure both humans are aligned on exactly what to build and limits AI hallucination*
+
+#### Sketch
+
+Ask what is already true, what the person or system does, what someone else can see afterward, and which situations change that result. Write the scenarios from those answers.
 
 #### Guidance
 
@@ -140,6 +148,10 @@ clean_engineering: code
 
 Make specifications executable by transforming them into automated tests that validate production code.  
 *Context graduates from being merely machine readable to machine executable. AI is allergic to causing tests to fail.*
+
+#### Sketch
+
+Ask which concrete case proves the outcome, which system already holds the starting state, and what a person can check when the action finishes. Write the examples from those answers.
 
 **Produce:** per lowest sub-epic, `{sub_epic_slug}.story.shared.{lang}` registers shared scenarios; `{sub_epic_slug}.story.domain.spec.{lang}` replays them at domain tier (domain is the only tier with one layer in the filename); `{sub_epic_slug}.story.server.spec.{lang}` and other tier specs name the tier explicitly before `spec`. Markdown scenarios stay `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
 

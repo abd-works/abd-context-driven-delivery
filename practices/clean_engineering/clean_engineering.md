@@ -51,6 +51,10 @@ Partition a problem into independently understandable units — name each unit, 
 
 Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
+#### Sketch
+
+Ask what a caller is hiring this part of the product to do, what they must honor when they use it, and which other part of the business it depends on. Write the module names from those answers. Do not ask the user to draw the dependency arrow.
+
 #### Language
 
 When language sits in `module-context.md`, use the top-level Language section **and** follow `templates/modules.md`. Do not skip this subsection.
@@ -145,6 +149,10 @@ stage: specification
 
 Design the object model — the classes, what they remember and do, and how they relate.
 
+#### Sketch
+
+Ask what the business calls the thing, what must stay true when someone acts, who is allowed to act, and what they look at before they act. From those answers write what the class remembers, what it does, and whether it owns, collects, or only knows the other thing. Do not ask the user to pick class, property, or subtype.
+
 #### Language
 
 **When the user asks for language** rather than full generation at this fidelity, apply the top-level Language section. Do not use Guidance or Rules. **Stop reading this skill when writing language.**
@@ -230,6 +238,10 @@ stage: implementation
 #### Overview
 
 Write working production code — real persistence, services, and UI behind the public seams.
+
+#### Sketch
+
+Ask what the caller can do now that they could not do before, what they see when it works, and what they see when the ordinary case is empty. Write the behavior from those answers.
 
 #### Guidance
 

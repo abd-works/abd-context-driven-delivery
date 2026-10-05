@@ -22,34 +22,31 @@ Rough, informal artifacts produced through an interactive grill loop, kept along
 
 ## Loop
 
-1. **Locate a template** — tiered discovery (see below).
-2. **Draft** — rough shape inspired by the template.
-3. **Present, persist, and pause for review** — show the sketch in chat with a short explanation, then **immediately** `save_sketch` to `{destination}/.context/{slug}-sketch.md`, then **immediately** `review_sketch`: pause so the person can look at it; AskQuestion whether it is correct; if not, AskQuestion what mistakes it made, correct them, `save_sketch` again, and re-enter review. Do **not** ask the next grill question until the person confirms the sketch is correct. A sketch that exists only in chat is a defect; skipping review is a defect.
-4. **Extend the next branch** — only after confirmed-correct review, pick the next unresolved branch (or batched peers), sketch your recommended shape, and explain why. One branch (or one batched frame) at a time.
-5. **Refine and overwrite** — regenerate the sketch showing what changed **and** incorporating every mistake named in prior `review_sketch` rounds, then **immediately** `save_sketch` again (same path), then **immediately** `review_sketch` again. Do not batch saves; do not wait until the session ends; do not regenerate as if named mistakes never happened.
-6. **Repeat** 4–5 until either the user says done, or every branch of the design tree has been sketched and reasoned out. Ask a question only when a branch genuinely cannot be resolved by sketching a recommendation. Batch very similar questions so the loop does not run forever. Use grilling to validate what the sketch claimed — sketch and grill must not run disconnected.
+1. **Views** — if the user already named the practices or fidelities, those are the views. Proceed. Otherwise AskQuestion which views to sketch, then proceed.
+2. **Shell** — in that same turn, write the high-level shell and `save_sketch`. Follow each active fidelity's **Scaffold** section for the level of detail, and that practice's sketch template for the notation. When the active fidelity has no **Scaffold** section, use the **Scaffold** section of the earlier fidelity in that same practice. One section per practice in the same file (`stories:`, `ce:`, `ddd:`, `ux:`, `bdd:`). No theme blocks.
+3. **Themes** — list the themes in priority order and AskQuestion which theme to start with.
+4. **Grill that theme** — ask three or four questions, then stop. See **When asking a question**. Do not sketch the theme during these questions.
+5. **Sketch** — fold those answers into the existing practice sections, using each practice's sketch template. `save_sketch`, then `review_sketch`.
+6. **Next theme** — after the user confirms that sketch, go back to step 3 for the next theme, or stop when they say done.
 
-### Sketch cadence — question budget before first sketch
+Carry forward every mistake named in review. Correct the sketch. Do not regenerate as if those mistakes never happened.
 
-**Sketch early. A sketch with placeholders beats one more question.**
+### Shell before questions
 
-| Questions asked before first sketch | Status |
-|---|---|
-| 1–2 | Normal — expected range |
-| 3 | Exceptional — only when all three genuinely block the first draft |
-| 4+ | **Never** — sketch with `?` placeholders for unresolved branches instead |
+The shell is the first file. Zero questions before it when the user has already named the subject and the views. Mark anything still unknown with `?` or `* approx`.
 
-If you reach 3 questions without having shown any shape: stop, draft what you know, mark gaps with `?`, then ask. Do not ask a fourth question before the first sketch exists.
+Practice Rules apply when sketching after the three or four answers. They do not apply to the shell.
 
 ## When asking a question (grill inside sketch)
 
-Bare option lists are not allowed. The user must be able to decide from the concepts in play — not from intuition about unlabeled choices.
+Ask questions that the active guidance is designed to answer. See the **Sketch** section of that fidelity. Ask three or four of those questions, then sketch. Do not ask mechanical questions
 
-For every question:
+Each question is one of these:
 
-1. **Frame** — name the sketch branch and ground the decision in the active practice concepts (e.g. for clean_engineering modules: high-cohesion, low-coupling, named-seam-and-constraint, deep-module, complexity-absorption; for OOAD: class vs property vs operation, composition/aggregation/association, single responsibility). Pull those concepts from the wrapped agent's material / fidelity docs, not from generic advice. Do not paste or restate prior grill-answer bodies into the AskQuestion text — cite `grill-answers.md` by path or heading if needed; the sketch file already holds what was agreed.
-2. **Options with rationale** — 3–5 choices; recommended first; each option gets one short concept-tied rationale (what it does to the seam, ownership, or coupling). End with "Other / I'll specify."
-3. **One question** — wait for the answer, then regenerate the sketch showing exactly what changed.
+- A recommended choice, with options, asked with AskQuestion.
+- Or the same kind of question after you have read context. Still ask. Point the recommendation at the file you read.
+
+Do not skip the question because you found an answer. Do not sketch between these questions.
 
 **Always use the AskQuestion tool** — never list options as plain chat text. One tool call = one question:
 
@@ -64,7 +61,7 @@ AskQuestion:
     - Other / I'll specify
 ```
 
-Question shape (frame + options) comes from `grill_with_context`, which `@sketch` pulls in explicitly. This section owns sketch show/persist cadence only.
+Question shape is the AskQuestion block above. What to ask is the **Sketch** section of the active fidelity.
 
 ## Template discovery (tiered)
 
@@ -72,7 +69,7 @@ Question shape (frame + options) comes from `grill_with_context`, which `@sketch
 2. **Convention (wrapped agent's own template)** — `{agent_dir}/templates/*-sketch.*` inside the wrapped agent's `templates/` folder (e.g. `bdd/templates/bdd-sketch.md`). Owned by whoever wrote that agent; lets each agent shape its own sketches without touching the sketch toolset.
 3. **Default (built-in fallback)** — `sketch/templates/sketch-template.md` shipped inside the sketch toolset itself. Owned by this toolset; used only when nobody upstream supplied a template.
 
-If none of the above yield a template, the sketcher invents a shape for the domain at hand — explicitly a fallback, not a design target.
+If none of the above yield a template, say so and stop. Use the practice's sketch template. Do not invent a notation.
 
 ## Persistence lifecycle
 
@@ -82,53 +79,42 @@ If none of the above yield a template, the sketcher invents a shape for the doma
   - Generated code for that module → `{session}/{module}/` (not under `.context/`)
 - Sketches live at `{destination}/.context/{slug}-sketch.md`. The slug names the subject, not the practice. When the session sketches more than one practice or guidance together (clean-engineering-model and bdd-behavior, object model and BDD), put every lens in that one file so the pairing stays visible; do not add `{slug}-bdd-sketch.md` beside it.
 - `.context/` is created inside the destination if it does not already exist.
-- **Hard rule:** call `save_sketch` as soon as the first interim draft exists; overwrite on every regeneration; call `review_sketch` after every `save_sketch` and do not ask the next grill question until the person confirms the sketch is correct. Never defer persistence or review to the end of the grill.
+- **Hard rule:** `save_sketch` the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, `save_sketch` again, then `review_sketch`. Do not ask the next theme until that review confirms the sketch. The three or four grill questions happen before that sketch, not after a review.
 - **Carry-forward mistakes:** mistakes named in review — bad assumptions, poor performance, poor hygiene, or anything else — must shape the next sketch. Correct the model; do not regenerate as if those mistakes never happened.
 - They persist until a formal artifact absorbs their content.
 - Retirement is manual for now — remove the sketch when the formal artifact fully captures its intent.
 
 ## Multi-lens sketching
 
-When sketching across multiple practices or guidances (Stories / DDD / UX / Modules / BDD, or clean-engineering-model with bdd-behavior):
+When more than one practice is active (Stories, DDD, UX, Clean Engineering, BDD), they share one sketch file. Each practice has one section. A theme is worked inside those sections. It does not get its own block.
+
+```
+stories:
+ce:
+ddd:
+ux:
+bdd:
+```
+
+Omit a section when that practice is not active. Use that practice's sketch template inside its section. Do not invent a notation.
 
 ### Rules
 
-- **`confirm-lenses-before-sketch`** — **Hard gate.** Before any scaffold or sketch, use AskQuestion (allow_multiple: true) to confirm which lenses are active. Present them by sketch label. Do not proceed until confirmed. All active lenses are recommended by default; user removes out-of-scope ones.
-- **`scaffold-before-content`** — **Hard gate.** Read the engagement sketch template (`templates/cdd-sketch.md` for CDD) and each active child's `sketch_template` **before** writing the sketch file. Do not invent a free-prose `sketch.md`.
-- **`grill-before-theme-detail`** — **Hard gate.** Before writing any non-scaffold content for a theme, run at least one grill round on that theme's open questions. The session-level lens confirmation does NOT substitute for this per-theme grill.
-- **`one-sketch-per-engagement`** — One sketch file per engagement. Put every active practice and guidance in that file. Deepening fidelity updates `fidelity:` at the top and deepens blocks in place. Never create a new file for a new fidelity, practice, or guidance.
-- **`scaffold-is-sketch-outline`** — **Hard gate.** Scaffold is the first outline pass of that same sketch file. Never create a separate scaffold artifact and never create standalone scaffold heading sections outside theme blocks.
-- **`scaffold-before-detail`** — A scaffold pass is required when the ask is greenfield, spans multiple themes/epics/modules, or no whole-design scaffold exists. Not required for a single narrow theme in an already-scaffolded design. Mark every scaffold line `< scaffold`. Never scaffold and detail in the same pass.
-- **`scaffold-per-epic-not-mega-block`** — One `=========` theme block per epic (or sub-epic for large systems). Do not group all epics into a single mega-theme block.
-- **`detail-updates-scaffold-in-place`** — When detailing a theme, update scaffold lines within the existing `=========` block. Remove `< scaffold` from filled lines. Never create a second parallel block for the same epic — one epic = one theme block for its lifetime.
-- **`lens-from-child-template`** — Every lens block body must use that lens's own sketch notation (from child `sketch_template`). No free prose inside `stories:` / `ddd:` / `ux:` / `ce:` / `bdd:`. Use `* approx …` or omit the block if the content is not yet known.
+- **`views-already-named`** — When the user names the practices or fidelities, do not ask which views. Proceed to the shell.
+- **`shell-before-questions`** — The first save is the shell. Its level of detail is that fidelity's **Scaffold** section. Its notation is the practice sketch template. Do not read practice Rules to produce the shell.
+- **`themes-after-shell`** — After the shell is saved, give a prioritized theme list and ask which theme to start.
+- **`grill-then-sketch`** — On the chosen theme, ask three or four questions from that fidelity's **Sketch** section, then sketch. Sketching edits the existing `stories:`, `ce:`, `ddd:`, `ux:`, and `bdd:` sections.
+- **`one-sketch-per-engagement`** — One sketch file. Deepen it in place. Do not add a second file per fidelity or practice.
+- **`lens-from-child-template`** — Section bodies use that practice's sketch template. No free prose inside `stories:` / `ddd:` / `ux:` / `ce:` / `bdd:`.
 
-### Scaffold level by lens
+### Common mistakes
 
-| Lens | Scaffold contains | NOT scaffold |
-|---|---|---|
-| **Stories** | Epics, Sub-Epics, minimal story spine | Scenarios, Given/When/Then |
-| **DDD** | Bounded context names, top-level aggregate roots | Building blocks, value objects, domain events |
-| **UX** | Site map / navigation only | Screen boxes, controls, layouts |
-| **Modules** | Module folder names only | Classes, operations, properties |
-| **BDD** | Top-level `describe` lines only | `it …` / `with …` behaviours |
-
-### Common mistakes (multi-lens)
-
-❌ Skipping the lens confirmation gate before scaffold or sketch
-❌ Writing the sketch file before reading the sketch template and child `sketch_template`s
-❌ Skipping the per-theme grill — lens confirmation does not substitute for it
-❌ Creating a new sketch file when moving to a deeper fidelity — deepen in place
-❌ Creating a second sketch file for another practice or guidance (`{slug}-bdd-sketch.md` beside `{slug}-sketch.md`) — put both in the same file
-❌ Creating a separate scaffold artifact for the same engagement
-❌ Adding top-level scaffold sections outside theme blocks (`## Stories Scaffold`, `## DDD Scaffold`, etc.)
-❌ Creating a new theme block when detailing — update scaffold lines in the existing block
-❌ Grouping all epics into one mega-theme block — one block per epic
-❌ Scaffolding and detailing in the same pass
-❌ Scaffolding one lens only when other active lenses also need a whole-system map
-❌ Leaving scaffold lines without the `< scaffold` marker
-❌ Writing free prose inside lens blocks — child notation only
-❌ Working multiple themes at once — finish one, then move to the next
+❌ Asking which views when the user already named them
+❌ Designing stories, classes, or rules before the shell file exists
+❌ A `=========` block per theme — themes are a queue, not sections
+❌ Asking the user to pick a story split, a class, or a property
+❌ Sketching after one question — wait for three or four
+❌ A second sketch file for another practice
 
 ---
 ## Composition — how sketch chains with other actions
