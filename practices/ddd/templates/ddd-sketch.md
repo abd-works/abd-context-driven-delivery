@@ -15,7 +15,7 @@ The map nests through markdown headings, so every context, aggregate, and root f
 | `##### {Root}` | the aggregate root, with its tactical stereotypes at **building_blocks** |
 | `### event_map:` | the cross-context event map, last in the section |
 
-Under a root heading, a fenced block holds its keys — `emits:`, `consumes:`, `members:`, `Integrations:`, `refs:`, `depends:`, `repo:`, `events:`, `Invariant:`. Prose that is not a context — false cognates, open questions, what is settled — belongs in its own `##` section beside `## domain driven design:`, not under a context heading.
+Under a root heading, a fenced block holds its keys — `emits events:`, `consumes events:`, `members:`, `Integrations:`, `refs:`, `depends:`, `repo:`, `events:`, `Invariant:`. Prose that is not a context — false cognates, open questions, what is settled — belongs in its own `##` section beside `## domain driven design:`, not under a context heading.
 
 ---
 
@@ -24,8 +24,8 @@ Under a root heading, a fenced block holds its keys — `emits:`, `consumes:`, `
 Name each **bounded context** (language boundary — **not** a UI theme or page), then the **aggregates it holds** (consistency clusters — usually more than one). Split when language or **change-frequency** diverges (stable identity vs fast line/service lifecycle), not when the UI has another section. A context is not an aggregate; do not wrap each root in its own BC. Use experts' words. List the wrapping / user-facing system first; vendors and systems of record sit downstream. Each context carries its vendor after `|` (`custom`, `bespoke`, or vendor name). On each **aggregate** that depends on another context, list upstream dependencies under `depends:` — do not invent a Cross-Context Relationships dump.
 
 For bounded_context sketches, include event flow on each root:
-- `emits:` event names this aggregate publishes
-- `consumes:` event names this aggregate reacts to
+- `emits events:` event names this aggregate publishes
+- `consumes events:` event names this aggregate reacts to
 
 Then close the section with `### event_map:` (`{Event}: emitted by X; consumed by Y, Z`) to make ownership and integration explicit at scaffold/discovery depth.
 

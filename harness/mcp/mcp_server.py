@@ -67,6 +67,10 @@ class HostPid:
             return False
         return self._process_is_running(pid)
 
+    @property
+    def is_this_process(self) -> bool:
+        return self._read_pid() == os.getpid()
+
     def claim(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(str(os.getpid()), encoding="utf-8")
@@ -425,8 +429,7 @@ class McpInstallation(Installation):
         canonical = repo_cursor is not None and Path(self.path).resolve() == repo_cursor
         cursor = CursorMcpJson()
         if canonical and spec and cursor.sync_user_cursor_server(spec, canonical=True):
-            cursor.touch_mcp_manifest(manifest, bump_env=True)
-            return "nudged"
+            return self._restart_cursor_host(manifest, cursor)
         if self.cursor_host_is_running():
             return "running"
         if not manifest.is_file():
@@ -439,8 +442,16 @@ class McpInstallation(Installation):
             last = 0.0
         if now - last < NUDGE_MIN_SECONDS:
             return "waiting"
-        cursor.touch_mcp_manifest(manifest, bump_env=True)
+        status = self._restart_cursor_host(manifest, cursor)
         nudge_file.write_text(str(now), encoding="utf-8")
+        return status
+
+    def _restart_cursor_host(self, manifest: Path, cursor: CursorMcpJson) -> str:
+        """Bumping the manifest relaunches the host, which drops any reply that host
+        still owes a caller, so the host leaves its own restart to a later standup."""
+        if HostPid.from_ide(self.path).is_this_process:
+            return "deferred"
+        cursor.touch_mcp_manifest(manifest, bump_env=True)
         return "nudged"
 
 

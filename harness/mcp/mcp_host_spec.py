@@ -19,7 +19,7 @@ from mamba import after, before, context, description, it
 
 from installation.installer import Installer
 from harness.mcp.examples.parameter_types.parameter_types import ParameterTypes
-from harness.mcp.mcp_server import McpHost, McpInstallation
+from harness.mcp.mcp_server import HostPid, McpHost, McpInstallation
 from actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from harness.mcp.examples.illegitimate_name.illegitimate_name import (
@@ -393,4 +393,27 @@ with description("an MCP host Cursor has stopped spawning") as self:
 
         with it("should leave the running host alone"):
             expect(self.mcp.ensure_cursor_host()).to(equal("running"))
+
+
+with description("the MCP host pid file") as self:
+    with before.each:
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with context("that names the process reading it"):
+        with before.each:
+            (self.tree / "mcp-host.pid").write_text(str(os.getpid()), encoding="utf-8")
+
+        with it("should report that reader as the host itself"):
+            expect(HostPid.from_ide(self.tree).is_this_process).to(equal(True))
+
+    with context("that names a different process"):
+        with before.each:
+            (self.tree / "mcp-host.pid").write_text(str(os.getppid()), encoding="utf-8")
+
+        with it("should report the reader as a process other than the host"):
+            expect(HostPid.from_ide(self.tree).is_this_process).to(equal(False))
 

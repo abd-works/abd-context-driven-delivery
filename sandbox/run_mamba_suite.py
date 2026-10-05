@@ -52,6 +52,9 @@ class SpecSuite:
             str((self._repository / root).resolve()) for root in SOURCE_ROOTS
         )
         environment["PYTHONIOENCODING"] = "utf-8"
+        # mamba reads each spec with open()'s default encoding, so without UTF-8
+        # mode every non-ASCII literal in a spec arrives as mojibake.
+        environment["PYTHONUTF8"] = "1"
         return environment
 
     def _is_vanilla_spec(self, path: Path) -> bool:

@@ -16,8 +16,8 @@ _NESTING_INDENT = 2
 _KEYS = (
     "owner:",
     "system:",
-    "emits:",
-    "consumes:",
+    "emits events:",
+    "consumes events:",
     "members:",
     "integrations:",
     "refs:",

@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 import time
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -120,7 +121,7 @@ class HookResult:
         return str(value)
 
     @classmethod
-    def from_handler(cls, raw: dict[str, Any] | None) -> HookResult:
+    def from_handler(cls, raw: Mapping[str, Any] | None) -> HookResult:
         if not raw:
             return cls()
         continue_flag = False if raw.get("continue") is False else None
@@ -205,8 +206,9 @@ class HookHandler:
         toolset = self.tool.toolset
         operation = self._bound_operation(toolset)
         raw = operation(payload.as_dict())
-        result = HookResult.from_handler(raw)
-        if result.additional_context or not raw:
+        fields = raw if isinstance(raw, Mapping) else None
+        result = HookResult.from_handler(fields)
+        if result.additional_context or not fields:
             return result
         return result.with_description(self.tool.docstring)
 

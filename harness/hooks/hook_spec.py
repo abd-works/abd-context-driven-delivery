@@ -259,6 +259,29 @@ with description("hook dispatch"):
             expect(out["agent_message"]).to(equal("Honor the hook operation description."))
             expect(out["permission"]).to(equal("allow"))
 
+    with context("that invokes a handler returning a status rather than hook fields"):
+
+        with it("should carry the handler through without a dispatch failure"):
+            @agent_toolset
+            class _StatusFixture:
+                @Hook("sessionStart")
+                def on_session_start(self, payload: dict) -> str:
+                    return "running"
+
+            out = _dispatch({"hook_event_name": "sessionStart"}, toolsets=[_StatusFixture])
+            expect(out["permission"]).to(equal("allow"))
+
+        with it("should leave the hook event free of an agent message"):
+            @agent_toolset
+            class _StatusFixture:
+                @Hook("sessionStart")
+                def on_session_start(self, payload: dict) -> str:
+                    """Report whether the host already runs."""
+                    return "running"
+
+            out = _dispatch({"hook_event_name": "sessionStart"}, toolsets=[_StatusFixture])
+            expect(out.get("agent_message")).to(equal(None))
+
     with context("that parses stdin payloads"):
 
         with it("should strip a UTF-8 BOM"):
@@ -532,6 +555,46 @@ with description("hook process helpers"):
         finally:
             HookServer._connect = original_connect
             HookDaemon.spawn = original_spawn
+
+    with it("should hold one daemon when several start for the same checkout"):
+        from harness.hooks.hook_daemon import HookDaemon
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            marker = repo / ".cursor" / "hook-server.json"
+            original_state_path = HookServer.state_path
+            HookServer.state_path = classmethod(lambda cls, _repo: marker)
+            try:
+                inner = HookServer(repo, HandlerCatalog([], repo))
+                daemons = [
+                    threading.Thread(
+                        target=HookDaemon().serve,
+                        args=(repo,),
+                        kwargs={"inner": inner},
+                        daemon=True,
+                    )
+                    for _ in range(4)
+                ]
+                for daemon in daemons:
+                    daemon.start()
+                deadline = time.time() + 5
+                while not marker.is_file() and time.time() < deadline:
+                    time.sleep(0.05)
+                for daemon in daemons:
+                    daemon.join(1)
+                expect(len([d for d in daemons if d.is_alive()])).to(equal(1))
+                expect(json.loads(marker.read_text(encoding="utf-8"))["port"]).to(
+                    equal(HookDaemon().repo_port(repo))
+                )
+            finally:
+                HookServer.state_path = original_state_path
+
+    with it("should give one checkout the same daemon port every start"):
+        from harness.hooks.hook_daemon import HookDaemon
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            expect(HookDaemon().repo_port(repo)).to(equal(HookDaemon().repo_port(repo)))
 
 
 with description("the Cursor hook_server.py command"):

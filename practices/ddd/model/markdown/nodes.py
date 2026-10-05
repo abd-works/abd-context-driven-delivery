@@ -117,13 +117,13 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
             if line.lower().startswith("integrations:"):
                 index = self._read_integrations(index + 1)
                 continue
-            if line.lower().startswith("emits:"):
+            if line.lower().startswith("emits events:"):
                 index += 1
                 while index < len(self._body) and self._body[index].strip().startswith("-"):
                     emit_names.append(self.plain_name(self._body[index].strip()[1:]))
                     index += 1
                 continue
-            if line.lower().startswith("consumes:"):
+            if line.lower().startswith("consumes events:"):
                 index += 1
                 while index < len(self._body) and self._body[index].strip().startswith("-"):
                     index += 1
@@ -196,7 +196,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
             events = [item for item in self.root.properties if isinstance(item, DomainEvent)]
             if events:
                 written.append("")
-                written.append("emits:")
+                written.append("emits events:")
                 for event in events:
                     written.append(f"  - {event.name}")
         written.append("")

@@ -48,12 +48,12 @@ Integrations:
 
 ### Events
 
-`emits:` on the aggregate that publishes. `consumes:` on the aggregate that reacts. The event map at the bottom names the producer and every consumer.
+`emits events:` on the aggregate that publishes. `consumes events:` on the aggregate that reacts. The event map at the bottom names the producer and every consumer.
 
 ```
-emits:
+emits events:
   - {{EventName}}
-consumes:
+consumes events:
   - {{EventName}}
 ```
 
@@ -71,7 +71,7 @@ Integrations:
     crosses: {{what crosses}}
     integration: {{concrete call site}}
 
-emits:
+emits events:
   - {{EventName}}
 
 ## {{NestedContextName}} | {{owner}}

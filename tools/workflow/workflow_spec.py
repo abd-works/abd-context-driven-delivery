@@ -104,6 +104,7 @@ with description("Workflow manifest"):
                     "align_child_tickets_to_parent",
                     "backlog",
                     "finish",
+                    "list_project_statuses",
                     "merge_child_into_parent",
                     "move_ticket",
                     "read_ticket_rules",

@@ -15,7 +15,7 @@ Integrations:
     crosses: unit price
     integration: synchronous call to Catalog.Product.unit_price at add_item
 
-emits:
+emits events:
   - CartCheckedOut
 
 ## Catalog | bespoke

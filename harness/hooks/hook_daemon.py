@@ -1,6 +1,7 @@
 """Persistent HookServer process — stdin CLI connects through HookServer.ensure."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import socket
@@ -13,6 +14,9 @@ for _entry in (_REPO, _REPO / "tools", _REPO / "practices", _REPO / "actions"):
     _path = str(_entry)
     if _path not in sys.path:
         sys.path.insert(0, _path)
+
+_PORT_RANGE_START = 20000
+_PORT_RANGE_SIZE = 10000
 
 
 class HookDaemon:
@@ -83,23 +87,53 @@ class HookDaemon:
             close_fds=True,
         )
 
-    def serve(self, repo: Path, inner=None) -> None:
-        from harness.hooks.hook_server import HookServer
+    def repo_port(self, repo: Path) -> int:
+        """The one port this checkout's daemon may listen on."""
+        key = str(Path(repo).resolve()).casefold().encode("utf-8")
+        offset = int.from_bytes(hashlib.sha256(key).digest()[:4], "big")
+        return _PORT_RANGE_START + offset % _PORT_RANGE_SIZE
 
-        server = inner if inner is not None else HookServer.from_toolsets(repo)
+    def serve(self, repo: Path, inner=None) -> None:
+        root = Path(repo).resolve()
+        listener = self._claim_repo_port(self.port or self.repo_port(root))
+        if listener is None:
+            return
+        try:
+            from harness.hooks.hook_server import HookServer
+
+            server = inner if inner is not None else HookServer.from_toolsets(root)
+            self._publish_address(HookServer.state_path(root), listener.getsockname()[1])
+            self._serve_until_stopped(listener, server)
+        finally:
+            listener.close()
+
+    def _claim_repo_port(self, port: int) -> socket.socket | None:
+        """None when a daemon already holds this repo's port, so the loser exits.
+
+        An exclusive bind is the claim — two daemons cannot both hold one port, and
+        no lock file can promise that once the holder is killed without cleanup.
+        """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind((self.HOST, 0))
+        if sys.platform == "win32":
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        try:
+            sock.bind((self.HOST, port))
+        except OSError:
+            sock.close()
+            return None
         sock.listen(8)
-        port = sock.getsockname()[1]
-        path = HookServer.state_path(repo)
+        return sock
+
+    def _publish_address(self, path: Path, port: int) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             json.dumps({"host": self.HOST, "port": port, "pid": os.getpid()}),
             encoding="utf-8",
         )
+
+    def _serve_until_stopped(self, listener: socket.socket, server) -> None:
         while True:
-            conn, _ = sock.accept()
+            conn, _ = listener.accept()
             try:
                 self._handle(conn, server)
             finally:

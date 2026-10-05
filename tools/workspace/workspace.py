@@ -109,10 +109,17 @@ class WorkSessionGuidance(PracticeGuidance):
 
     def __init__(self, work_session: WorkSession) -> None:
         self._work_session = work_session
-        self.module_dir = work_session.folder
+        self.format = self.default_format
+        self.session = work_session.name
+        self.workspace = None
 
     def _guidelines_path(self) -> Path:
         return self._work_session.folder / "work-guidelines.md"
+
+    @property
+    def module_dir(self) -> Path:
+        """Work guidelines live beside the work session, not beside this class."""
+        return self._work_session.folder
 
     @property
     def path(self) -> Path:
