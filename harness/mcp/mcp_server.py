@@ -30,6 +30,7 @@ BUILTIN_PING_TOOL = "cdd.ping"
 HOST_PID_NAME = "mcp-host.pid"
 NUDGE_NAME = "mcp-host-nudge"
 NUDGE_MIN_SECONDS = 5.0
+HOST_PROCESS_ENV = "CDD_MCP_HOST_PID"
 _UNION_ORIGINS = {Union, py_types.UnionType}
 _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}
@@ -69,11 +70,15 @@ class HostPid:
 
     @property
     def is_this_process(self) -> bool:
+        """A sibling host can delete the pid file, so a serving host trusts its own mark."""
+        if os.environ.get(HOST_PROCESS_ENV) == str(os.getpid()):
+            return True
         return self._read_pid() == os.getpid()
 
     def claim(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(str(os.getpid()), encoding="utf-8")
+        os.environ[HOST_PROCESS_ENV] = str(os.getpid())
         atexit.register(self._release_this_pid)
 
     def release(self, pid: int | None = None) -> None:

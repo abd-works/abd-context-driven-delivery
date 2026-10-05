@@ -417,3 +417,15 @@ with description("the MCP host pid file") as self:
         with it("should report the reader as a process other than the host"):
             expect(HostPid.from_ide(self.tree).is_this_process).to(equal(False))
 
+    with context("that a sibling host has deleted after this process claimed it"):
+        with before.each:
+            self.host_pid = HostPid.from_ide(self.tree)
+            self.host_pid.claim()
+            (self.tree / "mcp-host.pid").unlink()
+
+        with after.each:
+            os.environ.pop("CDD_MCP_HOST_PID", None)
+
+        with it("should still report the claiming process as the host itself"):
+            expect(self.host_pid.is_this_process).to(equal(True))
+
