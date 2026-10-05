@@ -44,14 +44,10 @@ def dict_to_story(data: dict) -> Story:
     for block in flow.get("interactions", ()):
         for text in block.get("when", ()):
             order += 1
-            scenario.steps.append(
-                Step(text, StepType.WHEN, order, is_continuation=text.startswith(("And ", "But ")))
-            )
+            scenario.steps.append(Step(text, StepType.WHEN, order))
         for text in block.get("then", ()):
             order += 1
-            scenario.steps.append(
-                Step(text, StepType.THEN, order, is_continuation=text.startswith(("And ", "But ")))
-            )
+            scenario.steps.append(Step(text, StepType.THEN, order))
     if flow.get("examples"):
         scenario.is_outline = True
         for index, row in enumerate(flow["examples"], start=1):
