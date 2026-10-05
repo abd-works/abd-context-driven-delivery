@@ -87,7 +87,7 @@ export function App() {
       const shown = next.practices.length ? next.practices : Object.keys(inventory);
       setTrees(shown.map((name) => inventory[name]?.tree).filter((tree): tree is GraphTree => Boolean(tree)));
       setNodeTypes(unique(shown.flatMap((name) => inventory[name]?.node_types ?? [])));
-      setRelationships(unique(shown.flatMap((name) => inventory[name]?.edge_types ?? [])));
+      setRelationships(visibleRelationships(unique(shown.flatMap((name) => inventory[name]?.edge_types ?? []))));
       setRules(unique(shown.flatMap((name) => inventory[name]?.rules ?? [])));
       setLoadedFolder(trimmed);
       window.localStorage.setItem(LAST_FOLDER, trimmed);
@@ -115,12 +115,12 @@ export function App() {
       resolved = practiceSelection(selection, next, catalog);
       const scope = resolved.practices.length ? resolved.practices : Object.keys(catalog);
       setNodeTypes(listed(scope, catalog, 'node_types'));
-      setRelationships(listed(scope, catalog, 'edge_types'));
+      setRelationships(visibleRelationships(listed(scope, catalog, 'edge_types')));
       setRules(listed(scope, catalog, 'rules'));
     } else if (nodeChanged) {
       const choices = await filters.choices(next);
       resolved = { ...next, relationships: choices.relationships, rules: choices.rules };
-      setRelationships(choices.relationships);
+      setRelationships(visibleRelationships(choices.relationships));
       setRules(choices.rules);
     }
     setSelection(resolved);
@@ -237,6 +237,10 @@ export function App() {
   }
 }
 
+function visibleRelationships(values: string[]): string[] {
+  return values.filter((value) => value !== 'belongsTo');
+}
+
 function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
@@ -260,7 +264,7 @@ function practiceSelection(
 ): FilterSelection {
   const scope = next.practices.length ? next.practices : Object.keys(catalog);
   const nodes = listed(scope, catalog, 'node_types');
-  const edges = listed(scope, catalog, 'edge_types');
+  const edges = visibleRelationships(listed(scope, catalog, 'edge_types'));
   const rules = listed(scope, catalog, 'rules');
   const added = next.practices.filter((name) => !previous.practices.includes(name));
   if (previous.practices.length === 0 || next.practices.length === 0) {
@@ -269,7 +273,11 @@ function practiceSelection(
   return {
     ...next,
     node_types: mergeKept(previous.node_types, nodes, added.flatMap((name) => catalog[name]?.node_types ?? [])),
-    relationships: mergeKept(previous.relationships, edges, added.flatMap((name) => catalog[name]?.edge_types ?? [])),
+    relationships: mergeKept(
+      previous.relationships,
+      edges,
+      visibleRelationships(added.flatMap((name) => catalog[name]?.edge_types ?? [])),
+    ),
     rules: mergeKept(previous.rules, rules, added.flatMap((name) => catalog[name]?.rules ?? [])),
   };
 }

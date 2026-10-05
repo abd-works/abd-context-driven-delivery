@@ -42,7 +42,7 @@ function TreeNode({
   onSelect: (nodeId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const children = node.children ?? [];
+  const children = (node.children ?? []).filter((child) => child.name !== 'belongsTo' && child.type !== 'belongsTo');
   const selected = node.node_id === selectedId;
   return (
     <li data-node-id={node.node_id} data-kind={node.type} className={selected ? 'is-selected' : undefined}>
