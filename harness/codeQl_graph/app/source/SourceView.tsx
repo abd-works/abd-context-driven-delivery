@@ -38,8 +38,10 @@ function SourceEditor({ source }: { source: SourceText }) {
   const decorations = useRef<{ set: (next: object[]) => void; clear: () => void } | null>(null);
   const hideSource = useRef({ id: 'call-folds' });
   const foldsRef = useRef(prepared.folds);
+  const depthsRef = useRef(prepared.depths);
   const openFoldsRef = useRef(openFolds);
   foldsRef.current = prepared.folds;
+  depthsRef.current = prepared.depths;
   openFoldsRef.current = openFolds;
 
   useLayoutEffect(() => {
@@ -50,12 +52,12 @@ function SourceEditor({ source }: { source: SourceText }) {
     if (editor.getValue() !== prepared.text) {
       editor.setValue(prepared.text);
     }
-    applyCallFolds(editor, prepared.folds, openFolds, hideSource.current, decorations);
-  }, [prepared.text, prepared.folds, openFolds]);
+    applyCallFolds(editor, prepared.folds, openFolds, hideSource.current, decorations, prepared.depths);
+  }, [prepared.text, prepared.folds, prepared.depths, openFolds]);
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
-    applyCallFolds(editor, foldsRef.current, openFoldsRef.current, hideSource.current, decorations);
+    applyCallFolds(editor, foldsRef.current, openFoldsRef.current, hideSource.current, decorations, depthsRef.current);
     const nodeEl = editor.getDomNode();
     nodeEl?.addEventListener(
       'mousedown',
@@ -84,7 +86,7 @@ function SourceEditor({ source }: { source: SourceText }) {
       <p className="source-path">{source.file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
-          height={Math.max(LINE_HEIGHT + 16, prepared.text.split('\n').length * LINE_HEIGHT)}
+          height={Math.max(LINE_HEIGHT + 16, shownLineCount(prepared.text, prepared.folds, openFolds) * LINE_HEIGHT)}
           language={languageFor(source.file)}
           theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
           value={prepared.text}
@@ -150,12 +152,30 @@ function glyphClass(kind: InlineFold['kind'], open: boolean): string {
   return `call-fold${open ? ' call-fold-open' : ''}`;
 }
 
+function editorHasViewModel(editor: Parameters<OnMount>[0]): boolean {
+  return Boolean(
+    (editor as unknown as { _modelData?: { viewModel?: { getLineCount?: () => number } } })._modelData?.viewModel
+      ?.getLineCount,
+  );
+}
+
+function shownLineCount(text: string, folds: InlineFold[], openFolds: string[]): number {
+  const hidden = new Set<number>();
+  for (const fold of hiddenRanges(folds, openFolds)) {
+    for (let line = fold.start; line <= fold.end; line += 1) {
+      hidden.add(line);
+    }
+  }
+  return Math.max(1, text.split('\n').length - hidden.size);
+}
+
 function applyCallFolds(
   editor: Parameters<OnMount>[0],
   folds: InlineFold[],
   openFolds: string[],
   source: object,
   decorations: { current: { set: (next: object[]) => void; clear: () => void } | null },
+  depths: number[] = [],
 ) {
   const open = new Set(openFolds);
   const ranges = hiddenRanges(folds, openFolds).map((fold) => ({
@@ -164,10 +184,24 @@ function applyCallFolds(
     endLineNumber: fold.end,
     endColumn: 1000,
   }));
-  const next = folds.map((fold) => ({
-    range: { startLineNumber: fold.glyph, startColumn: 1, endLineNumber: fold.glyph, endColumn: 1 },
-    options: { glyphMarginClassName: glyphClass(fold.kind, open.has(foldKey(fold))) },
-  }));
+  const next = [
+    ...folds.map((fold) => ({
+      range: { startLineNumber: fold.glyph, startColumn: 1, endLineNumber: fold.glyph, endColumn: 1 },
+      options: { glyphMarginClassName: glyphClass(fold.kind, open.has(foldKey(fold))) },
+    })),
+    ...depths.flatMap((depth, index) => {
+      if (depth <= 0) {
+        return [];
+      }
+      const level = Math.min(depth, 5);
+      return [
+        {
+          range: { startLineNumber: index + 1, startColumn: 1, endLineNumber: index + 1, endColumn: 1 },
+          options: { isWholeLine: true, className: `call-nest call-nest-${level}` },
+        },
+      ];
+    }),
+  ];
   if (decorations.current) {
     decorations.current.set(next);
   } else {
@@ -175,6 +209,19 @@ function applyCallFolds(
   }
   const hidden = editor as Parameters<OnMount>[0] & { setHiddenAreas(ranges: object[], source?: object): void };
   hidden.setHiddenAreas(ranges, source);
+  if (!editorHasViewModel(editor)) {
+    return;
+  }
+  const token = source as { generation?: number };
+  token.generation = (token.generation ?? 0) + 1;
+  const generation = token.generation;
+  requestAnimationFrame(() => {
+    if (token.generation !== generation) {
+      return;
+    }
+    decorations.current?.set(next);
+    hidden.setHiddenAreas(ranges, source);
+  });
 }
 
 export type { FoldMember };
