@@ -1,0 +1,12 @@
+---
+sourceLocationPrefix: C:\dev\abd-context-driven-delivery\practices\clean_engineering\model\python\codeql\.examples
+baselineLinesOfCode: 353
+unicodeNewlines: false
+columnKind: utf32
+primaryLanguage: python
+creationMetadata:
+  cliVersion: 2.27.0
+  creationTime: 2026-10-05T19:15:03.237581300Z
+overlayDatabase: false
+overlayBaseDatabase: false
+finalised: true

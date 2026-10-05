@@ -1,0 +1,813 @@
+---
+queries:
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/browser-then-asserts-screen-widgets.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/browser-then-asserts-screen-widgets.bqrs
+  metadata:
+    name: browser-then-asserts-screen-widgets
+    kind: problem
+    id: cdd/stories/rules/browser-then-asserts-screen-widgets
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/domain-fixture-example-files.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/domain-fixture-example-files.bqrs
+  metadata:
+    name: domain-fixture-example-files
+    kind: problem
+    id: cdd/stories/rules/domain-fixture-example-files
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/domain-operation-in-the-step.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/domain-operation-in-the-step.bqrs
+  metadata:
+    name: domain-operation-in-the-step
+    kind: problem
+    id: cdd/stories/rules/domain-operation-in-the-step
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/example-role-names.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/example-role-names.bqrs
+  metadata:
+    name: example-role-names
+    kind: problem
+    id: cdd/stories/rules/example-role-names
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/examples-export-data-not-repository.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/examples-export-data-not-repository.bqrs
+  metadata:
+    name: examples-export-data-not-repository
+    kind: problem
+    id: cdd/stories/rules/examples-export-data-not-repository
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/four-to-nine-children.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/four-to-nine-children.bqrs
+  metadata:
+    name: four-to-nine-children
+    kind: problem
+    id: cdd/stories/rules/four-to-nine-children
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/gwt-steps-trace-to-domain-operations.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/gwt-steps-trace-to-domain-operations.bqrs
+  metadata:
+    name: gwt-steps-trace-to-domain-operations
+    kind: problem
+    id: cdd/stories/rules/gwt-steps-trace-to-domain-operations
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/initialize-from-fixture-then-seed.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/initialize-from-fixture-then-seed.bqrs
+  metadata:
+    name: initialize-from-fixture-then-seed
+    kind: problem
+    id: cdd/stories/rules/initialize-from-fixture-then-seed
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/kebab-case-paths.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/kebab-case-paths.bqrs
+  metadata:
+    name: kebab-case-paths
+    kind: problem
+    id: cdd/stories/rules/kebab-case-paths
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/originating-sub-epic-examples.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/originating-sub-epic-examples.bqrs
+  metadata:
+    name: originating-sub-epic-examples
+    kind: problem
+    id: cdd/stories/rules/originating-sub-epic-examples
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/plain-english-gwt-steps.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/plain-english-gwt-steps.bqrs
+  metadata:
+    name: plain-english-gwt-steps
+    kind: problem
+    id: cdd/stories/rules/plain-english-gwt-steps
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/pml-artifact-layout.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/pml-artifact-layout.bqrs
+  metadata:
+    name: pml-artifact-layout
+    kind: problem
+    id: cdd/stories/rules/pml-artifact-layout
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/right-size-story-nodes.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/right-size-story-nodes.bqrs
+  metadata:
+    name: right-size-story-nodes
+    kind: problem
+    id: cdd/stories/rules/right-size-story-nodes
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/scaffold-test-scripts.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/scaffold-test-scripts.bqrs
+  metadata:
+    name: scaffold-test-scripts
+    kind: problem
+    id: cdd/stories/rules/scaffold-test-scripts
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/story-name-captures-system-mechanic.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/story-name-captures-system-mechanic.bqrs
+  metadata:
+    name: story-name-captures-system-mechanic
+    kind: problem
+    id: cdd/stories/rules/story-name-captures-system-mechanic
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/test-story-driven.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/test-story-driven.bqrs
+  metadata:
+    name: test-story-driven
+    kind: problem
+    id: cdd/stories/rules/test-story-driven
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/use-thorough-e2e-tests.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/use-thorough-e2e-tests.bqrs
+  metadata:
+    name: use-thorough-e2e-tests
+    kind: problem
+    id: cdd/stories/rules/use-thorough-e2e-tests
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/verb-noun-format.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/verb-noun-format.bqrs
+  metadata:
+    name: verb-noun-format
+    kind: problem
+    id: cdd/stories/rules/verb-noun-format
+ -
+  pack: cdd/stories-graph-query-typescript#0
+  relativeQueryPath: rules/vocabulary-traces-to-domain-source.ql
+  relativeBqrsPath: cdd/stories-graph-query-typescript/rules/vocabulary-traces-to-domain-source.bqrs
+  metadata:
+    name: vocabulary-traces-to-domain-source
+    kind: problem
+    id: cdd/stories/rules/vocabulary-traces-to-domain-source
+extensionPacks: []
+packs:
+  codeql/util#3:
+    name: codeql/util
+    version: 2.0.45
+    isLibrary: true
+    isExtensionPack: false
+    localPath: file:///C:/Users/jeffa/.codeql/packages/codeql/util/2.0.45/
+    localPackDefinitionFile: file:///C:/Users/jeffa/.codeql/packages/codeql/util/2.0.45/qlpack.yml
+    headSha: 6e9f9e38390175c41b99070a423c875f450759ca
+    runDataExtensions: []
+  cdd/stories-graph-query-typescript#0:
+    name: cdd/stories-graph-query-typescript
+    version: 0.0.1
+    isLibrary: false
+    isExtensionPack: false
+    localPath: file:///C:/dev/abd-context-driven-delivery/practices/stories/model/typescript/codeql/
+    localPackDefinitionFile: file:///C:/dev/abd-context-driven-delivery/practices/stories/model/typescript/codeql/qlpack.yml
+    headSha: 251cef75232b3417eeab4f8ef34edaeddde50687
+    runDataExtensions:
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/anthropic.model.yml
+      index: 0
+      firstRowId: 0
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/anthropic.model.yml
+      index: 1
+      firstRowId: 1
+      rowCount: 7
+      locations:
+        lineNumbers: A=12+1*6
+        columnNumbers: A=9*7
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/apollo-server.model.yml
+      index: 0
+      firstRowId: 8
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/apollo-server.model.yml
+      index: 1
+      firstRowId: 9
+      rowCount: 2
+      locations:
+        lineNumbers: A=12+1
+        columnNumbers: A=9*2
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/apollo-server.model.yml
+      index: 2
+      firstRowId: 11
+      rowCount: 10
+      locations:
+        lineNumbers: A=19+1*9
+        columnNumbers: A=9*10
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/aws-sdk.model.yml
+      index: 0
+      firstRowId: 21
+      rowCount: 8
+      locations:
+        lineNumbers: A=6+1*7
+        columnNumbers: A=9*8
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/aws-sdk.model.yml
+      index: 1
+      firstRowId: 29
+      rowCount: 10
+      locations:
+        lineNumbers: A=18+1*9
+        columnNumbers: A=9*10
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/aws-sdk.model.yml
+      index: 2
+      firstRowId: 39
+      rowCount: 8
+      locations:
+        lineNumbers: A=32+1*7
+        columnNumbers: A=9*8
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/aws-sdk.model.yml
+      index: 3
+      firstRowId: 47
+      rowCount: 9
+      locations:
+        lineNumbers: A=44+1*8
+        columnNumbers: A=9*9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/axios.model.yml
+      index: 0
+      firstRowId: 56
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/axios.model.yml
+      index: 1
+      firstRowId: 57
+      rowCount: 1
+      locations:
+        lineNumbers: A=12
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/call-me-maybe.model.yml
+      index: 0
+      firstRowId: 58
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/cors.model.yml
+      index: 0
+      firstRowId: 59
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/default-threat-models-fixup.model.yml
+      index: 0
+      firstRowId: 60
+      rowCount: 1
+      locations:
+        lineNumbers: A=8
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/google-genai.model.yml
+      index: 0
+      firstRowId: 61
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/google-genai.model.yml
+      index: 1
+      firstRowId: 62
+      rowCount: 13
+      locations:
+        lineNumbers: A=12+1*12
+        columnNumbers: A=9*13
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/graph-ql.model.yml
+      index: 0
+      firstRowId: 75
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/graph-ql.model.yml
+      index: 1
+      firstRowId: 76
+      rowCount: 1
+      locations:
+        lineNumbers: A=11
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/hana-db-client.model.yml
+      index: 0
+      firstRowId: 77
+      rowCount: 4
+      locations:
+        lineNumbers: A=6+1*3
+        columnNumbers: A=9*4
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/hana-db-client.model.yml
+      index: 1
+      firstRowId: 81
+      rowCount: 2
+      locations:
+        lineNumbers: A=15+1
+        columnNumbers: A=9*2
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/hana-db-client.model.yml
+      index: 2
+      firstRowId: 83
+      rowCount: 6
+      locations:
+        lineNumbers: A=22+1*5
+        columnNumbers: A=9*6
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/langchain.model.yml
+      index: 0
+      firstRowId: 89
+      rowCount: 17
+      locations:
+        lineNumbers: A=6+1*16
+        columnNumbers: A=9*17
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/langchain.model.yml
+      index: 1
+      firstRowId: 106
+      rowCount: 21
+      locations:
+        lineNumbers: A=28+1*20
+        columnNumbers: A=9*21
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/make-dir.model.yml
+      index: 0
+      firstRowId: 127
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/markdown-table.model.yml
+      index: 0
+      firstRowId: 128
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/mkdirp.model.yml
+      index: 0
+      firstRowId: 129
+      rowCount: 2
+      locations:
+        lineNumbers: A=6+1
+        columnNumbers: A=9*2
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/open.model.yml
+      index: 0
+      firstRowId: 131
+      rowCount: 2
+      locations:
+        lineNumbers: A=6+1
+        columnNumbers: A=9*2
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/openai.model.yml
+      index: 0
+      firstRowId: 133
+      rowCount: 3
+      locations:
+        lineNumbers: A=6+1*2
+        columnNumbers: A=9*3
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/openai.model.yml
+      index: 1
+      firstRowId: 136
+      rowCount: 16
+      locations:
+        lineNumbers: A=14+1*15
+        columnNumbers: A=9*16
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/openrouter.model.yml
+      index: 0
+      firstRowId: 152
+      rowCount: 3
+      locations:
+        lineNumbers: A=6+1*2
+        columnNumbers: A=9*3
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/openrouter.model.yml
+      index: 1
+      firstRowId: 155
+      rowCount: 6
+      locations:
+        lineNumbers: A=14+1*5
+        columnNumbers: A=9*6
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/react-relay-threat.model.yml
+      index: 0
+      firstRowId: 161
+      rowCount: 10
+      locations:
+        lineNumbers: A=6+1*9
+        columnNumbers: A=9*10
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/react.model.yml
+      index: 0
+      firstRowId: 171
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/rimraf.model.yml
+      index: 0
+      firstRowId: 172
+      rowCount: 3
+      locations:
+        lineNumbers: A=6+1*2
+        columnNumbers: A=9*3
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/shelljs.model.yml
+      index: 0
+      firstRowId: 175
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/tanstack.model.yml
+      index: 0
+      firstRowId: 176
+      rowCount: 6
+      locations:
+        lineNumbers: A=6+1*5
+        columnNumbers: A=9*6
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/underscore.string.model.yml
+      index: 0
+      firstRowId: 182
+      rowCount: 5
+      locations:
+        lineNumbers: A=6+1*4
+        columnNumbers: A=9*5
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/underscore.string.model.yml
+      index: 1
+      firstRowId: 187
+      rowCount: 20
+      locations:
+        lineNumbers: A=16+1*19
+        columnNumbers: A=9*20
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/vue.model.yml
+      index: 0
+      firstRowId: 207
+      rowCount: 3
+      locations:
+        lineNumbers: A=8+1*2
+        columnNumbers: A=9*3
+     -
+      pack: codeql/javascript-all#1
+      relativePath: ext/vue.model.yml
+      index: 1
+      firstRowId: 210
+      rowCount: 4
+      locations:
+        lineNumbers: A=16+2*3
+        columnNumbers: A=9*4
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/NoSQL.model.yml
+      index: 0
+      firstRowId: 214
+      rowCount: 4
+      locations:
+        lineNumbers: A=8+3+1*2
+        columnNumbers: A=9*4
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/NodeJSLib.model.yml
+      index: 0
+      firstRowId: 218
+      rowCount: 5
+      locations:
+        lineNumbers: A=6+1*4
+        columnNumbers: A=9*5
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/SQL.model.yml
+      index: 0
+      firstRowId: 223
+      rowCount: 5
+      locations:
+        lineNumbers: A=6+1*4
+        columnNumbers: A=9*5
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/SQL.model.yml
+      index: 1
+      firstRowId: 228
+      rowCount: 4
+      locations:
+        lineNumbers: A=16+1*3
+        columnNumbers: A=9*4
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/helmet/Helmet.Required.Setting.model.yml
+      index: 0
+      firstRowId: 232
+      rowCount: 2
+      locations:
+        lineNumbers: A=6+1
+        columnNumbers: A=9*2
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/minimongo/model.yml
+      index: 0
+      firstRowId: 234
+      rowCount: 75
+      locations:
+        lineNumbers: A=6+1*74
+        columnNumbers: A=9*75
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/mongodb/model.yml
+      index: 0
+      firstRowId: 309
+      rowCount: 26
+      locations:
+        lineNumbers: A=6+1*25
+        columnNumbers: A=9*26
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/mongodb/model.yml
+      index: 1
+      firstRowId: 335
+      rowCount: 611
+      locations:
+        lineNumbers: A=37+1*610
+        columnNumbers: A=9*611
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/mongodb/model.yml
+      index: 2
+      firstRowId: 946
+      rowCount: 32
+      locations:
+        lineNumbers: A=653+1*31
+        columnNumbers: A=9*32
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/mongodb/model.yml
+      index: 3
+      firstRowId: 978
+      rowCount: 102
+      locations:
+        lineNumbers: A=690+1*101
+        columnNumbers: A=9*102
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/mssql/model.yml
+      index: 0
+      firstRowId: 1080
+      rowCount: 34
+      locations:
+        lineNumbers: A=6+1*33
+        columnNumbers: A=9*34
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/mysql/model.yml
+      index: 0
+      firstRowId: 1114
+      rowCount: 57
+      locations:
+        lineNumbers: A=6+1*56
+        columnNumbers: A=9*57
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/mysql/model.yml
+      index: 1
+      firstRowId: 1171
+      rowCount: 3
+      locations:
+        lineNumbers: A=68+1*2
+        columnNumbers: A=9*3
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/pg/model.yml
+      index: 0
+      firstRowId: 1174
+      rowCount: 65
+      locations:
+        lineNumbers: A=6+1*64
+        columnNumbers: A=9*65
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/pg/model.yml
+      index: 1
+      firstRowId: 1239
+      rowCount: 5
+      locations:
+        lineNumbers: A=76+1*4
+        columnNumbers: A=9*5
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/pg/model.yml
+      index: 2
+      firstRowId: 1244
+      rowCount: 23
+      locations:
+        lineNumbers: A=86+1*22
+        columnNumbers: A=9*23
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/sequelize/model.yml
+      index: 0
+      firstRowId: 1267
+      rowCount: 7
+      locations:
+        lineNumbers: A=6+1*6
+        columnNumbers: A=9*7
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/sequelize/model.yml
+      index: 1
+      firstRowId: 1274
+      rowCount: 248
+      locations:
+        lineNumbers: A=18+1*247
+        columnNumbers: A=9*248
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/sequelize/model.yml
+      index: 2
+      firstRowId: 1522
+      rowCount: 5
+      locations:
+        lineNumbers: A=271+1*4
+        columnNumbers: A=9*5
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/sequelize/model.yml
+      index: 3
+      firstRowId: 1527
+      rowCount: 2
+      locations:
+        lineNumbers: A=281+1
+        columnNumbers: A=9*2
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/spanner/model.yml
+      index: 0
+      firstRowId: 1529
+      rowCount: 174
+      locations:
+        lineNumbers: A=6+1*173
+        columnNumbers: A=9*174
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/spanner/model.yml
+      index: 1
+      firstRowId: 1703
+      rowCount: 5
+      locations:
+        lineNumbers: A=185+1*4
+        columnNumbers: A=9*5
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/sqlite3/model.yml
+      index: 0
+      firstRowId: 1708
+      rowCount: 15
+      locations:
+        lineNumbers: A=6+1*14
+        columnNumbers: A=9*15
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/frameworks/sqlite3/model.yml
+      index: 1
+      firstRowId: 1723
+      rowCount: 3
+      locations:
+        lineNumbers: A=26+1*2
+        columnNumbers: A=9*3
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/security/domains/IntegrityCheckingRequired/integrity_checking_required.model.yml
+      index: 0
+      firstRowId: 1726
+      rowCount: 3
+      locations:
+        lineNumbers: A=6+1*2
+        columnNumbers: A=9*3
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/security/domains/compromised/compromised_domains.model.yml
+      index: 0
+      firstRowId: 1729
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/javascript-all#1
+      relativePath: semmle/javascript/security/domains/untrusted/untrusted_domains.model.yml
+      index: 0
+      firstRowId: 1730
+      rowCount: 6
+      locations:
+        lineNumbers: A=7+1+3+1*3
+        columnNumbers: A=9*6
+     -
+      pack: codeql/threat-models#2
+      relativePath: ext/supported-threat-models.model.yml
+      index: 0
+      firstRowId: 1736
+      rowCount: 1
+      locations:
+        lineNumbers: A=6
+        columnNumbers: A=9
+     -
+      pack: codeql/threat-models#2
+      relativePath: ext/threat-model-grouping.model.yml
+      index: 0
+      firstRowId: 1737
+      rowCount: 15
+      locations:
+        lineNumbers: A=8+3+1+3+1*5+3+1+5+1*3
+        columnNumbers: A=9*15
+  codeql/threat-models#2:
+    name: codeql/threat-models
+    version: 1.0.58
+    isLibrary: true
+    isExtensionPack: false
+    localPath: file:///C:/Users/jeffa/.codeql/packages/codeql/threat-models/1.0.58/
+    localPackDefinitionFile: file:///C:/Users/jeffa/.codeql/packages/codeql/threat-models/1.0.58/qlpack.yml
+    headSha: 6e9f9e38390175c41b99070a423c875f450759ca
+    runDataExtensions: []
+  codeql/javascript-all#1:
+    name: codeql/javascript-all
+    version: 2.10.2
+    isLibrary: true
+    isExtensionPack: false
+    localPath: file:///C:/Users/jeffa/.codeql/packages/codeql/javascript-all/2.10.2/
+    localPackDefinitionFile: file:///C:/Users/jeffa/.codeql/packages/codeql/javascript-all/2.10.2/qlpack.yml
+    headSha: 6e9f9e38390175c41b99070a423c875f450759ca
+    runDataExtensions: []

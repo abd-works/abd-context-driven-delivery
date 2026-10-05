@@ -1,0 +1,12 @@
+---
+sourceLocationPrefix: C:\dev\abd-context-driven-delivery\practices\stories\model\typescript\codeql\.examples
+baselineLinesOfCode: 182
+unicodeNewlines: true
+columnKind: utf16
+primaryLanguage: javascript
+creationMetadata:
+  cliVersion: 2.27.0
+  creationTime: 2026-10-05T19:19:02.079322200Z
+overlayBaseDatabase: false
+overlayDatabase: false
+finalised: true

@@ -1,0 +1,628 @@
+[2026-10-05 15:17:51] This is codeql database create C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master --language=python --source-root=C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples --overwrite
+[2026-10-05 15:17:51] Log file was started late.
+[2026-10-05 15:17:51] [PROGRESS] database create> Initializing database at C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master.
+[2026-10-05 15:17:51] Running plumbing command: codeql database init --overwrite --language=python --extractor-options-verbosity=1 --qlconfig-file=C:\dev\abd-context-driven-delivery\qlconfig.yml --source-root=C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples --allow-missing-source-root=false --allow-already-existing -- C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master
+[2026-10-05 15:17:51] Calling plumbing command: codeql resolve languages --extractor-options-verbosity=1 --format=betterjson
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Scanning for [codeql-extractor.yml] from C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\.codeqlmanifest.json
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\actions\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\cpp\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\csharp\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\csv\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\go\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\html\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\java\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\javascript\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\properties\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\ruby\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\rust\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\swift\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\xml\codeql-extractor.yml.
+[2026-10-05 15:17:51] [DETAILS] resolve languages> Parsing C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\yaml\codeql-extractor.yml.
+[2026-10-05 15:17:51] Plumbing command codeql resolve languages completed:
+                      {
+                        "aliases" : {
+                          "c" : "cpp",
+                          "c++" : "cpp",
+                          "c-c++" : "cpp",
+                          "c-cpp" : "cpp",
+                          "c#" : "csharp",
+                          "java-kotlin" : "java",
+                          "kotlin" : "java",
+                          "javascript-typescript" : "javascript",
+                          "typescript" : "javascript"
+                        },
+                        "extractors" : {
+                          "actions" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\actions",
+                              "extractor_options" : { }
+                            }
+                          ],
+                          "cpp" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\cpp",
+                              "extractor_options" : {
+                                "scale_timeouts" : {
+                                  "title" : "Value to scale compiler introspection timeouts with",
+                                  "description" : "The extractor attempts to determine what compiler the source code being extracted is compiled with. To this end the extractor makes additional calls to the compiler, some of which are expected to return within a certain fixed time (either 10s or 15s). On some systems that are under high load this time might be too short, and can be scaled up using this option.\n",
+                                  "type" : "string",
+                                  "pattern" : "[0-9]+"
+                                },
+                                "log_verbosity" : {
+                                  "title" : "Verbosity of the extractor logging",
+                                  "description" : "Set the verbosity of the extractor logging to 'quiet' (0), 'normal' (1), 'chatty' (2), or 'noisy' (3). The default is 'normal'.\n",
+                                  "type" : "string",
+                                  "pattern" : "[0-3]"
+                                }
+                              }
+                            }
+                          ],
+                          "csharp" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\csharp",
+                              "extractor_options" : {
+                                "trap" : {
+                                  "title" : "Options pertaining to TRAP.",
+                                  "description" : "Options pertaining to TRAP.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "compression" : {
+                                      "title" : "Controls compression for the TRAP files written by the extractor.",
+                                      "description" : "This option is only intended for use in debugging the extractor. Accepted values are 'brotli' (the default, to write brotli-compressed TRAP), 'gzip', and 'none' (to write uncompressed TRAP).\n",
+                                      "type" : "string",
+                                      "pattern" : "^(none|gzip|brotli)$"
+                                    }
+                                  }
+                                },
+                                "buildless" : {
+                                  "title" : "DEPRECATED - Whether to use buildless (standalone) extraction.",
+                                  "description" : "DEPRECATED: Use `--build-mode none` instead.\nA value indicating, which type of extraction the autobuilder should perform. If 'true', then the standalone extractor will be used, otherwise tracing extraction will be performed. The default is 'false'. Note that buildless extraction will generally yield less accurate analysis results, and should only be used in cases where it is not possible to build the code (for example if it uses inaccessible dependencies).\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                },
+                                "logging" : {
+                                  "title" : "Options pertaining to logging.",
+                                  "description" : "Options pertaining to logging.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "verbosity" : {
+                                      "title" : "Extractor logging verbosity level.",
+                                      "description" : "Controls the level of verbosity of the extractor. The supported levels are (in order of increasing verbosity):\n  - off\n  - errors\n  - warnings\n  - info or progress\n  - debug or progress+\n  - trace or progress++\n  - progress+++\n",
+                                      "type" : "string",
+                                      "pattern" : "^(off|errors|warnings|(info|progress)|(debug|progress\\+)|(trace|progress\\+\\+)|progress\\+\\+\\+)$"
+                                    }
+                                  }
+                                },
+                                "binlog" : {
+                                  "title" : "Binlog",
+                                  "description" : "[EXPERIMENTAL] The value is a path to the MsBuild binary log file that should be extracted. This option only works when `--build-mode none` is also specified.\n",
+                                  "type" : "array"
+                                },
+                                "buildless_dependency_dir" : {
+                                  "title" : "The path where buildless (standalone) extraction should keep dependencies.",
+                                  "description" : "If set, the buildless (standalone) extractor will store dependencies in this directory.\n",
+                                  "type" : "string"
+                                }
+                              }
+                            }
+                          ],
+                          "csv" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\csv"
+                            }
+                          ],
+                          "go" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\go",
+                              "extractor_options" : {
+                                "extract_tests" : {
+                                  "title" : "Whether to include Go test files in the CodeQL database.",
+                                  "description" : "A value indicating whether Go test files should be included in the CodeQL database. The default is 'false'.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                },
+                                "extract_vendor_dirs" : {
+                                  "title" : "Whether to include Go vendor directories in the CodeQL database.",
+                                  "description" : "A value indicating whether Go vendor directories should be included in the CodeQL database. The default is 'false'.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                }
+                              }
+                            }
+                          ],
+                          "html" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\html"
+                            }
+                          ],
+                          "java" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\java",
+                              "extractor_options" : {
+                                "exclude" : {
+                                  "title" : "A glob excluding files from analysis.",
+                                  "description" : "A glob indicating what files to exclude from the analysis. This accepts glob patterns that are supported by Java's 'getPathMatcher' implementation.\n",
+                                  "type" : "string"
+                                },
+                                "add_prefer_source" : {
+                                  "title" : "Whether to always prefer source files over class files.",
+                                  "description" : "A value indicating whether source files should be preferred over class files. If set to 'true', the extraction adds '-Xprefer:source' to the javac command line. If set to 'false', the extraction uses the default javac behavior ('-Xprefer:newer'). The default is 'true'.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                },
+                                "buildless" : {
+                                  "title" : "Whether to use buildless (standalone) extraction (experimental).",
+                                  "description" : "A value indicating, which type of extraction the autobuilder should perform. If 'true', then the standalone extractor will be used, otherwise tracing extraction will be performed. The default is 'false'. Note that buildless extraction will generally yield less accurate analysis results, and should only be used in cases where it is not possible to build the code (for example if it uses inaccessible dependencies).\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                },
+                                "buildless_dependency_dir" : {
+                                  "title" : "The path where buildless (standalone) extraction should keep dependencies.",
+                                  "description" : "If set, the buildless (standalone) extractor will store dependencies in this directory.\n",
+                                  "type" : "string"
+                                },
+                                "minimize_dependency_jars" : {
+                                  "title" : "Whether to rewrite and minimize downloaded JAR dependencies (experimental).",
+                                  "description" : "If 'true', JAR dependencies downloaded during extraction will be rewritten to remove unneeded data, such as method bodies. The default is 'false'.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                }
+                              }
+                            }
+                          ],
+                          "javascript" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\javascript",
+                              "extractor_options" : {
+                                "skip_types" : {
+                                  "title" : "Skip type extraction for TypeScript",
+                                  "description" : "Whether to skip the extraction of types in a TypeScript application",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                }
+                              }
+                            }
+                          ],
+                          "properties" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\properties"
+                            }
+                          ],
+                          "python" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\python",
+                              "extractor_options" : {
+                                "logging" : {
+                                  "title" : "Options pertaining to logging.",
+                                  "description" : "Options pertaining to logging.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "verbosity" : {
+                                      "title" : "Python extractor logging verbosity level.",
+                                      "description" : "Controls the level of verbosity of the CodeQL Python extractor.\nThe supported levels are (in order of increasing verbosity):\n\n  - off\n  - errors\n  - warnings\n  - info or progress\n  - debug or progress+\n  - trace or progress++\n  - progress+++\n",
+                                      "type" : "string",
+                                      "pattern" : "^(off|errors|warnings|(info|progress)|(debug|progress\\+)|(trace|progress\\+\\+)|progress\\+\\+\\+)$"
+                                    }
+                                  }
+                                },
+                                "python_executable_name" : {
+                                  "title" : "Controls the name of the Python executable used by the Python extractor.",
+                                  "description" : "The Python extractor uses platform-dependent heuristics to determine the name of the Python executable to use. Specifying a value for this option overrides the name of the Python executable used by the extractor. Accepted values are py, python and python3. Use this setting with caution, the Python extractor requires Python 3 to run.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(py|python|python3)$"
+                                }
+                              }
+                            }
+                          ],
+                          "ruby" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\ruby",
+                              "extractor_options" : {
+                                "trap" : {
+                                  "title" : "Options pertaining to TRAP.",
+                                  "description" : "Options pertaining to TRAP.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "compression" : {
+                                      "title" : "Controls compression for the TRAP files written by the extractor.",
+                                      "description" : "This option is only intended for use in debugging the extractor. Accepted values are 'gzip' (the default, to write gzip-compressed TRAP) 'zstd' (to write Zstandard-compressed TRAP) and 'none' (to write uncompressed TRAP).\n",
+                                      "type" : "string",
+                                      "pattern" : "^(none|gzip|zstd)$"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "rust" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\rust",
+                              "extractor_options" : {
+                                "trap" : {
+                                  "title" : "Options pertaining to TRAP.",
+                                  "description" : "Options pertaining to TRAP.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "compression" : {
+                                      "title" : "Controls compression for the TRAP files written by the extractor.",
+                                      "description" : "This option is only intended for use in debugging the extractor. Accepted values are 'gzip' (to write gzip-compressed TRAP) 'zstd' (the default, to write Zstandard-compressed TRAP) and 'none' (to write uncompressed TRAP).\n",
+                                      "type" : "string",
+                                      "pattern" : "^(none|gzip|zstd)$"
+                                    }
+                                  }
+                                },
+                                "cargo_target_dir" : {
+                                  "title" : "Directory to use for cargo output files.",
+                                  "description" : "This value is an optional path to use as `CARGO_TARGET_DIR` for the internal cargo commands the extractor uses. Pointing it to a persistent directory may reduce execution time of consecutive extractor runs. By default, a new scratch directory is used for each extraction, while qltests use the test's `target` directory so artifacts can be reused across runs.\n",
+                                  "type" : "string"
+                                },
+                                "cargo_target" : {
+                                  "title" : "Target architecture",
+                                  "description" : "Target architecture to use for analysis, analogous to `cargo --target`. By default the host architecture is used.\n",
+                                  "type" : "string"
+                                },
+                                "cargo_features" : {
+                                  "title" : "Cargo features to turn on",
+                                  "description" : "Comma-separated list of features to turn on. By default all features are enabled. If any features are specified, then only those features are enabled. The `default` feature must be explicitly specified if only default features are desired. Can be repeated.\n",
+                                  "type" : "array"
+                                },
+                                "cargo_cfg_overrides" : {
+                                  "title" : "Cargo cfg overrides",
+                                  "description" : "Comma-separated list of cfg settings to enable, or disable if prefixed with `-`. Can be repeated.\n",
+                                  "type" : "array"
+                                },
+                                "logging" : {
+                                  "title" : "Options pertaining to logging.",
+                                  "description" : "Options pertaining to logging.",
+                                  "type" : "object",
+                                  "properties" : {
+                                    "verbosity" : {
+                                      "title" : "Extractor logging verbosity level.",
+                                      "description" : "Controls the level of verbosity of the extractor. The supported levels are (in order of increasing verbosity):\n  - off\n  - errors\n  - warnings\n  - info or progress\n  - debug or progress+\n  - trace or progress++\n  - progress+++\n",
+                                      "type" : "string",
+                                      "pattern" : "^(off|errors|warnings|(info|progress)|(debug|progress\\+)|(trace|progress\\+\\+)|progress\\+\\+\\+)$"
+                                    },
+                                    "flamegraph" : {
+                                      "title" : "[Experimental] File path for write flame graph log",
+                                      "description" : "Collect flame graph data using the `tracing-flame` crate. To render a flame graph or chart, run the `inferno-flamegraph` command. See also: https://crates.io/crates/tracing-flame\n",
+                                      "type" : "string"
+                                    }
+                                  }
+                                },
+                                "extract_dependencies_as_source" : {
+                                  "title" : "Extract dependencies as source code",
+                                  "description" : "Extract the full source code of dependencies instead of only extracting signatures.\n",
+                                  "type" : "string",
+                                  "pattern" : "^(false|true)$"
+                                }
+                              }
+                            }
+                          ],
+                          "swift" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\swift"
+                            }
+                          ],
+                          "xml" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\xml"
+                            }
+                          ],
+                          "yaml" : [
+                            {
+                              "extractor_root" : "C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\yaml"
+                            }
+                          ]
+                        }
+                      }
+[2026-10-05 15:17:51] [PROGRESS] database init> Calculating baseline information in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples
+[2026-10-05 15:17:51] [SPAMMY] database init> Ignoring the following directories when processing baseline information: .git, .hg, .svn.
+[2026-10-05 15:17:51] [DETAILS] database init> Running command in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples: C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\tools\win64\scc.exe --no-config --by-file --exclude-dir .git,.hg,.svn --format json --no-large --no-min .
+[2026-10-05 15:17:51] [SPAMMY] database init> Found 19 baseline files for python.
+[2026-10-05 15:17:51] [PROGRESS] database init> Calculated baseline information for languages: python (79ms).
+[2026-10-05 15:17:51] [PROGRESS] database init> Resolving extractor python.
+[2026-10-05 15:17:51] [DETAILS] database init> Found candidate extractor root for python: C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python.
+[2026-10-05 15:17:51] [PROGRESS] database init> Successfully loaded extractor Python (python) from C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python.
+[2026-10-05 15:17:51] [PROGRESS] database init> Created skeleton CodeQL database at C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master. This in-progress database is ready to be populated by an extractor.
+[2026-10-05 15:17:51] Plumbing command codeql database init completed.
+[2026-10-05 15:17:51] [PROGRESS] database create> Running build command: []
+[2026-10-05 15:17:51] Running plumbing command: codeql database trace-command --working-dir=C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples --index-traceless-dbs --no-db-cluster -- C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master
+[2026-10-05 15:17:51] Using autobuild script C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\tools\autobuild.cmd.
+[2026-10-05 15:17:51] [PROGRESS] database trace-command> Running command in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples: [C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\tools\autobuild.cmd]
+[2026-10-05 15:17:51] [build-stdout] Python 3.14.7
+[2026-10-05 15:17:52] [build-stderr] No suitable Python runtime found
+[2026-10-05 15:17:52] [build-stderr] Pass --list (-0) to see all detected environments on your machine
+[2026-10-05 15:17:52] [build-stderr] or set environment variable PYLAUNCHER_ALLOW_INSTALL to use winget
+[2026-10-05 15:17:52] [build-stderr] or open the Microsoft Store to the requested version.
+[2026-10-05 15:17:52] [build-stdout] No directories containing root identifiers were found. Returning working directory as root.
+[2026-10-05 15:17:52] [build-stdout] Will try to guess Python version, as it was not specified in `lgtm.yml`
+[2026-10-05 15:17:52] [build-stdout] Trying to guess Python version based on Trove classifiers in setup.py
+[2026-10-05 15:17:52] [build-stdout] Did not find setup.py (expected it to be at C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\setup.py)
+[2026-10-05 15:17:52] [build-stdout] Trying to guess Python version based on travis file
+[2026-10-05 15:17:52] [build-stdout] Did not find any travis files (expected them at either ['C:\\dev\\abd-context-driven-delivery\\practices\\ddd\\model\\python\\codeql\\.examples\\.travis.yml', 'C:\\dev\\abd-context-driven-delivery\\practices\\ddd\\model\\python\\codeql\\.examples\\travis.yml'])
+[2026-10-05 15:17:52] [build-stdout] Trying to guess Python version based on installed versions
+[2026-10-05 15:17:52] [build-stdout] Wanted to run Python 2, but it is not available. Using Python 3 instead
+[2026-10-05 15:17:52] [build-stdout] This script is running Python 3, but Python 2 is also available (as 'py -3')
+[2026-10-05 15:17:52] [build-stdout] Could not guess Python version, will use default: Python 3
+[2026-10-05 15:17:52] [build-stdout] Calling py -3 -S C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\tools\python_tracer.py --verbosity 3 -z all -c C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\working\trap_cache -R C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples
+[2026-10-05 15:17:52] [build-stdout] Python 3.14.7
+[2026-10-05 15:17:52] [build-stdout] INFO: The Python extractor has recently stopped extracting the standard library by default. If you encounter problems, please let us know by submitting an issue to https://github.com/github/codeql. It is possible to re-enable extraction of the standard library by setting the environment variable CODEQL_EXTRACTOR_PYTHON_EXTRACT_STDLIB.
+[2026-10-05 15:17:52] [build-stdout] [INFO] Extraction will use the Python 3 standard library.
+[2026-10-05 15:17:52] [build-stdout] [INFO] sys_path is: ['C:\\Users\\jeffa\\AppData\\Local\\Programs\\CodeQL\\codeql\\python\\tools', 'C:\\dev\\abd-context-driven-delivery', 'C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python314\\python314.zip', 'C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python314\\DLLs', 'C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python314\\Lib', 'C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python314']
+[2026-10-05 15:17:52] [build-stdout] [INFO] Python version 3.14.7
+[2026-10-05 15:17:52] [build-stdout] [INFO] Python extractor version 7.1.9
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\building-blocks-fidelity-requires-tactical-stereotype\faulty in 2ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\building-blocks-fidelity-requires-tactical-stereotype\repaired\repairedAsset.py in 7ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\building-blocks-fidelity-requires-tactical-stereotype in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\building-blocks-fidelity-requires-tactical-stereotype\faulty\faultyAsset.py in 11ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [3] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\building-blocks-fidelity-requires-tactical-stereotype\repaired in 1ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\domain-concepts-not-technical-names\faulty in 2ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\domain-concepts-not-technical-names\repaired in 1ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\domain-concepts-not-technical-names in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\domain-concepts-not-technical-names\faulty\faultyAsset.py in 6ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\flaccid-data-object-no-behavior\faulty in 1ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [3] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\domain-concepts-not-technical-names\repaired\repairedAsset.py in 9ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [3] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\flaccid-data-object-no-behavior\repaired in 1ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [3] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\flaccid-data-object-no-behavior in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\flaccid-data-object-no-behavior\faulty\faultyAsset.py in 13ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\flaccid-data-object-no-behavior\repaired\repairedAsset.py in 11ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [7] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\legacy-asset in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\load-with-identity-in-hand\faulty in 2ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\load-with-identity-in-hand in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [7] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\load-with-identity-in-hand\repaired in 2ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [5] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\no-orphaned-objects\faulty in 2ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [5] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\no-orphaned-objects in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [12] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\no-orphaned-objects\repaired in 3ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [12] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\private-method-naming\faulty in 1ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\load-with-identity-in-hand\repaired\repairedAsset.py in 11ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [9] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\private-method-naming in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [9] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\repository-is-collection-lifecycle\faulty in 2ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [6] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\private-method-naming\repaired in 4ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\no-orphaned-objects\faulty\faultyAsset.py in 17ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [13] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\repository-is-collection-lifecycle in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [6] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\repository-is-collection-lifecycle\repaired in 4ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [4] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\load-with-identity-in-hand\faulty\faultyAsset.py in 21ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [4] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\screen-interface-not-a-domain-object in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [6] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\screen-interface-not-a-domain-object\repaired in 1ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [11] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\screen-interface-not-a-domain-object\faulty in 2ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [6] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\service-is-homeless\faulty in 2ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\repository-is-collection-lifecycle\faulty\faultyAsset.py in 13ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [1] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\service-is-homeless in 0ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [6] Extracted folder C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\service-is-homeless\repaired in 1ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [12] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\private-method-naming\repaired\repairedAsset.py in 17ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [5] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\private-method-naming\faulty\faultyAsset.py in 20ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [7] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\no-orphaned-objects\repaired\repairedAsset.py in 24ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [13] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\screen-interface-not-a-domain-object\repaired\repairedAsset.py in 14ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [9] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\repository-is-collection-lifecycle\repaired\repairedAsset.py in 19ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [3] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\legacy-asset\faultyAsset.py in 39ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [4] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\service-is-homeless\faulty\faultyAsset.py in 13ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [2] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\screen-interface-not-a-domain-object\faulty\faultyAsset.py in 17ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] [11] Extracted file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\service-is-homeless\repaired\repairedAsset.py in 13ms
+[2026-10-05 15:17:53] [build-stdout] [INFO] Processed 47 modules in 0.70s
+[2026-10-05 15:17:53] Plumbing command codeql database trace-command completed.
+[2026-10-05 15:17:53] [PROGRESS] database create> Finalizing database at C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master.
+[2026-10-05 15:17:53] Running plumbing command: codeql database finalize --no-db-cluster -- C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master
+[2026-10-05 15:17:53] Using pre-finalize script C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\tools\pre-finalize.cmd.
+[2026-10-05 15:17:53] [PROGRESS] database finalize> Running pre-finalize script C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\tools\pre-finalize.cmd in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples.
+[2026-10-05 15:17:53] Running plumbing command: codeql database trace-command --working-dir=C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples --no-tracing -- C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\tools\pre-finalize.cmd
+[2026-10-05 15:17:53] [PROGRESS] database trace-command> Running command in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples: [C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\tools\pre-finalize.cmd]
+[2026-10-05 15:17:53] [build-stderr] Scanning for files in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples...
+[2026-10-05 15:17:54] [build-stderr] C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master: Indexing files in in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples...
+[2026-10-05 15:17:54] [build-stderr] Running command in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples: [C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\yaml\tools\index-files.cmd, C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\working\files-to-index7868845643114881389.list]
+[2026-10-05 15:17:54] Plumbing command codeql database trace-command completed.
+[2026-10-05 15:17:54] [PROGRESS] database finalize> Pre-finalize script C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\tools\pre-finalize.cmd completed in 978 ms.
+[2026-10-05 15:17:54] [PROGRESS] database finalize> Running TRAP import for CodeQL database at C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master...
+[2026-10-05 15:17:54] Running plumbing command: codeql dataset import --dbscheme=C:\Users\jeffa\AppData\Local\Programs\CodeQL\codeql\python\semmlecode.python.dbscheme -- C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\db-python C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\trap\python
+[2026-10-05 15:17:54] Clearing disk cache since the version file C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\db-python\default\cache\version does not exist
+[2026-10-05 15:17:54] Tuple pool not found. Clearing relations with cached strings
+[2026-10-05 15:17:54] Trimming disk cache at C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\db-python\default\cache in mode clear.
+[2026-10-05 15:17:54] Sequence stamp origin is -5860620853595470323
+[2026-10-05 15:17:54] Pausing evaluation to hard-clear memory at sequence stamp o+0
+[2026-10-05 15:17:54] Unpausing evaluation
+[2026-10-05 15:17:54] Pausing evaluation to quickly trim disk at sequence stamp o+1
+[2026-10-05 15:17:54] Unpausing evaluation
+[2026-10-05 15:17:54] Pausing evaluation to zealously trim disk at sequence stamp o+2
+[2026-10-05 15:17:54] Unpausing evaluation
+[2026-10-05 15:17:54] Trimming completed (5ms): Purged everything.
+[2026-10-05 15:17:54] Scanning for files in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\trap\python
+[2026-10-05 15:17:54] Found 52 TRAP files (505.83 KiB)
+[2026-10-05 15:17:54] [PROGRESS] dataset import> Importing TRAP files
+[2026-10-05 15:17:54] Importing $files.7a7xeTOhzvUOpgqxzuzPXFe9plw=.trap.gz (1 of 52)
+[2026-10-05 15:17:54] Importing $files.EC5KjB6ZggThUbHhwkHBsNld3Jg=.trap.gz (2 of 52)
+[2026-10-05 15:17:54] Importing $files.Ho-vb0h7z-yNWlw8w4-GMLz2zMs=.trap.gz (3 of 52)
+[2026-10-05 15:17:54] Importing $files.MoJiejDUmrRnvNlVf9AeIFPTcWU=.trap.gz (4 of 52)
+[2026-10-05 15:17:54] Importing $files.ORBFWjNh14KbdFkwulgtikAu9oc=.trap.gz (5 of 52)
+[2026-10-05 15:17:54] Importing $files.W0oMqccpWLyPm9nlxiDEUSjgq_A=.trap.gz (6 of 52)
+[2026-10-05 15:17:54] Importing $files._Nkz-p2EWLJMLLA6vzIsNbB5EjI=.trap.gz (7 of 52)
+[2026-10-05 15:17:54] Importing $files.iicbtUeKXchAXAQxWIPu1bTAD48=.trap.gz (8 of 52)
+[2026-10-05 15:17:54] Importing $files.ktySbRI1Ruz2RvJyVHwI3jCIm1o=.trap.gz (9 of 52)
+[2026-10-05 15:17:54] Importing $files.nemioRJi8wiKUd5d0hQjlM841Uo=.trap.gz (10 of 52)
+[2026-10-05 15:17:54] Importing $flags._ZfCgmRGWkVaeWXIoBx444PbB7g=.trap.gz (11 of 52)
+[2026-10-05 15:17:54] Importing $interpreter3.ujtdCtbZi3VpP6Hbla98NW5jAxc=.trap.gz (12 of 52)
+[2026-10-05 15:17:54] Importing $stdlib_33.d4ERaDloyZjxa53eabUVEGm2P-Y=.trap (13 of 52)
+[2026-10-05 15:17:54] Importing codeql-database.yml.trap.gz (14 of 52)
+[2026-10-05 15:17:54] Importing faulty.5axLx9fVLUDGiFOn2rS4HMtNVY8=.trap.gz (15 of 52)
+[2026-10-05 15:17:54] Importing faulty.6BefMwQYVGk10MN61M2R0p9RAKM=.trap.gz (16 of 52)
+[2026-10-05 15:17:54] Importing faulty.KLO-9l75NNBKl6VdJq1Rb-kPLWU=.trap.gz (17 of 52)
+[2026-10-05 15:17:54] Importing faulty.hYJ1Yk0e8x8MfZwF_RXn4N2yyU8=.trap.gz (18 of 52)
+[2026-10-05 15:17:54] Importing faulty.ntENUpnk_zg2o5vIamXiiyyl9wU=.trap.gz (19 of 52)
+[2026-10-05 15:17:54] Importing faulty.qkewbPVeMH3JOAag7bnclNJMBM4=.trap.gz (20 of 52)
+[2026-10-05 15:17:54] Importing faulty.tSPwyOK8oRLWBqXK5cuDAzdUSFI=.trap.gz (21 of 52)
+[2026-10-05 15:17:54] Importing faulty.w-_PD1Nk8iQfx8WDLlnN2L5RSAk=.trap.gz (22 of 52)
+[2026-10-05 15:17:54] Importing faulty.yRWplGcd_O0McGXPPckxgntzhQY=.trap.gz (23 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.0LjXHIHFKtrHrADiBmX9AYbv_7c=.trap.gz (24 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.21isjvIbrQ_-uXD6QrI-oOgnnuo=.trap.gz (25 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.5dAMhut01lXv0UiShklFGqz1PSI=.trap.gz (26 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.F1AQmVsK4T2K9JyTTwdT5A689Jk=.trap.gz (27 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.JvUnq8eAILYc58ojMr7N-5muff8=.trap.gz (28 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.Sg59c0fevQ3noDDl_FP43ml_gK0=.trap.gz (29 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.XQPcKY6iY2u3wQgtyr8jYj1MUqI=.trap.gz (30 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.iCWF_4W-KSDrYEaKvkB7GrBdttA=.trap.gz (31 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.r3YRYr17FacS5fgBP5YI943XSJk=.trap.gz (32 of 52)
+[2026-10-05 15:17:54] Importing faultyAsset.py.rIe8H1Wcz9FXIa6NMyqmS5iB7hU=.trap.gz (33 of 52)
+[2026-10-05 15:17:54] Importing metadata.trap.gz (34 of 52)
+[2026-10-05 15:17:54] Importing repaired.9IRu0edWUCXKJmw7ZBc4gLXTL0o=.trap.gz (35 of 52)
+[2026-10-05 15:17:54] Importing repaired.Jemx8uAN_se03VS1xjO5YBm7zqY=.trap.gz (36 of 52)
+[2026-10-05 15:17:54] Importing repaired.LI5KeI3xTG24EWC2QK6keizk1rw=.trap.gz (37 of 52)
+[2026-10-05 15:17:54] Importing repaired.VD6pEpF_zAFq37k_8BnljcyAH3M=.trap.gz (38 of 52)
+[2026-10-05 15:17:54] Importing repaired.ZsssWiOg-PL7ulQ6DD0LNCWPlJE=.trap.gz (39 of 52)
+[2026-10-05 15:17:54] Importing repaired._1FOUL5lE8OCZP9mjQWzcF4--T4=.trap.gz (40 of 52)
+[2026-10-05 15:17:54] Importing repaired.gI_BBdk8XYG0LwrnKiD4MnS0eJs=.trap.gz (41 of 52)
+[2026-10-05 15:17:54] Importing repaired.kGHiIU9jGoNwTiFdeUGubnkXAJY=.trap.gz (42 of 52)
+[2026-10-05 15:17:54] Importing repaired.uXTjM6qlUsRT9fEUkf1nQlky0Q8=.trap.gz (43 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py.0oX6o8W2KGZEBOi3coN1c9iYSao=.trap.gz (44 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py.ARJeIxwSHbh1BiBJUbTt1ySxMmg=.trap.gz (45 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py.Eb3UpbkxifbtlHGkeM-MFDsRgGE=.trap.gz (46 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py.S2n-2i9AyymWLsCJqv6m4GzhUdE=.trap.gz (47 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py.SGS3Xzh5DkOSUy1TRMEc5oR3EYM=.trap.gz (48 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py._VPQylYpXfI9AFVpVQJgm-4LGlU=.trap.gz (49 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py.aWT9xKEDBWmoSP9EWrqs59sZ7PQ=.trap.gz (50 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py.ciNuKnqvSFXDxBjadgl18hc0Puk=.trap.gz (51 of 52)
+[2026-10-05 15:17:54] Importing repairedAsset.py.qiKniaW95yE4rrlxMUQOz8r4ux0=.trap.gz (52 of 52)
+[2026-10-05 15:17:54] [PROGRESS] dataset import> Merging relations
+[2026-10-05 15:17:54] Merging 1 fragment for 'files'.
+[2026-10-05 15:17:54] Merged 68 bytes for 'files'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'folders'.
+[2026-10-05 15:17:54] Merged 106 bytes for 'folders'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'containerparent'.
+[2026-10-05 15:17:54] Merged 148 bytes for 'containerparent'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_flags_versioned'.
+[2026-10-05 15:17:54] Merged 187 bytes for 'py_flags_versioned'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_cobjects'.
+[2026-10-05 15:17:54] Merged 4435 bytes (4.33 KiB) for 'py_cobjects'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_cobjecttypes'.
+[2026-10-05 15:17:54] Merged 4718 bytes (4.61 KiB) for 'py_cobjecttypes'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_cobject_sources'.
+[2026-10-05 15:17:54] Merged 6618 bytes (6.46 KiB) for 'py_cobject_sources'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_cobjectnames'.
+[2026-10-05 15:17:54] Merged 5661 bytes (5.53 KiB) for 'py_cobjectnames'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_cmembers_versioned'.
+[2026-10-05 15:17:54] Merged 6583 bytes (6.43 KiB) for 'py_cmembers_versioned'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_special_objects'.
+[2026-10-05 15:17:54] Merged 135 bytes for 'py_special_objects'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_citems'.
+[2026-10-05 15:17:54] Merged 551 bytes for 'py_citems'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'ext_rettype'.
+[2026-10-05 15:17:54] Merged 4050 bytes (3.96 KiB) for 'ext_rettype'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'ext_argtype'.
+[2026-10-05 15:17:54] Merged 6815 bytes (6.66 KiB) for 'ext_argtype'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'ext_argreturn'.
+[2026-10-05 15:17:54] Merged 41 bytes for 'ext_argreturn'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'ext_proptype'.
+[2026-10-05 15:17:54] Merged 344 bytes for 'ext_proptype'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'yaml_scalars'.
+[2026-10-05 15:17:54] Merged 154 bytes for 'yaml_scalars'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'yaml'.
+[2026-10-05 15:17:54] Merged 543 bytes for 'yaml'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'locations_default'.
+[2026-10-05 15:17:54] Merged 483 bytes for 'locations_default'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'yaml_locations'.
+[2026-10-05 15:17:54] Merged 178 bytes for 'yaml_locations'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_Modules'.
+[2026-10-05 15:17:54] Merged 54 bytes for 'py_Modules'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_module_path'.
+[2026-10-05 15:17:54] Merged 99 bytes for 'py_module_path'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_flow_bb_node'.
+[2026-10-05 15:17:54] Merged 1932 bytes (1.89 KiB) for 'py_flow_bb_node'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_scope_flow'.
+[2026-10-05 15:17:54] Merged 840 bytes for 'py_scope_flow'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'locations_ast'.
+[2026-10-05 15:17:54] Merged 2299 bytes (2.25 KiB) for 'locations_ast'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'variable'.
+[2026-10-05 15:17:54] Merged 991 bytes for 'variable'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_extracted_version'.
+[2026-10-05 15:17:54] Merged 47 bytes for 'py_extracted_version'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_stmt_lists'.
+[2026-10-05 15:17:54] Merged 401 bytes for 'py_stmt_lists'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_stmts'.
+[2026-10-05 15:17:54] Merged 487 bytes for 'py_stmts'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_scopes'.
+[2026-10-05 15:17:54] Merged 895 bytes for 'py_scopes'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_exprs'.
+[2026-10-05 15:17:54] Merged 1064 bytes (1.04 KiB) for 'py_exprs'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_strs'.
+[2026-10-05 15:17:54] Merged 456 bytes for 'py_strs'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_Classes'.
+[2026-10-05 15:17:54] Merged 98 bytes for 'py_Classes'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_arguments'.
+[2026-10-05 15:17:54] Merged 111 bytes for 'py_arguments'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_expr_lists'.
+[2026-10-05 15:17:54] Merged 485 bytes for 'py_expr_lists'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_Functions'.
+[2026-10-05 15:17:54] Merged 111 bytes for 'py_Functions'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_parameter_lists'.
+[2026-10-05 15:17:54] Merged 111 bytes for 'py_parameter_lists'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_variables'.
+[2026-10-05 15:17:54] Merged 370 bytes for 'py_variables'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_expr_contexts'.
+[2026-10-05 15:17:54] Merged 583 bytes for 'py_expr_contexts'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_exports'.
+[2026-10-05 15:17:54] Merged 81 bytes for 'py_exports'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_successors'.
+[2026-10-05 15:17:54] Merged 767 bytes for 'py_successors'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_idoms'.
+[2026-10-05 15:17:54] Merged 767 bytes for 'py_idoms'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_ssa_var'.
+[2026-10-05 15:17:54] Merged 204 bytes for 'py_ssa_var'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_ssa_defn'.
+[2026-10-05 15:17:54] Merged 207 bytes for 'py_ssa_defn'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_ssa_use'.
+[2026-10-05 15:17:54] Merged 210 bytes for 'py_ssa_use'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_scope_location'.
+[2026-10-05 15:17:54] Merged 306 bytes for 'py_scope_location'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_codelines'.
+[2026-10-05 15:17:54] Merged 203 bytes for 'py_codelines'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_commentlines'.
+[2026-10-05 15:17:54] Merged 116 bytes for 'py_commentlines'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_docstringlines'.
+[2026-10-05 15:17:54] Merged 116 bytes for 'py_docstringlines'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_alllines'.
+[2026-10-05 15:17:54] Merged 203 bytes for 'py_alllines'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'numlines'.
+[2026-10-05 15:17:54] Merged 100 bytes for 'numlines'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_locations'.
+[2026-10-05 15:17:54] Merged 724 bytes for 'py_locations'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'sourceLocationPrefix'.
+[2026-10-05 15:17:54] Merged 17 bytes for 'sourceLocationPrefix'.
+[2026-10-05 15:17:54] Merging 1 fragment for 'py_numbers'.
+[2026-10-05 15:17:54] Merged 49 bytes for 'py_numbers'.
+[2026-10-05 15:17:54] Saving string and id pools to disk.
+[2026-10-05 15:17:55] Finished importing TRAP files.
+[2026-10-05 15:17:55] Read 1.17 MiB of uncompressed TRAP data.
+[2026-10-05 15:17:55] Uncompressed relation data size: 234.06 KiB
+[2026-10-05 15:17:55] Relation data size: 55.98 KiB (merge rate: 658.25 KiB/s)
+[2026-10-05 15:17:55] String pool size: 2.08 MiB
+[2026-10-05 15:17:55] ID pool size: 1.09 MiB
+[2026-10-05 15:17:55] [PROGRESS] dataset import> Finished writing database (relations: 55.98 KiB; string pool: 2.08 MiB).
+[2026-10-05 15:17:55] Pausing evaluation to close the cache at sequence stamp o+109
+[2026-10-05 15:17:55] The disk cache is freshly trimmed; leave it be.
+[2026-10-05 15:17:55] Unpausing evaluation
+[2026-10-05 15:17:55] Plumbing command codeql dataset import completed.
+[2026-10-05 15:17:55] [PROGRESS] database finalize> TRAP import complete (661ms).
+[2026-10-05 15:17:55] Running plumbing command: codeql database cleanup -- C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master
+[2026-10-05 15:17:55] [PROGRESS] database cleanup> Cleaning up existing TRAP files after import...
+[2026-10-05 15:17:55] [PROGRESS] database cleanup> TRAP files cleaned up (10ms).
+[2026-10-05 15:17:55] [PROGRESS] database cleanup> Cleaning up scratch directory...
+[2026-10-05 15:17:55] [PROGRESS] database cleanup> Scratch directory cleaned up (6ms).
+[2026-10-05 15:17:55] Running plumbing command: codeql dataset cleanup -- C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\db-python
+[2026-10-05 15:17:55] [PROGRESS] dataset cleanup> Cleaning up dataset in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\db-python.
+[2026-10-05 15:17:55] Trimming disk cache at C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\db-python\default\cache in mode trim.
+[2026-10-05 15:17:55] Sequence stamp origin is -5860620850721484796
+[2026-10-05 15:17:55] Pausing evaluation to quickly trim memory at sequence stamp o+0
+[2026-10-05 15:17:55] Unpausing evaluation
+[2026-10-05 15:17:55] Pausing evaluation to zealously trim disk at sequence stamp o+1
+[2026-10-05 15:17:55] Unpausing evaluation
+[2026-10-05 15:17:55] Trimming completed (2ms): Trimmed disposable data from cache.
+[2026-10-05 15:17:55] Pausing evaluation to close the cache at sequence stamp o+2
+[2026-10-05 15:17:55] The disk cache is freshly trimmed; leave it be.
+[2026-10-05 15:17:55] Unpausing evaluation
+[2026-10-05 15:17:55] [PROGRESS] dataset cleanup> Trimmed disposable data from cache.
+[2026-10-05 15:17:55] [PROGRESS] dataset cleanup> Finalizing dataset in C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\db-python
+[2026-10-05 15:17:55] [DETAILS] dataset cleanup> Finished deleting ID pool from C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master\db-python (2ms).
+[2026-10-05 15:17:55] Plumbing command codeql dataset cleanup completed.
+[2026-10-05 15:17:55] Plumbing command codeql database cleanup completed with status 0.
+[2026-10-05 15:17:55] [PROGRESS] database finalize> Finished zipping source archive (8.69 KiB).
+[2026-10-05 15:17:55] Plumbing command codeql database finalize completed.
+[2026-10-05 15:17:55] [PROGRESS] database create> Successfully created database at C:\dev\abd-context-driven-delivery\practices\ddd\model\python\codeql\.examples\.codeql\ddd\python-master.
+[2026-10-05 15:17:55] Terminating normally.

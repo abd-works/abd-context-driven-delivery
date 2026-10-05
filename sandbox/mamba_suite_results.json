@@ -1,0 +1,530 @@
+{
+  "total": 105,
+  "failures": [
+    {
+      "spec": "actions/grill_context/grill_context_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "actions/improvement/improvement_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "actions/iterate/iterate_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "actions/partition/partition_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "actions/render/render_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "actions/sketch/sketch_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "actions/validate/validate_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "builders/create_context_tool/create_context_tool_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "builders/create_context_tool/examples/car_chronicle/car_chronicle_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/agent_tools/agent_tools_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/agent_tools/examples/reporter/reporter_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/codeQl_graph/app_smoke_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/codeQl_graph/codeql_database_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/codeQl_graph/codeql_graph_snapshot_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/codeQl_graph/codeql_graph_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/codeQl_graph/codeql_graph_view_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/codeQl_graph/codeql_rule_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/codeQl_graph/codeql_story_edges_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/guidance/guidance_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/guidance/practice_guidance_behavior_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/guidance/project_rules_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/guidance/rule_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/guidance_actions/guidance_actions_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/hooks/hook_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/legacy-v2/model/codeql_layout_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/legacy-v2/model/graph_query_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/legacy-v2/model/knowledge_graph_behavior_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/markdown/markdown_collection_behavior_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/markdown/markdown_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/mcp/codeql_server_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/mcp/mcp_host_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/mcp/mcp_server_host_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/session/session_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "harness/transformers/transformers_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "installation/installer_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "patterns/lern_domain_driven/codeql_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "patterns/lern_domain_driven/lern_domain_driven_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "patterns/mern_domain_driven/mern_domain_driven_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/agent_bdd/agent_bdd_generator_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/agent_bdd/agent_bdd_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/agent_bdd/spec_helpers_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/bdd/bdd_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/bdd/model/codeql/codeql_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/bdd/spec_helpers_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/clean_engineering_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/clean_engineering_transform_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/base_class_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/codeql/codeql_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/codeql/model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/drawio/drawio_module_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/drawio/scanners/class_title_no_markdown_bold_scanner_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/drawio/scanners/stereotype_above_class_name_scanner_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/miro/miro_class_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/module_context_files_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/responsibilities_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/clean_engineering/model/sketch/sketch_typescript_render_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ddd/ddd_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ddd/model/codeql/codeql_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ddd/model/nodes_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ddd/model/transformation/ddd_transformer_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/code_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/codeql/codeql_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/codeql/cross_practice_relationships_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/diagram_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/drawio/drawio_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/java/java_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/javascript/javascript_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/json/json_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/markdown/markdown_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/miro/miro_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/python/python_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/model/typescript/typescript_story_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/stories/stories_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ux/model/codeql/codeql_model_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ux/model/drawio/drawio_ux_map_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ux/model/html/html_ux_map_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ux/model/json/json_ux_map_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ux/model/markdown/markdown_ux_map_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "practices/ux/model/story_demo_control_spec.py",
+      "exit_code": "1",
+      "output": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 189, in _run_module_as_main\n  File \"<frozen runpy>\", line 148, in _get_module_details\n  File \"<frozen runpy>\", line 112, in _get_module_details\n  File \"C:\\dev\\abd-context-driven-delivery\\.venv\\Lib\\site-packages\\mamba\\__init__.py\", line 1, in <module>\n    import contextlib\n  File \"C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\contextlib.py\", line 6, in <module>\n    from collections import deque\n  File \"C:\\dev\\abd-context-driven-delivery\\practices\\ux\\model\\collections.py\", line 5, in <module>\n    from typing import Iterator, List, TypeVar, overload\n  File \"C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\typing.py\", line 24, in <module>\n    from collections import defaultdict\nImportError: cannot import name 'defaultdict' from partially initialized module 'collections' (most likely due to a circular import) (C:\\dev\\abd-context-driven-delivery\\practices\\ux\\model\\collections.py)\n"
+    },
+    {
+      "spec": "practices/ux/model/ux_map_spec.py",
+      "exit_code": "1",
+      "output": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 189, in _run_module_as_main\n  File \"<frozen runpy>\", line 148, in _get_module_details\n  File \"<frozen runpy>\", line 112, in _get_module_details\n  File \"C:\\dev\\abd-context-driven-delivery\\.venv\\Lib\\site-packages\\mamba\\__init__.py\", line 1, in <module>\n    import contextlib\n  File \"C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\contextlib.py\", line 6, in <module>\n    from collections import deque\n  File \"C:\\dev\\abd-context-driven-delivery\\practices\\ux\\model\\collections.py\", line 5, in <module>\n    from typing import Iterator, List, TypeVar, overload\n  File \"C:\\Users\\jeffa\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\typing.py\", line 24, in <module>\n    from collections import defaultdict\nImportError: cannot import name 'defaultdict' from partially initialized module 'collections' (most likely due to a circular import) (C:\\dev\\abd-context-driven-delivery\\practices\\ux\\model\\collections.py)\n"
+    },
+    {
+      "spec": "practices/ux/ux_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/catalog_generator/approach_copy_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/catalog_generator/catalog_generator_illustrated_examples_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/catalog_generator/catalog_generator_portability_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/catalog_generator/catalog_generator_render_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/catalog_generator/catalog_generator_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/catalog_generator/catalog_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/catalog_generator/foundry_chrome_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/context_setup/context_index_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/context_setup/context_setup_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/diagnose/diagnose_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/echo/echo_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/git/git_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/handoff/handoff_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/plan/plan_small_work_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/prompt_echo/prompt_echo_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/prompt_log/prompt_log_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/record_decisions/record_decisions_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/workflow/workflow_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/workspace/legacy/context_index_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/workspace/legacy/session_log_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/workspace/legacy/workspace_session_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/workspace/legacy/workspace_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    },
+    {
+      "spec": "tools/workspace/work_session_guidance_spec.py",
+      "exit_code": "1",
+      "output": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe: No module named mamba.__main__; 'mamba' is a package and cannot be directly executed\n"
+    }
+  ]
+}

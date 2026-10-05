@@ -14,7 +14,8 @@ import sys
 from pathlib import Path
 
 REPOSITORY = Path(__file__).resolve().parent.parent
-SOURCE_ROOTS = (".", "harness", "tools", "practices", "actions", "patterns")
+MAMBA = Path(sys.executable).parent / "mamba.exe"
+SOURCE_ROOTS = (".",)
 EXCLUDED_DIRECTORY_NAMES = {
     ".codeql",
     ".cq",
@@ -67,20 +68,27 @@ class SpecSuite:
             relative = spec.relative_to(self._repository).as_posix()
             print(f"[{position}/{len(spec_files)}] {relative}", flush=True)
             completed = subprocess.run(
-                [sys.executable, "-m", "mamba", "--format", "progress", spec.name],
-                cwd=spec.parent,
+                [str(MAMBA), "--format", "progress", relative],
+                cwd=self._repository,
                 env=self.environment,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
             )
+            output = completed.stdout + completed.stderr
+            summary = next(
+                (line for line in output.splitlines() if "examples" in line and "ran in" in line),
+                "no summary line (spec did not load)",
+            )
+            print(f"    {summary.strip()}", flush=True)
             if completed.returncode != 0:
                 failures.append(
                     {
                         "spec": relative,
                         "exit_code": str(completed.returncode),
-                        "output": (completed.stdout + completed.stderr)[-4000:],
+                        "summary": summary.strip(),
+                        "output": output[-6000:],
                     }
                 )
         self._report(spec_files, failures)
