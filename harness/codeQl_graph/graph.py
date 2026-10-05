@@ -360,13 +360,73 @@ class Source:
                 found.append(node)
         return found
 
-    def _read(self) -> str:
+    def align_to_label(self, label: str) -> None:
+        """Point this slice at the call that contains the step label, through that call's close."""
+        quote = label.split(" ", 1)[1] if " " in label else label
+        lines = self._file_lines()
+        if not quote or not lines:
+            return
+        hits = [index for index, line in enumerate(lines) if quote in line]
+        if not hits:
+            return
+        chosen = min(hits, key=lambda index: (abs(index + 1 - self.start_line), index))
+        self.start_line = chosen + 1
+        self.end_line = self._call_end(lines, chosen)
+        self._text = None
+
+    def _file_lines(self) -> list[str]:
+        full = self._full_path()
+        if full is None:
+            return []
+        return full.read_text(encoding="utf-8").splitlines()
+
+    def _full_path(self) -> Path | None:
         if not self.root or not self.file or self.file == ".":
-            return ""
+            return None
         full = Path(self.root, self.file)
-        if not full.is_file():
+        return full if full.is_file() else None
+
+    def _call_end(self, lines: list[str], start: int) -> int:
+        paren = 0
+        brace = 0
+        quote = ""
+        opened = False
+        for index in range(start, len(lines)):
+            paren, brace, quote, saw_paren = self._scan_call(lines[index], paren, brace, quote)
+            opened = opened or saw_paren
+            if opened and paren <= 0 and brace <= 0:
+                return index + 1
+        return max(self.end_line, start + 1)
+
+    def _scan_call(self, line: str, paren: int, brace: int, quote: str) -> tuple[int, int, str, bool]:
+        saw_paren = False
+        index = 0
+        while index < len(line):
+            char = line[index]
+            if quote:
+                if char == "\\":
+                    index += 2
+                    continue
+                if char == quote:
+                    quote = ""
+            elif char in "\"'`":
+                quote = char
+            elif char == "(":
+                paren += 1
+                saw_paren = True
+            elif char == ")":
+                paren -= 1
+            elif char == "{":
+                brace += 1
+            elif char == "}":
+                brace -= 1
+            index += 1
+        return paren, brace, quote, saw_paren
+
+    def _read(self) -> str:
+        lines = self._file_lines()
+        if not lines:
             return ""
-        lines = full.read_text(encoding="utf-8").splitlines()
         return "\n".join(lines[max(0, self.start_line - 1) : self.end_line])
 
     def _calls_on_line(self, line: str, line_number: int) -> None:
@@ -583,6 +643,8 @@ class CodeQLNode:
             Source(row["file"], row["line"], row["end_line"], practice.source_root),
         )
         node.stage = str(row.get("stage") or "")
+        if row["semantic_type"] == "Step":
+            node.source.align_to_label(row["name"])
         return node
 
     @staticmethod

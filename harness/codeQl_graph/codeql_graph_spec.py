@@ -662,3 +662,18 @@ with description("a scenario"):
         with it("should keep that call order under the step"):
             names = tree_names(tree_child(self.step.serialize(), "invokes"))
             expect(names).to(equal([self.later.name, self.earlier.name]))
+
+
+with description("a step"):
+    with context("with a stored line on the following statement"):
+        with before.each:
+            relative = "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts"
+            self.source = Source(relative, 146, 160, str(_SAMPLE))
+            self.source.align_to_label("when the User creates their account")
+
+        with it("should open on that call in the file"):
+            expect(self.source.start_line).to(equal(142))
+            expect(self.source.text.splitlines()[0]).to(contain("when('the User creates their account'"))
+
+        with it("should stop at the end of that call"):
+            expect("then(" in self.source.text).to(equal(False))

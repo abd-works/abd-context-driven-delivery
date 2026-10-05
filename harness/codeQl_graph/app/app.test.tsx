@@ -3,6 +3,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { useLayoutEffect, useRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { SourceView } from './source/SourceView';
 
 const foldMarks = vi.hoisted(() => ({
   names: [] as string[],
@@ -16,7 +17,10 @@ vi.mock('@monaco-editor/react', () => ({
     onMount,
   }: {
     value: string;
-    options?: { scrollbar?: { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean } };
+    options?: {
+      scrollbar?: { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean };
+      lineNumbers?: (line: number) => string;
+    };
     onMount?: (editor: {
       getValue: () => string;
       setValue: (next: string) => void;
@@ -43,12 +47,13 @@ vi.mock('@monaco-editor/react', () => ({
       editor.replaceChildren();
       value.split('\n').forEach((line, index) => {
         const lineNumber = index + 1;
+        const shown = options?.lineNumbers?.(lineNumber) || String(lineNumber);
         const covered = hidden.current.some((range) => lineNumber >= range.startLineNumber && lineNumber <= range.endLineNumber);
         if (covered) {
           return;
         }
         const row = document.createElement('div');
-        row.dataset.line = String(lineNumber);
+        row.dataset.line = shown;
         for (const item of marks.current) {
           const className = item.options.glyphMarginClassName;
           if (item.range.startLineNumber === lineNumber && className) {
@@ -327,6 +332,29 @@ it('should fold calls, classes, and blocks in the source', async () => {
   expect(line('if (input)')?.querySelector('.block-fold')).toBeTruthy();
   expect(editor.textContent).not.toContain('only-in-class-body');
   expect(foldMarks.scrollbar).toEqual({ handleMouseWheel: false, alwaysConsumeMouseWheel: false });
+});
+
+it('should number a step from its line in the file', async () => {
+  render(
+    <SourceView
+      source={{
+        node_id: 'when-load',
+        name: 'when My Paradise loads the customer',
+        type: 'Step',
+        file: 'create_customer.story.shared.ts',
+        text: "    when('My Paradise loads the customer', async () => {\n      customer = await ctx.customerRepository.load(accountCredentials);\n    });",
+        start_line: 93,
+        end_line: 95,
+        members: [],
+      }}
+    />,
+  );
+  const editor = await screen.findByTestId('source-editor');
+  const when = Array.from(editor.querySelectorAll<HTMLElement>('[data-line]')).find((row) =>
+    row.textContent?.includes('loads the customer'),
+  );
+  expect(when?.dataset.line).toBe('93');
+  expect(editor.textContent).not.toContain("then('the result");
 });
 
 it('should fold a story, a scenario, and a step the way a class folds', async () => {

@@ -18,7 +18,15 @@ predicate storyFile(File file) {
   file.getRelativePath().regexpMatch(".*story.*")
 }
 
-int stepLine(CallExpr call) { result = call.getLocation().getStartLine() }
+int stepLine(CallExpr call) { result = call.getCallee().getLocation().getStartLine() }
+
+int stepEnd(CallExpr call) {
+  result = max(int line |
+    line = call.getArgument(_).(Function).getLocation().getEndLine()
+    or
+    not exists(call.getArgument(_).(Function)) and line = call.getLocation().getEndLine()
+  )
+}
 
 string storyTitle(CallExpr inner) {
   exists(CallExpr story |
@@ -230,6 +238,21 @@ predicate storyStep(CallExpr step, string keyword, string text, string file, str
   text = step.getArgument(0).(StringLiteral).getValue() and
   file = slash(step.getFile().getRelativePath()) and
   id = stepId(file, stepLine(step), keyword + " " + text)
+}
+
+predicate continuesStep(CallExpr step, CallExpr prior) {
+  stepCall(step, ["and", "but"]) and
+  stepCall(prior, ["given", "when", "then"]) and
+  prior.getFile() = step.getFile() and
+  prior.getEnclosingFunction() = step.getEnclosingFunction() and
+  stepLine(prior) < stepLine(step) and
+  not exists(CallExpr between |
+    stepCall(between, ["given", "when", "then"]) and
+    between.getFile() = step.getFile() and
+    between.getEnclosingFunction() = step.getEnclosingFunction() and
+    stepLine(between) > stepLine(prior) and
+    stepLine(between) < stepLine(step)
+  )
 }
 
 predicate continuesThen(CallExpr step) {

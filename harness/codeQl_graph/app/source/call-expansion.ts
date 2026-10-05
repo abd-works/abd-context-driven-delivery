@@ -68,8 +68,8 @@ export type FoldMember = {
   classes?: string[];
 };
 
-type ClassBody = { id: string; name: string; text: string };
-type CallBody = { id: string; member: string; label: string; text: string; types: ClassBody[] };
+type ClassBody = { id: string; name: string; text: string; start: number };
+type CallBody = { id: string; member: string; label: string; text: string; start: number; types: ClassBody[] };
 type CallFold = { start: number; end: number; kind: "call" | "class" | "block"; member?: boolean; listed?: boolean };
 
 export type InlineFold = { start: number; end: number; kind: "call" | "class" | "block"; glyph: number; member?: boolean; listed?: boolean };
@@ -239,6 +239,7 @@ export function inlineCallLayout(
     named?: FoldMember[];
     openedClass?: string;
     context?: string;
+    origin?: number;
   } = {},
 ): InlineLayout {
   const classes = classCatalog(members);
@@ -263,6 +264,7 @@ export function inlineCallLayout(
       member: member.name,
       label: member.name,
       text: member.text || member.name,
+      start: member.start || 1,
       types: (member.classes ?? [])
         .map((name) => classes.get(name))
         .filter((item): item is ClassBody => Boolean(item)),
@@ -282,6 +284,7 @@ export function inlineCallLayout(
     new Set(),
     new Set(),
     bindings,
+    options.origin || 1,
   );
   return {
     text: layout.text,
@@ -363,7 +366,7 @@ function classCatalog(members: FoldMember[]): Map<string, ClassBody> {
     if (!CLASS_KINDS.has(member.kind) || !member.text || classes.has(member.name)) {
       continue;
     }
-    classes.set(member.name, { id: member.id, name: member.name, text: member.text });
+    classes.set(member.name, { id: member.id, name: member.name, text: member.text, start: member.start || 1 });
   }
   return classes;
 }
@@ -388,6 +391,7 @@ function callCatalog(members: FoldMember[], classes: Map<string, ClassBody>, own
       member: member.name,
       label: member.owner ? `${member.owner}.${member.name}` : member.name,
       text: member.text,
+      start: member.start || 1,
       types: typesIn(member.kind, member.text, classes),
     };
     if (!bodies.has(key)) {
@@ -445,6 +449,7 @@ function displayedCallSource(
   hold: Set<string> = new Set(),
   seenClasses: Set<string> = new Set(),
   inherited: Map<string, string> = new Map(),
+  origin = 1,
 ): { text: string; folds: CallFold[]; lineNumbers: string[]; depths: number[] } {
   const bindings = new Map(inherited);
   for (const [name, typeName] of variableTypes(text)) {
@@ -462,7 +467,7 @@ function displayedCallSource(
   let storyContainer = false;
   text.split("\n").forEach((line, index) => {
     output.push(line);
-    lineNumbers.push(String(index + 1));
+    lineNumbers.push(String(origin + index));
     depths.push(nest);
     const sourceLine = output.length;
     const before = brace;
@@ -678,7 +683,7 @@ function appendOperation(
   seenClasses: Set<string>,
 ) {
   output.push(`${pad}${call.member}`);
-  lineNumbers.push("");
+  lineNumbers.push(String(call.start || ""));
   depths.push(depth);
   const operationLine = output.length;
   const nested = displayedCallSource(
@@ -693,11 +698,13 @@ function appendOperation(
     [],
     hold,
     seenClasses,
+    new Map(),
+    call.start || 1,
   );
   const bodyPad = `${pad}    `;
   for (const [index, nestedLine] of nested.text.split("\n").entries()) {
     output.push(nestedLine.length > 0 ? `${bodyPad}${nestedLine}` : bodyPad);
-    lineNumbers.push("");
+    lineNumbers.push(nested.lineNumbers[index] ?? "");
     depths.push((nested.depths[index] ?? depth) + 1);
   }
   if (output.length > operationLine) {
@@ -734,7 +741,7 @@ function appendClass(
   }
   seenClasses.add(type.id);
   output.push(`${pad}${type.name}`);
-  lineNumbers.push("");
+  lineNumbers.push(String(type.start || ""));
   depths.push(depth);
   const classLine = output.length;
   const classLines = type.text.split("\n");
@@ -742,11 +749,11 @@ function appendClass(
     return;
   }
   const classPad = `${pad}    `;
-  for (const classLineText of classLines) {
+  classLines.forEach((classLineText, index) => {
     output.push(classLineText.length > 0 ? `${classPad}${classLineText}` : classPad);
-    lineNumbers.push("");
+    lineNumbers.push(String((type.start || 1) + index));
     depths.push(depth + 1);
-  }
+  });
   folds.push({ start: classLine, end: output.length, kind: "class", listed: true });
   for (const brace of braceFolds(type.text)) {
     folds.push({

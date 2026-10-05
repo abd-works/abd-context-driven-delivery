@@ -14,5 +14,5 @@ where
   file = slash(call.getFile().getRelativePath()) and
   name = keyword + " " + text
 select stepId(file, stepLine(call), name), name, "Step", "stories", file, stepLine(call),
-  call.getLocation().getEndLine(), keyword, storyTitle(call), "implementation"
+  stepEnd(call), keyword, storyTitle(call), "implementation"
 order by file, stepLine(call)

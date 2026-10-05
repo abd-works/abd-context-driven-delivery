@@ -24,6 +24,7 @@ function SourceEditor({ source }: { source: SourceText }) {
     () =>
       inlineCallLayout(source.text, members, owner, {
         openedClass: source.type === 'OoadClass' ? source.name : '',
+        origin: source.start_line || 1,
       }),
     [source, members, owner],
   );
@@ -100,6 +101,7 @@ function SourceEditor({ source }: { source: SourceText }) {
             fontSize: 13,
             lineHeight: LINE_HEIGHT,
             glyphMargin: prepared.folds.length > 0,
+            lineNumbers: (line: number) => prepared.lineNumbers[line - 1] ?? '',
             scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false },
           }}
         />
