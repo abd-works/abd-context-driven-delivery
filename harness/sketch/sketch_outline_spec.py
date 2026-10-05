@@ -50,7 +50,7 @@ members:
 ```
 """
 
-_FLAT = "ce:\n  shop/\n    Cart\n      total\n"
+_FLAT = "shop/\n  Cart\n    total\n"
 
 
 with description("a sketch that carries its hierarchy in markdown headings"):
@@ -120,5 +120,14 @@ with description("a sketch that carries its hierarchy in markdown headings"):
 with description("a sketch that names no lens"):
     with it("should read as one section of indented lines"):
         expect(SketchOutline(_FLAT, 2).body_for(SketchLens.clean_engineering)).to(
-            equal("  shop/\n    Cart\n      total\n")
+            equal("shop/\n  Cart\n    total\n")
         )
+
+
+with description("a sketch written flat beneath a bare lens marker"):
+    with it("should read its shallowest line as the top level"):
+        expect(
+            SketchOutline(
+                "ddd:\n  Customer | custom\n    customer\n", 2
+            ).body_for(SketchLens.domain_driven_design)
+        ).to(equal("Customer | custom\n  customer\n"))

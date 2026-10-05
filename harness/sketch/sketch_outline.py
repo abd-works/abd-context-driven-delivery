@@ -143,7 +143,13 @@ class SketchOutline:
             level = max(depth - base, 0)
             written.append(" " * (level * self._nesting_indent) + stripped[depth:].strip())
             indent = (level + 1) * self._nesting_indent
-        return "\n".join(written) + "\n"
+        return self._without_margin(written)
+
+    def _without_margin(self, written: list[str]) -> str:
+        """The section's shallowest line is its top level, however far it was written in."""
+        margins = [len(line) - len(line.lstrip(" ")) for line in written if line.strip()]
+        margin = min(margins) if margins else 0
+        return "\n".join(line[margin:] if line.strip() else line for line in written) + "\n"
 
     def _base_depth(self, section: _Section) -> int:
         depths = [
