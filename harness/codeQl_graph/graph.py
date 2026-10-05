@@ -977,10 +977,6 @@ class CodeQLGraph:
                     missing.append(query)
             if not missing:
                 return self._decode_located([(query, self._bqrs_for(database, Path(query))) for query in queries])
-        if not reuse or len(missing) == len(queries):
-            results = database / "results"
-            if results.exists():
-                remove_tree(results, ignore_errors=True)
         self._execute_queries(missing, database)
         located = [(query, self._bqrs_for(database, Path(query))) for query in queries]
         return self._decode_located(located)
@@ -1054,6 +1050,14 @@ class CodeQLGraph:
             raise QueryFailure("create_database", "Call create_database with a folder and practice roots first.")
 
     def _load_all(self, reuse: bool = False) -> None:
+        previous = self.practices
+        try:
+            self._replace_practices(reuse)
+        except Exception:
+            self.practices = previous
+            raise
+
+    def _replace_practices(self, reuse: bool = False) -> None:
         self.practices = {}
         groups: dict[tuple[str, str], list[str]] = {}
         for name, source in self._practice_roots.items():

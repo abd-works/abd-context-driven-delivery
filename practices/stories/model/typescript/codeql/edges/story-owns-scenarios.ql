@@ -16,4 +16,4 @@ where
   line = call.getLocation().getStartLine() and
   parent = storyId(file, storyTitle(call)) and
   child = scenarioId(file, name)
-select parent, child, "owns", 1, "direct" order by parent, file, line
+select parent, child, "owns", 1, "direct", file, line order by parent, file, line

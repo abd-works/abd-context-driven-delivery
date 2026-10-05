@@ -7,12 +7,13 @@
 import javascript
 import stories
 
-from CallExpr call, string keyword, string text, string file, string name
+from CallExpr call, string keyword, string text, string file, string name, int line
 where
   stepCall(call, keyword) and
   text = call.getArgument(0).(StringLiteral).getValue() and
   file = slash(call.getFile().getRelativePath()) and
-  name = keyword + " " + text
-select stepId(file, stepLine(call), name), name, "Step", "stories", file, stepLine(call),
-  stepEnd(call), keyword, storyTitle(call), "implementation"
-order by file, stepLine(call)
+  name = keyword + " " + text and
+  line = stepLine(call)
+select stepId(file, line, name), name, "Step", "stories", file, line, stepEnd(call), keyword,
+  storyTitle(call), "implementation"
+order by file, line

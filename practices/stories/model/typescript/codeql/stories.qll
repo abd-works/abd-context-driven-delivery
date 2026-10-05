@@ -18,7 +18,13 @@ predicate storyFile(File file) {
   file.getRelativePath().regexpMatch(".*story.*")
 }
 
-int stepLine(CallExpr call) { result = call.getCallee().getLocation().getStartLine() }
+/** Line of the step keyword. Chained `.and()` / `.but()` use the keyword line, not the receiver. */
+int stepLine(CallExpr call) {
+  result = call.getCallee().(PropAccess).getLocation().getEndLine()
+  or
+  not call.getCallee() instanceof PropAccess and
+  result = call.getCallee().getLocation().getStartLine()
+}
 
 int stepEnd(CallExpr call) {
   result = max(int line |

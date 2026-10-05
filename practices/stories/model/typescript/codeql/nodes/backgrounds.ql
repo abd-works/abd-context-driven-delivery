@@ -7,12 +7,13 @@
 import javascript
 import stories
 
-from CallExpr call, string label, string file
+from CallExpr call, string label, string file, int line
 where
   call.getCalleeName() = "background" and
   storyFile(call.getFile()) and
   file = slash(call.getFile().getRelativePath()) and
-  label = backgroundTitle(call)
-select backgroundId(file, label), label, "Background", "stories", file,
-  call.getLocation().getStartLine(), call.getLocation().getEndLine(), storyTitle(call), "specification"
-order by file, call.getLocation().getStartLine()
+  label = backgroundTitle(call) and
+  line = call.getLocation().getStartLine()
+select backgroundId(file, label), label, "Background", "stories", file, line,
+  call.getLocation().getEndLine(), storyTitle(call), "specification"
+order by file, line

@@ -3,12 +3,39 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import threading
 from pathlib import Path
 
-from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError, QueryServerDown
+
+class CodeQLRunError(RuntimeError):
+    """CodeQL could not be started or a query-server call failed."""
+
+
+class QueryServerDown(CodeQLRunError):
+    """The long-lived query server process is gone or its stream closed."""
+
+
+class CodeQL:
+    """Locates the codeql executable and the repo that owns the query server."""
+
+    def __init__(self, root: Path | str) -> None:
+        self.root = Path(root)
+
+    def executable(self) -> str:
+        path = shutil.which("codeql")
+        if path is None:
+            raise CodeQLRunError("codeql is not on PATH")
+        return path
+
+    def repo_root(self) -> Path:
+        resolved = self.root.resolve()
+        for candidate in (resolved, *resolved.parents):
+            if (candidate / ".git").exists() and (candidate / "practices").is_dir():
+                return candidate
+        return resolved
 
 _PHASES = {"Compiling", "Running", "Writing", "Shutting"}
 

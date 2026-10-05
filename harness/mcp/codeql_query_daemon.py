@@ -15,8 +15,11 @@ for _entry in (_REPO, _REPO / "tools", _REPO / "practices", _REPO / "actions"):
     if _text not in sys.path:
         sys.path.insert(0, _text)
 
-from harness.knowledge_graph.model.codeql import CodeQL, CodeQLRunError
-from harness.mcp.codeql_server import CodeQLQueryServer
+from harness.mcp.codeql_server import CodeQL, CodeQLQueryServer, CodeQLRunError
+
+
+def _repo_root(repo: Path) -> Path:
+    return CodeQL(repo).repo_root()
 
 _HOST = "127.0.0.1"
 _WAIT_SECONDS = 90
@@ -31,7 +34,7 @@ class QueryServerClient:
         self.pid = pid
 
     def state_path(self, repo: Path) -> Path:
-        return CodeQL(repo).repo_root() / ".codeql" / "query-server.json"
+        return _repo_root(repo) / ".codeql" / "query-server.json"
 
     def ensure_query_server(self, repo: Path):
         """Return a client to a long-lived query daemon; spawn it if needed."""
@@ -68,7 +71,7 @@ class QueryServerClient:
         return QueryServerClient(host, int(port), state.get("pid"))
 
     def _spawn(self, repo: Path, path: Path) -> None:
-        root = str(CodeQL(repo).repo_root())
+        root = str(_repo_root(repo))
         env = os.environ.copy()
         extra = [
             root,
