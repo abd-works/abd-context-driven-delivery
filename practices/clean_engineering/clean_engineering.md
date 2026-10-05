@@ -53,7 +53,7 @@ Each **module** is a named structural boundary that groups closely related class
 
 #### Sketch
 
-Ask what a caller is hiring this part of the product to do, what they must honor when they use it, and which other part of the business it depends on. Write the module names from those answers. Do not ask the user to draw the dependency arrow.
+Ask what the major subsystems of the solution are, what a caller is hiring each one to do, and what is public on it: the seam they use and what they must honor. Ask for the most important concepts inside each subsystem, and which other part of the business it depends on. Ask when two parts are really the same thing because they share behavior or share state. Write the module names and seams from those answers. Do not ask the user to draw the dependency arrow.
 
 #### Language
 
@@ -151,7 +151,7 @@ Design the object model — the classes, what they remember and do, and how they
 
 #### Sketch
 
-Ask what the business calls the thing, what must stay true when someone acts, who is allowed to act, and what they look at before they act. From those answers write what the class remembers, what it does, and whether it owns, collects, or only knows the other thing. Do not ask the user to pick class, property, or subtype.
+Verify with the user what the major concepts are from a business lens, and how they are currently implemented from a systems perspective. Ask what the major subsystems of the solution are, what is public on each (the module and its seam), and the most important concepts in each. Ask about the valid states, the operations that cause transitions into those states, and the invariants that must stay true in each state. Ask who is allowed to act, and what they look at before they act. Ask when two things are really the same thing because they share behavior or share state. From those answers write what the class remembers, what it does, and whether it owns, collects, or only knows the other thing. Do not ask the user to pick class, property, or subtype.
 
 #### Language
 
