@@ -231,6 +231,13 @@ class Step(StoryNode):
         value = getattr(self.step_type, "value", self.step_type)
         return str(value).capitalize()
 
+    @property
+    def is_continuation(self) -> bool:
+        """An And or But line continues the clause before it."""
+        if self._keyword:
+            return self._keyword.casefold() in ("and", "but")
+        return self.text.strip().startswith(("And ", "But "))
+
     def clone(self) -> "Step":
         cloned = type(self)(
             text=self.text,

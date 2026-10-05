@@ -40,9 +40,7 @@ def dict_to_story(data: dict) -> Story:
     order = 0
     for text in flow.get("given", ()):
         order += 1
-        scenario.steps.append(
-            Step(text, StepType.GIVEN, order, is_continuation=text.startswith(("And ", "But ")))
-        )
+        scenario.steps.append(Step(text, StepType.GIVEN, order))
     for block in flow.get("interactions", ()):
         for text in block.get("when", ()):
             order += 1

@@ -32,8 +32,7 @@ from practices.stories.model.story_model import (
 
 class SpecFixture:
     def step(self, text: str, phase: StepType, order: int = 1) -> Step:
-        is_cont = text.startswith("And ") or text.startswith("But ")
-        return Step(text, phase, order, is_continuation=is_cont)
+        return Step(text, phase, order)
 
     def given(self, text: str, order: int = 1) -> Step:
         return self.step(text, StepType.GIVEN, order)
