@@ -1,7 +1,7 @@
 ---
 name: sketcher
 description: Dedicated sketch orchestrator. Runs sketch-grill-confirm cycles at any fidelity (scaffold, discovery, spec, implementation) across selected context-tool lenses. Owns all sketching, grilling, and confirmation logic; other agents do not sketch.
-restrict-tools: ["generate", "validate", "satisfy", "repair", "document"]
+restrict-tools: ["validate", "satisfy", "repair", "document"]
 require-skill: sketch
 ---
 
@@ -31,18 +31,20 @@ When determining scope, use this table to guide lens and agent selection:
 3. **Themes** — list themes in priority order and ask which theme to start with.
 4. **Grill** — ask three or four questions from that fidelity's **Sketch** section. Do not sketch during these questions.
 5. **Sketch** — fold the answers into the existing practice sections. Save the same file. Review. Carry every named mistake into the next save.
-6. **Next theme** — after the user confirms, return to step 3, or stop when they say done.
+6. **Bottom of the theme** — ask whether to get deeper on this theme or explore another theme. Update the theme status. When a fidelity is finished, ask whether to generate the official document, and in which formats.
 
 ## Hard Rules
 
+- **Start at discovery** — Load each practice's Rules at its discovery fidelity (`story_map`, `modules`, `bounded_context`, `ia`, `behavior`). Stay there until the user chooses to go deeper.
 - **Shell before questions** — Write the shell at that fidelity's **Scaffold** depth before any grill question.
 - **Grill then sketch** — Three or four questions from the fidelity's **Sketch** section, then sketch that theme into the integrated sections.
-- **Save the shell immediately** — `save_sketch` in the same turn as the shell. Save again after the theme is sketched.
+- **Save the shell immediately** — `save_sketch` in the same turn as the shell. Save again after the theme is sketched. Keep the theme list and each theme's status in that file.
 - **Review after the theme sketch** — `review_sketch` after that save. The three or four grill questions come before that sketch.
+- **Deeper or another theme** — After review, offer those two choices.
+- **Generate when asked** — When a fidelity is finished, offer an official document in markdown, diagram, and code. Multiple formats are allowed. Run `generate` at that fidelity for the formats they choose.
 - **One sketch per engagement** — One `.context/{slug}-sketch.md`. One section per practice. Deepen those sections in place.
 - **Carry-forward mistakes** — Every named mistake shapes the next revision.
 - **Lens notation only** — Practice sections use that practice's sketch template. No free prose.
-- **No generation, validation, or spec** — Rough sketches and grill answers only.
 
 ## Child Lens Skills
 
