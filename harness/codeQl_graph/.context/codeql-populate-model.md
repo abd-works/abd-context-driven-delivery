@@ -1,16 +1,14 @@
 # CodeQLGraph
 
-CodeQL walks fact rows onto a `CodeQLGraph`. The CodeQL types are type-safe constructors for those nodes. They do not stitch. `populate` fills `practice.nodes` and `practice.edges`. `buildGraph` walks from each practice root.
+CodeQL holds the nodes, the edges, and the rules. `CodeQLGraph` runs those queries and renders the rows. It does not decide which nodes exist or which pairs connect.
 
-A node query names a `semantic_type`. That type is a CodeQL class. An edge query names a `kind`, `order`, and `display`. Both catalogs grow as the queries run.
+A practice pack is `practices/<practice>/model/<language>/codeql/`. `query_files` reads every `*.ql` in `nodes/`, then `edges/`, then `rules/`. Adding a query file is how a language or a stack extends the graph. The app in `harness/codeQl_graph/app` draws `return_nodes`.
 
-`order` and `display` are literals in the edge query. display = direct | grouped | relationship.
+A node query names a `semantic_type` as a string in the `select`. An edge query names `kind`, `order`, and `display` as literals. Both catalogs grow as the queries run. `display` is `direct`, `grouped`, or `relationship`.
 
-Loaders: `queries/{language}/{practice}/nodes`, then `queries/{language}/{practice}/edges`, then `queries/{language}/{practice}/rules`. Pass `language` to `populate` so the graph reads that pack.
+`reload_working_copy` runs every node query, registers a `CodeQLNode` per row, runs every edge query, then `populate` walks those edges from each practice root. An edge row is kept when both ids are already registered. A cross-practice edge is stored on the parent's practice. The reverse, child to parent with the same kind, is stored on the child's practice.
 
-A cross-practice edge is stored on the parent's practice. The reverse, child to parent with the same kind, is stored on the child's practice.
-
-`node_id` = `{practice}:{semantic_type}:{file}:{name}` (add class or operation when the name is not unique).
+`node_id` = `{practice}:{semantic_type}:{file}:{name}` (add class or operation when the name is not unique). Shared id helpers live in the pack library (`ce.qll`, `stories.qll`, `ddd.qll`, `graph_rule.qll`). Edge queries call those helpers. They do not invent a second id.
 
 ---
 
@@ -19,10 +17,9 @@ A cross-practice edge is stored on the parent's practice. The reverse, child to 
 + CodeQLPracticeGraph: dict
 	// practice name → CodeQLPracticeGraph
 ----
-+ populate(path, practices, language): CodeQLGraph
-	// language selects queries/{language}/{practice}. For each practice: run node queries, then edge queries, then rule queries, then buildGraph
-+ buildGraph(): None
-	// for each practice: root = practice.rootNode; root.populate()
++ reload_working_copy(): str
+	// for each practice: query_files(nodes), query_files(edges), query_files(rules) under practices/<practice>/model/<language>/codeql
+	// apply node rows, apply edge rows, root.populate(), apply rule rows
 
 ## CodeQLPracticeGraph
 
@@ -39,8 +36,8 @@ A cross-practice edge is stored on the parent's practice. The reverse, child to 
 ----
 - load_nodes(queries): None
 	// for query in node_queries
-	//   node_types.add(query.semantic_type)
-	//   nodes[query.semantic_type].append(CodeQLType[semantic_type].from_fact(row))
+	//   node_types.add(row.semantic_type)
+	//   nodes[row.semantic_type].append(CodeQLNode.from_fact(row))
 - load_edges(queries): None
 	// for query in edge_queries
 	//   edge_types.add(EdgeType(kind, order, display))
@@ -86,7 +83,7 @@ Taken from an edge query as rows arrive.
 
 ## CodeQLNode
 
-The type-safe CodeQL class for this semantic_type. Lives in `practice.nodes[type]`.
+One class for every semantic_type. Lives in `practice.nodes[type]`. The query string is the type.
 
 + practice: Practice
 + type: str
@@ -118,8 +115,10 @@ The type-safe CodeQL class for this semantic_type. Lives in `practice.nodes[type
 Every node query `select`s this, then practice columns.
 
 ```
-node_id, name, semantic_type, practice, file, line, end_line
+node_id, name, semantic_type, practice, file, line, end_line, …practice columns, stage
 ```
+
+`stage` is optional. When a later cell is `discovery`, `specification`, or `implementation`, that cell is the node's stage. Practice columns sit between `end_line` and `stage`.
 
 ## GraphEdge fact
 
@@ -149,7 +148,122 @@ When the check is a relationship, the same row also carries the edge already loa
 rule, node_id, parent_id, child_id, kind, violation
 ```
 
-`node_id` is the subject. The same slug is one query file in each language pack that already has that rule. A slug that exists only for TypeScript stays in the TypeScript pack.
+`node_id` is the subject. The same slug is one query file in each language pack that already has that rule. A slug that exists only for TypeScript stays in the TypeScript pack. A rule binds the node kinds named by the id helpers in that file (`classId`, `operationId`, `nodeId("practice", "Kind", …)`).
+
+---
+
+# Stack — lern_domain_driven
+
+A stack is more query files in the practice packs for that language. `lern_domain_driven` is the TypeScript pack. The graph already runs every `*.ql` in `nodes/`, `edges/`, and `rules/`. These files are the ones still to add. Each edge file selects `parent_id, child_id, kind, order, display` and calls the id helpers the node files use.
+
+Put an edge file in the pack of the parent. A row whose child id belongs to another practice is stored on both practices.
+
+## Domain nodes
+
+The domain entity is already `entity-roots.ql` (`semantic_type=EntityRoot`): `{Domain}` in `src/<domain-slug>/<domain-slug>.ts`. Repository stays `repositories.ql`.
+
+New files in `practices/ddd/model/typescript/codeql/nodes/`:
+
+**domain-client.ql** — `semantic_type=DomainClient`, `<domain-slug>-client.tsx`, class `{Domain}Client`
+
+**domain-node.ql** — `semantic_type=DomainNode`, `<domain-slug>-node.ts`, class `{Domain}Node`
+
+**json-store.ql** — `semantic_type=JsonStore`, `<domain-slug>.json`
+
+## Domain edges
+
+New files in `practices/ddd/model/typescript/codeql/edges/`. Each child is the EntityRoot id `entity-roots.ql` already returns. `view-displays-entity.ql` names a StoryView, so that row is also stored on stories.
+
+| File | parent | child | kind | order | display |
+|---|---|---|---|---|---|
+| client-interacts-entity.ql | DomainClient | EntityRoot | interacts | 5 | relationship |
+| node-hosts-entity.ql | DomainNode | EntityRoot | hosts | 5 | relationship |
+| view-displays-entity.ql | StoryView | EntityRoot | displays | 5 | relationship |
+| json-file-entity.ql | JsonStore | EntityRoot | jsonFile | 5 | relationship |
+
+## Story nodes
+
+`practices/stories/model/typescript/codeql/nodes/`
+
+**epic-package.ql** — `semantic_type=EpicPackage`, `packages/<epic-slug>/`
+
+**epic-view.ql** — `semantic_type=EpicView`, `<epic-slug>-view.tsx`
+
+**route.ql** — `semantic_type=Route`, one file beside its aggregate: `src/account-credentials/account-credentials-routes.ts` is the AccountCredentials route, `src/customer/customer-routes.ts` is the Customer route.
+
+**destination.ql** — `semantic_type=Destination`, each `router.get` / `router.post` in that file. `router.get('/destination', …)` is one destination.
+
+**app-boot.ql** — `semantic_type=AppBoot`, `app.ts`, `serve.ts`, `main.tsx`
+
+**sub-epic-folder.ql** — `semantic_type=SubEpicFolder`, `packages/<epic-slug>/<sub-epic-slug>/`
+
+**story-view.ql** — `semantic_type=StoryView`, `<story-slug>-view.tsx` under that folder
+
+**story-shared.ql** — `semantic_type=StoryShared`, `tests/<epic>/<sub-epic>/<snake>.story.shared.ts`. One `shareStory` body: Given, When, Then. It imports `examples/` and calls the domain operation.
+
+**domain-spec.ql** — `semantic_type=DomainSpec`, `<snake>.story.domain.spec.ts`. Runs that shared story with the domain repository.
+
+**server-spec.ql** — `semantic_type=ServerSpec`, `<snake>.story.server.spec.ts`. Runs that shared story with the node repository, and asks the route for the destination.
+
+**playwright-spec.ql** — `semantic_type=PlaywrightSpec`, `<snake>.story.playwright.ts`. Runs that shared story in the browser. The screen shows the destination.
+
+Epic, Story, Scenario, Step, and Example stay the story node queries already in that folder.
+
+## Story edges
+
+`practices/stories/model/typescript/codeql/edges/`. Each row says what the new node does. `route-navigates-aggregate.ql`, `destination-invokes-operation.ql`, `domain-runs-entity.ql`, and `server-runs-node.ql` name a node from another practice, so those rows are also stored there.
+
+A route file navigates to one aggregate. That route receives requests. Each request is a destination, and that destination invokes an operation on the aggregate's entity root. `src/account-credentials/account-credentials-routes.ts` navigates to AccountCredentials; `POST /api/account/register` invokes `register`. `src/customer/customer-routes.ts` navigates to Customer; `POST /api/customer/load` invokes `load`, `POST /api/customer/create` invokes `create`.
+
+| File | parent | child | kind | order | display |
+|---|---|---|---|---|---|
+| package-serves-epic.ql | EpicPackage | Epic | serves | 5 | relationship |
+| epic-view-displays-epic.ql | EpicView | Epic | displays | 5 | relationship |
+| route-navigates-aggregate.ql | Route | Aggregate | navigates | 5 | relationship |
+| route-has-destination.ql | Route | Destination | has | 2 | direct |
+| destination-invokes-operation.ql | Destination | Operation | invokes | 5 | relationship |
+| app-boot-runs-epic.ql | AppBoot | Epic | runs | 5 | relationship |
+| sub-epic-groups-views.ql | SubEpicFolder | StoryView | groups | 5 | relationship |
+| story-view-displays-story.ql | StoryView | Story | displays | 5 | relationship |
+| shared-states-story.ql | StoryShared | Story | states | 5 | relationship |
+| domain-runs-entity.ql | DomainSpec | EntityRoot | runs | 5 | relationship |
+| server-runs-node.ql | ServerSpec | DomainNode | runs | 5 | relationship |
+| playwright-displays-view.ql | PlaywrightSpec | StoryView | displays | 5 | relationship |
+
+## Edges across practices
+
+Parent pack holds the file. The child id is a node the other practice already registered.
+
+`practices/ddd/model/typescript/codeql/edges/`
+
+| File | parent | child | kind | order | display |
+|---|---|---|---|---|---|
+| node-decides-view.ql | DomainNode | StoryView | decides | 9 | relationship |
+
+`practices/stories/model/typescript/codeql/edges/`
+
+| File | parent | child | kind | order | display |
+|---|---|---|---|---|---|
+| package-imports-entity.ql | EpicPackage | EntityRoot | imports | 9 | relationship |
+
+`practices/clean_engineering/model/typescript/codeql/edges/`
+
+| File | parent | child | kind | order | display |
+|---|---|---|---|---|---|
+| operation-same-stem.ql | Operation | Operation | sameStem | 9 | relationship |
+| parameter-same-name.ql | Parameter | Parameter | sameName | 9 | relationship |
+| property-serializes-as.ql | Property | Property | serializesAs | 9 | relationship |
+| schema-validates-at-repository.ql | Operation | Operation | validatesAt | 9 | relationship |
+
+`sameStem` links one `{verbNoun}` from the domain entity to the client, the node, and the route. `sameName` links a parameter to the same name on the next tier. `serializesAs` links a TypeScript property to its JSON field. `validatesAt` links the Zod schema on the domain entity to repository `load`, `create`, `search`, and `update`.
+
+## Rules already in the TypeScript packs
+
+These rule files are already beside the practice rules. They select `rule, node_id, violation` and name a node id that a node query registers. They do not grow new edges.
+
+- `practices/clean_engineering/model/typescript/codeql/rules/` — `domain-core-file-matches-folder-slug`, `share-domain-logic`, `node-decides-next-page`, `views-render-only`, `cross-layer-method-naming`, `property-casing-transform`, `ensure-type-safe-routes`, `standard-mutation-response`, `include-all-external-dependencies`, `implement-full-interfaces`
+- `practices/ddd/model/typescript/codeql/rules/` — `one-json-store-per-aggregate`, `repository-owns-aggregate-lifecycle`, `one-repository-per-aggregate`, `ask-cross-aggregate-sync`, `use-ubiquitous-language`, `implement-domain-entities-correctly`, `use-ctx-repository-directly`
+- `practices/stories/model/typescript/codeql/rules/` — `test-story-driven`, `scaffold-test-scripts`, `use-thorough-e2e-tests`, `pml-artifact-layout`, `examples-export-data-not-repository`, `browser-then-asserts-screen-widgets`
 
 ---
 
@@ -162,8 +276,14 @@ Practice: `clean_engineering`. A class is an OoadClass. DDD stereotypes are the 
 
 **modules.ql**
 ```
-node_id, name, semantic_type=Module, practice=clean_engineering, file, line, end_line
+node_id, name, semantic_type=Module, practice=clean_engineering, file, line, end_line, stage=discovery
 ```
+
+**packages.ql**
+```
+node_id, name, semantic_type=Package, practice=clean_engineering, file, line, end_line, stage=discovery
+```
+A package is the folder under a module that holds classes (`src/<module>/<package>`).
 
 **classes.ql**
 ```
@@ -205,11 +325,13 @@ parent_id, child_id, kind=relative, order=1, display=direct
 ```
 OoadClass→Property when type_hint names another loaded class.
 
-**repo-owns-modules.ql**, **module-owns-classes.ql**, **module-owns-operations.ql**, **class-owns-operations.ql**, **operation-owns-parameters.ql**
+**repo-owns-modules.ql**, **module-owns-packages.ql**, **package-owns-classes.ql**, **module-owns-classes.ql**, **module-owns-operations.ql**, **class-owns-operations.ql**
 ```
 parent_id, child_id, kind=owns, order=2, display=direct
 ```
-Repo→Module, Module→OoadClass, Module→file-level Operation, OoadClass→Operation, Operation→Parameter.
+Repo→Module, Module→Package, Package→OoadClass, Module→OoadClass, Module→file-level Operation, OoadClass→Operation.
+
+TypeScript does not emit `operation-owns-parameters`. The parameter stays under `hasParameter`. The Python pack still has `operation-owns-parameters.ql` (`owns`, order 2, direct) for Operation→Parameter.
 
 **class-properties-properties.ql**
 ```

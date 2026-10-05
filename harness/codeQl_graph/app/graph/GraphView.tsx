@@ -25,12 +25,7 @@ export function GraphView({ trees, loading, error, selectedId, onSelect }: Graph
       ) : null}
       <ul className="tree">
         {trees.map((node) => (
-          <TreeNode
-            key={node.node_id || node.name}
-            node={node}
-            selectedId={selectedId}
-            onSelect={onSelect}
-          />
+          <TreeNode key={node.node_id || node.name} node={node} selectedId={selectedId} onSelect={onSelect} />
         ))}
       </ul>
     </div>

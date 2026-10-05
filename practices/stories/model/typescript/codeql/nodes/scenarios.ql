@@ -15,3 +15,4 @@ where
   file = slash(call.getFile().getRelativePath())
 select scenarioId(file, name), name, "Scenario", "stories", file, call.getLocation().getStartLine(),
   call.getLocation().getEndLine(), storyTitle(call), "specification"
+order by file, call.getLocation().getStartLine()

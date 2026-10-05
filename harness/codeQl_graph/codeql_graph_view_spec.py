@@ -1,6 +1,9 @@
 """Filter, stage, passing rules, packages, and source folds on a CodeQL graph."""
 
+import errno
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -10,7 +13,7 @@ if str(_HERE) not in sys.path:
 from expects import be_above, contain, equal, expect
 from mamba import before, context, description, it
 
-from graph import CodeQLGraph, CodeQLNode, CodeQLPracticeGraph, RuleResult, Source
+from graph import CodeQLGraph, CodeQLNode, CodeQLPracticeGraph, RuleResult, Source, missing_cache, remove_tree, windows_path
 
 _FOLDS = _HERE / "examples" / "folds"
 
@@ -115,14 +118,15 @@ with description("a CodeQL graph"):
                 ["clean_engineering:Package:src/domain/customer:customer", "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer", "owns", "2", "direct"],
             ])
             self.practice.root_node.populate()
+            self.tree = self.practice.root_node.serialize()
 
         with it("should parent the package on the module"):
-            package = next(child for child in self.practice.nodes["Module"][0].children if child.name == "customer")
-            expect(package.type).to(equal("Package"))
+            package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")
+            expect(package["type"]).to(equal("Package"))
 
         with it("should parent the class on the package"):
-            package = self.practice.nodes["Package"][0]
-            expect([child.name for child in package.children]).to(equal(["Customer"]))
+            package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")
+            expect([child["name"] for child in package["children"]]).to(equal(["Customer"]))
 
     with context("with source that opens a block and calls an operation"):
         with before.all:
@@ -163,3 +167,39 @@ with description("a CodeQL graph"):
         with it("should fold the class named in the inlined operation"):
             classes = [fold for fold in self.caller.source.folds if fold.kind == "class" and fold.end > fold.start]
             expect(len(classes)).to(be_above(0))
+
+
+with description("a CodeQL cache directory"):
+    with context("whose tuple pool name is past the Windows path limit"):
+        with before.all:
+            self.root = Path(tempfile.mkdtemp(prefix="cdd-long-"))
+            leaf = self.root / "cache" / "cached-strings" / "tuple-pool" / ("tuples#" + "x" * 180)
+            os.makedirs(windows_path(leaf))
+            with open(windows_path(leaf / "row"), "w", encoding="utf-8") as handle:
+                handle.write("a")
+            self.leaf = leaf / "row"
+
+        with it("should remove that directory"):
+            expect(len(str(self.leaf))).to(be_above(260))
+            remove_tree(self.root)
+            expect(os.path.exists(windows_path(self.root))).to(equal(False))
+
+    with context("when Windows reports a cache path it cannot find"):
+        with before.all:
+            self.root = Path(tempfile.mkdtemp(prefix="cdd-cache-"))
+            self.cache = self.root / "db-javascript" / "default" / "cache"
+            self.cache.mkdir(parents=True)
+            (self.cache / "marker").write_text("cached", encoding="utf-8")
+            (self.root / "codeql-database.yml").write_text("name: sample", encoding="utf-8")
+            self.error = OSError(
+                errno.ENOENT,
+                "The system cannot find the path specified",
+                str(self.cache / "cached-strings" / "tuple-pool" / "tuples#too-long"),
+            )
+            self.error.winerror = 3
+
+        with it("should delete that cache and leave the database"):
+            expect(missing_cache(self.error)).to(equal(self.cache))
+            remove_tree(missing_cache(self.error))
+            expect(self.cache.exists()).to(equal(False))
+            expect((self.root / "codeql-database.yml").is_file()).to(equal(True))

@@ -8,7 +8,6 @@ from practices.clean_engineering.model.javascript.javascript_class_model import 
 from practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
 from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
 from practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
-from practices.clean_engineering.model.knowledge_graph.nodes import KnowledgeGraphCleanEngineeringModel
 from practices.clean_engineering.model.sketch.sketch_class_model import SketchCleanEngineeringModel
 from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
@@ -38,7 +37,6 @@ class CleanEngineering(PracticeGuidance):
                 "javascript": JavaScriptCleanEngineeringModel,
                 "drawio": DrawIOCleanEngineeringModel,
                 "sketch": SketchCleanEngineeringModel,
-                "knowledge_graph": KnowledgeGraphCleanEngineeringModel,
             },
         )
         self.drawio = drawio

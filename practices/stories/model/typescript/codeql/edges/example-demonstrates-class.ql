@@ -7,14 +7,9 @@
 import javascript
 import stories
 
-from ExportNamedDeclaration decl, VarDecl exported, ClassDefinition cls, string file, string name, string parent, string child
+from string file, string name, ClassDefinition cls, string parent, string child
 where
-  exampleFile(decl.getFile()) and
-  exported = decl.getADecl() and
-  name = exported.getName() and
-  not name.matches("seed%") and
-  file = slash(decl.getFile().getRelativePath()) and
-  cls.getName() = exampleReturnClass(exported.getParent()) and
+  cls.getName() = exampleReturnClassName(file, name) and
   parent = exampleId(file, name) and
-  child = "clean_engineering:OoadClass:" + slash(cls.getFile().getRelativePath()) + ":" + cls.getName()
+  child = classNodeId(cls)
 select parent, child, "demonstrates", 3, "grouped"

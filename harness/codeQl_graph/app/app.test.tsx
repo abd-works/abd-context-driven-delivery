@@ -1,50 +1,99 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
+import { useLayoutEffect, useRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 
-const foldMarks = vi.hoisted(() => ({ names: [] as string[] }));
+const foldMarks = vi.hoisted(() => ({
+  names: [] as string[],
+  scrollbar: undefined as { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean } | undefined,
+}));
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({
     value,
+    options,
     onMount,
   }: {
     value: string;
+    options?: { scrollbar?: { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean } };
     onMount?: (editor: {
       getValue: () => string;
       setValue: (next: string) => void;
       getModel: () => { getLineCount: () => number };
       getDomNode: () => HTMLElement;
       getTargetAtClientPoint: () => null;
-      createDecorationsCollection: (next: { options: { glyphMarginClassName?: string } }[]) => {
-        set: (items: { options: { glyphMarginClassName?: string } }[]) => void;
+      createDecorationsCollection: (next: { range: { startLineNumber: number }; options: { glyphMarginClassName?: string } }[]) => {
+        set: (items: { range: { startLineNumber: number }; options: { glyphMarginClassName?: string } }[]) => void;
         clear: () => void;
       };
-      setHiddenAreas: () => void;
+      setHiddenAreas: (ranges: { startLineNumber: number; endLineNumber: number }[]) => void;
     }) => void;
   }) => {
-    const record = (items: { options: { glyphMarginClassName?: string } }[]) => {
-      foldMarks.names = items.flatMap((item) => (item.options.glyphMarginClassName ? [item.options.glyphMarginClassName] : []));
+    const host = useRef<HTMLDivElement>(null);
+    const marks = useRef<{ range: { startLineNumber: number }; options: { glyphMarginClassName?: string } }[]>([]);
+    const hidden = useRef<{ startLineNumber: number; endLineNumber: number }[]>([]);
+    foldMarks.scrollbar = options?.scrollbar;
+    const paint = () => {
+      const editor = host.current;
+      if (!editor) {
+        return;
+      }
+      foldMarks.names = marks.current.flatMap((item) => (item.options.glyphMarginClassName ? [item.options.glyphMarginClassName] : []));
+      editor.replaceChildren();
+      value.split('\n').forEach((line, index) => {
+        const lineNumber = index + 1;
+        const covered = hidden.current.some((range) => lineNumber >= range.startLineNumber && lineNumber <= range.endLineNumber);
+        if (covered) {
+          return;
+        }
+        const row = document.createElement('div');
+        row.dataset.line = String(lineNumber);
+        for (const item of marks.current) {
+          const className = item.options.glyphMarginClassName;
+          if (item.range.startLineNumber === lineNumber && className) {
+            const mark = document.createElement('span');
+            mark.className = className;
+            row.appendChild(mark);
+          }
+        }
+        row.append(line);
+        editor.appendChild(row);
+      });
     };
-    onMount?.({
-      getValue: () => value,
-      setValue: () => undefined,
-      getModel: () => ({ getLineCount: () => value.split('\n').length }),
-      getDomNode: () => document.body,
-      getTargetAtClientPoint: () => null,
-      createDecorationsCollection: (next) => {
-        record(next);
-        return { set: record, clear: () => undefined };
-      },
-      setHiddenAreas: () => undefined,
-    });
-    return <pre data-testid="source-editor">{value}</pre>;
+    useLayoutEffect(() => {
+      onMount?.({
+        getValue: () => value,
+        setValue: () => undefined,
+        getModel: () => ({ getLineCount: () => value.split('\n').length }),
+        getDomNode: () => host.current ?? document.body,
+        getTargetAtClientPoint: () => null,
+        createDecorationsCollection: (next) => {
+          marks.current = next;
+          paint();
+          return {
+            set: (items) => {
+              marks.current = items;
+              paint();
+            },
+            clear: () => {
+              marks.current = [];
+              paint();
+            },
+          };
+        },
+        setHiddenAreas: (ranges) => {
+          hidden.current = ranges;
+          paint();
+        },
+      });
+    }, [onMount, value]);
+    return <div ref={host} data-testid="source-editor" />;
   },
 }));
 
 const folder = 'C:\\dev\\example';
-const registerText = 'register(input: Credentials) {\n  if (input) {\n    credentials.save();\n  }\n  credentials.notify();\n}';
+const registerText = 'register(input: Credentials) {\n  const account: AccountToken = input;\n  if (input) {\n    credentials.save();\n  }\n  credentials.notify();\n}';
 const engineeringTree = {
   type: 'Practice',
   name: 'clean_engineering',
@@ -98,33 +147,7 @@ const domainTree = {
           name: 'account-credentials',
           node_id: 'aggregate-account',
           children: [
-            {
-              type: 'EntityRoot',
-              name: 'AccountCredentials',
-              node_id: 'entity-account',
-              children: [
-                {
-                  type: 'associates',
-                  name: 'associates',
-                  node_id: 'associates-account',
-                  children: [
-                    {
-                      type: 'EntityRoot',
-                      name: 'Customer',
-                      node_id: 'entity-customer',
-                      children: [
-                        {
-                          type: 'belongsTo',
-                          name: 'belongsTo',
-                          node_id: 'belongs-customer-entity',
-                          children: [{ type: 'Aggregate', name: 'customer', node_id: 'aggregate-customer', children: [] }],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
+            { type: 'EntityRoot', name: 'AccountCredentials', node_id: 'entity-account', children: [] },
           ],
         },
         {
@@ -142,11 +165,62 @@ const domainTree = {
     },
   ],
 };
+const storyText = [
+  "shareStory('Create Account', () => {",
+  "  scenario('Create account', ({ when, then }) => {",
+  "    when('the User creates their account', async () => {",
+  '      accountCredentials.register();',
+  '    });',
+  "    then('the account is unconfirmed', () => {",
+  '      expect(accountCredentials.verified).toBe(false);',
+  '    });',
+  '  });',
+  '});',
+].join('\n');
+const scenarioText = [
+  "scenario('Create account', ({ when, then }) => {",
+  "  when('the User creates their account', async () => {",
+  '    accountCredentials.register();',
+  '  });',
+  "  then('the account is unconfirmed', () => {",
+  '    expect(accountCredentials.verified).toBe(false);',
+  '  });',
+  '});',
+].join('\n');
+const stepText = [
+  "when('the User creates their account', async () => {",
+  '  accountCredentials.register();',
+  '  if (input) {',
+  '    accountCredentials.notify();',
+  '  }',
+  '});',
+].join('\n');
 const storiesTree = {
   type: 'Practice',
   name: 'stories',
   node_id: 'stories',
-  children: [{ type: 'Epic', name: 'Onboard', node_id: 'epic-1', children: [] }],
+  children: [
+    {
+      type: 'Epic',
+      name: 'Onboard',
+      node_id: 'epic-1',
+      children: [
+        {
+          type: 'Story',
+          name: 'Create Account',
+          node_id: 'story-1',
+          children: [
+            {
+              type: 'Scenario',
+              name: 'Create account',
+              node_id: 'scenario-1',
+              children: [{ type: 'Step', name: 'when the User creates their account', node_id: 'step-1', children: [] }],
+            },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 const inventory = {
@@ -181,6 +255,8 @@ const calls: { operation: string; body: Record<string, unknown> }[] = [];
 beforeEach(() => {
   calls.length = 0;
   foldMarks.names = [];
+  foldMarks.scrollbar = undefined;
+  window.localStorage.clear();
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -242,11 +318,39 @@ it('should fold calls, classes, and blocks in the source', async () => {
   await expand(user, 'AccountCredentials');
   await user.click(screen.getByText('register'));
   const editor = await screen.findByTestId('source-editor');
-  expect(editor.textContent).toContain('stored();');
-  expect(editor.textContent).toContain('sent();');
-  expect(foldMarks.names.some((name) => name.includes('call-fold'))).toBe(true);
-  expect(foldMarks.names.some((name) => name.includes('class-fold'))).toBe(true);
-  expect(foldMarks.names.some((name) => name.includes('block-fold'))).toBe(true);
+  await waitFor(() => expect(editor.querySelector('.call-fold')).toBeTruthy());
+  const line = (text: string) =>
+    Array.from(editor.querySelectorAll<HTMLElement>('[data-line]')).find((row) => row.textContent?.includes(text));
+  expect(line('credentials.save()')?.querySelector('.call-fold')).toBeTruthy();
+  expect(line('credentials.notify()')?.querySelector('.call-fold')).toBeTruthy();
+  expect(line('const account: AccountToken = input;')?.querySelector('.class-fold')).toBeTruthy();
+  expect(line('if (input)')?.querySelector('.block-fold')).toBeTruthy();
+  expect(editor.textContent).not.toContain('only-in-class-body');
+  expect(foldMarks.scrollbar).toEqual({ handleMouseWheel: false, alwaysConsumeMouseWheel: false });
+});
+
+it('should fold a story, a scenario, and a step the way a class folds', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await expand(user, 'stories');
+  await expand(user, 'Onboard');
+  await expand(user, 'Create Account');
+  await user.click(screen.getByText('Create Account'));
+  const editor = await screen.findByTestId('source-editor');
+  const line = (text: string) =>
+    Array.from(editor.querySelectorAll<HTMLElement>('[data-line]')).find((row) => row.textContent?.includes(text));
+  await waitFor(() => expect(line("scenario('Create account'")?.querySelector('.block-fold')).toBeTruthy());
+  expect(editor.textContent).not.toContain('accountCredentials.register');
+
+  await expand(user, 'Create Account');
+  await user.click(screen.getByText('Create account'));
+  await waitFor(() => expect(line("when('the User creates their account'")?.querySelector('.block-fold')).toBeTruthy());
+  expect(editor.textContent).not.toContain('accountCredentials.register');
+
+  await expand(user, 'Create account');
+  await user.click(screen.getByText('when the User creates their account'));
+  await waitFor(() => expect(line('accountCredentials.register()')?.querySelector('.call-fold')).toBeTruthy());
+  expect(line('if (input)')?.querySelector('.block-fold')).toBeTruthy();
 });
 
 it('should select every node, connector, and rule for the practice', async () => {
@@ -318,6 +422,14 @@ it('should put the chosen folder on the page and show its classes', async () => 
   await expand(user, 'account');
   expect(screen.getByText('AccountCredentials')).toBeTruthy();
   expect(calls.map((call) => call.operation)).toEqual(['choose_folder', 'load_working_copy', 'inventory']);
+});
+
+it('should reload the last folder when the app opens', async () => {
+  window.localStorage.setItem('cdd-graph-folder', folder);
+  render(<App />);
+  await screen.findByRole('button', { name: 'Expand clean_engineering' });
+  expect((screen.getByTestId('chosen-folder') as HTMLInputElement).value).toBe(folder);
+  expect(calls.some((call) => call.operation === 'load_working_copy' && call.body.folder === folder)).toBe(true);
 });
 
 it('should start with the source pane asking for a node', () => {
@@ -404,19 +516,39 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
     return rowsFor(filter.practices ?? [], filter.node_types ?? []);
   }
   if (operation === 'source') {
+    const nodeId = String(body.node_id);
+    const storySource =
+      nodeId === 'story-1'
+        ? { name: 'Create Account', type: 'Story', file: 'authenticate_user.story.shared.ts', text: storyText }
+        : nodeId === 'scenario-1'
+          ? { name: 'Create account', type: 'Scenario', file: 'authenticate_user.story.shared.ts', text: scenarioText }
+          : nodeId === 'step-1'
+            ? { name: 'when the User creates their account', type: 'Step', file: 'authenticate_user.story.shared.ts', text: stepText }
+            : { name: 'register', type: 'Operation', file: 'register.ts', text: registerText };
     return {
       node_id: body.node_id,
-      name: 'register',
-      type: 'Operation',
-      file: 'register.ts',
-      text: registerText,
+      name: storySource.name,
+      type: storySource.type,
+      file: storySource.file,
+      text: storySource.text,
       start_line: 1,
-      end_line: 4,
+      end_line: storySource.text.split('\n').length,
       members: [
         { id: 'op-1', name: 'register', kind: 'Operation', owner: 'AccountCredentials', text: registerText, file: 'register.ts', start: 1, end: 4 },
         { id: 'save', name: 'save', kind: 'Operation', owner: 'Credentials', text: 'save() {\n  stored();\n}', file: 'credentials.ts', start: 1, end: 3 },
         { id: 'notify', name: 'notify', kind: 'Operation', owner: 'Credentials', text: 'notify() {\n  sent();\n}', file: 'credentials.ts', start: 5, end: 7 },
         { id: 'class-c', name: 'Credentials', kind: 'OoadClass', owner: '', text: 'class Credentials {\n  token: string;\n}', file: 'credentials.ts', start: 1, end: 3 },
+        { id: 'class-token', name: 'AccountToken', kind: 'OoadClass', owner: '', text: 'class AccountToken {\n  value: string;\n}', file: 'token.ts', start: 1, end: 3 },
+        {
+          id: 'class-account',
+          name: 'AccountCredentials',
+          kind: 'OoadClass',
+          owner: '',
+          text: 'class AccountCredentials {\n  token: AccountToken;\n  only-in-class-body();\n}',
+          file: 'account.ts',
+          start: 1,
+          end: 4,
+        },
       ],
     };
   }

@@ -27,7 +27,12 @@ function SourceEditor({ source }: { source: SourceText }) {
       }),
     [source, members, owner],
   );
+  const [openFor, setOpenFor] = useState(source.node_id);
   const [openFolds, setOpenFolds] = useState<string[]>(() => openBlockFolds(prepared.folds));
+  if (openFor !== source.node_id) {
+    setOpenFor(source.node_id);
+    setOpenFolds(openBlockFolds(prepared.folds));
+  }
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const decorations = useRef<{ set: (next: object[]) => void; clear: () => void } | null>(null);
   const hideSource = useRef({ id: 'call-folds' });
@@ -95,6 +100,7 @@ function SourceEditor({ source }: { source: SourceText }) {
             fontSize: 13,
             lineHeight: LINE_HEIGHT,
             glyphMargin: prepared.folds.length > 0,
+            scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false },
           }}
         />
       </div>

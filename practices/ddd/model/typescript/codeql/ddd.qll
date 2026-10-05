@@ -247,9 +247,7 @@ predicate aggregateFolder(string mod) {
 }
 
 bindingset[mod]
-string aggregateId(string mod) {
-  result = dddNodeId("Aggregate", "src/" + mod, mod)
-}
+string aggregateId(string mod) { result = "ddd:Aggregate:src/" + mod }
 
 bindingset[name]
 predicate typeNames(FieldDefinition field, string name) {

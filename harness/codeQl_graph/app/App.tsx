@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 import { DataManagementClient } from './data-management/DataManagementClient';
@@ -11,6 +11,7 @@ import { SourceClient, type SourceText } from './source/SourceClient';
 import { SourceView } from './source/SourceView';
 
 const PRACTICES = ['clean_engineering', 'stories', 'ddd', 'bdd', 'ux'];
+const LAST_FOLDER = 'cdd-graph-folder';
 const EMPTY: FilterSelection = {
   practices: [],
   node_types: [],
@@ -26,7 +27,7 @@ const data = new DataManagementClient();
 
 export function App() {
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? '');
-  const [folder, setFolder] = useState('');
+  const [folder, setFolder] = useState(() => window.localStorage.getItem(LAST_FOLDER) ?? '');
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
@@ -51,6 +52,13 @@ export function App() {
     }
     window.localStorage.setItem('kg-theme', next);
   }
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(LAST_FOLDER)?.trim();
+    if (saved) {
+      void load(saved);
+    }
+  }, []);
 
   function practiceRoots(root: string): Record<string, string> {
     return Object.fromEntries(PRACTICES.map((name) => [name, root]));
@@ -82,6 +90,7 @@ export function App() {
       setRelationships(unique(shown.flatMap((name) => inventory[name]?.edge_types ?? [])));
       setRules(unique(shown.flatMap((name) => inventory[name]?.rules ?? [])));
       setLoadedFolder(trimmed);
+      window.localStorage.setItem(LAST_FOLDER, trimmed);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {

@@ -137,8 +137,17 @@ export function classPanelLayout(text: string, folds: InlineFold[] = []): Inline
   };
 }
 
+const STORY_CALL = /^\s*\.?(?:shareStory|story|scenario|background|given|when|then|and|but)\s*\(/;
+
+function isStoryCall(line: string): boolean {
+  return STORY_CALL.test(line) && line.includes("{");
+}
+
 function isMemberHead(line: string): boolean {
   const trimmed = line.trim();
+  if (isStoryCall(trimmed)) {
+    return true;
+  }
   if (/^(if|for|while|switch|catch|else|try|do|return|throw)\b/.test(trimmed)) {
     return false;
   }
@@ -152,8 +161,13 @@ function braceFolds(text: string): InlineFold[] {
   const lines = text.split("\n");
   const folds: InlineFold[] = [];
   const classLine = /^\s*(export\s+)?(abstract\s+)?class\s+/;
+  let storyContainer = false;
   for (let index = 0; index < lines.length; index += 1) {
-    if (classLine.test(lines[index]) || braceDepth(lines[index]) <= 0) {
+    const container = classLine.test(lines[index]) || (isStoryCall(lines[index]) && !storyContainer);
+    if (isStoryCall(lines[index])) {
+      storyContainer = true;
+    }
+    if (container || braceDepth(lines[index]) <= 0) {
       continue;
     }
     const end = blockEnd(lines, index);
@@ -445,6 +459,7 @@ function displayedCallSource(
   let brace = 0;
   let quote = "";
   const classDecl = /^\s*(export\s+)?(abstract\s+)?class\s+/;
+  let storyContainer = false;
   text.split("\n").forEach((line, index) => {
     output.push(line);
     lineNumbers.push(String(index + 1));
@@ -454,7 +469,11 @@ function displayedCallSource(
     const scanned = scanBraces(line, brace, quote);
     brace = scanned.depth;
     quote = scanned.quote;
-    if (!classDecl.test(line)) {
+    const openingStory = isStoryCall(line) && !storyContainer;
+    if (isStoryCall(line)) {
+      storyContainer = true;
+    }
+    if (!classDecl.test(line) && !openingStory) {
       const member = isMemberHead(line);
       for (let next = before + 1; next <= brace; next += 1) {
         frames.push({ at: sourceLine, openedTo: next, member: member && next === before + 1 });

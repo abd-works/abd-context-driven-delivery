@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -26,6 +28,76 @@ _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet", "--ram=8192")
 
 def query_pack(practice: str, language: str) -> Path:
     return _REPO / "practices" / practice / "model" / language / "codeql"
+
+
+def windows_path(path: Path) -> str:
+    """Absolute path. On Windows the \\\\?\\ form addresses CodeQL cache names past MAX_PATH."""
+    text = os.path.abspath(path)
+    if os.name != "nt" or text.startswith("\\\\?\\"):
+        return text
+    if text.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + text[2:]
+    return "\\\\?\\" + text
+
+
+def _make_writable(function, path, _exc) -> None:
+    os.chmod(path, stat.S_IWRITE)
+    function(path)
+
+
+def _cache_root(path: Path) -> Path | None:
+    parts = Path(str(path).removeprefix("\\\\?\\")).parts
+    for index, part in enumerate(parts):
+        if part == "cache" and index >= 1 and parts[index - 1] == "default":
+            return Path(*parts[: index + 1])
+    return None
+
+
+def missing_cache(error: BaseException) -> Path | None:
+    """The CodeQL cache directory named in a Windows path-not-found error."""
+    if not isinstance(error, OSError):
+        return None
+    unreachable = getattr(error, "winerror", None) == 3 or error.errno == errno.ENOENT
+    if not unreachable or not error.filename:
+        return None
+    return _cache_root(Path(error.filename))
+
+
+def _remove_tree_once(path: Path, *, ignore_errors: bool = False) -> None:
+    target = windows_path(path)
+    if not os.path.exists(target):
+        return
+    if not os.path.isdir(target):
+        os.remove(target)
+        return
+    shutil.rmtree(target, ignore_errors=ignore_errors, onexc=_make_writable)
+
+
+def remove_tree(path: Path, *, ignore_errors: bool = False) -> None:
+    """Delete a database directory. A path Windows cannot see drops the CodeQL cache and retries."""
+    try:
+        _remove_tree_once(path, ignore_errors=ignore_errors)
+    except OSError as error:
+        cache = missing_cache(error)
+        if cache is None:
+            if ignore_errors:
+                return
+            raise
+        _remove_tree_once(cache)
+        _remove_tree_once(path, ignore_errors=ignore_errors)
+
+
+def copy_tree(source: Path, destination: Path) -> None:
+    remove_tree(destination)
+    try:
+        shutil.copytree(windows_path(source), windows_path(destination))
+    except OSError as error:
+        cache = missing_cache(error)
+        if cache is None:
+            raise
+        _remove_tree_once(cache)
+        remove_tree(destination)
+        shutil.copytree(windows_path(source), windows_path(destination))
 
 
 class QueryFailure(Exception):
@@ -530,9 +602,7 @@ class CodeQLNode:
         self._populated = True
         types = sorted(self.practice.edge_types.values(), key=lambda edge_type: edge_type.order)
         for edge_type in types:
-            for edge in self.practice.edges.get(edge_type.kind, []):
-                if edge.parent is not self:
-                    continue
+            for edge in self._edges_in_source_order(edge_type.kind):
                 if edge.display == "direct":
                     edge.child.populate(self)
                 else:
@@ -543,6 +613,26 @@ class CodeQLNode:
                         self.children.append(holder)
                     edge.child.populate(holder)
 
+    def _edges_in_source_order(self, kind: str) -> list[Edge]:
+        matched = [edge for edge in self.practice.edges.get(kind, []) if edge.parent is self]
+        ordered = sorted((edge for edge in matched if self._follows_source(edge)), key=self._source_position)
+        cursor = 0
+        placed: list[Edge] = []
+        for edge in matched:
+            if self._follows_source(edge):
+                placed.append(ordered[cursor])
+                cursor += 1
+            else:
+                placed.append(edge)
+        return placed
+
+    def _follows_source(self, edge: Edge) -> bool:
+        return edge.child.type in {"Background", "Scenario", "Step", "Story"}
+
+    def _source_position(self, edge: Edge) -> tuple:
+        source = edge.child.source
+        return (source.file, source.start_line, edge.child.node_id)
+
     def _holder(self, node: CodeQLNode) -> bool:
         return node.type == node.name
 
@@ -552,24 +642,18 @@ class CodeQLNode:
                 return child
         return None
 
-    def serialize(self, seen: set[str] | None = None) -> dict:
-        """Structural children keep their tree. A relationship names its target and leaves that target free for its own place."""
+    def serialize(self, seen: set[str] | None = None, via: CodeQLNode | None = None) -> dict:
+        """Write children on the home parent. A later relationship copy is a stub and does not consume the id."""
         seen = set() if seen is None else seen
-        if self.node_id in seen:
+        home = via is None or via is self.parent
+        if not home or self.node_id in seen:
             return {"type": self.type, "name": self.name, "node_id": self.node_id, "children": []}
         seen.add(self.node_id)
-        holder = self.type == self.name
-        children = []
-        for child in self.children:
-            if holder:
-                children.append({"type": child.type, "name": child.name, "node_id": child.node_id, "children": []})
-            else:
-                children.append(child.serialize(seen))
         return {
             "type": self.type,
             "name": self.name,
             "node_id": self.node_id,
-            "children": children,
+            "children": [child.serialize(seen, self) for child in self.children],
         }
 
     def _new_kind_node(self, kind: str) -> CodeQLNode:
@@ -717,14 +801,14 @@ class CodeQLGraph:
     @mcp
     @agent_tool
     def create_database(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
-        """Create a CodeQL master database for each practice root and copy it to the working copy.
+        """Delete each master and working copy, extract the source into a new master, and copy that master to the working copy.
 
         folder is the repo. Databases are stored there unless database is set.
         database stores a subset's databases so a test does not overwrite the repo database.
         practices maps each practice name to that practice's source root.
-        An existing master or working copy is left in place.
         """
         self._bind(folder, practices, database)
+        self._delete_databases()
         self._ensure_masters()
         for name in self._practice_roots:
             working = self._working_copy(name)
@@ -834,7 +918,7 @@ class CodeQLGraph:
         if not reuse or len(missing) == len(queries):
             results = database / "results"
             if results.exists():
-                shutil.rmtree(results, ignore_errors=True)
+                remove_tree(results, ignore_errors=True)
         self._execute_queries(missing, database)
         located = [(query, self._bqrs_for(database, Path(query))) for query in queries]
         return self._decode_located(located)
@@ -979,6 +1063,12 @@ class CodeQLGraph:
 
     def _source_key(self, name: str) -> tuple[str, str]:
         return (str(self._practice_roots[name]), self._languages[name])
+
+    def _delete_databases(self) -> None:
+        for name in self._practice_roots:
+            for path in (self._master(name), self._working_copy(name), self._stamp_path(name)):
+                if path.is_dir() or path.is_file():
+                    remove_tree(path)
 
     def _ensure_masters(self) -> None:
         built: dict[tuple[str, str], Path] = {}
@@ -1150,9 +1240,7 @@ class CodeQLGraph:
             raise QueryFailure(str(database), detail) from error
 
     def _copy_database(self, source: Path, destination: Path) -> None:
-        if destination.exists():
-            shutil.rmtree(destination)
-        shutil.copytree(source, destination)
+        copy_tree(source, destination)
 
     def _practices_for_paths(self, paths: list[str]) -> list[str]:
         touched: list[str] = []

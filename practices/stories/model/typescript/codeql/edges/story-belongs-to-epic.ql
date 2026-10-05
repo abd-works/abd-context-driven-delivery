@@ -1,7 +1,7 @@
 /**
- * @name story-belongs-to-epic
+ * @name story-belongs-to-sub-epic
  * @kind problem
- * @id cdd/stories/edges/story-belongs-to-epic
+ * @id cdd/stories/edges/story-belongs-to-sub-epic
  */
 
 import javascript
@@ -13,5 +13,5 @@ where
   name = call.getArgument(0).(StringLiteral).getValue() and
   file = slash(call.getFile().getRelativePath()) and
   parent = storyId(file, name) and
-  child = epicId(epicFolder(call.getFile()))
+  child = storyOwner(call.getFile())
 select parent, child, "belongsTo", 4, "relationship"

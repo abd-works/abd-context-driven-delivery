@@ -188,27 +188,24 @@ packaging (`lowdb` on the server).
 
 ### Testing architecture
 
-Companion to `stories`'s `acceptance_tests` fidelity — this tool pins the
-generic `*_spec.{tier}` to `tier ∈ {server, client, e2e}` and the stub policy
-per tier. Domain unit tests (always present, live beside the class, not under
-this tool) are a separate always-on layer.
+One sub-epic folder under `tests/<epic-slug>/<sub-epic-slug>/` holds one story
+and three ways to run it. The shape is the onboard-a-customer tests: Create
+Customer and Authenticate User.
 
-| Tier | Real | Stubbed | Entry point |
-|---|---|---|---|
-| domain unit | domain-core classes | nothing | class method call |
-| server | domain + repository + lowdb `Memory` adapter | nothing | Supertest → Express route |
-| client | React tree + hooks + client domain | HTTP client via `vi.mock` | Testing Library render |
-| e2e | full stack + per-aggregate JSON files | nothing | Playwright `page.goto` |
+| File | What it does |
+|---|---|
+| `<snake>.story.shared.ts` | States the story once. `shareStory` holds Given, When, and Then. It imports `examples/` and calls the domain operation. |
+| `<snake>.story.domain.spec.ts` | Runs that shared story with the domain repository. This proves the entity. |
+| `<snake>.story.server.spec.ts` | Runs that shared story with the node repository, and asks the route for the destination. This proves the node. |
+| `<snake>.story.playwright.ts` | Runs that shared story in the browser. The screen shows the destination. This proves the view. |
+| `examples/<concept>.examples.ts` | Seed data for the entity. The shared story imports it. The file exports data, not a repository. |
 
-A base helper (`<sub-epic>.base.ts`) carries Given/When/Then vocabulary in
-business terms; each tier helper extends it with the same names, different
-mechanism underneath. Prefer building tier helpers from `stories`'
-`{Type}ExampleFactory` (`Isolated` mode = ctor-injected mocks for the server
-tier's collaborators, `Production` mode = real collaborators) over hand-rolled
-fixtures.
+`domain-runs-entity`, `server-runs-node`, and `playwright-displays-view` are
+those three runs. `shared-states-story` is the shared file stating the story
+they all import.
 
-Rules `test-story-driven`, `scaffold-test-scripts`, and `use-thorough-e2e-tests`
-govern acceptance tests for this architecture.
+Rules `test-story-driven`, `scaffold-test-scripts`, `use-thorough-e2e-tests`,
+and `pml-artifact-layout` govern these files.
 
 ### UX hand-off
 
@@ -258,10 +255,11 @@ heading and skip the question.
 2. **`ask-cross-aggregate-sync`** — if more than one aggregate is in play,
    AskQuestion as specified above and persist the answer **before** calling
    the Stories companion.
-3. Call guidance on the Stories companion — `*_spec.{tier}` for tier in
-   `(server, client, e2e)`, applying the testing-architecture rules. Specs
-   first — small RED cycles before production. Pass that companion to this
-   action as a separate tools run.
+3. Call guidance on the Stories companion. For each sub-epic write
+   `<snake>.story.shared.ts`, then `<snake>.story.domain.spec.ts`,
+   `<snake>.story.server.spec.ts`, and `<snake>.story.playwright.ts`, plus
+   `examples/`. Specs first — small RED cycles before production. Pass that
+   companion to this action as a separate tools run.
 4. Cite the ux screen/navigation artifact for this slice under **Sources /
    context** on the touched view files — this tool does not call `ux` itself.
 5. Run validate. If it fails, fix and validate again until it passes.
@@ -315,7 +313,7 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 
 ### Testing and story generation
 
-- **`test-story-driven`** — Tests mirror the story hierarchy; Given/When/Then helpers present at server, client, and e2e tiers.
+- **`test-story-driven`** — Each sub-epic states the story once in `<snake>.story.shared.ts`. The domain spec runs it on the entity, the server spec runs it on the node, and the Playwright spec displays it on the view.
 - **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` at the workspace root; Vitest and Playwright stay separate.
 - **`use-thorough-e2e-tests`** — E2E tests are independent (no wiping entire JSON stores between tests); delete only aggregate roots the test created.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.

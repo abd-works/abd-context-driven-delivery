@@ -7,12 +7,8 @@
 import javascript
 import stories
 
-from ExportNamedDeclaration decl, VarDecl exported, string file, string name
+from ExportNamedDeclaration decl, string file, string name, int start, int end
 where
-  exampleFile(decl.getFile()) and
-  exported = decl.getADecl() and
-  name = exported.getName() and
-  not name.matches("seed%") and
+  exampleExport(decl, name, start, end) and
   file = slash(decl.getFile().getRelativePath())
-select exampleId(file, name), name, "Example", "stories", file, exported.getLocation().getStartLine(),
-  exported.getLocation().getEndLine(), exampleReturnClass(exported.getParent()), "implementation"
+select exampleId(file, name), name, "Example", "stories", file, start, end, "implementation"

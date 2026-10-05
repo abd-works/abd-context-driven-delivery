@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from harness.guidance.rule import RulesCollection
-from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
 from harness.agent_tools.agent_tools import (
     collect,
     agent_instructions,
@@ -161,7 +160,7 @@ class PracticeGuidance(Guidance):
     @markdownCollection("shared rules")
     @rules
     @agent_tool
-    def rules(self) -> GraphRulesCollection:
+    def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
 
     @property
@@ -588,7 +587,7 @@ class FidelityGuidance(Guidance):
     @markdownCollection
     @rules
     @agent_tool
-    def rules(self) -> GraphRulesCollection:
+    def rules(self) -> RulesCollection:
         """Fidelity rules section."""
 
     @property

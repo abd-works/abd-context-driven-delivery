@@ -13,7 +13,7 @@ string ruleViolation(string rule, string node, string details) {
 string practiceId() { result = "clean_engineering:Practice:.:clean_engineering" }
 
 bindingset[mod]
-string moduleId(string mod) { result = "clean_engineering:Module:src/" + mod + ":" + mod }
+string moduleId(string mod) { result = "clean_engineering:Module:src/" + mod }
 
 string classFile(ClassDefinition cls) { result = slash(cls.getFile().getRelativePath()) }
 
@@ -50,7 +50,7 @@ string packageOfFile(string file) { result = slash(file).regexpCapture("src/[^/]
 
 bindingset[mod, package]
 string packageId(string mod, string package) {
-  result = "clean_engineering:Package:src/" + mod + "/" + package + ":" + package
+  result = "clean_engineering:Package:src/" + mod + "/" + package
 }
 
 string moduleOf(ClassDefinition cls) { result = moduleOfFile(classFile(cls)) }

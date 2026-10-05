@@ -7,12 +7,13 @@
 import javascript
 import stories
 
-from CallExpr call, string name, string file, string parent, string child
+from CallExpr call, string name, string file, string parent, string child, int line
 where
   scenarioCall(call) and
   storyFile(call.getFile()) and
   name = call.getArgument(0).(StringLiteral).getValue() and
   file = slash(call.getFile().getRelativePath()) and
+  line = call.getLocation().getStartLine() and
   parent = storyId(file, storyTitle(call)) and
   child = scenarioId(file, name)
-select parent, child, "owns", 1, "direct" order by parent, child
+select parent, child, "owns", 1, "direct" order by parent, file, line

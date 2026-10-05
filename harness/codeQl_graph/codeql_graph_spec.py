@@ -18,43 +18,79 @@ _SAMPLE = _ROOT / "examples" / "input"
 _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]
 
 
-def child_names(node: CodeQLNode) -> list[str]:
-    return [child.name for child in node.children]
+def walk_tree(node: dict):
+    yield node
+    for child in node.get("children") or []:
+        yield from walk_tree(child)
 
 
-def named(nodes: list[CodeQLNode], name: str) -> CodeQLNode:
-    for node in nodes:
-        if node.name == name:
-            return node
-    raise AssertionError(f"missing {name}")
+def tree_names(node: dict) -> list[str]:
+    return [child.get("name") for child in node.get("children") or []]
 
 
-def operation_named(nodes: list[CodeQLNode], name: str, parent_name: str) -> CodeQLNode:
-    for node in nodes:
-        if node.name == name and node.parent is not None and node.parent.name == parent_name:
-            return node
-    raise AssertionError(f"missing {name} on {parent_name}")
+def tree_count(node: dict, type: str) -> int:
+    """Distinct nodes of this type written by serialize. A relationship copy shares the home id."""
+    return len({item.get("node_id") for item in walk_tree(node) if item.get("type") == type and item.get("type") != item.get("name")})
 
 
-def holder(node: CodeQLNode, kind: str) -> CodeQLNode:
-    for child in node.children:
-        if child.name == kind:
+def owned_types(node: dict, practice: str) -> set[str]:
+    """Types of this practice's nodes in the serialized tree. Holders are named for their kind."""
+    return {
+        item.get("type")
+        for item in walk_tree(node)
+        if item.get("type") not in {None, "Practice"}
+        and item.get("type") != item.get("name")
+        and str(item.get("node_id") or "").startswith(f"{practice}:")
+    }
+
+
+def tree_child(node: dict, name: str) -> dict:
+    for child in node.get("children") or []:
+        if child.get("name") == name:
             return child
-    raise AssertionError(f"missing {kind}")
-
-
-def find(root: CodeQLNode, name: str) -> CodeQLNode:
-    queue = [root]
-    seen: set[str] = set()
-    while queue:
-        node = queue.pop(0)
-        if node.node_id in seen:
-            continue
-        seen.add(node.node_id)
-        if node.name == name:
-            return node
-        queue.extend(node.children)
     raise AssertionError(f"missing {name}")
+
+
+def tree_named(node: dict, name: str, type: str) -> dict:
+    """The serialized copy that keeps its children. A later relationship copy is empty."""
+    matches = [item for item in walk_tree(node) if item.get("name") == name and item.get("type") == type]
+    if not matches:
+        raise AssertionError(f"missing {type} {name}")
+    for item in matches:
+        if item.get("children"):
+            return item
+    return matches[0]
+
+
+def tree_with(node: dict, type: str, child_name: str) -> dict:
+    for item in walk_tree(node):
+        if item.get("type") == type and any(child.get("name") == child_name for child in item.get("children") or []):
+            return item
+    raise AssertionError(f"no {type} with {child_name}")
+
+
+def tree_by_id(node: dict, node_id: str) -> dict:
+    for item in walk_tree(node):
+        if item.get("node_id") == node_id and item.get("children"):
+            return item
+    raise AssertionError(f"missing {node_id}")
+
+
+def direct_child(node: dict, parent_type: str, child_type: str) -> dict:
+    for item in walk_tree(node):
+        if item.get("type") != parent_type:
+            continue
+        for child in item.get("children") or []:
+            if child.get("type") == child_type:
+                return child
+    raise AssertionError(f"no {child_type} under {parent_type}")
+
+
+def typed_child(node: dict, holder: str, type: str) -> dict:
+    for child in tree_child(node, holder).get("children") or []:
+        if child.get("type") == type:
+            return child
+    raise AssertionError(f"missing {type} under {holder}")
 
 
 with description("a CodeQL graph"):
@@ -67,17 +103,18 @@ with description("a CodeQL graph"):
         with context("with clean engineering"):
             with before.all:
                 self.clean = self.graph.practice("clean_engineering")
-                self.account = find(self.clean.root_node, "AccountCredentials")
+                self.clean_tree = self.clean.root_node.serialize()
+                self.account = tree_named(self.clean_tree, "AccountCredentials", "OoadClass")
 
             with it("should count three modules"):
-                expect(self.clean.node_count("Module")).to(equal(3))
+                expect(tree_count(self.clean_tree, "Module")).to(equal(3))
 
             with it("should count fourteen classes"):
-                expect(self.clean.node_count("OoadClass")).to(equal(14))
+                expect(tree_count(self.clean_tree, "OoadClass")).to(equal(14))
 
             with it("should include module, class, operation, property, and parameter nodes"):
                 expect(
-                    {"Module", "OoadClass", "Operation", "Property", "Parameter"} <= self.clean.node_types
+                    {"Module", "OoadClass", "Operation", "Property", "Parameter"} <= owned_types(self.clean_tree, "clean_engineering")
                 ).to(equal(True))
 
             with it("should order relative, owns, properties, belongsTo, hasParameter, hasType, invokes, and dependsOn"):
@@ -93,6 +130,7 @@ with description("a CodeQL graph"):
                             "hasType",
                             "demonstratedThrough",
                             "returns",
+                            "retrievedUsing",
                             "invokes",
                             "dependsOn",
                         ]
@@ -100,49 +138,73 @@ with description("a CodeQL graph"):
                 )
 
             with it("should own the account-credentials, customer, and onboarding modules"):
-                expect(child_names(self.clean.root_node)).to(equal(["account-credentials", "customer", "onboarding"]))
+                expect(tree_names(self.clean_tree)).to(equal(["account-credentials", "customer", "onboarding"]))
+
+            with it("should identify the customer module by its source path and keep its classes"):
+                module = tree_named(self.clean_tree, "customer", "Module")
+                expect(module["node_id"]).to(equal("clean_engineering:Module:src/customer"))
+                expect(
+                    {"Address", "Customer", "CustomerException", "CustomerRepository", "Identity"} <= set(tree_names(module))
+                ).to(equal(True))
+
+            with it("should leave a belongsTo copy of the customer module without its classes"):
+                copies = [
+                    item
+                    for item in walk_tree(self.clean_tree)
+                    if item.get("node_id") == "clean_engineering:Module:src/customer" and not item.get("children")
+                ]
+                expect(len(copies)).to(be_above(0))
 
             with it("should list token and customer first on AccountCredentials"):
-                expect(child_names(self.account)[:2]).to(equal(["token", "customer"]))
+                expect(tree_names(self.account)[:2]).to(equal(["token", "customer"]))
 
             with it("should include register on AccountCredentials"):
-                expect(child_names(self.account)).to(contain("register"))
+                expect(tree_names(self.account)).to(contain("register"))
 
             with it("should include properties on AccountCredentials"):
-                expect(child_names(self.account)).to(contain("properties"))
+                expect(tree_names(self.account)).to(contain("properties"))
 
             with it("should include belongsTo on AccountCredentials"):
-                expect(child_names(self.account)).to(contain("belongsTo"))
+                expect(tree_names(self.account)).to(contain("belongsTo"))
 
             with context("with a module, a class, an operation, a property, and a parameter"):
                 with before.all:
-                    self.module = named(self.clean.nodes["Module"], "account-credentials")
-                    self.class_node = named(self.clean.nodes["OoadClass"], "AccountCredentials")
-                    self.operation = operation_named(self.clean.nodes["Operation"], "register", "AccountCredentials")
-                    self.property = named(self.clean.nodes["Property"], "token")
-                    self.parameter = named(self.clean.nodes["Parameter"], "validationCode")
+                    self.module = tree_named(self.clean_tree, "account-credentials", "Module")
+                    self.class_node = tree_named(self.clean_tree, "AccountCredentials", "OoadClass")
+                    self.operation = tree_child(self.class_node, "register")
+                    self.property = tree_child(self.class_node, "token")
 
                 with it("should parent the module on the practice"):
-                    expect(self.module.parent.name).to(equal("clean_engineering"))
+                    expect(tree_child(self.clean_tree, "account-credentials")["node_id"]).to(equal(self.module["node_id"]))
 
                 with it("should parent the class on its module"):
-                    expect(self.class_node.parent.name).to(equal("account-credentials"))
+                    expect(tree_child(self.module, "AccountCredentials")["type"]).to(equal("OoadClass"))
 
                 with it("should parent the operation on its class"):
-                    expect(self.operation.parent.name).to(equal("AccountCredentials"))
+                    expect(self.operation["type"]).to(equal("Operation"))
 
                 with it("should parent the property on its class"):
-                    expect(self.property.parent.name).to(equal("AccountCredentials"))
+                    expect(self.property["type"]).to(equal("Property"))
 
-                with it("should parent the parameter on its operation"):
-                    expect(self.parameter.parent.type).to(equal("Operation"))
+                with it("should parent the parameter on its operation through hasParameter"):
+                    parameter = None
+                    for item in walk_tree(self.clean_tree):
+                        if item.get("type") != "Operation":
+                            continue
+                        for holder in item.get("children") or []:
+                            if holder.get("name") != "hasParameter":
+                                continue
+                            for child in holder.get("children") or []:
+                                if child.get("name") == "validationCode":
+                                    parameter = child
+                    expect(parameter["type"]).to(equal("Parameter"))
 
                 with it("should run rule queries after the node and edge queries"):
                     expect(self.clean.loaded).to(equal(["nodes", "edges", "rules"]))
 
             with context("with the register operation"):
                 with before.all:
-                    self.register = operation_named(self.clean.nodes["Operation"], "register", "AccountCredentials")
+                    self.register = self.clean.by_id[tree_child(self.account, "register")["node_id"]]
 
                 with it("should show the register body as Monaco text"):
                     expect(self.register.source.text.splitlines()[0].strip()).to(equal("async register(): Promise<void> {"))
@@ -231,63 +293,110 @@ with description("a CodeQL graph"):
         with context("with stories"):
             with before.all:
                 self.stories = self.graph.practice("stories")
+                self.stories_tree = self.stories.root_node.serialize()
+                self.clean_tree = self.graph.practice("clean_engineering").root_node.serialize()
 
             with it("should count one epic"):
-                expect(self.stories.node_count("Epic")).to(equal(1))
+                expect(tree_count(self.stories_tree, "Epic")).to(equal(1))
 
             with it("should count three stories"):
-                expect(self.stories.node_count("Story")).to(equal(3))
+                expect(tree_count(self.stories_tree, "Story")).to(equal(3))
 
-            with it("should include epic, story, scenario, background, step, and example nodes"):
+            with it("should include epic, sub-epic, story, scenario, background, step, and example nodes"):
                 expect(
-                    {"Epic", "Story", "Scenario", "Background", "Step", "Example"} <= self.stories.node_types
+                    {"Epic", "SubEpic", "Story", "Scenario", "Background", "Step", "Example"}
+                    <= owned_types(self.stories_tree, "stories")
                 ).to(equal(True))
 
             with it("should own Onboard A Customer"):
-                expect(child_names(self.stories.root_node)).to(contain("Onboard A Customer"))
+                expect(tree_names(self.stories_tree)).to(contain("Onboard A Customer"))
 
-            with context("with an epic, a story, a scenario, a step, and an example"):
-                with before.all:
-                    self.epic = named(self.stories.nodes["Epic"], "Onboard A Customer")
-                    self.story = self.stories.nodes["Story"][0]
-                    self.scenario = self.stories.nodes["Scenario"][0]
-                    self.step = self.stories.nodes["Step"][0]
-                    self.example = self.stories.nodes["Example"][0]
-
+            with context("with an epic, a sub-epic, a story, a scenario, a step, and an example"):
                 with it("should parent the epic on the practice"):
-                    expect(self.epic.parent.name).to(equal("stories"))
+                    expect(tree_child(self.stories_tree, "Onboard A Customer")["type"]).to(equal("Epic"))
 
-                with it("should parent the story on its epic"):
-                    expect(self.story.parent.type).to(equal("Epic"))
+                with it("should parent the sub-epic on its epic"):
+                    epic = tree_child(self.stories_tree, "Onboard A Customer")
+                    expect(tree_child(epic, "Authenticate User")["type"]).to(equal("SubEpic"))
+
+                with it("should parent the story on its sub-epic"):
+                    expect(direct_child(self.stories_tree, "SubEpic", "Story")["type"]).to(equal("Story"))
 
                 with it("should parent the scenario on its story"):
-                    expect(self.scenario.parent.type).to(equal("Story"))
+                    expect(direct_child(self.stories_tree, "Story", "Scenario")["type"]).to(equal("Scenario"))
 
                 with it("should parent the step on its scenario"):
-                    expect(self.step.parent.type).to(equal("Scenario"))
+                    expect(direct_child(self.stories_tree, "Scenario", "Step")["type"]).to(equal("Step"))
+
+                with it("should list Create account steps in source order"):
+                    steps = [
+                        child["name"]
+                        for child in tree_named(self.stories_tree, "Create account", "Scenario")["children"]
+                        if child["type"] == "Step"
+                    ]
+                    expect(steps).to(
+                        equal(
+                            [
+                                "when the User creates their account",
+                                "then the account is unconfirmed and a validation code is emailed",
+                            ]
+                        )
+                    )
 
                 with it("should parent the example on scopes"):
-                    expect(self.example.parent.name).to(equal("scopes"))
+                    step = tree_with(self.stories_tree, "Step", "scopes")
+                    expect(typed_child(step, "scopes", "Example")["type"]).to(equal("Example"))
 
                 with it("should parent scopes on the step"):
-                    expect(self.example.parent.parent.type).to(equal("Step"))
+                    step = tree_with(self.stories_tree, "Step", "scopes")
+                    expect(tree_child(step, "scopes")["type"]).to(equal("scopes"))
 
             with context("with a step that invokes an operation"):
                 with before.all:
-                    self.invoking_step = next(
-                        step
-                        for step in self.stories.nodes["Step"]
-                        if any(child.name == "invokes" for child in step.children)
-                    )
-                    self.invoked = next(
-                        child for child in holder(self.invoking_step, "invokes").children if child.type == "Operation"
-                    )
+                    self.invoking_step = tree_with(self.stories_tree, "Step", "invokes")
+                    self.invoked = typed_child(self.invoking_step, "invokes", "Operation")
 
                 with it("should place that operation under the step"):
-                    expect(self.invoked.practice.name).to(equal("clean_engineering"))
+                    expect(self.invoked["type"]).to(equal("Operation"))
+                    expect(str(self.invoked["node_id"]).startswith("clean_engineering:")).to(equal(True))
 
                 with it("should place that step back under the operation"):
-                    expect(child_names(holder(self.invoked, "invokes"))).to(contain(self.invoking_step.name))
+                    operation = tree_by_id(self.clean_tree, self.invoked["node_id"])
+                    expect(tree_names(tree_child(operation, "invokes"))).to(contain(self.invoking_step["name"]))
+
+            with context("with a then step that observes an example"):
+                with before.all:
+                    self.observing_step = tree_with(self.stories_tree, "Step", "observes")
+                    self.observed = typed_child(self.observing_step, "observes", "Example")
+
+                with it("should place that example under observes"):
+                    expect(self.observed["type"]).to(equal("Example"))
+
+                with it("should parent observes on the step"):
+                    expect(tree_child(self.observing_step, "observes")["name"]).to(equal("observes"))
+
+            with context("with an example that demonstrates a class"):
+                with before.all:
+                    self.demonstrating = tree_with(self.stories_tree, "Example", "demonstrates")
+                    self.demonstrated = typed_child(self.demonstrating, "demonstrates", "OoadClass")
+
+                with it("should place that class under demonstrates"):
+                    expect(str(self.demonstrated["node_id"]).startswith("clean_engineering:OoadClass:")).to(equal(True))
+
+                with it("should place that example back on the class"):
+                    class_node = tree_by_id(self.clean_tree, self.demonstrated["node_id"])
+                    expect(tree_names(tree_child(class_node, "demonstratedThrough"))).to(contain(self.demonstrating["name"]))
+
+            with context("with an example retrieved using a property"):
+                with before.all:
+                    self.retrieving = tree_with(self.stories_tree, "Example", "retrievedUsing")
+                    self.retrieved = typed_child(self.retrieving, "retrievedUsing", "Property")
+
+                with it("should place that property under retrievedUsing"):
+                    expect(str(self.retrieved["node_id"]).startswith("clean_engineering:Property:")).to(equal(True))
+
+                with it("should parent retrievedUsing on the example"):
+                    expect(tree_child(self.retrieving, "retrievedUsing")["name"]).to(equal("retrievedUsing"))
 
             with context("with the practice selected"):
                 with before.all:
@@ -311,33 +420,34 @@ with description("a CodeQL graph"):
         with context("with domain-driven design"):
             with before.all:
                 self.ddd = self.graph.practice("ddd")
-                self.bounded_context = find(self.ddd.root_node, "bounded context")
-                self.aggregate = find(self.bounded_context, "account-credentials")
+                self.ddd_tree = self.ddd.root_node.serialize()
+                self.bounded_context = tree_named(self.ddd_tree, "bounded context", "BoundedContext")
+                self.aggregate = tree_named(self.ddd_tree, "account-credentials", "Aggregate")
 
             with it("should count one bounded context"):
-                expect(self.ddd.node_count("BoundedContext")).to(equal(1))
+                expect(tree_count(self.ddd_tree, "BoundedContext")).to(equal(1))
 
             with it("should count two aggregates"):
-                expect(self.ddd.node_count("Aggregate")).to(equal(2))
+                expect(tree_count(self.ddd_tree, "Aggregate")).to(equal(2))
 
             with it("should count zero entities"):
-                expect(self.ddd.node_count("Entity")).to(equal(0))
+                expect(tree_count(self.ddd_tree, "Entity")).to(equal(0))
 
             with it("should count two entity roots"):
-                expect(self.ddd.node_count("EntityRoot")).to(equal(2))
+                expect(tree_count(self.ddd_tree, "EntityRoot")).to(equal(2))
 
             with it("should count five value objects"):
-                expect(self.ddd.node_count("ValueObject")).to(equal(5))
+                expect(tree_count(self.ddd_tree, "ValueObject")).to(equal(5))
 
             with it("should count two repositories"):
-                expect(self.ddd.node_count("Repository")).to(equal(2))
+                expect(tree_count(self.ddd_tree, "Repository")).to(equal(2))
 
             with it("should order root, owns, belongsTo, accesses, and associates"):
                 expect(self.ddd.edge_type_kinds).to(equal(["root", "owns", "belongsTo", "accesses", "associates"]))
 
             with it("should include only domain stereotypes"):
                 expect(
-                    self.ddd.node_types
+                    owned_types(self.ddd_tree, "ddd")
                     <= {
                         "BoundedContext",
                         "Aggregate",
@@ -353,48 +463,54 @@ with description("a CodeQL graph"):
                 ).to(equal(True))
 
             with it("should own the bounded context"):
-                expect(child_names(self.ddd.root_node)).to(equal(["bounded context"]))
+                expect(tree_names(self.ddd_tree)).to(equal(["bounded context"]))
 
             with it("should own account-credentials and customer under the bounded context"):
-                expect(child_names(self.bounded_context)).to(equal(["account-credentials", "customer"]))
+                expect(tree_names(self.bounded_context)).to(equal(["account-credentials", "customer"]))
+
+            with it("should identify the customer aggregate by its source path and keep its members"):
+                customer = tree_named(self.ddd_tree, "customer", "Aggregate")
+                expect(customer["node_id"]).to(equal("ddd:Aggregate:src/customer"))
+                expect({"Customer", "CustomerRepository", "Address", "Identity"} <= set(tree_names(customer))).to(equal(True))
+
+            with it("should leave a belongsTo copy of the customer aggregate without its members"):
+                copies = [
+                    item
+                    for item in walk_tree(self.ddd_tree)
+                    if item.get("node_id") == "ddd:Aggregate:src/customer" and not item.get("children")
+                ]
+                expect(len(copies)).to(be_above(0))
 
             with it("should include AccountCredentials"):
-                expect(child_names(self.aggregate)).to(contain("AccountCredentials"))
+                expect(tree_names(self.aggregate)).to(contain("AccountCredentials"))
 
             with it("should include ValidationCode"):
-                expect(child_names(self.aggregate)).to(contain("ValidationCode"))
+                expect(tree_names(self.aggregate)).to(contain("ValidationCode"))
 
             with it("should include AccountToken"):
-                expect(child_names(self.aggregate)).to(contain("AccountToken"))
+                expect(tree_names(self.aggregate)).to(contain("AccountToken"))
 
             with it("should include AccountCredentialsRepository"):
-                expect(child_names(self.aggregate)).to(contain("AccountCredentialsRepository"))
+                expect(tree_names(self.aggregate)).to(contain("AccountCredentialsRepository"))
 
             with it("should type AccountCredentials as an entity root"):
-                expect(find(self.aggregate, "AccountCredentials").type).to(equal("EntityRoot"))
+                expect(tree_child(self.aggregate, "AccountCredentials")["type"]).to(equal("EntityRoot"))
 
             with context("with a bounded context, an aggregate, an entity root, a value object, and a repository"):
-                with before.all:
-                    self.bounded = self.ddd.nodes["BoundedContext"][0]
-                    self.aggregate_node = named(self.ddd.nodes["Aggregate"], "account-credentials")
-                    self.entity_root = named(self.ddd.nodes["EntityRoot"], "AccountCredentials")
-                    self.value = self.ddd.nodes["ValueObject"][0]
-                    self.repository = self.ddd.nodes["Repository"][0]
-
                 with it("should parent the bounded context on the practice"):
-                    expect(self.bounded.parent.name).to(equal("ddd"))
+                    expect(tree_child(self.ddd_tree, "bounded context")["type"]).to(equal("BoundedContext"))
 
                 with it("should parent the aggregate on its bounded context"):
-                    expect(self.aggregate_node.parent.type).to(equal("BoundedContext"))
+                    expect(tree_child(self.bounded_context, "account-credentials")["type"]).to(equal("Aggregate"))
 
                 with it("should parent the entity root on its aggregate"):
-                    expect(self.entity_root.parent.name).to(equal("account-credentials"))
+                    expect(tree_child(self.aggregate, "AccountCredentials")["type"]).to(equal("EntityRoot"))
 
                 with it("should parent the value object on its aggregate"):
-                    expect(self.value.parent.type).to(equal("Aggregate"))
+                    expect(direct_child(self.ddd_tree, "Aggregate", "ValueObject")["type"]).to(equal("ValueObject"))
 
                 with it("should parent the repository on its aggregate"):
-                    expect(self.repository.parent.type).to(equal("Aggregate"))
+                    expect(direct_child(self.ddd_tree, "Aggregate", "Repository")["type"]).to(equal("Repository"))
 
             with context("with the practice selected"):
                 with before.all:
@@ -448,11 +564,14 @@ with description("a CodeQL graph"):
                         expect("EntityRoot" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
 
         with context("with behavior-driven development that has no specs"):
+            with before.all:
+                self.bdd_tree = self.graph.practice("bdd").root_node.serialize()
+
             with it("should count zero specs"):
-                expect(self.graph.practice("bdd").node_count("Spec")).to(equal(0))
+                expect(tree_count(self.bdd_tree, "Spec")).to(equal(0))
 
             with it("should have no edges"):
-                expect(self.graph.practice("bdd").edge_count).to(equal(0))
+                expect(tree_names(self.bdd_tree)).to(equal([]))
 
             with it("should have no edge types"):
                 expect(self.graph.practice("bdd").edge_type_kinds).to(equal([]))
@@ -487,11 +606,14 @@ with description("a CodeQL graph"):
                         expect("Description" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
 
         with context("with experience design that has no map"):
+            with before.all:
+                self.ux_tree = self.graph.practice("ux").root_node.serialize()
+
             with it("should count zero maps"):
-                expect(self.graph.practice("ux").node_count("UxMap")).to(equal(0))
+                expect(tree_count(self.ux_tree, "UxMap")).to(equal(0))
 
             with it("should have no edges"):
-                expect(self.graph.practice("ux").edge_count).to(equal(0))
+                expect(tree_names(self.ux_tree)).to(equal([]))
 
             with it("should have no edge types"):
                 expect(self.graph.practice("ux").edge_type_kinds).to(equal([]))
@@ -504,33 +626,39 @@ with description("a CodeQL graph"):
                 expect((query_pack("clean_engineering", "python") / "nodes" / "classes.ql").is_file()).to(equal(True))
 
 
-def _node(practice: CodeQLPracticeGraph, kind: str, name: str) -> CodeQLNode:
-    return CodeQLNode(practice, kind, f"ddd:{kind}:.:{name}", name, Source(".", 0, 0))
+def _node(practice: CodeQLPracticeGraph, type: str, name: str, line: int) -> CodeQLNode:
+    return CodeQLNode(practice, type, f"{type}:{line}:{name}", name, Source("story.ts", line, line))
 
 
-with description("an aggregate reached first through a relationship"):
-    with it("should keep the aggregate children where the bounded context owns it"):
-        practice = CodeQLPracticeGraph("ddd")
-        context_node = _node(practice, "BoundedContext", "bounded context")
-        account = _node(practice, "Aggregate", "account-credentials")
-        credentials = _node(practice, "EntityRoot", "AccountCredentials")
-        associates = _node(practice, "associates", "associates")
-        customer_entity = _node(practice, "EntityRoot", "Customer")
-        belongs = _node(practice, "belongsTo", "belongsTo")
-        customer = _node(practice, "Aggregate", "customer")
-        repository = _node(practice, "Repository", "CustomerRepository")
-        address = _node(practice, "ValueObject", "Address")
-        identity = _node(practice, "ValueObject", "Identity")
-        context_node.children = [account, customer]
-        account.children = [credentials]
-        credentials.children = [associates]
-        associates.children = [customer_entity]
-        customer_entity.children = [belongs]
-        belongs.children = [customer]
-        customer.children = [customer_entity, repository, address, identity]
+with description("a scenario"):
+    with context("with steps recorded in query order"):
+        with before.each:
+            self.practice = CodeQLPracticeGraph("stories")
+            self.scenario = _node(self.practice, "Scenario", "Create account", 139)
+            self.given = _node(self.practice, "Step", "given the account exists", 10)
+            self.when = _node(self.practice, "Step", "when the User creates their account", 20)
+            self.then = _node(self.practice, "Step", "then the account is unconfirmed", 30)
+            owns = {"kind": "owns", "order": 1, "display": "direct"}
+            self.practice.record(owns, self.scenario, self.then)
+            self.practice.record(owns, self.scenario, self.when)
+            self.practice.record(owns, self.scenario, self.given)
+            self.scenario.populate()
 
-        tree = context_node.serialize()
-        owned = tree["children"][1]
+        with it("should list the steps in source order"):
+            names = [child["name"] for child in self.scenario.serialize()["children"]]
+            expect(names).to(equal([self.given.name, self.when.name, self.then.name]))
 
-        expect(owned["name"]).to(equal("customer"))
-        expect([child["name"] for child in owned["children"]]).to(equal(["Customer", "CustomerRepository", "Address", "Identity"]))
+    with context("with an invoked operation recorded before an earlier definition"):
+        with before.each:
+            self.practice = CodeQLPracticeGraph("stories")
+            self.step = _node(self.practice, "Step", "when the User creates their account", 20)
+            self.later = _node(self.practice, "Operation", "register", 80)
+            self.earlier = _node(self.practice, "Operation", "save", 5)
+            invokes = {"kind": "invokes", "order": 2, "display": "grouped"}
+            self.practice.record(invokes, self.step, self.later)
+            self.practice.record(invokes, self.step, self.earlier)
+            self.step.populate()
+
+        with it("should keep that call order under the step"):
+            names = tree_names(tree_child(self.step.serialize(), "invokes"))
+            expect(names).to(equal([self.later.name, self.earlier.name]))

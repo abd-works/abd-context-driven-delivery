@@ -14,3 +14,4 @@ where
   file = slash(call.getFile().getRelativePath())
 select storyId(file, name), name, "Story", "stories", file, call.getLocation().getStartLine(),
   call.getLocation().getEndLine(), epicId(epicFolder(call.getFile())), "discovery"
+order by file, call.getLocation().getStartLine()

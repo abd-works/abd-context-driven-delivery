@@ -15,3 +15,4 @@ where
   label = backgroundTitle(call)
 select backgroundId(file, label), label, "Background", "stories", file,
   call.getLocation().getStartLine(), call.getLocation().getEndLine(), storyTitle(call), "specification"
+order by file, call.getLocation().getStartLine()

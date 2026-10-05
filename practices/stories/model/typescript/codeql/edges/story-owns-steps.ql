@@ -16,4 +16,4 @@ where
   name = keyword + " " + text and
   parent = storyId(file, storyTitle(call)) and
   child = stepId(file, stepLine(call), name)
-select parent, child, "owns", 1, "direct" order by parent, child
+select parent, child, "owns", 1, "direct" order by parent, file, stepLine(call)
