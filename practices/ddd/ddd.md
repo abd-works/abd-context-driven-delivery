@@ -81,7 +81,13 @@ Draw where language changes — context boundaries, the aggregates that protect 
 
 #### Sketch
 
-Ask where the business uses a different word, or a different rule, for what looks like the same situation. Ask which facts must change together, and which outside party they rely on. Write the contexts and what they hold from those answers. Do not ask the user to name a bounded context or an aggregate.
+- Ask what the main areas of the business are that this solution has to represent.
+- In each area, ask which things have to stay true together when something changes, and what people start from when they work with that group.
+- Ask what the important things are inside each of those groups.
+- Ask where two areas look at the same situation and care about different facts, or follow a different rule.
+- Ask where one area relies on another, and what has to be told or kept in step when something changes.
+- From those answers, write each context, the groups it holds, the important things in each group, and where one context depends on another.
+- Do not ask the user to name a bounded context or an aggregate.
 
 #### Guidance
 
