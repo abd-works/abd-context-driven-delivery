@@ -824,6 +824,7 @@ class Repairs:
     def __len__(self) -> int:
         return len(self._by_theme)
 
+@hooks(disabled=True)
 @agent_toolset
 class WorkSession:
     """One named work session — owns openTurn, turns, repairs, git; session.md kit."""

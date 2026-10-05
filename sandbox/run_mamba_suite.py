@@ -15,6 +15,8 @@ from pathlib import Path
 
 REPOSITORY = Path(__file__).resolve().parent.parent
 MAMBA = Path(sys.executable).parent / "mamba.exe"
+# `harness` is absent on purpose: it would put `harness/mcp` on the import path
+# ahead of the installed `mcp` distribution that `harness.mcp.mcp_server` needs.
 SOURCE_ROOTS = (".", "actions", "tools", "practices", "patterns")
 EXCLUDED_DIRECTORY_NAMES = {
     ".codeql",
