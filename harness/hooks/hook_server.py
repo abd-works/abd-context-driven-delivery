@@ -42,6 +42,7 @@ def _pid_alive(pid: int) -> bool:
         return False
     return True
 
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 for _category in ("tools", "practices", "actions", "patterns"):
     _entry = str(_REPO_ROOT / _category)
