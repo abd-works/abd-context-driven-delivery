@@ -27,11 +27,11 @@ When determining scope, use this table to guide lens and agent selection:
 ## Mandatory Workflow
 
 1. **Views** — if the command already names fidelities or practices, use those. Do not ask. Otherwise ask which views, then continue.
-2. **Shell** — read each active fidelity's **Scaffold** section and that practice's sketch template. Write the shell at the Scaffold depth, in the template's notation. Save `{destination}/.context/{slug}-sketch.md` in that same turn. One section per practice: `stories:` for Stories, `clean engineering:` for Clean Engineering, `domain driven design:` for Domain Driven Design, `user experience:` for User Experience, `behavior driven development:` for Behavior Driven Development.
+2. **Shell** — read each active fidelity's **Scaffold** section and that practice's sketch template. Write the shell at the Scaffold depth, in the template's notation. Save `{destination}/.context/{slug}-sketch.md` in that same turn. One section per active practice: `stories:`, `domain driven design:`, `user experience:`, `behavior driven development:`, and `clean engineering:` only when CE is active without DDD.
 3. **Themes** — list themes in priority order and ask which theme to start with.
 4. **Grill** — ask three or four questions from that fidelity's **Sketch** section. Do not sketch during these questions.
 5. **Sketch** — fold the answers into the existing practice sections. Save the same file. Review. Carry every named mistake into the next save.
-6. **Bottom of the theme** — ask whether to get deeper on this theme or explore another theme. Update the theme status. When a fidelity is finished, ask whether to generate the official document, and in which formats.
+6. **Bottom of the theme** — ask whether to get deeper on this theme, explore another theme, or render the sketch. Update the theme status. When a fidelity is finished, offer **render from sketch** (see `actions/sketch/sketch.md` → **Render from sketch**).
 
 ## Hard Rules
 
@@ -40,8 +40,8 @@ When determining scope, use this table to guide lens and agent selection:
 - **Grill then sketch** — Three or four questions from the fidelity's **Sketch** section, then sketch that theme into the integrated sections.
 - **Save the shell immediately** — `save_sketch` in the same turn as the shell. Save again after the theme is sketched. Keep the theme list and each theme's status in that file.
 - **Review after the theme sketch** — `review_sketch` after that save. The three or four grill questions come before that sketch.
-- **Deeper or another theme** — After review, offer those two choices.
-- **Generate when asked** — When a fidelity is finished, offer an official document. Call `generate.generate` with one guidance entry per format, as the generate skill describes.
+- **Deeper, another theme, or render** — After review, offer those three choices.
+- **Render from sketch** — When a fidelity is finished, offer render. Use `SketchRender.build_render_calls(formats, sketch_path)` then `render_approved_sketch(render_calls)`, or `/sketch_render` end-to-end. Required pairs: discovery → **drawio and markdown** (both); specification → **typescript and markdown** (both). Never render only one format at a stage unless the user explicitly overrides. Pass the sketch file as `content` with `source: sketch`. Use `generate.generate` only when the user explicitly wants a fresh AI-authored pass outside the sketch transform.
 - **One sketch per engagement** — One `.context/{slug}-sketch.md`. One section per practice. Deepen those sections in place.
 - **Carry-forward mistakes** — Every named mistake shapes the next revision.
 - **Lens notation only** — Practice sections use that practice's sketch template. No free prose.
@@ -53,7 +53,7 @@ Invoke these by name as needed:
 - **`stories`** — Story map, user journeys, epic flows.
 - **`ddd`** — Bounded contexts, aggregates, ubiquitous language.
 - **`ux`** — Information architecture, screen flows, user interaction sequences.
-- **`clean-engineering`** — Module boundaries, public seams, dependency direction.
+- **`clean-engineering`** — Module boundaries, public seams, dependency direction. When DDD is also active, module seams and root operations live in `domain driven design:` — read CE **Guidance** and **Rules** while sketching DDD; omit `clean engineering:`.
 - **`bdd`** — Behavior subjects, test outlines, acceptance criteria (normally omitted at scaffold/discovery).
 
 ## Artifacts

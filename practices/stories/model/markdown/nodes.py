@@ -679,8 +679,13 @@ class MarkdownStoryModel(StoryModel):
         return self.render(self)
 
     def render(self, story_map: "MarkdownStoryModel", previous: Optional[str] = None) -> str:
-        if self._should_render_outline(story_map, previous):
-            return self._render_outline(story_map)
+        if self._should_render_outline(story_map, previous) or self._is_discovery_story_map(
+            story_map
+        ):
+            body = self._render_outline(story_map)
+            if self._is_discovery_story_map(story_map):
+                return self._wrap_story_map_document(body, previous)
+            return body
         lines: List[str] = []
         for epic in story_map.epics:
             self._render_epic(epic, lines, depth=1)
@@ -706,6 +711,65 @@ class MarkdownStoryModel(StoryModel):
     def strip_backticks(self, text: str) -> str:
         return MarkdownScenario().strip_backticks(text)
 
+    def _is_discovery_story_map(self, story_map: "MarkdownStoryModel") -> bool:
+        return not self._tree_has_scenarios(story_map)
+
+    def _tree_has_scenarios(self, epic_or_map) -> bool:
+        epics = epic_or_map.epics if hasattr(epic_or_map, "epics") else []
+        stories = epic_or_map.stories if hasattr(epic_or_map, "stories") else []
+        for story in stories:
+            if story.scenarios or story.backgrounds:
+                return True
+        for epic in epics:
+            if self._tree_has_scenarios(epic):
+                return True
+        return False
+
+    def _wrap_story_map_document(self, body: str, previous: Optional[str]) -> str:
+        title, sources = self._sketch_metadata(previous or "")
+        return "\n".join(
+            [
+                "---",
+                "fidelity: [discovery]",
+                "artifact: [story-map]",
+                "format: md",
+                "---",
+                "",
+                f"# Story Map — {title}",
+                "",
+                f"**Sources / context:** {sources}",
+                "",
+                "---",
+                "",
+                body.rstrip(),
+                "",
+                "---",
+                "",
+                "## Scope boundary",
+                "",
+                "**In scope:** see sketch increments and detailed themes",
+                "**Out of scope:** themes not yet moved to specification",
+                "",
+            ]
+        )
+
+    def _sketch_metadata(self, text: str) -> tuple[str, str]:
+        title = "Product / Feature Name"
+        sources = "see engagement sketch"
+        sketch_suffix = re.compile(r"\s+sketch\s*$", re.IGNORECASE)
+        trailing_separator = re.compile(r"[\s\-–—\u20ac\u201d]+$")
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("# "):
+                raw = stripped[2:].strip()
+                title = sketch_suffix.sub("", raw).strip()
+                title = trailing_separator.sub("", title).strip() or title
+            if stripped.lower().startswith("source:"):
+                sources = stripped.split(":", 1)[1].strip()
+            if stripped.lower().startswith("## stories:"):
+                break
+        return title, sources
+
     def _render_outline(self, story_map: "MarkdownStoryModel") -> str:
         self._outline_lines: List[str] = []
         self._outline_indent = 4
@@ -713,6 +777,7 @@ class MarkdownStoryModel(StoryModel):
             self._outline_lines.append(f"(E) {self.strip_backticks(epic.name)}")
             if getattr(epic, "estimate", ""):
                 self._outline_lines.append(f"    * {epic.estimate}")
+            self._render_outline_stories(epic, "    ")
             self._render_outline_epics(epic.epics)
         return "\n".join(self._outline_lines)
 

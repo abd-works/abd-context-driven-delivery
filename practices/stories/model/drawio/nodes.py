@@ -335,6 +335,14 @@ class DrawIOStoryModel(DiagramStoryModel):
     def clone(self):
         return super().clone().save()
 
+    def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
+        from practices.stories.model.markdown.nodes import MarkdownStoryModel
+
+        source = canonical if canonical is not None else self
+        markdown = MarkdownStoryModel()
+        body = markdown.render(source, previous)
+        return type(self)(markdown.parse(body)).save()
+
     def save(self) -> str:
         mxfile = ET.Element("mxfile", attrib={"host": "app.diagrams.net"})
         diagram = ET.SubElement(mxfile, "diagram", attrib={"name": "Story Map", "id": "story-map"})

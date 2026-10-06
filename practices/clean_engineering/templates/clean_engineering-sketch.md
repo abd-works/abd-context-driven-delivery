@@ -6,6 +6,8 @@ Rough shape for sketching an clean_engineering analysis before generating the fo
 
 This template is the clean_engineering notation for a section of the engagement sketch. When sketched with another practice in the same session (bdd-behavior), keep that notation in `{slug}-sketch.md` so the object model and BDD stay paired; do not write a second sketch file.
 
+When **Domain Driven Design** is also an active sketch lens, do **not** add a `clean engineering:` section. Module seams and entity operations belong in `domain driven design:` per `practices/ddd/templates/ddd-sketch.md`. A small bounded context is usually **one** `#### {module}/` — not one module per aggregate or per class (`no-module-per-class`). Read this template and `clean_engineering.md` for **Guidance** and **Rules** while sketching DDD; use this file's notation only when CE is active without DDD.
+
 ## Notation — headings carry the hierarchy
 
 Modules and classes nest through markdown headings, so every module and class folds on its own. `## clean engineering:` is the section heading; the structure starts one level below it.

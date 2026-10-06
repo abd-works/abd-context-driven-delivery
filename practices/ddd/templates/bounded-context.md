@@ -84,3 +84,17 @@ emits events:
 ## event map
 
 - {{EventName}}: emitted by {{Aggregate}}; consumed by {{Aggregate}}, {{Aggregate}}
+
+---
+
+## Building blocks fidelity
+
+At **building_blocks**, keep this map as the strategic source of truth for context · aggregate · concept names, integrations, and event ownership. Flesh out each `###` aggregate into a full CE class model using `templates/building-blocks.md`, which **extends** `practices/clean_engineering/templates/class-model.md`.
+
+Under each aggregate in the model artifact:
+
+- Classify every concept with a tactical stereotype (`<<Aggregate Root>>`, `<<Entity>>`, `<<Value Object>>`, `<<Repository>>`, `<<Domain Event>>`, `<<Specification>>`, `<<Factory>>`, `<<Domain Service>>`).
+- Add the stereotype-appropriate operations from the **Stereotype operations** table in `building-blocks.md` — repositories `load` · `save` · `search` · `update` · `remove`; specifications `isSatisfiedBy`; aggregate roots own state change and `-> DomainEventPublisher.publish` when a past-tense event must cross the boundary.
+- Keep integrations and `emits events` / `consumes events` from this map aligned with the model **Event map** table.
+
+Produce `*-model.md` (artifact `ce-domain-model`) or a `building-blocks` section per context — not a parallel unnamed type list.

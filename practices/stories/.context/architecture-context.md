@@ -103,10 +103,8 @@ tests/
 +-- story-test.ts
 +-- <epic-slug>/
     +-- examples/
-    +-- givens.ts
     +-- <sub-epic-slug>/
         +-- examples/
-        +-- givens.ts
         +-- <story-slug>.<tier>.ts     <- one GWT file per story per seam
         +-- examples/                  <- only if this story alone owns the fixtures
 ```
@@ -115,7 +113,7 @@ tests/
 
 Other language channels still exist (Python / JavaScript / Java) and may keep their older helper-split trees until those backends are migrated.
 
-Concrete values live in `examples/` and `givens.ts` at the lowest shared folder — not inventable inline tables in the GWT file.
+Given / When / Then steps live inline in each story test file. Shared domain fixtures live in `examples/` at the lowest shared folder — not inventable inline tables in the GWT file.
 
 The `practices/stories/examples/{ts,py}/process-payments/` trees are historical examples of document-mode layout, not the acceptance-test tree above.
 
@@ -145,8 +143,8 @@ Java is unaffected because its file-per-class rule already forces PascalCase
 place. Python is the only backend where the kebab-everywhere rule collides
 with the language's identifier grammar, hence the single exception.
 
-When a seam needs example data, load it from `examples/` or `givens.ts` at the
-lowest shared epic / sub-epic / story folder — not inline in the GWT file.
+When a seam needs example data, load it from `examples/` at the lowest shared
+epic / sub-epic / story folder — not inline in the GWT file.
 See `stories.md`.
 
 JSON is emitted as `stories.json` — one file per project, pure data, round-trip

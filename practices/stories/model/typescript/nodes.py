@@ -246,19 +246,6 @@ class TypeScriptStory(CodeStory):
         ])
 
 
-_GIVENS = (
-    "/**\n"
-    " * Reusable Given steps for this folder.\n"
-    " * Labels match the prose used in story files; bodies live here once.\n"
-    " */\n"
-    "\n"
-    "/** Given: a prospect with a created account */\n"
-    "export async function aProspectWithACreatedAccount(): Promise<void> {\n"
-    "  // TODO: implement reusable given seed\n"
-    "}\n"
-)
-
-
 class TypeScriptEpic(CodeEpic):
     def _write_stories(self, parent: str, files: dict, tests_root: str) -> None:
         from practices.stories.model.typescript.story_file import story_test_import_path
@@ -286,7 +273,6 @@ class TypeScriptEpic(CodeEpic):
         ])
 
     def _write_folder(self, folder: str, files: dict, tests_root: str) -> None:
-        files.setdefault(f"{folder}/givens.ts", _GIVENS)
         noun = self._aggregate_noun()
         kebab = CodeEpic(noun).slug()
         files.setdefault(f"{folder}/examples/{kebab}.examples.ts", self._examples_file(noun))

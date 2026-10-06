@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from practices.clean_engineering.model.property import Property
@@ -17,10 +18,35 @@ from practices.ddd.model.nodes import (
 )
 
 _EVENT_MAP = "event map"
+_ARROW_SPLIT = re.compile(r"[\u00b7\u2022]")
+
+
+def _parse_arrow_target(target: str) -> tuple[str, str, str]:
+    text = target.strip()
+    if text.startswith("\u2192"):
+        text = text[1:].strip()
+    elif text.startswith("->"):
+        text = text[2:].strip()
+    parts = [part.strip() for part in _ARROW_SPLIT.split(text) if part.strip()]
+    if len(parts) >= 3:
+        return parts[0], parts[1], parts[2]
+    if len(parts) == 2:
+        return parts[0], parts[1], ""
+    if len(parts) == 1:
+        return "", "", parts[0]
+    return "", "", ""
 
 
 def _blank(line: str) -> bool:
     return not line.strip()
+
+
+def _looks_like_operation(line: str) -> bool:
+    if not line or " " in line:
+        return False
+    if line.endswith(":"):
+        return False
+    return line[0].islower()
 
 
 class MarkdownDomainNode:
@@ -109,6 +135,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
     def _read_body(self) -> None:
         root_name = self.name
         members: list[str] = []
+        operations: list[str] = []
         emit_names: list[str] = []
         index = 0
         while index < len(self._body):
@@ -131,8 +158,13 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
             if " - " in line and not raw.startswith(" "):
                 root_name = self.plain_name(line.split(" - ", 1)[0])
             elif raw.startswith("  ") and line and not line.startswith("-"):
-                members.append(line)
+                member = line.split("//", 1)[0].strip()
+                if _looks_like_operation(member):
+                    operations.append(member)
+                elif member:
+                    members.append(member)
             index += 1
+        self._operations = operations
         self.root = MarkdownEntity(root_name, 1)
         self.root._member_lines = members
         for event_name in emit_names:
@@ -153,7 +185,13 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
                 break
             if line.startswith("- "):
                 current = MarkdownIntegration()
-                current.target = self.plain_name(line[2:].split("(by", 1)[0])
+                target_text = self.plain_name(line[2:].split("(by", 1)[0])
+                current.target = target_text
+                context_name, aggregate_name, _entity_name = _parse_arrow_target(target_text)
+                if context_name:
+                    current.context = context_name
+                if aggregate_name:
+                    current.aggregate = aggregate_name
                 self.integrations.append(current)
             elif current is not None and ":" in line:
                 key, value = line.split(":", 1)
@@ -165,7 +203,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
                     current.direction = value
                 elif key == "crosses":
                     current.crosses = value
-                elif key == "integration":
+                elif key in {"integration", "integrate"}:
                     current.integration = value
                 elif key == "context":
                     current.context = value
@@ -177,7 +215,11 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
     def lines(self) -> list[str]:
         written = [f"### {self.name}", ""]
         if self.root is not None:
-            written.append(self.root.name)
+            operations = getattr(self, "_operations", [])
+            if operations:
+                written.append(f"{self.root.name} — {', '.join(operations)}")
+            else:
+                written.append(self.root.name)
             for item in self.root.invariant_objects:
                 written.append(f"  {item.name}")
             if self.integrations:
@@ -205,13 +247,40 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
 
 class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
     def lines(self) -> list[str]:
-        written = [f"## {self.name} | {self.owner}", ""]
+        owner = self.owner or ""
+        written = [f"## {self.name} | {owner}", ""]
+        written.extend(self._sketch_note_lines(getattr(self, "_preamble", [])))
+        module_name = getattr(self, "_module_name", "")
+        if module_name:
+            written.append(f"**Module:** `{module_name}`")
+            written.extend(self._sketch_note_lines(getattr(self, "_module_body", [])))
+            written.append("")
+        group_preambles = getattr(self, "_group_preambles", {})
+        last_group: str | None = None
         for context in self.contexts:
             if isinstance(context, MarkdownBoundedContext):
                 written.extend(context.lines())
         for aggregate in self.aggregates:
             if isinstance(aggregate, MarkdownAggregate):
+                group = getattr(aggregate, "_group", None)
+                if group and group != last_group:
+                    last_group = group
+                    pre = group_preambles.get(group, [])
+                    if pre:
+                        written.append(f"*{group}*")
+                        written.extend(self._sketch_note_lines(pre))
+                        written.append("")
                 written.extend(aggregate.lines())
+        return written
+
+    def _sketch_note_lines(self, lines: list[str]) -> list[str]:
+        written: list[str] = []
+        for raw in lines:
+            text = raw.strip()
+            if text:
+                written.append(f"> {text}")
+        if written:
+            written.append("")
         return written
 
 
@@ -248,11 +317,14 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         return model
 
     def render(self, canonical=None, previous: str | None = None) -> str:
-        del previous
         source = canonical if canonical is not None else self
         if isinstance(source, MarkdownBoundedContextMap):
-            return source.save()
-        return type(self)(source).save()
+            body = source.save()
+        else:
+            body = type(self)(source).save()
+        if previous and "## domain driven design:" in previous.lower():
+            return self._wrap_bounded_context_document(body, previous)
+        return body
 
     def save(self) -> str:
         lines = ["# Bounded Context Map", ""]
@@ -269,6 +341,42 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
                 lines.append(f"- {event.name}: emitted by {producer}; consumed by {consumers}")
             lines.append("")
         return "\n".join(lines)
+
+    def _wrap_bounded_context_document(self, body: str, sketch: str) -> str:
+        title, sources = self._sketch_metadata(sketch)
+        return "\n".join(
+            [
+                "---",
+                "fidelity: [discovery]",
+                "artifact: [bounded-context-map]",
+                "format: md",
+                "---",
+                "",
+                f"# Bounded Context Map — {title}",
+                "",
+                f"**Sources / context:** {sources}",
+                "",
+                "---",
+                "",
+                body.removeprefix("# Bounded Context Map\n\n").rstrip(),
+                "",
+            ]
+        )
+
+    def _sketch_metadata(self, text: str) -> tuple[str, str]:
+        title = "Product / Feature Name"
+        sources = "see engagement sketch"
+        sketch_suffix = re.compile(r"\s+sketch\s*$", re.IGNORECASE)
+        trailing_separator = re.compile(r"[\s\-–—\u20ac\u201d]+$")
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("# "):
+                raw = stripped[2:].strip()
+                title = sketch_suffix.sub("", raw).strip()
+                title = trailing_separator.sub("", title).strip() or title
+            if stripped.lower().startswith("source:"):
+                sources = stripped.split(":", 1)[1].strip()
+        return title, sources
 
     def _next_context_at(self) -> int | None:
         index = self._index
@@ -369,6 +477,8 @@ def _consumer_name(consumer: Aggregate | DomainService) -> str:
 
 def _wire_event(text: str, aggregates: dict[str, Aggregate], services: dict[str, DomainService]) -> None:
     # CartCheckedOut: emitted by ShoppingCart; consumed by Inventory, Receipt
+    if ":" not in text:
+        return
     name, rest = text.split(":", 1)
     emitted = ""
     consumed = ""

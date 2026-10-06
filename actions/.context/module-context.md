@@ -10,7 +10,7 @@
 
 - A list of Guidance, one Guidance (ref or `{toolset, …}`), or a string to act on directly.
 
-Build order: `actions/scan` → `actions/document` → `actions/generate` → `actions/validate` → `actions/satisfy` → `actions/render` → `actions/partition` → `actions/grill_context` → `actions/sketch` → `actions/iterate` → `actions/improvement`
+Build order: `actions/scan` → `actions/document` → `actions/generate` → `actions/validate` → `actions/satisfy` → `actions/render` → `actions/partition` → `actions/grill_context` → `actions/sketch` → `actions/sketch_render` → `actions/iterate` → `actions/improvement`
 
 ---
 
@@ -101,6 +101,17 @@ Do not offer options until the cited context files are read. Answers go to `{pat
 - **Purpose:** Persist a rough draft through grill before generate, so the sketch is a file, not chat.
 - **Seam (terms):** Sketch
 - **Dependencies (one-way):** `actions/grill_context`
+
+---
+
+# actions/sketch_render
+- **Purpose:** Sketch through grill; on approval render the sketch in a background sub-agent with explicit render calls.
+- **Seam (terms):** SketchRender, build_render_calls, render_approved_sketch
+- **Dependencies (one-way):** `actions/sketch`, `actions/render`, `actions/grill_context`
+
+## Constraint
+
+`build_render_calls` owns render parameters — the sub-agent runs that JSON verbatim. Required format pairs: discovery → drawio and markdown (both); specification → typescript and markdown (both).
 
 ---
 

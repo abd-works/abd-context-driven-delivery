@@ -57,8 +57,8 @@ with description("a TypeScript runnable-story Story Map") as self:
                 expect("/epic-1/epic_1_" in path).to(be_true)
                 expect("/redeem-a-voucher/" in path).to(equal(False))
 
-        with it("should include givens.ts at epic and sub-epic"):
-            expect(any(p.endswith("/givens.ts") for p in self.tree)).to(be_true)
+        with it("should not emit givens.ts — Given steps stay in story tests"):
+            expect(any(p.endswith("/givens.ts") for p in self.tree)).to(equal(False))
 
         with it("should contain story() call directly"):
             for path in self.leaf_paths:

@@ -1,4 +1,4 @@
-﻿"""Miro format story nodes - all seven StoryNode subtypes plus I/O.
+"""Miro format story nodes - all seven StoryNode subtypes plus I/O.
 
 load reads a canvas-composer SVG. save writes the nodes you edited.
 The thin-slice table is MiroIncrement.save and MiroIncrement.load.

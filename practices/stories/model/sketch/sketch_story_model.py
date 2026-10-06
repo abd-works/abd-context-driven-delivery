@@ -34,15 +34,21 @@ class SketchStoryModel(StoryModel):
         story: Story | None = None
         scenario: Scenario | None = None
         last_step: Step | None = None
+        in_increment_block = False
         for raw in body.splitlines():
             stripped = raw.strip()
             if not stripped or stripped.startswith(("//", "#", "Fidelity:")):
+                if in_increment_block and not stripped:
+                    in_increment_block = False
                 continue
             increment = _INCREMENT.match(stripped)
             if increment:
+                in_increment_block = True
                 model.append_increment(
                     Increment(increment.group(1), len(model.increments) + 1)
                 )
+                continue
+            if in_increment_block:
                 continue
             estimate = _ESTIMATE.match(stripped)
             if estimate:
@@ -106,16 +112,11 @@ def _parent_epic(model: StoryModel, epic: Epic | None, subs: list[Epic], level: 
     if epic is None:
         epic = Epic("Stories", 1)
         model.append_epic(epic)
-    while len(subs) >= max(level, 1):
+    while len(subs) >= level:
         subs.pop()
     if subs:
         return subs[-1]
-    if not epic.epics:
-        child = Epic(epic.name, 1)
-        epic.append_epic(child)
-        subs.append(child)
-        return child
-    return epic.epics[-1]
+    return epic
 
 
 def _add_step(

@@ -397,7 +397,10 @@ class PracticeGuidance(Guidance):
             )
         model = self._to_object_model(content, source)
         target = self._live_adapter(format)
-        rendered = self._call_render(target, model, previous, keep_positioning)
+        sketch_previous = previous
+        if (source or "").lower() == "sketch" and isinstance(content, str) and content.strip():
+            sketch_previous = previous or content
+        rendered = self._call_render(target, model, sketch_previous, keep_positioning)
         return {"format": format, "content": rendered}
 
     def _to_object_model(self, content: Any, source: str | None) -> Any:

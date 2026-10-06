@@ -55,8 +55,10 @@ Each **module** is a named structural boundary that groups closely related class
 
 - Ask what the major subsystems of the solution are, and what a caller is hiring each one to do.
 - Ask how users in other parts of the system interact with it, and which states, transitions, and operations are visible to them.
-- Ask for the most important concepts inside each subsystem, and which other part of the business it depends on.
+- Ask for the most important concepts exposed by subsystem, and which other part of the solution it depends on.
 - Ask when two parts are really the same thing because they share behavior or share state.
+- Ask how business / domain concepts will be implemented in the solutopn? what technical buiilding blocks are required to implement domain state, operations, services, UI these form technical modules often required to create a solution
+- what dependencies will Technical modules have on 3rd party libraries Apis or products?
 - Write the module names and seams from those answers.
 - Do not ask the user to draw the dependency arrow.
 
@@ -79,6 +81,8 @@ Lead with the job a caller hires it for; then the mark they type (`@markdown`, `
 #### Guidance
 
 **Create deep modules.** Group closely related classes around one domain concept. Give each module a narrow public interface with substantial implementation behind it so callers can understand the interface without reading the implementation. Avoid shallow modules that add another call without hiding a decision.
+
+**Do not mint a module per class.** One package per class is the same mistake as one bounded context per aggregate — folder noise without a real seam. When a bounded context (especially a new consolidated view) has only a handful of collaborating types, keep **one module** for the whole context and place the classes inside it. Split into separate modules only when change rate, team ownership, or coupling genuinely diverges; several public classes in one module is normal.
 
 **Arrange dependencies one way.** Code that changes often may depend on code that changes rarely, but the stable module must not import its volatile caller. Break a cycle by moving the genuinely shared concept to a module both sides may depend on. Split a module that attracts unrelated callers along domain lines.
 
@@ -119,6 +123,7 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 - `named-seam-and-constraint` — Name **Seam (terms)** and **Constraint** (what callers must or must not do). At modules do not require a Public API heading — that member dump is **model**.
 - `modules-name-the-source-type` — Seam terms and Language headings use the type or annotation in source (`Hook`, `@Hook`). Do not rename a Destination to `*Mark`, invent an import path, or copy a Public API of operations into `module-context.md`. That dump belongs in the sibling `*-model.md`. A second name or a copied member list is a parallel model, and it will disagree with the code.
 - `high-cohesion` — Group classes that share one purpose and the same domain concept, or else unrelated work will keep landing in the same module and every feature ends up editing it.
+- `no-module-per-class` — A module groups multiple cohesive classes. One folder or package per class is an anti-pattern unless each class is a genuinely independent subsystem. When sketching with DDD, a small bounded context is usually **one module** with several entities inside — not one module per aggregate root.
 - `single-boundary` — Do not let another module hold, mutate, or duplicate this module’s concept. The two modules will drift, and every rule change has to be found and made in both.
 
 **Shape the seam**
@@ -228,6 +233,7 @@ If this change will not stay here, follow `practices/clean_engineering/modules.m
 
 - `write-invariants` — Name a rule the object itself must keep true whenever it acts — a must, never, always, before, or after about its own state. Write one a caller can break by using the object wrong. Do not restate a type, a name, or a single operation’s happy path.
 - `write-interactions` — Collaborate when this object cannot finish its job from its own state — another object owns the data or the next act. Ask that object to do the work so each keeps its own invariants; do not reach into its internals or steal its job. Ask through a named public operation on a collaborator you hold or are given. Do not point at a type, and do not invent a third object to mediate a conversation two objects can have.
+- `no-redundant-relationship-paths` — Before you add an association, walk the paths already in the cluster. Each real participant gets one canonical link — not parallel wires through types that collapse to the same thing (`Client` and `ClientIdentity`, or `OfferChannel` on **Offer** and again on an event the offer just emitted). In-process payloads reach a participant through the aggregate that owns the act; outbound events carry the identity or routing fact downstream systems need, not a duplicate of context the publisher already holds.
 
 **Names and reuse**
 
