@@ -22,10 +22,6 @@ class Stories(PracticeGuidance):
             default_workspace_folder="tests",
             formats={
                 "sketch": ("practices.stories.model.sketch.sketch_story_model", "SketchStoryModel"),
-                "knowledge_graph": (
-                    "practices.stories.model.knowledge_graph.nodes",
-                    "KnowledgeGraphStoryModel",
-                ),
                 "markdown": ("stories.model.markdown.nodes", "MarkdownStoryModel"),
                 "json": ("stories.model.json.nodes", "JsonStoryModel"),
                 "drawio": ("stories.model.drawio.nodes", "DrawIOStoryModel"),

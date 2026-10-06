@@ -1,4 +1,4 @@
-"""BDD development — Session lazy graph and practices.
+"""BDD development â€” Session lazy graph and practices.
 
 Hierarchy 1:1 with knowledge-graph-file-change-sketch.md
 theme: bdd behavior / a session.
@@ -21,7 +21,7 @@ from mamba import before, context, description, it
 
 from harness.guidance.guidance import PracticeGuidance
 from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
-from harness.knowledge_graph.model.knowledge_graph import KnowledgeGraph
+from harness.codeQl_graph.graph import CodeQLGraph
 from harness.mcp.mcp_server import McpServer
 from harness.session import Session
 
@@ -33,7 +33,7 @@ with description("a session"):
 
         with it("should instantiate a knowledge graph on get"):
             graph = self.session.knowledge_graph
-            expect(graph).to(be_a(KnowledgeGraph))
+            expect(graph).to(be_a(CodeQLGraph))
 
     with context("that has no practices yet"):
         with before.each:
@@ -48,7 +48,7 @@ with description("a session"):
     with context("that has been given a knowledge graph"):
         with before.each:
             self.session = Session()
-            self.given = KnowledgeGraph()
+            self.given = CodeQLGraph()
             self.session.knowledge_graph = self.given
 
         with it("should return that graph on get"):
@@ -99,7 +99,7 @@ with description("a session"):
                 HookServer.state_path = original
 
         with it("should expose a knowledge graph"):
-            expect(self.session.knowledge_graph).to(be_a(KnowledgeGraph))
+            expect(self.session.knowledge_graph).to(be_a(CodeQLGraph))
 
         with it("should expose each practice guidance"):
             expect(
@@ -124,7 +124,7 @@ with description("a session"):
             expect(self.mcp.session is self.hooks.session).to(equal(False))
 
         with it("should expose a knowledge graph"):
-            expect(self.mcp.session.knowledge_graph).to(be_a(KnowledgeGraph))
+            expect(self.mcp.session.knowledge_graph).to(be_a(CodeQLGraph))
 
         with it("should expose each practice guidance"):
             expect(

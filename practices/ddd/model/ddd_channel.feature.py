@@ -13,7 +13,6 @@ from expects import equal, expect
 from mamba import before, describe, included_context, it, shared_context
 
 from practices.clean_engineering.model.property import Property
-from practices.ddd.model.knowledge_graph.nodes import KnowledgeGraphDomainDrivenDesignModel
 from practices.ddd.model.nodes import DDDModelFactory, DomainEvent, ValueObject
 
 EXPECTED = Path(__file__).resolve().parent / ".examples" / "expected" / "bounded-context-map.md"
@@ -80,18 +79,6 @@ with describe("a domain driven design model"):
                 self.loaded = DDDModelFactory.load(str(written))
             with included_context("a domain driven design model saved through a channel"):
                 pass
-        with describe("to knowledge graph"):
-            with before.all:
-                source = DDDModelFactory.load(str(EXPECTED))
-                folder = ACTUAL / "from-markdown" / "to-knowledge-graph"
-                if folder.exists():
-                    shutil.rmtree(folder)
-                folder.mkdir(parents=True)
-                self.loaded = KnowledgeGraphDomainDrivenDesignModel(source)
-                (folder / "bounded-context-map.kg").write_text(self.loaded.save(), encoding="utf-8")
-            with included_context("a domain driven design model saved through a channel"):
-                pass
-
     with it("should load the expected map"):
         check_map(DDDModelFactory.load(str(EXPECTED)))
 

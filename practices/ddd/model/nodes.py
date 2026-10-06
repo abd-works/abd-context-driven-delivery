@@ -18,6 +18,14 @@ _PATTERNS = (
 )
 
 
+class UnsupportedBoundedContextFile(Exception):
+    """No channel can read the given bounded-context file."""
+
+    def __init__(self, path: str) -> None:
+        super().__init__(f"No bounded-context channel reads {path}")
+        self.path = path
+
+
 class Integration:
     """An arrow from an aggregate to another class."""
 
@@ -333,10 +341,9 @@ class DDDModelFactory:
 
 
 def _channel_for(path: str) -> type[BoundedContextMap]:
-    from practices.ddd.model.codeql.nodes import CodeqlBoundedContextMap
     from practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 
     location = Path(path)
     if location.suffix.lower() in {".md", ".markdown"}:
         return MarkdownBoundedContextMap
-    return CodeqlBoundedContextMap
+    raise UnsupportedBoundedContextFile(path)

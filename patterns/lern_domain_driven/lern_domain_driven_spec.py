@@ -1,4 +1,4 @@
-"""BDD spec for LernDomainDriven — construction, companion wiring, contexts,
+"""BDD spec for LernDomainDriven â€” construction, companion wiring, contexts,
 and end-to-end scanning of its rules/scanners (development fidelity)."""
 
 import sys
@@ -44,7 +44,7 @@ from patterns.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
 )
 from practices.stories.stories import Stories
-from harness.knowledge_graph.model.graph_rules import GraphRule, GraphRulesCollection
+from harness.guidance.rule import RulesCollection
 
 _ALL_RULE_SLUGS = (
     "epic-package-screens-only",
@@ -176,12 +176,6 @@ with description("a LernDomainDriven generator"):
         with before.each:
             self.rules = self.tool.rules
 
-        with it("should tag every graph rule with the lern_domain_driven pattern"):
-            for rule in self.rules:
-                if not isinstance(rule, GraphRule):
-                    continue
-                expect(getattr(rule, "pattern", None)).to(equal("lern_domain_driven"))
-
         with it("should attribute layout rules to clean_engineering"):
             expect(self.rules["epic-package-screens-only"].practice).to(equal("clean_engineering"))
             expect(self.rules["epic-package-screens-only"].fidelity).to(equal("code"))
@@ -204,8 +198,8 @@ with description("a LernDomainDriven generator"):
                 "tool_input": {"path": "src/customer/customer-node.ts"},
             }
 
-        with it("should load shared rules as a GraphRulesCollection"):
-            expect(self.rules).to(be_a(GraphRulesCollection))
+        with it("should load shared rules as a RulesCollection"):
+            expect(self.rules).to(be_a(RulesCollection))
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
         with it("should scope inject globs to src domains and epic packages"):
@@ -219,10 +213,6 @@ with description("a LernDomainDriven generator"):
 
         with it("should not match unrelated files outside src or packages"):
             expect(self.rules.matches("actions/validate/validate.py")).to(equal(False))
-
-        with it("should upgrade rules with graph queries to GraphRule"):
-            expect(self.rules["epic-package-screens-only"]).to(be_a(GraphRule))
-            expect(self.rules["epic-package-screens-only"].graphQuery.is_file()).to(equal(True))
 
         with it("should inject rules markdown when a matching src file is written"):
             result = self.rules.inject_rules(self.payload)

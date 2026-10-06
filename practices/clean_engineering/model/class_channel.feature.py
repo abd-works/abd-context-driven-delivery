@@ -18,7 +18,6 @@ from mamba import before, context, describe, included_context, it, shared_contex
 from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, is_interface_name
 from practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
-from practices.clean_engineering.model.knowledge_graph.nodes import KnowledgeGraphCleanEngineeringModel
 from practices.clean_engineering.model.typescript.typescript_class_model import (
     TypeScriptCleanEngineeringModel,
     _camel_identifier,
@@ -174,11 +173,6 @@ def save_channel(source_name: str, target: str, source: CleanEngineeringModel) -
         return MarkdownCleanEngineeringModel().parse((folder / "class-model.md").read_text(encoding="utf-8"))
     if target == "drawio":
         return _save_drawio(folder, source)
-    if target == "knowledge_graph":
-        copied = KnowledgeGraphCleanEngineeringModel(source)
-        copied.translate_from(source)
-        _write(folder / "class-model.kg", copied.save())
-        return copied
     loaded = CleanEngineeringModel(name=source.name, sequential_order=1)
     for module in source.modules:
         _write(folder / _code_path(module.name), _render_typescript(_one_module(module)))
@@ -615,35 +609,3 @@ with describe("a class model"):
                 pass
             with included_context("a typescript file"):
                 pass
-        with describe("to knowledge graph"):
-            with before.all:
-                _open(self, "typescript", "knowledge_graph")
-            with included_context("a class model saved through a channel"):
-                pass
-
-with describe("a class model populated from the stored codeql database"):
-    with it("should write the typescript classes"):
-        from practices.clean_engineering.model.codeql.codeql_model import (
-            CleanEngineeringModel as CodeQLCleanEngineeringModel,
-        )
-
-        database = (
-            Path(__file__).resolve().parents[2]
-            / "stories"
-            / "model"
-            / ".examples"
-            / "expected"
-            / "codeql"
-        )
-        populated = CodeQLCleanEngineeringModel.load_content(database)
-        expected_names = set()
-        for path in EXPECTED.rglob("*.ts"):
-            expected_names.update(re.findall(r"(?m)^class\s+(\w+)", path.read_text(encoding="utf-8")))
-        found = {item.name for module in populated.modules for item in module.classes}
-        expect(bool(found) and found <= expected_names).to(equal(True))
-        expect({"Customer", "AccountCredentials", "Plan"} <= found).to(equal(True))
-        written = set()
-        for module in populated.modules:
-            parsed = TypeScriptCleanEngineeringModel.parse(_render_typescript(_one_module(module)))
-            written.update(item.name for parsed_module in parsed.modules for item in parsed_module.classes)
-        expect(written).to(equal(found))

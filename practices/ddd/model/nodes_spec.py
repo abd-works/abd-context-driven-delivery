@@ -11,12 +11,10 @@ for _cat in ("practices", "tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import equal, expect, have_length
+from expects import equal, expect
 from mamba import description, it
 
 from practices.ddd.model import ddd_class_kind
-from harness.knowledge_graph import model as kg
-from harness.knowledge_graph.model import Kind, PracticeGraph
 
 
 with description("DDD model nodes"):
@@ -29,61 +27,3 @@ with description("DDD model nodes"):
             equal("Repository")
         )
 
-
-with description("PracticeGraph DDD wiring"):
-    with it("should load bounded contexts and aggregates from examples map"):
-        graph = PracticeGraph.load(_REPO_ROOT / "practices" / "ddd" / "examples")
-        bc_nodes = graph.nodes_of_type(kg.BoundedContext)
-        expect(bc_nodes).to(have_length(2))
-        sales = next(bc for bc in bc_nodes if bc.name == "Sales")
-        expect(sales.aggregates[0].name).to(equal("ShoppingCart"))
-        owns_agg = [
-            r
-            for r in graph.relationships
-            if r.kind == Kind.OWNS
-            and any(
-                n.name == "ShoppingCart"
-                for n in graph.nodes.values()
-                if n.node_id == r.to_id
-            )
-        ]
-        expect(owns_agg).to(have_length(1))
-
-    with it("should wire root, belongsTo, accesses, and hasIdentity edges"):
-        graph = PracticeGraph(_REPO_ROOT)
-        agg = kg.Aggregate("Customer", 1)
-        graph.register(agg)
-
-        identity_vo = kg.ValueObject("Identity", 1)
-        id_prop = kg.Property("id", 1, type_hint="string")
-        identity_vo.property_nodes = [id_prop]
-        graph.register(identity_vo)
-        graph.register(id_prop)
-        identity_vo.relate(Kind.OWNS, id_prop)
-        id_prop.relate(Kind.BELONGS_TO, identity_vo)
-
-        root = kg.GraphEntityRoot("Customer", 1)
-        ident_prop = kg.Property("identity", 1, type_hint="Identity")
-        root.property_nodes = [ident_prop]
-        graph.register(root)
-        graph.register(ident_prop)
-        root.relate(Kind.OWNS, ident_prop)
-        ident_prop.relate(Kind.BELONGS_TO, root)
-
-        repo = kg.Repository("CustomerRepository", 2)
-        graph.register(repo)
-
-        agg.classes = [identity_vo, root, repo]
-        for oclass in agg.classes:
-            agg.relate(Kind.OWNS, oclass)
-            oclass.relate(Kind.BELONGS_TO, agg)
-
-        graph.wire_ddd()
-
-        kinds = {r.kind for r in graph.relationships}
-        expect(Kind.ROOT in kinds).to(equal(True))
-        expect(Kind.ACCESSES in kinds).to(equal(True))
-        expect(Kind.HAS_IDENTITY in kinds).to(equal(True))
-        expect(agg.root).to(equal(root))
-        expect(root.aggregate).to(equal(agg))
-        expect(repo.accesses).to(equal(root))

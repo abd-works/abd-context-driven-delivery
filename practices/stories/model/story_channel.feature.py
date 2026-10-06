@@ -20,10 +20,8 @@ from practices.stories.model.story_model import StoryModel, StoryModelFactory
 from practices.stories.model.java.java_story_model import JavaStoryModel
 from practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from practices.stories.model.python.python_story_model import PythonStoryModel
-from practices.stories.model.codeql.codeql_model import StoryModel as CodeQLStoryModel
 from practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 from practices.stories.model.code_story_model import CodeStoryNode
-from practices.stories.model.knowledge_graph.nodes import KnowledgeGraphStoryModel
 
 EXPECTED = Path(__file__).resolve().parent / ".examples" / "expected"
 ACTUAL = Path(__file__).resolve().parent / ".examples" / "actual"
@@ -288,13 +286,6 @@ def save_channel(source_name: str, target: str, source: StoryModel) -> StoryMode
     if target == "miro":
         _write(folder / "story-map.svg", MiroStoryModel(source).save())
         return MiroStoryModel().load((folder / "story-map.svg").read_text(encoding="utf-8"))
-    if target == "codeql":
-        _write_tree(folder, TypeScriptStoryModel(source).save())
-        return CodeQLStoryModel.load_content(folder)
-    if target == "knowledge_graph":
-        copied = KnowledgeGraphStoryModel(source)
-        _write(folder / "story-map.kg", copied.save())
-        return copied
     maps = {
         "typescript": TypeScriptStoryModel,
         "python": PythonStoryModel,
@@ -399,17 +390,6 @@ with shared_context("a story map saved through a channel"):
                 check_epics(actual_epic.epics, expected_epic.epics)
 
         check_epics(actual.epics, expected.epics)
-        if self.channel == "codeql":
-            from practices.clean_engineering.model.codeql.codeql_model import OoadClass
-
-            if self.loaded.graph.nodes_of_type(OoadClass):
-                _expect_clean_engineering_relationships(self.loaded)
-
-
-def _open_codeql(example, source_name: str) -> None:
-    _open(example, source_name, "codeql")
-    folder = ACTUAL / f"from-{source_name}" / "to-codeql"
-    example.source = TypeScriptStoryModel().load(_read_tree(folder))
 
 
 def _open(example, source_name: str, target: str) -> None:
@@ -504,16 +484,6 @@ with describe("a story map"):
                 with it("should leave that story out"):
                     names = _story_names(_as_loaded(self, walk(self.loaded)))
                     expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(False))
-        with describe("to codeql"):
-            with before.all:
-                _open_codeql(self, "markdown")
-            with included_context("a story map saved through a channel"):
-                pass
-        with describe("to knowledge graph"):
-            with before.all:
-                _open(self, "markdown", "knowledge_graph")
-            with included_context("a story map saved through a channel"):
-                pass
 
     with describe("from drawio"):
         with describe("to markdown"):
@@ -554,16 +524,6 @@ with describe("a story map"):
         with describe("to java"):
             with before.all:
                 _open(self, "drawio", "java")
-            with included_context("a story map saved through a channel"):
-                pass
-        with describe("to codeql"):
-            with before.all:
-                _open_codeql(self, "drawio")
-            with included_context("a story map saved through a channel"):
-                pass
-        with describe("to knowledge graph"):
-            with before.all:
-                _open(self, "drawio", "knowledge_graph")
             with included_context("a story map saved through a channel"):
                 pass
 
@@ -608,50 +568,3 @@ with describe("a story map"):
                 _open(self, "typescript", "java")
             with included_context("a story map saved through a channel"):
                 pass
-        with describe("to codeql"):
-            with before.all:
-                _open_codeql(self, "typescript")
-            with included_context("a story map saved through a channel"):
-                pass
-        with describe("to knowledge graph"):
-            with before.all:
-                _open(self, "typescript", "knowledge_graph")
-            with included_context("a story map saved through a channel"):
-                pass
-
-with describe("a story model populated from the stored codeql database"):
-    with it("should write the typescript stories and keep the clean engineering associations"):
-        from harness.knowledge_graph.model.graph_node import Kind
-        from practices.stories.model.codeql.codeql_model import Example
-
-        populated = CodeQLStoryModel.load_content(EXPECTED / "codeql")
-        expected = TypeScriptStoryModel().load(_expected_typescript())
-        expect(_story_names(walk(populated))).to(equal(_story_names(walk(expected))))
-        written = TypeScriptStoryModel(populated).save()
-        again = TypeScriptStoryModel().load(written)
-        expect(_story_names(walk(again))).to(equal(_story_names(walk(populated))))
-        _expect_clean_engineering_relationships(populated)
-
-
-def _expect_clean_engineering_relationships(populated) -> None:
-    """Story edges that name a class, and the class-model edges those classes hold."""
-    from harness.knowledge_graph.model.graph_node import Kind
-    from practices.clean_engineering.model.codeql.codeql_model import OoadClass
-    from practices.stories.model.codeql.codeql_model import Example
-
-    graph = populated.graph
-    linked = [
-        example
-        for example in graph.nodes_of_type(Example)
-        if example.related(Kind.DEMONSTRATES)
-    ]
-    expect(len(linked) > 0).to(equal(True))
-    classes = graph.nodes_of_type(OoadClass)
-    expect(len(classes) > 0).to(equal(True))
-    owned_members = [
-        node
-        for cls in classes
-        for node in cls.related(Kind.OWNS)
-        if node.semantic_type() in ("Operation", "Property")
-    ]
-    expect(len(owned_members) > 0).to(equal(True))

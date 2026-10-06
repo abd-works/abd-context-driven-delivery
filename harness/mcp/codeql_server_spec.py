@@ -17,14 +17,8 @@ for _cat in ("practices", "tools", "actions"):
         sys.path.insert(0, _p)
 
 from expects import equal, expect
-from mamba import after, context, description, it
+from mamba import context, description, it
 
-from harness.knowledge_graph.model.codeql import (
-    CodeQL,
-    attached_query_server,
-    attach_query_server,
-    detach_query_server,
-)
 from harness.mcp.codeql_query_daemon import QueryServerClient, serve
 from harness.mcp.codeql_server import CodeQLQueryServer
 from harness.mcp.mcp_server import McpHost
@@ -59,28 +53,14 @@ with description("the MCP CodeQL query server"):
             message = CodeQLQueryServer.read_message(stream)
             expect(message["result"]["registeredDatabases"]).to(equal(["db"]))
 
-    with context("a server attached to the host"):
-        with after.each:
-            detach_query_server()
-
-        with it("runs the batch on that server"):
-            server = _Server()
-            attach_query_server(server)
-            codeql = CodeQL(Path(tempfile.mkdtemp()))
-            query = Path("classes.ql")
-            produced = codeql._produce_bqrs([query], Path("."))
-            expect(server.queries).to(equal([query]))
-            expect(produced[str(query.resolve())]).to(equal(query))
-
+    with context("a server held by the host"):
         with it("drops the reference when the host stops"):
             server = _Server()
-            attach_query_server(server)
             host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
             host.codeql_server = server
             host._stop_codeql_server()
             expect(server.stopped).to(equal(False))
             expect(host.codeql_server).to(equal(None))
-            expect(attached_query_server()).to(equal(None))
 
     with context("a persistent query daemon"):
         with it("should ping without starting CodeQL"):

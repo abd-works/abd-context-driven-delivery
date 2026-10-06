@@ -1,8 +1,7 @@
-"""NLTK-backed word/POS helpers for story and naming scanners.
+"""NLTK-backed word and part-of-speech checks for DDD type names.
 
-Requires **nltk** (and downloads WordNet / punkt / tagger data on first use). Used by
-**abd-story-mapping** scanners; keep imports explicit - not re-exported from
-``scanner.__init__`` to avoid import-time NLTK side effects for unrelated code.
+Requires **nltk**, and downloads WordNet, punkt, and tagger data on first use. Import
+this module explicitly so unrelated code does not pay those import-time side effects.
 """
 
 from __future__ import annotations

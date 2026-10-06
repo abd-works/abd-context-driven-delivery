@@ -18,7 +18,7 @@ from patterns.mern_domain_driven.mern_domain_driven import (
     MernDomainDriven,
 )
 from practices.stories.stories import Stories
-from harness.knowledge_graph.model.graph_rules import GraphRulesCollection
+from harness.guidance.rule import RulesCollection
 
 _MODULE_DIR = Path(__file__).resolve().parent
 
@@ -100,8 +100,8 @@ with description("a MernDomainDriven generator"):
                 "tool_input": {"path": "packages/onboard-a-customer/carts/cart-server.ts"},
             }
 
-        with it("should load shared rules as a GraphRulesCollection"):
-            expect(self.rules).to(be_a(GraphRulesCollection))
+        with it("should load shared rules as a RulesCollection"):
+            expect(self.rules).to(be_a(RulesCollection))
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
         with it("should scope inject globs to packages feature layout"):

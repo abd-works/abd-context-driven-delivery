@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from typing import Iterable, List
 
-from harness.knowledge_graph.model.vocabulary_helper import VocabularyHelper
+from practices.ddd.model.vocabulary import VocabularyHelper
 
 _TECHNICAL_SUFFIXES = {"result", "response", "dto", "request"}
 _CAMEL = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])")

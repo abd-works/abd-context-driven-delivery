@@ -347,6 +347,24 @@ class OoadClass(OoadNode):
         self.operations = list(self.operation_nodes)
 
 
+class File(OoadNode):
+    """A source file inside a module. Holds the properties and operations that sit
+    at file scope rather than on a class."""
+
+    _semantic_type_name = "File"
+
+    def __init__(self, name: str, sequential_order: int) -> None:
+        super().__init__(name, sequential_order)
+        self.properties: List = []
+        self.operations: List = []
+
+    def update_self(self, source: OoadNode) -> None:
+        self.name = source.name
+
+    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
+        return []
+
+
 class Module(OoadNode):
     """A named module boundary grouping closely related classes."""
 

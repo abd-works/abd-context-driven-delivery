@@ -70,6 +70,16 @@ class Rule:
         self.body = body
         self.fidelity = fidelity
         self.tag = tag or "base"
+        self.practice = ""
+        self.pattern = ""
+        self.shared = False
+
+    def attribute_to(self, practice: str, *, tag: str = "base", shared: bool = False) -> Rule:
+        """Name the practice that owns this rule and whether it is shared across fidelities."""
+        self.practice = practice
+        self.tag = tag or "base"
+        self.shared = shared
+        return self
 
     def validate(self) -> str:
         return instructions(
@@ -323,7 +333,41 @@ class RulesCollection(MarkdownCollection):
             entries[rule.slug] = rule
         collection = cls(entries, applies_to=applies_to, parent=parent)
         collection.markdown = text
+        collection._attribute_from_queries(parent)
         return collection
+
+    def _attribute_from_queries(self, parent: Any) -> None:
+        """Credit each rule to the practice its query declares, so a pattern's rules
+        still name the parent practice they came from."""
+        practice = self._parent_practice(parent)
+        if not practice:
+            return
+        from harness.guidance.rule_query import RuleQuery
+
+        shared = getattr(parent, "fidelities", None) is not None
+        language = getattr(parent, "format", None) or "typescript"
+        for rule in self.entries.values():
+            if not isinstance(rule, Rule):
+                continue
+            query = RuleQuery.locate(rule.slug, practice, str(language))
+            if query is None:
+                continue
+            rule.attribute_to(query.practice or practice, tag=rule.tag, shared=shared)
+            rule.fidelity = query.fidelity or rule.fidelity
+            rule.pattern = query.pattern
+
+    @staticmethod
+    def _parent_practice(parent: Any) -> str:
+        if parent is None:
+            return ""
+        practice = getattr(parent, "practice_guidance", None)
+        if practice is None and getattr(parent, "fidelities", None) is not None:
+            practice = parent
+        if practice is None:
+            return ""
+        from harness.markdown import AssetLocator
+
+        return AssetLocator(practice, "").class_file_directory().name
 
     def __iter__(self) -> Iterator[Rule]:
         for value in self.entries.values():

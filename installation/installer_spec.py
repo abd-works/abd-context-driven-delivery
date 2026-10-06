@@ -391,6 +391,7 @@ with description("lifecycle actions registered for deploy") as self:
         from actions.render.render import Render
         from actions.satisfy.satisfy import Satisfy
         from actions.sketch.sketch import Sketch
+        from actions.sketch_render.sketch_render import SketchRender
         from actions.validate.validate import Validate
 
         self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
@@ -404,6 +405,7 @@ with description("lifecycle actions registered for deploy") as self:
                 Render(),
                 Satisfy(),
                 Sketch(),
+                SketchRender(),
                 Validate(),
             ]
         )
@@ -417,6 +419,7 @@ with description("lifecycle actions registered for deploy") as self:
             for name in (
                 "generate",
                 "sketch",
+                "sketch-render",
                 "document",
                 "satisfy",
                 "iterate",
@@ -1032,7 +1035,7 @@ with description("the installer import path") as self:
         expect(refs).to(contain("harness.transformers.transformers:Transformers"))
         expect(refs).to(contain("patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
         expect(refs).to(contain("patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
-        expect(refs).to(contain("harness.knowledge_graph.model.graph_rules:GraphRulesCollection"))
+        expect(refs).to(contain("harness.codeQl_graph.graph:CodeQLGraph"))
         expect(refs).to(contain("harness.guidance.guidance:Guidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:FidelityGuidance"))

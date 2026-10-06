@@ -11,10 +11,10 @@ from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
 from practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel as SourceModel,
+    File as SourceFile,
     Module as SourceModule,
     OoadClass as SourceClass,
 )
-from practices.clean_engineering.model.codeql.codeql_model import File as SourceFile
 from practices.clean_engineering.model.operation import Operation
 from practices.clean_engineering.model.property import Property
 from practices.clean_engineering.model.operation import Operation as SourceOperation

@@ -916,7 +916,6 @@ class McpHost:
             self._stop_codeql_server()
 
     def _start_codeql_server(self) -> None:
-        from harness.knowledge_graph.model.codeql import attach_query_server
         from harness.mcp.codeql_query_daemon import QueryServerClient
 
         try:
@@ -928,19 +927,12 @@ class McpHost:
             if self._codeql_closed:
                 return
             self.codeql_server = server
-            attach_query_server(server)
         logger.info("codeql query-server daemon pid=%s", getattr(server, "pid", None))
 
     def _stop_codeql_server(self) -> None:
-        from harness.knowledge_graph.model.codeql import detach_query_server
-
         with self._codeql_lock:
             self._codeql_closed = True
-            server = self.codeql_server
             self.codeql_server = None
-        if server is None:
-            return
-        detach_query_server(server)
 
     def ping(self) -> str:
         return "pong"

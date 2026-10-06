@@ -26,9 +26,9 @@ class Ddd(PracticeGuidance):
             default_workspace_folder="src",
             formats={
                 "sketch": ("practices.ddd.model.sketch.sketch_ddd_model", "SketchDddModel"),
-                "knowledge_graph": (
-                    "practices.ddd.model.knowledge_graph.nodes",
-                    "KnowledgeGraphDomainDrivenDesignModel",
+                "drawio": (
+                    "practices.ddd.model.drawio.drawio_bounded_context_map",
+                    "DrawIOBoundedContextMap",
                 ),
                 "markdown": ("practices.ddd.model.markdown.nodes", "MarkdownBoundedContextMap"),
                 "python": (

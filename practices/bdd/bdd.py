@@ -27,10 +27,6 @@ class Bdd(PracticeGuidance):
             default_workspace_folder="src",
             formats={
                 "sketch": ("practices.bdd.model.sketch.sketch_bdd_model", "SketchBddModel"),
-                "knowledge_graph": (
-                    "practices.bdd.model.knowledge_graph.nodes",
-                    "KnowledgeGraphDescription",
-                ),
                 "markdown": ("practices.bdd.model.bdd_model", "MarkdownBddModel"),
                 "python": ("practices.bdd.model.bdd_model", "PythonBddModel"),
                 "typescript": ("practices.bdd.model.bdd_model", "TypeScriptBddModel"),

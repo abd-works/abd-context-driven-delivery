@@ -1,4 +1,4 @@
-"""Load custom project rulesets from a working folder."""
+﻿"""Load custom project rulesets from a working folder."""
 from __future__ import annotations
 
 import os
@@ -19,7 +19,6 @@ _INDEX: dict[str, dict[str, list[Path]]] = {}
 def load_project_rules(root, practice, fidelities) -> list:
     """Rules tagged project, including fidelity folders under the practice ruleset."""
     from harness.guidance.rule import RulesCollection
-    from harness.knowledge_graph.model.graph_rules import GraphRule
 
     folder = _folder(root)
     practice_name = str(practice or "").strip()
@@ -36,7 +35,6 @@ def load_project_rules(root, practice, fidelities) -> list:
                 None,
                 seen,
                 RulesCollection,
-                GraphRule,
             )
         )
         for fidelity in names:
@@ -48,7 +46,6 @@ def load_project_rules(root, practice, fidelities) -> list:
                         fidelity,
                         seen,
                         RulesCollection,
-                        GraphRule,
                     )
                 )
     return loaded
@@ -108,7 +105,7 @@ def _fidelity_folders(fidelity: str) -> list[str]:
     return names
 
 
-def _rules_from(path: Path, practice: str, fidelity: str | None, seen: set[Path], collection_type, graph_rule):
+def _rules_from(path: Path, practice: str, fidelity: str | None, seen: set[Path], collection_type):
     if not path.is_file():
         return []
     resolved = path.resolve()
@@ -117,15 +114,8 @@ def _rules_from(path: Path, practice: str, fidelity: str | None, seen: set[Path]
     seen.add(resolved)
     text = path.read_text(encoding="utf-8")
     collection = collection_type.from_markdown(text, fidelity=fidelity)
-    codeql = path.parent / "codeql"
     shared = fidelity is None
     return [
-        graph_rule(
-            rule,
-            practice=practice,
-            shared=shared,
-            tag="project",
-            query_pack=codeql,
-        )
+        rule.attribute_to(practice, tag="project", shared=shared)
         for rule in collection
     ]
