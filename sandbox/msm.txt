@@ -1,0 +1,113 @@
+﻿.FFFFFF...FFF.......
+
+9 examples failed of 20 ran in 0.0339 seconds
+
+Failures:
+
+  1) a Markdown document that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic it should contain 4 top-level headings
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py expect(top_headings).to(have_len(4))
+         AssertionError: expected: [] to have len 4
+          but: was 0
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 66, in 00000002__it should contain 4 top-level headings
+         expect(top_headings).to(have_len(4))
+     
+     
+  2) a Markdown document that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic it should contain 3 second-level headings under the first top-level heading
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py first_index = next(i for i, l in enumerate(lines) if l.startswith("# "))
+         StopIteration: 
+             
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 70, in 00000003__it should contain 3 second-level headings under the first top-level heading
+         first_index = next(i for i, l in enumerate(lines) if l.startswith("# "))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  3) a Markdown document that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic it should list every Story as a bullet under its Epic
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py expect(story_bullets).to(have_len(3))
+         AssertionError: expected: [] to have len 3
+          but: was 0
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 89, in 00000004__it should list every Story as a bullet under its Epic
+         expect(story_bullets).to(have_len(3))
+     
+     
+  4) a Markdown document that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic it should list every Scenario as an indented bullet under its Story
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py expect(ac_bullets).to(have_len(3))
+         AssertionError: expected: [] to have len 3
+          but: was 0
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 94, in 00000005__it should list every Scenario as an indented bullet under its Story
+         expect(ac_bullets).to(have_len(3))
+     
+     
+  5) a Markdown document that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic it should preserve the sequential order of every node
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py expect(names).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
+         AssertionError: expected: [] to equal ['Epic 1', 'Epic 2', 'Epic 3', 'Epic 4']
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 100, in 00000006__it should preserve the sequential order of every node
+         expect(names).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
+     
+     
+  6) a Markdown document that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic with a fifth Epic appended in the source Story Map and re-rendered it should contain 5 top-level headings
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py expect(top_headings).to(have_len(5))
+         AssertionError: expected: [] to have len 5
+          but: was 0
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 113, in 00000007__it should contain 5 top-level headings
+         expect(top_headings).to(have_len(5))
+     
+     
+  7) a Markdown document that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic with the first Epic renamed in the source Story Map and re-rendered the first heading it should carry the new name
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py first_heading = next(
+         StopIteration: 
+             
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 152, in 00000015__it should carry the new name
+         first_heading = next(
+                         ^^^^^
+     
+     
+  8) a Markdown document that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic with the first Epic renamed in the source Story Map and re-rendered the headings under it it should be unchanged
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py expect("## Epic 1.1" in self.new_text).to(be_true)
+         AssertionError: expected: False to be true
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 159, in 00000017__it should be unchanged
+         expect("## Epic 1.1" in self.new_text).to(be_true)
+     
+     
+  9) a Markdown document that is being read back into a MarkdownStoryModel the reconstructed Story Map it should hold every Epic, Epic, Story, and Scenario in sequential order
+     Failure/Error: practices\stories\model\markdown\markdown_story_model_spec.py expect(first_epic.epics[0].stories[0].scenarios).to(
+         AssertionError: expected: [] to have len 1
+          but: was 0
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "practices\stories\model\markdown\markdown_story_model_spec.py", line 177, in 00000021__it should hold every Epic, Epic, Story, and Scenario in sequential order
+         expect(first_epic.epics[0].stories[0].scenarios).to(
+     
+     

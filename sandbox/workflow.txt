@@ -1,0 +1,18 @@
+﻿......F.....................................
+
+1 examples failed of 44 ran in 0.5977 seconds
+
+Failures:
+
+  1) Workflow manifest it should expose backlog and finish as tools and start as a sub_agent
+     Failure/Error: tools\workflow\workflow_spec.py expect(sig["start"]["kind"]).to(equal("sub_agent"))
+         AssertionError: expected: 'tool' to equal 'sub_agent'
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workflow\workflow_spec.py", line 93, in 00000008__it should expose backlog and finish as tools and start as a sub_agent
+         expect(sig["start"]["kind"]).to(equal("sub_agent"))
+     
+     

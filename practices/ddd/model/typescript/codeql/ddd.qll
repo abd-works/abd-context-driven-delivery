@@ -14,7 +14,7 @@ string dddPracticeId() { result = "ddd:Practice:.:ddd" }
 string classFile(ClassDefinition cls) { result = slash(cls.getFile().getRelativePath()) }
 
 string moduleName(ClassDefinition cls) {
-  result = classFile(cls).regexpCapture("src/([^/]+)/.*", 1)
+  result = classFile(cls).regexpCapture("(?:src|domain)/([^/]+)/.*", 1)
 }
 
 bindingset[name]
@@ -223,7 +223,11 @@ predicate dddClass(
 predicate contextPath(string dir, string name) {
   exists(File marker, string path |
     path = slash(marker.getRelativePath()) and
-    dir = path.regexpCapture("(.*)/\\.context/bounded-context\\.md", 1) and
+    (
+      dir = path.regexpCapture("(.*)/\\.context/bounded-context\\.md", 1)
+      or
+      dir = path.regexpCapture("(.*)/bounded-context\\.md", 1)
+    ) and
     (
       name = dir.regexpCapture(".*/([^/]+)$", 1)
       or
@@ -247,7 +251,19 @@ predicate aggregateFolder(string mod) {
 }
 
 bindingset[mod]
-string aggregateId(string mod) { result = "ddd:Aggregate:src/" + mod }
+string aggregateRoot(string mod) {
+  exists(ClassDefinition cls |
+    kindOf(cls, "EntityRoot") and moduleName(cls) = mod and
+    (
+      classFile(cls).matches("domain/" + mod + "/%") and result = "domain/" + mod
+      or
+      classFile(cls).matches("src/" + mod + "/%") and result = "src/" + mod
+    )
+  )
+}
+
+bindingset[mod]
+string aggregateId(string mod) { result = "ddd:Aggregate:" + aggregateRoot(mod) }
 
 bindingset[name]
 predicate typeNames(FieldDefinition field, string name) {

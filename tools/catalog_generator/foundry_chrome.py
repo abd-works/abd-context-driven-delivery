@@ -14,6 +14,7 @@ import shutil
 import urllib.parse
 import xml.etree.ElementTree as ET
 import zlib
+from dataclasses import dataclass
 from pathlib import Path
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
@@ -57,6 +58,57 @@ _STORY_EXAMPLES = (
 )
 
 
+@dataclass(frozen=True)
+class ProjectExampleSources:
+    """Example files staged under a generated catalog ``examples/`` tree."""
+
+    staged: dict[tuple[str, str], Path]
+
+    def file_for(self, practice: str, stage_id: str) -> Path | None:
+        return self.staged.get((practice, stage_id))
+
+    def stories_stage_file(self, stage_id: str) -> Path | None:
+        return self.file_for("stories", stage_id)
+
+
+def stage_project_examples(
+    project_root: Path,
+    slots: dict[tuple[str, str], Path],
+    out_root: Path,
+) -> ProjectExampleSources:
+    """Copy project artifacts into ``out_root/examples`` with stable names."""
+    staged: dict[tuple[str, str], Path] = {}
+    examples_root = Path(out_root) / "examples"
+    for (practice, stage_id), source in sorted(slots.items()):
+        source_path = Path(source)
+        if not source_path.is_file():
+            continue
+        dest_dir = examples_root / practice
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_name = _project_example_dest_name(practice, stage_id, source_path)
+        dest = dest_dir / dest_name
+        shutil.copy2(source_path, dest)
+        staged[(practice, stage_id)] = Path("examples") / practice / dest_name
+    return ProjectExampleSources(staged=staged)
+
+
+def _project_example_dest_name(practice: str, stage_id: str, source: Path) -> str:
+    stem = source.stem.lower().replace(" ", "-")
+    suffix = source.suffix.lower()
+    canonical = {
+        ("stories", "discovery"): "story-map",
+        ("stories", "specification"): "scenarios",
+        ("stories", "implementation"): "acceptance-tests",
+        ("ddd", "discovery"): "bounded-context",
+        ("ddd", "specification"): "building-blocks",
+        ("ddd", "implementation"): "tactics",
+        ("ux", "discovery"): "information-architecture",
+        ("ux", "specification"): "mockup",
+        ("ux", "implementation"): "front-end-code",
+    }.get((practice, stage_id), stem)
+    return f"{canonical}{suffix}"
+
+
 def approach_board_stages(path: str | Path | None = None) -> dict[str, dict]:
     """Stage chips and paragraphs keyed by board column, from approach markdown."""
     from catalog_generator.approach_copy import APPROACH_MARKDOWN, load_approach_copy
@@ -70,9 +122,18 @@ def approach_board_stages(path: str | Path | None = None) -> dict[str, dict]:
     }
 
 
-def stage_example_href(stage: dict, *, path_prefix: str = "") -> str:
+def stage_example_href(
+    stage: dict,
+    *,
+    path_prefix: str = "",
+    example_sources: ProjectExampleSources | None = None,
+) -> str:
     """Catalog page for a stage ``example:`` file under stories catalog-examples."""
     filename = (stage.get("example") or "").strip()
+    if example_sources:
+        if not example_sources.stories_stage_file(stage["id"]):
+            return ""
+        return f"{path_prefix}examples/{stage['id']}.html"
     if not filename or not (_STORY_EXAMPLES / filename).is_file():
         return ""
     return f"{path_prefix}examples/{stage['id']}.html"
@@ -173,6 +234,8 @@ def approach_principle_grid(
     *,
     approach_md_path: str | Path | None = None,
     stages: tuple[dict, ...] | list[dict] | None = None,
+    example_sources: ProjectExampleSources | None = None,
+    catalog_root: Path | None = None,
 ) -> str:
     """Static board under one approach principle. ``kind`` is descriptions, windows, spec, or tickets."""
     by_name = {t["toolset_name"]: t for t in practices}
@@ -198,7 +261,11 @@ def approach_principle_grid(
     )
 
     if kind == "descriptions":
-        return _product_engineering_grid(rows)
+        return _product_engineering_grid(
+            rows,
+            example_sources=example_sources,
+            catalog_root=catalog_root,
+        )
 
     if kind == "spec":
         body = []
@@ -210,7 +277,11 @@ def approach_principle_grid(
         return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
 
     if kind == "windows":
-        return _approach_windows_html(stages)
+        return _approach_windows_html(
+            stages,
+            example_sources=example_sources,
+            catalog_root=catalog_root,
+        )
 
     if kind == "stages":
         board_stages = approach_board_stages(approach_md_path)
@@ -863,7 +934,7 @@ def _render_catalog_example(path: Path) -> str:
 
 
 def _render_example_markdown(text: str) -> str:
-    body = _strip_markdown_frontmatter(text).strip()
+    body = _normalize_story_scenario_markdown(_strip_markdown_frontmatter(text)).strip()
     while body.startswith("---") and not body.startswith("----"):
         body = body[3:].lstrip("\n")
     lines = [line for line in body.splitlines() if line.strip()]
@@ -874,13 +945,44 @@ def _render_example_markdown(text: str) -> str:
     return markdown_to_html(body, include_tables=True)
 
 
+_DOMAIN_TERM_PLUS = re.compile(
+    r"\+\+`([^`]+)`\+\+(\.[A-Za-z][\w]*)?",
+)
+_DOMAIN_TERM_PLAIN = re.compile(r"\+\+([^+`][^+]*?)\+\+")
+_OPERATION_PARENS = re.compile(
+    r"\*\(\*`([^`]+)`\*(\.[A-Za-z][\w]*)\)\*",
+)
+
+
+def _normalize_story_scenario_markdown(text: str) -> str:
+    """Unwrap ++domain-term++ markers and story operation parentheticals for catalog HTML."""
+
+    def _plus_backtick(match: re.Match[str]) -> str:
+        term = match.group(1)
+        suffix = match.group(2) or ""
+        return f"`{term}`{suffix}"
+
+    text = _DOMAIN_TERM_PLUS.sub(_plus_backtick, text)
+    text = _DOMAIN_TERM_PLAIN.sub(r"**\1**", text)
+    text = _OPERATION_PARENS.sub(r"(`\1`\2)", text)
+    return text
+
+
 def _strip_markdown_frontmatter(text: str) -> str:
+    """Strip only a YAML fence at the top — not mid-document ``---`` horizontal rules."""
     if not text.startswith("---"):
         return text
-    end = text.find("\n---", 3)
-    if end == -1:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
         return text
-    return text[end + 4 :].lstrip("\n")
+    for index in range(1, len(lines)):
+        if lines[index].strip() != "---":
+            continue
+        inner = "\n".join(lines[1:index])
+        if re.search(r"^#{1,6}\s", inner, re.MULTILINE):
+            return text
+        return "\n".join(lines[index + 1 :]).lstrip("\n")
+    return text
 
 
 _DRAWIO_FRAME_MARGIN = 20
@@ -987,21 +1089,22 @@ def _drawio_story_map_viewer_url(xml: str) -> str:
 def _drawio_iframe(path: Path, *, zoom_left: bool = False) -> str:
     xml = path.read_text(encoding="utf-8")
     name = html.escape(path.name)
-    display_xml = _drawio_frame_viewport(xml) if path.stem == "story_map" else xml
+    story_map = path.stem.replace("-", "_") == "story_map"
+    display_xml = _drawio_frame_viewport(xml) if story_map else xml
     viewer_url = (
         _drawio_story_map_viewer_url(display_xml)
-        if path.stem == "story_map"
+        if story_map
         else _drawio_framed_viewer_url(display_xml)
     )
     src = html.escape(viewer_url, quote=True)
     kind = (
         " approach-stage-drawio--story-map"
-        if path.stem == "story_map"
+        if story_map
         else " approach-stage-drawio--framed"
     )
     page_w, page_h = (
         _drawio_page_size(display_xml)
-        if path.stem == "story_map"
+        if story_map
         else _drawio_content_size(display_xml)
     )
     return (
@@ -1270,17 +1373,28 @@ def _skip_string(text: str, start: int) -> int:
     return length
 
 
-def write_stage_example_pages(out_root: Path, stages) -> dict[str, str]:
+def write_stage_example_pages(
+    out_root: Path,
+    stages,
+    *,
+    example_sources: ProjectExampleSources | None = None,
+) -> dict[str, str]:
     """Copy each stage example into ``out_root/examples`` and write its catalog page."""
     hrefs: dict[str, str] = {}
     dest_dir = Path(out_root) / "examples"
     for stage in stages:
-        href = stage_example_href(stage)
+        href = stage_example_href(stage, example_sources=example_sources)
         if not href:
             continue
-        source = _STORY_EXAMPLES / stage["example"].strip()
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, dest_dir / source.name)
+        if example_sources:
+            relative = example_sources.stories_stage_file(stage["id"])
+            if not relative:
+                continue
+            source = Path(out_root) / relative
+        else:
+            source = _STORY_EXAMPLES / stage["example"].strip()
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, dest_dir / source.name)
         page = page_shell(
             title=f"{stage['label']} — ABD Context Driven Delivery",
             h1=html.escape(stage["label"]),
@@ -1387,15 +1501,32 @@ def _refine_opening(stage_id: str, opening: str) -> str:
     )
 
 
-def _stage_example_panel_html(stage: dict) -> tuple[str, bool]:
+def _stage_example_panel_html(
+    stage: dict,
+    *,
+    example_sources: ProjectExampleSources | None = None,
+    catalog_root: Path | None = None,
+) -> tuple[str, bool]:
     """Example body for one refine stage, or empty when no catalog example exists."""
     filename = (stage.get("example") or "").strip()
-    if not filename:
-        return "", False
-    source = _STORY_EXAMPLES / filename
+    relative = None
+    if example_sources:
+        relative = example_sources.stories_stage_file(stage["id"])
+        if not relative or catalog_root is None:
+            return "", False
+        source = Path(catalog_root) / relative
+    else:
+        if not filename:
+            return "", False
+        source = _STORY_EXAMPLES / filename
     if not source.is_file():
         return "", False
-    inline = _stage_example_inline(source, include_monaco_script=False)
+    catalog_href = relative if example_sources else None
+    inline = _stage_example_inline(
+        source,
+        include_monaco_script=False,
+        catalog_href=catalog_href,
+    )
     return (
         _refine_example_panel(stage["id"], _stories_stage_overview(stage["id"]), inline),
         "catalog-monaco" in inline,
@@ -1488,7 +1619,12 @@ def _monaco_loader_scripts() -> str:
     )
 
 
-def _approach_windows_html(stages: tuple[dict, ...] | list[dict] | None) -> str:
+def _approach_windows_html(
+    stages: tuple[dict, ...] | list[dict] | None,
+    *,
+    example_sources: ProjectExampleSources | None = None,
+    catalog_root: Path | None = None,
+) -> str:
     """Narrowing-window diagram with context left and stacked stage columns."""
     stage_by_id = {stage["id"]: stage for stage in (stages or ())}
     panels: dict[str, str] = {}
@@ -1496,7 +1632,15 @@ def _approach_windows_html(stages: tuple[dict, ...] | list[dict] | None) -> str:
     needs_monaco = False
     for stage_id, _label in _REFINE_STAGES:
         stage = stage_by_id.get(stage_id, {})
-        panel, panel_monaco = _stage_example_panel_html(stage) if stage else ("", False)
+        panel, panel_monaco = (
+            _stage_example_panel_html(
+                stage,
+                example_sources=example_sources,
+                catalog_root=catalog_root,
+            )
+            if stage
+            else ("", False)
+        )
         needs_monaco = needs_monaco or panel_monaco
         if panel:
             panels[stage_id] = panel
@@ -1543,6 +1687,7 @@ def _stage_example_inline(
     *,
     include_monaco_script: bool = True,
     editor_id: str | None = None,
+    catalog_href: Path | str | None = None,
 ) -> str:
     suffix = source.suffix.lower()
     name = html.escape(source.name)
@@ -1557,7 +1702,9 @@ def _stage_example_inline(
             "</figure>"
         )
     if suffix in _IMAGE_SUFFIXES:
-        if source.parent.name == "catalog-examples":
+        if catalog_href is not None:
+            href = html.escape(str(catalog_href).replace("\\", "/"))
+        elif source.parent.name == "catalog-examples":
             href = f"examples/{html.escape(source.parent.parent.name)}/{name}"
         else:
             href = f"examples/{name}"
@@ -1566,7 +1713,7 @@ def _stage_example_inline(
             classes.append("catalog-example--fit")
         if source.stem in {"building-blocks", "front-end-code"}:
             classes.append("catalog-example--zoom-2")
-        if source.stem == "story_map":
+        if source.stem.replace("-", "_") == "story_map":
             classes.append("catalog-example--story-map")
         return (
             f'<figure class="{" ".join(classes)}">'
@@ -1648,14 +1795,23 @@ _FIDELITY_STEM_ALIASES = {
 }
 
 
-def _product_engineering_grid(practices: list[dict]) -> str:
+def _product_engineering_grid(
+    practices: list[dict],
+    *,
+    example_sources: ProjectExampleSources | None = None,
+    catalog_root: Path | None = None,
+) -> str:
     """One refine row per practice, reusing the Iterate and Learn stage architecture."""
     rows: list[str] = []
     needs_monaco = False
     for tool in practices:
         name = tool["toolset_name"]
         label = _PE_TAB_LABELS.get(name, name.replace("_", "-"))
-        panels, openings, panel_monaco = _practice_refine_panels(name)
+        panels, openings, panel_monaco = _practice_refine_panels(
+            name,
+            example_sources=example_sources,
+            catalog_root=catalog_root,
+        )
         needs_monaco = needs_monaco or panel_monaco
         rows.append(
             refine_stage_row(
@@ -1675,7 +1831,12 @@ def _product_engineering_grid(practices: list[dict]) -> str:
     )
 
 
-def _practice_refine_panels(practice: str) -> tuple[dict[str, str], dict[str, str], bool]:
+def _practice_refine_panels(
+    practice: str,
+    *,
+    example_sources: ProjectExampleSources | None = None,
+    catalog_root: Path | None = None,
+) -> tuple[dict[str, str], dict[str, str], bool]:
     panels: dict[str, str] = {}
     openings: dict[str, str] = {}
     needs_monaco = False
@@ -1689,7 +1850,11 @@ def _practice_refine_panels(practice: str) -> tuple[dict[str, str], dict[str, st
         stage_id = _STAGE_ID_FROM_KEY.get(item["stage"])
         if not stage_id:
             continue
-        files = _fidelity_example_files(practice, item["key"])
+        if example_sources and catalog_root is not None:
+            relative = example_sources.file_for(practice, stage_id)
+            files = [Path(catalog_root) / relative] if relative else []
+        else:
+            files = _fidelity_example_files(practice, item["key"])
         if not files:
             continue
         parts: list[str] = []
@@ -1699,10 +1864,14 @@ def _practice_refine_panels(practice: str) -> tuple[dict[str, str], dict[str, st
                 "-",
                 f"{practice}-{path.stem}-{path.suffix.lstrip('.')}".lower(),
             ).strip("-")
+            relative = None
+            if example_sources:
+                relative = example_sources.file_for(practice, stage_id)
             inline = _stage_example_inline(
                 path,
                 include_monaco_script=False,
                 editor_id=f"monaco-{slug}",
+                catalog_href=relative,
             )
             needs_monaco = needs_monaco or "catalog-monaco" in inline
             parts.append(inline)

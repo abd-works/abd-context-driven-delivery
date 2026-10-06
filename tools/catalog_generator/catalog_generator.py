@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from harness.guidance.guidance import FidelityGuidance
-from harness.agent_tools import agent_tool, agent_toolset
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from installation.destination import noCatalog, omitted_from_catalog
 from installation.files import skill
 from harness.mcp.mcp_server import mcp
@@ -1874,6 +1874,123 @@ class Catalog:
         self.brand = dest
         return f"Applied brand {name} under {dest}"
 
+    @mcp
+    @skill
+    @agent_tool
+    def generate_project_approach(
+        self,
+        project_root: str,
+        out_root: str = "",
+        project_title: str = "",
+        repo_url: str = "",
+        examples_json: str = "",
+    ) -> str:
+        """Render ``cdd-approach.html`` for a project using mapped example artifacts.
+
+        ``project_root`` is the project checkout. ``out_root`` defaults to
+        ``{project_root}/catalog``. ``examples_json`` is optional JSON mapping
+        practice → stage → relative path; when blank, use
+        ``.context/project-approach-examples.json`` and auto-discovery."""
+        from catalog_generator.project_approach import (
+            ProjectApproach,
+            merge_example_sources,
+            save_examples_manifest,
+        )
+
+        root = Path(project_root).resolve()
+        destination = Path(out_root).resolve() if out_root else root / "catalog"
+        merged = merge_example_sources(root)
+        if examples_json.strip():
+            payload = __import__("json").loads(examples_json)
+            for practice, stages in (payload.get("examples") or payload).items():
+                if not isinstance(stages, dict):
+                    continue
+                for stage, relative in stages.items():
+                    merged[(practice, stage)] = (root / str(relative)).resolve()
+        save_examples_manifest(
+            root,
+            merged,
+            project_title=project_title,
+            repo_url=repo_url,
+        )
+        approach = ProjectApproach(
+            project_root=root,
+            project_title=project_title or root.name.replace("-", " ").title(),
+            repo_url=repo_url or self.repo_url,
+            examples=merged,
+        )
+        return approach.generate(destination, brands_root=self.brands_root)
+
+    @mcp
+    @skill
+    @agent_instructions
+    def configure_project_approach(
+        self,
+        project_root: str,
+        example_paths: list[str] | None = None,
+        out_root: str = "",
+    ) -> str:
+        """Build a project-specific ``cdd-approach.html`` slide from example artifacts.
+
+        project_root={project_root}
+        out_root={out_root or '{project_root}/catalog'}
+        example_paths={example_paths or 'discover from project tree'}
+
+        Each example lands in one practice × stage slot on the approach page.
+        Use the same layout as ``catalog/cdd-approach.html``.
+
+        **Slots**
+
+        | Practice | Discovery | Specification | Implementation |
+        | --- | --- | --- | --- |
+        | stories | story map (``.drawio`` / image) | scenarios (``.md``) | acceptance / story tests (``.test.ts``) |
+        | ddd | bounded-context diagram | building-blocks model | domain model / tactics code |
+        | ux | information architecture | mockup (``.html`` / image) | front-end code |
+        | clean_engineering | module map / module-context | model diagram / doc | code sample |
+        | bdd | — | behavior spec | development tests |
+
+        **Step 1 — Collect examples**
+
+        Read every path in ``example_paths``. When the list is empty, walk
+        ``stories/``, ``domain/``, and ``ux/`` for drawio, markdown, html, and
+        test files. Prefer the highest-fidelity artifact that matches the slot.
+
+        **Step 2 — Classify each file**
+
+        Use file names and folder context:
+
+        - ``story-map``, ``story_map`` → stories · discovery
+        - ``scenarios``, ``story-scenarios`` → stories · specification
+        - ``*_story.test.ts``, ``acceptance`` → stories · implementation
+        - ``bounded-context`` → ddd · discovery
+        - ``building-blocks``, ``ce-domain-model`` → ddd · specification
+        - ``*-model.ts`` under ``domain/`` → ddd · implementation
+        - ``information-architecture`` → ux · discovery
+        - ``mockup/`` html → ux · specification
+        - ``front-end``, ``components/`` → ux · implementation
+
+        When two files compete for one slot, keep the one whose path and
+        content best match the row above. Ask only when classification is
+        genuinely ambiguous.
+
+        **Step 3 — Confirm the mapping**
+
+        Show a short table: practice, stage, relative path. Edit until every
+        row the user cares about is filled.
+
+        **Step 4 — Generate**
+
+        Build ``examples_json`` from the confirmed mapping:
+
+        ```json
+        {{"examples": {{"stories": {{"discovery": "stories/story-map.drawio", ...}}}}}}
+        ```
+
+        Call ``generate_project_approach`` with ``project_root``, ``out_root``,
+        ``project_title``, ``repo_url``, and ``examples_json``."""
+        self.generate_project_approach()
+        return "Project approach slide generated."
+
     def write_page(self, relative_path: str, html: str) -> Path:
         return CatalogPage(self.out_root).write(relative_path, html)
 
@@ -2095,7 +2212,13 @@ class Catalog:
             )
             self.write_page(f'cdd-{practice["slug"]}.html', page)
 
-    def _approach_page_body(self, example_hrefs: dict[str, str] | None = None) -> str:
+    def _approach_page_body(
+        self,
+        example_hrefs: dict[str, str] | None = None,
+        *,
+        example_sources=None,
+        catalog_root: str | Path | None = None,
+    ) -> str:
         import html as html_mod
 
         from catalog_generator.approach_copy import (
@@ -2105,6 +2228,7 @@ class Catalog:
         )
 
         copy = self._approach_copy()
+        resolved_catalog_root = Path(catalog_root) if catalog_root is not None else self.out_root
         stages = copy.stages
         principles = copy.practices
         example_hrefs = example_hrefs or {}
@@ -2176,6 +2300,8 @@ class Catalog:
                 self._board_tools,
                 kind,
                 stages=stages if practice["slug"] == "iterate-and-learn" else None,
+                example_sources=example_sources,
+                catalog_root=resolved_catalog_root,
             )
             caption = practice.get("caption", "")
             caption_html = (
@@ -2232,7 +2358,7 @@ class Catalog:
             '<h2 class="approach-library__title" id="approach-library-heading">'
             f"{html_mod.escape(copy.library_heading)}"
             "</h2>"
-            f"{approach_principle_grid(self._board_tools, 'tickets')}"
+            f"{approach_principle_grid(self._board_tools, 'tickets', example_sources=example_sources, catalog_root=resolved_catalog_root)}"
             "</section>"
             "</div>"
             "<script>(function(){"

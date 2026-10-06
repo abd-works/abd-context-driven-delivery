@@ -126,6 +126,51 @@ with description("catalog examples"):
         expect("<pre>" in html).to(equal(False))
 
 
+with description("story scenario markdown normalization"):
+    with it("keeps content before a mid-document horizontal rule"):
+        from catalog_generator.foundry_chrome import _render_example_markdown
+
+        source = (
+            "---\n"
+            "## fidelity: [specification]\n"
+            "format: md\n"
+            "\n"
+            "# Story Scenarios\n"
+            "\n"
+            "### Domain terms\n"
+            "\n"
+            "- `Offer` — qualifies products\n"
+            "\n"
+            "---\n"
+            "\n"
+            "## Behaviors\n"
+            "\n"
+            "#### Scenario: User sees an offer\n"
+            "\n"
+            "*Given* a `Client`\n"
+            "  *When* the rep opens **offers available** on `[ client dashboard ]` *(*`Offer`*.scan)*\n"
+            "  *Then* the rep sees `[ offer panel ]`\n"
+        )
+        html = _render_example_markdown(source)
+        expect("Domain terms" in html).to(equal(True))
+        expect("Scenario: User sees an offer" in html).to(equal(True))
+        expect("++" in html).to(equal(False))
+        expect("<em>(</em><code>Offer</code><em>.scan)</em>" in html).to(equal(False))
+        expect("(`Offer`.scan)" in html or "<code>Offer</code>.scan" in html).to(equal(True))
+
+    with it("unwraps ++domain-term++ markers around backticked names"):
+        from catalog_generator.foundry_chrome import _render_example_markdown
+
+        html = _render_example_markdown(
+            "#### Scenario: Example\n\n"
+            "*Given* ++`Client`++ holds ++Already held++\n"
+            "  *When* ++`Offer`++.scan runs\n"
+        )
+        expect("++" in html).to(equal(False))
+        expect("<code>Client</code>" in html).to(equal(True))
+        expect("<strong>Already held</strong>" in html).to(equal(True))
+
+
 with description("markdown hard breaks"):
     with it("renders trailing double spaces as line breaks inside a paragraph"):
         html = markdown_to_html("*When* one step  \n*Then* another step")

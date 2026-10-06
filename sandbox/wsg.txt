@@ -1,0 +1,58 @@
+﻿..............................F..FF...F
+
+4 examples failed of 39 ran in 4.6581 seconds
+
+Failures:
+
+  1) a work session that is open that has announced a new turn that is generating with clean engineering code with context inclusion set to 3 with context injection detail set to slug with exclude set to 5 with a rule that failed previous turns inside the context window it should inject only the rule slug and its star
+     Failure/Error: tools\workspace\work_session_guidance_spec.py expect(rendered).to(contain(f"├ó╦£ΓÇª{rule.star}"))
+         AssertionError: expected: 'put-logic-on-the-owning-resource Γÿà2' to contain '├ó╦£ΓÇª2'
+          but: item '├ó╦£ΓÇª2' not found
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\work_session_guidance_spec.py", line 572, in 00000054__it should inject only the rule slug and its star
+         expect(rendered).to(contain(f"Γÿà{rule.star}"))
+     
+     
+  2) a work session that is open that has announced a new turn that is generating with clean engineering code that has changed relevant inclusion to 1 with a rule that failed one turn earlier it should treat that rule as context
+     Failure/Error: tools\workspace\work_session_guidance_spec.py expect(rendered).to(contain(f"├ó╦£ΓÇª{rule.star}"))
+         AssertionError: expected: 'put-logic-on-the-owning-resource Γÿà2' to contain '├ó╦£ΓÇª2'
+          but: item '├ó╦£ΓÇª2' not found
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\work_session_guidance_spec.py", line 618, in 00000062__it should treat that rule as context
+         expect(rendered).to(contain(f"Γÿà{rule.star}"))
+     
+     
+  3) a work session that is open that has announced a new turn that is generating with clean engineering code that has changed priority injection detail to slug with a rule that failed last turn it should inject only the rule slug and its star
+     Failure/Error: tools\workspace\work_session_guidance_spec.py expect(rendered).to(contain(f"├ó╦£ΓÇª{rule.star}"))
+         AssertionError: expected: 'put-logic-on-the-owning-resource Γÿà2' to contain '├ó╦£ΓÇª2'
+          but: item '├ó╦£ΓÇª2' not found
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\work_session_guidance_spec.py", line 639, in 00000065__it should inject only the rule slug and its star
+         expect(rendered).to(contain(f"Γÿà{rule.star}"))
+     
+     
+  4) a work session that is open that has announced a new turn that is generating with clean engineering code that has changed exclude to 10 with a rule that failed five turns ago it should inject only the rule slug and its star
+     Failure/Error: tools\workspace\work_session_guidance_spec.py expect(rendered).to(contain(f"├ó╦£ΓÇª{rule.star}"))
+         AssertionError: expected: 'put-logic-on-the-owning-resource Γÿà2' to contain '├ó╦£ΓÇª2'
+          but: item '├ó╦£ΓÇª2' not found
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\work_session_guidance_spec.py", line 689, in 00000073__it should inject only the rule slug and its star
+         expect(rendered).to(contain(f"Γÿà{rule.star}"))
+     
+     

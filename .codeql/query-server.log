@@ -282,3 +282,18 @@ Traceback (most recent call last):
     length = int(header.decode("ascii"))
              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ValueError: invalid literal for int() with base 10: 'GET / HTTP/1.1\r\n'
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 205, in <module>
+    return json.loads(body)
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 144, in serve
+    )
+      
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 150, in _handle
+    conn.close()
+  ^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 190, in _read_json
+    
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host

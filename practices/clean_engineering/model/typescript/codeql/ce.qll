@@ -13,7 +13,20 @@ string ruleViolation(string rule, string node, string details) {
 string practiceId() { result = "clean_engineering:Practice:.:clean_engineering" }
 
 bindingset[mod]
-string moduleId(string mod) { result = "clean_engineering:Module:src/" + mod }
+string modulePath(string mod) {
+  exists(File f |
+    inSubjectPath(slash(f.getRelativePath())) and
+    mod = slash(f.getRelativePath()).regexpCapture("(?:src|domain)/([^/]+)/.*", 1) and
+    (
+      slash(f.getRelativePath()).matches("domain/" + mod + "/%") and result = "domain/" + mod
+      or
+      slash(f.getRelativePath()).matches("src/" + mod + "/%") and result = "src/" + mod
+    )
+  )
+}
+
+bindingset[mod]
+string moduleId(string mod) { result = "clean_engineering:Module:" + modulePath(mod) }
 
 string classFile(ClassDefinition cls) { result = slash(cls.getFile().getRelativePath()) }
 
@@ -43,14 +56,16 @@ string parameterId(MethodDefinition method, Parameter param) {
 }
 
 bindingset[file]
-string moduleOfFile(string file) { result = slash(file).regexpCapture("src/([^/]+)/.*", 1) }
+string moduleOfFile(string file) { result = slash(file).regexpCapture("(?:src|domain)/([^/]+)/.*", 1) }
 
 bindingset[file]
-string packageOfFile(string file) { result = slash(file).regexpCapture("src/[^/]+/([^/]+)/.+", 1) }
+string packageOfFile(string file) {
+  result = slash(file).regexpCapture("(?:src|domain)/[^/]+/([^/]+)/.+", 1)
+}
 
 bindingset[mod, package]
 string packageId(string mod, string package) {
-  result = "clean_engineering:Package:src/" + mod + "/" + package
+  result = "clean_engineering:Package:" + modulePath(mod) + "/" + package
 }
 
 string moduleOf(ClassDefinition cls) { result = moduleOfFile(classFile(cls)) }
@@ -58,7 +73,7 @@ string moduleOf(ClassDefinition cls) { result = moduleOfFile(classFile(cls)) }
 predicate subjectModule(string mod) {
   exists(File f |
     inSubjectPath(slash(f.getRelativePath())) and
-    mod = slash(f.getRelativePath()).regexpCapture("src/([^/]+)/.*", 1)
+    mod = slash(f.getRelativePath()).regexpCapture("(?:src|domain)/([^/]+)/.*", 1)
   )
 }
 

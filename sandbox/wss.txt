@@ -1,0 +1,281 @@
+﻿FFFFFF........F........FFF.....F.F..F.F......FFF.....F.F...F.....F....F...F
+
+23 examples failed of 75 ran in 27.1628 seconds
+
+Failures:
+
+  1) WorkSession kit prose it should resolve open from workspace_session.md section
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect("single tool" in text.lower() or "ensure sprint" in text.lower()).to(be_true)
+         AssertionError: expected: False to be true
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 42, in 00000001__it should resolve open from workspace_session.md section
+         expect("single tool" in text.lower() or "ensure sprint" in text.lower()).to(be_true)
+     
+     
+  2) WorkSession kit prose it should resolve session guidance from workspace_session.md section
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect("active.path" in text or "path" in text).to(be_true)
+         AssertionError: expected: False to be true
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 46, in 00000002__it should resolve session guidance from workspace_session.md section
+         expect("active.path" in text or "path" in text).to(be_true)
+     
+     
+  3) WorkSession on a PracticeGuidance CarChronicle generate via Generate kit it should name CDR tools then finish_turn
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(self.response.tools).to(
+         AssertionError: expected: ['render'] to equal ['read_cdr_format', 'list_cdrs', 'write_cdr', 'finish_turn']
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 63, in 00000004__it should name CDR tools then finish_turn
+         expect(self.response.tools).to(
+     
+     
+  4) WorkSession on a PracticeGuidance CarChronicle generate via Generate kit it should not expand session active resource on the generate kit
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py f"Resource `active` = {self.tool.active!r}."
+         AttributeError: 'CarChronicle' object has no attribute 'active'
+             
+     File "tools\workspace\legacy\workspace_session_spec.py", line 76, in 00000005__it should not expand session active resource on the generate kit
+         f"Resource `active` = {self.tool.active!r}."
+                                ^^^^^^^^^^^^^^^^
+     
+     
+  5) WorkSession on a PracticeGuidance CarChronicle generate via Generate kit it should compose a Workspace as guidance.workspace
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(isinstance(self.tool.workspace, Workspace)).to(be_true)
+         AssertionError: expected: False to be true
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 83, in 00000006__it should compose a Workspace as guidance.workspace
+         expect(isinstance(self.tool.workspace, Workspace)).to(be_true)
+     
+     
+  6) WorkSession on a PracticeGuidance ChronicleWithOutput generate via Generate kit it should keep nested generate_output tools ahead of finish_turn
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(self.response.tools).to(
+         AssertionError: expected: ['render'] to equal ['read_cdr_format', 'list_cdrs', 'write_cdr', 'add_epic', 'finish_turn']
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 97, in 00000008__it should keep nested generate_output tools ahead of finish_turn
+         expect(self.response.tools).to(
+     
+     
+  7) a WorkSession without a name it should raise ValueError when folder is accessed
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(raised).to(be_true)
+         AssertionError: expected: False to be true
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 179, in 00000021__it should raise ValueError when folder is accessed
+         expect(raised).to(be_true)
+     
+     
+  8) a WorkSession that is started in a git working area that is an existing session whose branch we are not on it should switch to the existing session worktree from the primary clone
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py _git(session.git.root, "add", ".context")
+         GitConnectError: Cannot connect git: git add .context failed in C:\Users\jeffa\AppData\Local\Temp\session-grct-resume-clean: fatal: pathspec '.context' did not match any files.
+             
+     File "C:\dev\abd-context-driven-delivery\tools\git\git.py", line 914, in git
+         raise GitConnectError(
+     File "tools\workspace\legacy\workspace_session_spec.py", line 329, in 00000035__it should switch to the existing session worktree from the primary clone
+         _git(session.git.root, "add", ".context")
+     
+     
+  9) a WorkSession that is started in a git working area that is an existing session whose branch we are not on it should return to the first session worktree after a later session was opened
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py _git(first.git.root, "add", ".context")
+         GitConnectError: Cannot connect git: git add .context failed in C:\Users\jeffa\AppData\Local\Temp\session-gtso-first: fatal: pathspec '.context' did not match any files.
+             
+     File "C:\dev\abd-context-driven-delivery\tools\git\git.py", line 914, in git
+         raise GitConnectError(
+     File "tools\workspace\legacy\workspace_session_spec.py", line 349, in 00000036__it should return to the first session worktree after a later session was opened
+         _git(first.git.root, "add", ".context")
+     
+     
+  10) a work session checkout that needs a venv when the checkout has no setup.ps1 to build one it should open without building or reporting a venv
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(session.venv_note).to(equal(""))
+         AssertionError: expected: 'no venv at C:\\Users\\jeffa\\AppData\\Local\\Temp\\session-vs2p-venv-skip\\.venv' to equal ''
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 391, in 00000040__it should open without building or reporting a venv
+         expect(session.venv_note).to(equal(""))
+     
+     
+  11) a WorkSession that is closed it should save the running chat file on the close commit and the session tag
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py session.close(outcome="done", handoff="")
+         ModuleNotFoundError: No module named 'cli_agent'
+             
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 1109, in cli_agent
+         from cli_agent.cli_agent import CliAgent
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 1966, in close
+         agent = self.cli_agent
+                 ^^^^^^^^^^^^^^
+     File "tools\workspace\legacy\workspace_session_spec.py", line 489, in 00000052__it should save the running chat file on the close commit and the session tag
+         session.close(outcome="done", handoff="")
+     
+     
+  12) a WorkSession that is closed it should commit the complete worktree on close
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py session.close(outcome="done", handoff="")
+         TypeError: 00000058__a WorkSession that is closed.00000054__it should commit the complete worktree on close.<locals>.capture_commit() got an unexpected keyword argument 'untracked'
+             
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 597, in _commit
+         sha = git.commit(
+               ^^^^^^^^^^^
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 414, in turn
+         return self._commit()
+                ^^^^^^^^^^^^^^
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 1960, in close
+         turn.turn(
+     File "tools\workspace\legacy\workspace_session_spec.py", line 537, in 00000054__it should commit the complete worktree on close
+         session.close(outcome="done", handoff="")
+     
+     
+  13) a WorkSession that is closed it should switch to main via the git utility
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(GitRepo(tmp).current_branch).to(equal("session/sprint"))
+         AssertionError: expected: 'master' to equal 'session/sprint'
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 597, in 00000057__it should switch to main via the git utility
+         expect(GitRepo(tmp).current_branch).to(equal("session/sprint"))
+     
+     
+  14) a WorkSession that is closed in a git worktree it should archive the session folder under .sessions/closed at the repo root
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py durable.write_text("# keep me\n", encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\session_archive_close_n0_rfmis\\.context\\story-map.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1047, in write_text
+         with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "tools\workspace\legacy\workspace_session_spec.py", line 630, in 00000060__it should archive the session folder under .sessions/closed at the repo root
+         durable.write_text("# keep me\n", encoding="utf-8")
+     
+     
+  15) a WorkSession that is closed in a git worktree it should close a forgotten turn before session close
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(git.commits[0][1]).to(contain("forgotten-turn"))
+         AssertionError: expected: 'close' to contain 'forgotten-turn'
+          but: item 'forgotten-turn' not found
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 781, in 00000067__it should close a forgotten turn before session close
+         expect(git.commits[0][1]).to(contain("forgotten-turn"))
+     
+     
+  16) a WorkSession that is closed in a git worktree it should not remove a dirty worktree
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(tree.exists()).to(be_true)
+         AssertionError: expected: False to be true
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 798, in 00000068__it should not remove a dirty worktree
+         expect(tree.exists()).to(be_true)
+     
+     
+  17) a WorkSession that is closed in a git worktree it should remove an empty orphan checkout folder after close
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py orphan.mkdir()
+         FileExistsError: [WinError 183] Cannot create a file when that file already exists: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\abd-cdd-orphan-empty'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1311, in mkdir
+         os.mkdir(self, mode)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 807, in 00000069__it should remove an empty orphan checkout folder after close
+         orphan.mkdir()
+     
+     
+  18) a WorkSession tool close_session it should expose cli_agent only after a CLI agent ran
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(session.cli_agent).not_to(be_none)
+         ModuleNotFoundError: No module named 'cli_agent'
+             
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 1109, in cli_agent
+         from cli_agent.cli_agent import CliAgent
+     File "tools\workspace\legacy\workspace_session_spec.py", line 897, in 00000078__it should expose cli_agent only after a CLI agent ran
+         expect(session.cli_agent).not_to(be_none)
+                ^^^^^^^^^^^^^^^^^
+     
+     
+  19) a WorkSession tool close_session it should call cleanup on cli_agent when that property is set
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py session.close_session(outcome="done")
+         ModuleNotFoundError: No module named 'cli_agent'
+             
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 1109, in cli_agent
+         from cli_agent.cli_agent import CliAgent
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 1966, in close
+         agent = self.cli_agent
+                 ^^^^^^^^^^^^^^
+     File "C:\dev\abd-context-driven-delivery\tools\workspace\legacy\workspace.py", line 2000, in close_session
+         md = self.close(outcome=outcome, handoff=handoff)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "tools\workspace\legacy\workspace_session_spec.py", line 933, in 00000080__it should call cleanup on cli_agent when that property is set
+         session.close_session(outcome="done")
+     
+     
+  20) docs_dir it should resolve a sprint folder up to path/.context
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(SessionPaths().docs_dir(sprint)).to(equal(Path("/work/.context")))
+         AssertionError: expected: WindowsPath('/work/.sessions/my-sprint/.context') to equal WindowsPath('/work/.context')
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 979, in 00000089__it should resolve a sprint folder up to path/.context
+         expect(SessionPaths().docs_dir(sprint)).to(equal(Path("/work/.context")))
+     
+     
+  21) session_dir it should keep sessions in the worktree when working path is a worktree
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(session.folder).to(equal(tmp / ".sessions" / "decouple-test"))
+         AssertionError: expected: WindowsPath('C:/Users/jeffa/AppData/Local/Temp/abd-cdd-decouple/.sessions/decouple-test') to equal WindowsPath('C:/Users/jeffa/AppData/Local/Temp/session_decouple_thj26cd9/.sessions/decouple-test')
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 1027, in 00000096__it should keep sessions in the worktree when working path is a worktree
+         expect(session.folder).to(equal(tmp / ".sessions" / "decouple-test"))
+     
+     
+  22) Workspace /model it should persist via set_session_model and change instructions mention IDE model
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(SessionModel(str(tmp)).read("sprint-a")).to(equal("composer-2.5-fast"))
+         NameError: name 'SessionModel' is not defined
+             
+     File "tools\workspace\legacy\workspace_session_spec.py", line 1080, in 00000103__it should persist via set_session_model and change instructions mention IDE model
+         expect(SessionModel(str(tmp)).read("sprint-a")).to(equal("composer-2.5-fast"))
+                ^^^^^^^^^^^^
+     
+     
+  23) default work session when none is set it should close the default session on main with commit only and no push
+     Failure/Error: tools\workspace\legacy\workspace_session_spec.py expect(git.pushes).to(equal([]))
+         AssertionError: expected: ['main'] to equal []
+             
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-context-driven-delivery\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "tools\workspace\legacy\workspace_session_spec.py", line 1161, in 00000109__it should close the default session on main with commit only and no push
+         expect(git.pushes).to(equal([]))
+     
+     
