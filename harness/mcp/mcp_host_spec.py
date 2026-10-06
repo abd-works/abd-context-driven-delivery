@@ -417,6 +417,18 @@ with description("the MCP host pid file") as self:
         with it("should report the reader as a process other than the host"):
             expect(HostPid.from_ide(self.tree).is_this_process).to(equal(False))
 
+    with context("that already names a live host when another host claims it"):
+        with before.each:
+            (self.tree / "mcp-host.pid").write_text(str(os.getppid()), encoding="utf-8")
+            HostPid.from_ide(self.tree).claim()
+
+        with after.each:
+            os.environ.pop("CDD_MCP_HOST_PID", None)
+
+        with it("should keep naming the host that was already serving"):
+            recorded = (self.tree / "mcp-host.pid").read_text(encoding="utf-8").strip()
+            expect(recorded).to(equal(str(os.getppid())))
+
     with context("that a sibling host has deleted after this process claimed it"):
         with before.each:
             self.host_pid = HostPid.from_ide(self.tree)

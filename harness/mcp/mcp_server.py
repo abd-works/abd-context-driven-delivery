@@ -76,9 +76,13 @@ class HostPid:
         return self._read_pid() == os.getpid()
 
     def claim(self) -> None:
+        """Leave a live host's claim alone — taking it over means this process's exit
+        erases the record of a host that is still serving."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(str(os.getpid()), encoding="utf-8")
         os.environ[HOST_PROCESS_ENV] = str(os.getpid())
+        if self.is_running():
+            return
+        self._path.write_text(str(os.getpid()), encoding="utf-8")
         atexit.register(self._release_this_pid)
 
     def release(self, pid: int | None = None) -> None:

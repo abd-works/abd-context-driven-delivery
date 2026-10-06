@@ -9,7 +9,7 @@ import sys
 import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Mapping, cast, get_args, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
@@ -307,6 +307,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
     _mode: str = "instructions"
     _MEMBER_MARKS = ("_is_agent_tool", "_is_agent_instructions", "_hook")
+    _member_walk: ClassVar[dict[type, list[tuple[str, Any]]]] = {}
 
     @property
     def mode(self) -> ExpansionMode:
@@ -437,6 +438,11 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         )
 
     def _annotated_members(self, owner: type) -> list[tuple[str, Any]]:
+        """Walk each class once — every hook dispatch asks this of every toolset, and
+        a class's functions and properties are fixed once it is imported."""
+        cached = AgentToolSet._member_walk.get(owner)
+        if cached is not None:
+            return cached
         seen: set[str] = set()
         members: list[tuple[str, Any]] = []
         for name, member in inspect.getmembers(owner, predicate=inspect.isfunction):
@@ -446,6 +452,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             getter = getattr(member, "fget", None)
             if getter is not None and name not in seen:
                 members.append((name, getter))
+        AgentToolSet._member_walk[owner] = members
         return members
 
     def _marked_members(self, owner: type) -> list[tuple[str, Any]]:
