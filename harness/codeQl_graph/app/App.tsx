@@ -37,6 +37,7 @@ export function App() {
   const [relationships, setRelationships] = useState<string[]>([]);
   const [rules, setRules] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState('Loading the graph…');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [selectedId, setSelectedId] = useState('');
@@ -79,6 +80,7 @@ export function App() {
       return;
     }
     setLoading(true);
+    setLoadingLabel('Loading the graph…');
     setError('');
     try {
       await graphs.load(trimmed, practiceRoots(trimmed));
@@ -160,9 +162,24 @@ export function App() {
               loading={loading}
               folder={folder}
               status={status}
-              onCreate={() => runStatus(data.createDatabase(folder, practiceRoots(folder)).then((message) => load(folder).then(() => message)))}
-              onMerge={() => runStatus(data.mergeWorkingToMaster().then((message) => load(folder).then(() => message)))}
-              onReload={() => runStatus(data.reloadWorkingCopy(folder, practiceRoots(folder)).then((message) => load(folder).then(() => message)))}
+              onCreate={() =>
+                runStatus(
+                  data.createDatabase(folder, practiceRoots(folder)).then((message) => load(folder).then(() => message)),
+                  'Creating the CodeQL database…',
+                )
+              }
+              onMerge={() =>
+                runStatus(
+                  data.mergeWorkingToMaster().then((message) => load(folder).then(() => message)),
+                  'Merging the working copy onto master…',
+                )
+              }
+              onReload={() =>
+                runStatus(
+                  data.reloadWorkingCopy(folder, practiceRoots(folder)).then((message) => load(folder).then(() => message)),
+                  'Reloading the working copy…',
+                )
+              }
             />
           </div>
         </header>
@@ -220,15 +237,23 @@ export function App() {
           />
         </div>
         <div className="split">
-          <GraphView trees={trees} loading={loading} error={error} selectedId={selectedId} onSelect={(nodeId) => void choose(nodeId)} />
+          <GraphView
+            trees={trees}
+            loading={loading}
+            loadingLabel={loadingLabel}
+            error={error}
+            selectedId={selectedId}
+            onSelect={(nodeId) => void choose(nodeId)}
+          />
           <SourceView source={source} />
         </div>
       </div>
     </main>
   );
 
-  function runStatus(work: Promise<string>) {
+  function runStatus(work: Promise<string>, label: string) {
     setLoading(true);
+    setLoadingLabel(label);
     setError('');
     work
       .then((message) => setStatus(message))

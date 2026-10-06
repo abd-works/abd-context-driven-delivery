@@ -456,6 +456,34 @@ it('should put the chosen folder on the page and show its classes', async () => 
   expect(calls.map((call) => call.operation)).toEqual(['choose_folder', 'load_working_copy', 'inventory']);
 });
 
+it('should show the backend traceback instead of loading forever', async () => {
+  window.localStorage.setItem('cdd-graph-folder', folder);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const operation = String(url).replace('/api/', '');
+      const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
+      calls.push({ operation, body });
+      if (operation === 'load_working_copy') {
+        return {
+          ok: false,
+          json: async () => ({
+            ok: false,
+            error: 'No working copy for stories.',
+            error_type: 'QueryFailure',
+            traceback: 'Traceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({ ok: true, result: answer(operation, body) }) };
+    }),
+  );
+  render(<App />);
+  const error = await screen.findByTestId('scan-error');
+  expect(error.textContent).toContain('Traceback (most recent call last)');
+  expect(screen.queryByTestId('extraction-progress')).toBeNull();
+});
+
 it('should reload the last folder when the app opens', async () => {
   window.localStorage.setItem('cdd-graph-folder', folder);
   render(<App />);

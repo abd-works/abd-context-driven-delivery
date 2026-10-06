@@ -24,6 +24,7 @@ from harness.mcp.mcp_server import mcp
 Display = str
 Tuple = list[str]
 _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet", "--ram=8192")
+_CODEQL_SUBPROCESS_TIMEOUT_SECONDS = int(os.environ.get("CODEQL_SUBPROCESS_TIMEOUT_SECONDS", "600"))
 
 
 def query_pack(practice: str, language: str) -> Path:
@@ -998,11 +999,25 @@ class CodeQLGraph:
         located = [(query, self._bqrs_for(database, Path(query))) for query in queries]
         return self._decode_located(located)
 
+    def _run_codeql(self, args: list[str], *, label: str, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
+        limit = timeout if timeout is not None else _CODEQL_SUBPROCESS_TIMEOUT_SECONDS
+        try:
+            return subprocess.run(
+                args,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=limit,
+            )
+        except subprocess.TimeoutExpired as error:
+            detail = error.stderr or error.stdout or f"no output before timeout after {limit}s"
+            raise QueryFailure(label, f"CodeQL subprocess timed out after {limit}s\n{detail}") from error
+
     def _execute_queries(self, queries: list[str], database: Path) -> None:
         if not queries:
             return
         paths = [str(Path(query).resolve()) for query in queries]
-        run = subprocess.run(
+        run = self._run_codeql(
             [
                 self._executable,
                 "database",
@@ -1012,9 +1027,7 @@ class CodeQLGraph:
                 "--",
                 *paths,
             ],
-            check=False,
-            capture_output=True,
-            text=True,
+            label="database run-queries",
         )
         if run.returncode != 0:
             detail = run.stderr or run.stdout or "database run-queries failed"
@@ -1326,11 +1339,9 @@ class CodeQLGraph:
         return query, self._decode_bqrs(bqrs)
 
     def _decode_bqrs(self, bqrs: Path) -> list[Tuple]:
-        decode = subprocess.run(
+        decode = self._run_codeql(
             [self._executable, "bqrs", "decode", str(bqrs), "--format=json"],
-            check=False,
-            capture_output=True,
-            text=True,
+            label=f"bqrs decode {bqrs}",
         )
         if decode.returncode != 0 or not decode.stdout.strip():
             detail = decode.stderr or decode.stdout or "bqrs decode failed"
@@ -1395,24 +1406,21 @@ class CodeQLGraph:
     def _create_database_at(self, database: Path, source: Path, language: str) -> None:
         database.parent.mkdir(parents=True, exist_ok=True)
         extractor = "python" if language == "python" else "javascript"
-        try:
-            subprocess.run(
-                [
-                    self._executable,
-                    "database",
-                    "create",
-                    str(database),
-                    f"--language={extractor}",
-                    f"--source-root={source}",
-                    "--overwrite",
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-        except subprocess.CalledProcessError as error:
-            detail = error.stderr or str(error)
-            raise QueryFailure(str(database), detail) from error
+        run = self._run_codeql(
+            [
+                self._executable,
+                "database",
+                "create",
+                str(database),
+                f"--language={extractor}",
+                f"--source-root={source}",
+                "--overwrite",
+            ],
+            label=f"database create {database}",
+        )
+        if run.returncode != 0:
+            detail = run.stderr or run.stdout or "database create failed"
+            raise QueryFailure(str(database), detail)
 
     def _copy_database(self, source: Path, destination: Path) -> None:
         copy_tree(source, destination)

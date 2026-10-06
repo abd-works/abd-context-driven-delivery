@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import traceback
 from pathlib import Path
 
 _GRAPH = Path(__file__).resolve().parents[1]
@@ -86,7 +87,7 @@ class GraphHost:
         operation = str(request.get("operation", ""))
         runner = self._operations().get(operation)
         if runner is None:
-            return {"ok": False, "error": f"Unknown operation {operation}"}
+            raise ValueError(f"Unknown operation {operation}")
         return {"ok": True, "result": runner(request)}
 
     def _operations(self) -> dict:
@@ -180,6 +181,23 @@ class GraphHost:
         return None
 
 
+def _error_response(error: BaseException) -> dict:
+    return {
+        "ok": False,
+        "error": str(error),
+        "error_type": type(error).__name__,
+        "traceback": traceback.format_exc(),
+    }
+
+
+def dispatch(request: dict, host: GraphHost | None = None) -> dict:
+    worker = host or GraphHost()
+    try:
+        return worker.handle(request)
+    except Exception as error:
+        return _error_response(error)
+
+
 def serve() -> None:
     host = GraphHost()
     for line in sys.stdin:
@@ -187,9 +205,9 @@ def serve() -> None:
             continue
         try:
             request = json.loads(line)
-            response = host.handle(request)
+            response = dispatch(request, host)
         except Exception as error:
-            response = {"ok": False, "error": str(error)}
+            response = _error_response(error)
         sys.stdout.write(json.dumps(response) + "\n")
         sys.stdout.flush()
 

@@ -5,17 +5,18 @@ import type { GraphTree } from '../filter/FilterClient';
 type GraphViewProps = {
   trees: GraphTree[];
   loading: boolean;
+  loadingLabel?: string;
   error: string;
   selectedId: string;
   onSelect: (nodeId: string) => void;
 };
 
-export function GraphView({ trees, loading, error, selectedId, onSelect }: GraphViewProps) {
+export function GraphView({ trees, loading, loadingLabel, error, selectedId, onSelect }: GraphViewProps) {
   return (
     <div className="panel" data-testid="practice-graph-tree">
       {loading ? (
         <p className="empty-state work-progress is-working" data-testid="extraction-progress">
-          Loading the graph…
+          {loadingLabel ?? 'Loading the graph…'}
         </p>
       ) : null}
       {error ? (
