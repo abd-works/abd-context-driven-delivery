@@ -259,7 +259,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         parts = re.split(r"(?m)^(?=##\s)", body, maxsplit=1)
         self._apply_module_preamble(module, parts[0].strip())
         classes_text = parts[1] if len(parts) > 1 else ""
-        module._class_blocks = self._class_blocks_in(classes_text)
+        module._class_blocks = self._class_blocks_in(module, classes_text)
         return module
 
     def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
@@ -301,7 +301,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         if seam_terms and not module.seam:
             module.seam = ", ".join(seam_terms)
 
-    def _class_blocks_in(self, classes_text: str) -> List[str]:
+    def _class_blocks_in(self, module: Module, classes_text: str) -> List[str]:
         blocks: List[str] = []
         for class_block in re.split(r"(?m)^(?=##\s)", classes_text):
             class_block = class_block.strip()
@@ -310,7 +310,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 continue
             class_name = heading.group(1).strip()
             if class_name.lower() in self._MODULE_META_HEADINGS:
-                self._section_heading = class_name
+                self._apply_module_section(module, class_name, class_block[heading.end():])
                 continue
             if re.search(r"(?m)^###\s+\*\*", class_block):
                 for nested in re.split(r"(?m)^(?=###\s)", class_block):
@@ -323,7 +323,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
 
     def _append_h2_classes(self, module: MarkdownModule, classes_text: str) -> None:
         class_order = 1
-        for class_block in self._class_blocks_in(classes_text):
+        for class_block in self._class_blocks_in(module, classes_text):
             heading = re.match(r"^#{2,3}\s+(.+)", class_block)
             if heading is None:
                 continue
@@ -429,8 +429,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         return purpose, seam_terms, deps, leftover
 
 
-    def _apply_module_section(self, module: Module, body: str) -> None:
-        heading = self._section_heading
+    def _apply_module_section(self, module: Module, heading: str, body: str) -> None:
         key = heading.lower().strip()
         if key == "modules fidelity":
             purpose, seam_terms, deps, _leftover = self._parse_module_meta(body)

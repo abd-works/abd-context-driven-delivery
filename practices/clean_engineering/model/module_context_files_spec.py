@@ -12,12 +12,12 @@ from mamba import description, it
 
 from practices.clean_engineering.model.module_context_files import ModuleContextFiles
 
-_EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+_EXAMPLES = Path(__file__).resolve().parent / "python" / "codeql" / ".examples"
 
 
 class ContextRow:
     def for_folder(self, class_name: str, folder: str) -> dict:
-        path = _EXAMPLES / folder / "faultyAsset.py"
+        path = _EXAMPLES / folder / "faulty" / "faultyAsset.py"
         return {"name": class_name, "message": str(path.resolve()), "contributor": class_name}
 
 

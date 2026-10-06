@@ -37,6 +37,12 @@ _NESTED_POWERS_MD = '# powers\n\nOwns Effect shared base.\n\n- **Purpose:** Shar
 _NESTED_MODULE_CONTEXT_MD = '# powers/effect\n\nShared base for all power effects.\n\n## Modules fidelity\n\n### Module `powers/effect`\n\n- **Purpose:** Own the shared Effect seam.\n- **Seam (terms):** Effect\n- **Dependencies (one-way):** `character`, `checks`\n- **Build order:** see module-build-order.md\n'
 
 
+# A class cell is named for the module that owns it, so two modules can both hold a Cart.
+_CART = 'shop--cart'
+_ORDER = 'shop--order'
+_INVOICE = 'shop--invoice'
+
+
 def _shop_model(extra_properties=None, extra_class=None, extra_relationship=None) -> CleanEngineeringModel:
     model = CleanEngineeringModel(name='Shop', sequential_order=1)
     module = Module(name='Shop', sequential_order=1)
@@ -300,14 +306,14 @@ with description('a Draw.io class diagram'):
         with context('with existing class content that has changed'):
             with before.each:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
-                moved = _set_cell_xy(first, 'cart', 500, 300)
+                moved = _set_cell_xy(first, _CART, 500, 300)
                 self.xml = _render_kept(
                     _shop_model(extra_properties=[Property(name='items', type_hint='list')]),
                     moved,
                 )
 
             with it('should keep the existing class at its previous position'):
-                expect(_cell_xy(self.xml, 'cart')).to(equal((500.0, 300.0)))
+                expect(_cell_xy(self.xml, _CART)).to(equal((500.0, 300.0)))
 
             with it('should update the class contents in place'):
                 expect(self.xml).to(contain('items'))
@@ -318,37 +324,37 @@ with description('a Draw.io class diagram'):
         with context('with an existing relationship already present'):
             with before.each:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
-                marked = _set_edge_waypoint(first, 'cart', 'order', 111, 222)
+                marked = _set_edge_waypoint(first, _CART, _ORDER, 111, 222)
                 self.xml = _render_kept(_shop_model(), marked)
 
             with it('should leave the existing relationship routing in place'):
-                edge = _edge_cell(self.xml, 'cart', 'order')
+                edge = _edge_cell(self.xml, _CART, _ORDER)
                 points = [(pt.get('x'), pt.get('y')) for pt in edge.iter('mxPoint')]
                 expect(points).to(contain(('111', '222')))
 
         with context('with a new class added to the model'):
             with before.each:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
-                moved = _set_cell_xy(first, 'cart', 500, 300)
+                moved = _set_cell_xy(first, _CART, 500, 300)
                 invoice = OoadClass(name='Invoice', sequential_order=3, properties=[Property(name='number', type_hint='str')])
                 self.xml = _render_kept(_shop_model(extra_class=invoice), moved)
 
             with it('should keep existing class positions'):
-                expect(_cell_xy(self.xml, 'cart')).to(equal((500.0, 300.0)))
+                expect(_cell_xy(self.xml, _CART)).to(equal((500.0, 300.0)))
 
             with it('should add the new class'):
-                expect(_has_vertex(self.xml, 'invoice')).to(be_true)
+                expect(_has_vertex(self.xml, _INVOICE)).to(be_true)
 
             with it('should show the new class members'):
                 expect(self.xml).to(contain('number'))
 
             with it('should not place the new class on top of the kept class'):
-                expect(_cell_xy(self.xml, 'invoice') == (500.0, 300.0)).to(be_false)
+                expect(_cell_xy(self.xml, _INVOICE) == (500.0, 300.0)).to(be_false)
 
         with context('with a new relationship added to the model'):
             with before.each:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
-                marked = _set_edge_waypoint(first, 'cart', 'order', 111, 222)
+                marked = _set_edge_waypoint(first, _CART, _ORDER, 111, 222)
                 invoice = OoadClass(name='Invoice', sequential_order=3, properties=[Property(name='number', type_hint='str')])
                 self.xml = _render_kept(
                     _shop_model(extra_class=invoice, extra_relationship=Relationship(target='Invoice', kind='association')),
@@ -356,12 +362,12 @@ with description('a Draw.io class diagram'):
                 )
 
             with it('should leave the existing relationship in place'):
-                edge = _edge_cell(self.xml, 'cart', 'order')
+                edge = _edge_cell(self.xml, _CART, _ORDER)
                 points = [(pt.get('x'), pt.get('y')) for pt in edge.iter('mxPoint')]
                 expect(points).to(contain(('111', '222')))
 
             with it('should add the new relationship'):
-                expect(_edge_cell(self.xml, 'cart', 'invoice').get('target')).to(equal('invoice'))
+                expect(_edge_cell(self.xml, _CART, _INVOICE).get('target')).to(equal(_INVOICE))
 
         with context('with no previous diagram'):
             with before.each:
@@ -373,19 +379,19 @@ with description('a Draw.io class diagram'):
                 expect(self.xml).to(contain('id="CleanEngineering-model"'))
 
             with it('should still place the cart class'):
-                expect(_has_vertex(self.xml, 'cart')).to(be_true)
+                expect(_has_vertex(self.xml, _CART)).to(be_true)
 
     with context('that does not keep positioning'):
         with context('with a new class added after a hand-moved layout'):
             with it('should not keep a hand-moved position after full relayout'):
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
-                moved = _set_cell_xy(first, 'cart', 500, 300)
+                moved = _set_cell_xy(first, _CART, 500, 300)
                 invoice = OoadClass(name='Invoice', sequential_order=3, properties=[Property(name='number', type_hint='str')])
                 channel = DrawIOCleanEngineeringModel()
                 channel.previous = moved
                 channel.keep_positioning = False
                 xml = channel.render(_shop_model(extra_class=invoice))
-                expect(_cell_xy(xml, 'cart') == (500.0, 300.0)).to(be_false)
+                expect(_cell_xy(xml, _CART) == (500.0, 300.0)).to(be_false)
 
 
 with description('Drawio creating a diagram'):
@@ -395,7 +401,7 @@ with description('Drawio creating a diagram'):
                 self.tmp = tempfile.TemporaryDirectory()
                 self.path = str(Path(self.tmp.name) / 'shop.drawio')
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
-                Path(self.path).write_text(_set_cell_xy(first, 'cart', 500, 300), encoding='utf-8')
+                Path(self.path).write_text(_set_cell_xy(first, _CART, 500, 300), encoding='utf-8')
                 md = MarkdownCleanEngineeringModel(name='', sequential_order=1).render(
                     _shop_model(extra_properties=[Property(name='items', type_hint='list')])
                 )
@@ -403,7 +409,7 @@ with description('Drawio creating a diagram'):
                 self.xml = Path(self.path).read_text(encoding='utf-8')
 
             with it('should keep class positions from the existing diagram'):
-                expect(_cell_xy(self.xml, 'cart')).to(equal((500.0, 300.0)))
+                expect(_cell_xy(self.xml, _CART)).to(equal((500.0, 300.0)))
 
             with it('should refresh class contents from the new model'):
                 expect(self.xml).to(contain('items'))
@@ -422,4 +428,4 @@ with description('Drawio creating a diagram'):
                     md = MarkdownCleanEngineeringModel(name='', sequential_order=1).render(_shop_model())
                     _create_kept(md, path)
                     xml = Path(path).read_text(encoding='utf-8')
-                    expect(_has_vertex(xml, 'cart')).to(be_true)
+                    expect(_has_vertex(xml, _CART)).to(be_true)
