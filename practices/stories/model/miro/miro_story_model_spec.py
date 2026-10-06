@@ -222,7 +222,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
                 equal([35, 107, 179])
             )
 
-        with it("should use compact square story cards like the DrawIO map"):
+        with it("should use square story cards sized for board zoom"):
             stories = fixture.rects_by_role(self.text, "story:")
             expect(
                 [(int(story.get("width")), int(story.get("height"))) for story in stories]

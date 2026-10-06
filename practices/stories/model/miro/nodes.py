@@ -1,4 +1,4 @@
-"""Miro format story nodes - all seven StoryNode subtypes plus I/O.
+﻿"""Miro format story nodes - all seven StoryNode subtypes plus I/O.
 
 load reads a canvas-composer SVG. save writes the nodes you edited.
 The thin-slice table is MiroIncrement.save and MiroIncrement.load.
@@ -64,7 +64,7 @@ class MiroIncrement(DiagramIncrement):
                     headers.append(f"{epic.name} / {sub_epic.name}")
                 else:
                     for leaf in leaves:
-                        headers.append(f"{epic.name} / … / {leaf.name}")
+                        headers.append(f"{epic.name} / â€¦ / {leaf.name}")
                 for leaf in leaves:
                     for story in leaf.stories:
                         story_column[story.name] = column
@@ -74,7 +74,7 @@ class MiroIncrement(DiagramIncrement):
             increment.table_row(len(headers), story_column) for increment in story_map.increments
         )
         column_count = len(headers)
-        table_width = cls.label_width + (column_count - 1) * (DiagramStory.pitch + 20)
+        table_width = cls.label_width + (column_count - 1) * (MiroStory.pitch + 20)
         table_height = 60 + len(story_map.increments) * 40
         table = (
             f'<foreignObject id="thin-slice-table" x="0" y="0" '
@@ -133,6 +133,14 @@ class MiroIncrement(DiagramIncrement):
 
 
 class MiroStory(DiagramStory):
+    """A Miro board reads at a coarser zoom than a DrawIO page, so story cards and
+    their columns are larger here than the shared diagram geometry."""
+
+    pitch = 72
+    size = 60
+    actor_height = size
+    column_pad = 5
+
     @property
     def slug(self) -> str:
         slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
@@ -144,7 +152,7 @@ class MiroStory(DiagramStory):
         if not isinstance(parent, Epic):
             return 0
         index = parent.stories.index(self)
-        return parent.x + DiagramEpic.tighten + index * self.pitch
+        return parent.x + MiroEpic.tighten + self.column_pad + index * self.pitch
 
     @property
     def y(self) -> int:
@@ -197,6 +205,11 @@ class MiroStory(DiagramStory):
 
 
 class MiroEpic(DiagramEpic):
+    """A nested epic is inset from its parent's left edge and sits flush with its
+    right edge, so the nesting reads as a bar under the epic that owns it."""
+
+    tighten = 10
+
     @property
     def slug(self) -> str:
         slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
@@ -205,8 +218,8 @@ class MiroEpic(DiagramEpic):
     @property
     def width(self) -> int:
         if isinstance(self.parent, Epic):
-            return max(self.diagram_span_columns(), 1) * DiagramStory.pitch
-        return self.span_columns() * DiagramStory.pitch
+            return max(self.diagram_span_columns(), 1) * MiroStory.pitch
+        return self.span_columns() * MiroStory.pitch
 
     @property
     def height(self) -> int:
@@ -222,7 +235,7 @@ class MiroEpic(DiagramEpic):
     def x(self) -> int:
         parent = self.parent
         if isinstance(parent, Epic):
-            origin = parent.x + len(parent.stories) * DiagramStory.pitch
+            origin = parent.x + len(parent.stories) * MiroStory.pitch
             siblings = parent.epics
             offset = origin
             for sibling in siblings:
@@ -278,8 +291,8 @@ class MiroEpic(DiagramEpic):
         index = siblings.index(self) + 1
         sid = f"{parent_id}/sub-{index}-{self.slug}-d{self.depth}"
         shapes: List[dict] = [{
-            "id": sid, "x": self.x, "y": self.y,
-            "w": self.width - self.tighten * 2, "h": self.height, "rx": 4,
+            "id": sid, "x": self.x + self.tighten, "y": self.y,
+            "w": self.width - self.tighten, "h": self.height, "rx": 4,
             "fill": self.fill, "stroke": self.stroke, "stroke_width": 1,
             "content": self.name, "role": f"subepic:{self.depth}", "font_size": 10,
         }]
@@ -359,7 +372,7 @@ class MiroStoryModel(DiagramStoryModel):
         """Return a flat list of shape descriptors for direct Miro REST API upload.
 
         Each dict has: id, x, y, w, h, rx, fill, stroke, stroke_width,
-        content, role, font_size — all in SVG-coordinate space.
+        content, role, font_size â€” all in SVG-coordinate space.
         upload converts those top-left boxes to Miro centre coordinates.
         """
         return self._build_shape_dicts(canonical)
