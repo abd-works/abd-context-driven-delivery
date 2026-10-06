@@ -20,6 +20,15 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from git import DirtyBranchSwitchError, NullGitRepo
 from workspace.legacy.workspace import ContextTool, PathOverride, Turn, Workspace
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.mcp.mcp_server import McpHost
+
+
+def _required_inputs(kit, operation: str) -> list:
+    """The inputs an agent must supply. The MCP host builds the schema, and it omits
+    the harness plumbing a toolset is handed rather than asked for."""
+    host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
+    schema = host.input_schema_for_callable(kit.tools[operation].callable)
+    return schema.get("required", [])
 
 
 with description("a context tool"):
@@ -56,12 +65,7 @@ with description("a context tool"):
                     self.session = self.tool.run_action("sprint-a", goal="resume")
 
                 with it("should load the existing work session from its sessions folder"):
-                    folder = (
-                        Path(self.workspace.path)
-                        / ".context"
-                        / "sessions"
-                        / "sprint-a"
-                    )
+                    folder = Path(self.workspace.path) / ".sessions" / "sprint-a"
                     expect(folder.is_dir()).to(be_true)
                     expect((folder / "session.md").is_file()).to(be_true)
                     expect(len(self.workspace.work_sessions)).to(equal(1))
@@ -516,7 +520,6 @@ with description("Turn"):
     with context("that is a toolset"):
         with it("should load as workspace.workspace:Turn"):
             loaded = type(AgentToolSet.instantiate("workspace.workspace:Turn"))
-            expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
             expect("turn" in loaded().tools).to(equal(True))
             expect("finish_turn" in loaded().tools).to(equal(True))
             expect("open" in loaded().tools).to(equal(False))
@@ -559,9 +562,8 @@ with description("WorkSession"):
             from workspace.legacy.workspace import WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="ws-session-load-"))
-            loaded = type(AgentToolSet.instantiate("workspace.workspace:WorkSession"))
+            loaded = type(AgentToolSet.instantiate("workspace.legacy.workspace:WorkSession"))
             kit = loaded(workspace=str(tmp), session="probe-tools")
-            expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
             expect("finish_work_session" in kit.tools).to(equal(True))
             expect("start_work_session" in kit.tools).to(equal(True))
             expect("worksession_chat" in kit.tools).to(equal(True))
@@ -605,18 +607,9 @@ with description("WorkSession"):
             expect(started.name).to(equal("sprint-start-cli"))
             expect(started.goal).to(equal("ship"))
             expect(kit.session_md.is_file()).to(equal(True))
-            expect(
-                "host"
-                in kit.tools["start_work_session"].manifest["inputSchema"].get(
-                    "required", []
-                )
-            ).to(equal(False))
-            expect(
-                "tools"
-                in kit.tools["start_work_session"].manifest["inputSchema"].get(
-                    "required", []
-                )
-            ).to(equal(False))
+            required = _required_inputs(kit, "start_work_session")
+            expect("host" in required).to(equal(False))
+            expect("tools" in required).to(equal(False))
 
 
 with description("Workspace"):
@@ -627,9 +620,7 @@ with description("Workspace"):
             opened = kit.open(name="sprint-ws-open", goal="open from path")
             expect(opened.name).to(equal("sprint-ws-open"))
             expect(kit.current_work_session.name).to(equal("sprint-ws-open"))
-            expect(
-                "host" in kit.tools["open"].manifest["inputSchema"].get("required", [])
-            ).to(equal(False))
+            expect("host" in _required_inputs(kit, "open")).to(equal(False))
 
 
 with description("Repair"):

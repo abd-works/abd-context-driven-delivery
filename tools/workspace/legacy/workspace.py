@@ -787,13 +787,12 @@ class Repair:
     violation: str = ""
     mistakes: list[Mistake] = field(default_factory=list)
 
-    def open(self, tool: Any, asset: str, violation: str) -> Repair:
+    def open(self, asset: str, violation: str) -> Repair:
         self.asset = asset
         self.violation = violation
         self.status = "backlog"
-        session = getattr(getattr(tool, "workspace", None), "current_work_session", None)
-        if session is not None:
-            session.turn
+        if self.work_session is not None:
+            self.work_session.turn
         return self
 
     def verify_fix(self) -> str:

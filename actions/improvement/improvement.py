@@ -38,7 +38,7 @@ class Improvement(GuidanceAction):
             if current is None:
                 raise ValueError("No current work session — open failed")
             repair = current.repairs.for_violation(asset, violation)
-            repair.open(item, asset, violation)
+            repair.open(asset, violation)
             item.contexts
             item.examples
             item.templates
