@@ -495,7 +495,7 @@ with description("a context tool"):
                     expect(self.commit.sha).to(equal("commit-1"))
                     expect(self.git.commits[0][1]).to(contain("bdd/run"))
                     expect(self.git.commits[0][1]).to(contain("Context-Tool: bdd"))
-                    expect(self.git.commits[0][1]).to(contain("AgentTool: run"))
+                    expect(self.git.commits[0][1]).to(contain("Action: run"))
 
                 with it("should not write session.yaml"):
                     expect((self.session.folder / "session.yaml").is_file()).to(
@@ -527,7 +527,7 @@ with description("Turn"):
         with it("should commit from the current checkout without a work session"):
             git = NullGitRepo()
             git.mark_dirty(True)
-            kit = Turn(root=str(git.root))
+            kit = Turn(root=str(git.root), git=git)
             commit = kit.turn(
                 context_tool="stories",
                 action="generate",
@@ -550,7 +550,7 @@ with description("Turn"):
         with it("should leave finish_turn as a legacy alias for turn"):
             git = NullGitRepo()
             git.mark_dirty(True)
-            kit = Turn(root=str(git.root))
+            kit = Turn(root=str(git.root), git=git)
             commit = kit.finish_turn(result="legacy checkpoint")
             expect(commit).not_to(be_none)
             expect(git.commits[0][1]).to(contain("legacy checkpoint"))
