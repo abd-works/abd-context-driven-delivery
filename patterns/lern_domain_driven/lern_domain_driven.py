@@ -25,18 +25,6 @@ class LernDomainDriven(PracticeGuidance):
             format="typescript",
             default_workspace_folder="packages",
         )
-        from practices.clean_engineering.specifications._scan_kit import Scan
-
-        self.scanner = Scan.from_guidance(self)
-
-    def scanner_collection(self):
-        return self._scanner_collection()
-
-    def _scanner_collection(self):
-        from practices.clean_engineering.specifications._scan_kit import ScannerCollection
-
-        folder = self.install_folder
-        return ScannerCollection(module_dir=folder)
 
     def _stories(self) -> "Stories":
         """Stories companion pinned at acceptance_tests fidelity, typescript format."""
