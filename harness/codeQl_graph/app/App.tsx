@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 import { DataManagementClient } from './data-management/DataManagementClient';
-import { DataManagementView } from './data-management/DataManagementView';
+import { DataManagementView, type Staleness } from './data-management/DataManagementView';
 import { FilterClient, type FilterSelection, type GraphTree, type PracticeInventory } from './filter/FilterClient';
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
@@ -38,8 +38,10 @@ export function App() {
   const [rules, setRules] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState('Loading the graph…');
+  const [loadingLog, setLoadingLog] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  const [staleness, setStaleness] = useState<Staleness | null>(null);
   const [selectedId, setSelectedId] = useState('');
   const [source, setSource] = useState<SourceText | null>(null);
   const engineering = theme === 'engineering';
@@ -59,6 +61,32 @@ export function App() {
     if (saved) {
       void load(saved);
     }
+  }, []);
+
+  useEffect(() => {
+    let stop = false;
+    async function tick() {
+      while (!stop) {
+        try {
+          const response = await fetch('/api/progress');
+          const body = (await response.json()) as { messages?: string[] };
+          if (Array.isArray(body.messages) && body.messages.length > 0) {
+            setLoadingLog(body.messages);
+          }
+        } catch (cause) {
+          const message = cause instanceof Error ? cause.message : String(cause);
+          setLoadingLog((current) => {
+            const line = `error: Progress check failed: ${message}`;
+            return current[current.length - 1] === line ? current : [...current, line];
+          });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+    }
+    void tick();
+    return () => {
+      stop = true;
+    };
   }, []);
 
   function practiceRoots(root: string): Record<string, string> {
@@ -81,10 +109,12 @@ export function App() {
     }
     setLoading(true);
     setLoadingLabel('Loading the graph…');
+    setLoadingLog([]);
     setError('');
     try {
       await graphs.load(trimmed, practiceRoots(trimmed));
       const inventory = await graphs.inventory();
+      const report = await data.staleness(trimmed, practiceRoots(trimmed));
       setCatalog(inventory);
       const shown = next.practices.length ? next.practices : Object.keys(inventory);
       setTrees(shown.map((name) => inventory[name]?.tree).filter((tree): tree is GraphTree => Boolean(tree)));
@@ -93,8 +123,14 @@ export function App() {
       setRules(unique(shown.flatMap((name) => inventory[name]?.rules ?? [])));
       setLoadedFolder(trimmed);
       window.localStorage.setItem(LAST_FOLDER, trimmed);
+      setStaleness(report);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
+      try {
+        setStaleness(await data.staleness(trimmed, practiceRoots(trimmed)));
+      } catch {
+        setStaleness(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -162,6 +198,7 @@ export function App() {
               loading={loading}
               folder={folder}
               status={status}
+              staleness={staleness}
               onCreate={() =>
                 runStatus(
                   data.createDatabase(folder, practiceRoots(folder)).then((message) => load(folder).then(() => message)),
@@ -178,6 +215,15 @@ export function App() {
                 runStatus(
                   data.reloadWorkingCopy(folder, practiceRoots(folder)).then((message) => load(folder).then(() => message)),
                   'Reloading the working copy…',
+                )
+              }
+              onSerialize={() =>
+                runStatus(
+                  data.serializeGraphCache(folder, practiceRoots(folder)).then(async (message) => {
+                    setStaleness(await data.staleness(folder, practiceRoots(folder)));
+                    return message;
+                  }),
+                  'Serializing the graph cache…',
                 )
               }
             />
@@ -239,8 +285,9 @@ export function App() {
         <div className="split">
           <GraphView
             trees={trees}
-            loading={loading}
+            loading={loading || (trees.length === 0 && loadingLog.length > 0)}
             loadingLabel={loadingLabel}
+            loadingLog={loadingLog}
             error={error}
             selectedId={selectedId}
             onSelect={(nodeId) => void choose(nodeId)}
@@ -321,7 +368,9 @@ function keep(node: GraphTree | undefined, ids: Set<string>, types: string[]): G
   if (!node) {
     return null;
   }
+  const rules = node.children.filter((child) => child.type === 'rules');
   const children = node.children
+    .filter((child) => child.type !== 'rules')
     .map((child) => keep(child, ids, types))
     .filter((child): child is GraphTree => Boolean(child));
   const holder = node.type === node.name;
@@ -336,5 +385,8 @@ function keep(node: GraphTree | undefined, ids: Set<string>, types: string[]): G
   if (node.type !== 'Practice' && !selectedId && children.length === 0) {
     return null;
   }
-  return { ...node, children };
+  if (node.type !== 'Practice' && !selectedId) {
+    return { ...node, children };
+  }
+  return { ...node, children: [...children, ...rules] };
 }

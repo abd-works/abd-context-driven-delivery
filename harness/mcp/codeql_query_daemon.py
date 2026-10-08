@@ -6,6 +6,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -15,7 +16,15 @@ for _entry in (_REPO, _REPO / "tools", _REPO / "practices", _REPO / "actions"):
     if _text not in sys.path:
         sys.path.insert(0, _text)
 
-from harness.mcp.codeql_server import CodeQL, CodeQLQueryServer, CodeQLRunError
+from harness.mcp.codeql_server import (
+    CodeQL,
+    CodeQLQueryServer,
+    CodeQLRunError,
+    codeql_process_report,
+    held_process_error,
+    pid_alive,
+    process_command,
+)
 
 
 def _repo_root(repo: Path) -> Path:
@@ -42,6 +51,10 @@ class QueryServerClient:
         client = self._connect(path)
         if client is not None:
             return client
+        holder = self._live_holder(path)
+        if holder is not None:
+            pid, command = holder
+            raise CodeQLRunError(held_process_error(pid, command))
         self._spawn(repo, path)
         deadline = time.time() + _WAIT_SECONDS
         while time.time() < deadline:
@@ -49,7 +62,14 @@ class QueryServerClient:
             if client is not None:
                 return client
             time.sleep(0.2)
-        raise CodeQLRunError("codeql query daemon did not become ready")
+        detail = "codeql query daemon did not become ready"
+        others = codeql_process_report()
+        if others:
+            detail = f"{detail}\n{others}"
+        log = path.parent / "query-server.log"
+        if log.is_file():
+            detail = f"{detail}\n{log.read_text(encoding='utf-8', errors='replace')[-8000:]}"
+        raise CodeQLRunError(detail)
 
     def _connect(self, path: Path) -> QueryServerClient | None:
         if not path.is_file():
@@ -69,6 +89,18 @@ class QueryServerClient:
         if not result.get("ok"):
             return None
         return QueryServerClient(host, int(port), state.get("pid"))
+
+    def _live_holder(self, path: Path) -> tuple[int, str] | None:
+        if not path.is_file():
+            return None
+        try:
+            state = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return None
+        pid = int(state.get("pid") or 0)
+        if not pid_alive(pid):
+            return None
+        return pid, process_command(pid)
 
     def _spawn(self, repo: Path, path: Path) -> None:
         root = str(_repo_root(repo))
@@ -101,24 +133,51 @@ class QueryServerClient:
         )
 
     def run_queries(self, queries, database: Path, on_line) -> dict[str, Path]:
-        result = _rpc(
-            self.host,
-            self.port,
-            {
-                "method": "runQueries",
-                "queries": [str(Path(query).resolve()) for query in queries],
-                "database": str(Path(database).resolve()),
-            },
-        )
-        for line in result.get("log") or []:
-            if on_line is not None:
-                on_line(line)
+        try:
+            return self._run_queries(queries, database, on_line)
+        except OSError as error:
+            raise CodeQLRunError(self._closed_dump(error)) from error
+
+    def _run_queries(self, queries, database: Path, on_line) -> dict[str, Path]:
+        with socket.create_connection((self.host, self.port), timeout=None) as conn:
+            _write_json(
+                conn,
+                {
+                    "method": "runQueries",
+                    "queries": [str(Path(query).resolve()) for query in queries],
+                    "database": str(Path(database).resolve()),
+                },
+            )
+            streamed = False
+            while True:
+                result = _read_json(conn)
+                progress = result.get("progress")
+                if progress and "produced" not in result and not result.get("error"):
+                    streamed = True
+                    if on_line is not None:
+                        on_line(str(progress))
+                    continue
+                break
+        if not streamed:
+            for line in result.get("log") or []:
+                if on_line is not None:
+                    on_line(line)
         if result.get("error"):
             raise CodeQLRunError(result["error"])
         return {
             key: Path(value)
             for key, value in (result.get("produced") or {}).items()
         }
+
+    def _closed_dump(self, error: BaseException) -> str:
+        pid = int(self.pid or 0)
+        if pid and pid_alive(pid):
+            return f"{error}\n{held_process_error(pid, process_command(pid))}"
+        others = codeql_process_report()
+        text = f"query daemon closed: {error}\npid: {pid or 'unknown'}"
+        if others:
+            text = f"{text}\n{others}"
+        return text
 
     def start(self) -> None:
         return
@@ -160,25 +219,39 @@ def _handle(conn: socket.socket, server: CodeQLQueryServer) -> None:
         _write_json(conn, {"error": f"unknown method {method}"})
         return
     log: list[str] = []
+    write_lock = threading.Lock()
+
+    def emit(line: str) -> None:
+        log.append(line)
+        with write_lock:
+            _write_json(conn, {"progress": line})
+
     try:
         produced = server.run_queries(
             [Path(path) for path in raw.get("queries") or []],
             Path(raw["database"]),
-            log.append,
+            emit,
         )
-        _write_json(
-            conn,
-            {
-                "produced": {key: str(value) for key, value in produced.items()},
-                "log": log,
-            },
-        )
+        with write_lock:
+            _write_json(
+                conn,
+                {
+                    "produced": {key: str(value) for key, value in produced.items()},
+                    "log": log,
+                },
+            )
     except Exception as error:
-        _write_json(conn, {"error": str(error), "log": log})
+        message = str(error)
+        if hasattr(server, "crash_dump"):
+            dump = server.crash_dump()
+            if dump and dump not in message:
+                message = f"{message}\n{dump}"
+        with write_lock:
+            _write_json(conn, {"error": message, "log": log})
 
 
-def _rpc(host: str, port: int, payload: dict) -> dict:
-    with socket.create_connection((host, port), timeout=600) as conn:
+def _rpc(host: str, port: int, payload: dict, timeout: float | None = 30) -> dict:
+    with socket.create_connection((host, port), timeout=timeout) as conn:
         _write_json(conn, payload)
         return _read_json(conn)
 

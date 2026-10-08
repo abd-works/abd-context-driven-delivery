@@ -10,6 +10,8 @@ import shutil
 import stat
 import subprocess
 import sys
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,8 +25,13 @@ from harness.mcp.mcp_server import mcp
 
 Display = str
 Tuple = list[str]
-_RUN_QUERIES_FLAGS = ("--threads=0", "--quiet", "--ram=8192")
+_RUN_QUERIES_FLAGS = ("--threads=0", "--ram=8192", "--warnings=hide", "-v")
 _CODEQL_SUBPROCESS_TIMEOUT_SECONDS = int(os.environ.get("CODEQL_SUBPROCESS_TIMEOUT_SECONDS", "600"))
+_SKIP_SOURCE_DIRS = ("node_modules", ".git", "dist", "__pycache__", ".venv", ".codeql", "coverage")
+
+
+def _codeql_detail(*parts: str | None) -> str:
+    return "\n".join(part for part in parts if part)
 
 
 def query_pack(practice: str, language: str) -> Path:
@@ -722,12 +729,55 @@ class CodeQLNode:
         else:
             children = [child for child in self.children if child.type == child.name and child.name in {"invokes", "observes", "demonstrates"}]
         path = stack | {self.node_id}
+        written = [child.serialize(seen, self, path) for child in children]
+        if first_home:
+            category = self.rule_category()
+            if category is not None:
+                written.append(category)
         return {
             "type": self.type,
             "name": self.name,
             "node_id": self.node_id,
-            "children": [child.serialize(seen, self, path) for child in children],
+            "children": written,
         }
+
+    def rule_category(self) -> dict | None:
+        """Applicable rules as one child category. A violation filter keeps the rules that failed."""
+        if self.type == self.name or self.type == "Practice":
+            return None
+        rows = self.rule_rows()
+        if not rows:
+            return None
+        return {
+            "type": "rules",
+            "name": "rules",
+            "node_id": f"{self.node_id}:rules",
+            "children": rows,
+        }
+
+    def rule_rows(self) -> list[dict]:
+        graph = self.practice.graph
+        violations_only = bool(graph and graph.filter.violations)
+        selected = list(graph.filter.rules) if graph else []
+        failed: dict[str, str] = {}
+        for hit in self.rules:
+            failed.setdefault(hit.rule, hit.violation)
+        rows: list[dict] = []
+        for rule in self.practice.rules_for(self.type):
+            violating = rule in failed
+            if violations_only and (not violating or (selected and rule not in selected)):
+                continue
+            rows.append(
+                {
+                    "type": "Rule",
+                    "name": rule,
+                    "node_id": f"{self.node_id}:rules:{rule}",
+                    "status": "violating" if violating else "passing",
+                    "violation": failed.get(rule, ""),
+                    "children": [],
+                }
+            )
+        return rows
 
     def _new_kind_node(self, kind: str) -> CodeQLNode:
         return CodeQLNode(self.practice, kind, f"{self.practice.name}:{kind}:{self.node_id}", kind, self.source)
@@ -861,8 +911,23 @@ class CodeQLGraph:
         self._executable = shutil.which("codeql") or "codeql"
         self.practices: dict[str, CodeQLPracticeGraph] = {}
         self._query_rows: list[dict] = []
+        self._progress: list[dict] = []
+        self._on_progress = None
+        self.use_query_server = False
         self.filter = CodeQLFilter(self)
         super().__init__()
+
+    def watch_progress(self, listener) -> None:
+        """listener receives each progress event while a load or query is running."""
+        self._on_progress = listener
+
+    def _report(self, step: str, message: str, **extra: object) -> None:
+        event = {"step": step, "message": message, **extra}
+        self._progress.append(event)
+        listener = self._on_progress
+        if listener is None:
+            return
+        listener(event)
 
     @property
     def folder(self) -> str:
@@ -871,6 +936,87 @@ class CodeQLGraph:
         This is the repo root unless a subset directory was passed.
         """
         return "" if self._folder is None else str(self._folder)
+
+    @property
+    def master_stale(self) -> dict:
+        """Whether the master is older than the working copy or the code. Each comparison includes those dates."""
+        rows = self._artifact_rows()
+        return {
+            "older_than_worktree": self._older_than(rows, "master", "worktree"),
+            "older_than_code": self._older_than(rows, "master", "code"),
+        }
+
+    @property
+    def worktree_stale(self) -> dict:
+        """Whether the working copy is older than the code or the master. Each comparison includes those dates."""
+        rows = self._artifact_rows()
+        return {
+            "older_than_code": self._older_than(rows, "worktree", "code"),
+            "older_than_master": self._older_than(rows, "worktree", "master"),
+        }
+
+    @property
+    def graph_cache_stale(self) -> dict:
+        """Whether the saved graph is older than the working copy, the master, or the code. Each comparison includes those dates."""
+        rows = self._artifact_rows()
+        cache_ns = self._graph_cache_ns()
+        compared = [{**row, "graph_cache": cache_ns} for row in rows]
+        return {
+            "older_than_worktree": self._older_than(compared, "graph_cache", "worktree"),
+            "older_than_master": self._older_than(compared, "graph_cache", "master"),
+            "older_than_code": self._older_than(compared, "graph_cache", "code"),
+        }
+
+    @property
+    def dates(self) -> dict:
+        """Dates of the master, working copy, graph cache, and code."""
+        return {
+            "graph_cache": self._iso_time(self._graph_cache_ns()),
+            "practices": [
+                {
+                    "practice": row["practice"],
+                    "master": self._iso_time(row["master"]),
+                    "worktree": self._iso_time(row["worktree"]),
+                    "code": self._iso_time(row["code"]),
+                }
+                for row in self._artifact_rows()
+            ],
+        }
+
+    @mcp
+    @agent_tool
+    def staleness(self, folder: str | None = None, practices: dict[str, str] | None = None, database: str | None = None) -> str:
+        """Report master, working copy, and graph cache staleness, with the dates compared.
+
+        folder and practices bind the graph when the caller has not already created a database.
+        """
+        return json.dumps(self.staleness_report(folder, practices, database), indent=2)
+
+    def staleness_report(self, folder: str | None = None, practices: dict[str, str] | None = None, database: str | None = None) -> dict:
+        """master_stale, worktree_stale, graph_cache_stale, and dates."""
+        if folder and practices is not None:
+            self._bind(folder, practices, database)
+        return {
+            "master_stale": self.master_stale,
+            "worktree_stale": self.worktree_stale,
+            "graph_cache_stale": self.graph_cache_stale,
+            "dates": self.dates,
+        }
+
+    @mcp
+    @agent_tool
+    def serialize_graph_cache(self, folder: str | None = None, practices: dict[str, str] | None = None, database: str | None = None) -> str:
+        """Write the loaded graph to the knowledge-graph cache.
+
+        folder and practices bind the graph when the caller has not already created a database.
+        """
+        if folder and practices is not None:
+            self._bind(folder, practices, database)
+        self._require_practices()
+        if not self._query_rows:
+            raise QueryFailure("serialize_graph_cache", "Load a graph before serializing the cache.")
+        self._save_graph()
+        return f"Serialized the graph cache to {self._snapshot_path()}"
 
     @mcp
     @agent_tool
@@ -882,6 +1028,7 @@ class CodeQLGraph:
         practices maps each practice name to that practice's source root.
         """
         self._bind(folder, practices, database)
+        self._report("create", f"Creating databases in {self._folder}")
         self._delete_databases()
         self._ensure_masters()
         for name in self._practice_roots:
@@ -899,7 +1046,12 @@ class CodeQLGraph:
         The working copy is rebuilt only when it is missing or the practice source or CodeQL queries are newer than the stamp. When the query packs match the saved graph, that graph is loaded instead of querying.
         """
         self._require_practices()
+        self._report("reload", "Checking which working copies are older than the code")
         stale = [name for name in self._practice_roots if not self._working_copy_current(name)]
+        if stale:
+            self._report("reload", f"Rebuilding working copies for {', '.join(stale)}")
+        else:
+            self._report("reload", "Working copies match the code")
         self._rewrite_working_copies(stale)
         if not stale and self._saved_graph_current():
             self._restore_saved_graph()
@@ -932,14 +1084,19 @@ class CodeQLGraph:
         folder is the repo. database stores a subset's databases so a test does not overwrite the repo database.
         A newer query pack re-runs the queries and saves the graph again. This does not create a database.
         """
+        self._progress.clear()
         self._bind(folder, practices, database)
+        self._report("load", f"Opening {folder}")
         missing = [name for name in self._practice_roots if not self._database_ready(self._working_copy(name))]
         if missing:
             names = ", ".join(missing)
+            self._report("error", f"No working copy for {names}")
             raise QueryFailure("load_working_copy", f"No working copy for {names}.")
         if self._saved_graph_current():
+            self._report("load", "Saved graph matches the query packs")
             self._restore_saved_graph()
             return "Loaded the saved knowledge graph."
+        self._report("load", "Saved graph is stale. Querying the working copies.")
         self._load_all(reuse=not self._queries_newer_than_graph())
         return "Loaded the working copies."
 
@@ -979,44 +1136,154 @@ class CodeQLGraph:
         return self.run_queries([ql_path], database).get(ql_path, [])
 
     def run_queries(self, queries: list[str], database: Path, *, reuse: bool = False) -> dict[str, list[Tuple]]:
-        """Evaluate every query in one CodeQL process. The JVM compiles the pack once.
+        """Evaluate the queries that are not already cached.
 
-        reuse decodes bqrs already stored on the working copy and does not write.
+        Cached results are decoded. The rest run together on the warm query server, or in one database run-queries process if that server is down.
+        reuse keeps a saved result even when the query pack is newer.
         """
         if not queries:
             return {}
-        missing = list(queries)
-        if reuse:
-            missing = []
-            for query in queries:
-                try:
-                    self._bqrs_for(database, Path(query))
-                except QueryFailure:
-                    missing.append(query)
-            if not missing:
-                return self._decode_located([(query, self._bqrs_for(database, Path(query))) for query in queries])
-        self._execute_queries(missing, database)
-        located = [(query, self._bqrs_for(database, Path(query))) for query in queries]
+        cached, missing = self._partition_cached(queries, database, reuse=reuse)
+        if cached:
+            self._report("cache", f"Using {len(cached)} saved query results. Running {len(missing)}.")
+        produced: dict[str, Path] = {}
+        if missing:
+            produced = self._run_missing(missing, database)
+        located: list[tuple[str, Path]] = []
+        for query in queries:
+            key = str(Path(query).resolve())
+            if key in produced:
+                located.append((query, produced[key]))
+            elif key in cached:
+                located.append((query, cached[key]))
+            else:
+                located.append((query, self._bqrs_for(database, Path(query))))
+        self._report("decode", f"Decoding {len(located)} query results")
         return self._decode_located(located)
 
-    def _run_codeql(self, args: list[str], *, label: str, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
-        limit = timeout if timeout is not None else _CODEQL_SUBPROCESS_TIMEOUT_SECONDS
+    def _run_codeql(
+        self,
+        args: list[str],
+        *,
+        label: str,
+        timeout: int | None = None,
+        extra_env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        limit = _CODEQL_SUBPROCESS_TIMEOUT_SECONDS if timeout is None else timeout
+        env = os.environ.copy()
+        if extra_env:
+            env.update(extra_env)
+        self._report("codeql", label)
         try:
-            return subprocess.run(
+            process = subprocess.Popen(
                 args,
-                check=False,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=limit,
+                encoding="utf-8",
+                errors="replace",
+                env=env,
             )
+        except OSError as error:
+            self._report("error", f"Could not start CodeQL: {error}")
+            raise QueryFailure(label, f"Could not start CodeQL\n{error}") from error
+        stdout_parts: list[str] = []
+        stderr_parts: list[str] = []
+
+        def drain(stream, parts: list[str]) -> None:
+            if stream is None:
+                return
+            for line in stream:
+                parts.append(line)
+                text = line.strip()
+                if text:
+                    self._report("codeql", text)
+
+        threads = [
+            threading.Thread(target=drain, args=(process.stdout, stdout_parts), daemon=True),
+            threading.Thread(target=drain, args=(process.stderr, stderr_parts), daemon=True),
+        ]
+        for thread in threads:
+            thread.start()
+        try:
+            if limit <= 0:
+                process.wait()
+            else:
+                process.wait(timeout=limit)
         except subprocess.TimeoutExpired as error:
-            detail = error.stderr or error.stdout or f"no output before timeout after {limit}s"
+            process.kill()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            for thread in threads:
+                thread.join(timeout=1)
+            detail = self._with_crash_dump(_codeql_detail("".join(stderr_parts), "".join(stdout_parts)) or f"no output before timeout after {limit}s")
+            self._report("error", f"CodeQL timed out after {limit}s during {label}")
             raise QueryFailure(label, f"CodeQL subprocess timed out after {limit}s\n{detail}") from error
+        for thread in threads:
+            thread.join(timeout=5)
+        return subprocess.CompletedProcess(args, process.returncode or 0, "".join(stdout_parts), "".join(stderr_parts))
+
+    def _partition_cached(self, queries: list[str], database: Path, *, reuse: bool) -> tuple[dict[str, Path], list[str]]:
+        """Saved bqrs newer than their query pack are reused. One walk of the results directory."""
+        index = self._bqrs_index(database)
+        pack_mtime: dict[Path, int] = {}
+        cached: dict[str, Path] = {}
+        missing: list[str] = []
+        for query in queries:
+            path = Path(query)
+            pack = self._pack_root(path)
+            if pack not in pack_mtime:
+                pack_mtime[pack] = self._latest_mtime(pack)
+            hit = index.get(path.stem)
+            fresh = hit is not None and (reuse or hit.stat().st_mtime_ns >= pack_mtime[pack])
+            if fresh and hit is not None:
+                cached[str(path.resolve())] = hit
+            else:
+                missing.append(query)
+        return cached, missing
+
+    def _bqrs_index(self, database: Path) -> dict[str, Path]:
+        results = database / "results"
+        found: dict[str, Path] = {}
+        if not results.is_dir():
+            return found
+        for path in results.rglob("*.bqrs"):
+            previous = found.get(path.stem)
+            if previous is None or path.stat().st_mtime_ns >= previous.stat().st_mtime_ns:
+                found[path.stem] = path
+        return found
+
+    def _run_missing(self, queries: list[str], database: Path) -> dict[str, Path]:
+        total = len(queries)
+        self._report("queries", f"Running {total} queries together", total=total)
+        if not self.use_query_server:
+            self._execute_queries(queries, database)
+            return {}
+        try:
+            from harness.mcp.codeql_query_daemon import QueryServerClient
+
+            self._report("queries", "Connecting to the query server")
+            client = QueryServerClient().ensure_query_server(_REPO)
+            self._report("queries", f"Query server on port {client.port}, {total} queries, threads across cores")
+            produced = client.run_queries(queries, database, lambda line: self._report("query", line))
+            resolved = {str(Path(query).resolve()) for query in queries}
+            return {key: path for key, path in produced.items() if key in resolved}
+        except QueryFailure:
+            raise
+        except Exception as error:
+            detail = str(error)
+            self._report("error", detail)
+            raise QueryFailure("query server", detail) from error
 
     def _execute_queries(self, queries: list[str], database: Path) -> None:
         if not queries:
             return
         paths = [str(Path(query).resolve()) for query in queries]
+        total = len(paths)
+        for index, query in enumerate(paths, start=1):
+            self._report("query", f"{index}/{total} {Path(query).name}", index=index, total=total, query=query)
         run = self._run_codeql(
             [
                 self._executable,
@@ -1028,10 +1295,24 @@ class CodeQLGraph:
                 *paths,
             ],
             label="database run-queries",
+            timeout=0,
         )
         if run.returncode != 0:
-            detail = run.stderr or run.stdout or "database run-queries failed"
+            detail = self._with_crash_dump(_codeql_detail(run.stderr, run.stdout) or "database run-queries failed")
+            self._report("error", detail)
             raise QueryFailure("database run-queries", detail)
+
+    def _with_crash_dump(self, detail: str) -> str:
+        from harness.mcp.codeql_server import codeql_process_report, crash_logs
+
+        logs = crash_logs([Path.cwd(), _REPO], time.time() - 7200)
+        others = codeql_process_report()
+        text = detail
+        if logs and logs not in text:
+            text = f"{text}\n{logs}"
+        if others and others not in text:
+            text = f"{text}\n{others}"
+        return text
 
     def _decode_located(self, located: list[tuple[str, Path]]) -> dict[str, list[Tuple]]:
         decoded: dict[str, list[Tuple]] = {}
@@ -1083,9 +1364,11 @@ class CodeQLGraph:
         previous = self.practices
         try:
             self._replace_practices(reuse)
-        except Exception:
+        except Exception as error:
             self.practices = previous
+            self._report("error", f"{type(error).__name__}: {error}")
             raise
+        self._report("save", "Writing the graph cache")
         self._save_graph()
 
     def _load_saved_or_query(self) -> None:
@@ -1147,7 +1430,17 @@ class CodeQLGraph:
 
     def _apply_kind(self, queries: list[tuple[str, str]], rows: dict[str, list[Tuple]], kind: str) -> None:
         seen: set[str] = set()
-        for name, query in queries:
+        total = len(queries)
+        for index, (name, query) in enumerate(queries, start=1):
+            self._report(
+                "apply",
+                f"{kind} {index}/{total} {name} {Path(query).name}",
+                index=index,
+                total=total,
+                practice=name,
+                query=query,
+                kind=kind,
+            )
             practice = self.practice(name)
             tuples = rows.get(query, [])
             if kind == "nodes":
@@ -1236,6 +1529,7 @@ class CodeQLGraph:
         path.write_text(json.dumps(payload), encoding="utf-8")
 
     def _restore_saved_graph(self) -> None:
+        self._report("restore", "Reading the saved graph")
         saved = self._read_snapshot() or {}
         self._query_rows = list(saved.get("batches") or [])
         self._open_practices()
@@ -1282,7 +1576,8 @@ class CodeQLGraph:
             return False
         try:
             saved = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as error:
+            self._report("error", f"Working copy stamp for {name} is not valid JSON: {error}")
             return False
         current = self._watched_stamp(name)
         return saved.get("source_ns") == current["source_ns"] and saved.get("queries_ns") == current["queries_ns"]
@@ -1310,7 +1605,7 @@ class CodeQLGraph:
         if not path.is_dir():
             return 0
         latest = 0
-        skip = {"node_modules", ".git", "dist", "__pycache__", ".venv", ".codeql", "coverage"}
+        skip = set(_SKIP_SOURCE_DIRS)
         for dirpath, dirnames, filenames in os.walk(path):
             dirnames[:] = [name for name in dirnames if name not in skip]
             for filename in filenames:
@@ -1321,6 +1616,53 @@ class CodeQLGraph:
         if mtime_ns <= 0:
             return ""
         return datetime.fromtimestamp(mtime_ns / 1_000_000_000, timezone.utc).isoformat()
+
+    def _artifact_rows(self) -> list[dict]:
+        rows = []
+        for name in self._practice_roots:
+            rows.append(
+                {
+                    "practice": name,
+                    "master": self._database_mtime(self._master(name)),
+                    "worktree": self._database_mtime(self._working_copy(name)),
+                    "code": self._latest_mtime(self._practice_roots[name]),
+                }
+            )
+        return rows
+
+    def _database_mtime(self, database: Path) -> int:
+        marker = database / "codeql-database.yml"
+        if marker.is_file():
+            return marker.stat().st_mtime_ns
+        return 0
+
+    def _graph_cache_ns(self) -> int:
+        path = self._snapshot_path()
+        if path.is_file():
+            return path.stat().st_mtime_ns
+        return 0
+
+    def _older_than(self, rows: list[dict], left: str, right: str) -> dict:
+        """The comparison with the greatest gap. A missing left side is older than a right side that exists."""
+        chosen: dict | None = None
+        chosen_older = False
+        chosen_gap = 0
+        for row in rows:
+            left_ns = int(row[left])
+            right_ns = int(row[right])
+            older = right_ns > 0 and left_ns < right_ns
+            gap = right_ns - left_ns
+            if chosen is None or (older and not chosen_older) or (older == chosen_older and gap > chosen_gap):
+                chosen = row
+                chosen_older = older
+                chosen_gap = gap
+        if chosen is None:
+            return {"older": False, "practice": "", "dates": {left: "", right: ""}}
+        return {
+            "older": chosen_older,
+            "practice": chosen["practice"],
+            "dates": {left: self._iso_time(int(chosen[left])), right: self._iso_time(int(chosen[right]))},
+        }
 
     def _rewrite_working_copies(self, names: list[str]) -> None:
         """Extract each distinct source once, then copy that database to the other practices."""
@@ -1336,6 +1678,7 @@ class CodeQLGraph:
 
     def _decode_query(self, item: tuple[str, Path]) -> tuple[str, list[Tuple]]:
         query, bqrs = item
+        self._report("decode", Path(query).name, query=query)
         return query, self._decode_bqrs(bqrs)
 
     def _decode_bqrs(self, bqrs: Path) -> list[Tuple]:
@@ -1345,6 +1688,7 @@ class CodeQLGraph:
         )
         if decode.returncode != 0 or not decode.stdout.strip():
             detail = decode.stderr or decode.stdout or "bqrs decode failed"
+            self._report("error", f"Could not decode {bqrs.name}: {detail}")
             raise QueryFailure(str(bqrs), detail)
         payload = json.loads(decode.stdout)
         tuples = payload.get("#select", {}).get("tuples") or []
@@ -1387,7 +1731,7 @@ class CodeQLGraph:
         return (database / "codeql-database.yml").is_file()
 
     def _detect_language(self, source: Path) -> str:
-        skip = {"node_modules", ".git", "dist", "__pycache__", ".venv", ".codeql", "coverage"}
+        skip = set(_SKIP_SOURCE_DIRS)
         counts = {"python": 0, "javascript": 0, "typescript": 0}
         for dirpath, dirnames, filenames in os.walk(source):
             dirnames[:] = [name for name in dirnames if name not in skip]
@@ -1405,6 +1749,7 @@ class CodeQLGraph:
 
     def _create_database_at(self, database: Path, source: Path, language: str) -> None:
         database.parent.mkdir(parents=True, exist_ok=True)
+        self._report("extract", f"Extracting {language} source into {database.name}")
         extractor = "python" if language == "python" else "javascript"
         run = self._run_codeql(
             [
@@ -1417,9 +1762,13 @@ class CodeQLGraph:
                 "--overwrite",
             ],
             label=f"database create {database}",
+            extra_env={
+                "LGTM_INDEX_EXCLUDE": "\n".join(str(source / name) for name in _SKIP_SOURCE_DIRS),
+            },
         )
         if run.returncode != 0:
-            detail = run.stderr or run.stdout or "database create failed"
+            detail = _codeql_detail(run.stderr, run.stdout) or "database create failed"
+            self._report("error", detail)
             raise QueryFailure(str(database), detail)
 
     def _copy_database(self, source: Path, destination: Path) -> None:
@@ -1453,6 +1802,7 @@ class CodeQLGraph:
                     "node_id": node.node_id,
                     "ancestors": ancestors,
                     "children": [child.name for child in node.children],
+                    "rules": node.rule_rows(),
                 }
             )
         for child in node.children:

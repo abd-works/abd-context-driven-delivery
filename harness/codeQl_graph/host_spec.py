@@ -36,9 +36,15 @@ with description("GraphHost"):
             expect(response["error_type"]).to(equal("QueryFailure"))
             expect(response["traceback"]).to(contain("Traceback (most recent call last)"))
             expect(response["error"]).to(contain("No working copy"))
+            expect(response["diagnosis"]).to(contain(f"I just encountered an error doing load_working_copy on {temp}"))
+            expect(response["diagnosis"]).to(contain("Please diagnose and fix"))
+            expect(response["diagnosis"]).to(contain("Traceback (most recent call last)"))
+            expect(response["diagnosis"]).to(contain("python:"))
 
         with it("should return a traceback for unknown operations"):
             response = dispatch({"operation": "missing"}, self.host)
             expect(response["ok"]).to(equal(False))
             expect(response["error"]).to(contain("Unknown operation missing"))
             expect(response["traceback"]).to(contain("Traceback (most recent call last)"))
+            expect(response["diagnosis"]).to(contain("I just encountered an error doing missing on (unknown database)"))
+            expect(response["diagnosis"]).to(contain("Please diagnose and fix"))

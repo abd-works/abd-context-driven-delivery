@@ -6,10 +6,12 @@ import express from 'express';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const python = process.env.PYTHON || 'python';
-const PYTHON_TIMEOUT_MS = Number(process.env.CODEQL_PYTHON_TIMEOUT_MS || 605_000);
+const PYTHON_TIMEOUT_MS = Number(process.env.CODEQL_PYTHON_TIMEOUT_MS || 10_800_000);
 const child = spawn(python, ['-u', path.join(here, 'host.py')], { stdio: ['pipe', 'pipe', 'inherit'] });
 const lines = createInterface({ input: child.stdout });
 const pending: Array<(line: string) => void> = [];
+const progressMessages: string[] = [];
+const resetProgressFor = new Set(['load_working_copy', 'create_database', 'reload_working_copy', 'update_working_copy']);
 
 type PythonResponse = {
   ok: boolean;
@@ -17,9 +19,43 @@ type PythonResponse = {
   error?: string;
   error_type?: string;
   traceback?: string;
+  diagnosis?: string;
+  progress?: { step?: string; message?: string };
 };
 
+function progressLine(payload: PythonResponse): string {
+  const step = payload.progress?.step || 'progress';
+  const message = payload.progress?.message || '';
+  return message ? `${step}: ${message}` : step;
+}
+
 lines.on('line', (line) => {
+  let payload: PythonResponse;
+  try {
+    payload = JSON.parse(line) as PythonResponse;
+  } catch (error) {
+    const resolve = pending.shift();
+    if (resolve) {
+      const detail = error instanceof Error ? error.message : String(error);
+      resolve(
+        JSON.stringify({
+          ok: false,
+          error: `Host sent a line that is not JSON: ${line}`,
+          error_type: 'SyntaxError',
+          traceback: detail,
+          diagnosis: `The Python host wrote a line the server could not parse.\n\n${line}\n\n${detail}`,
+        }),
+      );
+    }
+    return;
+  }
+  if (payload.progress) {
+    progressMessages.push(progressLine(payload));
+    if (progressMessages.length > 2000) {
+      progressMessages.shift();
+    }
+    return;
+  }
   const resolve = pending.shift();
   if (resolve) {
     resolve(line);
@@ -79,6 +115,7 @@ function ask(body: unknown): Promise<unknown> {
         const payload = JSON.parse(line) as PythonResponse;
         if (!payload.ok) {
           const message =
+            payload.diagnosis ||
             payload.traceback ||
             `${payload.error_type ?? 'Error'}: ${payload.error ?? `operation ${operation} failed`}`;
           reject(new Error(message));
@@ -90,6 +127,9 @@ function ask(body: unknown): Promise<unknown> {
       }
     }
 
+    if (resetProgressFor.has(operation)) {
+      progressMessages.length = 0;
+    }
     pending.push(onLine);
     child.stdin.write(JSON.stringify(body) + '\n');
   });
@@ -107,6 +147,8 @@ for (const operation of [
   'create_database',
   'reload_working_copy',
   'update_working_copy',
+  'staleness',
+  'serialize_graph_cache',
   'choose_folder',
 ]) {
   app.post(`/api/${operation}`, async (request, response) => {
@@ -121,10 +163,26 @@ for (const operation of [
         error: message,
         error_type: error instanceof Error ? error.name : 'Error',
         traceback,
+        diagnosis: message,
       });
     }
   });
 }
 
+app.get('/api/progress', (_request, response) => {
+  response.json({ ok: true, messages: progressMessages });
+});
+
 const port = Number(process.env.PORT || 3000);
-app.listen(port);
+const server = app.listen(port);
+
+app.get('/ping', (_request, response) => {
+  const address = server.address();
+  const heard = typeof address === 'object' && address ? address.port : port;
+  response.json({
+    ok: true,
+    ping: 'pong',
+    url: `http://127.0.0.1:${heard}`,
+    port: heard,
+  });
+});

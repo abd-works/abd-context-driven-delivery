@@ -3,6 +3,7 @@ export type PythonFailure = {
   error?: string;
   error_type?: string;
   traceback?: string;
+  diagnosis?: string;
 };
 
 export type PythonSuccess<T> = {
@@ -10,7 +11,7 @@ export type PythonSuccess<T> = {
   result: T;
 };
 
-const DEFAULT_TIMEOUT_MS = Number(import.meta.env.VITE_CODEQL_CLIENT_TIMEOUT_MS || 605_000);
+const DEFAULT_TIMEOUT_MS = Number(import.meta.env.VITE_CODEQL_CLIENT_TIMEOUT_MS || 10_800_000);
 
 export class PythonCall {
   constructor(private readonly timeoutMs = DEFAULT_TIMEOUT_MS) {}
@@ -26,7 +27,9 @@ export class PythonCall {
     if (!response.ok || !payload.ok) {
       const failure = payload as PythonFailure;
       const detail = failure.error ?? response.statusText ?? 'request failed';
-      throw new Error(failure.traceback || `${failure.error_type ?? 'Error'}: ${detail}`);
+      throw new Error(
+        failure.diagnosis || failure.traceback || `${failure.error_type ?? 'Error'}: ${detail}`,
+      );
     }
     return payload.result;
   }

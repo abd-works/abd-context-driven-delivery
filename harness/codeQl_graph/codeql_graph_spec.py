@@ -86,6 +86,10 @@ def direct_child(node: dict, parent_type: str, child_type: str) -> dict:
     raise AssertionError(f"no {child_type} under {parent_type}")
 
 
+def rule_on(node: dict, slug: str) -> dict:
+    return tree_child(tree_child(node, "rules"), slug)
+
+
 def typed_child(node: dict, holder: str, type: str) -> dict:
     for child in tree_child(node, holder).get("children") or []:
         if child.get("type") == type:
@@ -260,10 +264,26 @@ with description("a CodeQL graph"):
                         returned = {node["type"] for node in json.loads(self.graph.return_nodes())}
                         expect("OoadClass" in returned).to(equal(False))
 
+                    with it("should attach the parameter rule to the operation that fails it"):
+                        failure = tree_named(self.clean_tree, "failure", "Operation")
+                        rule = rule_on(failure, "limit-operation-parameters")
+                        expect(rule["status"]).to(equal("violating"))
+                        expect(len(rule["violation"])).to(be_above(0))
+
+                    with it("should attach the parameter rule to the operation that passes it"):
+                        register = tree_named(self.clean_tree, "register", "Operation")
+                        expect(rule_on(register, "limit-operation-parameters")["status"]).to(equal("passing"))
+
+                    with it("should leave the class dependency rule off an operation"):
+                        failure = tree_named(self.clean_tree, "failure", "Operation")
+                        attached = [child["name"] for child in tree_child(failure, "rules")["children"]]
+                        expect("use-explicit-dependencies" in attached).to(equal(False))
+
                 with context("with violations of the parameter rule"):
                     with before.all:
                         self.graph.filter.select_rules(["limit-operation-parameters"])
                         self.graph.filter.select_violations()
+                        self.violation_tree = self.graph.practice("clean_engineering").root_node.serialize()
 
                     with it("should return the operation that fails the rule"):
                         returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
@@ -273,12 +293,45 @@ with description("a CodeQL graph"):
                         returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
                         expect("register" in returned).to(equal(False))
 
+                    with it("should attach the violation on the returned operation"):
+                        returned = json.loads(self.graph.return_nodes())
+                        failure = next(node for node in returned if node["name"] == "failure")
+                        attached = [rule for rule in failure["rules"] if rule["name"] == "limit-operation-parameters"]
+                        expect(len(attached)).to(equal(1))
+                        expect(attached[0]["status"]).to(equal("violating"))
+                        expect(len(attached[0]["violation"])).to(be_above(0))
+
+                    with it("should attach that violation on the serialized graph"):
+                        failure = tree_named(self.violation_tree, "failure", "Operation")
+                        rule = rule_on(failure, "limit-operation-parameters")
+                        expect(rule["status"]).to(equal("violating"))
+                        expect(len(rule["violation"])).to(be_above(0))
+
+                    with it("should leave the passing rule off the serialized graph"):
+                        register = tree_named(self.violation_tree, "register", "Operation")
+                        attached = [
+                            rule["name"]
+                            for child in register.get("children") or []
+                            if child.get("name") == "rules"
+                            for rule in child.get("children") or []
+                        ]
+                        expect("limit-operation-parameters" in attached).to(equal(False))
+
                 with context("with classes selected"):
                     with before.all:
                         self.graph.filter.select_node_types(["OoadClass"])
 
                     with it("should offer the class dependency rule"):
                         expect(self.graph.filter.rules).to(contain("use-explicit-dependencies"))
+
+                    with it("should attach the class dependency rule to the class"):
+                        rule = rule_on(self.account, "use-explicit-dependencies")
+                        expect(rule["type"]).to(equal("Rule"))
+                        expect(rule["status"] in {"passing", "violating"}).to(equal(True))
+
+                    with it("should leave the operation parameter rule off the class"):
+                        attached = [child["name"] for child in tree_child(self.account, "rules")["children"]]
+                        expect("limit-operation-parameters" in attached).to(equal(False))
 
                     with it("should leave the operation parameter rule out of the rule filter"):
                         expect("limit-operation-parameters" in self.graph.filter.rules).to(equal(False))

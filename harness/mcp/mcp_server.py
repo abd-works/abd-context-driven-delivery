@@ -808,16 +808,7 @@ class McpHost:
             name: str, arguments: dict[str, object] | None
         ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
             try:
-                name = self._runtime.resolve_call_name(name)
-                if name == BUILTIN_PING_TOOL:
-                    return self._content_blocks("pong")
-                if name in self._runtime._prompts:
-                    return self._content_blocks(
-                        self._runtime.invoke_prompt(name, dict(arguments or {}))
-                    )
-                return self._content_blocks(
-                    self._runtime.invoke_tool(name, dict(arguments or {}))
-                )
+                return self._content_blocks(self.dispatch(name, arguments))
             except Exception as error:
                 logger.exception("MCP tool %s failed", name)
                 return self._content_blocks(f"{type(error).__name__}: {error}")
@@ -878,6 +869,27 @@ class McpHost:
         return types.Prompt(
             name=prompt.mcp_name,
             description=prompt.prompt_text or None,
+        )
+
+    def dispatch(self, name: str, arguments: dict[str, object] | None = None) -> object:
+        """Run one tool call. A true ``ping`` argument answers without entering the tool."""
+        resolved = self._runtime.resolve_call_name(name)
+        args = dict(arguments or {})
+        if args.get("ping") is True:
+            if not self._enrolled(resolved):
+                raise KeyError(resolved)
+            return {"ping": "pong", "tool": resolved}
+        if resolved == BUILTIN_PING_TOOL:
+            return self._runtime.ping()
+        if resolved in self._runtime._prompts:
+            return self._runtime.invoke_prompt(resolved, args)
+        return self._runtime.invoke_tool(resolved, args)
+
+    def _enrolled(self, name: str) -> bool:
+        return (
+            name == BUILTIN_PING_TOOL
+            or name in self._runtime._tools
+            or name in self._runtime._prompts
         )
 
     def _content_blocks(self, value: object) -> list[types.TextContent]:

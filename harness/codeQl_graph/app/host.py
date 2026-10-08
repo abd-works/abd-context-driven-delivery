@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import platform
 import sys
+import threading
 import traceback
 from pathlib import Path
 
@@ -19,6 +22,8 @@ class GraphHost:
 
     def __init__(self, graph: CodeQLGraph | None = None) -> None:
         self.graph = graph or CodeQLGraph()
+        if graph is None:
+            self.graph.use_query_server = True
 
     def load_working_copy(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
         return self.graph.load_working_copy(folder, practices, database)
@@ -72,6 +77,12 @@ class GraphHost:
     def update_working_copy(self, paths: list[str]) -> str:
         return self.graph.update_working_copy(paths)
 
+    def staleness(self, folder: str, practices: dict[str, str], database: str | None = None) -> dict:
+        return self.graph.staleness_report(folder, practices, database)
+
+    def serialize_graph_cache(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
+        return self.graph.serialize_graph_cache(folder, practices, database)
+
     def choose_folder(self) -> str:
         import tkinter
         from tkinter import filedialog
@@ -100,6 +111,8 @@ class GraphHost:
             "create_database": self._create,
             "reload_working_copy": lambda _request: self.reload_working_copy(),
             "update_working_copy": lambda request: self.update_working_copy(list(request.get("paths") or [])),
+            "staleness": self._staleness,
+            "serialize_graph_cache": self._serialize,
             "choose_folder": lambda _request: self.choose_folder(),
         }
 
@@ -112,6 +125,20 @@ class GraphHost:
 
     def _create(self, request: dict) -> str:
         return self.create_database(
+            str(request.get("folder", "")),
+            dict(request.get("practices") or {}),
+            request.get("database"),
+        )
+
+    def _staleness(self, request: dict) -> dict:
+        return self.staleness(
+            str(request.get("folder", "")),
+            dict(request.get("practices") or {}),
+            request.get("database"),
+        )
+
+    def _serialize(self, request: dict) -> str:
+        return self.serialize_graph_cache(
             str(request.get("folder", "")),
             dict(request.get("practices") or {}),
             request.get("database"),
@@ -181,12 +208,77 @@ class GraphHost:
         return None
 
 
-def _error_response(error: BaseException) -> dict:
+def _action_from(request: dict | None) -> str:
+    if not request:
+        return "an unknown operation"
+    return str(request.get("operation") or "an unknown operation")
+
+
+def _database_from(request: dict | None, host: GraphHost | None) -> str:
+    if request:
+        for key in ("database", "folder"):
+            value = request.get(key)
+            if value:
+                return str(value)
+    if host is not None and host.graph.folder:
+        return host.graph.folder
+    return "(unknown database)"
+
+
+def _request_facts(request: dict | None) -> list[str]:
+    if not request:
+        return []
+    facts: list[str] = []
+    for key in ("practices", "filter", "node_id", "paths"):
+        value = request.get(key)
+        if value:
+            facts.append(f"{key}: {json.dumps(value)}")
+    return facts
+
+
+def _graph_facts(host: GraphHost | None) -> list[str]:
+    if host is None:
+        return []
+    facts: list[str] = []
+    graph = host.graph
+    if graph.folder:
+        facts.append(f"graph.folder: {graph.folder}")
+    languages = getattr(graph, "_languages", {})
+    if languages:
+        facts.append(f"languages: {json.dumps(languages)}")
+    executable = getattr(graph, "_executable", "")
+    if executable:
+        facts.append(f"codeql: {executable}")
+    return facts
+
+
+def _diagnosis(error: BaseException, request: dict | None = None, host: GraphHost | None = None) -> str:
+    action = _action_from(request)
+    database = _database_from(request, host)
+    lines = [
+        f"I just encountered an error doing {action} on {database}. Please diagnose and fix.",
+        "",
+        f"error_type: {type(error).__name__}",
+        f"error: {error}",
+        *_request_facts(request),
+        *_graph_facts(host),
+        f"python: {sys.version.split()[0]} ({platform.machine()}, {sys.platform})",
+        f"python_executable: {sys.executable}",
+        f"cwd: {os.getcwd()}",
+        "",
+        traceback.format_exc(),
+    ]
+    return "\n".join(lines)
+
+
+def _error_response(error: BaseException, request: dict | None = None, host: GraphHost | None = None) -> dict:
+    trace = traceback.format_exc()
     return {
         "ok": False,
         "error": str(error),
         "error_type": type(error).__name__,
-        "traceback": traceback.format_exc(),
+        "traceback": trace,
+        "diagnosis": _diagnosis(error, request, host),
     }
 
 
@@ -195,19 +287,34 @@ def dispatch(request: dict, host: GraphHost | None = None) -> dict:
     try:
         return worker.handle(request)
     except Exception as error:
-        return _error_response(error)
+        return _error_response(error, request, worker)
+
+
+_PROGRESS_LOCK = threading.Lock()
+
+
+def _emit_progress(event: dict) -> None:
+    line = json.dumps({"ok": True, "progress": event})
+    try:
+        with _PROGRESS_LOCK:
+            sys.stdout.write(line + "\n")
+            sys.stdout.flush()
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
 
 
 def serve() -> None:
     host = GraphHost()
+    host.graph.watch_progress(_emit_progress)
     for line in sys.stdin:
         if not line.strip():
             continue
+        request: dict | None = None
         try:
             request = json.loads(line)
             response = dispatch(request, host)
         except Exception as error:
-            response = _error_response(error)
+            response = _error_response(error, request, host)
         sys.stdout.write(json.dumps(response) + "\n")
         sys.stdout.flush()
 

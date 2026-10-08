@@ -132,6 +132,43 @@ const engineeringTree = {
                     { type: 'Operation', name: 'notify', node_id: 'notify', children: [] },
                   ],
                 },
+                {
+                  type: 'rules',
+                  name: 'rules',
+                  node_id: 'op-1:rules',
+                  children: [
+                    {
+                      type: 'Rule',
+                      name: 'limit-operation-parameters',
+                      node_id: 'op-1:rules:limit-operation-parameters',
+                      status: 'passing',
+                      violation: '',
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: 'Operation',
+              name: 'failure',
+              node_id: 'op-failure',
+              children: [
+                {
+                  type: 'rules',
+                  name: 'rules',
+                  node_id: 'op-failure:rules',
+                  children: [
+                    {
+                      type: 'Rule',
+                      name: 'limit-operation-parameters',
+                      node_id: 'op-failure:rules:limit-operation-parameters',
+                      status: 'violating',
+                      violation: "Operation 'failure' takes more than two parameters.",
+                      children: [],
+                    },
+                  ],
+                },
               ],
             },
           ],
@@ -260,9 +297,13 @@ const inventory = {
 };
 
 const calls: { operation: string; body: Record<string, unknown> }[] = [];
+let shownViolations = false;
+let reported = currentStaleness();
 
 beforeEach(() => {
   calls.length = 0;
+  shownViolations = false;
+  reported = currentStaleness();
   foldMarks.names = [];
   foldMarks.scrollbar = undefined;
   window.localStorage.clear();
@@ -453,7 +494,12 @@ it('should put the chosen folder on the page and show its classes', async () => 
   await expand(user, 'clean_engineering');
   await expand(user, 'account');
   expect(screen.getByText('AccountCredentials')).toBeTruthy();
-  expect(calls.map((call) => call.operation)).toEqual(['choose_folder', 'load_working_copy', 'inventory']);
+  expect(calls.map((call) => call.operation).filter((operation) => operation !== 'progress')).toEqual([
+    'choose_folder',
+    'load_working_copy',
+    'inventory',
+    'staleness',
+  ]);
 });
 
 it('should show the backend traceback instead of loading forever', async () => {
@@ -472,6 +518,8 @@ it('should show the backend traceback instead of loading forever', async () => {
             error: 'No working copy for stories.',
             error_type: 'QueryFailure',
             traceback: 'Traceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
+            diagnosis:
+              'I just encountered an error doing load_working_copy on C:\\repo. Please diagnose and fix.\n\nTraceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
           }),
         };
       }
@@ -480,7 +528,10 @@ it('should show the backend traceback instead of loading forever', async () => {
   );
   render(<App />);
   const error = await screen.findByTestId('scan-error');
+  expect(error.textContent).toContain('I just encountered an error doing load_working_copy');
+  expect(error.textContent).toContain('Please diagnose and fix');
   expect(error.textContent).toContain('Traceback (most recent call last)');
+  expect(screen.getByRole('button', { name: 'Copy for AI' })).toBeTruthy();
   expect(screen.queryByTestId('extraction-progress')).toBeNull();
 });
 
@@ -504,6 +555,37 @@ it('should send violations when the switch is turned on', async () => {
   await waitFor(() =>
     expect(calls.some((call) => call.operation === 'return_nodes' && (call.body.filter as { violations: boolean }).violations)).toBe(true),
   );
+});
+
+it('should show a passing rule and a violating rule under the operation', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  await expand(user, 'AccountCredentials');
+  await expand(user, 'register');
+  await user.click(screen.getAllByTestId('tree-expand-rules')[0]);
+  const passing = document.querySelector('.rule-status.passing');
+  expect(passing?.textContent).toContain('limit-operation-parameters');
+  await expand(user, 'failure');
+  const rules = screen.getAllByTestId('tree-expand-rules');
+  await user.click(rules[rules.length - 1]);
+  const violating = document.querySelector('.rule-status.violating');
+  expect(violating?.textContent).toContain('limit-operation-parameters');
+});
+
+it('should keep the violation attached when violations are filtered', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await user.click(screen.getByRole('button', { name: 'Violations' }));
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  await expand(user, 'AccountCredentials');
+  expect(screen.queryByRole('button', { name: 'Expand register' })).toBeNull();
+  await expand(user, 'failure');
+  await user.click(screen.getByTestId('tree-expand-rules'));
+  expect(document.querySelector('.rule-status.violating')?.textContent).toContain('limit-operation-parameters');
+  expect(document.querySelector('.rule-status.passing')).toBeNull();
 });
 
 it('should show invokes, observes, and demonstrates on a step', async () => {
@@ -566,7 +648,7 @@ it('should create the database for the chosen folder', async () => {
   expect((await screen.findByTestId('work-progress')).textContent).toContain('Created the database');
   const created = calls.findIndex((call) => call.operation === 'create_database');
   expect(created).toBeGreaterThan(-1);
-  expect(calls[created + 1]?.operation).toBe('load_working_copy');
+  expect(calls.slice(created + 1).some((call) => call.operation === 'load_working_copy')).toBe(true);
 });
 
 it('should merge the working copy onto master', async () => {
@@ -583,6 +665,68 @@ it('should reload the working copy for the chosen folder', async () => {
   await user.click(screen.getByTestId('reload-working-copy'));
   expect(await screen.findByTestId('work-progress')).toHaveProperty('textContent', 'Reloaded the working copy');
   expect(calls.filter((call) => call.operation === 'load_working_copy').length).toBeGreaterThan(1);
+});
+
+it('should color a stale command and show the compared dates on hover', async () => {
+  reported = staleMaster();
+  const user = userEvent.setup();
+  await openFolder(user);
+  expect(screen.getByTestId('create-database').classList.contains('is-stale')).toBe(true);
+  expect(screen.getByTestId('refresh-master').classList.contains('is-stale')).toBe(false);
+  expect(screen.getByTestId('reload-working-copy').classList.contains('is-stale')).toBe(true);
+  expect(screen.getByTestId('serialize-graph-cache').classList.contains('is-stale')).toBe(true);
+  expect(screen.getByTestId('create-database-staleness').textContent).toContain('master 2026-01-01T00:00:00+00:00');
+  expect(screen.getByTestId('create-database-staleness').textContent).toContain('code 2026-10-08T00:00:00+00:00');
+  expect(screen.getByTestId('serialize-graph-cache-staleness').textContent).toContain('graph_cache 2026-01-02T00:00:00+00:00');
+});
+
+it('should show each load step while the graph is loading', async () => {
+  let release: (value: unknown) => void = () => undefined;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  window.localStorage.setItem('cdd-graph-folder', folder);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const operation = String(url).replace('/api/', '');
+      const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
+      calls.push({ operation, body });
+      if (operation === 'load_working_copy') {
+        await gate;
+      }
+      if (operation === 'progress') {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            messages: [
+              'query: 1/2 steps.ql',
+              'codeql: Starting evaluation of steps.ql.',
+              'codeql: [1/2 comp 1s] Compiled C:\\pack\\steps.ql.',
+              'codeql: [2/2 comp 1s] Compiled C:\\pack\\edges.ql.',
+            ],
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({ ok: true, result: answer(operation, body) }) };
+    }),
+  );
+  render(<App />);
+  const log = await screen.findByTestId('loading-log');
+  expect(log.textContent).toContain('1/2 steps.ql');
+  expect(log.textContent).toContain('2/2 edges.ql');
+  expect(screen.getByTestId('extraction-progress').textContent).toContain('Compiled 2/2 edges.ql');
+  release(undefined);
+  await screen.findByRole('button', { name: 'Expand clean_engineering' });
+});
+
+it('should serialize the graph cache', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await user.click(screen.getByTestId('serialize-graph-cache'));
+  expect(await screen.findByTestId('work-progress')).toHaveProperty('textContent', 'Serialized the graph cache');
+  expect(calls.some((call) => call.operation === 'serialize_graph_cache')).toBe(true);
 });
 
 async function openFolder(user: UserEvent) {
@@ -622,13 +766,21 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
     return folder;
   }
   if (operation === 'inventory') {
-    return inventory;
+    if (!shownViolations) {
+      return inventory;
+    }
+    return {
+      ...inventory,
+      clean_engineering: { ...inventory.clean_engineering, tree: violationTree(engineeringTree) },
+    };
   }
   if (operation === 'filter_choices') {
     return constrained(filter.node_types ?? []);
   }
   if (operation === 'return_nodes') {
-    return rowsFor(filter.practices ?? [], filter.node_types ?? []);
+    const picked = body.filter as { practices?: string[]; node_types?: string[]; violations?: boolean };
+    shownViolations = Boolean(picked.violations);
+    return rowsFor(picked.practices ?? [], picked.node_types ?? [], shownViolations);
   }
   if (operation === 'source') {
     const nodeId = String(body.node_id);
@@ -676,7 +828,53 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
   if (operation === 'load_working_copy') {
     return 'Reloaded the working copy';
   }
+  if (operation === 'progress') {
+    return { messages: [] };
+  }
+  if (operation === 'staleness') {
+    return reported;
+  }
+  if (operation === 'serialize_graph_cache') {
+    return 'Serialized the graph cache';
+  }
   return 'ok';
+}
+
+function comparison(older: boolean, dates: Record<string, string>) {
+  return { older, practice: 'stories', dates };
+}
+
+function currentStaleness() {
+  return {
+    master_stale: {
+      older_than_worktree: comparison(false, { master: '2026-10-08T00:00:00+00:00', worktree: '2026-10-08T00:00:00+00:00' }),
+      older_than_code: comparison(false, { master: '2026-10-08T00:00:00+00:00', code: '2026-10-08T00:00:00+00:00' }),
+    },
+    worktree_stale: {
+      older_than_code: comparison(false, { worktree: '2026-10-08T00:00:00+00:00', code: '2026-10-08T00:00:00+00:00' }),
+      older_than_master: comparison(false, { worktree: '2026-10-08T00:00:00+00:00', master: '2026-10-08T00:00:00+00:00' }),
+    },
+    graph_cache_stale: {
+      older_than_worktree: comparison(false, { graph_cache: '2026-10-08T00:00:00+00:00', worktree: '2026-10-08T00:00:00+00:00' }),
+      older_than_master: comparison(false, { graph_cache: '2026-10-08T00:00:00+00:00', master: '2026-10-08T00:00:00+00:00' }),
+      older_than_code: comparison(false, { graph_cache: '2026-10-08T00:00:00+00:00', code: '2026-10-08T00:00:00+00:00' }),
+    },
+    dates: {
+      graph_cache: '2026-10-08T00:00:00+00:00',
+      practices: [{ practice: 'stories', master: '2026-10-08T00:00:00+00:00', worktree: '2026-10-08T00:00:00+00:00', code: '2026-10-08T00:00:00+00:00' }],
+    },
+  };
+}
+
+function staleMaster() {
+  const report = currentStaleness();
+  report.master_stale.older_than_code = comparison(true, { master: '2026-01-01T00:00:00+00:00', code: '2026-10-08T00:00:00+00:00' });
+  report.worktree_stale.older_than_master = comparison(true, { worktree: '2026-01-01T00:00:00+00:00', master: '2026-10-08T00:00:00+00:00' });
+  report.graph_cache_stale.older_than_worktree = comparison(true, {
+    graph_cache: '2026-01-02T00:00:00+00:00',
+    worktree: '2026-10-08T00:00:00+00:00',
+  });
+  return report;
 }
 
 function constrained(types: string[]) {
@@ -692,7 +890,18 @@ function constrained(types: string[]) {
   return { node_types: types, relationships: ['contains', 'owns', 'invokes'], rules: ['module-rule', 'class-rule', 'limit-operation-parameters'] };
 }
 
-function rowsFor(practices: string[], types: string[]) {
+function violationTree(node: (typeof engineeringTree)): (typeof engineeringTree) | null {
+  const children = node.children.map((child) => violationTree(child)).filter((child): child is typeof engineeringTree => Boolean(child));
+  if (node.type === 'Rule') {
+    return node.status === 'violating' ? { ...node, children } : null;
+  }
+  if (node.type === 'rules') {
+    return children.length > 0 ? { ...node, children } : null;
+  }
+  return { ...node, children };
+}
+
+function rowsFor(practices: string[], types: string[], violations = false) {
   const trees = [];
   if (practices.length === 0 || practices.includes('clean_engineering')) {
     trees.push(engineeringTree);
@@ -703,7 +912,17 @@ function rowsFor(practices: string[], types: string[]) {
   const rows: { practice: string; type: string; name: string; node_id: string; ancestors: string[]; children: string[] }[] = [];
   const walk = (node: { type: string; name: string; node_id: string; children: typeof engineeringTree.children }, practice: string) => {
     const holder = node.type === node.name;
-    if (!holder && node.type !== 'Practice' && (types.length === 0 || types.includes(node.type))) {
+    const violating = (node.children ?? []).some(
+      (child) => child.name === 'rules' && (child.children ?? []).some((hit) => hit.status === 'violating'),
+    );
+    if (
+      !holder &&
+      node.type !== 'Practice' &&
+      node.type !== 'rules' &&
+      node.type !== 'Rule' &&
+      (types.length === 0 || types.includes(node.type)) &&
+      (!violations || violating)
+    ) {
       rows.push({ practice, type: node.type, name: node.name, node_id: node.node_id, ancestors: [], children: [] });
     }
     for (const child of node.children) {

@@ -21,6 +21,8 @@ export type GraphTree = {
   type: string;
   name: string;
   node_id: string;
+  status?: string;
+  violation?: string;
   children: GraphTree[];
 };
 

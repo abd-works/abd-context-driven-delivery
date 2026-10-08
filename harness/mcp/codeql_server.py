@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 
@@ -38,6 +39,110 @@ class CodeQL:
         return resolved
 
 _PHASES = {"Compiling", "Running", "Writing", "Shutting"}
+_STDERR_LIMIT = 400
+_CRASH_LOG_CHARS = 12000
+
+
+def pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        import ctypes
+
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        if handle:
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return True
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def process_command(pid: int) -> str:
+    if pid <= 0:
+        return ""
+    if sys.platform != "win32":
+        try:
+            raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+        except OSError:
+            return ""
+        return raw.replace(b"\x00", b" ").decode("utf-8", errors="replace").strip()
+    result = subprocess.run(
+        [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            f"(Get-CimInstance Win32_Process -Filter 'ProcessId={int(pid)}').CommandLine",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    return (result.stdout or "").strip()
+
+
+def codeql_process_report() -> str:
+    """Name every CodeQL process that can hold the query server or a database."""
+    if sys.platform != "win32":
+        return ""
+    script = (
+        "Get-CimInstance Win32_Process | "
+        "Where-Object { $_.CommandLine -match 'query-server2|database run-queries' } | "
+        "ForEach-Object { '{0}`t{1}' -f $_.ProcessId, $_.CommandLine }"
+    )
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", script],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    rows = []
+    for line in (result.stdout or "").splitlines():
+        pid_text, separator, command = line.partition("\t")
+        if separator and pid_text.strip():
+            rows.append(f"pid {pid_text.strip()}: {command.strip()}")
+    if not rows:
+        return ""
+    return "CodeQL processes still running:\n" + "\n".join(rows)
+
+
+def held_process_error(pid: int, command: str) -> str:
+    text = (
+        "Another process is holding the query server and it did not answer.\n"
+        f"pid: {pid}\n"
+        f"command: {command or '(command line unavailable)'}"
+    )
+    others = codeql_process_report()
+    if others:
+        text = f"{text}\n{others}"
+    return text
+
+
+def crash_logs(folders: list[Path], since: float) -> str:
+    parts: list[str] = []
+    seen: set[Path] = set()
+    for folder in folders:
+        if not folder.is_dir():
+            continue
+        for path in folder.glob("hs_err_pid*.log"):
+            resolved = path.resolve()
+            if resolved in seen:
+                continue
+            try:
+                modified = path.stat().st_mtime
+            except OSError:
+                continue
+            if modified < since:
+                continue
+            seen.add(resolved)
+            text = path.read_text(encoding="utf-8", errors="replace")[:_CRASH_LOG_CHARS]
+            parts.append(f"--- {path} ---\n{text}")
+    return "\n".join(parts)
 
 
 class CodeQLQueryServer:
@@ -52,6 +157,9 @@ class CodeQLQueryServer:
         self._lock = threading.Lock()
         self._last_progress = ""
         self._on_line = None
+        self._stderr_lines: list[str] = []
+        self._stderr_thread: threading.Thread | None = None
+        self._started_at = 0.0
 
     @classmethod
     def from_repo(cls, repo: Path | str) -> CodeQLQueryServer:
@@ -98,7 +206,10 @@ class CodeQLQueryServer:
         )
         if self._process.stdout is None or self._process.stdin is None:
             raise CodeQLRunError("codeql query server produced no stdio streams")
-        threading.Thread(target=self._drain_stderr, daemon=True).start()
+        self._started_at = time.time()
+        self._stderr_lines.clear()
+        self._stderr_thread = threading.Thread(target=self._drain_stderr, daemon=True)
+        self._stderr_thread.start()
         self._registered.clear()
 
     def stop(self) -> None:
@@ -201,14 +312,17 @@ class CodeQLQueryServer:
         raw = json.dumps(payload).encode("utf-8")
         process = self._process
         if process is None or process.stdin is None or process.stdout is None:
-            raise QueryServerDown("codeql query server is not running")
+            raise QueryServerDown(self._failure("codeql query server is not running"))
         try:
             process.stdin.write(f"Content-Length: {len(raw)}\r\n\r\n".encode("ascii") + raw)
             process.stdin.flush()
         except OSError as error:
-            raise QueryServerDown(f"codeql query server stdin closed: {error}") from error
+            raise QueryServerDown(self._failure(f"codeql query server stdin closed: {error}")) from error
         while True:
-            message = self.read_message(process.stdout)
+            try:
+                message = self.read_message(process.stdout)
+            except QueryServerDown as error:
+                raise QueryServerDown(self._failure(str(error))) from error
             if message.get("id") != request_id:
                 if message.get("method") == "ql/progressUpdated":
                     self._note_progress(message.get("params") or {})
@@ -216,20 +330,50 @@ class CodeQLQueryServer:
             if "error" in message:
                 err = message["error"]
                 detail = err.get("message", err) if isinstance(err, dict) else err
-                raise CodeQLRunError(f"{method} failed: {detail}")
+                raise CodeQLRunError(self._failure(f"{method} failed: {detail}"))
             result = message.get("result")
             return result if isinstance(result, dict) else {}
 
     def _note_progress(self, params: dict) -> None:
-        message = str(params.get("message") or "").strip()
-        if not message or message == self._last_progress or message.startswith("("):
+        raw = str(params.get("message") or "").strip()
+        step = params.get("step")
+        maximum = params.get("maxStep")
+        message = raw
+        if raw.startswith("(") and isinstance(step, int) and isinstance(maximum, int) and maximum:
+            message = f"{raw} {step}/{maximum}"
+        if not message or message == self._last_progress:
             return
         self._last_progress = message
         phase = message.split(" ", 1)[0]
-        if ".ql" not in message and phase not in _PHASES:
+        if not raw.startswith("(") and ".ql" not in message and phase not in _PHASES:
             return
         if self._on_line is not None:
             self._on_line(message)
+
+    def _failure(self, message: str) -> str:
+        dump = self.crash_dump()
+        text = message if not dump or dump in message else f"{message}\n{dump}"
+        others = codeql_process_report()
+        if others and others not in text:
+            text = f"{text}\n{others}"
+        return text
+
+    def crash_dump(self) -> str:
+        """Stderr plus any Java crash log written since this server started."""
+        thread = self._stderr_thread
+        if thread is not None:
+            thread.join(timeout=1)
+        process = self._process
+        pid = process.pid if process is not None else None
+        code = process.poll() if process is not None else None
+        stderr = "\n".join(self._stderr_lines).strip()
+        logs = crash_logs([self._codeql.repo_root(), Path.cwd()], self._started_at)
+        parts = [f"query server pid {pid} exit {code}"]
+        if stderr:
+            parts.append(stderr)
+        if logs:
+            parts.append(logs)
+        return "\n".join(parts)
 
     def _drain_stderr(self) -> None:
         process = self._process
@@ -237,7 +381,12 @@ class CodeQLQueryServer:
             return
         for line in process.stderr:
             text = line.decode("utf-8", errors="replace").rstrip("\r\n")
-            if text and self._on_line is not None:
+            if not text:
+                continue
+            self._stderr_lines.append(text)
+            if len(self._stderr_lines) > _STDERR_LIMIT:
+                del self._stderr_lines[: len(self._stderr_lines) - _STDERR_LIMIT]
+            if self._on_line is not None:
                 self._on_line(text)
 
     @staticmethod

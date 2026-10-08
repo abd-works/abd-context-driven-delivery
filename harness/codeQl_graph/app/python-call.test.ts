@@ -25,6 +25,28 @@ it('should surface the python traceback when the api reports a failure', async (
   );
 });
 
+it('should prefer the diagnosis prompt when the api reports a failure', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({
+      ok: false,
+      json: async () => ({
+        ok: false,
+        error: 'No working copy for stories.',
+        error_type: 'QueryFailure',
+        traceback: 'Traceback (most recent call last):\n  File "host.py", line 1',
+        diagnosis:
+          'I just encountered an error doing load_working_copy on C:\\repo. Please diagnose and fix.\n\nTraceback (most recent call last):',
+      }),
+    })),
+  );
+
+  const client = new PythonCall();
+  await expect(client.run('load_working_copy', { folder: 'C:\\repo' })).rejects.toThrow(
+    'I just encountered an error doing load_working_copy on C:\\repo',
+  );
+});
+
 it('should surface a timeout when the api never answers', async () => {
   vi.stubGlobal(
     'fetch',

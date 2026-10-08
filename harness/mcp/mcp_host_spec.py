@@ -351,6 +351,31 @@ with description("an MCP host") as self:
             expect(self.host.refs_from_manifest(self.tree / "mcp.json")).to(equal(()))
 
 
+with description("an MCP host tool ping") as self:
+    with before.each:
+        self.host = McpHost.from_refs(
+            ("harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo",),
+            repo=str(_REPO_ROOT),
+            project=str(_REPO_ROOT),
+        )
+
+    with it("should answer ping for an enrolled tool without running it"):
+        reply = self.host.dispatch(
+            "hosting-demo.increment", {"ping": True, "step": 5}
+        )
+        expect(reply).to(equal({"ping": "pong", "tool": "hosting-demo.increment"}))
+        expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
+
+    with it("should leave ping out of the tool schema"):
+        schema = self.host.input_schema_for_callable(
+            self.host._runtime.tools["hosting-demo.increment"].callable
+        )
+        expect("ping" in schema["properties"]).to(equal(False))
+
+    with it("should still run a tool when ping is absent"):
+        expect(self.host.dispatch("hosting-demo.increment", {"step": 1})).to(equal(1))
+
+
 with description("an MCP host Cursor has stopped spawning") as self:
     with before.each:
         self._user_mcp = Path.home() / ".cursor" / "mcp.json"
