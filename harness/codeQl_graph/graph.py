@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import errno
+import hashlib
 import json
 import os
 import re
@@ -28,6 +29,12 @@ Tuple = list[str]
 _RUN_QUERIES_FLAGS = ("--threads=0", "--ram=8192", "--warnings=hide", "-v")
 _CODEQL_SUBPROCESS_TIMEOUT_SECONDS = int(os.environ.get("CODEQL_SUBPROCESS_TIMEOUT_SECONDS", "600"))
 _SKIP_SOURCE_DIRS = ("node_modules", ".git", "dist", "__pycache__", ".venv", ".codeql", "coverage")
+_DB_STORE_BY_LANGUAGE = {"python": "db-python", "javascript": "db-javascript", "typescript": "db-javascript"}
+
+
+def _dbscheme_mismatch(detail: str) -> bool:
+    text = detail.lower()
+    return "no upgrade path" in text and "dbscheme" in text
 
 
 def _codeql_detail(*parts: str | None) -> str:
@@ -48,9 +55,26 @@ def windows_path(path: Path) -> str:
     return "\\\\?\\" + text
 
 
-def _make_writable(function, path, _exc) -> None:
-    os.chmod(path, stat.S_IWRITE)
+def _make_writable(function, path, exc) -> None:
+    if _file_in_use(exc):
+        raise exc
+    try:
+        os.chmod(path, stat.S_IWRITE)
+    except OSError:
+        pass
     function(path)
+
+
+_WINDOWS_FILE_IN_USE = 32
+_REMOVE_TREE_ATTEMPTS = 12
+_REMOVE_TREE_DELAY_SECONDS = 0.3
+
+
+def _file_in_use(error: BaseException) -> bool:
+    if os.name != "nt":
+        return False
+    winerror = getattr(error, "winerror", None)
+    return winerror == _WINDOWS_FILE_IN_USE
 
 
 def _cache_root(path: Path) -> Path | None:
@@ -81,22 +105,56 @@ def _remove_tree_once(path: Path, *, ignore_errors: bool = False) -> None:
     shutil.rmtree(target, ignore_errors=ignore_errors, onexc=_make_writable)
 
 
-def remove_tree(path: Path, *, ignore_errors: bool = False) -> None:
-    """Delete a database directory. A path Windows cannot see drops the CodeQL cache and retries."""
+def _remove_tree_with_cache_recovery(path: Path, *, ignore_errors: bool = False) -> None:
     try:
         _remove_tree_once(path, ignore_errors=ignore_errors)
     except OSError as error:
         cache = missing_cache(error)
         if cache is None:
-            if ignore_errors:
-                return
             raise
         _remove_tree_once(cache)
         _remove_tree_once(path, ignore_errors=ignore_errors)
 
 
-def copy_tree(source: Path, destination: Path) -> None:
-    remove_tree(destination)
+def remove_tree(
+    path: Path,
+    *,
+    ignore_errors: bool = False,
+    lock_roots: tuple[Path | str, ...] = (),
+) -> None:
+    """Delete a database directory. A path Windows cannot see drops the CodeQL cache and retries."""
+    from harness.mcp.codeql_server import release_codeql_database_locks
+
+    last: BaseException | None = None
+    for attempt in range(_REMOVE_TREE_ATTEMPTS):
+        try:
+            _remove_tree_with_cache_recovery(path, ignore_errors=ignore_errors)
+            return
+        except OSError as error:
+            last = error
+            if not _file_in_use(error):
+                if ignore_errors:
+                    return
+                raise
+            if attempt + 1 >= _REMOVE_TREE_ATTEMPTS:
+                break
+            if lock_roots:
+                release_codeql_database_locks(*lock_roots, settle_seconds=1.0 if os.name == "nt" else 0.5)
+            else:
+                time.sleep(_REMOVE_TREE_DELAY_SECONDS)
+    if ignore_errors:
+        return
+    if last is not None:
+        raise last
+
+
+def copy_tree(
+    source: Path,
+    destination: Path,
+    *,
+    lock_roots: tuple[Path | str, ...] = (),
+) -> None:
+    remove_tree(destination, lock_roots=lock_roots)
     try:
         shutil.copytree(windows_path(source), windows_path(destination))
     except OSError as error:
@@ -914,6 +972,7 @@ class CodeQLGraph:
         self._progress: list[dict] = []
         self._on_progress = None
         self.use_query_server = False
+        self._target_dbscheme_by_language: dict[str, Path | None] = {}
         self.filter = CodeQLFilter(self)
         super().__init__()
 
@@ -1087,11 +1146,16 @@ class CodeQLGraph:
         self._progress.clear()
         self._bind(folder, practices, database)
         self._report("load", f"Opening {folder}")
-        missing = [name for name in self._practice_roots if not self._database_ready(self._working_copy(name))]
-        if missing:
-            names = ", ".join(missing)
-            self._report("error", f"No working copy for {names}")
-            raise QueryFailure("load_working_copy", f"No working copy for {names}.")
+        stale = [name for name in self._practice_roots if not self._working_copy_current(name)]
+        if stale:
+            names = ", ".join(stale)
+            if any(not self._database_ready(self._working_copy(name)) for name in stale):
+                self._report("load", f"No working copy for {names}. Extracting source.")
+            else:
+                self._report("load", f"Working copy outdated for {names}. Rebuilding.")
+            self._rewrite_working_copies(stale)
+            for name in stale:
+                self._write_stamp(name)
         if self._saved_graph_current():
             self._report("load", "Saved graph matches the query packs")
             self._restore_saved_graph()
@@ -1255,11 +1319,11 @@ class CodeQLGraph:
                 found[path.stem] = path
         return found
 
-    def _run_missing(self, queries: list[str], database: Path) -> dict[str, Path]:
+    def _run_missing(self, queries: list[str], database: Path, *, retried_for_dbscheme: bool = False) -> dict[str, Path]:
         total = len(queries)
         self._report("queries", f"Running {total} queries together", total=total)
         if not self.use_query_server:
-            self._execute_queries(queries, database)
+            self._execute_queries(queries, database, retried_for_dbscheme=retried_for_dbscheme)
             return {}
         try:
             from harness.mcp.codeql_query_daemon import QueryServerClient
@@ -1270,14 +1334,22 @@ class CodeQLGraph:
             produced = client.run_queries(queries, database, lambda line: self._report("query", line))
             resolved = {str(Path(query).resolve()) for query in queries}
             return {key: path for key, path in produced.items() if key in resolved}
-        except QueryFailure:
+        except QueryFailure as error:
+            if not retried_for_dbscheme and _dbscheme_mismatch(error.detail):
+                self._report("queries", "CodeQL database scheme is outdated. Rebuilding and retrying queries.")
+                self._rebuild_working_copies_for_database(database)
+                return self._run_missing(queries, database, retried_for_dbscheme=True)
             raise
         except Exception as error:
             detail = str(error)
+            if not retried_for_dbscheme and _dbscheme_mismatch(detail):
+                self._report("queries", "CodeQL database scheme is outdated. Rebuilding and retrying queries.")
+                self._rebuild_working_copies_for_database(database)
+                return self._run_missing(queries, database, retried_for_dbscheme=True)
             self._report("error", detail)
             raise QueryFailure("query server", detail) from error
 
-    def _execute_queries(self, queries: list[str], database: Path) -> None:
+    def _execute_queries(self, queries: list[str], database: Path, *, retried_for_dbscheme: bool = False) -> None:
         if not queries:
             return
         paths = [str(Path(query).resolve()) for query in queries]
@@ -1299,6 +1371,11 @@ class CodeQLGraph:
         )
         if run.returncode != 0:
             detail = self._with_crash_dump(_codeql_detail(run.stderr, run.stdout) or "database run-queries failed")
+            if not retried_for_dbscheme and _dbscheme_mismatch(detail):
+                self._report("queries", "CodeQL database scheme is outdated. Rebuilding and retrying queries.")
+                self._rebuild_working_copies_for_database(database)
+                self._execute_queries(queries, database, retried_for_dbscheme=True)
+                return
             self._report("error", detail)
             raise QueryFailure("database run-queries", detail)
 
@@ -1476,14 +1553,24 @@ class CodeQLGraph:
     def _source_key(self, name: str) -> tuple[str, str]:
         return (str(self._practice_roots[name]), self._languages[name])
 
+    def _lock_release_roots(self) -> tuple[Path | str, ...]:
+        roots: list[Path | str] = [_REPO]
+        if self._folder is not None:
+            roots.append(self._folder)
+        return tuple(roots)
+
     def _delete_databases(self) -> None:
+        from harness.mcp.codeql_server import release_codeql_database_locks
+
+        lock_roots = self._lock_release_roots()
+        release_codeql_database_locks(*lock_roots, settle_seconds=1.0 if os.name == "nt" else 0.5)
         snapshot = self._snapshot_path()
         if snapshot.is_file():
             snapshot.unlink()
         for name in self._practice_roots:
             for path in (self._master(name), self._working_copy(name), self._stamp_path(name)):
                 if path.is_dir() or path.is_file():
-                    remove_tree(path)
+                    remove_tree(path, lock_roots=lock_roots)
 
     def _snapshot_path(self) -> Path:
         folder = self._folder or Path()
@@ -1571,6 +1658,8 @@ class CodeQLGraph:
     def _working_copy_current(self, name: str) -> bool:
         if not self._database_ready(self._working_copy(name)):
             return False
+        if not self._database_dbscheme_current(name):
+            return False
         path = self._stamp_path(name)
         if not path.is_file():
             return False
@@ -1582,6 +1671,88 @@ class CodeQLGraph:
         current = self._watched_stamp(name)
         return saved.get("source_ns") == current["source_ns"] and saved.get("queries_ns") == current["queries_ns"]
 
+    def _practices_with_stale_dbscheme(self) -> list[str]:
+        stale: list[str] = []
+        for name in self._practice_roots:
+            working = self._working_copy(name)
+            if not self._database_ready(working):
+                continue
+            if not self._database_dbscheme_current(name):
+                stale.append(name)
+        return stale
+
+    def _rebuild_working_copies_for_database(self, database: Path) -> None:
+        from harness.mcp.codeql_server import release_codeql_database_locks
+
+        lock_roots = self._lock_release_roots()
+        release_codeql_database_locks(*lock_roots, settle_seconds=1.0 if os.name == "nt" else 0.5)
+        names = self._practice_names_for_database(database)
+        touched = names if names else list(self._practice_roots)
+        self._rewrite_working_copies(touched)
+        for name in touched:
+            self._write_stamp(name)
+
+    def _practice_names_for_database(self, database: Path) -> list[str]:
+        resolved = Path(database).resolve()
+        return [name for name in self._practice_roots if self._working_copy(name).resolve() == resolved]
+
+    def _database_dbscheme_current(self, name: str) -> bool:
+        target = self._target_dbscheme(name)
+        if target is None:
+            return True
+        stored = self._stored_dbscheme(self._working_copy(name), self._languages[name])
+        if stored is None or not stored.is_file():
+            return False
+        return stored.read_bytes() == target.read_bytes()
+
+    def _stored_dbscheme(self, database: Path, language: str) -> Path | None:
+        store = _DB_STORE_BY_LANGUAGE.get(language)
+        if store is None:
+            return None
+        folder = database / store
+        if not folder.is_dir():
+            return None
+        matches = list(folder.glob("*.dbscheme"))
+        if not matches:
+            return None
+        return matches[0]
+
+    def _target_dbscheme(self, practice: str) -> Path | None:
+        language = self._languages[practice]
+        if language in self._target_dbscheme_by_language:
+            return self._target_dbscheme_by_language[language]
+        sample = self.query_files(practice, "nodes")
+        if not sample:
+            sample = self.query_files(practice, "rules")
+        if not sample:
+            self._target_dbscheme_by_language[language] = None
+            return None
+        run = subprocess.run(
+            [
+                self._executable,
+                "resolve",
+                "library-path",
+                f"--query={sample[0]}",
+                "--format=json",
+                f"--search-path={_REPO / 'practices'}",
+            ],
+            cwd=str(_REPO),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if run.returncode != 0 or not run.stdout.strip():
+            self._target_dbscheme_by_language[language] = None
+            return None
+        try:
+            payload = json.loads(run.stdout)
+            path = Path(payload["dbscheme"])
+        except (json.JSONDecodeError, KeyError, TypeError):
+            self._target_dbscheme_by_language[language] = None
+            return None
+        self._target_dbscheme_by_language[language] = path
+        return path
+
     def _write_stamp(self, name: str) -> None:
         path = self._stamp_path(name)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1592,11 +1763,16 @@ class CodeQLGraph:
         pack = query_pack(name, language)
         source_ns = self._latest_mtime(self._practice_roots[name])
         queries_ns = self._latest_mtime(pack)
+        target = self._target_dbscheme(name)
+        dbscheme_digest = ""
+        if target is not None and target.is_file():
+            dbscheme_digest = hashlib.sha256(target.read_bytes()).hexdigest()
         return {
             "source_ns": source_ns,
             "queries_ns": queries_ns,
             "source": self._iso_time(source_ns),
             "queries": self._iso_time(queries_ns),
+            "dbscheme_digest": dbscheme_digest,
         }
 
     def _latest_mtime(self, path: Path) -> int:
@@ -1666,6 +1842,10 @@ class CodeQLGraph:
 
     def _rewrite_working_copies(self, names: list[str]) -> None:
         """Extract each distinct source once, then copy that database to the other practices."""
+        from harness.mcp.codeql_server import release_codeql_database_locks
+
+        lock_roots = self._lock_release_roots()
+        release_codeql_database_locks(*lock_roots, settle_seconds=1.0 if os.name == "nt" else 0.5)
         built: dict[tuple[str, str], Path] = {}
         for name in names:
             key = self._source_key(name)
@@ -1749,6 +1929,8 @@ class CodeQLGraph:
 
     def _create_database_at(self, database: Path, source: Path, language: str) -> None:
         database.parent.mkdir(parents=True, exist_ok=True)
+        if database.exists() and not self._database_ready(database):
+            remove_tree(database, lock_roots=self._lock_release_roots())
         self._report("extract", f"Extracting {language} source into {database.name}")
         extractor = "python" if language == "python" else "javascript"
         run = self._run_codeql(
@@ -1772,7 +1954,7 @@ class CodeQLGraph:
             raise QueryFailure(str(database), detail)
 
     def _copy_database(self, source: Path, destination: Path) -> None:
-        copy_tree(source, destination)
+        copy_tree(source, destination, lock_roots=self._lock_release_roots())
 
     def _practices_for_paths(self, paths: list[str]) -> list[str]:
         touched: list[str] = []
