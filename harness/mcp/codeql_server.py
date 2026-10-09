@@ -85,13 +85,99 @@ def process_command(pid: int) -> str:
     return (result.stdout or "").strip()
 
 
+_CODEQL_HOLDER_PATTERN = (
+    "query-server2|database run-queries|database create|codeql_query_daemon|execute queries"
+)
+
+
+def codeql_holder_pids() -> list[int]:
+    """PIDs for processes that can keep a CodeQL database directory open on Windows."""
+    if sys.platform != "win32":
+        return []
+    script = (
+        "Get-CimInstance Win32_Process | "
+        f"Where-Object {{ $_.CommandLine -match '{_CODEQL_HOLDER_PATTERN}' }} | "
+        "ForEach-Object { $_.ProcessId }"
+    )
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", script],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    pids: list[int] = []
+    for line in (result.stdout or "").splitlines():
+        text = line.strip()
+        if text.isdigit():
+            pids.append(int(text))
+    return pids
+
+
+def terminate_process_tree(pid: int) -> None:
+    if pid <= 0:
+        return
+    if sys.platform == "win32":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(pid)],
+            check=False,
+            capture_output=True,
+        )
+        return
+    try:
+        os.kill(pid, 9)
+    except OSError:
+        return
+
+
+def stop_query_daemon(repo: Path | str) -> None:
+    """Stop the persistent query daemon registered for this repo, if any."""
+    root = CodeQL(repo).repo_root()
+    path = root / ".codeql" / "query-server.json"
+    if not path.is_file():
+        return
+    pid = 0
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+        pid = int(state.get("pid") or 0)
+    except (json.JSONDecodeError, OSError, TypeError, ValueError):
+        pass
+    if pid_alive(pid):
+        terminate_process_tree(pid)
+    try:
+        path.unlink()
+    except OSError:
+        pass
+
+
+def release_codeql_database_locks(*repos: Path | str, settle_seconds: float | None = None) -> None:
+    """Drop query daemons and CodeQL JVMs so database directories can be deleted."""
+    seen: set[Path] = set()
+    touched = False
+    for repo in repos:
+        root = CodeQL(repo).repo_root()
+        if root in seen:
+            continue
+        seen.add(root)
+        marker = root / ".codeql" / "query-server.json"
+        if marker.is_file():
+            touched = True
+        stop_query_daemon(root)
+    for pid in codeql_holder_pids():
+        touched = True
+        terminate_process_tree(pid)
+    if touched:
+        delay = settle_seconds if settle_seconds is not None else (1.0 if sys.platform == "win32" else 0.35)
+        time.sleep(delay)
+
+
 def codeql_process_report() -> str:
     """Name every CodeQL process that can hold the query server or a database."""
     if sys.platform != "win32":
         return ""
     script = (
         "Get-CimInstance Win32_Process | "
-        "Where-Object { $_.CommandLine -match 'query-server2|database run-queries' } | "
+        f"Where-Object {{ $_.CommandLine -match '{_CODEQL_HOLDER_PATTERN}' }} | "
         "ForEach-Object { '{0}`t{1}' -f $_.ProcessId, $_.CommandLine }"
     )
     result = subprocess.run(
@@ -412,16 +498,4 @@ class CodeQLQueryServer:
         return json.loads(b"".join(chunks))
 
     def _kill_tree(self, pid: int) -> None:
-        if sys.platform == "win32":
-            subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)],
-                check=False,
-                capture_output=True,
-            )
-            return
-        try:
-            os.kill(pid, 9)
-        except OSError:
-            logger = __import__("logging").getLogger(__name__)
-            logger.debug("process %s already gone", pid)
-            return
+        terminate_process_tree(pid)
