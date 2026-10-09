@@ -133,10 +133,12 @@ with description("a CodeQL graph"):
                             "hasParameter",
                             "hasType",
                             "demonstratedThrough",
+                            "invokedBy",
                             "returns",
                             "retrievedUsing",
                             "invokes",
                             "dependsOn",
+                            "usedBy",
                         ]
                     )
                 )
@@ -411,6 +413,10 @@ with description("a CodeQL graph"):
                 with it("should place that step back under the operation"):
                     operation = tree_by_id(self.clean_tree, self.invoked["node_id"])
                     expect(tree_names(tree_child(operation, "invokes"))).to(contain(self.invoking_step["name"]))
+
+                with it("should name the inverse invokedBy on the operation"):
+                    operation = tree_by_id(self.clean_tree, self.invoked["node_id"])
+                    expect(tree_names(tree_child(operation, "invokedBy"))).to(contain(self.invoking_step["name"]))
 
             with context("with a then step that observes an example"):
                 with before.all:

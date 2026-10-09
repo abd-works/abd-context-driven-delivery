@@ -266,6 +266,31 @@ predicate continuesStep(CallExpr step, CallExpr prior) {
   )
 }
 
+predicate storyImportsModule(File file, string prefix, string mod) {
+  exists(ImportDeclaration imp, string path |
+    storyFile(file) and
+    imp.getFile() = file and
+    path = slash(imp.getImportedPathString()) and
+    (
+      mod = path.regexpCapture("(?:.*@)?src/([^/]+).*", 1) and prefix = "src"
+      or
+      mod = path.regexpCapture("(?:.*@)?domain/([^/]+).*", 1) and prefix = "domain"
+    )
+  )
+}
+
+predicate epicUsesModule(string folder, string prefix, string mod) {
+  exists(File file |
+    folder = epicFolder(file) and
+    storyImportsModule(file, prefix, mod)
+  )
+}
+
+bindingset[prefix, mod]
+string moduleNodeId(string prefix, string mod) {
+  result = "clean_engineering:Module:" + prefix + "/" + mod
+}
+
 predicate continuesThen(CallExpr step) {
   stepCall(step, ["and", "but"]) and
   exists(CallExpr prior |

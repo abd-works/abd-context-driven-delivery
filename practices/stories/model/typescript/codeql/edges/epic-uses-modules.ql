@@ -5,7 +5,9 @@
  */
 
 import javascript
+import stories
 
-from File f
-where none()
-select f.getRelativePath(), f.getRelativePath(), "uses", 9, "relationship"
+from string folder, string prefix, string mod
+where epicUsesModule(folder, prefix, mod)
+select epicId(folder), moduleNodeId(prefix, mod), "uses", 9, "relationship"
+  order by folder, prefix, mod

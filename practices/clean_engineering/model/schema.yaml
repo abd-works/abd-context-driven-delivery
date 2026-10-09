@@ -1,0 +1,42 @@
+# Allowed structure from CodeQL nodes and edges.
+# is: names the supertype. practice.type is a node in another practice.
+# Quoted names are constants.
+# Top: a collection of modules or packages is required. Everything below is a def or sub-def.
+[module | package]
+module:
+  - name: string
+  - stereotypes?: [string]
+  - participants:
+    [
+      module | package | class | operation
+    ]
+  - usedBy?: [stories.epic]
+package:
+  - name: string
+  - participants:[class | package | module]
+class:
+  - name: string
+  - stereotypes?: [string]
+  - baseClass?: [class]
+  - dependsOn?: [class]
+  - relationship?:
+    [
+      - kind: "composition" | "aggregation" | "association"
+      - target: class
+    ]
+  - demonstratedThrough?: [stories.example]
+  - [operation | property]
+operation:
+  - name: string
+  - parameters: [string]
+  - returnType: class | string
+  - body: string
+  - invokes: [operation | property]
+  - invokedBy?: [stories.step]
+property:
+  - name: string
+  - type: string
+  - value?: string
+  - relative?: [property]
+  - hasType?: class
+  - invokes: [operation | property]

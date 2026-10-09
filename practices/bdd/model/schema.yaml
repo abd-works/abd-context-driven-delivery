@@ -1,0 +1,17 @@
+# Allowed structure from CodeQL nodes and edges.
+# Top: a collection of specs is required. Everything below is a def or sub-def.
+[spec]
+spec:
+  - name: string
+  - [description]
+description:
+  - name: string
+  - belongsTo: spec | description
+  - [description | context]
+context:
+  - name: string
+  - belongsTo: description | context
+  - [context | observation]
+observation:
+  - name: string
+  - belongsTo: context

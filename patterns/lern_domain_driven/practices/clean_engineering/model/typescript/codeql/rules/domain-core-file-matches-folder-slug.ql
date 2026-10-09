@@ -12,9 +12,8 @@ import subject_filter
 import model
 
 predicate srcDomainFolder(Container domain, string slug) {
-  domain.getParentContainer().getBaseName() = "src" and
+  aggregateFolder(domain) and
   slug = domain.getBaseName() and
-  slug != "systems" and
   exists(File f | f.getParentContainer() = domain)
 }
 
@@ -44,7 +43,7 @@ where
   exists(File core, TopLevel top |
     core = top.getFile() and
     inSubject(top) and
-    core.getRelativePath().regexpMatch("src/[^/]+/[A-Z][A-Za-z0-9]*\\.ts") and
+    core.getRelativePath().regexpMatch("src/(?:[^/]+/){1,2}[A-Z][A-Za-z0-9]*\\.ts") and
     not core.getRelativePath().regexpMatch("src/systems/.*") and
     core.getBaseName() =
       pascalFromSlug(core.getParentContainer().getBaseName()) + ".ts" and
@@ -57,7 +56,7 @@ where
   exists(File file, TopLevel top |
     file = top.getFile() and
     inSubject(top) and
-    file.getRelativePath().regexpMatch("src/[^/]+/[^/]+-server\\.ts$") and
+    file.getRelativePath().regexpMatch("src/(?:[^/]+/){1,2}[^/]+-server\\.ts$") and
     subject = top and
     contributor = top and
     message = "Node tier file must use <domain>-node.ts, not -server.ts."
@@ -66,7 +65,7 @@ where
   exists(ClassDefinition cls |
     inSubject(cls) and
     cls.getName().matches("%Server") and
-    cls.getFile().getRelativePath().regexpMatch("src/[^/]+/[^/]+\\.(ts|tsx)$") and
+    cls.getFile().getRelativePath().regexpMatch("src/(?:[^/]+/){1,2}[^/]+\\.(ts|tsx)$") and
     subject = cls and
     contributor = cls and
     message =
@@ -87,14 +86,17 @@ where
     subject = top and
     contributor = top and
     message =
-      "Each src/" + slug + "/ folder holds " + slug + ".ts, " + slug +
-        "-client.tsx, and " + slug + "-node.ts; Client and Node extend the domain class."
+      "Aggregate src/<bounded context>/" + slug + "/ holds " + slug + ".ts, " + slug +
+        "-client.tsx, " + slug + "-node.ts, its views, and one route file."
   )
   or
   exists(ClassDefinition cls, string folderSlug, string domainName |
     inSubject(cls) and
     folderSlug = cls.getFile().getParentContainer().getBaseName() and
-    cls.getFile().getParentContainer().getParentContainer().getBaseName() = "src" and
+    (
+      aggregateFolder(cls.getFile().getParentContainer()) or
+      cls.getFile().getParentContainer().getParentContainer().getBaseName() = "src"
+    ) and
     domainName = pascalFromSlug(folderSlug) and
     (
       cls.getFile().getBaseName() = folderSlug + "-client.tsx" and
@@ -119,17 +121,65 @@ where
       artifact.getBaseName().matches("%-node.ts") or
       artifact.getBaseName().matches("%-server.ts") or
       artifact.getBaseName().matches("%-client.tsx") or
+      (
+        artifact.getExtension() = "tsx" and
+        not artifact.getBaseName() = "main.tsx" and
+        not artifact.getBaseName().matches("%-redirect.tsx") and
+        not artifact.getBaseName().matches("%-shell.tsx") and
+        not artifact.getBaseName().matches("%-view.tsx")
+      ) or
+      routeFile(artifact) or
       artifact.getRelativePath().regexpMatch("packages/[^/]+/data/[^/]+\\.json") or
       artifact.getRelativePath().regexpMatch("packages/[^/]+/.+/data/[^/]+\\.json") or
       artifact.getRelativePath().regexpMatch("packages/[^/]+/.+/source/[^/]+\\.ts") or
-      artifact.getRelativePath().regexpMatch("packages/[^/]+/[^/]+/[^/]+\\.ts") and
-      not artifact.getRelativePath().regexpMatch("packages/[^/]+/routes/.*")
+      artifact.getRelativePath().regexpMatch("packages/[^/]+/[^/]+/[^/]+\\.ts")
     ) and
     subject = top and
     contributor = top and
     message =
       "Domain tier '" + artifact.getRelativePath() +
-        "' belongs under src/<domain>/, not inside packages/<epicSlug>/."
+        "' belongs in src/<bounded context>/<aggregate>/ with its views, node file, and client file, not inside packages/<epicSlug>/."
+  )
+  or
+  exists(File flat, TopLevel top |
+    flat = top.getFile() and
+    inSubject(top) and
+    flat.getParentContainer().getParentContainer().getBaseName() = "src" and
+    not flat.getRelativePath().regexpMatch("src/systems/.*") and
+    (
+      flat.getExtension() = "ts" or
+      flat.getExtension() = "tsx"
+    ) and
+    subject = top and
+    contributor = top and
+    message =
+      "Aggregate files live in src/<bounded context>/<aggregate>/, with the views, the node file, and the client file."
+  )
+  or
+  exists(Container folder, File route, TopLevel top |
+    aggregateFolder(folder) and
+    route.getParentContainer() = folder and
+    routeFile(route) and
+    count(File other | other.getParentContainer() = folder and routeFile(other)) > 1 and
+    top.getFile() = route and
+    inSubject(top) and
+    subject = top and
+    contributor = top and
+    message = "An aggregate has one route file."
+  )
+  or
+  exists(File view, ImportDeclaration imp, string path, TopLevel top |
+    view.getExtension() = "tsx" and
+    not clientFile(view) and
+    top.getFile() = view and
+    inSubject(top) and
+    imp.getFile() = view and
+    importedPath(imp, path) and
+    path.regexpMatch(".*\\.\\./.*-(client|node)(\\.(tsx|ts))?$") and
+    subject = top and
+    contributor = imp and
+    message =
+      "A view, the client file, and the node file live in the same aggregate folder."
   )
   or
   exists(ImportDeclaration imp, string path |

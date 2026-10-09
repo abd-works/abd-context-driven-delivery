@@ -715,7 +715,7 @@ class CodeQLNode:
     def serialize(self, seen: set[str] | None = None, via: CodeQLNode | None = None, stack: set[str] | None = None) -> dict:
         """Write the full child list once, on the home parent.
 
-        Every copy still lists invokes, observes, and demonstrates. A node already on the path is a stub, so a call back to this step stops.
+        Every copy still lists invokes, invokedBy, observes, demonstrates, and demonstratedThrough. A node already on the path is a stub, so a call back to this step stops.
         """
         seen = set() if seen is None else seen
         stack = set() if stack is None else stack
@@ -727,7 +727,7 @@ class CodeQLNode:
             seen.add(self.node_id)
             children = self.children
         else:
-            children = [child for child in self.children if child.type == child.name and child.name in {"invokes", "observes", "demonstrates"}]
+            children = [child for child in self.children if child.type == child.name and child.name in {"invokes", "invokedBy", "observes", "demonstrates", "demonstratedThrough", "uses", "usedBy"}]
         path = stack | {self.node_id}
         written = [child.serialize(seen, self, path) for child in children]
         if first_home:

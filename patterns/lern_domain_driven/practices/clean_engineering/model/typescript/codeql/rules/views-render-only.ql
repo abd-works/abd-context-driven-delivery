@@ -11,11 +11,25 @@ import javascript
 import subject_filter
 import model
 
+predicate viewModule(File f) {
+  screenViewFile(f)
+  or
+  (
+    f.getExtension() = "tsx" and
+    epicPackagePath(f.getRelativePath()) and
+    not clientFile(f) and
+    not f.getBaseName() = "main.tsx" and
+    not f.getBaseName().matches("%-redirect.tsx") and
+    not f.getBaseName().matches("%-shell.tsx") and
+    not f.getBaseName().matches("%-view.tsx")
+  )
+}
+
 from AstNode subject, string message, AstNode contributor
 where
   exists(Function fn, File f |
     inSubject(fn) and
-    screenViewFile(f) and
+    viewModule(f) and
     fn.getFile() = f and
     fn.getName() = "destination" and
     subject = fn and
@@ -26,7 +40,7 @@ where
   or
   exists(Function fn |
     inSubject(fn) and
-    screenViewFile(fn.getFile()) and
+    viewModule(fn.getFile()) and
     exists(ExportDeclaration exp | exp.getAChild*() = fn) and
     fn.getName().regexpMatch("^[A-Z].*") and
     not fn.getName().matches("%View") and
@@ -37,7 +51,7 @@ where
   )
   or
   exists(File f, TopLevel top |
-    screenViewFile(f) and
+    viewModule(f) and
     top.getFile() = f and
     inSubject(top) and
     f.getBaseName().regexpMatch("^[A-Z].*\\.tsx$") and
@@ -45,6 +59,6 @@ where
     contributor = top and
     message =
       "A screen view only renders. Screen file '" + f.getBaseName() +
-        "' stays kebab-case under the sub-epic folder."
+        "' stays kebab-case in the aggregate folder, beside the client file and the node file."
   )
 select subject, message, contributor

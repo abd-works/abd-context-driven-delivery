@@ -11,9 +11,21 @@ predicate clientFile(File f) {
 
 predicate tierFile(File f) { nodeFile(f) or serverFile(f) or clientFile(f) }
 
+predicate aggregateFolder(Container folder) {
+  folder.getParentContainer().getParentContainer().getParentContainer().getBaseName() = "src"
+}
+
 predicate srcCoreFile(File f) {
-  f.getRelativePath().regexpMatch("src/[^/]+/[^/]+\\.ts") and
-  not f.getRelativePath().regexpMatch("src/[^/]+/[^/]+-(node|server|client)\\.ts")
+  f.getExtension() = "ts" and
+  not f.getBaseName().matches("%-node.ts") and
+  not f.getBaseName().matches("%-server.ts") and
+  not f.getBaseName().matches("%-client.ts") and
+  not f.getBaseName().matches("%-routes.ts") and
+  (
+    aggregateFolder(f.getParentContainer())
+    or
+    f.getParentContainer().getParentContainer().getBaseName() = "src"
+  )
 }
 
 predicate coreFile(File f) {
@@ -133,13 +145,18 @@ predicate epicPackagePath(string path) {
   path.regexpMatch("packages/[^/]+/.+")
 }
 
+predicate routeFile(File f) { f.getBaseName().matches("%-routes.ts") }
+
 predicate routerModuleFile(File f) {
-  f.getRelativePath().regexpMatch("packages/[^/]+/routes/[^/]+\\.ts") or
-  f.getRelativePath().regexpMatch("packages/[^/]+/.*-redirect\\.tsx")
+  routeFile(f) and aggregateFolder(f.getParentContainer())
 }
 
 predicate screenViewFile(File f) {
-  f.getRelativePath().regexpMatch("packages/[^/]+/[^/]+/[^/]+\\.tsx")
+  f.getExtension() = "tsx" and
+  not clientFile(f) and
+  not f.getBaseName().matches("%-redirect.tsx") and
+  not f.getBaseName().matches("%-shell.tsx") and
+  aggregateFolder(f.getParentContainer())
 }
 
 bindingset[slug]

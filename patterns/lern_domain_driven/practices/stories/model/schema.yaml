@@ -1,0 +1,17 @@
+# LERN overlay on stories. Extend only.
+share:
+  - is: stories.story
+  - states: stories.story
+  - links?: ddd.aggregate
+  - domain
+  - server
+  - playwright
+domain:
+  - is: stories.story
+  - executes: share
+server:
+  - is: stories.story
+  - executes: share
+playwright:
+  - is: stories.story
+  - executes: share

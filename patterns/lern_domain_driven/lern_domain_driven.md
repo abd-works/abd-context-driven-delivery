@@ -42,39 +42,41 @@ callers never open the JSON store themselves.
 
 ---
 
-### Two-root layout: `src/` domains, `packages/` screens
+### Layout: bounded context, aggregate, epic shell
 
-Domain tiers and lowdb stores live **once** under `src/<domain-slug>/`.
-Epic packages under `packages/<epicSlug>/` hold process boot, routing, and
-screen views only — they import domain tiers through `@src`.
+Domain tiers, views, the node file, the client file, and one route file live
+under `src/<boundedContext>/<aggregate>/`. Epic packages under
+`packages/<epicSlug>/` hold process boot and the shell only — they import the
+aggregate through `@src`.
 
 ```
-src/                                    ← shared domain modules (one copy)
-  <domain-slug>/
-    <domain-slug>.ts                    ← core aggregate, repository, VOs
-    <domain-slug>-node.ts               ← Node tier (Express, destination, repo node)
-    <domain-slug>-client.tsx            ← browser client subtype
-    <domain-slug>.json                  ← lowdb store for this aggregate
+src/
+  <boundedContext>/
+    <aggregate>/
+      <aggregate>.ts                    ← core aggregate, repository, VOs
+      <aggregate>-node.ts               ← Node tier; selects the next view
+      <aggregate>-client.tsx            ← browser client; the view renders this
+      <screen-slug>.tsx                 ← views in this folder
+      <aggregate>-routes.ts             ← one route file for this aggregate
+      <aggregate>.json                  ← lowdb store for this aggregate
 
-packages/<epicSlug>/                    ← epic package — screens and boot only
+packages/<epicSlug>/                    ← epic shell — boot only
   app.ts / serve.ts / main.tsx          ← Express + Vite process boot
   package.json / index.html / vite.config.ts
-  <epic-slug>-view.tsx                  ← epic shell view (kebab-case filename)
-  <epic-slug>-redirect.tsx              ← fetches destination, mounts sub-epic view
-  routes/
-    <epic-slug>-routes.ts               ← asks *Node classes; never picks a step locally
-  <sub-epic-slug>/                      ← sub-epic screen folder
-    <screen-slug>.tsx
+  <epic-slug>-view.tsx                  ← epic shell view
+  <epic-slug>-redirect.tsx              ← fetches the node destination, mounts the view
 ```
 
-Rule `epic-package-screens-only` governs this split. Do **not** duplicate
-`<domain>.ts`, `<domain>-node.ts`, `<domain>-client.tsx`, `source/`, or
-`data/` trees under the epic package — tests and screens already import the
-single copy from `@src`.
+A view, the client file, and the node file are siblings in the aggregate
+folder. The view renders the client. The node selects the view. The aggregate
+has one route file.
+
+Rule `epic-package-screens-only` governs the split. Do **not** put
+`<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, views, or
+the route file under the epic package.
 
 Rule `domain-core-file-matches-folder-slug` governs filenames: kebab-case core
-files (`<domain-slug>/<domain-slug>.ts`), PascalCase exported types
-(`{Domain}`).
+files (`<aggregate>/<aggregate>.ts`), PascalCase exported types (`{Domain}`).
 
 ---
 
@@ -152,21 +154,23 @@ path those classes produce. Redirect components fetch that result and mount the
 view for the returned path. Neither the route module nor the redirect derives
 the page from a step enum locally (rule `router-asks-the-node`).
 
-**Views render only.** A screen view keeps the client instance in React state
-and paints the fields, requirement lines, and actions that client exposes.
-Field entry, touched flags, requirement strings, host operations, and the next
-page stay off the view (rule `views-render-only`).
+**Views render only.** A view in the aggregate folder keeps the client instance
+in React state and paints the fields, requirement lines, and actions that
+client exposes. Field entry, touched flags, requirement strings, and host
+operations stay on the client. The node selects the next view (rule
+`views-render-only`).
 
-Epic and sub-epic views use kebab-case filenames (`<epic-slug>-view.tsx`,
-`<screen-slug>.tsx`). Exported React components end in `View`
-(rule `consistent-view-naming`).
+The epic shell uses `<epic-slug>-view.tsx`. Aggregate views use kebab-case
+filenames (`<screen-slug>.tsx`) beside the client file and the node file.
+Exported React components end in `View` (rule `consistent-view-naming`).
 
 ---
 
 ### App server / routes
 
-Route handlers stay thin: parse the request, delegate to a `*Node` class or
-call `*Node.destination`. Rules `router-asks-the-node`, `ensure-type-safe-routes`
+One route file per aggregate lives in that aggregate folder. Handlers stay
+thin: parse the request, delegate to a `*Node` class or call
+`*Node.destination`. Rules `router-asks-the-node`, `ensure-type-safe-routes`
 (typed request extensions), and `standard-mutation-response` govern this tier.
 
 Create the aggregate's one repository at the **caller** — production passes the
@@ -182,9 +186,9 @@ boundary. Rules `implement-domain-entities-correctly` and
 ### Packaging
 
 `@src` alias resolves `src/` for epic packages. One epic package per feature
-(`packages/<epicSlug>`) with screen and route subpaths. Rules
-`use-valid-package-names` and `include-all-external-dependencies` govern
-packaging (`lowdb` on the server).
+(`packages/<epicSlug>`) is the shell. The aggregate folder holds the views and
+the one route file. Rules `use-valid-package-names` and
+`include-all-external-dependencies` govern packaging (`lowdb` on the server).
 
 ### Testing architecture
 
@@ -211,8 +215,8 @@ and `pml-artifact-layout` govern these files.
 
 Screens and navigation for this slice were designed upstream by `ux` before
 this tool runs. `generate` cites that artifact under **Sources / context** on
-the touched view files (`packages/<epicSlug>/*-view.tsx`, sub-epic screen
-folders, …) — it does not call `ux` itself.
+the touched view files (`src/<boundedContext>/<aggregate>/*.tsx` and the epic
+shell `*-view.tsx`) — it does not call `ux` itself.
 
 ### Generating stories — cross-aggregate sync
 
@@ -248,10 +252,11 @@ heading and skip the question.
 
 ## Generate
 
-1. Follow **session_guidance**. Scaffold domain modules under `src/<domain-slug>/`
-   (`<domain>.ts`, `<domain>-node.ts`, `<domain>-client.tsx`, `<domain>.json`)
-   and the epic package under `packages/<epicSlug>/` (boot, `routes/`, epic view,
-   sub-epic screen folders). Import domain tiers through `@src`.
+1. Follow **session_guidance**. Scaffold each aggregate under
+   `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`,
+   `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`,
+   `<aggregate>.json`) and the epic shell under `packages/<epicSlug>/` (boot,
+   epic view, redirect). Import the aggregate through `@src`.
 2. **`ask-cross-aggregate-sync`** — if more than one aggregate is in play,
    AskQuestion as specified above and persist the answer **before** calling
    the Stories companion.
@@ -278,22 +283,22 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 
 ### Layout and tiers
 
-- **`epic-package-screens-only`** — Keep shared domain tiers and lowdb data only under `src/<domain>/` (`<domain>.ts`, `<domain>-node.ts`, `<domain>-client.tsx`, and per-aggregate json). Limit `packages/<epicSlug>/` to epic boot (`app.ts`, `serve.ts`, `main.tsx`, `*-view.tsx`) plus sub-epic screen views and `routes/` — no second `*-node.ts`, `*-client.tsx`, `source/`, or `data/` tree under the epic package.
-- **`domain-core-file-matches-folder-slug`** — Name the domain core file after the folder slug in kebab-case (`<domain-slug>/<domain-slug>.ts`). Keep exported classes PascalCase (`{Domain}`). Place `<domain>-node.ts` and `<domain>-client.tsx` beside the core file in the same `src/<domain>/` folder.
+- **`epic-package-screens-only`** — Keep the aggregate under `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`, and the json store). Limit `packages/<epicSlug>/` to epic boot (`app.ts`, `serve.ts`, `main.tsx`, `*-view.tsx`, `*-redirect.tsx`) — no `*-node.ts`, `*-client.tsx`, views, route file, `source/`, or `data/` tree under the epic package.
+- **`domain-core-file-matches-folder-slug`** — Name the domain core file after the aggregate folder slug in kebab-case (`src/<boundedContext>/<aggregate>/<aggregate>.ts`). Keep exported classes PascalCase (`{Domain}`). Place `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, and one route file in that same aggregate folder.
 - **`node-tier-uses-node-suffix`** — Name the Node.js LERN tier with the `Node` suffix and `<domain>-node.ts` filenames (`{Domain}Node`). Type request-context fields as `*Node`, not `Server`. The repository is `*Repository`, never `*RepositoryNode`.
-- **`client-subtypes-domain-hosts-browser-logic`** — For each `src/<domain>/`, derive `<domain>.ts`, `<domain>-client.tsx`, and `<domain>-node.ts` from the folder slug. The `*Client` and `*Node` classes extend the core domain class. Domain operations on the core are the operations the client hosts for the browser; field changes return a new client instance for React state.
+- **`client-subtypes-domain-hosts-browser-logic`** — For each aggregate folder, derive `<aggregate>.ts`, `<aggregate>-client.tsx`, and `<aggregate>-node.ts` from the folder slug. The `*Client` and `*Node` classes extend the core domain class. The view renders the client. The node selects the view. Domain operations on the core are the operations the client hosts for the browser; field changes return a new client instance for React state.
 
 ### Navigation and views
 
 - **`node-decides-next-page`** — The node class decides the next page. `*Node.destination` maps the domain step to the browser path; path maps stay in `*-node.ts`.
 - **`router-asks-the-node`** — Route modules only ask node classes and return the path they produce. Redirect components fetch that result and mount the view — neither derives the page from a step locally.
-- **`views-render-only`** — A screen view only renders. It keeps the client in React state and paints fields, requirement lines, and actions the client exposes. Field entry, touched flags, host operations, and next-page logic stay on the client or node.
+- **`views-render-only`** — A view lives in the aggregate folder and only renders. It keeps the client in React state and paints fields, requirement lines, and actions the client exposes. Field entry, touched flags, and host operations stay on the client. The node selects the next view.
 
 ### Persistence and repositories
 
-- **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON file under `src/<domain-slug>/`. Do not put several aggregates in one file. Repositories never open another aggregate's JSON file.
+- **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON file in its aggregate folder. Do not put several aggregates in one file. Repositories never open another aggregate's JSON file.
 - **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository` interface is the collection seam for the root: `load`, `create`, `search`, `update` — named in ubiquitous language. Zod `.parse()` runs at this boundary.
-- **`one-repository-per-aggregate`** — One `*Repository` per `src/<domain>/`, declared on the aggregate. The client does not declare a repository. Repository names keep the `Repository` suffix only — never `*RepositoryNode`.
+- **`one-repository-per-aggregate`** — One `*Repository` per aggregate folder, declared on the aggregate. The client does not declare a repository. Repository names keep the `Repository` suffix only — never `*RepositoryNode`.
 
 ### Naming, purity, and packaging
 

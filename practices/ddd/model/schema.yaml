@@ -1,0 +1,59 @@
+# Allowed structure from CodeQL nodes and edges.
+# is: names the supertype. practice.type is a node in another practice.
+# Top: a collection of bounded contexts or aggregates is required. Everything below is a def or sub-def.
+[boundedContext | aggregate]
+boundedContext:
+  - is: module
+  - name: string
+  - [boundedContext | aggregate]
+  - mappedTo:
+    [
+      - contextMapping:
+          - local: aggregate
+          - remote: aggregate
+          - pattern: "shared kernel" | "customer-supplier" | "published language" | "conformist" | "separate ways"
+    ]
+aggregate:
+  - is: module
+  - name: string
+  - root: entityRoot
+  - participants:
+    [
+      entity | valueObject | class | repository | domainEvent | domainService | factory | specification
+    ]
+  - entityRoot:
+      - is: entity
+      - name: string
+      - belongsTo: aggregate
+      - associates: [entity]
+      - identity: property
+  - valueObject:
+      - is: class
+      - name: string
+      - belongsTo: aggregate
+  - entity:
+      - is: class
+      - name: string
+      - belongsTo: aggregate
+      - associates: [entity]
+  - repository:
+      - is: class
+      - name: string
+      - belongsTo: aggregate
+      - accesses: entityRoot
+  - domainEvent:
+      - is: property
+      - name: string
+      - belongsTo: aggregate
+  - domainService:
+      - is: class
+      - name: string
+      - belongsTo: aggregate
+  - factory:
+      - is: class
+      - name: string
+      - belongsTo: aggregate
+  - specification:
+      - is: class
+      - name: string
+      - belongsTo: aggregate

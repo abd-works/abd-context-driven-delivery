@@ -1,0 +1,31 @@
+# Allowed structure from CodeQL nodes and edges.
+# Top: a collection of epics is required. Everything below is a def or sub-def.
+[epic]
+epic:
+  - name: string
+  - uses?: [module]
+  - [subEpic | story]
+subEpic:
+  - name: string
+  - belongsTo: epic
+  - [story]
+story:
+  - name: string
+  - belongsTo: epic
+  - [background | scenario | step | example]
+background:
+  - name: string
+  - [step]
+scenario:
+  - name: string
+  - [step]
+step:
+  - name: string
+  - order: number
+  - invokes: [class.operation | class.property]
+  - observes: [example]
+example:
+  - name: string
+  - value: string
+  - demonstrates: class
+  - retrievedUsing: [class.operation | class.property]

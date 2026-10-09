@@ -17,6 +17,7 @@ where
   (
     nodeFile(ta.getFile()) or
     serverFile(ta.getFile()) or
+    routeFile(ta.getFile()) or
     routerModuleFile(ta.getFile())
   ) and
   ta.getTypeAnnotation().toString() = "any" and

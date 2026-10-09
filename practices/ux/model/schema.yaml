@@ -1,0 +1,34 @@
+# Allowed structure from CodeQL nodes and edges.
+# Top: a collection of maps is required. Everything below is a def or sub-def.
+[map]
+map:
+  - name: string
+  - [contentType | context | navComponent | screen | transition]
+contentType:
+  - name: string
+  - belongsTo: map
+context:
+  - name: string
+  - belongsTo: map
+navComponent:
+  - name: string
+  - belongsTo: map
+screen:
+  - name: string
+  - belongsTo: map
+  - [region]
+region:
+  - name: string
+  - belongsTo: screen
+  - [control]
+control:
+  - name: string
+  - belongsTo: region
+  - [interaction]
+interaction:
+  - name: string
+  - belongsTo: control
+transition:
+  - name: string
+  - belongsTo: map
+  - namesState: [screen]

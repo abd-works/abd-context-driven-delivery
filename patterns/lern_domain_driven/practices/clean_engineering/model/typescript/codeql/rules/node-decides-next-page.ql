@@ -14,7 +14,11 @@ import model
 from AstNode subject, string message, AstNode contributor
 where
   exists(CallExpr redirect, StringLiteral path |
-    routerModuleFile(redirect.getFile()) and
+    (
+      routerModuleFile(redirect.getFile()) or
+      routeFile(redirect.getFile()) or
+      redirect.getFile().getBaseName().matches("%-redirect.tsx")
+    ) and
     inSubject(path) and
     redirect.getCalleeName() = "redirect" and
     path = redirect.getAnArgument() and

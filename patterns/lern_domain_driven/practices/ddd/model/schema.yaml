@@ -1,0 +1,31 @@
+# LERN overlay on ddd. Extend only.
+# Aggregate folder: src/<boundedContext>/<aggregate>/.
+# That folder holds the core, the node file, the client file, the views, and one route file.
+entityRoot:
+  - is: ddd.entityRoot
+  - [node | client]
+node:
+  - is: ddd.entityRoot
+  - hosts: ddd.entityRoot
+  - selects: [view]
+client:
+  - is: ddd.entityRoot
+  - interacts: ddd.entityRoot
+  - presents: [view]
+repository:
+  - is: ddd.repository
+  - [jsonStore]
+jsonStore:
+  - jsonFile: ddd.entityRoot
+aggregate:
+  - is: ddd.aggregate
+  - route
+  - [view]
+route:
+  - navigates: ddd.aggregate
+  - [destination]
+destination:
+  - invokes: [operation]
+view:
+  - renders: client
+  - selectedBy: node
