@@ -10,4 +10,4 @@ import stories
 from string folder, string prefix, string mod
 where epicUsesModule(folder, prefix, mod)
 select epicId(folder), moduleNodeId(prefix, mod), "uses", 9, "relationship"
-  order by folder, prefix, mod
+  order by epicId(folder), moduleNodeId(prefix, mod)

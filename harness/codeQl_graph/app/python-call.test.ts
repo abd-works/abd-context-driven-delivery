@@ -8,15 +8,16 @@ afterEach(() => {
 it('should surface the python traceback when the api reports a failure', async () => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
+    vi.fn(async () => {
+      const payload = {
         ok: false,
         error: 'load_working_copy\nNo working copy for stories.',
         error_type: 'QueryFailure',
         traceback: 'Traceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: load_working_copy',
-      }),
-    })),
+      };
+      const serialized = JSON.stringify(payload);
+      return { ok: true, text: async () => serialized, json: async () => payload };
+    }),
   );
 
   const client = new PythonCall();
@@ -28,17 +29,18 @@ it('should surface the python traceback when the api reports a failure', async (
 it('should prefer the diagnosis prompt when the api reports a failure', async () => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({
-      ok: false,
-      json: async () => ({
+    vi.fn(async () => {
+      const payload = {
         ok: false,
         error: 'No working copy for stories.',
         error_type: 'QueryFailure',
         traceback: 'Traceback (most recent call last):\n  File "host.py", line 1',
         diagnosis:
           'I just encountered an error doing load_working_copy on C:\\repo. Please diagnose and fix.\n\nTraceback (most recent call last):',
-      }),
-    })),
+      };
+      const serialized = JSON.stringify(payload);
+      return { ok: false, text: async () => serialized, json: async () => payload };
+    }),
   );
 
   const client = new PythonCall();

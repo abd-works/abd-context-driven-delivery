@@ -13,6 +13,9 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable, NamedTuple
 
+CODEQL_WEB_PORTS: tuple[int, ...] = (3000,)
+CODEQL_APP_PORTS: tuple[int, ...] = (5173, 5174, 5175, 5176)
+
 
 class Process(NamedTuple):
     pid: int
@@ -98,10 +101,12 @@ class RepoProcesses:
             return
         os.kill(pid, signal.SIGTERM)
 
-    def http_ping(self, port: int) -> dict[str, Any] | None:
-        heard = self._read_ping(port)
+    def http_ping(self, port: int, expect_service: str | None = None) -> dict[str, Any] | None:
+        heard = self._read_ping(port, expect_service)
         if heard is not None:
             return heard
+        if expect_service is not None:
+            return None
         origin = self._open_origin(port)
         if origin is None:
             return None
@@ -112,14 +117,14 @@ class RepoProcesses:
             "port": port,
         }
 
-    def _read_ping(self, port: int) -> dict[str, Any] | None:
+    def _read_ping(self, port: int, expect_service: str | None = None) -> dict[str, Any] | None:
         for origin in self._origins(port):
-            body = self._fetch_ping(origin)
+            body = self._fetch_ping(origin, expect_service)
             if body is not None:
                 return body
         return None
 
-    def _fetch_ping(self, origin: str) -> dict[str, Any] | None:
+    def _fetch_ping(self, origin: str, expect_service: str | None = None) -> dict[str, Any] | None:
         try:
             with urllib.request.urlopen(origin + "/ping", timeout=2) as response:
                 body = json.loads(response.read().decode("utf-8"))
@@ -127,6 +132,20 @@ class RepoProcesses:
             return None
         if not isinstance(body, dict) or body.get("ping") != "pong":
             return None
+        if expect_service is not None:
+            tagged = body.get("service")
+            port_text = origin.rsplit(":", 1)[-1]
+            if tagged is not None:
+                if tagged != expect_service:
+                    return None
+            elif expect_service == "codeql_web":
+                if port_text != str(CODEQL_WEB_PORTS[0]):
+                    return None
+            elif expect_service == "codeql_app":
+                if port_text not in {str(item) for item in CODEQL_APP_PORTS}:
+                    return None
+            else:
+                return None
         reported = str(body.get("url") or "").rstrip("/")
         body["url"] = reported if reported == origin else origin
         port_text = origin.rsplit(":", 1)[-1]
@@ -367,23 +386,33 @@ class HttpPing:
     def __init__(self, repo: Path | str | None = None) -> None:
         self.processes = RepoProcesses(repo)
 
-    def run(self, include: Callable[[str], bool]) -> int:
+    def run(
+        self,
+        include: Callable[[str], bool],
+        preferred_ports: tuple[int, ...] = (),
+        expect_service: str | None = None,
+    ) -> int:
         def scoped(command: str) -> bool:
             return self.processes.in_repo(command) and include(command)
 
         found = [item.pid for item in self.processes.roots(self.processes.matching(scoped))]
         ports = {pid: self.processes.tree_ports(pid) for pid in found}
-        answered = {pid: self._first_pong(ports.get(pid, [])) for pid in found}
+        answered = {
+            pid: self._first_pong(ports.get(pid, []), preferred_ports, expect_service) for pid in found
+        }
         healthy = [pid for pid, body in answered.items() if body is not None]
         prefer = min(healthy) if healthy else None
         keeper, stopped = self.processes.collapse(found, prefer)
         body = answered.get(keeper) if keeper is not None else None
         if keeper is not None and body is None:
-            body = self._first_pong(self.processes.tree_ports(keeper))
+            body = self._first_pong(self.processes.tree_ports(keeper), preferred_ports, expect_service)
         port = None if body is None else body.get("port")
         if port is None and keeper is not None:
-            heard = ports.get(keeper) or []
-            port = heard[0] if heard else None
+            if preferred_ports:
+                port = preferred_ports[0]
+            else:
+                heard = ports.get(keeper) or []
+                port = heard[0] if heard else None
         url = None if body is None else body.get("url")
         if url is None and port is not None:
             url = f"http://127.0.0.1:{port}"
@@ -400,9 +429,15 @@ class HttpPing:
             }
         )
 
-    def _first_pong(self, ports: list[int]) -> dict[str, Any] | None:
-        for port in ports:
-            body = self.processes.http_ping(port)
+    def _first_pong(
+        self,
+        ports: list[int],
+        preferred_ports: tuple[int, ...] = (),
+        expect_service: str | None = None,
+    ) -> dict[str, Any] | None:
+        candidates = list(preferred_ports) if preferred_ports else sorted(ports)
+        for port in candidates:
+            body = self.processes.http_ping(port, expect_service)
             if body is not None:
                 return body
         return None

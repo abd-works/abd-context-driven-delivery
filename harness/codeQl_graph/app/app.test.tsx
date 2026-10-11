@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { GraphView } from './graph/GraphView';
 import { SourceView } from './source/SourceView';
+import { buildViolationCorrectPrompt } from './source/violation-prompt';
 
 const foldMarks = vi.hoisted(() => ({
   names: [] as string[],
@@ -30,8 +31,8 @@ vi.mock('@monaco-editor/react', () => ({
       getModel: () => { getLineCount: () => number };
       getDomNode: () => HTMLElement;
       getTargetAtClientPoint: () => null;
-      createDecorationsCollection: (next: { range: { startLineNumber: number }; options: { glyphMarginClassName?: string } }[]) => {
-        set: (items: { range: { startLineNumber: number }; options: { glyphMarginClassName?: string } }[]) => void;
+      createDecorationsCollection: (next: { range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } }[]) => {
+        set: (items: { range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } }[]) => void;
         clear: () => void;
       };
       setHiddenAreas: (ranges: { startLineNumber: number; endLineNumber: number }[]) => void;
@@ -39,7 +40,7 @@ vi.mock('@monaco-editor/react', () => ({
   }) => {
     const text = value ?? defaultValue ?? '';
     const host = useRef<HTMLDivElement>(null);
-    const marks = useRef<{ range: { startLineNumber: number }; options: { glyphMarginClassName?: string } }[]>([]);
+    const marks = useRef<{ range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } }[]>([]);
     const hidden = useRef<{ startLineNumber: number; endLineNumber: number }[]>([]);
     foldMarks.scrollbar = options?.scrollbar;
     const paint = () => {
@@ -58,6 +59,11 @@ vi.mock('@monaco-editor/react', () => ({
         }
         const row = document.createElement('div');
         row.dataset.line = shown;
+        for (const item of marks.current) {
+          if (item.range.startLineNumber === lineNumber && item.options.isWholeLine && item.options.className) {
+            row.className = item.options.className;
+          }
+        }
         for (const item of marks.current) {
           const className = item.options.glyphMarginClassName;
           if (item.range.startLineNumber === lineNumber && className) {
@@ -102,6 +108,7 @@ vi.mock('@monaco-editor/react', () => ({
 }));
 
 const folder = 'C:\\dev\\example';
+const overlayFolder = 'C:\\dev\\patterns\\lern_domain_driven';
 const registerText = 'register(input: Credentials) {\n  const account: AccountToken = input;\n  if (input) {\n    credentials.save();\n  }\n  credentials.notify();\n}';
 const engineeringTree = {
   type: 'Practice',
@@ -298,11 +305,28 @@ const inventory = {
 
 const calls: { operation: string; body: Record<string, unknown> }[] = [];
 let shownViolations = false;
+let activeOverlays: string[] = [];
 let reported = currentStaleness();
+
+function inventoryBundle() {
+  const practices =
+    shownViolations
+      ? {
+          ...inventory,
+          clean_engineering: { ...inventory.clean_engineering, tree: violationTree(engineeringTree) },
+        }
+      : inventory;
+  return {
+    practices,
+    overlays: activeOverlays,
+    available_overlays: ['lern_domain_driven'],
+  };
+}
 
 beforeEach(() => {
   calls.length = 0;
   shownViolations = false;
+  activeOverlays = [];
   reported = currentStaleness();
   foldMarks.names = [];
   foldMarks.scrollbar = undefined;
@@ -313,7 +337,13 @@ beforeEach(() => {
       const operation = String(url).replace('/api/', '');
       const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
       calls.push({ operation, body });
-      return { ok: true, json: async () => ({ ok: true, result: answer(operation, body) }) };
+      const payload = { ok: true, result: answer(operation, body) };
+      const serialized = JSON.stringify(payload);
+      return {
+        ok: true,
+        text: async () => serialized,
+        json: async () => payload,
+      };
     }),
   );
 });
@@ -392,6 +422,7 @@ it('should number a step from its line in the file', async () => {
         end_line: 95,
         members: [],
       }}
+      violation={null}
     />,
   );
   const editor = await screen.findByTestId('source-editor');
@@ -511,19 +542,20 @@ it('should show the backend traceback instead of loading forever', async () => {
       const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
       calls.push({ operation, body });
       if (operation === 'load_working_copy') {
-        return {
+        const payload = {
           ok: false,
-          json: async () => ({
-            ok: false,
-            error: 'No working copy for stories.',
-            error_type: 'QueryFailure',
-            traceback: 'Traceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
-            diagnosis:
-              'I just encountered an error doing load_working_copy on C:\\repo. Please diagnose and fix.\n\nTraceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
-          }),
+          error: 'No working copy for stories.',
+          error_type: 'QueryFailure',
+          traceback: 'Traceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
+          diagnosis:
+            'I just encountered an error doing load_working_copy on C:\\repo. Please diagnose and fix.\n\nTraceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
         };
+        const serialized = JSON.stringify(payload);
+        return { ok: false, text: async () => serialized, json: async () => payload };
       }
-      return { ok: true, json: async () => ({ ok: true, result: answer(operation, body) }) };
+      const payload = { ok: true, result: answer(operation, body) };
+      const serialized = JSON.stringify(payload);
+      return { ok: true, text: async () => serialized, json: async () => payload };
     }),
   );
   render(<App />);
@@ -546,6 +578,43 @@ it('should reload the last folder when the app opens', async () => {
 it('should start with the source pane asking for a node', () => {
   render(<App />);
   expect(screen.getByText('Select a node')).toBeTruthy();
+});
+
+it('should offer an overlay folder picker between practice and node filters', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  expect(screen.getByTestId('overlay-add')).toBeTruthy();
+  expect(screen.getByText('No overlays. Add a folder with a practices/ tree.')).toBeTruthy();
+});
+
+it('should apply overlays through the api when a folder is chosen', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await user.click(screen.getByTestId('overlay-add'));
+  await waitFor(() =>
+    expect(calls.some((call) => call.operation === 'choose_overlay_folder')).toBe(true),
+  );
+  await waitFor(() =>
+    expect(
+      calls.some(
+        (call) => call.operation === 'apply_overlays' && (call.body.overlays as string[]).includes(overlayFolder),
+      ),
+    ).toBe(true),
+  );
+  expect(screen.getByTestId('overlay-list').textContent).toContain('lern_domain_driven');
+});
+
+it('should remove an overlay when its remove control is clicked', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await user.click(screen.getByTestId('overlay-add'));
+  await waitFor(() => expect(activeOverlays).toContain(overlayFolder));
+  await user.click(screen.getByTestId('overlay-remove-lern_domain_driven'));
+  await waitFor(() =>
+    expect(calls.some((call) => call.operation === 'apply_overlays' && (call.body.overlays as string[]).length === 0)).toBe(
+      true,
+    ),
+  );
 });
 
 it('should send violations when the switch is turned on', async () => {
@@ -586,6 +655,61 @@ it('should keep the violation attached when violations are filtered', async () =
   await user.click(screen.getByTestId('tree-expand-rules'));
   expect(document.querySelector('.rule-status.violating')?.textContent).toContain('limit-operation-parameters');
   expect(document.querySelector('.rule-status.passing')).toBeNull();
+});
+
+it('should expose the violation message when hovering a violating rule', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  await expand(user, 'AccountCredentials');
+  await expand(user, 'failure');
+  await user.click(screen.getByTestId('tree-expand-rules'));
+  expect(screen.getByTestId('tree-violation-rule').getAttribute('title')).toBe(
+    "Operation 'failure' takes more than two parameters.",
+  );
+});
+
+it('should show the violation banner, highlight the source, and copy a Correct prompt', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(writeText);
+  const user = userEvent.setup();
+  await openFolder(user);
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  await expand(user, 'AccountCredentials');
+  await expand(user, 'failure');
+  await user.click(screen.getByTestId('tree-expand-rules'));
+  await user.click(screen.getByTestId('tree-violation-rule'));
+  const banner = await screen.findByTestId('violation-banner');
+  expect(banner.textContent).toContain('limit-operation-parameters');
+  expect(banner.textContent).toContain('takes more than two parameters');
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(editor.querySelector('.violation-highlight')).toBeTruthy());
+  await user.click(screen.getByTestId('violation-correct'));
+  expect(writeText).toHaveBeenCalledOnce();
+  const copied = String(writeText.mock.calls[0][0]);
+  expect(copied).toContain('Clean Engineering');
+  expect(copied).toContain('test-driven');
+  expect(copied).toContain(registerText);
+  expect(copied).toContain("Violation: Operation 'failure' takes more than two parameters.");
+});
+
+it('should build a Correct prompt with the rule, excerpt, and violation message', () => {
+  const prompt = buildViolationCorrectPrompt({
+    rule: 'use-explicit-dependencies',
+    message: 'Constructs a collaborator inside the constructor.',
+    nodeName: 'register',
+    nodeType: 'Operation',
+    file: 'account.ts',
+    startLine: 10,
+    endLine: 18,
+    excerpt: 'register() { }',
+  });
+  expect(prompt).toContain('use-explicit-dependencies');
+  expect(prompt).toContain('account.ts:10-18');
+  expect(prompt).toContain('register() { }');
+  expect(prompt).toContain('Constructs a collaborator inside the constructor.');
 });
 
 it('should show invokes, observes, and demonstrates on a step', async () => {
@@ -696,20 +820,21 @@ it('should show each load step while the graph is loading', async () => {
         await gate;
       }
       if (operation === 'progress') {
-        return {
+        const payload = {
           ok: true,
-          json: async () => ({
-            ok: true,
-            messages: [
-              'query: 1/2 steps.ql',
-              'codeql: Starting evaluation of steps.ql.',
-              'codeql: [1/2 comp 1s] Compiled C:\\pack\\steps.ql.',
-              'codeql: [2/2 comp 1s] Compiled C:\\pack\\edges.ql.',
-            ],
-          }),
+          messages: [
+            'query: 1/2 steps.ql',
+            'codeql: Starting evaluation of steps.ql.',
+            'codeql: [1/2 comp 1s] Compiled C:\\pack\\steps.ql.',
+            'codeql: [2/2 comp 1s] Compiled C:\\pack\\edges.ql.',
+          ],
         };
+        const serialized = JSON.stringify(payload);
+        return { ok: true, text: async () => serialized, json: async () => payload };
       }
-      return { ok: true, json: async () => ({ ok: true, result: answer(operation, body) }) };
+      const payload = { ok: true, result: answer(operation, body) };
+      const serialized = JSON.stringify(payload);
+      return { ok: true, text: async () => serialized, json: async () => payload };
     }),
   );
   render(<App />);
@@ -765,14 +890,15 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
   if (operation === 'choose_folder') {
     return folder;
   }
+  if (operation === 'choose_overlay_folder') {
+    return overlayFolder;
+  }
   if (operation === 'inventory') {
-    if (!shownViolations) {
-      return inventory;
-    }
-    return {
-      ...inventory,
-      clean_engineering: { ...inventory.clean_engineering, tree: violationTree(engineeringTree) },
-    };
+    return inventoryBundle();
+  }
+  if (operation === 'apply_overlays') {
+    activeOverlays = Array.isArray(body.overlays) ? (body.overlays as string[]) : [];
+    return inventoryBundle();
   }
   if (operation === 'filter_choices') {
     return constrained(filter.node_types ?? []);

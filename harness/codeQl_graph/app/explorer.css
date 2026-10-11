@@ -433,6 +433,60 @@ html[data-theme="engineering"] .site-nav {
   min-width: 0;
 }
 
+.overlay-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  max-height: 6rem;
+  overflow: auto;
+}
+
+.overlay-empty {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  padding: var(--space-2xs) 0;
+}
+
+.overlay-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  padding: 2px var(--space-xs);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.overlay-path {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.overlay-remove {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  line-height: 1;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.overlay-remove:hover {
+  color: var(--error);
+}
+
 .filter-heading {
   display: flex;
   flex-wrap: wrap;
@@ -714,6 +768,44 @@ ul.tree ul {
 
 .copy-diagnosis {
   justify-self: start;
+}
+
+.violation-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--error) 12%, var(--raised));
+}
+
+.violation-banner-copy {
+  display: grid;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.violation-rule {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.violation-message {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+  color: var(--error);
+}
+
+.source-snippet .violation-highlight {
+  background-color: color-mix(in srgb, var(--error) 22%, transparent) !important;
 }
 
 .source-snippet {

@@ -14,7 +14,14 @@ for _entry in (str(_REPO), str(_SCRIPTS)):
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 
-from instances import PingReport, RepoProcesses, codeql_app, codeql_web
+from instances import (
+    CODEQL_APP_PORTS,
+    CODEQL_WEB_PORTS,
+    PingReport,
+    RepoProcesses,
+    codeql_app,
+    codeql_web,
+)
 
 
 class ServiceStart:
@@ -27,14 +34,30 @@ class ServiceStart:
         self.logs = _SCRIPTS / ".run"
 
     def codeql_app(self) -> int:
-        return self._http(codeql_app, "npm run dev", self.app, self.logs / "codeql-app.log", os.environ.copy())
+        return self._http(
+            codeql_app,
+            "npm run dev",
+            self.app,
+            self.logs / "codeql-app.log",
+            os.environ.copy(),
+            preferred_ports=CODEQL_APP_PORTS,
+            expect_service="codeql_app",
+        )
 
     def codeql_web(self) -> int:
         env = os.environ.copy()
         python = self.repo / ".venv" / "Scripts" / "python.exe"
         if python.is_file():
             env["PYTHON"] = str(python)
-        return self._http(codeql_web, "npm run server", self.app, self.logs / "codeql-web.log", env)
+        return self._http(
+            codeql_web,
+            "npm run server",
+            self.app,
+            self.logs / "codeql-web.log",
+            env,
+            preferred_ports=CODEQL_WEB_PORTS,
+            expect_service="codeql_web",
+        )
 
     def hook(self) -> int:
         from harness.hooks.hook_daemon import HookDaemon
@@ -65,10 +88,19 @@ class ServiceStart:
             }
         )
 
-    def _http(self, include: Callable[[str], bool], command: str, cwd: Path, log: Path, env: dict[str, str]) -> int:
+    def _http(
+        self,
+        include: Callable[[str], bool],
+        command: str,
+        cwd: Path,
+        log: Path,
+        env: dict[str, str],
+        preferred_ports: tuple[int, ...] = (),
+        expect_service: str | None = None,
+    ) -> int:
         stopped = self._stop(include)
         self._spawn(command, cwd, log, env)
-        pid, body = self._wait_pong(include)
+        pid, body = self._wait_pong(include, preferred_ports, expect_service)
         ok = body is not None
         report: dict[str, Any] = {
             "ok": ok,
@@ -91,19 +123,30 @@ class ServiceStart:
             time.sleep(0.2)
         return found
 
-    def _wait_pong(self, include: Callable[[str], bool]) -> tuple[int | None, dict[str, Any] | None]:
+    def _wait_pong(
+        self,
+        include: Callable[[str], bool],
+        preferred_ports: tuple[int, ...] = (),
+        expect_service: str | None = None,
+    ) -> tuple[int | None, dict[str, Any] | None]:
         deadline = time.time() + 30
         while time.time() < deadline:
             for pid in self._roots(include):
-                body = self._first_pong(self.processes.tree_ports(pid))
+                body = self._first_pong(self.processes.tree_ports(pid), preferred_ports, expect_service)
                 if body is not None:
                     return pid, body
             time.sleep(0.25)
         return None, None
 
-    def _first_pong(self, ports: list[int]) -> dict[str, Any] | None:
-        for port in ports:
-            body = self.processes.http_ping(port)
+    def _first_pong(
+        self,
+        ports: list[int],
+        preferred_ports: tuple[int, ...] = (),
+        expect_service: str | None = None,
+    ) -> dict[str, Any] | None:
+        candidates = list(preferred_ports) if preferred_ports else sorted(ports)
+        for port in candidates:
+            body = self.processes.http_ping(port, expect_service)
             if body is not None:
                 return body
         return None

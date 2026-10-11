@@ -1,19 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 import { DataManagementClient } from './data-management/DataManagementClient';
 import { DataManagementView, type Staleness } from './data-management/DataManagementView';
-import { FilterClient, type FilterSelection, type GraphTree, type PracticeInventory } from './filter/FilterClient';
+import { FilterClient, type FilterSelection, type GraphTree, type InventoryBundle, type PracticeInventory } from './filter/FilterClient';
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
 import { GraphView } from './graph/GraphView';
+import type { GraphSelection } from './graph/graph-selection';
 import { SourceClient, type SourceText } from './source/SourceClient';
 import { SourceView } from './source/SourceView';
+import { normalizeInventoryBundle } from './inventory-bundle';
+import type { ViolationFocus } from './source/violation-prompt';
 
 const PRACTICES = ['clean_engineering', 'stories', 'ddd', 'bdd', 'ux'];
 const LAST_FOLDER = 'cdd-graph-folder';
 const EMPTY: FilterSelection = {
   practices: [],
+  overlays: [],
   node_types: [],
   relationships: [],
   rules: [],
@@ -43,7 +47,9 @@ export function App() {
   const [status, setStatus] = useState('');
   const [staleness, setStaleness] = useState<Staleness | null>(null);
   const [selectedId, setSelectedId] = useState('');
+  const [violation, setViolation] = useState<ViolationFocus | null>(null);
   const [source, setSource] = useState<SourceText | null>(null);
+  const loadGeneration = useRef(0);
   const engineering = theme === 'engineering';
 
   function applyTheme(next: '' | 'engineering') {
@@ -107,24 +113,32 @@ export function App() {
     if (!trimmed) {
       return;
     }
+    const generation = loadGeneration.current + 1;
+    loadGeneration.current = generation;
     setLoading(true);
     setLoadingLabel('Loading the graph…');
     setLoadingLog([]);
     setError('');
     try {
       await graphs.load(trimmed, practiceRoots(trimmed));
-      const inventory = await graphs.inventory();
+      if (generation !== loadGeneration.current) {
+        return;
+      }
+      const bundle = normalizeInventoryBundle(await graphs.inventory());
       const report = await data.staleness(trimmed, practiceRoots(trimmed));
-      setCatalog(inventory);
-      const shown = next.practices.length ? next.practices : Object.keys(inventory);
-      setTrees(shown.map((name) => inventory[name]?.tree).filter((tree): tree is GraphTree => Boolean(tree)));
-      setNodeTypes(unique(shown.flatMap((name) => inventory[name]?.node_types ?? [])));
-      setRelationships(visibleRelationships(unique(shown.flatMap((name) => inventory[name]?.edge_types ?? []))));
-      setRules(unique(shown.flatMap((name) => inventory[name]?.rules ?? [])));
+      if (generation !== loadGeneration.current) {
+        return;
+      }
+      const synced = { ...next, overlays: bundle.overlays };
+      adoptInventory(bundle, synced);
+      setSelection(synced);
       setLoadedFolder(trimmed);
       window.localStorage.setItem(LAST_FOLDER, trimmed);
       setStaleness(report);
     } catch (cause) {
+      if (generation !== loadGeneration.current) {
+        return;
+      }
       setError(cause instanceof Error ? cause.message : String(cause));
       try {
         setStaleness(await data.staleness(trimmed, practiceRoots(trimmed)));
@@ -132,16 +146,70 @@ export function App() {
         setStaleness(null);
       }
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) {
+        setLoading(false);
+        setLoadingLog([]);
+      }
     }
   }
 
-  async function choose(nodeId: string) {
-    setSelectedId(nodeId);
-    setSource(await sources.open(nodeId));
+  async function choose(selection: GraphSelection) {
+    setSelectedId(selection.nodeId);
+    setViolation(selection.violation ?? null);
+    setSource(await sources.open(selection.nodeId));
   }
 
-  async function applyFilter(next: FilterSelection) {
+  function adoptInventory(bundle: InventoryBundle, filter: FilterSelection) {
+    setCatalog(bundle.practices);
+    const shown = filter.practices.length ? filter.practices : Object.keys(bundle.practices);
+    setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is GraphTree => Boolean(tree)));
+    setNodeTypes(unique(shown.flatMap((name) => bundle.practices[name]?.node_types ?? [])));
+    setRelationships(visibleRelationships(unique(shown.flatMap((name) => bundle.practices[name]?.edge_types ?? []))));
+    setRules(unique(shown.flatMap((name) => bundle.practices[name]?.rules ?? [])));
+  }
+
+  async function applyOverlays(overlays: string[]) {
+    const next = { ...selection, overlays };
+    if (!folder.trim()) {
+      setSelection(next);
+      return;
+    }
+    setLoading(true);
+    setLoadingLabel('Applying pattern overlays…');
+    setError('');
+    try {
+      const bundle = normalizeInventoryBundle(await filters.applyOverlays(overlays));
+      adoptInventory(bundle, next);
+      setSelection(next);
+      await applyFilter(next, bundle.practices);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setLoading(false);
+      setLoadingLog([]);
+    }
+  }
+
+  async function addOverlayFolder() {
+    try {
+      const picked = await graphs.chooseOverlayFolder();
+      if (!picked.trim()) {
+        return;
+      }
+      if (selection.overlays.includes(picked)) {
+        return;
+      }
+      await applyOverlays([...selection.overlays, picked]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+
+  function removeOverlay(overlay: string) {
+    void applyOverlays(selection.overlays.filter((item) => item !== overlay));
+  }
+
+  async function applyFilter(next: FilterSelection, practices = catalog) {
     if (!folder.trim()) {
       setSelection(next);
       return;
@@ -150,11 +218,11 @@ export function App() {
     const nodeChanged = joined(next.node_types) !== joined(selection.node_types);
     let resolved = next;
     if (practiceChanged) {
-      resolved = practiceSelection(selection, next, catalog);
-      const scope = resolved.practices.length ? resolved.practices : Object.keys(catalog);
-      setNodeTypes(listed(scope, catalog, 'node_types'));
-      setRelationships(visibleRelationships(listed(scope, catalog, 'edge_types')));
-      setRules(listed(scope, catalog, 'rules'));
+      resolved = practiceSelection(selection, next, practices);
+      const scope = resolved.practices.length ? resolved.practices : Object.keys(practices);
+      setNodeTypes(listed(scope, practices, 'node_types'));
+      setRelationships(visibleRelationships(listed(scope, practices, 'edge_types')));
+      setRules(listed(scope, practices, 'rules'));
     } else if (nodeChanged) {
       const choices = await filters.choices(next);
       resolved = { ...next, relationships: choices.relationships, rules: choices.rules };
@@ -164,11 +232,11 @@ export function App() {
     setSelection(resolved);
     const rows = await filters.nodes(resolved);
     const names = new Set(rows.map((row) => row.node_id));
-    const inventory = await graphs.inventory();
-    const shown = resolved.practices.length ? resolved.practices : Object.keys(inventory);
+    const bundle = normalizeInventoryBundle(await graphs.inventory());
+    const shown = resolved.practices.length ? resolved.practices : Object.keys(bundle.practices);
     setTrees(
       shown
-        .map((name) => keep(inventory[name]?.tree, names, resolved.node_types))
+        .map((name) => keep(bundle.practices[name]?.tree, names, resolved.node_types))
         .filter((tree): tree is GraphTree => Boolean(tree)),
     );
   }
@@ -280,19 +348,23 @@ export function App() {
             onChange={(next) => {
               void applyFilter(next);
             }}
+            onAddOverlay={() => {
+              void addOverlayFolder();
+            }}
+            onRemoveOverlay={removeOverlay}
           />
         </div>
         <div className="split">
           <GraphView
             trees={trees}
-            loading={loading || (trees.length === 0 && loadingLog.length > 0)}
+            loading={loading}
             loadingLabel={loadingLabel}
             loadingLog={loadingLog}
             error={error}
             selectedId={selectedId}
-            onSelect={(nodeId) => void choose(nodeId)}
+            onSelect={(selection) => void choose(selection)}
           />
-          <SourceView source={source} />
+          <SourceView source={source} violation={violation} />
         </div>
       </div>
     </main>

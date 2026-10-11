@@ -2,22 +2,24 @@ import Editor, { type OnMount } from '@monaco-editor/react';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { initialOpenFolds, inlineCallLayout, type FoldMember, type InlineFold } from './call-expansion';
 import type { SourceText } from './SourceClient';
+import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
 
 const LINE_HEIGHT = 20;
 
 type SourceViewProps = {
   source: SourceText | null;
+  violation: ViolationFocus | null;
 };
 
-export function SourceView({ source }: SourceViewProps) {
+export function SourceView({ source, violation }: SourceViewProps) {
   return (
     <div className="panel" data-testid="source-file">
-      {source ? <SourceEditor source={source} /> : <p className="empty-state">Select a node</p>}
+      {source ? <SourceEditor source={source} violation={violation} /> : <p className="empty-state">Select a node</p>}
     </div>
   );
 }
 
-function SourceEditor({ source }: { source: SourceText }) {
+function SourceEditor({ source, violation }: { source: SourceText; violation: ViolationFocus | null }) {
   const members = source.members ?? [];
   const owner = members.find((member) => member.id === source.node_id)?.owner ?? '';
   const prepared = useMemo(
@@ -52,12 +54,33 @@ function SourceEditor({ source }: { source: SourceText }) {
     if (editor.getValue() !== prepared.text) {
       editor.setValue(prepared.text);
     }
-    applyCallFolds(editor, prepared.folds, openFolds, hideSource.current, decorations, prepared.depths);
-  }, [prepared.text, prepared.folds, prepared.depths, openFolds]);
+    applyCallFolds(
+      editor,
+      prepared.folds,
+      openFolds,
+      hideSource.current,
+      decorations,
+      prepared.depths,
+      violationLineDecorations(prepared.lineNumbers, source.start_line, source.end_line, Boolean(violation)),
+    );
+  }, [prepared.text, prepared.folds, prepared.depths, openFolds, prepared.lineNumbers, source.start_line, source.end_line, violation]);
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
-    applyCallFolds(editor, foldsRef.current, openFoldsRef.current, hideSource.current, decorations, depthsRef.current);
+    applyCallFolds(
+      editor,
+      foldsRef.current,
+      openFoldsRef.current,
+      hideSource.current,
+      decorations,
+      depthsRef.current,
+      violationLineDecorations(
+        prepared.lineNumbers,
+        source.start_line,
+        source.end_line,
+        Boolean(violation),
+      ),
+    );
     const nodeEl = editor.getDomNode();
     nodeEl?.addEventListener(
       'mousedown',
@@ -81,8 +104,36 @@ function SourceEditor({ source }: { source: SourceText }) {
     );
   };
 
+  async function copyCorrectPrompt() {
+    if (!violation) {
+      return;
+    }
+    const prompt = buildViolationCorrectPrompt({
+      rule: violation.rule,
+      message: violation.message,
+      nodeName: source.name,
+      nodeType: source.type,
+      file: source.file,
+      startLine: source.start_line,
+      endLine: source.end_line,
+      excerpt: source.text,
+    });
+    await navigator.clipboard.writeText(prompt);
+  }
+
   return (
     <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={source.file}>
+      {violation ? (
+        <div className="violation-banner" data-testid="violation-banner">
+          <div className="violation-banner-copy">
+            <p className="violation-rule">{violation.rule}</p>
+            <p className="violation-message">{violation.message}</p>
+          </div>
+          <button type="button" className="copy-prompt" data-testid="violation-correct" onClick={() => void copyCorrectPrompt()}>
+            Correct
+          </button>
+        </div>
+      ) : null}
       <p className="source-path">{source.file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
@@ -169,6 +220,31 @@ function shownLineCount(text: string, folds: InlineFold[], openFolds: string[]):
   return Math.max(1, text.split('\n').length - hidden.size);
 }
 
+function violationLineDecorations(
+  lineNumbers: string[],
+  startLine: number,
+  endLine: number,
+  active: boolean,
+): { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; options: { isWholeLine: boolean; className: string } }[] {
+  if (!active || startLine < 1) {
+    return [];
+  }
+  const last = endLine >= startLine ? endLine : startLine;
+  const rows: { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; options: { isWholeLine: boolean; className: string } }[] = [];
+  for (let index = 0; index < lineNumbers.length; index += 1) {
+    const fileLine = Number.parseInt(lineNumbers[index] ?? '', 10);
+    if (!Number.isFinite(fileLine) || fileLine < startLine || fileLine > last) {
+      continue;
+    }
+    const editorLine = index + 1;
+    rows.push({
+      range: { startLineNumber: editorLine, startColumn: 1, endLineNumber: editorLine, endColumn: 1 },
+      options: { isWholeLine: true, className: 'violation-highlight' },
+    });
+  }
+  return rows;
+}
+
 function applyCallFolds(
   editor: Parameters<OnMount>[0],
   folds: InlineFold[],
@@ -176,6 +252,7 @@ function applyCallFolds(
   source: object,
   decorations: { current: { set: (next: object[]) => void; clear: () => void } | null },
   depths: number[] = [],
+  violationMarks: { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; options: { isWholeLine?: boolean; className?: string; glyphMarginClassName?: string } }[] = [],
 ) {
   const open = new Set(openFolds);
   const ranges = hiddenRanges(folds, openFolds).map((fold) => ({
@@ -201,6 +278,7 @@ function applyCallFolds(
         },
       ];
     }),
+    ...violationMarks,
   ];
   const withOptions = editor as Parameters<OnMount>[0] & { updateOptions?(options: { glyphMargin: boolean }): void };
   withOptions.updateOptions?.({ glyphMargin: folds.length > 0 });

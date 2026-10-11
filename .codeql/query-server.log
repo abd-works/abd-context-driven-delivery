@@ -297,3 +297,16 @@ Traceback (most recent call last):
   File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 190, in _read_json
     
 ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 282, in <module>
+    serve(Path(sys.argv[1] if len(sys.argv) > 1 else "."))
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 207, in serve
+    _handle(conn, server)
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 213, in _handle
+    raw = _read_json(conn)
+          ^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 269, in _read_json
+    raise OSError("query daemon closed")
+OSError: query daemon closed

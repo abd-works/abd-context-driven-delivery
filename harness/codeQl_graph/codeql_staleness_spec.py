@@ -15,7 +15,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from app.host import dispatch
-from graph import CodeQLGraph, QueryFailure
+from graph import CodeQLGraph, QueryFailure, normalize_overlay
 
 
 def _stamp(path: Path, seconds: int) -> None:
@@ -114,3 +114,29 @@ with description("database staleness"):
                 expect(str(error)).to(contain("Load a graph before serializing"))
             else:
                 raise AssertionError("serialize_graph_cache should fail when the graph is empty")
+
+    with context("with a graph cache that stores an overlay by pattern name"):
+        with before.each:
+            self.folder = Path(tempfile.mkdtemp())
+            self.source = Path(tempfile.mkdtemp())
+            _stamp(self.source / "account.ts", 1_700_000_900)
+            self.graph = CodeQLGraph()
+            self.graph._bind(str(self.source), {"stories": str(self.source)}, database=str(self.folder))
+            queries_ns = {"stories": self.graph._watched_stamp("stories")["queries_ns"]}
+            payload = {
+                "queries_ns": queries_ns,
+                "overlays": ["lern_domain_driven"],
+                "batches": [{"nodes": [], "edges": [], "rules": []}],
+            }
+            path = self.graph._snapshot_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            self.graph._sync_overlays_from_snapshot()
+
+        with after.each:
+            shutil.rmtree(self.folder, ignore_errors=True)
+            shutil.rmtree(self.source, ignore_errors=True)
+
+        with it("should treat the cache as current after normalizing overlay paths"):
+            expect(self.graph.overlays).to(equal([normalize_overlay("lern_domain_driven")]))
+            expect(self.graph._saved_graph_current()).to(equal(True))

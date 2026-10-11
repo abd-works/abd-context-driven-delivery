@@ -2,10 +2,17 @@ import { PythonCall } from '../python-call';
 
 export type FilterSelection = {
   practices: string[];
+  overlays: string[];
   node_types: string[];
   relationships: string[];
   rules: string[];
   violations: boolean;
+};
+
+export type InventoryBundle = {
+  practices: Record<string, PracticeInventory>;
+  overlays: string[];
+  available_overlays: string[];
 };
 
 export type PracticeInventory = {
@@ -35,6 +42,10 @@ export class FilterClient {
 
   choices(selection: FilterSelection): Promise<FilterChoices> {
     return this.python.run('filter_choices', { filter: selection });
+  }
+
+  applyOverlays(overlays: string[]): Promise<InventoryBundle> {
+    return this.python.run('apply_overlays', { overlays });
   }
 }
 

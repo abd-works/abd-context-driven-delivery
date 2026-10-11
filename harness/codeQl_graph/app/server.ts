@@ -11,7 +11,13 @@ const child = spawn(python, ['-u', path.join(here, 'host.py')], { stdio: ['pipe'
 const lines = createInterface({ input: child.stdout });
 const pending: Array<(line: string) => void> = [];
 const progressMessages: string[] = [];
-const resetProgressFor = new Set(['load_working_copy', 'create_database', 'reload_working_copy', 'update_working_copy']);
+const resetProgressFor = new Set([
+  'load_working_copy',
+  'create_database',
+  'reload_working_copy',
+  'update_working_copy',
+  'apply_overlays',
+]);
 
 type PythonResponse = {
   ok: boolean;
@@ -141,6 +147,7 @@ app.use(express.json());
 for (const operation of [
   'load_working_copy',
   'inventory',
+  'apply_overlays',
   'return_nodes',
   'filter_choices',
   'source',
@@ -150,6 +157,7 @@ for (const operation of [
   'staleness',
   'serialize_graph_cache',
   'choose_folder',
+  'choose_overlay_folder',
 ]) {
   app.post(`/api/${operation}`, async (request, response) => {
     try {
@@ -173,16 +181,21 @@ app.get('/api/progress', (_request, response) => {
   response.json({ ok: true, messages: progressMessages });
 });
 
+const explorerUi = process.env.EXPLORER_UI_URL || 'http://localhost:5173';
 const port = Number(process.env.PORT || 3000);
-const server = app.listen(port);
+
+app.get('/', (_request, response) => {
+  response.redirect(302, explorerUi);
+});
 
 app.get('/ping', (_request, response) => {
-  const address = server.address();
-  const heard = typeof address === 'object' && address ? address.port : port;
   response.json({
     ok: true,
     ping: 'pong',
-    url: `http://127.0.0.1:${heard}`,
-    port: heard,
+    service: 'codeql_web',
+    url: `http://127.0.0.1:${port}`,
+    port,
   });
 });
+
+app.listen(port);

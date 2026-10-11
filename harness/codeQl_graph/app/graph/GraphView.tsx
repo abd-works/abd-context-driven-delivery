@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { KindMark } from '../kind-mark';
 import type { GraphTree } from '../filter/FilterClient';
+import type { GraphSelection } from './graph-selection';
 import { queryProgress } from './query-progress';
 
 type GraphViewProps = {
@@ -10,7 +11,7 @@ type GraphViewProps = {
   loadingLog?: string[];
   error: string;
   selectedId: string;
-  onSelect: (nodeId: string) => void;
+  onSelect: (selection: GraphSelection) => void;
 };
 
 function elapsedLabel(seconds: number): string {
@@ -62,7 +63,7 @@ export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error
           ) : null}
         </div>
       ) : null}
-      {error ? (
+      {error && !loading ? (
         <div className="scan-error empty-state" data-testid="scan-error">
           <button type="button" className="copy-diagnosis" onClick={() => void navigator.clipboard.writeText(error)}>
             Copy for AI
@@ -87,7 +88,7 @@ function TreeNode({
 }: {
   node: GraphTree;
   selectedId: string;
-  onSelect: (nodeId: string) => void;
+  onSelect: (selection: GraphSelection) => void;
   ownerId?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -101,6 +102,7 @@ function TreeNode({
     (child) => child.name === 'rules' && (child.children ?? []).some((hit) => hit.status === 'violating'),
   );
   const selectId = rule ? ownerId || node.node_id : node.node_id;
+  const violationHint = rule && node.status === 'violating' && node.violation ? node.violation : undefined;
   return (
     <li
       data-node-id={node.node_id}
@@ -128,7 +130,17 @@ function TreeNode({
           className={[selected ? 'selected' : '', rule ? `rule-status ${node.status ?? ''}` : '', violating ? 'tree-violating' : '']
             .filter(Boolean)
             .join(' ')}
-          onClick={() => onSelect(selectId)}
+          title={violationHint}
+          data-testid={violationHint ? 'tree-violation-rule' : undefined}
+          onClick={() =>
+            onSelect({
+              nodeId: selectId,
+              violation:
+                rule && node.status === 'violating' && node.violation
+                  ? { rule: node.name, message: node.violation }
+                  : undefined,
+            })
+          }
         >
           <KindMark kind={rule ? 'Rule' : rulesHolder ? 'Rules' : node.type} isFile={false} />
           <span className="node-name">{node.name}</span>

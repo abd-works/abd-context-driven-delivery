@@ -169,3 +169,23 @@ string pascalFromSlug(string slug) {
   )
 }
 
+bindingset[path]
+string slash(string path) { result = path.replaceAll("\\", "/") }
+
+string domainSlugFromClient(ClassDefinition cls) {
+  result = slash(cls.getFile().getRelativePath()).regexpCapture("src/([^/]+)/[^/]+-client\\.(tsx|ts)$", 1)
+}
+
+bindingset[file, name]
+predicate domainClient(
+  ClassDefinition cls, string id, string name, string file, int start, int end
+) {
+  clientFile(cls.getFile()) and
+  cls.getName().regexpMatch(".+Client") and
+  name = cls.getName() and
+  file = slash(cls.getFile().getRelativePath()) and
+  start = cls.getLocation().getStartLine() and
+  end = cls.getLocation().getEndLine() and
+  id = "ddd:DomainClient:" + file + ":" + name
+}
+

@@ -23,7 +23,19 @@ export class PythonCall {
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(this.timeoutMs),
     });
-    const payload = (await response.json()) as PythonSuccess<T> | PythonFailure;
+    const raw = await response.text();
+    if (!raw.trim()) {
+      throw new Error(
+        `Empty response from /api/${operation} (HTTP ${response.status}). The graph API may have restarted during a long load — try Reload working copy.`,
+      );
+    }
+    let payload: PythonSuccess<T> | PythonFailure;
+    try {
+      payload = JSON.parse(raw) as PythonSuccess<T> | PythonFailure;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid JSON from /api/${operation} (HTTP ${response.status}): ${detail}`);
+    }
     if (!response.ok || !payload.ok) {
       const failure = payload as PythonFailure;
       const detail = failure.error ?? response.statusText ?? 'request failed';

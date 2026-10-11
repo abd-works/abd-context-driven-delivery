@@ -14,7 +14,7 @@ _GRAPH = Path(__file__).resolve().parents[1]
 if str(_GRAPH) not in sys.path:
     sys.path.insert(0, str(_GRAPH))
 
-from graph import CodeQLGraph, CodeQLNode
+from graph import CodeQLGraph, CodeQLNode, QueryFailure, available_pattern_overlays, normalize_overlay, resolve_overlay_root
 
 
 class GraphHost:
@@ -23,13 +23,21 @@ class GraphHost:
     def __init__(self, graph: CodeQLGraph | None = None) -> None:
         self.graph = graph or CodeQLGraph()
         if graph is None:
-            self.graph.use_query_server = True
+            self.graph.use_query_server = _explorer_use_query_server()
 
     def load_working_copy(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
         return self.graph.load_working_copy(folder, practices, database)
 
     def inventory(self) -> dict:
-        return self.graph.inventory()
+        return {
+            "practices": self.graph.inventory(),
+            "overlays": list(self.graph.overlays),
+            "available_overlays": available_pattern_overlays(),
+        }
+
+    def apply_overlays(self, overlays: list[str]) -> dict:
+        message = self.graph.set_overlays(list(overlays or []))
+        return {"message": message, **self.inventory()}
 
     def return_nodes(self, selection: dict | None = None) -> list[dict]:
         self._apply_filter(selection or {})
@@ -84,13 +92,25 @@ class GraphHost:
         return self.graph.serialize_graph_cache(folder, practices, database)
 
     def choose_folder(self) -> str:
+        return self._choose_directory("Select a repo folder")
+
+    def choose_overlay_folder(self) -> str:
+        chosen = self._choose_directory("Select a pattern overlay folder (contains practices/)")
+        if not chosen:
+            return ""
+        root = resolve_overlay_root(chosen)
+        if not (root / "practices").is_dir():
+            raise QueryFailure("choose_overlay_folder", f"Not an overlay root (missing practices/): {chosen}")
+        return normalize_overlay(str(root))
+
+    def _choose_directory(self, title: str) -> str:
         import tkinter
         from tkinter import filedialog
 
         window = tkinter.Tk()
         window.withdraw()
         window.attributes("-topmost", True)
-        chosen = filedialog.askdirectory(title="Select a repo folder")
+        chosen = filedialog.askdirectory(title=title)
         window.destroy()
         return chosen or ""
 
@@ -105,6 +125,7 @@ class GraphHost:
         return {
             "load_working_copy": self._load,
             "inventory": lambda _request: self.inventory(),
+            "apply_overlays": lambda request: self.apply_overlays(list(request.get("overlays") or [])),
             "return_nodes": lambda request: self.return_nodes(request.get("filter")),
             "filter_choices": lambda request: self.filter_choices(request.get("filter")),
             "source": lambda request: self.source(str(request.get("node_id", ""))),
@@ -114,6 +135,7 @@ class GraphHost:
             "staleness": self._staleness,
             "serialize_graph_cache": self._serialize,
             "choose_folder": lambda _request: self.choose_folder(),
+            "choose_overlay_folder": lambda _request: self.choose_overlay_folder(),
         }
 
     def _load(self, request: dict) -> str:
@@ -269,6 +291,12 @@ def _diagnosis(error: BaseException, request: dict | None = None, host: GraphHos
         traceback.format_exc(),
     ]
     return "\n".join(lines)
+
+
+def _explorer_use_query_server() -> bool:
+    """Warm query-server2 is opt-in for the explorer; database run-queries is more reliable."""
+    value = os.environ.get("CODEQL_USE_QUERY_SERVER", "").strip().lower()
+    return value in ("1", "true", "yes")
 
 
 def _error_response(error: BaseException, request: dict | None = None, host: GraphHost | None = None) -> dict:
