@@ -2,12 +2,37 @@
 
 from __future__ import annotations
 
+from harness.graph.bound_node import BoundChildren, BoundNode
+from harness.graph.graph import Graph
+
 from practices.bdd.model.nodes import Context, Description, Observation
 
 
-class BddModel:
-    def __init__(self) -> None:
-        self.descriptions: list[Description] = []
+class BddModel(BoundNode):
+    _graph_practice = "bdd"
+    _semantic_type_name = "Spec"
+    _belongs = {("Description", "Spec")}
+
+    def __init__(self, graph: Graph | None = None) -> None:
+        super().__init__("spec", 0, graph)
+        self._descriptions = BoundChildren(self, "descriptions")
+        if graph is not None:
+            self._copy_descriptions_on_graph()
+
+    @property
+    def descriptions(self) -> list[Description]:
+        return self._descriptions
+
+    @descriptions.setter
+    def descriptions(self, descriptions: list[Description]) -> None:
+        self._refill(self._descriptions, descriptions)
+
+    def _copy_descriptions_on_graph(self) -> None:
+        others = [node for node in self._copies_on_graph("Spec") if node.descriptions]
+        if not others:
+            return
+        for description in others[0].descriptions:
+            self.descriptions.append(description.clone())
 
     def parse(self, text: str) -> "BddModel":
         self.descriptions = _parse_sketch(text)

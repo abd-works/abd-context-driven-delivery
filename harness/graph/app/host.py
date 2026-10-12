@@ -1,0 +1,313 @@
+"""JSON line host for Graph. The app calls these operations. It does not keep a second graph."""
+
+from __future__ import annotations
+
+import json
+import os
+import platform
+import sys
+import threading
+import traceback
+from pathlib import Path
+
+_GRAPH = Path(__file__).resolve().parents[1]
+if str(_GRAPH) not in sys.path:
+    sys.path.insert(0, str(_GRAPH))
+
+from graph import Graph, Node, GraphFailure, available_pattern_overlays, normalize_overlay, resolve_overlay_root
+
+
+class GraphHost:
+    """One Graph. Each operation is the graph operation of the same name."""
+
+    def __init__(self, graph: Graph | None = None) -> None:
+        self.graph = graph or Graph()
+
+    def load_working_copy(
+        self,
+        folder: str,
+        practices: dict[str, str],
+        database: str | None = None,
+        overlays: list[str] | None = None,
+    ) -> str:
+        return self.graph.load_working_copy(folder, practices, database, overlays=overlays)
+
+    @staticmethod
+    def _overlay_list_from_request(request: dict) -> list[str] | None:
+        if "overlays" not in request:
+            return None
+        return [str(item) for item in request.get("overlays") or []]
+
+    def inventory(self) -> dict:
+        return {
+            "practices": self.graph.inventory(),
+            "overlays": list(self.graph.overlays),
+            "available_overlays": available_pattern_overlays(),
+        }
+
+    def apply_overlays(self, overlays: list[str]) -> dict:
+        message = self.graph.set_overlays(list(overlays or []))
+        return {"message": message, **self.inventory()}
+
+    def return_nodes(self, selection: dict | None = None) -> list[dict]:
+        self._apply_filter(selection or {})
+        return json.loads(self.graph.return_nodes())
+
+    def filter_choices(self, selection: dict | None = None) -> dict:
+        picked = selection or {}
+        self.graph.filter.clear()
+        practices = list(picked.get("practices") or [])
+        node_types = list(picked.get("node_types") or [])
+        if practices:
+            self.graph.filter.select_practices(practices)
+        if node_types:
+            self.graph.filter.select_node_types(node_types)
+        chosen = self.graph.filter
+        return {
+            "node_types": list(chosen.node_types),
+            "relationships": list(chosen.relationships),
+            "rules": list(chosen.rules),
+        }
+
+    def source(self, node_id: str) -> dict:
+        node = self._node(node_id)
+        if node is None:
+            return {}
+        return {
+            "node_id": node.node_id,
+            "name": node.name,
+            "type": node.type,
+            "file": node.source.file,
+            "text": node.source.text,
+            "start_line": node.source.start_line,
+            "end_line": node.source.end_line,
+            "members": self._members(),
+        }
+
+    def choose_folder(self) -> str:
+        return self._choose_directory("Select a repo folder")
+
+    def choose_overlay_folder(self) -> str:
+        chosen = self._choose_directory("Select a pattern overlay folder (contains practices/)")
+        if not chosen:
+            return ""
+        root = resolve_overlay_root(chosen)
+        if not (root / "practices").is_dir():
+            raise GraphFailure("choose_overlay_folder", f"Not an overlay root (missing practices/): {chosen}")
+        return normalize_overlay(str(root))
+
+    def _choose_directory(self, title: str) -> str:
+        import tkinter
+        from tkinter import filedialog
+
+        window = tkinter.Tk()
+        window.withdraw()
+        window.attributes("-topmost", True)
+        chosen = filedialog.askdirectory(title=title)
+        window.destroy()
+        return chosen or ""
+
+    def handle(self, request: dict) -> dict:
+        operation = str(request.get("operation", ""))
+        runner = self._operations().get(operation)
+        if runner is None:
+            raise ValueError(f"Unknown operation {operation}")
+        return {"ok": True, "result": runner(request)}
+
+    def _operations(self) -> dict:
+        return {
+            "load_working_copy": self._load,
+            "inventory": lambda _request: self.inventory(),
+            "apply_overlays": lambda request: self.apply_overlays(list(request.get("overlays") or [])),
+            "return_nodes": lambda request: self.return_nodes(request.get("filter")),
+            "filter_choices": lambda request: self.filter_choices(request.get("filter")),
+            "source": lambda request: self.source(str(request.get("node_id", ""))),
+            "choose_folder": lambda _request: self.choose_folder(),
+            "choose_overlay_folder": lambda _request: self.choose_overlay_folder(),
+        }
+
+    def _load(self, request: dict) -> str:
+        return self.load_working_copy(
+            str(request.get("folder", "")),
+            dict(request.get("practices") or {}),
+            request.get("database"),
+            overlays=self._overlay_list_from_request(request),
+        )
+
+    def _apply_filter(self, selection: dict) -> None:
+        self.graph.filter.clear()
+        practices = list(selection.get("practices") or [])
+        node_types = list(selection.get("node_types") or [])
+        relationships = list(selection.get("relationships") or [])
+        rules = list(selection.get("rules") or [])
+        if practices:
+            self.graph.filter.select_practices(practices)
+        if node_types:
+            self.graph.filter.select_node_types(node_types)
+        if relationships:
+            self.graph.filter.select_relationships(relationships)
+        if selection.get("violations"):
+            self.graph.filter.select_rules(rules)
+            self.graph.filter.select_violations()
+
+    def _members(self) -> list[dict]:
+        classes = {
+            "OoadClass",
+            "Entity",
+            "EntityRoot",
+            "ValueObject",
+            "Aggregate",
+            "Repository",
+            "DomainEvent",
+            "DomainService",
+            "Specification",
+        }
+        wanted = classes | {"Operation", "Property"}
+        members: list[dict] = []
+        for practice in self.graph.practices.values():
+            for node in practice.by_id.values():
+                if node.type not in wanted:
+                    continue
+                members.append(
+                    {
+                        "id": node.node_id,
+                        "name": node.name,
+                        "kind": node.type,
+                        "owner": "" if node.type in classes else self._owner(node, classes),
+                        "text": node.source.text,
+                        "file": node.source.file,
+                        "start": node.source.start_line,
+                        "end": node.source.end_line,
+                    }
+                )
+        return members
+
+    def _owner(self, node: Node, classes: set[str]) -> str:
+        parent = node.parent
+        while parent is not None:
+            if parent.type in classes:
+                return parent.name
+            parent = parent.parent
+        return ""
+
+    def _node(self, node_id: str) -> Node | None:
+        for practice in self.graph.practices.values():
+            node = practice.by_id.get(node_id)
+            if node is not None:
+                return node
+        return None
+
+
+def _action_from(request: dict | None) -> str:
+    if not request:
+        return "an unknown operation"
+    return str(request.get("operation") or "an unknown operation")
+
+
+def _database_from(request: dict | None, host: GraphHost | None) -> str:
+    if request:
+        for key in ("database", "folder"):
+            value = request.get(key)
+            if value:
+                return str(value)
+    if host is not None and host.graph.folder:
+        return host.graph.folder
+    return "(unknown database)"
+
+
+def _request_facts(request: dict | None) -> list[str]:
+    if not request:
+        return []
+    facts: list[str] = []
+    for key in ("practices", "filter", "node_id", "paths"):
+        value = request.get(key)
+        if value:
+            facts.append(f"{key}: {json.dumps(value)}")
+    return facts
+
+
+def _graph_facts(host: GraphHost | None) -> list[str]:
+    if host is None:
+        return []
+    facts: list[str] = []
+    graph = host.graph
+    if graph.folder:
+        facts.append(f"graph.folder: {graph.folder}")
+    languages = getattr(graph, "_languages", {})
+    if languages:
+        facts.append(f"languages: {json.dumps(languages)}")
+    executable = getattr(graph, "_executable", "")
+    if executable:
+        facts.append(f"codeql: {executable}")
+    return facts
+
+
+def _diagnosis(error: BaseException, request: dict | None = None, host: GraphHost | None = None) -> str:
+    action = _action_from(request)
+    database = _database_from(request, host)
+    lines = [
+        f"I just encountered an error doing {action} on {database}. Please diagnose and fix.",
+        "",
+        f"error_type: {type(error).__name__}",
+        f"error: {error}",
+        *_request_facts(request),
+        *_graph_facts(host),
+        f"python: {sys.version.split()[0]} ({platform.machine()}, {sys.platform})",
+        f"python_executable: {sys.executable}",
+        f"cwd: {os.getcwd()}",
+        "",
+        traceback.format_exc(),
+    ]
+    return "\n".join(lines)
+
+
+def _error_response(error: BaseException, request: dict | None = None, host: GraphHost | None = None) -> dict:
+    trace = traceback.format_exc()
+    return {
+        "ok": False,
+        "error": str(error),
+        "error_type": type(error).__name__,
+        "traceback": trace,
+        "diagnosis": _diagnosis(error, request, host),
+    }
+
+
+def dispatch(request: dict, host: GraphHost | None = None) -> dict:
+    worker = host or GraphHost()
+    try:
+        return worker.handle(request)
+    except Exception as error:
+        return _error_response(error, request, worker)
+
+
+_PROGRESS_LOCK = threading.Lock()
+
+
+def _emit_progress(event: dict) -> None:
+    line = json.dumps({"ok": True, "progress": event})
+    try:
+        with _PROGRESS_LOCK:
+            sys.stdout.write(line + "\n")
+            sys.stdout.flush()
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
+
+
+def serve() -> None:
+    host = GraphHost()
+    host.graph.watch_progress(_emit_progress)
+    for line in sys.stdin:
+        if not line.strip():
+            continue
+        request: dict | None = None
+        try:
+            request = json.loads(line)
+            response = dispatch(request, host)
+        except Exception as error:
+            response = _error_response(error, request, host)
+        sys.stdout.write(json.dumps(response) + "\n")
+        sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    serve()

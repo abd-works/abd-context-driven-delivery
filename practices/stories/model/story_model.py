@@ -7,27 +7,52 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
+
+from harness.graph.bound_node import BoundChildren as _BoundChildren
+from harness.graph.bound_node import BoundNode
+from harness.graph.graph import Graph
 
 from .source_location import SourceLocation
 
+# Pairs the schema names with belongsTo. The facade does not grow a method for them.
+_BELONGS = {
+    ("Epic", "Epic"),
+    ("Story", "Epic"),
+    ("Background", "Story"),
+    ("Step", "Scenario"),
+}
 
-class StoryNode(ABC):
-    """Abstract base. Subclasses declare `_semantic_type_name` so cross-format nodes
-    (e.g. MarkdownEpic vs JsonEpic) share one semantic axis."""
 
+class StoryNode(BoundNode, ABC):
+    """A story-model object and the graph node for that object.
+
+    Subclasses declare `_semantic_type_name` so cross-format nodes
+    (e.g. MarkdownEpic vs JsonEpic) share one semantic axis.
+    Pass a graph the same way you pass another model. Omit it and this node
+    keeps a graph of its own until a parent adopts it.
+    """
+
+    _graph_practice = "stories"
     _semantic_type_name: str = "StoryNode"
+    _belongs = _BELONGS
+    _edge_order = {
+        "decomposedInto": 1,
+        "background": 2,
+        "scenarios": 3,
+        "steps": 4,
+        "examples": 5,
+        "increments": 6,
+        "stories": 7,
+        "belongsTo": 8,
+        "ands": 9,
+    }
 
-    def __init__(self, name: str, sequential_order: int):
-        self.name = name
-        self.sequential_order = sequential_order
-        self.parent: Optional[StoryNode] = None
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None):
+        super().__init__(name, sequential_order, graph)
         # Shaping outline sizing (e.g. "approx 2-3 more stories (...)").
-        # Meaningful on Epic/Epic; empty on Story and below.
+        # Meaningful on Epic; empty on Story and below.
         self.estimate: str = ""
-
-    def semantic_type(self) -> str:
-        return self._semantic_type_name
 
     @abstractmethod
     def clone(self) -> "StoryNode":
@@ -104,6 +129,8 @@ class Examples(dict):
             value = Example(str(name), value)
         value.scope = self.scope
         super().__setitem__(name, value)
+        if isinstance(self.scope, StoryNode):
+            self.scope._link(value, "examples")
 
     def clone(self, scope: Optional["StoryNode"] = None) -> "Examples":
         copied = type(self)(self.scope if scope is None else scope)
@@ -148,7 +175,7 @@ class Increment(StoryNode):
         self.slicing_notes: str = source.slicing_notes if source is not None else ""
         self.decision_prompt: str = source.decision_prompt if source is not None else ""
         self.source: Optional[SourceLocation] = source.source if source is not None else None
-        self.stories: List["Story"] = []
+        self._stories = _BoundChildren(self, "stories")
         if source is None:
             for story in stories or []:
                 story.increment = self
@@ -159,6 +186,14 @@ class Increment(StoryNode):
             copied = build(story)
             copied.increment = self
             self.stories.append(copied)
+
+    @property
+    def stories(self) -> List["Story"]:
+        return self._stories
+
+    @stories.setter
+    def stories(self, stories: List["Story"]) -> None:
+        self._refill(self._stories, stories)
 
     def clone(self) -> "Increment":
         cloned = type(self)(
@@ -205,7 +240,7 @@ class Step(StoryNode):
         self.text = text
         self.step_type = step_type
         self._keyword = (keyword or "").strip()
-        self._ands: List["Step"] = []
+        self._ands = _BoundChildren(self, "ands")
         self.concepts: List[str] = list(concepts) if concepts is not None else []
         self.values: List[str] = list(values) if values is not None else []
         self.actor = actor
@@ -221,7 +256,7 @@ class Step(StoryNode):
 
     @ands.setter
     def ands(self, ands: List["Step"]) -> None:
-        self._ands = list(ands)
+        self._refill(self._ands, ands)
 
     @property
     def keyword(self) -> str:
@@ -263,7 +298,7 @@ class Background(StoryNode):
             name=source.name if source is not None else name,
             sequential_order=source.sequential_order if source is not None else sequential_order,
         )
-        self._steps: List["Step"] = []
+        self._steps = _BoundChildren(self, "steps")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         if source is not None:
             for step in source.steps:
@@ -275,7 +310,7 @@ class Background(StoryNode):
 
     @steps.setter
     def steps(self, steps: List["Step"]) -> None:
-        self._steps = list(steps)
+        self._refill(self._steps, steps)
 
     def clone(self) -> "Background":
         cloned = type(self)(self.name, self.sequential_order)
@@ -312,8 +347,8 @@ class Scenario(StoryNode):
             sequential_order=source.sequential_order if source is not None else sequential_order,
         )
         self.story_name: str = source.story_name if source is not None else story_name
-        self.backgrounds: List[Background] = []
-        self.steps: List[Step] = []
+        self._backgrounds = _BoundChildren(self, "background")
+        self._steps = _BoundChildren(self, "steps")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         self.is_outline: bool = source.is_outline if source is not None else False
         self.evidence: List[str] = list(source.evidence) if source is not None else []
@@ -323,6 +358,22 @@ class Scenario(StoryNode):
                 self.backgrounds.append(Background(background))
             for step in source.steps:
                 self.steps.append(Step(step))
+
+    @property
+    def backgrounds(self) -> List[Background]:
+        return self._backgrounds
+
+    @backgrounds.setter
+    def backgrounds(self, backgrounds: List[Background]) -> None:
+        self._refill(self._backgrounds, backgrounds)
+
+    @property
+    def steps(self) -> List[Step]:
+        return self._steps
+
+    @steps.setter
+    def steps(self, steps: List[Step]) -> None:
+        self._refill(self._steps, steps)
 
     def steps_in(self, step_type: StepType) -> List[Step]:
         return [step for step in self.steps if step.step_type == step_type]
@@ -379,8 +430,8 @@ class Epic(StoryNode):
             source.name if source is not None else name,
             source.sequential_order if source is not None else sequential_order,
         )
-        self.epics: List[Epic] = []
-        self.stories: List[Story] = []
+        self._epics = _BoundChildren(self, "decomposedInto")
+        self._stories = _BoundChildren(self, "decomposedInto")
         self.examples = Examples(self)
         if source is None:
             return
@@ -390,6 +441,22 @@ class Epic(StoryNode):
             self.append_epic(type(self)(child, story_class=build_story))
         for story in source.stories:
             self.append_story(build_story(story))
+
+    @property
+    def epics(self) -> List["Epic"]:
+        return self._epics
+
+    @epics.setter
+    def epics(self, epics: List["Epic"]) -> None:
+        self._refill(self._epics, epics)
+
+    @property
+    def stories(self) -> List["Story"]:
+        return self._stories
+
+    @stories.setter
+    def stories(self, stories: List["Story"]) -> None:
+        self._refill(self._stories, stories)
 
     @property
     def has_epics(self) -> bool:
@@ -522,14 +589,30 @@ class Story(StoryNode):
         self.actors: List[str] = list(source.actors) if source is not None else []
         self.domain_terms: List[str] = list(source.domain_terms) if source is not None else []
         self.evidence: List[str] = list(source.evidence) if source is not None else []
-        self.backgrounds: List["Background"] = []
-        self.scenarios: List["Scenario"] = []
+        self._backgrounds = _BoundChildren(self, "background")
+        self._scenarios = _BoundChildren(self, "scenarios")
         if source is None:
             return
         for background in source.backgrounds:
             self.backgrounds.append(Background(background))
         for scenario in source.scenarios:
             self.scenarios.append(type(self).scenario_type(scenario))
+
+    @property
+    def backgrounds(self) -> List["Background"]:
+        return self._backgrounds
+
+    @backgrounds.setter
+    def backgrounds(self, backgrounds: List["Background"]) -> None:
+        self._refill(self._backgrounds, backgrounds)
+
+    @property
+    def scenarios(self) -> List["Scenario"]:
+        return self._scenarios
+
+    @scenarios.setter
+    def scenarios(self, scenarios: List["Scenario"]) -> None:
+        self._refill(self._scenarios, scenarios)
 
     def clone(self) -> "Story":
         cloned = type(self)(self.name, self.sequential_order, self.story_type)
@@ -549,18 +632,51 @@ class StoryModel(StoryNode):
     epic_type = Epic
     story_type = Story
 
-    def __init__(self, source: Optional["StoryModel"] = None) -> None:
-        super().__init__(name="StoryModel", sequential_order=0)
-        self.epics: List[Epic] = []
-        self.increments: List[Increment] = []
+    def __init__(self, source: Optional["StoryModel | Graph"] = None, graph: Optional[Graph] = None) -> None:
+        if isinstance(source, Graph):
+            graph = source
+            source = None
+        super().__init__(name="StoryModel", sequential_order=0, graph=graph)
+        self._epics = _BoundChildren(self, "decomposedInto")
+        self._increments = _BoundChildren(self, "increments")
         self.examples = Examples(self)
-        if source is None:
+        if isinstance(source, StoryModel):
+            self._copy_map(source)
             return
+        if graph is not None:
+            self._copy_map_on_graph()
+
+    @property
+    def epics(self) -> List[Epic]:
+        return self._epics
+
+    @epics.setter
+    def epics(self, epics: List[Epic]) -> None:
+        self._refill(self._epics, epics)
+
+    @property
+    def increments(self) -> List[Increment]:
+        return self._increments
+
+    @increments.setter
+    def increments(self, increments: List[Increment]) -> None:
+        self._refill(self._increments, increments)
+
+    def _copy_map(self, source: "StoryModel") -> None:
         for epic in source.epics:
             self.append_epic(self.epic_type(epic, story_class=self.story_type))
         increment_type = getattr(type(self), "increment_type", Increment)
         for increment in source.increments:
             self.append_increment(increment_type(increment, story_class=self.story_type))
+
+    def _copy_map_on_graph(self) -> None:
+        maps = [
+            node
+            for node in self.practice.nodes.get("StoryModel", [])
+            if node is not self and isinstance(node, StoryModel) and node.epics
+        ]
+        if maps:
+            self._copy_map(maps[0])
 
     @classmethod
     def load(cls, root) -> "StoryModel":

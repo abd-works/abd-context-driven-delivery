@@ -43,7 +43,11 @@ class TypeScriptStoryModel(CodeStoryModel):
             return False
         if "/examples/" in path.replace("\\", "/"):
             return False
-        return name.endswith(_STORY_TEST_SUFFIX) or name.endswith("_story.spec.ts")
+        return (
+            name.endswith(_STORY_TEST_SUFFIX)
+            or name.endswith("_story.spec.ts")
+            or name.endswith(".story.shared.ts")
+        )
 
     def _story_slug_from_filename(self, name: str) -> str | None:
         suffix = _STORY_TEST_SUFFIX if name.endswith(_STORY_TEST_SUFFIX) else "_story.spec.ts"
@@ -66,7 +70,7 @@ class TypeScriptStoryModel(CodeStoryModel):
             if stripped is None:
                 continue
             parts = stripped
-            if self.take_sub_epic_file(parts, content):
+            if self.take_sub_epic_file(parts, content, path):
                 continue
             if len(parts) < 3:
                 continue

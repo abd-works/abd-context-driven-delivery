@@ -1,7 +1,6 @@
 """Hook server — run enabled Cursor hooks and return one merged result."""
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
@@ -674,18 +673,7 @@ class HookServer:
         if payload.hook_event_name == "beforeSubmitPrompt":
             result = self._inject_saved_chat_context(payload, result)
         if payload.hook_event_name in ("stop", "subagentStop"):
-            followup = self._consume_followup()
-            if followup:
-                result.followup_message = followup
-            result.followup_only = True
-            fields = payload.as_dict()
-            self._append_debug(
-                "FOLLOWUP "
-                f"event={payload.hook_event_name} status={fields.get('status')!r} "
-                f"loop_count={fields.get('loop_count')!r} "
-                f"conversation={self._conversation_id()!r} "
-                f"sent={bool(followup)} text={(followup or '')[:120]!r}"
-            )
+            result.followup_only = result.followup_message is not None
         return result
 
     def run(self) -> None:
@@ -777,20 +765,6 @@ class HookServer:
     def _inject_path(self) -> Path:
         return self._repo_root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
 
-    def _chat_visible(self, body: str) -> str:
-        """The chat bubble is the practice and fidelity. The model keeps the full text."""
-        chunks: list[str] = []
-        rest = body
-        while "--- chat ---" in rest and "--- end chat ---" in rest:
-            _, _, rest = rest.partition("--- chat ---")
-            chunk, _, rest = rest.partition("--- end chat ---")
-            text = chunk.strip()
-            if text:
-                chunks.append(text)
-        if chunks:
-            return "\n\n".join(chunks)
-        return body
-
     def _publish_context(self, result: HookResult) -> None:
         """Remember this chat's injection. A shared always-apply rule would enter every chat."""
         self._retire_shared_inject()
@@ -801,12 +775,6 @@ class HookServer:
         dest = self._chat_injection_path(conversation_id)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(body, encoding="utf-8")
-        if body.lstrip().startswith("These rules are injected in the chat."):
-            check = self._edit_check_path(conversation_id)
-            check.write_text(self._chat_visible(body), encoding="utf-8")
-            sent = check.with_suffix(".sent")
-            if sent.is_file():
-                sent.unlink()
 
     def _inject_saved_chat_context(self, payload: HookPayload, result: HookResult) -> HookResult:
         if result.additional_context:
@@ -817,11 +785,38 @@ class HookServer:
         dest = self._chat_injection_path(conversation_id)
         if not dest.is_file():
             return result
-        body = dest.read_text(encoding="utf-8").strip()
+        body = self._model_context(dest.read_text(encoding="utf-8"))
         if not body or body.lstrip().startswith("Before you continue, echo the following message"):
             return result
         result.additional_context = body
         return result
+
+    def _model_context(self, body: str) -> str:
+        """Rule text for the model. The injected-rules notice stays out of the prompt."""
+        kept: list[str] = []
+        hide = False
+        for line in body.splitlines():
+            stripped = line.strip()
+            if stripped == "--- chat ---":
+                hide = True
+                continue
+            if stripped == "--- end chat ---":
+                hide = False
+                continue
+            if hide or self._is_rules_notice_line(stripped):
+                continue
+            kept.append(line)
+        return "\n".join(kept).strip()
+
+    def _is_rules_notice_line(self, line: str) -> bool:
+        if line.startswith("rules injected"):
+            return True
+        return line in {
+            "These rules are injected in the chat.",
+            "The user sees the chat line. Do not paste the rule text into the chat.",
+            "Before you continue, echo the following message to the user:",
+            "The following rules need to be followed while editing this document:",
+        }
 
     def _conversation_id(self) -> str:
         if self._payload is None:
@@ -832,9 +827,6 @@ class HookServer:
             if stem:
                 return stem
         return self._payload.conversation_id.strip()
-
-    def _edit_check_path(self, conversation_id: str) -> Path:
-        return self._chat_injection_path(conversation_id).with_suffix(".check.md")
 
     def _chat_injection_path(self, conversation_id: str) -> Path:
         from harness.hooks.session_logs import SessionLogs
@@ -854,52 +846,6 @@ class HookServer:
         sent = dest.with_suffix(".sent")
         if sent.is_file():
             sent.unlink()
-
-    def _consume_followup(self) -> str | None:
-        conversation_id = self._conversation_id()
-        if not conversation_id:
-            return None
-        dest = self._edit_check_path(conversation_id)
-        if not dest.is_file():
-            return None
-        body = dest.read_text(encoding="utf-8").strip()
-        if not body:
-            return None
-        generation = self._generation_id()
-        if self._already_sent(dest, body):
-            if generation and generation == self._sent_generation(dest):
-                return body
-            return None
-        self._mark_sent(dest, body, generation)
-        return body
-
-    def _generation_id(self) -> str:
-        if self._payload is None:
-            return ""
-        return self._payload.generation_id.strip()
-
-    def _already_sent(self, dest: Path, body: str) -> bool:
-        stamp = dest.with_suffix(".sent")
-        if not stamp.is_file():
-            return False
-        recorded = stamp.read_text(encoding="utf-8").splitlines()
-        return bool(recorded) and recorded[0].strip() == self._digest(body)
-
-    def _sent_generation(self, dest: Path) -> str:
-        stamp = dest.with_suffix(".sent")
-        if not stamp.is_file():
-            return ""
-        recorded = stamp.read_text(encoding="utf-8").splitlines()
-        return recorded[1].strip() if len(recorded) > 1 else ""
-
-    def _mark_sent(self, dest: Path, body: str, generation: str = "") -> None:
-        dest.with_suffix(".sent").write_text(
-            f"{self._digest(body)}\n{generation}",
-            encoding="utf-8",
-        )
-
-    def _digest(self, body: str) -> str:
-        return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
     def ping(self) -> str:
         return "pong"

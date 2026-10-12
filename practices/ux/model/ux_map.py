@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Iterable, List
 
+from harness.graph.bound_node import BoundChildren
+from harness.graph.graph import Graph
+
 from .collections import ContentTypes, NavComponents, Transitions
 from .nodes import ContentType, NavComponent, Screen, Transition, UxContext
 from .reference_paths import ReferencePaths
@@ -25,20 +28,25 @@ class UxMap(UxNode):
         story_references: ReferencePaths,
         object_references: ReferencePaths,
         context: UxContext,
+        graph: Graph | None = None,
     ) -> None:
-        super().__init__(name, sequential_order)
+        super().__init__(name, sequential_order, graph)
         self.scope: str = ""
         self._story_references = story_references
         self._object_references = object_references
-        self.screens: List[Screen] = []
+        self.screens = BoundChildren(self, "screens")
         self.transitions = transitions
         self.content_types = content_types
         self.nav_components = nav_components
         self.context = context
 
     @classmethod
-    def create(cls, name: str = "UxMap", sequential_order: int = 0) -> "UxMap":
-        return cls(
+    def create(cls, name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> "UxMap":
+        opened = isinstance(name, Graph)
+        if opened:
+            graph = name
+            name = "UxMap"
+        created = cls(
             name,
             sequential_order,
             content_types=ContentTypes(),
@@ -47,7 +55,18 @@ class UxMap(UxNode):
             story_references=ReferencePaths(),
             object_references=ReferencePaths(),
             context=UxContext(),
+            graph=graph,
         )
+        if opened:
+            created._copy_screens_on_graph()
+        return created
+
+    def _copy_screens_on_graph(self) -> None:
+        others = [node for node in self._copies_on_graph("UxMap") if node.screens]
+        if not others:
+            return
+        for screen in others[0].screens:
+            self.append_screen(Screen(screen.name, screen.sequential_order))
 
     @property
     def story_references(self) -> ReferencePaths:

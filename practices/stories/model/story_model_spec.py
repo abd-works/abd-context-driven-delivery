@@ -14,7 +14,9 @@ for _candidate in _HERE.parents:
         break
 
 from mamba import description, context, it, before
-from expects import equal, have_len, be_true, be_false, expect
+from expects import be, contain, equal, have_len, be_true, be_false, expect
+
+from harness.graph.graph import Graph
 
 from practices.stories.model.story_model import (
     Background,
@@ -840,3 +842,118 @@ with description("a StoryModel being translated from another StoryModel") as sel
     with it("should reconcile increments as tree children in the same pass"):
         expect(self.target.increments).to(have_len(1))
         expect(self.target.increments[0].name).to(equal("Increment 1"))
+
+
+with description("a story map on a graph") as self:
+    with before.each:
+        self.graph = Graph()
+        self.story_map = StoryModel(self.graph)
+        self.epic = Epic("Onboard A Customer", 1)
+        self.sub_epic = Epic("Authenticate User", 1)
+        self.story = Story("Create Account", 1)
+        self.scenario = Scenario("Create account", 1)
+        self.scenario.steps = [
+            fixture.when("the User creates their account", 1),
+            fixture.then("the account is unconfirmed", 2),
+        ]
+        self.story.scenarios.append(self.scenario)
+        self.sub_epic.stories.append(self.story)
+        self.epic.epics.append(self.sub_epic)
+        self.story_map.append_epic(self.epic)
+
+    with it("should be the graph node for each story object"):
+        expect(self.epic.node).to(be(self.epic))
+        expect(self.story.node).to(be(self.story))
+
+    with it("should keep every attached object on the story map graph"):
+        expect(self.epic.graph).to(be(self.graph))
+        expect(self.story.graph).to(be(self.graph))
+        expect(self.scenario.graph).to(be(self.graph))
+
+    with it("should record decomposedInto from the epic through the story"):
+        practice = self.graph.practice("stories")
+        pairs = [
+            (edge.parent.name, edge.child.name)
+            for edge in practice.edges.get("decomposedInto", [])
+        ]
+        expect(pairs).to(contain(
+            ("Onboard A Customer", "Authenticate User"),
+            ("Authenticate User", "Create Account"),
+        ))
+
+    with it("should record scenarios and steps for the story"):
+        practice = self.graph.practice("stories")
+        scenario_pairs = [
+            (edge.parent.name, edge.child.name)
+            for edge in practice.edges.get("scenarios", [])
+        ]
+        step_names = [edge.child.name for edge in practice.edges.get("steps", [])]
+        expect(scenario_pairs).to(contain(("Create Account", "Create account")))
+        expect(step_names).to(contain("the User creates their account", "the account is unconfirmed"))
+
+    with it("should record belongsTo back to the owning epic"):
+        practice = self.graph.practice("stories")
+        pairs = [
+            (edge.parent.name, edge.child.name)
+            for edge in practice.edges.get("belongsTo", [])
+        ]
+        expect(pairs).to(contain(
+            ("Authenticate User", "Onboard A Customer"),
+            ("Create Account", "Authenticate User"),
+        ))
+
+    with it("should open the same map from the graph"):
+        restored = StoryModel(self.graph)
+        expect([epic.name for epic in restored.epics]).to(equal(["Onboard A Customer"]))
+        expect(restored.epics[0].epics[0].name).to(equal("Authenticate User"))
+        expect(restored.epics[0].epics[0].stories[0].name).to(equal("Create Account"))
+        expect(restored.epics[0].epics[0].stories[0].scenarios[0].name).to(equal("Create account"))
+
+    with it("should record ands from the schema"):
+        continued = Step("the email is saved", StepType.WHEN, 1, keyword="and")
+        self.scenario.steps[0].ands = [continued]
+        pairs = [
+            (edge.parent.name, edge.child.name)
+            for edge in self.graph.practice("stories").edges.get("ands", [])
+        ]
+        expect(pairs).to(contain(("the User creates their account", "the email is saved")))
+
+    with it("should record invokes, observes, demonstrates, and retrievedUsing from the schema"):
+        from practices.bdd.model.nodes import Observation
+        from practices.clean_engineering.model.base_class_model import Module, OoadClass
+        from practices.clean_engineering.model.operation import Operation
+        from practices.clean_engineering.model.property import Property
+        from practices.stories.model.source_location import SourceLocation
+        from practices.ux.model.nodes import Screen
+
+        self.scenario.steps[0].source = SourceLocation("", text="await accountCredentials.register()")
+        self.scenario.steps[1].source = SourceLocation("", text="expect(emailedValidationCode.code)")
+        self.scenario.examples["emailedValidationCode"] = "code"
+        example = self.scenario.examples["emailedValidationCode"]
+        example.source = SourceLocation("", text="function emailedValidationCode(): AccountCredentials {\n  return account.token\n}")
+        module = Module("account-credentials", 0, graph=self.graph)
+        account = OoadClass("AccountCredentials", 0)
+        module.classes.append(account)
+        account.properties.append(Property("token", 0))
+        account.operations.append(Operation("register", 0))
+        Screen("Create Account", 0, graph=self.graph).story_names = ["Create Account"]
+        Observation("Create account", graph=self.graph)
+
+        stories = self.graph.practice("stories")
+        clean = self.graph.practice("clean_engineering")
+        invokes = [(edge.parent.name, edge.child.name) for edge in stories.edges.get("invokes", [])]
+        observes = [(edge.parent.name, edge.child.name) for edge in stories.edges.get("observes", [])]
+        demonstrates = [(edge.parent.name, edge.child.name) for edge in stories.edges.get("demonstrates", [])]
+        retrieved = [(edge.parent.name, edge.child.name) for edge in stories.edges.get("retrievedUsing", [])]
+        uses = [(edge.parent.name, edge.child.name) for edge in stories.edges.get("uses", [])]
+        shown = [(edge.parent.name, edge.child.name) for edge in stories.edges.get("shownOn", [])]
+        specified = [(edge.parent.name, edge.child.name) for edge in stories.edges.get("specifiedBy", [])]
+        expect(invokes).to(contain(("the User creates their account", "register")))
+        expect([(edge.parent.name, edge.child.name) for edge in clean.edges.get("invokedBy", [])]).to(contain(("register", "the User creates their account")))
+        expect(observes).to(contain(("the account is unconfirmed", "emailedValidationCode")))
+        expect(demonstrates).to(contain(("emailedValidationCode", "AccountCredentials")))
+        expect([(edge.parent.name, edge.child.name) for edge in clean.edges.get("demonstratedThrough", [])]).to(contain(("AccountCredentials", "emailedValidationCode")))
+        expect(retrieved).to(contain(("emailedValidationCode", "token")))
+        expect(uses).to(contain(("Onboard A Customer", "account-credentials")))
+        expect(shown).to(contain(("Create Account", "Create Account")))
+        expect(specified).to(contain(("Create account", "Create account")))

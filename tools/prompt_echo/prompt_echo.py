@@ -377,6 +377,10 @@ class PromptEcho:
             return echo
         if abs((now - prev_at).total_seconds()) > _SAME_BURST_SECONDS:
             return echo
+        if self._rules_notice(prev_msg) and self._rules_notice(echo):
+            if echo in prev_msg:
+                return prev_msg
+            return f"{prev_msg}\n\n{echo}"
         return self._join_arrow_toasts(prev_msg, echo)
 
     def _read_toast(self, dest: Path) -> dict:
@@ -524,6 +528,10 @@ class PromptEcho:
             return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
         except ValueError:
             return None
+
+    def _rules_notice(self, text: str) -> bool:
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        return bool(lines) and all(line.startswith("rules injected") for line in lines)
 
     def _rules_rest(self, rest: str) -> bool:
         lowered = rest.strip().lower()

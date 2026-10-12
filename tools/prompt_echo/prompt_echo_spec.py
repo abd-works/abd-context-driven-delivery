@@ -287,6 +287,26 @@ with description("prompt echo detection"):
                     equal("Practice \u2192 ddd; Practice \u2192 stories")
                 )
 
+        with it("should stack rules notices from the same burst"):
+            with TemporaryDirectory() as tmp:
+                _prompt_echo.repo = Path(tmp)
+                _prompt_echo.show_ide_toast(
+                    "rules injected for clean-engineering-code\n"
+                    "rules injected for clean-engineering-modules"
+                )
+                dest = _prompt_echo.show_ide_toast(
+                    "rules injected for ddd-tactics\nrules injected for ddd-bounded-context"
+                )
+                message = json.loads(dest.read_text(encoding="utf-8"))["message"]
+                expect(message).to(
+                    equal(
+                        "rules injected for clean-engineering-code\n"
+                        "rules injected for clean-engineering-modules\n\n"
+                        "rules injected for ddd-tactics\n"
+                        "rules injected for ddd-bounded-context"
+                    )
+                )
+
         with it("should keep both inject toasts from the same burst"):
             with TemporaryDirectory() as tmp:
                 repo = Path(tmp)

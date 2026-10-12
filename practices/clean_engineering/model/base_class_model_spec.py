@@ -3,13 +3,16 @@
 import sys
 from pathlib import Path
 
-from expects import be_true, equal, expect, have_len
+from expects import be, be_true, contain, equal, expect, have_len
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from harness.graph.graph import Graph
+
+from practices.clean_engineering.model.operation import Operation
 from practices.clean_engineering.model.property import bind_property_relationship
 from practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
@@ -366,3 +369,35 @@ with description("interface naming"):
 
         with it("should resolve ProductionCart to ICart"):
             expect(companion_interface_name("ProductionCart", self.known)).to(equal("ICart"))
+
+
+with description("a clean engineering model on a graph"):
+    with before.each:
+        self.graph = Graph()
+        self.model = CleanEngineeringModel("orders", graph=self.graph)
+        self.module = Module("orders", 0)
+        self.model.modules.append(self.module)
+        self.order = OoadClass("Order", 0)
+        self.module.classes.append(self.order)
+        self.place = Operation("place")
+        self.order.operations.append(self.place)
+
+    with it("should be the graph node for the class"):
+        expect(self.order.node).to(be(self.order))
+
+    with it("should keep the class on the model graph"):
+        expect(self.order.graph).to(be(self.graph))
+        expect(self.place.graph).to(be(self.graph))
+
+    with it("should record participants and belongsTo"):
+        practice = self.graph.practice("clean_engineering")
+        participants = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("participants", [])]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("belongsTo", [])]
+        expect(participants).to(contain(("orders", "Order"), ("Order", "place")))
+        expect(belongs).to(contain(("Order", "orders"), ("place", "Order")))
+
+    with it("should open the same model from the graph"):
+        restored = CleanEngineeringModel(self.graph)
+        expect(restored.modules[0].name).to(equal("orders"))
+        expect(restored.modules[0].classes[0].name).to(equal("Order"))
+        expect(restored.modules[0].classes[0].operations[0].name).to(equal("place"))

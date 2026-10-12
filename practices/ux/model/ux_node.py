@@ -4,20 +4,21 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from harness.graph.bound_node import BoundNode
+from harness.graph.graph import Graph
+
 from .update_report import ChildCollectionPair, TranslationError, UpdateReport
 
 
-class UxNode:
+class UxNode(BoundNode):
     """Subclasses declare `_semantic_type_name` so cross-format nodes translate cleanly."""
 
+    _graph_practice = "ux"
     _semantic_type_name: str = "UxNode"
+    _belongs = {("Screen", "UxMap")}
 
-    def __init__(self, name: str, sequential_order: int) -> None:
-        self.name = name
-        self.sequential_order = sequential_order
-
-    def semantic_type(self) -> str:
-        return self._semantic_type_name
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
+        super().__init__(name, sequential_order, graph)
 
     def translate_from(self, source: "UxNode") -> UpdateReport:
         if self.semantic_type() != source.semantic_type():
