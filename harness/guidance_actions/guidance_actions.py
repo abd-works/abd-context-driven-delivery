@@ -4,15 +4,23 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import Any, NotRequired, TypedDict
 
 from harness.agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
 from prompt_echo.prompt_echo import PromptEcho, echo
 from harness.hooks.hooks import Hook
 from harness.mcp.mcp_server import mcp
 
+class GuidanceRef(TypedDict):
+    """One Guidance: a toolset ref, plus the fidelity or context that ref accepts."""
+
+    toolset: str
+    fidelity: NotRequired[str]
+    context: NotRequired[dict[str, Any]]
+
+
 # Guidance list, one Guidance (ref or {toolset, …}), or a string to act on directly.
-GuidanceArg = str | dict[str, Any] | list[str | dict[str, Any]]
+GuidanceArg = str | GuidanceRef | list[str | GuidanceRef]
 _TOOLSET_REF = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 _GUIDANCE_SLUG = re.compile(r"^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$")
 

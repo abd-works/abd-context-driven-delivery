@@ -120,6 +120,29 @@ with description("prompt echo detection"):
             expect(kind).to(equal("action"))
             expect(label).to(equal("scan"))
 
+    with context("that receives a source file whose path names a practice"):
+        with it("should not toast a practice"):
+            expect(
+                _prompt_echo.handle(
+                    {
+                        "tool_name": "Read",
+                        "tool_input": {
+                            "path": str(_REPO_ROOT / "practices" / "ddd" / "ddd.md")
+                        },
+                    }
+                ).get("user_message")
+            ).to(equal(None))
+
+        with it("should not toast a practice from a command that mentions one"):
+            expect(
+                _prompt_echo.handle(
+                    {
+                        "tool_name": "Shell",
+                        "tool_input": {"command": "rg stories practices/stories"},
+                    }
+                ).get("user_message")
+            ).to(equal(None))
+
     with context("that receives an ordinary source file Read"):
         with it("should not echo"):
             expect(
@@ -203,6 +226,66 @@ with description("prompt echo detection"):
                 _prompt_echo.show_ide_toast("chat edit \u2192 rules : code")
                 copied = other / ".cursor" / "prompt-echo-toast.json"
                 expect(copied.is_file()).to(equal(True))
+
+        with it("should use the composer chat name instead of a file path"):
+            with TemporaryDirectory() as tmp:
+                db = Path(tmp) / "state.vscdb"
+                import sqlite3
+
+                con = sqlite3.connect(db)
+                con.execute("CREATE TABLE cursorDiskKV (key TEXT, value TEXT)")
+                con.execute(
+                    "INSERT INTO cursorDiskKV (key, value) VALUES (?, ?)",
+                    (
+                        "composerData:chat-1",
+                        '{"name": "mm3e story map no yaml", "subtitle": "Edited story-map.md"}',
+                    ),
+                )
+                con.commit()
+                con.close()
+                echo = PromptEcho()
+                echo.state_db = db
+                expect(
+                    echo.chat_edit_source(
+                        {
+                            "conversation_id": "chat-1",
+                            "transcript_path": str(
+                                Path(tmp) / "missing-transcript.jsonl"
+                            ),
+                        }
+                    )
+                ).to(equal("chat mm3e story map no yaml edited file"))
+
+        with it("should not use a file path from the first message as the chat title"):
+            with TemporaryDirectory() as tmp:
+                transcript = Path(tmp) / "chat.jsonl"
+                transcript.write_text(
+                    "<user_query>\n@abd-context-driven-delivery/sandbox/mm3e/story-map.md\n</user_query>\n",
+                    encoding="utf-8",
+                )
+                echo = PromptEcho()
+                echo.state_db = Path(tmp) / "missing.vscdb"
+                expect(
+                    echo.chat_edit_source({"transcript_path": str(transcript)})
+                ).to(equal("chat edit"))
+
+        with it("should name the chat that edited the file"):
+            source = _prompt_echo.chat_edit_source(
+                {"conversation_title": "Story map scenarios"}
+            )
+            expect(source).to(equal("chat Story map scenarios edited file"))
+            expect(
+                _prompt_echo.inject_rules_toast(source, ["stories scenarios"])
+            ).to(equal("chat Story map scenarios edited file \u2192 rules : stories scenarios"))
+
+        with it("should not rewrite practice echoes into a rules toast"):
+            with TemporaryDirectory() as tmp:
+                _prompt_echo.repo = Path(tmp)
+                _prompt_echo.show_ide_toast("Practice \u2192 ddd")
+                dest = _prompt_echo.show_ide_toast("Practice \u2192 stories")
+                expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
+                    equal("Practice \u2192 ddd; Practice \u2192 stories")
+                )
 
         with it("should keep both inject toasts from the same burst"):
             with TemporaryDirectory() as tmp:

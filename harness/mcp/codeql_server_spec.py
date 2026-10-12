@@ -32,7 +32,8 @@ class _Server:
 
     def run_queries(self, queries, database, on_line):
         self.queries = list(queries)
-        return {str(Path(query).resolve()): Path(query) for query in queries}
+        produced = {str(Path(query).resolve()): Path(query) for query in queries}
+        return produced, {}
 
     def stop(self) -> None:
         self.stopped = True
@@ -66,7 +67,7 @@ with description("the MCP CodeQL query server"):
         with it("should ping without starting CodeQL"):
             class _Inner:
                 def run_queries(self, queries, database, on_line):
-                    return {}
+                    return {}, {}
 
             folder = Path(tempfile.mkdtemp())
             marker = folder / "query-server.json"

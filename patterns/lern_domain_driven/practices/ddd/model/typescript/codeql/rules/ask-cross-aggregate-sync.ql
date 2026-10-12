@@ -8,7 +8,6 @@
  */
 
 import javascript
-import subject_filter
 import model
 
 predicate fileSrcDomain(File f, string domain) {
@@ -39,7 +38,7 @@ where
   not nodeFile(imp.getFile()) and
   not clientFile(imp.getFile()) and
   not specFile(imp.getFile()) and
-  inSubject(imp) and
+  inGraphSubject(imp) and
   not exists(File note |
     note.getBaseName().regexpMatch("(?i).*sync.*") and
     (

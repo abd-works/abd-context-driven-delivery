@@ -7,12 +7,22 @@ from pathlib import Path
 
 
 def hook_python_executable(python: str | None = None) -> str:
-    """Return pythonw.exe on Windows so Cursor hook CLIs do not open consoles."""
+    """Return pythonw.exe on Windows so a background daemon does not open a console."""
     exe = Path(python or sys.executable)
     if sys.platform == "win32":
         pythonw = exe.with_name("pythonw.exe")
         if pythonw.is_file():
             return str(pythonw)
+    return str(exe)
+
+
+def hook_cli_executable(python: str | None = None) -> str:
+    """Return python.exe. pythonw.exe drops stdout, so Cursor never sees hook JSON."""
+    exe = Path(python or sys.executable)
+    if sys.platform == "win32" and exe.name.lower() == "pythonw.exe":
+        console = exe.with_name("python.exe")
+        if console.is_file():
+            return str(console)
     return str(exe)
 
 

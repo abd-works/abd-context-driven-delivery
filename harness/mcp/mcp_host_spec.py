@@ -251,6 +251,54 @@ with description("an MCP host input schema"):
                 schema = self.host.input_schema_for_callable(ParameterTypes().echo_unannotated)
                 expect(schema["properties"]["value"]).to(equal({"type": "string"}))
 
+    with context("that has been derived from a ParameterTypes echo_record operation"):
+        with context("with a named record parameter"):
+            with it("should advertise the record fields and require toolset"):
+                schema = self.host.input_schema_for_callable(ParameterTypes().echo_record)
+                expect(schema["properties"]["record"]).to(
+                    equal(
+                        {
+                            "type": "object",
+                            "properties": {
+                                "toolset": {"type": "string"},
+                                "fidelity": {"type": "string"},
+                            },
+                            "required": ["toolset"],
+                            "additionalProperties": False,
+                        }
+                    )
+                )
+
+    with context("that has been derived from generate.generate"):
+        with context("with a guidance parameter"):
+            with it("should advertise a toolset object instead of an open object"):
+                from actions.generate.generate import Generate
+
+                schema = self.host.input_schema_for_callable(Generate.generate)
+                guidance = schema["properties"]["guidance"]
+                object_form = next(
+                    variant
+                    for variant in guidance["anyOf"]
+                    if variant.get("type") == "object" and "properties" in variant
+                )
+                expect(object_form).to(
+                    equal(
+                        {
+                            "type": "object",
+                            "properties": {
+                                "toolset": {"type": "string"},
+                                "fidelity": {"type": "string"},
+                                "context": {
+                                    "type": "object",
+                                    "additionalProperties": {},
+                                },
+                            },
+                            "required": ["toolset"],
+                            "additionalProperties": False,
+                        }
+                    )
+                )
+
     with context("that has been derived from iterate.iterate"):
         with context("with a tools list parameter"):
             with it("should advertise JSON Schema array of string"):

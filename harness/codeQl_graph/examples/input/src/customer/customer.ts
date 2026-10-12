@@ -1,6 +1,7 @@
 import { AccountCredentials, AccountToken } from '../account-credentials/account-credentials';
 
 
+/** <<Value Object>> */
 export class Identity {
   constructor(
     public email: string,
@@ -17,6 +18,7 @@ export class Identity {
   ) {}
 }
 
+/** <<Value Object>> */
 export class Address {
   constructor(
     public street = '',
@@ -33,6 +35,7 @@ export type CustomerBilling = {
   state: string;
 };
 
+/** <<Aggregate Root>> <<Entity>> */
 export class Customer {
   static readonly messages = {
     createFailed: 'Could not create customer.',
@@ -101,6 +104,7 @@ type StoredCustomer = {
   billingState: string | null;
 };
 
+/** <<Repository>> */
 export class CustomerRepository {
   private readonly customers = new Map<string, StoredCustomer>();
   private nextCustomerId = 0;

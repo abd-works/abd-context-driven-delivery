@@ -46,6 +46,8 @@ class ServiceStart:
 
     def codeql_web(self) -> int:
         env = os.environ.copy()
+        env.setdefault("CODEQL_USE_QUERY_SERVER", "true")
+        env.setdefault("CODEQL_QUERY_SERVER_BATCH_SIZE", "4")
         python = self.repo / ".venv" / "Scripts" / "python.exe"
         if python.is_file():
             env["PYTHON"] = str(python)

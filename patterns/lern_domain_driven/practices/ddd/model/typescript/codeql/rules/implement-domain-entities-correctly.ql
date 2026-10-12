@@ -8,12 +8,11 @@
  */
 
 import javascript
-import subject_filter
 import model
 
 from ClassDefinition cls, string message, AstNode contributor
 where
-  inSubject(cls) and
+  inGraphSubject(cls) and
   coreFile(cls.getFile()) and
   cls.getName() = pascalFromSlug(cls.getFile().getParentContainer().getBaseName()) and
   not exists(MethodDeclaration m | m = cls.getAMethod() and m.getName() != "constructor") and

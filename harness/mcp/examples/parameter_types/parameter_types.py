@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, NotRequired, TypedDict
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.mcp.mcp_server import Mcp
+
+
+class NamedRecord(TypedDict):
+    toolset: str
+    fidelity: NotRequired[str]
 
 
 @agent_toolset
@@ -88,3 +93,9 @@ class ParameterTypes:
     def echo_unannotated(self, value) -> object:
         """Return an unannotated argument."""
         return value
+
+    @Mcp
+    @agent_tool
+    def echo_record(self, record: NamedRecord) -> dict[str, str]:
+        """Return a record whose fields are named on the type."""
+        return dict(record)

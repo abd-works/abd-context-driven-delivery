@@ -169,3 +169,19 @@ string pascalFromSlug(string slug) {
   )
 }
 
+bindingset[path]
+string slash(string path) { result = path.replaceAll("\\", "/") }
+
+predicate storySharedFile(File f) { f.getBaseName().matches("%.story.shared.ts") }
+
+predicate domainSpecFile(File f) { f.getBaseName().matches("%.story.domain.spec.ts") }
+
+predicate serverSpecFile(File f) { f.getBaseName().matches("%.story.server.spec.ts") }
+
+predicate playwrightSpecFile(File f) { f.getBaseName().matches("%.story.playwright.ts") }
+
+bindingset[f, semantic]
+string lernStoryNodeId(File f, string semantic) {
+  result = "stories:" + semantic + ":" + slash(f.getRelativePath()) + ":" + f.getBaseName()
+}
+

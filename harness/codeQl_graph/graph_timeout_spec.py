@@ -85,7 +85,7 @@ with description("CodeQLGraph subprocess guardrails"):
             expect(raised).to(equal(True))
             expect(self.graph._progress[-1]["step"]).to(equal("error"))
 
-        with it("should report each query and each CodeQL line"):
+        with it("should run missing queries in one database run-queries batch"):
             with patch(
                 "graph.subprocess.Popen",
                 return_value=_Process(
@@ -95,6 +95,21 @@ with description("CodeQLGraph subprocess guardrails"):
             ):
                 self.graph._execute_queries([r"C:\pack\steps.ql", r"C:\pack\edges.ql"], Path("C:/tmp/example-db"))
             messages = [event["message"] for event in self.graph._progress]
-            expect(messages).to(contain("1/2 steps.ql"))
-            expect(messages).to(contain("2/2 edges.ql"))
-            expect(messages).to(contain("Starting evaluation of steps.ql."))
+            expect(messages).to(contain("database run-queries 1/1 (2 queries)"))
+
+        with it("should raise QueryFailure when a query batch fails instead of running queries one by one"):
+            with patch(
+                "graph.subprocess.Popen",
+                return_value=_Process(
+                    ["codeql"],
+                    returncode=1,
+                    stderr="evaluation failed",
+                ),
+            ):
+                try:
+                    self.graph._execute_queries([r"C:\pack\a.ql", r"C:\pack\b.ql"], Path("C:/tmp/example-db"))
+                    raised = False
+                except QueryFailure as error:
+                    raised = True
+                    expect(str(error)).to(contain("database run-queries 1/1"))
+            expect(raised).to(equal(True))

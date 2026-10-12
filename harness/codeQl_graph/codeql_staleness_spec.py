@@ -122,6 +122,7 @@ with description("database staleness"):
             _stamp(self.source / "account.ts", 1_700_000_900)
             self.graph = CodeQLGraph()
             self.graph._bind(str(self.source), {"stories": str(self.source)}, database=str(self.folder))
+            self.graph.overlays = [normalize_overlay("lern_domain_driven")]
             queries_ns = {"stories": self.graph._watched_stamp("stories")["queries_ns"]}
             payload = {
                 "queries_ns": queries_ns,
@@ -140,3 +141,19 @@ with description("database staleness"):
         with it("should treat the cache as current after normalizing overlay paths"):
             expect(self.graph.overlays).to(equal([normalize_overlay("lern_domain_driven")]))
             expect(self.graph._saved_graph_current()).to(equal(True))
+
+    with context("when the project has no saved graph cache"):
+        with before.each:
+            self.folder = Path(tempfile.mkdtemp())
+            self.source = Path(tempfile.mkdtemp())
+            self.graph = CodeQLGraph()
+            self.graph.overlays = [normalize_overlay("lern_domain_driven")]
+
+        with after.each:
+            shutil.rmtree(self.folder, ignore_errors=True)
+            shutil.rmtree(self.source, ignore_errors=True)
+
+        with it("should clear sticky overlays so load does not run pattern queries"):
+            self.graph._bind(str(self.source), {"stories": str(self.source)}, database=str(self.folder))
+            self.graph._sync_overlays_from_snapshot()
+            expect(self.graph.overlays).to(equal([]))

@@ -581,3 +581,332 @@ AggregateError [ECONNREFUSED]:
 
   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
 [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m241[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  VITE v6.4.3  ready in 294 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+12:14:36 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+12:14:36 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+12:14:36 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+12:14:36 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+12:14:36 a.m. [vite] http proxy error: /api/staleness
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+12:14:36 a.m. [vite] http proxy error: /api/staleness
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+12:14:36 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+12:14:36 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+12:14:36 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+12:14:36 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+12:14:37 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:21:25 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+1:21:25 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:21:25 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:21:26 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:21:26 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  VITE v6.4.3  ready in 242 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+1:22:55 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+1:22:55 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+1:22:55 a.m. [vite] http proxy error: /api/staleness
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:22:55 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:22:56 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:22:56 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:22:56 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:24:20 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+1:24:20 a.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+1:24:20 a.m. [vite] http proxy error: /api/staleness
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:24:20 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:24:21 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:24:21 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+1:24:21 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m228[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m1:24:36 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/load_working_copy[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m1:24:36 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/load_working_copy[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m1:24:36 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/staleness[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:24:36 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:24:37 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:24:37 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:27:11 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/load_working_copy[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m1:27:11 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/staleness[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:27:11 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:27:11 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:27:12 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:29:30 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:29:31 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:29:31 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:29:31 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:34:11 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:34:13 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:34:20 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/load_working_copy[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m1:34:20 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/staleness[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:34:21 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:34:21 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:34:21 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m1:34:21 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m402[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m11:28:03 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/load_working_copy[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m11:28:03 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/load_working_copy[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m11:28:03 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/staleness[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:28:04 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:28:04 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:28:04 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:28:04 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:28:28 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m11:28:29 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m11:28:30 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m11:28:34 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m11:28:37 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m11:29:01 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m11:29:02 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m11:29:03 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m11:29:07 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m239[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m11:29:19 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/load_working_copy[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m11:29:19 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/load_working_copy[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m11:29:19 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/inventory[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:29:19 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:29:20 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:29:20 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:29:21 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:29:21 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:29:21 a.m.[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/progress[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+[2m11:35:58 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m

@@ -8,12 +8,11 @@
  */
 
 import javascript
-import subject_filter
 import model
 
 from ClassDefinition cls, string suffix, string message, AstNode contributor
 where
-  inSubject(cls) and
+  inGraphSubject(cls) and
   technicalSuffix(suffix) and
   cls.getName().matches("%" + suffix) and
   message = "Class '" + cls.getName() + "' uses the technical suffix '" + suffix + "'." and

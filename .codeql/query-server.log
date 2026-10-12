@@ -310,3 +310,121 @@ Traceback (most recent call last):
   File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 269, in _read_json
     raise OSError("query daemon closed")
 OSError: query daemon closed
+Exception in thread Thread-3 (_drain_stderr):
+Traceback (most recent call last):
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_server.py", line 506, in _drain_stderr
+    self._on_line(text)
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 229, in emit
+    _write_json(conn, {"progress": line})
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 264, in _write_json
+    conn.sendall(f"{len(raw)}\n".encode("ascii") + raw)
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 232, in _handle
+    produced, failed = server.run_queries(
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_server.py", line 373, in run_queries
+    result = self._request(
+             ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_server.py", line 449, in _request
+    raise CodeQLRunError(self._failure(f"{method} failed: {detail}"))
+harness.mcp.codeql_server.CodeQLRunError: evaluation/runQueries failed: Internal error.
+query server pid 48240 exit None
+Oct 11, 2026 1:36:58 AM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint fallbackResponseError
+SEVERE: Internal error: java.lang.OutOfMemoryError: Java heap space
+java.util.concurrent.CompletionException: java.lang.OutOfMemoryError: Java heap space
+	at java.base/java.util.concurrent.CompletableFuture.encodeThrowable(Unknown Source)
+	at java.base/java.util.concurrent.CompletableFuture.completeThrowable(Unknown Source)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: java.lang.OutOfMemoryError: Java heap space
+	at com.semmle.dil.proptypes.BDDProposition.intersect(BDDProposition.java:48)
+	at com.semmle.dil.typeinference.TTC.and(TTC.java:208)
+	at com.semmle.dil.absinthe.types.TypingFactory$Typing.conjoinTTCs(TypingFactory.java:375)
+	at com.semmle.dil.absinthe.types.TypingFactory$Typing.and(TypingFactory.java:404)
+	at com.semmle.dil.absinthe.types.TypingFactory$Typing.and(TypingFactory.java:273)
+	at com.semmle.dil.absinthe.util.PropagateValues.conjoinValueWithContext(PropagateValues.java:93)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 285, in <module>
+    serve(Path(sys.argv[1] if len(sys.argv) > 1 else "."))
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 209, in serve
+    _handle(conn, server)
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 253, in _handle
+    _write_json(conn, {"error": message, "log": log})
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 264, in _write_json
+    conn.sendall(f"{len(raw)}\n".encode("ascii") + raw)
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in thread Thread-3 (_drain_stderr):
+Traceback (most recent call last):
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_server.py", line 506, in _drain_stderr
+    self._on_line(text)
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 229, in emit
+    _write_json(conn, {"progress": line})
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 264, in _write_json
+    conn.sendall(f"{len(raw)}\n".encode("ascii") + raw)
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 232, in _handle
+    produced, failed = server.run_queries(
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_server.py", line 373, in run_queries
+    result = self._request(
+             ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_server.py", line 449, in _request
+    raise CodeQLRunError(self._failure(f"{method} failed: {detail}"))
+harness.mcp.codeql_server.CodeQLRunError: evaluation/runQueries failed: Internal error.
+query server pid 50332 exit None
+Oct 11, 2026 1:38:17 AM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint fallbackResponseError
+SEVERE: Internal error: java.lang.OutOfMemoryError: Java heap space
+java.util.concurrent.CompletionException: java.lang.OutOfMemoryError: Java heap space
+	at java.base/java.util.concurrent.CompletableFuture.encodeThrowable(Unknown Source)
+	at java.base/java.util.concurrent.CompletableFuture.completeThrowable(Unknown Source)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: java.lang.OutOfMemoryError: Java heap space
+	at com.semmle.util.unionfind.IntEquivalenceRelation.<init>(IntEquivalenceRelation.java:40)
+	at com.semmle.util.unionfind.IntEquivalenceRelation.union(IntEquivalenceRelation.java:290)
+	at com.semmle.dil.typeinference.TTC.and(TTC.java:203)
+	at com.semmle.dil.absinthe.types.TypingFactory$Typing.conjoinTTCs(TypingFactory.java:375)
+	at com.semmle.dil.absinthe.types.TypingFactory$Typing.and(TypingFactory.java:404)
+	at com.semmle.dil.absinthe.types.TypingFactory$Typing.and(TypingFactory.java:273)
+	at com.semmle.dil.absinthe.AbstractInterpreter$Evaluator$$Lambda/0x000000080070e1b8.apply(Unknown Source)
+	at java.base/java.util.stream.ReduceOps$2ReducingSink.accept(Unknown Source)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(Unknown Source)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(Unknown Source)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(Unknown Source)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(Unknown Source)
+	at java.base/java.util.stream.ReduceOps$ReduceOp.evaluateSequential(Unknown Source)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(Unknown Source)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 285, in <module>
+    serve(Path(sys.argv[1] if len(sys.argv) > 1 else "."))
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 209, in serve
+    _handle(conn, server)
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 253, in _handle
+    _write_json(conn, {"error": message, "log": log})
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\codeql_query_daemon.py", line 264, in _write_json
+    conn.sendall(f"{len(raw)}\n".encode("ascii") + raw)
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host

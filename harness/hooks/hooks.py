@@ -44,6 +44,7 @@ class Hook(Destination):
             "preToolUse",
             "postToolUse",
             "postToolUseFailure",
+            "afterFileEdit",
             "beforeReadFile",
             "subagentStart",
         }
@@ -98,11 +99,11 @@ class HookInstallation(Installation):
 
     @property
     def dispatch_command(self) -> str:
-        from harness.hooks.process import hook_python_executable
+        from harness.hooks.process import hook_cli_executable
 
         repo = self.repo or Path(__file__).resolve().parents[2]
         script = (repo / self.DISPATCH_SCRIPT).resolve()
-        python = hook_python_executable(self.python)
+        python = hook_cli_executable(self.python)
         return f"{python} -u {script}"
 
     def write(self, tool: Any) -> None:
@@ -184,7 +185,12 @@ class HookInstallation(Installation):
             "timeout": 30,
             "failClosed": False,
         }
-        for event in sorted({item["event"] for item in self._handlers}):
+        events = {item["event"] for item in self._handlers}
+        if "postToolUse" in events:
+            events.add("afterFileEdit")
+            events.add("stop")
+            events.add("subagentStop")
+        for event in sorted(events):
             if event == "afterAgentResponse":
                 hooks[event] = [dict(hook_def)]
                 continue

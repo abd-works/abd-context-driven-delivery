@@ -8,7 +8,6 @@
  */
 
 import javascript
-import subject_filter
 import model
 
 predicate repositoryDeclaration(AstNode node, string name, File f) {
@@ -31,7 +30,7 @@ from AstNode subject, string message, AstNode contributor
 where
   exists(string name, File f |
     repositoryDeclaration(subject, name, f) and
-    inSubject(subject) and
+    inGraphSubject(subject) and
     contributor = subject and
     (
       (

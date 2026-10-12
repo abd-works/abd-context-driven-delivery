@@ -22,6 +22,7 @@ class Satisfy(GuidanceAction):
         """Run validate for each provided Guidance against the content; apply generate_fixes_from_validate, then validate again when done. Pass a string to satisfy that text once."""
         from validate.validate import Validate
 
+        self._bind_guidance(guidance)
         instructions(_SATISFY_MARKDOWN)
 
         def on(item) -> None:

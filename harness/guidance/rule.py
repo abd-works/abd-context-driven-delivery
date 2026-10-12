@@ -129,20 +129,27 @@ class RulesCollection(MarkdownCollection):
         from prompt_echo.prompt_echo import PromptEcho
 
         hook_payload = payload or {}
+        if not self._just_edited(hook_payload):
+            return {}
         path = self._payload_path(hook_payload)
         bags = self._bags_for_path(path) if path else []
         parts, labels = self._bodies(bags)
         if not parts:
             return {}
-        body = self._inject_context(path, bags, parts)
-        echo = PromptEcho()
-        echo.toast_roots = hook_payload.get("workspace_roots")
-        echo.show_ide_toast(
-            PromptEcho().inject_rules_toast("chat edit", labels),
-        )
+        body = self._inject_context(path, bags, parts, hook_payload)
+        if hook_payload.get("conversation_id") or hook_payload.get("workspace_roots"):
+            echo = PromptEcho()
+            echo.toast_roots = hook_payload.get("workspace_roots")
+            echo.show_ide_toast(
+                echo.inject_rules_toast(echo.chat_edit_source(hook_payload), labels),
+            )
         return {"additional_context": body}
 
     def _payload_path(self, hook_payload: dict[str, Any]) -> str:
+        for key in ("file_path", "path", "uri"):
+            value = hook_payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
         raw = hook_payload.get("tool_input") or {}
         if isinstance(raw, str):
             try:
@@ -264,26 +271,72 @@ class RulesCollection(MarkdownCollection):
         return patterns
 
     def _inject_echo_instruction(
-        self, path: str, bags: list[RulesCollection]
+        self, path: str, bags: list[RulesCollection], hook_payload: dict[str, Any] | None = None
     ) -> str:
-        rule_names = self._rule_names(bags)
-        if not rule_names:
-            return ""
-        lines = [
-            "Before you continue, echo the following message to the user:",
-            "",
-            "The following rules need to be followed while editing this document:",
-            *rule_names,
-            path,
-        ]
+        if self._just_edited(hook_payload or {}):
+            lines = [
+                "These rules are injected in the chat.",
+                "The user sees the chat line. Do not paste the rule text into the chat.",
+                *self._chat_block(bags),
+                f"You just edited {self._edited_label(path)}.",
+                "The full rule text follows.",
+                "Fix any violations from the edit you just made.",
+            ]
+        else:
+            rule_names = self._rule_names(bags)
+            if not rule_names:
+                return ""
+            lines = [
+                "Before you continue, echo the following message to the user:",
+                "",
+                "The following rules need to be followed while editing this document:",
+                *rule_names,
+                path,
+            ]
         for pattern in self._matched_globs(bags):
             lines.append(pattern)
         return "\n".join(lines)
 
+    def _chat_block(self, bags: list[RulesCollection]) -> list[str]:
+        return ["--- chat ---", *self._chat_lines(bags), "--- end chat ---"]
+
+    def _chat_lines(self, bags: list[RulesCollection]) -> list[str]:
+        practice = self._owner_practice()
+        lines: list[str] = []
+        for bag in bags:
+            parent = bag.parent
+            if parent is None or parent is practice:
+                continue
+            skill = getattr(parent, "slug", None)
+            if isinstance(skill, str) and skill.strip():
+                line = f"rules injected for {skill.strip()}"
+                if line not in lines:
+                    lines.append(line)
+        if lines:
+            return lines
+        if practice is not None:
+            slug = getattr(practice, "slug", None)
+            if isinstance(slug, str) and slug.strip():
+                return [f"rules injected for {slug.strip()}"]
+        return ["rules injected"]
+
+    def _edited_label(self, path: str) -> str:
+        file = Path(path)
+        parent = file.parent.name
+        if not parent:
+            return file.name
+        sep = "\\" if "\\" in path else "/"
+        return f"{parent}{sep}{file.name}"
+
+    def _just_edited(self, hook_payload: dict[str, Any]) -> bool:
+        event = str(hook_payload.get("hook_event_name") or "")
+        tool = str(hook_payload.get("tool_name") or "")
+        return event == "afterFileEdit" or tool in {"Write", "StrReplace", "EditNotebook"}
+
     def _inject_context(
-        self, path: str, bags: list[RulesCollection], parts: list[str]
+        self, path: str, bags: list[RulesCollection], parts: list[str], hook_payload: dict[str, Any] | None = None
     ) -> str:
-        preamble = self._inject_echo_instruction(path, bags).strip()
+        preamble = self._inject_echo_instruction(path, bags, hook_payload).strip()
         rules = "\n\n".join(parts).strip()
         if preamble and rules:
             return f"{preamble}\n\n{rules}"

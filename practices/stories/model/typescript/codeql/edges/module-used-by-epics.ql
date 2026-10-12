@@ -7,7 +7,9 @@
 import javascript
 import stories
 
-from string folder, string prefix, string mod
-where epicUsesModule(folder, prefix, mod)
-select moduleNodeId(prefix, mod), epicId(folder), "usedBy", 9, "relationship"
-  order by moduleNodeId(prefix, mod), epicId(folder)
+from string folder, string prefix, string mod, string parent, string child
+where
+  epicUsesModule(folder, prefix, mod) and
+  parent = moduleNodeId(prefix, mod) and
+  child = epicId(folder)
+select parent, child, "usedBy", 9, "relationship" order by parent, child

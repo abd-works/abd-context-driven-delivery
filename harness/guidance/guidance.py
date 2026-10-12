@@ -326,7 +326,27 @@ class PracticeGuidance(Guidance):
         parent_text = Guidance.instructions.fget(self)
         extra = self.fidelities.instructions if self.fidelities.entries else ""
         return "\n\n".join(
-            part for part in (parent_text, extra, self.scoped_markdown()) if part
+            part
+            for part in (self.schema_guide(), parent_text, extra, self.scoped_markdown())
+            if part
+        )
+
+    @property
+    def schema(self) -> str:
+        """The practice schema at ``{practice}/model/schema.yaml``."""
+        path = AssetLocator(self, "").class_file_directory() / "model" / "schema.yaml"
+        if not path.is_file():
+            return ""
+        return path.read_text(encoding="utf-8").strip()
+
+    def schema_guide(self) -> str:
+        """Tell an action to conform its output to this practice schema."""
+        body = (self.schema or "").strip()
+        if not body:
+            return ""
+        return (
+            "Guide this action so the output conforms to this schema.\n\n"
+            f"{body}"
         )
 
 
@@ -648,9 +668,11 @@ class FidelityGuidance(Guidance):
                 practice.format = previous_format
             if templates:
                 templates = f"#### Template\n\n{templates}"
+        schema = practice.schema_guide() if practice is not None else ""
         return "\n\n".join(
             part
             for part in (
+                schema,
                 *parent,
                 (self.overview or "").strip(),
                 (self.guidance or "").strip(),

@@ -8,13 +8,12 @@
  */
 
 import javascript
-import subject_filter
 import model
 
 from AstNode subject, string message, AstNode contributor
 where
   exists(InterfaceDefinition iface |
-    inSubject(iface) and
+    inGraphSubject(iface) and
     repositoryType(iface.getName()) and
     not exists(Function loadFn |
       loadFn.getName() = "load" and
@@ -28,7 +27,7 @@ where
   )
   or
   exists(MethodDefinition method |
-    inSubject(method) and
+    inGraphSubject(method) and
     repositoryType(method.getDeclaringType().getName()) and
     method.getName() = ["rehydrate", "hydrate"] and
     subject = method and

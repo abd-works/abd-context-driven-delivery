@@ -1,5 +1,7 @@
 import javascript
-import subject_filter
+import ddd
+
+predicate inGraphSubject(AstNode n) { exists(n.getLocation()) }
 
 predicate nodeFile(File f) { f.getBaseName().matches("%-node.ts") }
 
@@ -11,7 +13,7 @@ predicate clientFile(File f) {
 
 predicate tierFile(File f) { nodeFile(f) or serverFile(f) or clientFile(f) }
 
-predicate aggregateFolder(Container folder) {
+predicate srcAggregateFolder(Container folder) {
   folder.getParentContainer().getParentContainer().getParentContainer().getBaseName() = "src"
 }
 
@@ -22,7 +24,7 @@ predicate srcCoreFile(File f) {
   not f.getBaseName().matches("%-client.ts") and
   not f.getBaseName().matches("%-routes.ts") and
   (
-    aggregateFolder(f.getParentContainer())
+    srcAggregateFolder(f.getParentContainer())
     or
     f.getParentContainer().getParentContainer().getBaseName() = "src"
   )
@@ -148,7 +150,7 @@ predicate epicPackagePath(string path) {
 predicate routeFile(File f) { f.getBaseName().matches("%-routes.ts") }
 
 predicate routerModuleFile(File f) {
-  routeFile(f) and aggregateFolder(f.getParentContainer())
+  routeFile(f) and srcAggregateFolder(f.getParentContainer())
 }
 
 predicate screenViewFile(File f) {
@@ -156,7 +158,7 @@ predicate screenViewFile(File f) {
   not clientFile(f) and
   not f.getBaseName().matches("%-redirect.tsx") and
   not f.getBaseName().matches("%-shell.tsx") and
-  aggregateFolder(f.getParentContainer())
+  srcAggregateFolder(f.getParentContainer())
 }
 
 bindingset[slug]
@@ -169,14 +171,11 @@ string pascalFromSlug(string slug) {
   )
 }
 
-bindingset[path]
-string slash(string path) { result = path.replaceAll("\\", "/") }
-
 string domainSlugFromClient(ClassDefinition cls) {
-  result = slash(cls.getFile().getRelativePath()).regexpCapture("src/([^/]+)/[^/]+-client\\.(tsx|ts)$", 1)
+  result =
+    slash(cls.getFile().getRelativePath()).regexpCapture("src/(?:[^/]+/)?([^/]+)/[^/]+-client\\.(tsx|ts)$", 1)
 }
 
-bindingset[file, name]
 predicate domainClient(
   ClassDefinition cls, string id, string name, string file, int start, int end
 ) {
@@ -187,5 +186,78 @@ predicate domainClient(
   start = cls.getLocation().getStartLine() and
   end = cls.getLocation().getEndLine() and
   id = "ddd:DomainClient:" + file + ":" + name
+}
+
+predicate domainNode(
+  ClassDefinition cls, string id, string name, string file, int start, int end
+) {
+  nodeFile(cls.getFile()) and
+  cls.getName().regexpMatch(".+Node") and
+  name = cls.getName() and
+  file = slash(cls.getFile().getRelativePath()) and
+  start = cls.getLocation().getStartLine() and
+  end = cls.getLocation().getEndLine() and
+  id = "ddd:DomainNode:" + file + ":" + name
+}
+
+predicate domainView(
+  File f, string id, string name, string file, int start, int end
+) {
+  screenViewFile(f) and
+  name = f.getBaseName().regexpCapture("^(.+)\\.tsx$", 1) and
+  file = slash(f.getRelativePath()) and
+  start = f.getLocation().getStartLine() and
+  end = f.getLocation().getEndLine() and
+  id = "ddd:DomainView:" + file + ":" + name
+}
+
+predicate jsonStore(File f, string id, string name, string file) {
+  f.getExtension() = "json" and
+  srcAggregateFolder(f.getParentContainer()) and
+  name = f.getBaseName().regexpCapture("^(.+)\\.json$", 1) and
+  file = slash(f.getRelativePath()) and
+  id = "ddd:JsonStore:" + file + ":" + name
+}
+
+predicate routeModule(File f, string id, string name, string file, int start, int end) {
+  routeFile(f) and
+  srcAggregateFolder(f.getParentContainer()) and
+  name = f.getBaseName().regexpCapture("^(.+)-routes\\.ts$", 1) and
+  file = slash(f.getRelativePath()) and
+  start = f.getLocation().getStartLine() and
+  end = f.getLocation().getEndLine() and
+  id = "ddd:Route:" + file + ":" + name
+}
+
+predicate clientInteractsEntityEdge(string parent, string child) {
+  exists(
+    ClassDefinition clientCls, ClassDefinition rootCls, string parentId, string childId,
+    string clientClassName, string clientPath, int clientStartLine, int clientEndLine,
+    string rootClassName, string rootPath, int rootStartLine, int rootEndLine
+  |
+    domainClient(clientCls, parentId, clientClassName, clientPath, clientStartLine, clientEndLine) and
+    parent = parentId and
+    dddClass(
+      rootCls, "EntityRoot", childId, rootClassName, rootPath, rootStartLine, rootEndLine
+    ) and
+    child = childId and
+    clientCls.getFile().getParentContainer() = rootCls.getFile().getParentContainer()
+  )
+}
+
+predicate nodeHostsEntityEdge(string parent, string child) {
+  exists(
+    ClassDefinition nodeCls, ClassDefinition rootCls, string parentId, string childId,
+    string nodeClassName, string nodePath, int nodeStartLine, int nodeEndLine,
+    string rootClassName, string rootPath, int rootStartLine, int rootEndLine
+  |
+    domainNode(nodeCls, parentId, nodeClassName, nodePath, nodeStartLine, nodeEndLine) and
+    parent = parentId and
+    dddClass(
+      rootCls, "EntityRoot", childId, rootClassName, rootPath, rootStartLine, rootEndLine
+    ) and
+    child = childId and
+    nodeCls.getFile().getParentContainer() = rootCls.getFile().getParentContainer()
+  )
 }
 

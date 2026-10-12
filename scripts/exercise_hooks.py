@@ -116,6 +116,7 @@ class HookExercise:
             "tool_name": "Write",
             "cwd": str(path.parent),
             "workspace_roots": [str(self.repo)],
+            "conversation_id": "hook-exercise",
             "tool_input": {"path": str(path)},
         }
 
@@ -194,11 +195,12 @@ class HookExercise:
         result = self._server().handle_stdin(json.dumps(self._payload(path)).encode("utf-8"))
         injected = result.additional_context or ""
         logs = SessionLogs(self.repo)
-        chat = logs.session_folder(logs.active_session_name()) / "last-chat-injected-rules.md"
-        published = self.repo / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
+        folder = logs.session_folder(logs.active_session_name())
+        chat = folder / "last-chat-injected-rules.md"
+        remembered = folder / "chat-injections" / "hook-exercise.md"
         chat_text = chat.read_text(encoding="utf-8") if chat.is_file() else ""
-        published_text = published.read_text(encoding="utf-8") if published.is_file() else ""
-        return injected, f"{chat_text}\n{published_text}"
+        remembered_text = remembered.read_text(encoding="utf-8") if remembered.is_file() else ""
+        return injected, f"{chat_text}\n{remembered_text}"
 
     def _example_for(self, fidelity: str, practice: str) -> Path | None:
         needle = fidelity.casefold().replace("_", "-")

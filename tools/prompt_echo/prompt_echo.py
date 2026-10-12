@@ -10,8 +10,10 @@ Off when the class is annotated ``@Hooks(disabled=True)``.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
+import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -172,6 +174,87 @@ class PromptEcho:
 
     def inject_rules_toast(self, source: str, labels: list[str]) -> str:
         return f"{source}{_ARROW}rules : {', '.join(labels)}"
+
+    def chat_edit_source(self, hook_payload: dict | None) -> str:
+        """Name the chat that edited the file, so the toast is not shared across chats."""
+        title = self._chat_title(hook_payload or {})
+        if not title:
+            return "chat edit"
+        return f"chat {title} edited file"
+
+    def _chat_title(self, hook_payload: dict) -> str:
+        for key in ("conversation_title", "composer_title", "chat_title", "title"):
+            value = hook_payload.get(key)
+            if isinstance(value, str) and value.strip() and not self._looks_like_path(value):
+                return " ".join(value.split())
+        named = self._composer_name(str(hook_payload.get("conversation_id") or ""))
+        if named:
+            return named
+        return self._title_from_transcript(str(hook_payload.get("transcript_path") or ""))
+
+    def _looks_like_path(self, text: str) -> bool:
+        compact = " ".join(text.split())
+        if compact.startswith("@") or "\\" in compact or "/" in compact:
+            return True
+        return Path(compact).suffix.lower() in {".md", ".py", ".ts", ".tsx", ".js", ".json"}
+
+    def _composer_name(self, conversation_id: str) -> str:
+        if not conversation_id:
+            return ""
+        db = self._cursor_state_db()
+        if db is None or not db.is_file():
+            return ""
+        try:
+            con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            try:
+                row = con.execute(
+                    "SELECT value FROM cursorDiskKV WHERE key = ?",
+                    (f"composerData:{conversation_id}",),
+                ).fetchone()
+            finally:
+                con.close()
+        except (OSError, sqlite3.Error):
+            return ""
+        if not row or row[0] is None:
+            return ""
+        raw = row[0]
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", "replace")
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return ""
+        name = data.get("name") if isinstance(data, dict) else ""
+        if not isinstance(name, str) or not name.strip() or self._looks_like_path(name):
+            return ""
+        return " ".join(name.split())
+
+    def _cursor_state_db(self) -> Path | None:
+        override = getattr(self, "state_db", None)
+        if isinstance(override, Path):
+            return override
+        appdata = os.environ.get("APPDATA")
+        if not appdata:
+            return None
+        return Path(appdata) / "Cursor" / "User" / "globalStorage" / "state.vscdb"
+
+    def _title_from_transcript(self, transcript_path: str) -> str:
+        path = Path(transcript_path)
+        if not transcript_path or not path.is_file():
+            return ""
+        try:
+            first = path.open(encoding="utf-8").readline()
+        except OSError:
+            return ""
+        match = re.search(r"<user_query>\s*(.*?)\s*</user_query>", first, re.DOTALL)
+        text = match.group(1) if match else ""
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text or self._looks_like_path(text):
+            return ""
+        if len(text) <= 60:
+            return text
+        shortened = text[:60].rsplit(" ", 1)[0]
+        return shortened or text[:60]
 
     def toast_notice(self, echo: str) -> dict[str, str]:
         return {
@@ -367,8 +450,14 @@ class PromptEcho:
 
     def _haystacks(self, hook_payload: dict) -> list[str]:
         values = [self._mcp_tool_name(hook_payload), str(hook_payload.get("tool_name") or "")]
-        values.extend(self._paths(hook_payload))
+        for path in self._paths(hook_payload):
+            if self._skill_or_rule_path(path):
+                values.append(path)
         return [item for item in values if item]
+
+    def _skill_or_rule_path(self, path: str) -> bool:
+        posix = path.replace("\\", "/").lower()
+        return "/.cursor/skills/" in posix or "/.cursor/rules/" in posix
 
     def _token_in(self, hay: str, token: str) -> bool:
         compacted_hay = f"-{self._compact(hay)}-"
@@ -436,6 +525,10 @@ class PromptEcho:
         except ValueError:
             return None
 
+    def _rules_rest(self, rest: str) -> bool:
+        lowered = rest.strip().lower()
+        return lowered.startswith("rules :") or lowered.startswith("rules:")
+
     def _guidance_names_from_toast_rest(self, rest: str) -> list[str]:
         text = rest.strip()
         lowered = text.lower()
@@ -457,7 +550,7 @@ class PromptEcho:
             return f"{previous}; {incoming}"
         prev_src, prev_rest = previous.split(_ARROW, 1)
         inc_src, inc_rest = incoming.split(_ARROW, 1)
-        if prev_src.strip() != inc_src.strip():
+        if prev_src.strip() != inc_src.strip() or not self._rules_rest(prev_rest) or not self._rules_rest(inc_rest):
             return f"{previous}; {incoming}"
         names: list[str] = []
         for name in self._guidance_names_from_toast_rest(

@@ -8,12 +8,11 @@
  */
 
 import javascript
-import subject_filter
 import model
 
 from StringLiteral lit, string message, AstNode contributor
 where
-  inSubject(lit) and
+  inGraphSubject(lit) and
   exists(CallExpr call |
     call.getAnArgument() = lit and
     call.getCalleeName() = "JSONFilePreset"

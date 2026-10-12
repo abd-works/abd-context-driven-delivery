@@ -8,7 +8,6 @@
  */
 
 import javascript
-import subject_filter
 import model
 
 predicate storyStepFile(File file) {
@@ -23,7 +22,7 @@ predicate ctxRepositoryAccess(PropAccess access) {
 from AstNode subject, string message, AstNode contributor
 where
   storyStepFile(subject.getFile()) and
-  inSubject(subject) and
+  inGraphSubject(subject) and
   (
     exists(TypeAssertion assertion, PropAccess access |
       subject = assertion and

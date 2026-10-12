@@ -45,3 +45,11 @@ with description("a validate action on practice guidance") as self:
                 self.action, {"guidance": [self.guidance], "rule": rule}
             )
             expect(prose).to(contain("sample-rule-one"))
+
+    with context("with a fidelity active"):
+        with it("should pass that fidelity's rules with the shared rules"):
+            guidance = SamplePracticeGuidance(format="markdown", fidelity="sketch")
+            prose = _expanded_validate(self.action, {"guidance": [guidance]})
+            expect(prose).to(contain("sample-rule-one"))
+            expect(prose).to(contain("sketch-rule"))
+            expect(prose).not_to(contain("spec-rule"))

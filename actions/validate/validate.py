@@ -22,17 +22,53 @@ class Validate(GuidanceAction):
     @agent_instructions
     def validate(self, guidance: GuidanceArg, rule: Rule | None = None) -> str:
         """Check artifacts against rules. Pass a string to validate that text once. Pass a list of Guidance to walk each Guidance's rules. Pass a single Rule to check only that rule."""
+        self._bind_guidance(guidance)
         instructions(_VALIDATE_MARKDOWN)
         def on(item) -> str:
             if rule is not None:
                 return rule.validate()
             if isinstance(item, str):
                 return item
-            return item.rules.validate
+            return self._rules_for(item)
 
         parts = [part for part in self.run(guidance, on, action="validate") if part]
         report = "Validation report for artifacts under {session.path}/."
         return "\n\n".join([_VALIDATE_MARKDOWN, *parts, report])
+
+    def _rules_for(self, item) -> str:
+        """Shared rules plus the active fidelity's rules. Every fidelity when none is active."""
+        sections: list[str] = []
+        seen: set[int] = set()
+        for collection in (getattr(item, "rules", None), *self._fidelity_rule_collections(item)):
+            if collection is None or id(collection) in seen:
+                continue
+            seen.add(id(collection))
+            text = self._validate_text(collection)
+            if text:
+                sections.append(text)
+        return "\n\n".join(sections)
+
+    def _fidelity_rule_collections(self, item) -> list:
+        fidelities = getattr(item, "fidelities", None)
+        if fidelities is None:
+            return []
+        current = getattr(fidelities, "current", None)
+        if current is not None:
+            rules = getattr(current, "rules", None)
+            return [rules] if rules is not None else []
+        return [
+            rules
+            for child in fidelities
+            if (rules := getattr(child, "rules", None)) is not None
+        ]
+
+    def _validate_text(self, collection) -> str:
+        text = getattr(collection, "validate", "")
+        if callable(text):
+            text = text()
+        if not isinstance(text, str):
+            return ""
+        return text.strip()
 
     @noDeploy
     @Mcp

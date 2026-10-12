@@ -132,22 +132,36 @@ class QueryServerClient:
             close_fds=True,
         )
 
-    def run_queries(self, queries, database: Path, on_line) -> dict[str, Path]:
+    def run_queries(
+        self,
+        queries,
+        database: Path,
+        on_line,
+        *,
+        additional_packs: str | None = None,
+    ) -> tuple[dict[str, Path], dict[str, str]]:
         try:
-            return self._run_queries(queries, database, on_line)
+            return self._run_queries(queries, database, on_line, additional_packs=additional_packs)
         except OSError as error:
             raise CodeQLRunError(self._closed_dump(error)) from error
 
-    def _run_queries(self, queries, database: Path, on_line) -> dict[str, Path]:
+    def _run_queries(
+        self,
+        queries,
+        database: Path,
+        on_line,
+        *,
+        additional_packs: str | None = None,
+    ) -> tuple[dict[str, Path], dict[str, str]]:
         with socket.create_connection((self.host, self.port), timeout=None) as conn:
-            _write_json(
-                conn,
-                {
-                    "method": "runQueries",
-                    "queries": [str(Path(query).resolve()) for query in queries],
-                    "database": str(Path(database).resolve()),
-                },
-            )
+            payload = {
+                "method": "runQueries",
+                "queries": [str(Path(query).resolve()) for query in queries],
+                "database": str(Path(database).resolve()),
+            }
+            if additional_packs:
+                payload["additionalPacks"] = additional_packs
+            _write_json(conn, payload)
             streamed = False
             while True:
                 result = _read_json(conn)
@@ -164,10 +178,12 @@ class QueryServerClient:
                     on_line(line)
         if result.get("error"):
             raise CodeQLRunError(result["error"])
-        return {
+        produced = {
             key: Path(value)
             for key, value in (result.get("produced") or {}).items()
         }
+        failed = {str(key): str(value) for key, value in (result.get("failed") or {}).items()}
+        return produced, failed
 
     def _closed_dump(self, error: BaseException) -> str:
         pid = int(self.pid or 0)
@@ -227,16 +243,20 @@ def _handle(conn: socket.socket, server: CodeQLQueryServer) -> None:
             _write_json(conn, {"progress": line})
 
     try:
-        produced = server.run_queries(
+        additional = raw.get("additionalPacks") or ""
+        packs = [part for part in str(additional).split(os.pathsep) if part] if additional else None
+        produced, failed = server.run_queries(
             [Path(path) for path in raw.get("queries") or []],
             Path(raw["database"]),
             emit,
+            additional_packs=packs,
         )
         with write_lock:
             _write_json(
                 conn,
                 {
                     "produced": {key: str(value) for key, value in produced.items()},
+                    "failed": failed,
                     "log": log,
                 },
             )

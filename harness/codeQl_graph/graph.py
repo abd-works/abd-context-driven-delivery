@@ -26,9 +26,11 @@ from harness.mcp.mcp_server import mcp
 
 Display = str
 Tuple = list[str]
+_GRAPH_PRACTICE_NAMES = frozenset({"clean_engineering", "stories", "ddd", "bdd", "ux"})
+_EDGE_DISPLAY_MARKERS = frozenset({"relationship", "direct", "grouped"})
 _RUN_QUERIES_FLAGS = ("--threads=0", "--ram=8192", "--warnings=hide", "-v")
 _CODEQL_SUBPROCESS_TIMEOUT_SECONDS = int(os.environ.get("CODEQL_SUBPROCESS_TIMEOUT_SECONDS", "600"))
-_QUERY_SERVER_BATCH_SIZE = int(os.environ.get("CODEQL_QUERY_SERVER_BATCH_SIZE", "8"))
+_QUERY_SERVER_BATCH_SIZE = int(os.environ.get("CODEQL_QUERY_SERVER_BATCH_SIZE", "4"))
 _SKIP_SOURCE_DIRS = ("node_modules", ".git", "dist", "__pycache__", ".venv", ".codeql", "coverage")
 _DB_STORE_BY_LANGUAGE = {"python": "db-python", "javascript": "db-javascript", "typescript": "db-javascript"}
 
@@ -36,6 +38,11 @@ _DB_STORE_BY_LANGUAGE = {"python": "db-python", "javascript": "db-javascript", "
 def _dbscheme_mismatch(detail: str) -> bool:
     text = detail.lower()
     return "no upgrade path" in text and "dbscheme" in text
+
+
+def _imb_cache_locked(detail: str) -> bool:
+    text = detail.lower()
+    return "imb disk cache" in text or "overlappingfilelockexception" in text or "cache directory is already locked" in text
 
 
 def _query_server_memory_failure(detail: str) -> bool:
@@ -59,6 +66,35 @@ def _chunk_queries(queries: list[str], batch_size: int) -> list[list[str]]:
 
 def _codeql_detail(*parts: str | None) -> str:
     return "\n".join(part for part in parts if part)
+
+
+def _codeql_pack_search_path() -> str:
+    roots = [_REPO / "practices"]
+    patterns = _REPO / "patterns"
+    if patterns.is_dir():
+        roots.append(patterns)
+    return os.pathsep.join(str(path.resolve()) for path in roots)
+
+
+def codeql_additional_pack_roots(
+    practice_roots: dict[str, str],
+    languages: dict[str, str],
+    overlays: list[str],
+) -> str:
+    paths: list[str] = []
+    language_set = set(languages.values())
+    for name in practice_roots:
+        for language in language_set:
+            base = query_pack(name, language)
+            if (base / "qlpack.yml").is_file():
+                paths.append(str(base.resolve()))
+    for overlay in overlays:
+        for name in practice_roots:
+            for language in language_set:
+                pack = pattern_query_pack(overlay, name, language)
+                if pack is not None:
+                    paths.append(str(pack.resolve()))
+    return os.pathsep.join(dict.fromkeys(paths))
 
 
 def query_pack(practice: str, language: str) -> Path:
@@ -762,14 +798,19 @@ class CodeQLNode:
 
     @staticmethod
     def fact(row: Tuple) -> dict | None:
+        if len(row) < 7:
+            return None
         node_id, name, semantic_type, practice, file, line, end_line = (row + [""] * 7)[:7]
         if not node_id or not semantic_type:
+            return None
+        practice_name = str(practice).strip()
+        if practice_name not in _GRAPH_PRACTICE_NAMES:
             return None
         return {
             "node_id": node_id,
             "name": name,
             "semantic_type": semantic_type,
-            "practice": practice,
+            "practice": practice_name,
             "file": file,
             "line": int(line or 1),
             "end_line": int(end_line or 1),
@@ -1012,6 +1053,14 @@ class CodeQLPracticeGraph:
     def node_count(self, type: str) -> int:
         return len(self.nodes.get(type, []))
 
+    def rebuild_tree(self) -> None:
+        """Rebuild the explorer tree from edge facts after late-bound nodes or overlays."""
+        for node in self.by_id.values():
+            node.children = []
+            node.parent = None
+            node._populated = False
+        self.root_node.populate()
+
     def apply_rules(self, rule: str, tuples: list[Tuple]) -> None:
         self.rules_run.append(rule)
         for row in tuples:
@@ -1062,9 +1111,19 @@ class CodeQLGraph:
         event = {"step": step, "message": message, **extra}
         self._progress.append(event)
         listener = self._on_progress
-        if listener is None:
-            return
-        listener(event)
+        if listener is not None:
+            listener(event)
+        if _query_server_memory_failure(message):
+            self._oom_abort(message, "queries")
+
+    def _oom_abort(self, detail: str, label: str) -> None:
+        text = (
+            "CodeQL ran out of Java heap memory while compiling or evaluating queries "
+            f"({label}). "
+            "Close stray CodeQL/Java processes in Task Manager, then reload. "
+            "If it happens again, set CODEQL_QUERY_SERVER_BATCH_SIZE=2 before starting the graph API."
+        )
+        raise QueryFailure(label, text)
 
     @property
     def folder(self) -> str:
@@ -1177,13 +1236,13 @@ class CodeQLGraph:
 
     @mcp
     @agent_tool
-    def reload_working_copy(self) -> str:
+    def reload_working_copy(self, overlays: list[str] | None = None) -> str:
         """Populate the graph from each working copy.
 
         The working copy is rebuilt only when it is missing or the practice source or CodeQL queries are newer than the stamp. When the query packs match the saved graph, that graph is loaded instead of querying.
         """
         self._require_practices()
-        self._sync_overlays_from_snapshot()
+        self._resolve_overlays_for_load(overlays)
         self._report("reload", "Checking which working copies are older than the code")
         if self._saved_graph_current():
             self._restore_saved_graph()
@@ -1216,15 +1275,22 @@ class CodeQLGraph:
         names = ", ".join(touched) if touched else "no practices"
         return f"Updated the working copy for {names}."
 
-    def load_working_copy(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
+    def load_working_copy(
+        self,
+        folder: str,
+        practices: dict[str, str],
+        database: str | None = None,
+        overlays: list[str] | None = None,
+    ) -> str:
         """Populate the graph from the saved graph, or from query results on each working copy.
 
         folder is the repo. database stores a subset's databases so a test does not overwrite the repo database.
         A newer query pack re-runs the queries and saves the graph again. This does not create a database.
+        When overlays is provided (including an empty list), that set is used for this load instead of snapshot overlays.
         """
         self._progress.clear()
         self._bind(folder, practices, database)
-        self._sync_overlays_from_snapshot()
+        self._resolve_overlays_for_load(overlays)
         self._report("load", f"Opening {folder}")
         if self._saved_graph_current():
             self._report("load", "Saved graph matches the query packs")
@@ -1299,10 +1365,13 @@ class CodeQLGraph:
         removed = [item for item in previous if item not in ordered]
         added = [item for item in ordered if item not in previous]
         self.overlays = ordered
-        if self.practices and self._query_rows and not removed:
-            self._apply_overlay_delta(added, reuse=True)
-        else:
-            self._load_all(reuse=not removed and bool(self._query_rows))
+        if self._practice_roots:
+            if removed or not self._query_rows:
+                self._load_all(reuse=bool(self._query_rows))
+            elif added:
+                self._apply_overlay_delta(added, reuse=True)
+            else:
+                self._load_all(reuse=True)
         self._report("save", "Writing the graph cache")
         self._save_graph()
         label = ", ".join(Path(item).name for item in ordered) if ordered else "none"
@@ -1311,10 +1380,17 @@ class CodeQLGraph:
     def run_query(self, ql_path: str, database: Path) -> list[Tuple]:
         return self.run_queries([ql_path], database).get(ql_path, [])
 
-    def run_queries(self, queries: list[str], database: Path, *, reuse: bool = False) -> dict[str, list[Tuple]]:
+    def run_queries(
+        self,
+        queries: list[str],
+        database: Path,
+        *,
+        reuse: bool = False,
+        _retry_mismatched: bool = True,
+    ) -> dict[str, list[Tuple]]:
         """Evaluate the queries that are not already cached.
 
-        Cached results are decoded. The rest run together on the warm query server, or in one database run-queries process if that server is down.
+        Cached results are decoded. The rest run on the warm query server or in chunked database run-queries batches.
         reuse keeps a saved result even when the query pack is newer.
         """
         if not queries:
@@ -1327,6 +1403,7 @@ class CodeQLGraph:
             produced = self._run_missing(missing, database)
         decoded: dict[str, list[Tuple]] = {}
         located: list[tuple[str, Path]] = []
+        skipped: list[str] = []
         for query in queries:
             key = str(Path(query).resolve())
             if key in produced:
@@ -1338,11 +1415,38 @@ class CodeQLGraph:
                 if bqrs is not None:
                     located.append((query, bqrs))
                 else:
+                    skipped.append(Path(query).name)
                     self._report("query-skipped", f"{Path(query).name}: no query result")
                     decoded[query] = []
+        if skipped:
+            names = ", ".join(skipped[:12])
+            suffix = f" (+{len(skipped) - 12} more)" if len(skipped) > 12 else ""
+            raise QueryFailure(
+                "run_queries",
+                f"{len(skipped)} queries produced no results ({names}{suffix}). "
+                "The graph load is incomplete; fix CodeQL errors above and reload.",
+            )
         if located:
             self._report("decode", f"Decoding {len(located)} query results")
             decoded.update(self._decode_located(located))
+        if _retry_mismatched:
+            corrupt = [
+                query
+                for query in queries
+                if decoded.get(query) and not self._tuples_match_query_kind(Path(query), decoded[query])
+            ]
+            if corrupt:
+                names = ", ".join(Path(query).name for query in corrupt[:8])
+                self._report(
+                    "cache",
+                    f"Discarding {len(corrupt)} mismatched query results ({names}); re-running those queries",
+                )
+                for query in corrupt:
+                    self._discard_bqrs(database, Path(query))
+                    decoded.pop(query, None)
+                decoded.update(
+                    self.run_queries(corrupt, database, reuse=False, _retry_mismatched=False)
+                )
         return decoded
 
     def _run_codeql(
@@ -1431,25 +1535,21 @@ class CodeQLGraph:
                 missing.append(query)
         return cached, missing
 
-    def _bqrs_index(self, database: Path) -> dict[str, Path]:
-        results = database / "results"
-        found: dict[str, Path] = {}
-        if not results.is_dir():
-            return found
-        for path in results.rglob("*.bqrs"):
-            previous = found.get(path.stem)
-            if previous is None or path.stat().st_mtime_ns >= previous.stat().st_mtime_ns:
-                found[path.stem] = path
-        return found
+    def _release_database_locks(self) -> None:
+        from harness.mcp.codeql_server import release_codeql_database_locks
+
+        release_codeql_database_locks(
+            *self._lock_release_roots(),
+            settle_seconds=1.0 if os.name == "nt" else 0.5,
+        )
 
     def _recover_query_server(self) -> None:
-        from harness.mcp.codeql_server import stop_query_daemon
-
-        stop_query_daemon(_REPO)
+        self._release_database_locks()
 
     def _run_missing(self, queries: list[str], database: Path, *, retried_for_dbscheme: bool = False) -> dict[str, Path]:
         total = len(queries)
         if not self.use_query_server:
+            self._release_database_locks()
             self._execute_queries(queries, database, retried_for_dbscheme=retried_for_dbscheme)
             return {}
         produced: dict[str, Path] = {}
@@ -1472,8 +1572,12 @@ class CodeQLGraph:
                 if len(chunks) > 1:
                     self._report("queries", f"Batch {index}/{len(chunks)}: {len(chunk)} queries")
                 try:
-                    batch_produced = client.run_queries(
-                        chunk, database, lambda line: self._report("query", line)
+                    batch_produced, batch_failed = self._run_query_server_batch(
+                        client,
+                        chunk,
+                        database,
+                        batch_index=index,
+                        batch_total=len(chunks),
                     )
                     produced.update(
                         {key: path for key, path in batch_produced.items() if key in resolved}
@@ -1484,34 +1588,131 @@ class CodeQLGraph:
                         if str(Path(query).resolve()) not in batch_produced
                     ]
                     if unresolved:
+                        hints = "; ".join(
+                            f"{Path(query).name}: {batch_failed.get(str(Path(query).resolve()), 'no result')}"
+                            for query in unresolved
+                        )
+                        if any(
+                            _query_server_memory_failure(batch_failed.get(str(Path(query).resolve()), ""))
+                            for query in unresolved
+                        ):
+                            self._oom_abort(hints, f"batch {index}/{len(chunks)}")
+                        self._report(
+                            "queries",
+                            f"Query server missed {len(unresolved)} in batch {index}/{len(chunks)} ({hints}); "
+                            "retrying with database run-queries",
+                        )
+                        self._release_database_locks()
                         self._execute_queries(
                             unresolved, database, retried_for_dbscheme=retried_for_dbscheme
                         )
+                        client = QueryServerClient().ensure_query_server(_REPO)
+                        for query in unresolved:
+                            key = str(Path(query).resolve())
+                            bqrs = self._bqrs_if_present(database, Path(query))
+                            if bqrs is not None:
+                                produced[key] = bqrs
+                        still_missing = [
+                            query
+                            for query in unresolved
+                            if str(Path(query).resolve()) not in produced
+                            and self._bqrs_if_present(database, Path(query)) is None
+                        ]
+                        if still_missing:
+                            names = ", ".join(Path(query).name for query in still_missing)
+                            detail = f"Queries failed on query server and database run-queries: {names}. {hints}"
+                            self._report("error", detail)
+                            raise QueryFailure(f"batch {index}/{len(chunks)}", detail)
+                except QueryFailure:
+                    raise
                 except Exception as error:
                     detail = str(error)
+                    if _query_server_memory_failure(detail):
+                        self._oom_abort(detail, f"batch {index}/{len(chunks)}")
                     if not retried_for_dbscheme and _dbscheme_mismatch(detail):
                         self._report("queries", "CodeQL database scheme is outdated. Rebuilding and retrying queries.")
                         self._rebuild_working_copies_for_database(database)
                         return self._run_missing(queries, database, retried_for_dbscheme=True)
-                    self._report(
-                        "queries",
-                        f"Query server failed on batch {index}/{len(chunks)}; falling back to database run-queries",
-                    )
-                    self._recover_query_server()
-                    client = QueryServerClient().ensure_query_server(_REPO)
-                    self._execute_queries(chunk, database, retried_for_dbscheme=retried_for_dbscheme)
+                    self._report("error", detail)
+                    raise QueryFailure(f"batch {index}/{len(chunks)}", detail) from error
             return {key: path for key, path in produced.items() if key in resolved}
         except QueryFailure:
             raise
         except Exception as error:
             detail = str(error)
+            if _query_server_memory_failure(detail):
+                self._oom_abort(detail, "query server")
             if not retried_for_dbscheme and _dbscheme_mismatch(detail):
                 self._report("queries", "CodeQL database scheme is outdated. Rebuilding and retrying queries.")
                 self._rebuild_working_copies_for_database(database)
                 return self._run_missing(queries, database, retried_for_dbscheme=True)
             self._report("error", detail)
-            self._report("queries", "Query server unavailable; continuing with queries that already produced results")
-            return {key: path for key, path in produced.items() if key in resolved}
+            raise QueryFailure("query server", detail) from error
+
+    def _run_query_server_batch(
+        self,
+        client,
+        chunk: list[str],
+        database: Path,
+        *,
+        batch_index: int,
+        batch_total: int,
+    ) -> tuple[dict[str, Path], dict[str, str]]:
+        done = threading.Event()
+        started = time.time()
+
+        def heartbeat() -> None:
+            while not done.wait(30):
+                elapsed = int(time.time() - started)
+                self._report(
+                    "queries",
+                    f"Batch {batch_index}/{batch_total} still running ({elapsed}s, {len(chunk)} queries)",
+                )
+
+        pulse = threading.Thread(target=heartbeat, daemon=True)
+        pulse.start()
+        extra_packs = codeql_additional_pack_roots(self._practice_roots, self._languages, self.overlays)
+        try:
+            return client.run_queries(
+                chunk,
+                database,
+                lambda line: self._report("query", line),
+                additional_packs=extra_packs or None,
+            )
+        except Exception as error:
+            detail = str(error)
+            if _query_server_memory_failure(detail) and len(chunk) > 1:
+                self._report(
+                    "queries",
+                    f"Batch {batch_index}/{batch_total} out of memory with {len(chunk)} queries; splitting in half",
+                )
+                self._release_database_locks()
+                from harness.mcp.codeql_query_daemon import QueryServerClient
+
+                fresh = QueryServerClient().ensure_query_server(_REPO)
+                mid = max(1, len(chunk) // 2)
+                left_produced, left_failed = self._run_query_server_batch(
+                    fresh,
+                    chunk[:mid],
+                    database,
+                    batch_index=batch_index,
+                    batch_total=batch_total,
+                )
+                right_produced, right_failed = self._run_query_server_batch(
+                    fresh,
+                    chunk[mid:],
+                    database,
+                    batch_index=batch_index,
+                    batch_total=batch_total,
+                )
+                left_produced.update(right_produced)
+                left_failed.update(right_failed)
+                return left_produced, left_failed
+            if _query_server_memory_failure(detail):
+                self._oom_abort(detail, f"batch {batch_index}/{batch_total}")
+            raise
+        finally:
+            done.set()
 
     def _query_server_batches(self, queries: list[str], batch_size: int) -> list[list[str]]:
         by_pack: dict[str, list[str]] = {}
@@ -1526,87 +1727,68 @@ class CodeQLGraph:
     def _execute_queries(self, queries: list[str], database: Path, *, retried_for_dbscheme: bool = False) -> None:
         if not queries:
             return
-        paths = [str(Path(query).resolve()) for query in queries]
-        if len(paths) > 1:
-            run = self._run_codeql(
-                [
-                    self._executable,
-                    "database",
-                    "run-queries",
-                    *_RUN_QUERIES_FLAGS,
-                    str(database),
-                    "--",
-                    *paths,
-                ],
-                label="database run-queries",
-                timeout=0,
-            )
-            if run.returncode == 0:
-                return
-            detail = self._with_crash_dump(_codeql_detail(run.stderr, run.stdout) or "database run-queries failed")
-            if not retried_for_dbscheme and _dbscheme_mismatch(detail):
-                self._report("queries", "CodeQL database scheme is outdated. Rebuilding and retrying queries.")
-                self._rebuild_working_copies_for_database(database)
-                self._execute_queries(queries, database, retried_for_dbscheme=True)
-                return
-            self._report(
-                "queries",
-                f"Batch database run-queries failed; running {len(paths)} queries individually",
-            )
-        for index, query in enumerate(queries, start=1):
-            self._run_single_query(
-                query,
+        batch_size = max(1, _QUERY_SERVER_BATCH_SIZE)
+        chunks = self._query_server_batches(queries, batch_size)
+        for chunk_index, chunk in enumerate(chunks, start=1):
+            self._run_database_query_batch(
+                chunk,
                 database,
-                index=index,
-                total=len(queries),
+                chunk_index=chunk_index,
+                total_chunks=len(chunks),
                 retried_for_dbscheme=retried_for_dbscheme,
             )
 
-    def _run_single_query(
+    def _run_database_query_batch(
         self,
-        query: str,
+        queries: list[str],
         database: Path,
         *,
-        index: int,
-        total: int,
-        retried_for_dbscheme: bool = False,
-    ) -> bool:
-        path = str(Path(query).resolve())
-        self._report(
-            "query",
-            f"{index}/{total} {Path(query).name}",
-            index=index,
-            total=total,
-            query=query,
-        )
+        chunk_index: int,
+        total_chunks: int,
+        retried_for_dbscheme: bool,
+    ) -> None:
+        paths = [str(Path(query).resolve()) for query in queries]
+        label = f"database run-queries {chunk_index}/{total_chunks}"
+        self._report("queries", f"{label} ({len(paths)} queries)")
+        extra_packs = codeql_additional_pack_roots(self._practice_roots, self._languages, self.overlays)
+        run_args = [
+            self._executable,
+            "database",
+            "run-queries",
+            *_RUN_QUERIES_FLAGS,
+            f"--search-path={_codeql_pack_search_path()}",
+        ]
+        if extra_packs:
+            run_args.append(f"--additional-packs={extra_packs}")
+        run_args.extend([str(database), "--", *paths])
         run = self._run_codeql(
-            [
-                self._executable,
-                "database",
-                "run-queries",
-                *_RUN_QUERIES_FLAGS,
-                str(database),
-                "--",
-                path,
-            ],
-            label=f"database run-queries {Path(query).name}",
+            run_args,
+            label=label,
             timeout=0,
         )
         if run.returncode == 0:
-            return True
-        detail = _codeql_detail(run.stderr, run.stdout) or "database run-queries failed"
+            return
+        detail = self._with_crash_dump(_codeql_detail(run.stderr, run.stdout) or "database run-queries failed")
+        if _query_server_memory_failure(detail):
+            self._oom_abort(detail, label)
         if not retried_for_dbscheme and _dbscheme_mismatch(detail):
             self._report("queries", "CodeQL database scheme is outdated. Rebuilding and retrying queries.")
             self._rebuild_working_copies_for_database(database)
-            return self._run_single_query(
-                query,
+            self._execute_queries(queries, database, retried_for_dbscheme=True)
+            return
+        if not retried_for_dbscheme and _imb_cache_locked(detail):
+            self._report("queries", "CodeQL cache is locked; stopping the query server and retrying database run-queries")
+            self._release_database_locks()
+            self._run_database_query_batch(
+                queries,
                 database,
-                index=index,
-                total=total,
+                chunk_index=chunk_index,
+                total_chunks=total_chunks,
                 retried_for_dbscheme=True,
             )
-        self._report("query-skipped", f"{Path(query).name}: {detail}")
-        return False
+            return
+        self._report("error", detail)
+        raise QueryFailure(label, detail)
 
     def _bqrs_if_present(self, database: Path, query: Path) -> Path | None:
         try:
@@ -1721,7 +1903,7 @@ class CodeQLGraph:
                 if batch[kind] and kind not in practice.loaded:
                     practice.loaded.append(kind)
         for practice in self.practices.values():
-            practice.root_node.populate()
+            practice.rebuild_tree()
         for batch, _name in pending_rules:
             self._apply_kind(batch["rules"], batch["rows"], "rules")
 
@@ -1887,10 +2069,25 @@ class CodeQLGraph:
         except json.JSONDecodeError:
             return None
 
+    def _resolve_overlays_for_load(self, overlays: list[str] | None) -> None:
+        if overlays is not None:
+            self._apply_overlay_selection(overlays)
+            return
+        self._sync_overlays_from_snapshot()
+
+    def _apply_overlay_selection(self, overlays: list[str]) -> None:
+        ordered = sorted({normalize_overlay(name) for name in overlays if str(name).strip()})
+        for name in ordered:
+            root = Path(name)
+            if not (root / "practices").is_dir():
+                raise QueryFailure("overlays", f"Not an overlay root (missing practices/): {name}")
+        self.overlays = ordered
+
     def _sync_overlays_from_snapshot(self) -> None:
         """Active overlays must match the saved graph before cache checks run."""
         saved = self._read_snapshot()
         if saved is None:
+            self.overlays = []
             return
         self.overlays = self._overlay_paths_from_snapshot(saved)
 
@@ -2214,18 +2411,38 @@ class CodeQLGraph:
         tuples = payload.get("#select", {}).get("tuples") or []
         return [[self._cell(value) for value in row] for row in tuples]
 
-    def _bqrs_for(self, database: Path, query: Path) -> Path:
+    def _bqrs_path(self, database: Path, query: Path) -> Path:
         pack_root = self._pack_root(query)
         name = self._pack_name(pack_root)
         relative = query.resolve().relative_to(pack_root.resolve()).with_suffix(".bqrs")
-        direct = database / "results" / Path(*name.split("/")) / relative
-        if direct.is_file():
-            return direct
-        results = database / "results"
-        matches = list(results.rglob(f"{query.stem}.bqrs")) if results.is_dir() else []
-        if not matches:
-            raise QueryFailure(str(query), f"no bqrs for {query.stem} under {results}")
-        return max(matches, key=lambda path: path.stat().st_mtime)
+        return database / "results" / Path(*name.split("/")) / relative
+
+    def _discard_bqrs(self, database: Path, query: Path) -> None:
+        path = self._bqrs_path(database, query)
+        if path.is_file():
+            path.unlink()
+
+    def _tuples_match_query_kind(self, query: Path, tuples: list[Tuple]) -> bool:
+        if not tuples:
+            return True
+        row = tuples[0]
+        folder = query.parent.name
+        if folder == "nodes":
+            if len(row) < 7:
+                return False
+            return str(row[3]).strip() in _GRAPH_PRACTICE_NAMES
+        if folder == "edges":
+            if len(row) < 5:
+                return False
+            display = str(row[4]).strip()
+            return display in _EDGE_DISPLAY_MARKERS
+        return True
+
+    def _bqrs_for(self, database: Path, query: Path) -> Path:
+        direct = self._bqrs_path(database, query)
+        if not direct.is_file():
+            raise QueryFailure(str(query), f"no bqrs at {direct}")
+        return direct
 
     def _pack_root(self, query: Path) -> Path:
         for parent in (query.resolve(), *query.resolve().parents):

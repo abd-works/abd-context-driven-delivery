@@ -110,7 +110,7 @@ with description("context guidance"):
             expect(notice).to(contain("code"))
             expect(notice).to(contain("model"))
 
-        with it("should inject after Read using the parented practice rules collection"):
+        with it("should not inject after Read using the parented practice rules collection"):
             from practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
@@ -119,18 +119,15 @@ with description("context guidance"):
                     "tool_input": {"path": "actions/validate/validate.py"},
                 }
             )
-            expect(result.get("additional_context") or "").to(
-                contain("keep-operations-small-focused")
-            )
+            expect(result).to(equal({}))
 
         with it("should inject matching code rules for an absolute path in any folder"):
             from practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
                 {
-                    "tool_input": {
-                        "path": r"C:\dev\other-repo\src\cart.py",
-                    }
+                    "hook_event_name": "afterFileEdit",
+                    "file_path": r"C:\dev\other-repo\src\cart.py",
                 }
             )
             expect(result.get("additional_context") or "").to(
@@ -369,3 +366,15 @@ with description("practice and fidelity template files"):
             expect(Ddd(fidelity="building_blocks", format="markdown").templates).to(
                 equal("")
             )
+
+    with context("with a practice schema file"):
+        with it("should return that schema and tell actions to conform to it"):
+            from practices.stories.stories import Stories
+
+            stories = Stories()
+            expect(stories.schema).to(contain("epic:"))
+            expect(stories.schema_guide()).to(contain("conforms to this schema"))
+            expect(stories.instructions).to(contain(stories.schema))
+            scenarios = stories.fidelities.entries["scenarios"]
+            expect(scenarios.instructions).to(contain("conforms to this schema"))
+            expect(scenarios.instructions).to(contain("story:"))

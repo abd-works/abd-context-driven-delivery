@@ -107,6 +107,45 @@ class _StopFixture:
 
 
 @agent_toolset
+class _PatternInject:
+    pattern = "lern_domain_driven"
+    calls: list[str] = []
+
+    @Hook("postToolUse")
+    def inject_rules(self, payload: dict) -> dict:
+        type(self).calls.append("lern")
+        return {"additional_context": "lern rules"}
+
+
+@agent_toolset
+class _CoreInject:
+    calls: list[str] = []
+
+    @Hook("postToolUse")
+    def inject_rules(self, payload: dict) -> dict:
+        type(self).calls.append("core")
+        return {"additional_context": "core rules"}
+
+
+def _guidelines_dispatch(root: Path, toolsets: list, config: str | None = None) -> dict:
+    if config is not None:
+        folder = root / ".context"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "guidelines.config").write_text(config, encoding="utf-8")
+    server = HookServer(root, HandlerCatalog(toolsets, root))
+    return server.dispatch(
+        HookPayload(
+            {
+                "hook_event_name": "postToolUse",
+                "tool_name": "Write",
+                "workspace_roots": [str(root)],
+                "tool_input": {"path": "src/customer/customer.ts"},
+            }
+        )
+    ).as_dict()
+
+
+@agent_toolset
 class _HookToolset:
     @Hook("stop")
     def on_stop(self, payload: dict) -> dict:
@@ -154,6 +193,50 @@ with description("hook dispatch"):
             expect(out["agent_message"]).to(equal("ran"))
             expect(_DispatchFixture.calls).to(equal(["after"]))
 
+    with context("that gates pattern hooks on guidelines.config"):
+
+        with it("should skip a pattern when the workspace leaves it disabled"):
+            _PatternInject.calls = []
+            with tempfile.TemporaryDirectory() as tmp:
+                out = _guidelines_dispatch(
+                    Path(tmp),
+                    [_PatternInject],
+                    "lern_domain_driven: disabled\n",
+                )
+            expect(_PatternInject.calls).to(equal([]))
+            expect(out).to(equal({"permission": "allow"}))
+
+        with it("should skip a pattern when the workspace has no guidelines.config"):
+            _PatternInject.calls = []
+            with tempfile.TemporaryDirectory() as tmp:
+                out = _guidelines_dispatch(Path(tmp), [_PatternInject])
+            expect(_PatternInject.calls).to(equal([]))
+            expect(out).to(equal({"permission": "allow"}))
+
+        with it("should run a pattern when the workspace enables it"):
+            _PatternInject.calls = []
+            with tempfile.TemporaryDirectory() as tmp:
+                out = _guidelines_dispatch(
+                    Path(tmp),
+                    [_PatternInject],
+                    "lern-domain-driven: enabled\n",
+                )
+            expect(_PatternInject.calls).to(equal(["lern"]))
+            expect(out["additional_context"]).to(equal("lern rules"))
+
+        with it("should run a core practice when patterns are disabled"):
+            _PatternInject.calls = []
+            _CoreInject.calls = []
+            with tempfile.TemporaryDirectory() as tmp:
+                out = _guidelines_dispatch(
+                    Path(tmp),
+                    [_PatternInject, _CoreInject],
+                    "lern_domain_driven: disabled\n",
+                )
+            expect(_PatternInject.calls).to(equal([]))
+            expect(_CoreInject.calls).to(equal(["core"]))
+            expect(out["additional_context"]).to(equal("core rules"))
+
     with context("that receives a stop payload"):
 
         with it("should pass through followup_message from enabled handlers"):
@@ -161,6 +244,14 @@ with description("hook dispatch"):
             out = _dispatch({"hook_event_name": "stop"}, toolsets=[_StopFixture])
             expect(out).to(equal({"permission": "allow", "followup_message": "/turn"}))
             expect(_StopFixture.calls).to(equal(["stop"]))
+
+        with it("should give Cursor only followup_message for a stop reply"):
+            delivered = HookResult.from_handler(
+                {"followup_message": "These rules are injected in the chat."}
+            )
+            expect(delivered.as_dict()).to(
+                equal({"followup_message": "These rules are injected in the chat."})
+            )
 
         with it("should keep user_message separate from agent_message"):
             @agent_toolset
@@ -201,6 +292,24 @@ with description("hook dispatch"):
             )
             expect(out.get("additional_context") or "").to(contain("ddd tactics rules"))
 
+        with it("should run inject_rules when a file edit arrives as afterFileEdit"):
+            @agent_toolset
+            class _FileEditRules:
+                @Hook("postToolUse")
+                def inject_rules(self, payload: dict) -> dict:
+                    return {"additional_context": payload.get("file_path") or ""}
+
+            out = _dispatch(
+                {
+                    "hook_event_name": "afterFileEdit",
+                    "file_path": "sandbox/mm3e/no-yaml/story-map.md",
+                },
+                toolsets=[_FileEditRules],
+            )
+            expect(out.get("additional_context") or "").to(
+                contain("sandbox/mm3e/no-yaml/story-map.md")
+            )
+
         with it("should keep a repeated additional_context body once"):
             @agent_toolset
             class _Once:
@@ -234,6 +343,143 @@ with description("hook dispatch"):
                     text.find("session body of put-logic")
                     < text.find("hide-inner-details")
                 ).to(equal(True))
+            finally:
+                tmp.cleanup()
+
+        with it("should inject saved rules only into the chat that edited"):
+            tmp = tempfile.TemporaryDirectory()
+            try:
+                root = Path(tmp.name)
+
+                @agent_toolset
+                class _ChatInject:
+                    @Hook("postToolUse")
+                    def on_inject(self, payload: dict) -> dict:
+                        return {"additional_context": "stories scenario rules"}
+
+                server = HookServer(root, HandlerCatalog([_ChatInject], root))
+                server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "postToolUse",
+                            "tool_name": "Write",
+                            "conversation_id": "chat-a",
+                            "tool_input": {"path": "story-map.md"},
+                        }
+                    ).encode()
+                )
+                shared = root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
+                expect(shared.is_file()).to(equal(False))
+                other = server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "beforeSubmitPrompt",
+                            "conversation_id": "chat-b",
+                        }
+                    ).encode()
+                )
+                expect(other.additional_context or "").to(equal(""))
+                same = server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "beforeSubmitPrompt",
+                            "conversation_id": "chat-a",
+                        }
+                    ).encode()
+                )
+                expect(same.additional_context or "").to(contain("stories scenario rules"))
+            finally:
+                tmp.cleanup()
+
+        with it("should not replay a read injection on the next prompt"):
+            tmp = tempfile.TemporaryDirectory()
+            try:
+                root = Path(tmp.name)
+                server = HookServer(root, HandlerCatalog([], root))
+                saved = server._chat_injection_path("chat-a")
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                saved.write_text(
+                    "Before you continue, echo the following message to the user:\n\nrules injected for clean-engineering-code\n",
+                    encoding="utf-8",
+                )
+                replayed = server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "beforeSubmitPrompt",
+                            "conversation_id": "chat-a",
+                        }
+                    ).encode()
+                )
+                expect(replayed.additional_context or "").to(equal(""))
+            finally:
+                tmp.cleanup()
+
+        with it("should send the edit check on stop after a later tool replaces the chat rules"):
+            tmp = tempfile.TemporaryDirectory()
+            try:
+                root = Path(tmp.name)
+
+                @agent_toolset
+                class _EditCheck:
+                    @Hook("postToolUse")
+                    def inject_rules(self, payload: dict) -> dict:
+                        path = (payload.get("tool_input") or {}).get("path") or ""
+                        if path.endswith("story-map.md"):
+                            return {
+                                "additional_context": "These rules are injected in the chat.\nReply with exactly: These rules are injected in the chat.\nverb-noun-format"
+                            }
+                        return {"additional_context": "later read rules"}
+
+                server = HookServer(root, HandlerCatalog([_EditCheck], root))
+                edit = {
+                    "hook_event_name": "afterFileEdit",
+                    "conversation_id": "chat-a",
+                    "file_path": "story-map.md",
+                    "tool_input": {"path": "story-map.md"},
+                }
+                server.handle_stdin(json.dumps(edit).encode())
+                server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "postToolUse",
+                            "tool_name": "Read",
+                            "conversation_id": "chat-a",
+                            "tool_input": {"path": "hook_server.py"},
+                        }
+                    ).encode()
+                )
+                stopped = server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "stop",
+                            "conversation_id": "chat-a",
+                            "generation_id": "edit-turn",
+                        }
+                    ).encode()
+                )
+                expect(stopped.followup_message or "").to(contain("These rules are injected in the chat."))
+                expect(stopped.followup_message or "").to(contain("verb-noun-format"))
+                expect(stopped.followup_message or "").not_to(contain("later read rules"))
+                duplicate = server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "stop",
+                            "conversation_id": "chat-a",
+                            "generation_id": "edit-turn",
+                        }
+                    ).encode()
+                )
+                expect(duplicate.followup_message or "").to(contain("These rules are injected in the chat."))
+                again = server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "stop",
+                            "conversation_id": "chat-a",
+                            "generation_id": "next-turn",
+                        }
+                    ).encode()
+                )
+                expect(again.followup_message).to(equal(None))
             finally:
                 tmp.cleanup()
 
@@ -502,17 +748,18 @@ with description("inject_rules hook dispatch"):
 
 with description("hook process helpers"):
 
-    with it("should use pythonw for the Cursor dispatch command on Windows"):
+    with it("should use python.exe for the Cursor dispatch command so stdout is returned"):
         from harness.hooks.hooks import HookInstallation
-        from harness.hooks.process import hook_python_executable
+        from harness.hooks.process import hook_cli_executable
 
         install = HookInstallation("Cursor", _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
         command = install.dispatch_command.replace("\\", "/")
-        python = hook_python_executable(sys.executable).replace("\\", "/")
+        python = hook_cli_executable(sys.executable).replace("\\", "/")
         expect(command).to(contain(python))
         expect(command).to(contain("harness/hooks/hook_server.py"))
         if sys.platform == "win32":
-            expect(command).to(contain("pythonw.exe"))
+            expect(command).to(contain("python.exe"))
+            expect(command).not_to(contain("pythonw.exe"))
 
     with it("should include CREATE_NO_WINDOW in detached daemon flags on Windows"):
         from harness.hooks.process import detached_creationflags

@@ -92,6 +92,25 @@ class HookPayload:
     def conversation_id(self) -> str:
         return str(self._fields.get("conversation_id") or "")
 
+    @property
+    def generation_id(self) -> str:
+        return str(self._fields.get("generation_id") or "")
+
+    def edited_path(self) -> str:
+        for key in ("file_path", "path", "uri"):
+            value = self._fields.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
+        raw = self._fields.get("tool_input") or {}
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except json.JSONDecodeError:
+                return ""
+        if not isinstance(raw, dict):
+            return ""
+        return str(raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or "")
+
     def as_dict(self) -> dict[str, Any]:
         return dict(self._fields)
 
@@ -114,6 +133,7 @@ class HookResult:
         self.agent_message = self._optional_text(agent_message)
         self.followup_message = self._optional_text(followup_message)
         self.additional_context = self._optional_text(additional_context)
+        self.followup_only = False
 
     def _optional_text(self, value: Any) -> str | None:
         if not value:
@@ -125,7 +145,7 @@ class HookResult:
         if not raw:
             return cls()
         continue_flag = False if raw.get("continue") is False else None
-        return cls(
+        result = cls(
             permission=str(raw.get("permission") or "allow"),
             continue_flag=continue_flag,
             user_message=raw.get("user_message"),
@@ -133,6 +153,9 @@ class HookResult:
             followup_message=raw.get("followup_message"),
             additional_context=raw.get("additional_context"),
         )
+        if "permission" not in raw and result.followup_message:
+            result.followup_only = True
+        return result
 
     def with_description(self, description: str) -> HookResult:
         text = description.strip()
@@ -176,6 +199,10 @@ class HookResult:
         return "\n\n".join(parts) or None
 
     def as_dict(self) -> dict[str, Any]:
+        if self.followup_only:
+            if self.followup_message:
+                return {"followup_message": self.followup_message}
+            return {}
         payload: dict[str, Any] = {"permission": self.permission}
         if self.continue_flag is False:
             payload["continue"] = False
@@ -198,9 +225,85 @@ class HookHandler:
         self.event = event
         self.operation = tool.name
         self.owner = type(tool.toolset)
+        self.repo_root = repo_root
 
-    def is_enabled(self) -> bool:
-        return not bool(getattr(self.owner, "_hooks_disabled", False))
+    def is_enabled(self, payload: HookPayload | None = None) -> bool:
+        if bool(getattr(self.owner, "_hooks_disabled", False)):
+            return False
+        pattern = self._pattern_name()
+        if not pattern:
+            return True
+        return self._pattern_enabled(pattern, payload)
+
+    def _pattern_name(self) -> str:
+        toolset = self.tool.toolset
+        name = getattr(toolset, "pattern", None) or getattr(type(toolset), "pattern", None)
+        return str(name or "").strip()
+
+    def _pattern_enabled(self, pattern: str, payload: HookPayload | None) -> bool:
+        if payload is None:
+            return False
+        return any(
+            self._guideline_value(root, pattern) == "enabled"
+            for root in self._guideline_roots(payload)
+        )
+
+    def _guideline_roots(self, payload: HookPayload) -> list[Path]:
+        edited = payload.edited_path()
+        roots = self._declared_roots(payload)
+        if not edited:
+            return roots or [self.repo_root]
+        edited_path = Path(edited)
+        if edited_path.is_absolute():
+            containing = [root for root in roots if self._contains(root, edited_path)]
+            if containing:
+                return containing
+            return self._context_parents(edited_path)
+        existing = [root for root in roots if (root / edited_path).exists()]
+        if existing:
+            return existing
+        if roots:
+            return roots
+        return [self.repo_root]
+
+    def _declared_roots(self, payload: HookPayload) -> list[Path]:
+        raw = payload.as_dict().get("workspace_roots") or []
+        if isinstance(raw, str):
+            raw = [raw]
+        if not isinstance(raw, list):
+            return []
+        return [Path(item) for item in raw if isinstance(item, str) and item.strip()]
+
+    def _contains(self, root: Path, edited: Path) -> bool:
+        try:
+            edited.resolve().relative_to(root.resolve())
+        except (OSError, ValueError):
+            return False
+        return True
+
+    def _context_parents(self, edited: Path) -> list[Path]:
+        for parent in edited.resolve().parents:
+            if (parent / ".context" / "guidelines.config").is_file():
+                return [parent]
+        return []
+
+    def _guideline_value(self, root: Path, pattern: str) -> str:
+        path = root / ".context" / "guidelines.config"
+        if not path.is_file():
+            return ""
+        wanted = pattern.replace("-", "_").casefold()
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return ""
+        for line in lines:
+            text = line.split("#", 1)[0].strip()
+            if ":" not in text:
+                continue
+            key, value = text.split(":", 1)
+            if key.strip().replace("-", "_").casefold() == wanted:
+                return value.strip().casefold()
+        return ""
 
     def invoke(self, payload: HookPayload) -> HookResult:
         toolset = self.tool.toolset
@@ -310,7 +413,7 @@ class HandlerCatalog:
                 self.failures.append((self.ref_label(toolset), error))
                 continue
             for tool in tools:
-                if getattr(tool.callable, "_hook_name", None) != event.name:
+                if not self._serves_event(tool, event.name):
                     continue
                 key = (type(toolset).__name__, tool.name)
                 if key in seen:
@@ -318,6 +421,16 @@ class HandlerCatalog:
                 seen.add(key)
                 handlers.append(HookHandler(tool, event, repo_root))
         return handlers
+
+    def _serves_event(self, tool: Any, event_name: str) -> bool:
+        hooked = getattr(tool.callable, "_hook_name", None)
+        if hooked == event_name:
+            return True
+        return (
+            event_name == "afterFileEdit"
+            and hooked == "postToolUse"
+            and tool.name == "inject_rules"
+        )
 
 
 class HookStandupFailed(Exception):
@@ -497,10 +610,7 @@ class HookServer:
         self._injected = {"practices": [], "fidelities": []}
         event = CursorEvent(payload.hook_event_name)
         fields = payload.as_dict()
-        raw = fields.get("tool_input") or {}
-        path = ""
-        if isinstance(raw, dict):
-            path = str(raw.get("path") or raw.get("file_path") or "")
+        path = payload.edited_path()
         self._append_debug(
             f"EVENT {event.name!r} tool={fields.get('tool_name')!r} path={path!r} "
             f"conversation_id={payload.conversation_id!r} "
@@ -526,7 +636,7 @@ class HookServer:
             return results
         for handler in self._catalog.for_event(event):
             self._absorb_catalog_failures()
-            if not handler.is_enabled():
+            if not handler.is_enabled(payload):
                 continue
             label = f"{handler.owner.__name__}.{handler.operation}"
             enabled.append(label)
@@ -561,10 +671,21 @@ class HookServer:
         result = self.dispatch(payload)
         self._publish_context(result)
         self._write_last_chat_injected(result)
-        if payload.hook_event_name == "stop":
+        if payload.hook_event_name == "beforeSubmitPrompt":
+            result = self._inject_saved_chat_context(payload, result)
+        if payload.hook_event_name in ("stop", "subagentStop"):
             followup = self._consume_followup()
             if followup:
                 result.followup_message = followup
+            result.followup_only = True
+            fields = payload.as_dict()
+            self._append_debug(
+                "FOLLOWUP "
+                f"event={payload.hook_event_name} status={fields.get('status')!r} "
+                f"loop_count={fields.get('loop_count')!r} "
+                f"conversation={self._conversation_id()!r} "
+                f"sent={bool(followup)} text={(followup or '')[:120]!r}"
+            )
         return result
 
     def run(self) -> None:
@@ -656,30 +777,126 @@ class HookServer:
     def _inject_path(self) -> Path:
         return self._repo_root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
 
+    def _chat_visible(self, body: str) -> str:
+        """The chat bubble is the practice and fidelity. The model keeps the full text."""
+        chunks: list[str] = []
+        rest = body
+        while "--- chat ---" in rest and "--- end chat ---" in rest:
+            _, _, rest = rest.partition("--- chat ---")
+            chunk, _, rest = rest.partition("--- end chat ---")
+            text = chunk.strip()
+            if text:
+                chunks.append(text)
+        if chunks:
+            return "\n\n".join(chunks)
+        return body
+
     def _publish_context(self, result: HookResult) -> None:
+        """Remember this chat's injection. A shared always-apply rule would enter every chat."""
+        self._retire_shared_inject()
         body = (result.additional_context or "").strip()
-        if not body:
+        conversation_id = self._conversation_id()
+        if not body or not conversation_id:
             return
-        dest = self._inject_path()
+        dest = self._chat_injection_path(conversation_id)
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(f"---\nalwaysApply: true\n---\n\n{body}\n", encoding="utf-8")
+        dest.write_text(body, encoding="utf-8")
+        if body.lstrip().startswith("These rules are injected in the chat."):
+            check = self._edit_check_path(conversation_id)
+            check.write_text(self._chat_visible(body), encoding="utf-8")
+            sent = check.with_suffix(".sent")
+            if sent.is_file():
+                sent.unlink()
+
+    def _inject_saved_chat_context(self, payload: HookPayload, result: HookResult) -> HookResult:
+        if result.additional_context:
+            return result
+        conversation_id = payload.conversation_id.strip()
+        if not conversation_id:
+            return result
+        dest = self._chat_injection_path(conversation_id)
+        if not dest.is_file():
+            return result
+        body = dest.read_text(encoding="utf-8").strip()
+        if not body or body.lstrip().startswith("Before you continue, echo the following message"):
+            return result
+        result.additional_context = body
+        return result
+
+    def _conversation_id(self) -> str:
+        if self._payload is None:
+            return ""
+        if self._payload.hook_event_name == "subagentStop":
+            transcript = str(self._payload.as_dict().get("agent_transcript_path") or "")
+            stem = Path(transcript).stem.strip()
+            if stem:
+                return stem
+        return self._payload.conversation_id.strip()
+
+    def _edit_check_path(self, conversation_id: str) -> Path:
+        return self._chat_injection_path(conversation_id).with_suffix(".check.md")
+
+    def _chat_injection_path(self, conversation_id: str) -> Path:
+        from harness.hooks.session_logs import SessionLogs
+
+        logs = SessionLogs(self._repo_root)
+        folder = logs.session_folder(logs.active_session_name()) / "chat-injections"
+        return folder / f"{self._chat_injection_name(conversation_id)}.md"
+
+    def _chat_injection_name(self, conversation_id: str) -> str:
+        safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in conversation_id)
+        return safe.strip("-") or "unknown"
+
+    def _retire_shared_inject(self) -> None:
+        dest = self._inject_path()
+        if dest.is_file():
+            dest.unlink()
+        sent = dest.with_suffix(".sent")
+        if sent.is_file():
+            sent.unlink()
 
     def _consume_followup(self) -> str | None:
-        dest = self._inject_path()
+        conversation_id = self._conversation_id()
+        if not conversation_id:
+            return None
+        dest = self._edit_check_path(conversation_id)
         if not dest.is_file():
             return None
-        body = dest.read_text(encoding="utf-8")
-        if self._already_sent(dest, body):
+        body = dest.read_text(encoding="utf-8").strip()
+        if not body:
             return None
-        self._mark_sent(dest, body)
-        return "Injected rules for the edit you just made. Honor them on the next change.\n\n" + body
+        generation = self._generation_id()
+        if self._already_sent(dest, body):
+            if generation and generation == self._sent_generation(dest):
+                return body
+            return None
+        self._mark_sent(dest, body, generation)
+        return body
+
+    def _generation_id(self) -> str:
+        if self._payload is None:
+            return ""
+        return self._payload.generation_id.strip()
 
     def _already_sent(self, dest: Path, body: str) -> bool:
         stamp = dest.with_suffix(".sent")
-        return stamp.is_file() and stamp.read_text(encoding="utf-8").strip() == self._digest(body)
+        if not stamp.is_file():
+            return False
+        recorded = stamp.read_text(encoding="utf-8").splitlines()
+        return bool(recorded) and recorded[0].strip() == self._digest(body)
 
-    def _mark_sent(self, dest: Path, body: str) -> None:
-        dest.with_suffix(".sent").write_text(self._digest(body), encoding="utf-8")
+    def _sent_generation(self, dest: Path) -> str:
+        stamp = dest.with_suffix(".sent")
+        if not stamp.is_file():
+            return ""
+        recorded = stamp.read_text(encoding="utf-8").splitlines()
+        return recorded[1].strip() if len(recorded) > 1 else ""
+
+    def _mark_sent(self, dest: Path, body: str, generation: str = "") -> None:
+        dest.with_suffix(".sent").write_text(
+            f"{self._digest(body)}\n{generation}",
+            encoding="utf-8",
+        )
 
     def _digest(self, body: str) -> str:
         return hashlib.sha256(body.encode("utf-8")).hexdigest()

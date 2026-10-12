@@ -67,7 +67,7 @@ section: body
 
 ### Alternate — inline scenarios
 
-Use when an examples table adds no value — express mechanical variation as sibling scenarios instead.
+Use only for  simple scenarios where an examples table adds limited value — express mechanical variation as sibling scenarios instead.
 
 #### Scenario 1: `<outcome-oriented scenario name>`
 

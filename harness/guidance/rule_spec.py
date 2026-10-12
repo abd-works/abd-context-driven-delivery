@@ -82,29 +82,51 @@ with description("a shared rules section containing rule bullets") as self:
             )
             expect(result.get("additional_context")).to(contain("sample rule one"))
 
-        with it("should ask the agent to echo injected rule names and the document path"):
+        with it("should ask the agent to check an edit it just made"):
             result = self.guidance.rules.inject_rules(
                 {
-                    "tool_name": "Write",
-                    "tool_input": {"path": "pkg/foo_sample_bar.py"},
+                    "hook_event_name": "afterFileEdit",
+                    "file_path": "pkg/foo_sample_bar.py",
                 }
             )
             text = result.get("additional_context") or ""
-            expect(text).to(
-                contain(
-                    "The following rules need to be followed while editing this document:"
-                )
-            )
+            expect(text).to(contain("These rules are injected in the chat."))
+            expect(text).to(contain("The user sees the chat line. Do not paste the rule text into the chat."))
+            expect(text).to(contain("--- chat ---"))
+            expect(text).to(contain("rules injected for"))
+            expect(text).to(contain("You just edited pkg/foo_sample_bar.py."))
+            expect(text).to(contain("The full rule text follows."))
+            expect(text).to(contain("Fix any violations from the edit you just made."))
             expect(text).to(contain("sample-rule-one"))
-            expect(text).to(contain("pkg/foo_sample_bar.py"))
+            expect(text).to(contain("sample rule one"))
             expect(text).to(contain("**/*sample*"))
-            expect(text).to(contain("echo the following message to the user"))
 
-        with it("should inject when the path matches regardless of tool name"):
+        with it("should not toast the ide when the call has no chat"):
+            notice = _REPO_ROOT / ".cursor" / "prompt-echo-toast.json"
+            before = notice.read_text(encoding="utf-8") if notice.is_file() else ""
+            self.guidance.rules.inject_rules(
+                {
+                    "hook_event_name": "afterFileEdit",
+                    "file_path": "pkg/foo_sample_bar.py",
+                }
+            )
+            after = notice.read_text(encoding="utf-8") if notice.is_file() else ""
+            expect(after).to(equal(before))
+
+        with it("should not inject rules when the tool only reads the file"):
+            result = self.guidance.rules.inject_rules(
+                {
+                    "tool_name": "Read",
+                    "tool_input": {"path": "pkg/foo_sample_bar.py"},
+                }
+            )
+            expect(result).to(equal({}))
+
+        with it("should not inject when the payload has a path and no edit"):
             result = self.guidance.rules.inject_rules(
                 {"tool_input": {"path": "pkg/foo_sample_bar.py"}}
             )
-            expect(result.get("additional_context")).to(contain("sample rule one"))
+            expect(result).to(equal({}))
 
         with it("should inject nothing from a rules collection that has no parent"):
             from harness.guidance.rule import RulesCollection

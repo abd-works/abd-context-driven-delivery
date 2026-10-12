@@ -12,6 +12,11 @@ from mamba import description, it
 
 from graph import (
     CodeQLGraph,
+    CodeQLNode,
+    CodeQLPracticeGraph,
+    Edge,
+    EdgeType,
+    Source,
     available_pattern_overlays,
     normalize_overlay,
     pattern_query_pack,
@@ -59,3 +64,22 @@ with description("pattern overlays"):
         if len(cached) < 2:
             return
         expect(cached[str(ddd_entities.resolve())]).not_to(equal(cached[str(stories_entities.resolve())]))
+
+    with it("should rebuild the tree from edges that still point at the practice root"):
+        practice = CodeQLPracticeGraph("ddd")
+        practice.source_root = "."
+        root = practice.root_node
+        child = CodeQLNode(
+            practice,
+            "Aggregate",
+            "ddd:Aggregate:src/account",
+            "account",
+            Source("src/account.ts", 1, 10),
+        )
+        practice.by_id[child.node_id] = child
+        practice.nodes.setdefault("Aggregate", []).append(child)
+        practice.edge_types["owns"] = EdgeType("owns", 2, "direct")
+        practice.edges["owns"] = [Edge("owns", 2, "direct", root, child)]
+        practice.rebuild_tree()
+        expect(len(practice.root_node.children)).to(equal(1))
+        expect(practice.root_node.children[0].node_id).to(equal(child.node_id))

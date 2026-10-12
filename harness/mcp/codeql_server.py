@@ -43,6 +43,79 @@ _STDERR_LIMIT = 400
 _CRASH_LOG_CHARS = 12000
 
 
+def _pack_root(query: Path) -> Path:
+    resolved = query.resolve()
+    for parent in (resolved, *resolved.parents):
+        if (parent / "qlpack.yml").is_file():
+            return parent
+    return resolved.parent
+
+
+def _repo_pack_search_path(repo: Path) -> str:
+    roots = [repo / "practices"]
+    patterns = repo / "patterns"
+    if patterns.is_dir():
+        roots.append(patterns)
+    return os.pathsep.join(str(path.resolve()) for path in roots)
+
+
+def _resolve_query_library_path(
+    executable: str,
+    query: Path,
+    *,
+    repo_root: Path,
+    search_path: str,
+    additional_packs: list[str] | None,
+) -> list[str]:
+    command = [
+        executable,
+        "resolve",
+        "library-path",
+        f"--query={query.resolve()}",
+        "--format=json",
+        f"--search-path={search_path}",
+    ]
+    if additional_packs:
+        command.append(f"--additional-packs={os.pathsep.join(additional_packs)}")
+    run = subprocess.run(
+        command,
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if run.returncode != 0 or not run.stdout.strip():
+        detail = (run.stderr or run.stdout or "resolve library-path failed").strip()
+        raise CodeQLRunError(f"{query.name}: {detail}")
+    try:
+        payload = json.loads(run.stdout)
+    except json.JSONDecodeError as error:
+        raise CodeQLRunError(f"{query.name}: invalid resolve library-path JSON") from error
+    paths = payload.get("libraryPath")
+    if not isinstance(paths, list) or not paths:
+        raise CodeQLRunError(f"{query.name}: Could not resolve library path for {_pack_root(query)}")
+    return [str(item) for item in paths]
+
+
+def _pack_name(pack_root: Path) -> str:
+    for line in (pack_root / "qlpack.yml").read_text(encoding="utf-8").splitlines():
+        if line.startswith("name:"):
+            return line.split(":", 1)[1].strip()
+    return "cdd/codeql-graph"
+
+
+def _query_server_bqrs_path(database: Path, query: Path) -> Path:
+    pack_root = _pack_root(query)
+    name = _pack_name(pack_root)
+    relative = query.resolve().relative_to(pack_root.resolve()).with_suffix(".bqrs")
+    return database / "results" / "query-server" / Path(*name.split("/")) / relative
+
+
+def _query_server_memory_failure(detail: str) -> bool:
+    text = detail.lower()
+    return "outofmemoryerror" in text or "java heap space" in text
+
+
 def pid_alive(pid: int) -> bool:
     if pid <= 0:
         return False
@@ -246,6 +319,7 @@ class CodeQLQueryServer:
         self._stderr_lines: list[str] = []
         self._stderr_thread: threading.Thread | None = None
         self._started_at = 0.0
+        self._library_path_cache: dict[tuple[str, str, str], list[str]] = {}
 
     @classmethod
     def from_repo(cls, repo: Path | str) -> CodeQLQueryServer:
@@ -273,12 +347,14 @@ class CodeQLQueryServer:
             text=True,
         )
         ram_args = [line.strip() for line in (ram.stdout or "").splitlines() if line.strip()]
+        search_path = _repo_pack_search_path(self._codeql.repo_root())
         command = [
             executable,
             "execute",
             "query-server2",
             "--threads=0",
             "-q",
+            f"--search-path={search_path}",
             *ram_args,
         ]
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
@@ -319,8 +395,15 @@ class CodeQLQueryServer:
         elif process.pid:
             self._kill_tree(process.pid)
 
-    def run_queries(self, queries, database: Path, on_line) -> dict[str, Path]:
-        """Evaluate one batch on the warm server. Returns resolved query path to bqrs."""
+    def run_queries(
+        self,
+        queries,
+        database: Path,
+        on_line,
+        *,
+        additional_packs: list[str] | None = None,
+    ) -> tuple[dict[str, Path], dict[str, str]]:
+        """Evaluate one batch on the warm server. Returns produced bqrs paths and per-query failure messages."""
         with self._lock:
             if not self.alive:
                 raise QueryServerDown("codeql query server is not running")
@@ -328,19 +411,35 @@ class CodeQLQueryServer:
             self._last_progress = ""
             db = str(Path(database).resolve())
             self._register(db)
-            folder = Path(database) / "results" / "query-server"
-            folder.mkdir(parents=True, exist_ok=True)
+            executable = self._codeql.executable()
+            search_path = _repo_pack_search_path(self._codeql.repo_root())
+            pack_list = list(additional_packs or [])
+            additional_key = os.pathsep.join(pack_list)
             inputs = []
             outputs: dict[str, Path] = {}
             for query in queries:
                 resolved = str(Path(query).resolve())
-                bqrs = folder / f"{Path(query).stem}.bqrs"
+                query_path = Path(query)
+                cache_key = (resolved, search_path, additional_key)
+                library_path = self._library_path_cache.get(cache_key)
+                if library_path is None:
+                    library_path = _resolve_query_library_path(
+                        executable,
+                        query_path,
+                        repo_root=self._codeql.repo_root(),
+                        search_path=search_path,
+                        additional_packs=pack_list or None,
+                    )
+                    self._library_path_cache[cache_key] = library_path
+                bqrs = _query_server_bqrs_path(database, query_path)
+                bqrs.parent.mkdir(parents=True, exist_ok=True)
                 dil = bqrs.with_suffix(".dil")
                 inputs.append(
                     {
                         "queryPath": resolved,
                         "outputPath": str(bqrs),
                         "dilPath": str(dil),
+                        "libraryPath": library_path,
                     }
                 )
                 outputs[resolved] = bqrs
@@ -349,12 +448,13 @@ class CodeQLQueryServer:
                 {
                     "inputOutputPaths": inputs,
                     "db": db,
-                    "additionalPacks": [],
+                    "additionalPacks": list(additional_packs or []),
                     "externalInputs": {},
                     "singletonExternalInputs": {},
                 },
             )
             failures: list[str] = []
+            failed: dict[str, str] = {}
             produced: dict[str, Path] = {}
             by_path = {
                 str(Path(path).resolve()): value
@@ -367,16 +467,19 @@ class CodeQLQueryServer:
                 if result_type != 0 or not bqrs.is_file():
                     message = entry.get("message") or f"resultType={result_type}"
                     failures.append(f"{Path(resolved).stem}: {message}")
+                    failed[resolved] = message
                 else:
                     produced[resolved] = bqrs
                 dil = bqrs.with_suffix(".dil")
                 if dil.is_file():
                     dil.unlink()
+            if failures and any(_query_server_memory_failure(item) for item in failures):
+                raise CodeQLRunError("codeql query server out of memory: " + "; ".join(failures))
             if failures and not produced:
                 raise CodeQLRunError("codeql query server failed: " + "; ".join(failures))
             if failures and on_line is not None:
                 on_line("query-server partial: " + "; ".join(failures))
-            return produced
+            return produced, failed
 
     def _register(self, database: str) -> None:
         if database in self._registered:

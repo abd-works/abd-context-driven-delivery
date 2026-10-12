@@ -3,10 +3,12 @@ import { OnboardingStep } from '../onboarding/onboarding-step';
 
 export { OnboardingStep };
 
+/** <<Value Object>> */
 export class ValidationCode {
   constructor(public code: string, public sentAt: Date = new Date()) {}
 }
 
+/** <<Value Object>> */
 export class ValidationCodeMessage {
   executed = false;
 
@@ -18,6 +20,7 @@ export class ValidationCodeMessage {
 }
 
 
+/** <<Value Object>> */
 export class AccountToken {
   constructor(
     public email: string,
@@ -26,6 +29,7 @@ export class AccountToken {
   ) {}
 }
 
+/** <<Aggregate Root>> <<Entity>> */
 export class AccountCredentials {
   static readonly RESEND_WAIT_MILLISECONDS = 60_000;
 
@@ -334,6 +338,7 @@ type StoredAccount = {
   validationCodeMessages: ValidationCodeMessage[];
 };
 
+/** <<Repository>> */
 export class AccountCredentialsRepository {
   constructor(readonly customerRepository: CustomerRepository = new CustomerRepository()) {}
 

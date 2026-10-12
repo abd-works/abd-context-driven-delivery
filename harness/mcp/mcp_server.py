@@ -14,7 +14,7 @@ import types as py_types
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Union, get_args, get_origin, get_type_hints
+from typing import Any, NotRequired, Required, Union, get_args, get_origin, get_type_hints, is_typeddict
 
 import anyio
 import mcp.types as types
@@ -724,8 +724,11 @@ class McpHost:
         return self._annotation_schema(annotation)
 
     def _annotation_schema(self, annotation: object) -> dict[str, Any]:
+        annotation = self._unwrap_required(annotation)
         if annotation is Any:
             return {}
+        if is_typeddict(annotation):
+            return self._typed_dict_schema(annotation)
         origin = get_origin(annotation)
         if origin in _UNION_ORIGINS:
             return self._union_schema(annotation)
@@ -734,6 +737,32 @@ class McpHost:
         if annotation is dict or origin in _OBJECT_ORIGINS:
             return self._object_schema(annotation)
         return self._scalar_schema(annotation)
+
+    def _unwrap_required(self, annotation: object) -> object:
+        if get_origin(annotation) in {NotRequired, Required}:
+            args = get_args(annotation)
+            if args:
+                return args[0]
+        return annotation
+
+    def _typed_dict_schema(self, annotation: object) -> dict[str, Any]:
+        hints = get_type_hints(annotation, include_extras=True)
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+        for name, hint in hints.items():
+            if get_origin(hint) is NotRequired:
+                hint = get_args(hint)[0]
+            else:
+                required.append(name)
+            properties[name] = self._annotation_schema(hint)
+        schema: dict[str, Any] = {
+            "type": "object",
+            "properties": properties,
+            "additionalProperties": False,
+        }
+        if required:
+            schema["required"] = required
+        return schema
 
     def _union_schema(self, annotation: object) -> dict[str, Any]:
         variants = [self._annotation_schema(arg) for arg in get_args(annotation)]

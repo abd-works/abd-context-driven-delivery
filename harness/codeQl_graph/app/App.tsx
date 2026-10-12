@@ -132,15 +132,19 @@ export function App() {
       const synced = { ...next, overlays: bundle.overlays };
       adoptInventory(bundle, synced);
       setSelection(synced);
+      await applyFilter(synced, bundle.practices);
       setLoadedFolder(trimmed);
       window.localStorage.setItem(LAST_FOLDER, trimmed);
       setStaleness(report);
+      setLoadingLog([]);
     } catch (cause) {
       if (generation !== loadGeneration.current) {
         return;
       }
       setError(cause instanceof Error ? cause.message : String(cause));
       try {
+        const bundle = normalizeInventoryBundle(await graphs.inventory());
+        setSelection((current) => ({ ...current, overlays: bundle.overlays }));
         setStaleness(await data.staleness(trimmed, practiceRoots(trimmed)));
       } catch {
         setStaleness(null);
@@ -148,7 +152,6 @@ export function App() {
     } finally {
       if (generation === loadGeneration.current) {
         setLoading(false);
-        setLoadingLog([]);
       }
     }
   }
@@ -186,7 +189,6 @@ export function App() {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setLoading(false);
-      setLoadingLog([]);
     }
   }
 

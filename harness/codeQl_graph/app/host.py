@@ -25,8 +25,20 @@ class GraphHost:
         if graph is None:
             self.graph.use_query_server = _explorer_use_query_server()
 
-    def load_working_copy(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
-        return self.graph.load_working_copy(folder, practices, database)
+    def load_working_copy(
+        self,
+        folder: str,
+        practices: dict[str, str],
+        database: str | None = None,
+        overlays: list[str] | None = None,
+    ) -> str:
+        return self.graph.load_working_copy(folder, practices, database, overlays=overlays)
+
+    @staticmethod
+    def _overlay_list_from_request(request: dict) -> list[str] | None:
+        if "overlays" not in request:
+            return None
+        return [str(item) for item in request.get("overlays") or []]
 
     def inventory(self) -> dict:
         return {
@@ -79,8 +91,8 @@ class GraphHost:
         self.graph.load_working_copy(folder, practices, database)
         return message
 
-    def reload_working_copy(self) -> str:
-        return self.graph.reload_working_copy()
+    def reload_working_copy(self, overlays: list[str] | None = None) -> str:
+        return self.graph.reload_working_copy(overlays=overlays)
 
     def update_working_copy(self, paths: list[str]) -> str:
         return self.graph.update_working_copy(paths)
@@ -130,7 +142,9 @@ class GraphHost:
             "filter_choices": lambda request: self.filter_choices(request.get("filter")),
             "source": lambda request: self.source(str(request.get("node_id", ""))),
             "create_database": self._create,
-            "reload_working_copy": lambda _request: self.reload_working_copy(),
+            "reload_working_copy": lambda request: self.reload_working_copy(
+                self._overlay_list_from_request(request)
+            ),
             "update_working_copy": lambda request: self.update_working_copy(list(request.get("paths") or [])),
             "staleness": self._staleness,
             "serialize_graph_cache": self._serialize,
@@ -143,6 +157,7 @@ class GraphHost:
             str(request.get("folder", "")),
             dict(request.get("practices") or {}),
             request.get("database"),
+            overlays=self._overlay_list_from_request(request),
         )
 
     def _create(self, request: dict) -> str:
@@ -294,9 +309,9 @@ def _diagnosis(error: BaseException, request: dict | None = None, host: GraphHos
 
 
 def _explorer_use_query_server() -> bool:
-    """Warm query-server2 is opt-in for the explorer; database run-queries is more reliable."""
-    value = os.environ.get("CODEQL_USE_QUERY_SERVER", "").strip().lower()
-    return value in ("1", "true", "yes")
+    """Warm query-server2 is the default; set CODEQL_USE_QUERY_SERVER=false to use run-queries only."""
+    value = os.environ.get("CODEQL_USE_QUERY_SERVER", "true").strip().lower()
+    return value not in ("0", "false", "no")
 
 
 def _error_response(error: BaseException, request: dict | None = None, host: GraphHost | None = None) -> dict:

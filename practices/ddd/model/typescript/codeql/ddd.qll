@@ -13,8 +13,16 @@ string dddPracticeId() { result = "ddd:Practice:.:ddd" }
 
 string classFile(ClassDefinition cls) { result = slash(cls.getFile().getRelativePath()) }
 
+string classDir(ClassDefinition cls) {
+  result = classFile(cls).regexpCapture("(.+)/[^/]+$", 1)
+}
+
 string moduleName(ClassDefinition cls) {
-  result = classFile(cls).regexpCapture("(?:src|domain)/([^/]+)/.*", 1)
+  result = max(string dir |
+    aggregateFolder(dir) and classFile(cls).matches(dir + "/%")
+  |
+    dir order by dir.length()
+  )
 }
 
 bindingset[name]
@@ -27,8 +35,10 @@ predicate nonTacticalName(string name) {
 predicate commentText(Locatable loc, int start, int end, string text) {
   exists(Comment comment |
     comment.getLocation().getFile() = loc.getLocation().getFile() and
-    start = comment.getLocation().getStartLine() and
     end = comment.getLocation().getEndLine() and
+    start = comment.getLocation().getStartLine() and
+    end <= loc.getLocation().getStartLine() and
+    end >= loc.getLocation().getStartLine() - 8 and
     text = comment.toString().toLowerCase()
   )
 }
@@ -81,34 +91,38 @@ predicate valueObjectSuffix(string name) {
   name.matches("%Operation")
 }
 
+predicate markedEntityRoot(ClassDefinition cls) {
+  hasStereotype(cls, "aggregate root") or hasStereotype(cls, "entityroot")
+}
+
 predicate taggedKind(ClassDefinition cls, string kind) {
   domainClass(cls) and
   (
-    hasStereotype(cls, "aggregate root") and kind = "EntityRoot"
+    markedEntityRoot(cls) and kind = "EntityRoot"
     or
-    not hasStereotype(cls, "aggregate root") and
+    not markedEntityRoot(cls) and
       hasStereotype(cls, "specification") and
       kind = "Specification"
     or
-    not hasStereotype(cls, "aggregate root") and
+    not markedEntityRoot(cls) and
       not hasStereotype(cls, "specification") and
       hasStereotype(cls, "entity") and
       kind = "Entity"
     or
-    not hasStereotype(cls, "aggregate root") and
+    not markedEntityRoot(cls) and
       not hasStereotype(cls, "specification") and
       not hasStereotype(cls, "entity") and
       hasStereotype(cls, "value object") and
       kind = "ValueObject"
     or
-    not hasStereotype(cls, "aggregate root") and
+    not markedEntityRoot(cls) and
       not hasStereotype(cls, "specification") and
       not hasStereotype(cls, "entity") and
       not hasStereotype(cls, "value object") and
       hasStereotype(cls, "repository") and
       kind = "Repository"
     or
-    not hasStereotype(cls, "aggregate root") and
+    not markedEntityRoot(cls) and
       not hasStereotype(cls, "specification") and
       not hasStereotype(cls, "entity") and
       not hasStereotype(cls, "value object") and
@@ -116,7 +130,7 @@ predicate taggedKind(ClassDefinition cls, string kind) {
       hasStereotype(cls, "domain event") and
       kind = "DomainEvent"
     or
-    not hasStereotype(cls, "aggregate root") and
+    not markedEntityRoot(cls) and
       not hasStereotype(cls, "specification") and
       not hasStereotype(cls, "entity") and
       not hasStereotype(cls, "value object") and
@@ -128,7 +142,7 @@ predicate taggedKind(ClassDefinition cls, string kind) {
       ) and
       kind = "DomainService"
     or
-    not hasStereotype(cls, "aggregate root") and
+    not markedEntityRoot(cls) and
       not hasStereotype(cls, "specification") and
       not hasStereotype(cls, "entity") and
       not hasStereotype(cls, "value object") and
@@ -142,13 +156,10 @@ predicate taggedKind(ClassDefinition cls, string kind) {
 }
 
 predicate nameRepository(ClassDefinition cls) {
-  domainClass(cls) and cls.getName().matches("%Repository")
+  domainClass(cls) and cls.getName().matches("%Repository%")
 }
 
-predicate nameEntityRoot(ClassDefinition cls) {
-  domainClass(cls) and
-  exists(ClassDefinition repo | nameRepository(repo) and repo.getName() = cls.getName() + "Repository")
-}
+predicate nameEntityRoot(ClassDefinition cls) { markedEntityRoot(cls) }
 
 predicate inferredKind(ClassDefinition cls, string kind) {
   domainClass(cls) and
@@ -220,23 +231,29 @@ predicate dddClass(
   end = cls.getLocation().getEndLine()
 }
 
-predicate contextPath(string dir, string name) {
-  exists(File marker, string path |
-    path = slash(marker.getRelativePath()) and
-    (
-      dir = path.regexpCapture("(.*)/\\.context/bounded-context\\.md", 1)
-      or
-      dir = path.regexpCapture("(.*)/bounded-context\\.md", 1)
-    ) and
-    (
-      name = dir.regexpCapture(".*/([^/]+)$", 1)
-      or
-      not dir.matches("%/%") and name = dir
-    )
+predicate aggregateFolder(string dir) {
+  exists(ClassDefinition cls |
+    (kindOf(cls, "EntityRoot") or kindOf(cls, "Repository")) and
+    classDir(cls) = dir
   )
 }
 
-predicate implicitContext() { not contextPath(_, _) }
+predicate contextPath(string dir, string name) {
+  exists(string aggregate |
+    aggregateFolder(aggregate) and
+    dir = aggregate.regexpCapture("((?:src|domain)/[^/]+)/[^/]+", 1) and
+    name = dir.regexpCapture(".*/([^/]+)$", 1)
+  )
+}
+
+predicate implicitContext() {
+  exists(string dir |
+    aggregateFolder(dir) and
+    not exists(string context, string contextName |
+      contextPath(context, contextName) and dir.matches(context + "/%")
+    )
+  )
+}
 
 string boundedContextId() {
   implicitContext() and result = dddNodeId("BoundedContext", ".", "bounded context")
@@ -246,21 +263,22 @@ string boundedContextId() {
   )
 }
 
-predicate aggregateFolder(string mod) {
-  exists(ClassDefinition cls | kindOf(cls, "EntityRoot") and moduleName(cls) = mod)
+bindingset[aggregateDir]
+string contextIdForAggregate(string aggregateDir) {
+  exists(string dir, string name |
+    contextPath(dir, name) and
+    aggregateDir.matches(dir + "/%") and
+    result = dddNodeId("BoundedContext", dir, name)
+  )
+  or
+  not exists(string dir, string name |
+    contextPath(dir, name) and aggregateDir.matches(dir + "/%")
+  ) and
+  result = dddNodeId("BoundedContext", ".", "bounded context")
 }
 
 bindingset[mod]
-string aggregateRoot(string mod) {
-  exists(ClassDefinition cls |
-    kindOf(cls, "EntityRoot") and moduleName(cls) = mod and
-    (
-      classFile(cls).matches("domain/" + mod + "/%") and result = "domain/" + mod
-      or
-      classFile(cls).matches("src/" + mod + "/%") and result = "src/" + mod
-    )
-  )
-}
+string aggregateRoot(string mod) { aggregateFolder(mod) and result = mod }
 
 bindingset[mod]
 string aggregateId(string mod) { result = "ddd:Aggregate:" + aggregateRoot(mod) }
