@@ -515,9 +515,9 @@ class Filter:
                 if type_name not in types:
                     continue
                 for node in nodes:
-                    for hit in node.rules:
-                        if hit.rule not in found:
-                            found.append(hit.rule)
+                    for slug in node.failed_rules:
+                        if slug not in found:
+                            found.append(slug)
         return found
 
     def _fill_from_nodes(self) -> None:
@@ -536,22 +536,26 @@ class Node:
         self.stage = ""
         self.children: list[Node] = []
         self.parent: Node | None = None
-        self.rules: list[RuleResult] = []
+        self._rules = None
         self._populated = False
 
     @property
+    def rules(self):
+        """Schema rules for this node, with violations on each entry."""
+        from harness.graph.node_rules import attach_node_rules
+
+        if self._rules is None:
+            attach_node_rules(self)
+        return self._rules
+
+    @property
     def failed_rules(self) -> list[str]:
-        found: list[str] = []
-        for hit in self.rules:
-            if hit.rule not in found:
-                found.append(hit.rule)
-        return found
+        return self.rules.failed_slugs()
 
     @property
     def passing_rules(self) -> list[str]:
         """Rules that apply to this node and did not fail."""
-        failed = set(self.failed_rules)
-        return [rule for rule in self.practice.rules_for(self.type) if rule not in failed]
+        return self.rules.passing_slugs()
 
     @staticmethod
     def fact(row: Tuple) -> dict | None:
@@ -691,10 +695,10 @@ class Node:
         violations_only = bool(graph and graph.filter.violations)
         selected = list(graph.filter.rules) if graph else []
         failed: dict[str, str] = {}
-        for hit in self.rules:
-            failed.setdefault(hit.rule, hit.violation)
+        for slug, message in self.rules.violations():
+            failed.setdefault(slug, message)
         rows: list[dict] = []
-        for rule in self.practice.rules_for(self.type):
+        for rule in self.rules.slugs():
             violating = rule in failed
             if violations_only and (not violating or (selected and rule not in selected)):
                 continue
@@ -753,12 +757,17 @@ class PracticeGraph:
         self.apply_nodes(tuples)
 
     def apply_nodes(self, tuples: list[Tuple]) -> None:
+        from harness.graph.node_rules import attach_node_rules
+        from harness.graph.schema_rules import bind_practice_rules
+
+        bind_practice_rules(self)
         for row in tuples:
             fact = Node.fact(row)
             if fact is None or fact["node_id"] in self.by_id:
                 continue
             self.node_types.add(fact["semantic_type"])
             node = Node.from_fact(self, fact)
+            attach_node_rules(node)
             self.nodes.setdefault(fact["semantic_type"], []).append(node)
             self.by_id[fact["node_id"]] = node
 
@@ -818,15 +827,16 @@ class PracticeGraph:
             node = self.registered(node_id)
             if node is None:
                 continue
-            if any(hit.rule == slug and hit.violation == violation for hit in node.rules):
+            existing = [message for s, message in node.rules.violations() if s == slug]
+            if violation in existing:
                 continue
-            node.rules.append(RuleResult(slug, violation))
+            node.rules.record_violation(slug, violation)
 
     def nodes_for_rule(self, rule: str) -> list[Node]:
         found = []
         for nodes in self.nodes.values():
             for node in nodes:
-                if any(hit.rule == rule for hit in node.rules):
+                if rule in node.failed_rules:
                     found.append(node)
         return found
 
