@@ -50,3 +50,17 @@ with description("schema rules on a node"):
         expect(slugs_for_type("clean_engineering", "Operation")).to(
             contain("limit-operation-parameters")
         )
+
+
+with description("DDD schema extends clean engineering"):
+    with it("should inherit OoadClass rules on Entity"):
+        expect(slugs_for_type("ddd", "Entity")).to(contain("keep-classes-single-responsibility"))
+
+    with it("should inherit Module rules on BoundedContext"):
+        expect(slugs_for_type("ddd", "BoundedContext")).to(contain("named-seam-and-constraint"))
+
+    with it("should resolve ce anchor for tactical class types"):
+        from harness.graph.schema_rules import ce_anchor_type
+
+        expect(ce_anchor_type("ddd", "ValueObject")).to(equal("OoadClass"))
+        expect(ce_anchor_type("ddd", "BoundedContext")).to(equal("Module"))

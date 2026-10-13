@@ -1,5 +1,10 @@
-# Allowed structure from CodeQL nodes and edges.
-# is: names the supertype. practice.type is a node in another practice.
+# DDD extends Clean Engineering (practices/clean_engineering/model/schema.yaml).
+# Each ``is:`` line names the CE supertype (or a DDD type that itself extends CE):
+#   module → Module (BoundedContext, Aggregate)
+#   class → OoadClass (Entity, ValueObject, Repository, …)
+#   property → Property (DomainEvent)
+# Python nodes in nodes.py subclass the same CE model types; graph rules inherit from schema.
+# Pattern overlays may use ``is: ddd.entityRoot`` to extend a DDD type.
 # Top: a collection of bounded contexts or aggregates is required. Everything below is a def or sub-def.
 [boundedContext | aggregate]
 boundedContext:

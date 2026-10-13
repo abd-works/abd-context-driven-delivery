@@ -89,7 +89,10 @@ class RuleCheckContext:
         return model
 
     def ce_class(self, node) -> OoadClass | None:
-        if node.type != "OoadClass":
+        from harness.graph.schema_rules import ce_anchor_type
+
+        anchor = ce_anchor_type(node.practice.name, node.type)
+        if node.type != "OoadClass" and anchor != "OoadClass":
             return None
         model = self.clean_engineering_model(node)
         if model is None:
@@ -101,7 +104,10 @@ class RuleCheckContext:
         return None
 
     def ce_operation(self, node) -> tuple[OoadClass, Operation] | None:
-        if node.type != "Operation":
+        from harness.graph.schema_rules import ce_anchor_type
+
+        anchor = ce_anchor_type(node.practice.name, node.type)
+        if node.type != "Operation" and anchor != "Operation":
             return None
         model = self.clean_engineering_model(node)
         if model is None:
