@@ -207,6 +207,12 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             is_property=self._is_property(node),
             body_fingerprint=operation_body_fingerprint(body_text),
         )
+        operation.is_static = any(
+            isinstance(dec, ast.Name) and dec.id == "staticmethod" for dec in node.decorator_list
+        )
+        operation.is_classmethod = any(
+            isinstance(dec, ast.Name) and dec.id == "classmethod" for dec in node.decorator_list
+        )
         apply_python_function_metrics(operation, node)
         return operation
 

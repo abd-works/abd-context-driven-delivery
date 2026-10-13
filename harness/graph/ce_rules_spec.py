@@ -70,6 +70,12 @@ with description("Clean Engineering graph rules (python .examples pairs)"):
     with context("use-property-not-accessor"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("use-property-not-accessor")
+    with context("use-consistent-naming"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("use-consistent-naming")
+    with context("prefer-instance-operations"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("prefer-instance-operations")
 
 
 with description("Clean Engineering graph rules (multi-language scanner fixtures)"):

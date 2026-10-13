@@ -28,6 +28,12 @@ VAGUE_NAMES = {
     "payload",
 }
 
+_SNAKE_CASE = re.compile(r"^_*[a-z][a-z0-9]*(_[a-z0-9]+)*_*$")
+_CAMEL_CASE = re.compile(r"^_*[a-z]+[A-Z][a-zA-Z0-9]*$")
+_DUNDER = re.compile(r"^__[a-z]+__$")
+_SKIP_OP_NAMES = frozenset({"setUp", "tearDown", "setUpClass", "tearDownClass", "setUpModule"})
+_STATIC_FACTORY_NAMES = frozenset({"instance", "create"})
+
 GENERIC_NAMES = {
     "info",
     "thing",
@@ -190,6 +196,52 @@ class UseIntentionRevealingNames(PracticeGraphRule):
         return []
 
 
+class UseConsistentNaming(PracticeGraphRule):
+    slug = "use-consistent-naming"
+    node_types = ("OoadClass",)
+
+    def check(self, node, context) -> list[str]:
+        oclass = context.ce_class(node)
+        if oclass is None:
+            return []
+        snake_ops: list = []
+        camel_ops: list = []
+        for op in oclass.operations:
+            name = op.name
+            if name in _SKIP_OP_NAMES or _DUNDER.match(name):
+                continue
+            if _CAMEL_CASE.match(name):
+                camel_ops.append(op)
+            elif _SNAKE_CASE.match(name):
+                snake_ops.append(op)
+        if not snake_ops or not camel_ops:
+            return []
+        minority = camel_ops if len(camel_ops) <= len(snake_ops) else snake_ops
+        style = "camelCase" if minority is camel_ops else "snake_case"
+        op = minority[0]
+        return [
+            f"Operation '{op.name}' uses {style} while other operations on '{node.name}' "
+            "use the other convention."
+        ]
+
+
+class PreferInstanceOperations(PracticeGraphRule):
+    slug = "prefer-instance-operations"
+    node_types = ("Operation",)
+
+    def check(self, node, context) -> list[str]:
+        operation = _parsed_operation(context, node)
+        if operation is None:
+            return []
+        if not operation.is_static and not operation.is_classmethod:
+            return []
+        name = operation.name
+        if name in _STATIC_FACTORY_NAMES or name.startswith("from_"):
+            return []
+        kind = "classmethod" if operation.is_classmethod else "staticmethod"
+        return [f"Operation '{name}' is a {kind}; prefer an instance operation."]
+
+
 class UsePropertyNotAccessor(PracticeGraphRule):
     slug = "use-property-not-accessor"
     node_types = ("Operation",)
@@ -252,6 +304,7 @@ def _line_span(node) -> int:
 
 CODE_RULES: tuple[PracticeGraphRule, ...] = (
     UseExplicitDependencies(),
+    UseConsistentNaming(),
     KeepOperationsSmall(),
     SimplifyControlFlow(),
     UseExceptionsProperly(),
@@ -259,6 +312,7 @@ CODE_RULES: tuple[PracticeGraphRule, ...] = (
     ProvideMeaningfulContext(),
     AvoidVagueParameterNames(),
     UseIntentionRevealingNames(),
+    PreferInstanceOperations(),
     UsePropertyNotAccessor(),
     EliminateDuplication(),
 )

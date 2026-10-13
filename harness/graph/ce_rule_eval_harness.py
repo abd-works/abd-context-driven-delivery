@@ -24,10 +24,9 @@ _LANG = {
 
 
 def ce_rule_by_slug(slug: str):
-    from practices.clean_engineering.model.python.rules import BY_SLUG as code
-    from practices.clean_engineering.rules import BY_SLUG as graph
+    from practices.clean_engineering.rules import BY_SLUG
 
-    rule = code.get(slug) or graph.get(slug)
+    rule = BY_SLUG.get(slug)
     if rule is None:
         raise KeyError(slug)
     return rule

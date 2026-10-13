@@ -168,9 +168,10 @@ class CFamilyParse:
             op.line = self._line_at(self._text, self._body_start + match.start())
             self._apply_method_end_line(op, class_body, match.end() - 1)
             filled = self._operation_from_body(op, method_body)
-            prefix = class_body[max(0, match.start() - 12) : match.start()]
+            prefix = class_body[max(0, match.start() - 24) : match.start()]
             if re.search(r"\bget\s*$", prefix):
                 filled.is_property = True
+            filled.is_static = bool(re.search(r"\bstatic\b", prefix))
             ops.append(filled)
         return ops
 

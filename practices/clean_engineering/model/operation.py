@@ -90,6 +90,8 @@ class Operation(OoadNode):
         self.body_fingerprint: str = ""
         self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
+        self.is_static = False
+        self.is_classmethod = False
         self.max_control_flow_depth: int = 0
         self.has_bare_catch: bool = False
         self.swallows_exceptions: bool = False
@@ -135,6 +137,8 @@ class Operation(OoadNode):
         cloned.body_fingerprint = self.body_fingerprint
         cloned.constructed_types = list(self.constructed_types)
         cloned.is_property = self.is_property
+        cloned.is_static = self.is_static
+        cloned.is_classmethod = self.is_classmethod
         cloned.max_control_flow_depth = self.max_control_flow_depth
         cloned.has_bare_catch = self.has_bare_catch
         cloned.swallows_exceptions = self.swallows_exceptions
@@ -178,6 +182,8 @@ class Operation(OoadNode):
         self.body_fingerprint = copied.body_fingerprint
         self.constructed_types = list(copied.constructed_types)
         self.is_property = copied.is_property
+        self.is_static = copied.is_static
+        self.is_classmethod = copied.is_classmethod
         self.max_control_flow_depth = copied.max_control_flow_depth
         self.has_bare_catch = copied.has_bare_catch
         self.swallows_exceptions = copied.swallows_exceptions
