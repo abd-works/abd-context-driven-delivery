@@ -2,30 +2,39 @@
 # Aggregate folder: src/<boundedContext>/<aggregate>/.
 # That folder holds the core, the node file, the client file, the views, and one route file.
 entityRoot:
+  - fidelity: tactics
   - is: ddd.entityRoot
   - [node | client]
 node:
+  - fidelity: tactics
   - is: ddd.entityRoot
   - hosts: ddd.entityRoot
   - selects: [view]
 client:
+  - fidelity: tactics
   - is: ddd.entityRoot
   - interacts: ddd.entityRoot
   - presents: [view]
 repository:
+  - fidelity: tactics
   - is: ddd.repository
   - [jsonStore]
 jsonStore:
+  - fidelity: tactics
   - jsonFile: ddd.entityRoot
 aggregate:
+  - fidelity: tactics
   - is: ddd.aggregate
   - route
   - [view]
 route:
+  - fidelity: tactics
   - navigates: ddd.aggregate
   - [destination]
 destination:
+  - fidelity: tactics
   - invokes: [operation]
 view:
+  - fidelity: tactics
   - renders: client
   - selectedBy: node

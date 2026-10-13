@@ -1,6 +1,7 @@
 [module | package]
 
 module:
+  fidelity: modules
   id: dotPath
   name: string
   stereotypes?: [string]
@@ -41,6 +42,7 @@ module:
     - nesting
 
 package:
+  fidelity: modules
   id: dotPath
   name: string
   belongsTo: module
@@ -50,6 +52,7 @@ package:
     - a package groups classes inside a module
 
 class:
+  fidelity: model
   id: dotPath
   name: string
   belongsTo: module
@@ -82,6 +85,7 @@ class:
     - no-redundant-relationship-paths
 
 relationship:
+  fidelity: model
   id: dotPath
   kind: "composition" | "aggregation" | "association"
   target: class
@@ -94,6 +98,7 @@ relationship:
     - one canonical link per participant
 
 operation:
+  fidelity: model
   id: dotPath
   name: string
   belongsTo: class
@@ -130,6 +135,7 @@ operation:
     - no-legacy-api-after-refactor
 
 property:
+  fidelity: model
   id: dotPath
   name: string
   belongsTo: class
@@ -147,6 +153,7 @@ property:
     - hide-inner-details
 
 parameter:
+  fidelity: model
   id: dotPath
   name: string
   belongsTo: operation
@@ -160,6 +167,7 @@ parameter:
     - use-intention-revealing-names
 
 invariant:
+  fidelity: model
   id: dotPath
   text: string
   belongsTo: [operation | property]

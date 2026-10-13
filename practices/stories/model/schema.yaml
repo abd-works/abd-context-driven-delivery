@@ -1,6 +1,7 @@
 [epic]
 
 storyNode:
+  fidelity: story_map
   text: string
   order: number
   belongsTo?: storyNode
@@ -17,6 +18,7 @@ storyNode:
     - evidence-distinguishes-observed-inferred-and-intended
 
 epic:
+  fidelity: story_map
   id: dotPath
   uses?: [module]
   decomposedInto: [subEpic | story]
@@ -30,6 +32,7 @@ epic:
     - four-to-nine-children
 
 subEpic:
+  fidelity: story_map
   id: dotPath
   belongsTo: epic
   decomposedInto: [subEpic | story]
@@ -43,6 +46,7 @@ subEpic:
     - four-to-nine-children
 
 story:
+  fidelity: story_map
   id: dotPath
   belongsTo: [subEpic | epic]
   background?: background
@@ -63,6 +67,7 @@ story:
     - four-to-nine-children
 
 scenario:
+  fidelity: scenarios
   id: dotPath
   steps: [step]
   examples?: [example]
@@ -85,6 +90,7 @@ scenario:
     - flagged-writes-intended-gwt
 
 step:
+  fidelity: scenarios
   id: dotPath
   order: number
   belongsTo: scenario
@@ -99,6 +105,7 @@ step:
     - but-marks-missing-state
 
 given:
+  fidelity: scenarios
   is: step
   id: dotPath
   order: number
@@ -111,6 +118,7 @@ given:
     - seed-prior-story-as-given
 
 when:
+  fidelity: scenarios
   is: step
   id: dotPath
   order: number
@@ -123,6 +131,7 @@ when:
     - expressive-system-interactions
 
 then:
+  fidelity: scenarios
   is: step
   id: dotPath
   order: number
@@ -135,6 +144,7 @@ then:
     - assert-domain-behavior-not-seeded-state
 
 background:
+  fidelity: scenarios
   is: given
   id: dotPath
   given: given
@@ -146,6 +156,7 @@ background:
     - present only when more than one scenario shares the state
 
 example:
+  fidelity: scenarios
   id: dotPath
   text: string
   demonstrates: class
