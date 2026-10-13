@@ -26,6 +26,7 @@ from practices.clean_engineering.model.base_class_model import (
     is_interface_name,
 )
 from practices.clean_engineering.model.operation import operation_body_fingerprint
+from practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
 from practices.clean_engineering.model.update_report import UpdateReport
 
 _MODULE_MARKER = re.compile(r"^#\s*===\s*(.+?)\s*===$", re.MULTILINE)
@@ -193,7 +194,7 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         if node.name in {"__init__", "constructor"}:
             constructed = self._constructed_types(node)
         body_text = "\n".join(ast.unparse(stmt) for stmt in node.body)
-        return Operation(
+        operation = Operation(
             name=node.name,
             parameters=params,
             return_type=ret,
@@ -206,6 +207,8 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             is_property=self._is_property(node),
             body_fingerprint=operation_body_fingerprint(body_text),
         )
+        apply_python_function_metrics(operation, node)
+        return operation
 
     def _constructed_types(self, func: ast.AST) -> list[tuple[str, int]]:
         found: list[tuple[str, int]] = []

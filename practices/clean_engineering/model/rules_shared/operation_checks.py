@@ -1,4 +1,4 @@
-"""Code-channel graph rules — use the Clean Engineering class model, span only where needed."""
+"""Code-channel graph rules — prefer Operation model fields from parsers."""
 
 from __future__ import annotations
 
@@ -46,6 +46,11 @@ GENERIC_NAMES = {
 }
 
 
+def _parsed_operation(context, node):
+    matched = context.ce_operation(node)
+    return matched[1] if matched else None
+
+
 class UseExplicitDependencies(PracticeGraphRule):
     slug = "use-explicit-dependencies"
     node_types = ("OoadClass",)
@@ -77,10 +82,9 @@ class KeepOperationsSmall(PracticeGraphRule):
     limit = 20
 
     def check(self, node, context) -> list[str]:
-        matched = context.ce_operation(node)
-        if matched is not None:
-            _oclass, operation = matched
-            size = operation.line_count if operation.line_count is not None else _line_span(node)
+        operation = _parsed_operation(context, node)
+        if operation is not None and operation.line_count is not None:
+            size = operation.line_count
         else:
             size = _line_span(node)
         if size <= self.limit:
@@ -94,7 +98,11 @@ class SimplifyControlFlow(PracticeGraphRule):
     limit = 3
 
     def check(self, node, context) -> list[str]:
-        depth = control_flow_depth(context.span(node))
+        operation = _parsed_operation(context, node)
+        if operation is not None:
+            depth = operation.max_control_flow_depth
+        else:
+            depth = control_flow_depth(context.span(node))
         if depth <= self.limit:
             return []
         return [f"Operation '{node.name}' nests control flow {depth} levels deep (max {self.limit})."]
@@ -105,9 +113,11 @@ class UseExceptionsProperly(PracticeGraphRule):
     node_types = ("Operation",)
 
     def check(self, node, context) -> list[str]:
-        if bare_catch_in_span(context.span(node)):
-            return [f"Operation '{node.name}' has a bare catch."]
-        return []
+        operation = _parsed_operation(context, node)
+        bare = operation.has_bare_catch if operation is not None else bare_catch_in_span(context.span(node))
+        if not bare:
+            return []
+        return [f"Operation '{node.name}' has a bare catch."]
 
 
 class NeverSwallowExceptions(PracticeGraphRule):
@@ -115,9 +125,15 @@ class NeverSwallowExceptions(PracticeGraphRule):
     node_types = ("Operation",)
 
     def check(self, node, context) -> list[str]:
-        if swallowing_catch_in_span(context.span(node)):
-            return [f"Operation '{node.name}' swallows a caught failure."]
-        return []
+        operation = _parsed_operation(context, node)
+        swallow = (
+            operation.swallows_exceptions
+            if operation is not None
+            else swallowing_catch_in_span(context.span(node))
+        )
+        if not swallow:
+            return []
+        return [f"Operation '{node.name}' swallows a caught failure."]
 
 
 class ProvideMeaningfulContext(PracticeGraphRule):
@@ -125,14 +141,18 @@ class ProvideMeaningfulContext(PracticeGraphRule):
     node_types = ("Operation",)
 
     def check(self, node, context) -> list[str]:
-        for raw in unnamed_numbers_in_span(context.span(node)):
+        operation = _parsed_operation(context, node)
+        numbers = (
+            operation.unnamed_literal_numbers
+            if operation is not None
+            else unnamed_numbers_in_span(context.span(node))
+        )
+        for raw in numbers:
             return [f"Operation '{node.name}' uses the unnamed number {raw}."]
         return []
 
 
 class AvoidVagueParameterNames(PracticeGraphRule):
-    """From clear_parameters_scanner — schema slug avoid-vague-parameter-names."""
-
     slug = "avoid-vague-parameter-names"
     node_types = ("Parameter", "Operation")
 
@@ -145,11 +165,10 @@ class AvoidVagueParameterNames(PracticeGraphRule):
         if matched is None:
             return []
         _oclass, operation = matched
-        hits: list[str] = []
         for param in operation.parameters:
             if param.name.lower() in VAGUE_NAMES:
-                hits.append(f"Parameter '{param.name}' in '{operation.name}' is vague.")
-        return hits[:1]
+                return [f"Parameter '{param.name}' in '{operation.name}' is vague."]
+        return []
 
 
 class UseIntentionRevealingNames(PracticeGraphRule):
@@ -172,8 +191,6 @@ class UseIntentionRevealingNames(PracticeGraphRule):
 
 
 class UsePropertyNotAccessor(PracticeGraphRule):
-    """From property_encapsulation_code_scanner."""
-
     slug = "use-property-not-accessor"
     node_types = ("Operation",)
 

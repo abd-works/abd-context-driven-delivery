@@ -1,14 +1,15 @@
-"""Source-span helpers when the class model does not carry enough detail."""
+"""Fallback source-span helpers when graph nodes lack a parsed Operation."""
 
 from __future__ import annotations
 
 import re
 
-_CATCH = re.compile(r"\bcatch\s*(?:\([^)]*\))?\s*\{")
-_PY_EXCEPT = re.compile(r"\bexcept\s*(?::|\([^)]*\)\s*:)")
-_STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
-_NUMBER = re.compile(r"\b(\d+(?:\.\d+)?)\b")
-_SAFE_NUMBERS = {0, 1, 2, -1, 0.0, 1.0, 0.5, 10, 100}
+from practices.clean_engineering.model.operation_metrics import (
+    bare_catch_in_text,
+    control_flow_depth_in_text,
+    swallowing_catch_in_text,
+    unnamed_literal_numbers_in_text,
+)
 
 
 def brace_body(text: str, open_index: int) -> str | None:
@@ -25,34 +26,8 @@ def brace_body(text: str, open_index: int) -> str | None:
     return None
 
 
-def brace_depth(text: str) -> int:
-    depth = 0
-    deepest = 0
-    for character in text:
-        if character == "{":
-            depth += 1
-            deepest = max(deepest, depth)
-        elif character == "}":
-            depth = max(0, depth - 1)
-    return deepest
-
-
 def control_flow_depth(text: str) -> int:
-    """Nested if/for/while — Python indentation and brace languages."""
-    brace = brace_depth(text)
-    stack: list[int] = []
-    deepest = 0
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or stripped.startswith("//"):
-            continue
-        indent = len(line.expandtabs()) - len(line.lstrip())
-        while stack and indent <= stack[-1]:
-            stack.pop()
-        if re.match(r"(if|for|while|elif)\b", stripped):
-            stack.append(indent)
-            deepest = max(deepest, len(stack))
-    return max(deepest, brace)
+    return control_flow_depth_in_text(text)
 
 
 def class_body(text: str, name: str) -> str:
@@ -74,37 +49,12 @@ def constructor_body(class_body_text: str) -> str:
 
 
 def unnamed_numbers_in_span(span: str) -> list[str]:
-    code = _STRING.sub('""', span)
-    found: list[str] = []
-    for raw in _NUMBER.findall(code):
-        value = float(raw)
-        if value in _SAFE_NUMBERS:
-            continue
-        found.append(raw)
-    return found
+    return unnamed_literal_numbers_in_text(span)
 
 
 def bare_catch_in_span(span: str) -> bool:
-    if re.search(r"\bcatch\s*\{", span):
-        return True
-    if re.search(r"\bcatch\s*\(\s*\)", span):
-        return True
-    if re.search(r"\bexcept\s*:", span):
-        return True
-    return False
+    return bare_catch_in_text(span)
 
 
 def swallowing_catch_in_span(span: str) -> bool:
-    for match in _CATCH.finditer(span):
-        catch_body = brace_body(span, match.end() - 1)
-        if catch_body is None:
-            continue
-        stripped = catch_body.strip()
-        if stripped and stripped not in {";", "pass", "// ignore", "/* ignore */"}:
-            continue
-        return True
-    for match in _PY_EXCEPT.finditer(span):
-        tail = span[match.end() :]
-        if re.match(r"^\s*pass\b", tail, re.M):
-            return True
-    return False
+    return swallowing_catch_in_text(span)

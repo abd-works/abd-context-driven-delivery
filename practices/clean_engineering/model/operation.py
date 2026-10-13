@@ -90,6 +90,10 @@ class Operation(OoadNode):
         self.body_fingerprint: str = ""
         self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
+        self.max_control_flow_depth: int = 0
+        self.has_bare_catch: bool = False
+        self.swallows_exceptions: bool = False
+        self.unnamed_literal_numbers: list[str] = []
         for key, value in fields.items():
             setattr(self, key, value)
         if parameters:
@@ -131,6 +135,10 @@ class Operation(OoadNode):
         cloned.body_fingerprint = self.body_fingerprint
         cloned.constructed_types = list(self.constructed_types)
         cloned.is_property = self.is_property
+        cloned.max_control_flow_depth = self.max_control_flow_depth
+        cloned.has_bare_catch = self.has_bare_catch
+        cloned.swallows_exceptions = self.swallows_exceptions
+        cloned.unnamed_literal_numbers = list(self.unnamed_literal_numbers)
         return cloned
 
     def save(self) -> str:
@@ -170,6 +178,10 @@ class Operation(OoadNode):
         self.body_fingerprint = copied.body_fingerprint
         self.constructed_types = list(copied.constructed_types)
         self.is_property = copied.is_property
+        self.max_control_flow_depth = copied.max_control_flow_depth
+        self.has_bare_catch = copied.has_bare_catch
+        self.swallows_exceptions = copied.swallows_exceptions
+        self.unnamed_literal_numbers = list(copied.unnamed_literal_numbers)
 
     def load_parameters(self) -> None:
         while self.has_more_parameter():

@@ -1,4 +1,4 @@
-"""Load graph rules per practice and per model language channel."""
+"""Load graph rules per practice; draw.io is the main language-specific CE channel."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from functools import lru_cache
 from harness.graph.language_for_node import language_for_node
 from harness.graph.practice_rule import PracticeGraphRule
 
-_PRACTICE_GRAPH_RULES = {
+_PRACTICE_RULES = {
     "clean_engineering": "practices.clean_engineering.rules",
     "stories": "practices.stories.rules",
     "ddd": "practices.ddd.rules",
@@ -16,10 +16,7 @@ _PRACTICE_GRAPH_RULES = {
     "ux": "practices.ux.rules",
 }
 
-_CE_LANGUAGE_RULES = {
-    "python": "practices.clean_engineering.model.python.rules",
-    "typescript": "practices.clean_engineering.model.typescript.rules",
-    "javascript": "practices.clean_engineering.model.javascript.rules",
+_CE_CHANNEL_RULES = {
     "drawio": "practices.clean_engineering.model.drawio.rules",
 }
 
@@ -43,18 +40,18 @@ def _load_module_rules(module_path: str) -> dict[str, PracticeGraphRule]:
 
 @lru_cache(maxsize=None)
 def graph_rules_for_practice(practice: str) -> dict[str, PracticeGraphRule]:
-    path = _PRACTICE_GRAPH_RULES.get(practice)
+    path = _PRACTICE_RULES.get(practice)
     if path is None:
         return {}
     return _load_module_rules(path)
 
 
 @lru_cache(maxsize=None)
-def language_rules_for_practice(practice: str, language: str) -> dict[str, PracticeGraphRule]:
+def channel_rules_for_practice(practice: str, channel: str) -> dict[str, PracticeGraphRule]:
     if practice == "clean_engineering":
-        path = _CE_LANGUAGE_RULES.get(language)
+        path = _CE_CHANNEL_RULES.get(channel)
     elif practice == "stories":
-        path = _STORIES_LANGUAGE_RULES.get(language)
+        path = _STORIES_LANGUAGE_RULES.get(channel)
     else:
         path = None
     if path is None:
@@ -63,26 +60,23 @@ def language_rules_for_practice(practice: str, language: str) -> dict[str, Pract
 
 
 def checks_for_practice(practice: str) -> dict[str, PracticeGraphRule]:
-    """All registered checks (graph + every language channel) for listing."""
     merged = dict(graph_rules_for_practice(practice))
     if practice == "clean_engineering":
-        for language in _CE_LANGUAGE_RULES:
-            for slug, rule in language_rules_for_practice(practice, language).items():
-                merged.setdefault(slug, rule)
+        for channel in _CE_CHANNEL_RULES:
+            merged.update(channel_rules_for_practice(practice, channel))
     elif practice == "stories":
-        for language in _STORIES_LANGUAGE_RULES:
-            for slug, rule in language_rules_for_practice(practice, language).items():
-                merged.setdefault(slug, rule)
+        for channel in _STORIES_LANGUAGE_RULES:
+            merged.update(channel_rules_for_practice(practice, channel))
     return merged
 
 
 def checks_for_node(node) -> dict[str, PracticeGraphRule]:
-    """Checks that apply to this node type and source language."""
+    """Checks for this node type; code rules are language-agnostic (model shape)."""
     practice_name = node.practice.name
     language = language_for_node(node)
     merged = dict(graph_rules_for_practice(practice_name))
-    if language and language != "graph":
-        merged.update(language_rules_for_practice(practice_name, language))
+    if language and language not in {"graph", "python", "typescript", "javascript"}:
+        merged.update(channel_rules_for_practice(practice_name, language))
     applicable: dict[str, PracticeGraphRule] = {}
     for slug, rule in merged.items():
         if rule.applies_to(node.type):

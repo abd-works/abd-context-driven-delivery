@@ -1,8 +1,5 @@
-"""TypeScript / TSX code-channel graph rules."""
+"""TypeScript channel — rule classes live in practices.clean_engineering.rules (model shape is unified)."""
 
-from practices.clean_engineering.model.rules_shared.operation_checks import CODE_RULES
-
-RULES: tuple = CODE_RULES
-BY_SLUG = {rule.slug: rule for rule in RULES}
+from practices.clean_engineering.rules import BY_SLUG, RULES
 
 __all__ = ["BY_SLUG", "RULES"]
